@@ -7,6 +7,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -1843,13 +1844,13 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEvents(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
 		for key := range result.Rows {
-			if result.Rows[key][0] == "s0" {
+			if result.Rows[key][1] == "s0" {
 				assert.Equal(t, float64(1), result.Rows[key][2])
-			} else if result.Rows[key][0] == "s1" {
+			} else if result.Rows[key][1] == "s1" {
 				assert.Equal(t, float64(3), result.Rows[key][2])
-			} else if result.Rows[key][0] == "s2" {
+			} else if result.Rows[key][1] == "s2" {
 				assert.Equal(t, float64(2), result.Rows[key][2])
-			} else if result.Rows[key][0] == "s3" {
+			} else if result.Rows[key][1] == "s3" {
 				assert.Equal(t, float64(2), result.Rows[key][2])
 			}
 		}
@@ -2391,6 +2392,707 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsQuarterTimeGroup(t *te
 		for i, _ := range result.Rows {
 			if i != 0 {
 				assert.NotEqual(t, float64(0), result.Rows[i][0])
+			}
+		}
+	})
+}
+
+func TestGlobalFilterChanges(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	customerIDUser1 := "customerIDUser1"
+	customerIDUser2 := "customerIDUser2"
+	customerIDUser3 := "customerIDUser3"
+
+	commonUserProperty := make(map[string]interface{})
+	commonUserProperty[U.UP_BROWSER] = "Chrome"
+	commonUserPropertyBytes, _ := json.Marshal(commonUserProperty)
+
+	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID3)
+	createdUserID4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID4_1)
+	createdUserID5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID5_2)
+	createdUserID6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID6_3)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", createdUserID1, stepTimestamp, "A", 1234)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", createdUserID1, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", createdUserID1, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", createdUserID2, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", createdUserID2, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s3", createdUserID3, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", createdUserID3, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", createdUserID4_1, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s3", createdUserID4_1, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", createdUserID5_2, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", createdUserID5_2, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", createdUserID6_3, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", createdUserID6_3, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("TestEachUniqueUsersGlobalFilter", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+			},
+			GlobalUserProperties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityUserGlobal,
+					Property:  U.UP_BROWSER,
+					Operator:  model.EqualsOpStr,
+					Type:      U.PropertyTypeCategorical,
+					LogicalOp: model.LOGICAL_OP_AND,
+					Value:     "Chrome",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		for key := range result.Rows {
+			if result.Rows[key][1] == "s0" {
+				assert.Equal(t, float64(1), result.Rows[key][2])
+			} else if result.Rows[key][1] == "s1" {
+				assert.Equal(t, float64(2), result.Rows[key][2])
+			} else if result.Rows[key][1] == "s2" {
+				assert.Equal(t, float64(2), result.Rows[key][2])
+			} else if result.Rows[key][1] == "s3" {
+				assert.Equal(t, float64(1), result.Rows[key][2])
+			} else if result.Rows[key][1] == "s4" {
+				assert.Equal(t, float64(1), result.Rows[key][2])
+			}
+		}
+	})
+	t.Run("TestAnyUniqueUsersGlobalFilter", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+			},
+			GlobalUserProperties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityUserGlobal,
+					Property:  U.UP_BROWSER,
+					Operator:  model.EqualsOpStr,
+					Type:      U.PropertyTypeCategorical,
+					LogicalOp: model.LOGICAL_OP_AND,
+					Value:     "Chrome",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAnyGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, float64(2), result.Rows[0][0])
+	})
+	t.Run("TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsUserAll", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+			},
+			GlobalUserProperties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityUserGlobal,
+					Property:  U.UP_BROWSER,
+					Operator:  model.EqualsOpStr,
+					Type:      U.PropertyTypeCategorical,
+					LogicalOp: model.LOGICAL_OP_AND,
+					Value:     "Chrome",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, float64(0), result.Rows[0][0])
+	})
+}
+
+func TestNoneFilterGroup1(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	customerIDUser1 := "customerIDUser1"
+	customerIDUser2 := "customerIDUser2"
+
+	commonUserProperty := make(map[string]interface{})
+	commonUserProperty[U.UP_BROWSER] = "Chrome"
+	commonUserPropertyBytes, _ := json.Marshal(commonUserProperty)
+
+	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$source":"%s"}}`,
+		"s0", createdUserID1, stepTimestamp, "A", "google")
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$source":"%s"}}`,
+		"s1", createdUserID1, stepTimestamp+10, "A", "google")
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$source":"%s"}}`,
+		"s2", createdUserID1, stepTimestamp+20, "A", "google")
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("TestEachEventsNoneFilterCase1", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
+							Property:  U.EP_SOURCE,
+							Operator:  model.NotEqualOpStr,
+							Type:      U.PropertyTypeCategorical,
+							LogicalOp: model.LOGICAL_OP_AND,
+							Value:     "$none",
+						},
+					},
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				{
+					Property:       U.EP_SOURCE,
+					Entity:         "event",
+					Type:           "categorical",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+
+			GlobalUserProperties: []model.QueryProperty{},
+			Class:                model.QueryClassEvents,
+			Type:                 model.QueryTypeEventsOccurrence,
+			EventsCondition:      model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		for key := range result.Rows {
+			if result.Rows[key][1] == "s0" {
+				assert.Equal(t, "google", result.Rows[key][2])
+				assert.Equal(t, float64(1), result.Rows[key][3])
+			}
+		}
+	})
+	t.Run("TestEachEventsNoneFilterCase2", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
+							Property:  U.EP_SOURCE,
+							Operator:  model.NotEqualOpStr,
+							Type:      U.PropertyTypeCategorical,
+							LogicalOp: model.LOGICAL_OP_AND,
+							Value:     "google",
+						},
+					},
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				{
+					Property:       U.EP_SOURCE,
+					Entity:         "event",
+					Type:           "categorical",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+
+			GlobalUserProperties: []model.QueryProperty{},
+			Class:                model.QueryClassEvents,
+			Type:                 model.QueryTypeEventsOccurrence,
+			EventsCondition:      model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		// no events where $source != "google"
+		assert.Equal(t, 0, len(result.Rows))
+	})
+	t.Run("TestEachEventsNoneFilterCase3", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
+							Property:  U.EP_SOURCE,
+							Operator:  model.NotEqualOpStr,
+							Type:      U.PropertyTypeCategorical,
+							LogicalOp: model.LOGICAL_OP_AND,
+							Value:     "$none",
+						},
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
+							Property:  U.EP_SOURCE,
+							Operator:  model.NotEqualOpStr,
+							Type:      U.PropertyTypeCategorical,
+							LogicalOp: model.LOGICAL_OP_AND,
+							Value:     "google",
+						},
+					},
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				{
+					Property:       U.EP_SOURCE,
+					Entity:         "event",
+					Type:           "categorical",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+
+			GlobalUserProperties: []model.QueryProperty{},
+			Class:                model.QueryClassEvents,
+			Type:                 model.QueryTypeEventsOccurrence,
+			EventsCondition:      model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		// no events where $source != "google"
+		assert.Equal(t, 0, len(result.Rows))
+	})
+}
+
+func TestNoneFilterGroup2(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	customerIDUser1 := "customerIDUser1"
+	customerIDUser2 := "customerIDUser2"
+
+	commonUserProperty := make(map[string]interface{})
+	commonUserProperty[U.UP_BROWSER] = "Chrome"
+	commonUserPropertyBytes, _ := json.Marshal(commonUserProperty)
+
+	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$source":"%s"}}`,
+		"s0", createdUserID1, stepTimestamp, "A", "google")
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$source":"%s"}}`,
+		"s0", createdUserID1, stepTimestamp+10, "A", "google")
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$source":"%s"}}`,
+		"s0", createdUserID1, stepTimestamp+20, "A", "facebook")
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("TestEachEventsNoneFilterCase1", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
+							Property:  U.EP_SOURCE,
+							Operator:  model.NotEqualOpStr,
+							Type:      U.PropertyTypeCategorical,
+							LogicalOp: model.LOGICAL_OP_AND,
+							Value:     "$none",
+						},
+					},
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				{
+					Property:       U.EP_SOURCE,
+					Entity:         "event",
+					Type:           "categorical",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+
+			GlobalUserProperties: []model.QueryProperty{},
+			Class:                model.QueryClassEvents,
+			Type:                 model.QueryTypeEventsOccurrence,
+			EventsCondition:      model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		for key := range result.Rows {
+			if result.Rows[key][1] == "s0" {
+				if "google" == result.Rows[key][2] {
+					assert.Equal(t, float64(2), result.Rows[key][3])
+				}
+				if "facebook" == result.Rows[key][2] {
+					assert.Equal(t, float64(1), result.Rows[key][3])
+				}
+			}
+		}
+	})
+	t.Run("TestEachEventsNoneFilterCase2", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
+							Property:  U.EP_SOURCE,
+							Operator:  model.NotEqualOpStr,
+							Type:      U.PropertyTypeCategorical,
+							LogicalOp: model.LOGICAL_OP_AND,
+							Value:     "google",
+						},
+					},
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				{
+					Property:       U.EP_SOURCE,
+					Entity:         "event",
+					Type:           "categorical",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+
+			GlobalUserProperties: []model.QueryProperty{},
+			Class:                model.QueryClassEvents,
+			Type:                 model.QueryTypeEventsOccurrence,
+			EventsCondition:      model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		for key := range result.Rows {
+			if result.Rows[key][1] == "s0" {
+				assert.Equal(t, "facebook", result.Rows[key][2])
+				assert.Equal(t, float64(1), result.Rows[key][3])
+			}
+		}
+	})
+	t.Run("TestEachEventsNoneFilterCase3", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
+							Property:  U.EP_SOURCE,
+							Operator:  model.NotEqualOpStr,
+							Type:      U.PropertyTypeCategorical,
+							LogicalOp: model.LOGICAL_OP_AND,
+							Value:     "$none",
+						},
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
+							Property:  U.EP_SOURCE,
+							Operator:  model.NotEqualOpStr,
+							Type:      U.PropertyTypeCategorical,
+							LogicalOp: model.LOGICAL_OP_AND,
+							Value:     "google",
+						},
+					},
+				},
+			},
+			GroupByProperties: []model.QueryGroupByProperty{
+				{
+					Property:       U.EP_SOURCE,
+					Entity:         "event",
+					Type:           "categorical",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+
+			GlobalUserProperties: []model.QueryProperty{},
+			Class:                model.QueryClassEvents,
+			Type:                 model.QueryTypeEventsOccurrence,
+			EventsCondition:      model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		for key := range result.Rows {
+			if result.Rows[key][1] == "s0" {
+				assert.Equal(t, "facebook", result.Rows[key][2])
+				assert.Equal(t, float64(1), result.Rows[key][3])
 			}
 		}
 	})

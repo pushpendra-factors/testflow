@@ -551,7 +551,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 			groupBy = "coal_user_id, timestamp"
 		}
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
-			"", stepName, addSelect, addParams, addJoinStatement, groupBy, "")
+			"", stepName, addSelect, addParams, addJoinStatement, groupBy, "", q.GlobalUserProperties)
 
 		if len(q.EventsWithProperties) > 1 && i == 0 {
 			qStmnt = qStmnt + ", "
