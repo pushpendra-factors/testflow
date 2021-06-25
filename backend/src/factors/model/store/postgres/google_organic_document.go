@@ -182,7 +182,7 @@ func sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos []model.Goog
 
 		settings, exists := googleOrganicSettingsByProjectAndURL[googleOrganicLastSyncInfos[i].ProjectId][googleOrganicLastSyncInfos[i].URLPrefix]
 		if !exists {
-			logCtx.Error("GoogleOrganic project settings not found for url googleOrganic synced earlier.")
+			logCtx.Warn("GoogleOrganic project settings not found for url googleOrganic synced earlier.")
 		}
 
 		if settings == nil {

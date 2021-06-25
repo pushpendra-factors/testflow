@@ -548,7 +548,7 @@ func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, ad
 
 		settings, exists := adwordsSettingsByProjectAndCustomerAccount[adwordsLastSyncInfos[i].ProjectId][adwordsLastSyncInfos[i].CustomerAccountId]
 		if !exists {
-			logCtx.Error("Adwords project settings not found for customer account adwords synced earlier.")
+			logCtx.Warn("Adwords project settings not found for customer account adwords synced earlier.")
 		}
 
 		if settings == nil {
