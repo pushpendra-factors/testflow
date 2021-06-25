@@ -33,6 +33,19 @@ def remove_project_ids(infos, exclude_project_ids):
 
     return [info for info in infos if info.get("project_id") not in exclude_project_ids]
 
+def filter_based_on_input_timezone(facebook_settings, input_timezone):
+    if input_timezone == "":
+        return facebook_settings
+    resultant_facebook_settings = []
+    for last_sync_info in facebook_settings:
+        if input_timezone == scripts.facebook.TIMEZONE_IST and last_sync_info.get("timezone") == input_timezone:
+            resultant_facebook_settings.append(last_sync_info)
+
+        if input_timezone != scripts.facebook.TIMEZONE_IST and last_sync_info.get("timezone") != scripts.facebook.TIMEZONE_IST:
+            resultant_facebook_settings.append(last_sync_info)
+
+    return resultant_facebook_settings
+
 
 # TODO IMP add notification 10 days before expiry to team@factors.ai.
 if __name__ == "__main__":
@@ -49,6 +62,7 @@ if __name__ == "__main__":
 
     facebook_settings = allow_project_ids(facebook_settings, facebook_config.project_ids)
     facebook_settings = remove_project_ids(facebook_settings, facebook_config.exclude_project_ids)
+    facebook_settings = filter_based_on_input_timezone(facebook_settings, facebook_config.timezone)
     try:
         for facebook_int_setting in facebook_settings:
             customer_account_ids = facebook_int_setting[FACEBOOK_AD_ACCOUNT].split(',')

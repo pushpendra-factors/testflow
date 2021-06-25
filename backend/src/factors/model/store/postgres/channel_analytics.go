@@ -54,6 +54,7 @@ const (
 	CAFilterCreative                       = "creative"
 	CAFilterOrganicProperty                = "organic_property"
 	dateTruncateString                     = "date_trunc('%s', make_timestamptz(SUBSTRING (%s::text, 1, 4)::INTEGER, SUBSTRING (%s::text, 5, 2)::INTEGER, SUBSTRING (%s::text, 7, 2)::INTEGER, 0, 0, 0, '%s') AT TIME ZONE '%s')"
+	dateTruncateWeekString                 = "date_trunc('WEEK', (make_timestamptz(SUBSTRING (%s::text, 1, 4)::INTEGER, SUBSTRING (%s::text, 5, 2)::INTEGER, SUBSTRING (%s::text, 7, 2)::INTEGER, 0, 0, 0, '%s') + INTERVAL '1 day') AT TIME ZONE '%s') - INTERVAL '1 day'"
 	CAUnionFilterQuery                     = "SELECT filter_value from ( %s ) all_ads LIMIT 2500"
 	CAUnionQuery1                          = "SELECT %s FROM ( %s ) all_ads ORDER BY %s %s"
 	CAUnionQuery2                          = "SELECT %s FROM ( %s ) all_ads GROUP BY %s ORDER BY %s %s"
@@ -550,9 +551,11 @@ func getSelectTimestampByTypeForChannels(timestampType, timezone string) string 
 	if timestampType == model.GroupByTimestampHour {
 		selectStr = fmt.Sprintf(dateTruncateString, "hour", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
-		selectStr = fmt.Sprintf(dateTruncateString, "week", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
+		selectStr = fmt.Sprintf(dateTruncateWeekString, channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
 	} else if timestampType == model.GroupByTimestampMonth {
 		selectStr = fmt.Sprintf(dateTruncateString, "month", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
+	} else if timestampType == model.GroupByTimestampQuarter {
+		selectStr = fmt.Sprintf(dateTruncateString, "quarter", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
 	} else {
 		// defaults to GroupByTimestampDate.
 		selectStr = fmt.Sprintf(dateTruncateString, "day", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)

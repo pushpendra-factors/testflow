@@ -358,3 +358,10 @@ go-fmt:
 
 test:
 	go test -failfast -v $(GOPATH)/src/factors/tests && go test -failfast -v $(GOPATH)/src/factors/pattern_server/store
+
+pack-weekly-insights:
+	docker build -t us.gcr.io/factors-$(ENV)/weekly-insights-job:$(TAG) -f Dockerfile.weekly_insights_job .
+
+upload-weekly-insights: export IMAGE_NAME=weekly-insights-job
+upload-weekly-insights: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/weekly-insights-job:$(TAG)

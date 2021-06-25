@@ -581,17 +581,21 @@ func (pg *Postgres) GetProjectDetailsByShopifyDomain(
 	return 0, "", false, http.StatusInternalServerError
 }
 
-func (pg *Postgres) GetFacebookEnabledProjectSettings() ([]model.FacebookProjectSettings, int) {
+func (pg *Postgres) GetFacebookEnabledIDsAndProjectSettings() ([]uint64, []model.FacebookProjectSettings, int) {
 	db := C.GetServices().Db
 
 	facebookProjectSettings := make([]model.FacebookProjectSettings, 0, 0)
+	facebookIDs := make([]uint64, 0, 0)
 
 	err := db.Table("project_settings").Where("int_facebook_access_token IS NOT NULL AND int_facebook_access_token != ''").Find(&facebookProjectSettings).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
-		return facebookProjectSettings, http.StatusInternalServerError
+		return facebookIDs, facebookProjectSettings, http.StatusInternalServerError
 	}
-	return facebookProjectSettings, http.StatusOK
+	for _, facebookProjectSetting := range facebookProjectSettings {
+		facebookIDs = append(facebookIDs, facebookProjectSetting.ProjectId)
+	}
+	return facebookIDs, facebookProjectSettings, http.StatusOK
 }
 func (pg *Postgres) GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int) {
 	db := C.GetServices().Db

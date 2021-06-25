@@ -10,6 +10,7 @@ class AppConfig(Config):
     document_type = None
     data_service_host = None
 
+    timezone = None
     type_of_run = None
     dry = None
     last_timestamp = None
@@ -20,13 +21,14 @@ class AppConfig(Config):
 
     @classmethod
     def _init(cls, env, project_ids, exclude_project_ids, document_type, data_service_host,
-              type_of_run, dry, last_timestamp, to_timestamp):
+              timezone, type_of_run, dry, last_timestamp, to_timestamp):
         cls.env = env
         cls.project_ids = project_ids
         cls.exclude_project_ids = exclude_project_ids
         cls.document_type = document_type
         cls.data_service_host = data_service_host
 
+        cls.timezone = timezone
         cls.type_of_run = type_of_run
         cls.dry = (dry == "True")
         cls.last_timestamp = last_timestamp
@@ -44,7 +46,7 @@ class AppConfig(Config):
             exclude_project_ids = StringUtil.get_set_from_string_split_by_comma(argv.exclude_project_id)
 
         cls._init(argv.env, project_ids, exclude_project_ids, argv.document_type, argv.data_service_host,
-                  argv.type_of_run, argv.dry, argv.last_timestamp, argv.to_timestamp)
+                  argv.timezone, argv.type_of_run, argv.dry, argv.last_timestamp, argv.to_timestamp)
 
     @classmethod
     def get_data_service_path(cls):

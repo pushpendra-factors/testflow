@@ -8,6 +8,8 @@ AD = "ad"
 AD_ACCOUNT = "ad_account"
 AD_SET = "ad_set"
 
+TIMEZONE_IST = "Asia/Kolkata"
+
 ACCESS_TOKEN = "int_facebook_access_token"
 FACEBOOK_AD_ACCOUNT = "int_facebook_ad_account"
 DATA = "data"

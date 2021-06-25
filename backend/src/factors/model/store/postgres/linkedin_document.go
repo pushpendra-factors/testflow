@@ -68,7 +68,7 @@ const errorDuplicateLinkedinDocument = "pq: duplicate key value violates unique 
 
 var errorEmptyLinkedinDocument = errors.New("empty linked document")
 
-const linkedinFilterQueryStr = "SELECT DISTINCT(value->>?) as filter_value FROM linkedin_documents WHERE project_id = ? AND" +
+const linkedinFilterQueryStr = "SELECT DISTINCT(LOWER(value->>?)) as filter_value FROM linkedin_documents WHERE project_id = ? AND" +
 	" " + "customer_ad_account_id = ? AND type = ? AND value->>? IS NOT NULL LIMIT 5000"
 
 const fromLinkedinDocuments = " FROM linkedin_documents "

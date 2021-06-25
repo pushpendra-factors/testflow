@@ -1,0 +1,36 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: factors-staging-node-pool
+  name: facebook-etl-ist-job
+spec:
+  schedule: "0 0 * * *" # In UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: factors-staging-node-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: facebook-etl-ist
+            image: us.gcr.io/factors-staging/facebook-etl:v0.01-ea6b22e
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --data_service_host
+            - $(DATA_SERVICE_HOST_URL)
+            - --timezone
+            - "Asia/Kolkata"
+            envFrom:
+            - configMapRef:
+                name: config-env
+          restartPolicy: OnFailure

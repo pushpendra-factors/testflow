@@ -11,7 +11,15 @@ import (
 )
 
 func DataServiceFacebookGetProjectSettings(c *gin.Context) {
-	facebookProjectSettings, status := store.GetStore().GetFacebookEnabledProjectSettings()
+	facebookIDs, facebookProjectSettings, status := store.GetStore().GetFacebookEnabledIDsAndProjectSettings()
+	projects, _ := store.GetStore().GetProjectsByIDs(facebookIDs)
+	for _, project := range projects {
+		for index := range facebookProjectSettings {
+			if facebookProjectSettings[index].ProjectId == project.ID {
+				facebookProjectSettings[index].Timezone = project.TimeZone
+			}
+		}
+	}
 	c.JSON(status, facebookProjectSettings)
 }
 func DataServiceFacebookAddDocumentHandler(c *gin.Context) {

@@ -138,3 +138,17 @@ func (gcsd *GCSDriver) ListFiles(prefix string) []string {
 
 	return files
 }
+
+func (gcsd *GCSDriver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+	path := gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	return path, fmt.Sprintf("wpi.txt")
+}
+
+func (gcsd *GCSDriver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+	path := gcsd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	return path, fmt.Sprintf("cpi.txt")
+}
+
+func (gcsd *GCSDriver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId uint64, k int) string {
+	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
+}
