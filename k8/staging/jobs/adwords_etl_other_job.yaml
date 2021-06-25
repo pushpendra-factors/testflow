@@ -2,10 +2,10 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-highmem
-  name: adwords-sync-job
+    nodePool: factors-staging-node-pool
+  name: adwords-etl-other-job
 spec:
-  schedule: "0 00 * * *" # In UTC
+  schedule: "0 7 * * *" # In UTC
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
@@ -16,12 +16,12 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-highmem
+            nodePool: factors-staging-node-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
-          - name: adwords-sync
+          - name: adwords-etl-other
             image: us.gcr.io/factors-staging/adwords-etl:v0.49-4bcdb5e2-644
             imagePullPolicy: IfNotPresent
             args:
@@ -33,6 +33,8 @@ spec:
             - $(GOOGLE_ADWORDS_DEVELOPER_TOKEN)
             - --data_service_host
             - $(DATA_SERVICE_HOST_URL)
+            - --timezone
+            - "Other"
             envFrom:
             - configMapRef:
                 name: config-pythonappserver

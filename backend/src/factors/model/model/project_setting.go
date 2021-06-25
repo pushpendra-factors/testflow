@@ -85,6 +85,7 @@ type HubspotProjectSettings struct {
 
 type FacebookProjectSettings struct {
 	ProjectId              uint64 `json:"project_id"`
+	Timezone               string `json:"timezone"`
 	IntFacebookUserId      string `json:"int_facebook_user_id"`
 	IntFacebookAccessToken string `json:"int_facebook_access_token"`
 	IntFacebookAdAccount   string `json:"int_facebook_ad_account"`

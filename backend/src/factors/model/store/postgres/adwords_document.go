@@ -475,7 +475,7 @@ func (pg *Postgres) GetAdwordsLastSyncInfoForProject(projectID uint64) ([]model.
 		return []model.AdwordsLastSyncInfo{}, errCode
 	}
 
-	return sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
+	return pg.sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
 }
 
 // GetAllAdwordsLastSyncInfoForAllProjects - @TODO Kark v1
@@ -491,7 +491,7 @@ func (pg *Postgres) GetAllAdwordsLastSyncInfoForAllProjects() ([]model.AdwordsLa
 		return []model.AdwordsLastSyncInfo{}, errCode
 	}
 
-	return sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
+	return pg.sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
 }
 
 func getAdwordsLastSyncInfo(query string, params []interface{}) ([]model.AdwordsLastSyncInfo, int) {
@@ -519,13 +519,15 @@ func getAdwordsLastSyncInfo(query string, params []interface{}) ([]model.Adwords
 }
 
 // This method handles adding additionalInformation to lastSyncInfo, Skipping inactive Projects and adding missed LastSync.
-func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, adwordsSettings []model.AdwordsProjectSettings) ([]model.AdwordsLastSyncInfo, int) {
+func (pg *Postgres) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, adwordsSettings []model.AdwordsProjectSettings) ([]model.AdwordsLastSyncInfo, int) {
 
 	adwordsSettingsByProjectAndCustomerAccount := make(map[uint64]map[string]*model.AdwordsProjectSettings, 0)
+	projectIDs := make([]uint64, 0, 0)
 
 	for i := range adwordsSettings {
 		customerAccountIDs := strings.Split(adwordsSettings[i].CustomerAccountId, ",")
 		adwordsSettingsByProjectAndCustomerAccount[adwordsSettings[i].ProjectId] = make(map[string]*model.AdwordsProjectSettings)
+		projectIDs = append(projectIDs, adwordsSettings[i].ProjectId)
 		for j := range customerAccountIDs {
 			var setting model.AdwordsProjectSettings
 			setting.ProjectId = adwordsSettings[i].ProjectId
@@ -599,6 +601,15 @@ func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, ad
 			}
 		}
 
+	}
+
+	projects, _ := pg.GetProjectsByIDs(projectIDs)
+	for _, project := range projects {
+		for index := range selectedLastSyncInfos {
+			if selectedLastSyncInfos[index].ProjectId == project.ID {
+				selectedLastSyncInfos[index].Timezone = project.TimeZone
+			}
+		}
 	}
 
 	return selectedLastSyncInfos, http.StatusOK

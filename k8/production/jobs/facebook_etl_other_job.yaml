@@ -1,0 +1,36 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: persistent-pool-highmem
+  name: facebook-etl-ist-job
+spec:
+  schedule: "0 7 * * *" # In UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: persistent-pool-highmem
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: persistent-pool-highmem
+          containers:
+          - name: facebook-etl-ist
+            image: us.gcr.io/factors-production/facebook-etl:v0.01-eaf59a3
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --data_service_host
+            - $(DATA_SERVICE_HOST_URL)
+            - --timezone
+            - "Other"
+            envFrom:
+            - configMapRef:
+                name: config-env
+          restartPolicy: OnFailure

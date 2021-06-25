@@ -256,7 +256,7 @@ type Model interface {
 	GetIntAdwordsProjectSettingsForProjectID(projectID uint64) ([]model.AdwordsProjectSettings, int)
 	GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int)
 	GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int)
-	GetFacebookEnabledProjectSettings() ([]model.FacebookProjectSettings, int)
+	GetFacebookEnabledIDsAndProjectSettings() ([]uint64, []model.FacebookProjectSettings, int)
 	GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int)
 	GetLinkedinEnabledProjectSettingsForProjects(projectIDs []string) ([]model.LinkedinProjectSettings, int)
 	GetArchiveEnabledProjectIDs() ([]uint64, int)

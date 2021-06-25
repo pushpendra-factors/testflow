@@ -16,6 +16,7 @@ class AdwordsEtlParserOptions(ParseOptions):
         parser.add_option("--project_id", dest="project_id", help="", default=None)
         parser.add_option("--exclude_project_id", dest="exclude_project_id", help="", default=None)
         parser.add_option("--document_type", dest="document_type", help="", default=None)
+        parser.add_option("--timezone", dest="timezone", default="")
         parser.add_option("--type_of_run", dest="type_of_run", default="extract_and_load")
         parser.add_option("--dry", dest="dry", help="", default="False")
         parser.add_option("--last_timestamp", dest="last_timestamp", help="", default=None, type=int)

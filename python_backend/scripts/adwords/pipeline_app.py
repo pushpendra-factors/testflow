@@ -18,7 +18,7 @@ def setup(argv):
 
 
 # TODO Error handling not done.
-def get_last_sync_infos(include_project_ids, exclude_project_ids, doc_type):
+def get_last_sync_infos(include_project_ids, exclude_project_ids, doc_type, input_timezone):
     last_sync_infos = []
     if len(include_project_ids) == 0:
         last_sync_infos = FactorsDataService.get_last_sync_infos_for_all_projects()
@@ -28,6 +28,7 @@ def get_last_sync_infos(include_project_ids, exclude_project_ids, doc_type):
             last_sync_infos.extend(current_sync_infos)
 
     last_sync_infos = remove_excluded_project_ids(last_sync_infos, exclude_project_ids)
+    last_sync_infos = filter_based_on_input_timezone(last_sync_infos, input_timezone)
     last_sync_infos = filter_doc_type(last_sync_infos, doc_type)
     return last_sync_infos
 
@@ -39,6 +40,19 @@ def remove_excluded_project_ids(last_sync_infos, exclude_project_ids):
     return [last_sync_info for last_sync_info in last_sync_infos if
             last_sync_info.get("project_id") not in exclude_project_ids]
 
+
+def filter_based_on_input_timezone(last_sync_infos, input_timezone):
+    if input_timezone == "":
+        return last_sync_infos
+    resultant_last_sync_infos = []
+    for last_sync_info in last_sync_infos:
+        if input_timezone == scripts.adwords.TIMEZONE_IST and last_sync_info.get("timezone") == input_timezone:
+            resultant_last_sync_infos.append(last_sync_info)
+
+        if input_timezone != scripts.adwords.TIMEZONE_IST and last_sync_info.get("timezone") != scripts.adwords.TIMEZONE_IST:
+            resultant_last_sync_infos.append(last_sync_info)
+
+    return resultant_last_sync_infos
 
 def filter_doc_type(last_sync_infos, doc_type):
     if doc_type is None:
@@ -63,8 +77,9 @@ if __name__ == "__main__":
     input_last_timestamp = scripts.adwords.CONFIG.ADWORDS_APP.last_timestamp
     input_to_timestamp = scripts.adwords.CONFIG.ADWORDS_APP.to_timestamp
     metrics_controller = scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller
+    input_timezone = scripts.adwords.CONFIG.ADWORDS_APP.timezone
 
-    final_last_sync_infos = get_last_sync_infos(input_project_ids, input_exclude_project_ids, input_document_type)
+    final_last_sync_infos = get_last_sync_infos(input_project_ids, input_exclude_project_ids, input_document_type, input_timezone)
 
     for last_sync in final_last_sync_infos:
         next_sync_infos = AdwordsSyncUtil.get_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp)

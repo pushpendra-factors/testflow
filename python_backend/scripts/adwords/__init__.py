@@ -4,6 +4,8 @@ STATUS_FAILED = "failed"
 STATUS_SKIPPED = "skipped"
 PAGE_SIZE = 200
 
+TIMEZONE_IST = "Asia/Kolkata"
+
 CUSTOMER_ACCOUNT_PROPERTIES = "customer_account_properties"
 CAMPAIGNS = "campaigns"
 ADS = "ads"
