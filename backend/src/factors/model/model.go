@@ -459,4 +459,8 @@ type Model interface {
 	// monitoring
 	MonitorSlowQueries() ([]interface{}, []interface{}, error)
 	CollectTableSizes() map[string]string
+
+	// weekly insights
+	CreateWeeklyInsightsMetadata(pmm *model.WeeklyInsightsMetadata) (int, string)
+	GetWeeklyInsightsMetadata(projectId uint64) ([]model.WeeklyInsightsMetadata, int, string)
 }

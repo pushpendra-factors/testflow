@@ -18,4 +18,7 @@ type FileManager interface {
 	GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
 	GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
 	ListFiles(path string) []string
+	GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string)
+	GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string)
+	GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId uint64, k int) string
 }
