@@ -27,7 +27,6 @@ const FaDatepicker = ({
   className,
   comparison_supported = false,
   handleCompareWithClick,
-
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setdatePickerType] = useState('');
@@ -393,7 +392,6 @@ const FaDatepicker = ({
         </>
       }
     </div>
-
   );
 };
 
