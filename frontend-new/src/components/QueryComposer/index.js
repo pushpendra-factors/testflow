@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
-import { Button, Collapse, Select, Popover } from 'antd';
-import moment from 'moment';
-import { SVG, Text } from '../factorsComponents';
-import styles from './index.module.scss';
-import QueryBlock from './QueryBlock';
-import SeqSelector from './AnalysisSeqSelector';
-import GroupBlock from './GroupBlock';
-import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from '../../utils/constants';
+import React, { useState, useEffect, useCallback } from "react";
+import { connect, useSelector } from "react-redux";
+import { bindActionCreators } from "redux";
+import { Button, Collapse, Select, Popover } from "antd";
+import moment from "moment";
+import { SVG, Text } from "../factorsComponents";
+import styles from "./index.module.scss";
+import QueryBlock from "./QueryBlock";
+import SeqSelector from "./AnalysisSeqSelector";
+import GroupBlock from "./GroupBlock";
+import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from "../../utils/constants";
 
 import FaDatepicker from '../../components/FaDatepicker';
 
@@ -22,7 +22,9 @@ import {
   fetchEventNames,
   getUserProperties,
   getEventProperties,
-} from '../../reducers/coreQuery/middleware';
+} from "Reducers/coreQuery/middleware";
+
+import GLobalFilter from './GlobalFilter';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
 
 const { Option } = Select;
@@ -46,6 +48,8 @@ function QueryComposer({
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
   const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
+
+  const userProperties = useSelector((state) => state.coreQuery.userProperties);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -99,6 +103,36 @@ function QueryComposer({
 
     return blockList;
   };
+
+  const setGlobalFiltersOption = (filters) => {
+    const opts = Object.assign({}, queryOptions)
+    opts.globalFilters = filters;
+    setQueryOptions(opts);
+  }
+
+  const renderGlobalFilterBlock = () => {
+    try {
+      if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+        return null;
+      }
+      if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+        return null;
+      }
+
+      return (
+        <ComposerBlock blockTitle={'FILTER BY'} isOpen={true} showIcon={false}>
+          <div key={0} className={"fa--query_block borderless no-padding "}>
+            <GLobalFilter filters={queryOptions.globalFilters} 
+              setGlobalFilters={setGlobalFiltersOption}
+              onFiltersLoad={[() => {getUserProperties(activeProject.id, queryType)}]}
+            ></GLobalFilter>
+          </div>
+        </ComposerBlock>
+
+      );
+    } catch (err) { console.log(err) };
+  };
+  
 
   const groupByBlock = () => {
     try {
@@ -336,12 +370,15 @@ function QueryComposer({
         );
       }
       if (queryType === QUERY_TYPE_FUNNEL) {
-        if (queries.length <= 1) return null;
-        return (
-          <ComposerBlock blockTitle={'CRITERIA'} isOpen={true} showIcon={false}>
-            {renderFuCrit()}
-          </ComposerBlock>
-        );
+        return null;
+        // if (queries.length <= 1) return null;
+        // return (
+        //   <ComposerBlock blockTitle={'CRITERIA'}
+        //   isOpen={true} showIcon={false}>
+        //     {renderFuCrit()}
+
+        //   </ComposerBlock>
+        // );
       }
     } catch (err) {
       console.log(err);
@@ -363,6 +400,7 @@ function QueryComposer({
   return (
     <div className={styles.composer_body}>
       {renderQueryList()}
+      {renderGlobalFilterBlock()}
       {groupByBlock()}
       {renderCriteria()}
       {footer()}

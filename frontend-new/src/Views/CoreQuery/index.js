@@ -110,6 +110,7 @@ function CoreQuery({
         eventIndex: 0,
       },
     ],
+    globalFilters: [],
     event_analysis_seq: '',
     session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
     date_range: { ...DefaultDateRangeFormat },
@@ -162,6 +163,7 @@ function CoreQuery({
 
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
+  const { globalFilters } = queryOptions;
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -255,7 +257,8 @@ function CoreQuery({
           queries,
           result_criteria,
           user_type,
-          durationObj
+          durationObj,
+          globalFilters
         );
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -327,6 +330,7 @@ function CoreQuery({
       user_type,
       activeProject.id,
       groupBy,
+      globalFilters,
       updateResultState,
       configActionsOnRunningQuery,
       updateLocalReducer,
@@ -345,7 +349,8 @@ function CoreQuery({
           groupBy,
           queries,
           session_analytics_seq,
-          durationObj
+          durationObj,
+          globalFilters
         );
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -380,6 +385,7 @@ function CoreQuery({
       session_analytics_seq,
       activeProject.id,
       groupBy,
+      globalFilters,
       dateRange,
       updateResultState,
       configActionsOnRunningQuery,

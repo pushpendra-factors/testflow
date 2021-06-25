@@ -195,6 +195,7 @@ function CoreQuery({
             ...equivalentQuery.breakdown.global,
             ...equivalentQuery.breakdown.event,
           ],
+          globalFilters: equivalentQuery.globalFilters,
           ...newDateRange,
         };
       });
