@@ -75,6 +75,32 @@ func TestPatternFromFile(t *testing.T) {
 	assert.Equal(t, 304.0, float64(constraintCount))
 }
 
+func createEtsStruct(userId string, user1CreatedTime,
+	nextEventCreatedTime time.Time, events []string,
+	cardinalities []uint) []P.EvSameTs {
+	etsList := make([]P.EvSameTs, 0)
+	emap := make(map[string]P.CounterEventFormat)
+	for idx, et := range events {
+		enameList := []string{et}
+		t := P.CounterEventFormat{
+			UserId:            userId,
+			UserJoinTimestamp: user1CreatedTime.Unix(),
+			EventName:         et,
+			EventTimestamp:    nextEventCreatedTime.Unix(),
+			EventCardinality:  cardinalities[idx],
+			EventProperties:   nil,
+			UserProperties:    nil,
+		}
+		emap[et] = t
+		tmp := P.EvSameTs{EventsNames: enameList, EventsMap: emap, EventTimestamp: nextEventCreatedTime.Unix()}
+		etsList = append(etsList, tmp)
+		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
+	}
+
+	return etsList
+
+}
+
 func TestPatternCountEvents(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
@@ -103,11 +129,11 @@ func TestPatternCountEvents(t *testing.T) {
 		events := []string{"F", "B", "A", "C", "B", "A", "B", "C"}
 		cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
 
-		for i, event := range events {
-			err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-				make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), countOccurFlag)
+		etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
+
+		for i, _ := range events {
+			err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i])
 			assert.Nil(t, err)
-			nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 		}
 
 		// User 2 events.
@@ -118,11 +144,12 @@ func TestPatternCountEvents(t *testing.T) {
 		nextEventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
 		events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
 		cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
-		for i, event := range events {
-			err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-				make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(), countOccurFlag)
+		etsList = createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
+
+		for i, _ := range events {
+			err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i])
 			assert.Nil(t, err)
-			nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
+			// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 		}
 
 		err = p.ResetAfterLastUser()
@@ -217,11 +244,13 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	nextEventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	events := []string{"F", "B", "A", "C", "B", "A", "B", "C"}
 	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
-	for i, event := range events {
-		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), countOccurFlag)
+
+	etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
+
+	for i, _ := range events {
+		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i])
 		assert.Nil(t, err)
-		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
+		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
 	// User 2 events.
 	userId = "user2"
@@ -231,11 +260,13 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	nextEventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
 	events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
 	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
-	for i, event := range events {
-		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(), countOccurFlag)
+
+	etsList = createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
+
+	for i, _ := range events {
+		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i])
 		assert.Nil(t, err)
-		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
+		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
 
 	err = p.ResetAfterLastUser()
@@ -468,8 +499,8 @@ func TestPatternEdgeConditions(t *testing.T) {
 	assert.Nil(t, err)
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
-	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(), countOccurFlag)
+	etsList := createEtsStruct("user1", userCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
+	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.NotNil(t, err)
 
 	// Test Count Event, with wrong userId or wrong userCreatedTime.
@@ -479,16 +510,17 @@ func TestPatternEdgeConditions(t *testing.T) {
 	eventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	err = p.ResetForNewUser("user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
-	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(), countOccurFlag)
+	etsList = createEtsStruct("user1", userCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
+	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.Nil(t, err)
 	// Wrong userId.
-	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user2", userCreatedTime.Unix(), countOccurFlag)
+	etsList = createEtsStruct("user2", userCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
+	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.NotNil(t, err)
 	// Wrong userCreatedTime. Error is ignored.
-	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user1", eventCreatedTime.Unix(), countOccurFlag)
+	etsList = createEtsStruct("user1", eventCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
+
+	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.Nil(t, err)
 
 	// Test Events out of order. Out of order events are noticed only when
@@ -518,11 +550,11 @@ func TestPatternEdgeConditions(t *testing.T) {
 	event2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:59:59Z")
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	err = p.CountForEvent(project.ID, "A", event1CreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), countOccurFlag)
+	etsList = createEtsStruct(userId, userCreatedTime, event1CreatedTime, []string{"A"}, []uint{1})
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.Nil(t, err)
-	err = p.CountForEvent(project.ID, "B", event2CreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), countOccurFlag)
+	etsList = createEtsStruct(userId, userCreatedTime, event2CreatedTime, []string{"B"}, []uint{1})
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.NotNil(t, err)
 
 }
@@ -582,12 +614,12 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 	nextEventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	events := []string{"F", "B", "A", "C", "B", "A", "B", "C"}
 	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
+	etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
-	for i, event := range events {
-		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), countOccurFlag)
+	for i, _ := range events {
+		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i])
 		assert.Nil(t, err)
-		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
+		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
 
 	// User 2 events.
@@ -598,11 +630,12 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 	nextEventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
 	events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
 	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
-	for i, event := range events {
-		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(), countOccurFlag)
+	etsList = createEtsStruct(userId, user2CreatedTime, nextEventCreatedTime, events, cardinalities)
+
+	for i, _ := range events {
+		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i])
 		assert.Nil(t, err)
-		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
+		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
 
 	err = p.ResetAfterLastUser()
@@ -698,9 +731,10 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 	nextEventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	events := []string{"F", "B", "A", "C", "B", "A", "B", "C"}
 	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
-	for i, event := range events {
-		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), countOccurFlag)
+	etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
+
+	for i, _ := range events {
+		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i])
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -712,9 +746,10 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 	nextEventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
 	events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
 	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
-	for i, event := range events {
-		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(), countOccurFlag)
+	etsList = createEtsStruct(userId, user2CreatedTime, nextEventCreatedTime, events, cardinalities)
+
+	for i, _ := range events {
+		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i])
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -949,8 +984,12 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	assert.Nil(t, err)
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
-	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(), countOccurFlag)
+	events := []string{"J"}
+	cardinalities := []uint{1}
+	userId := "user1"
+	etsList := createEtsStruct(userId, userCreatedTime, eventCreatedTime, events, cardinalities)
+
+	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.NotNil(t, err)
 
 	// Test Count Event, with wrong userId or wrong userCreatedTime.
@@ -960,16 +999,20 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	eventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	err = p.ResetForNewUser("user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
-	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(), countOccurFlag)
+
+	etsList = createEtsStruct(userId, userCreatedTime, eventCreatedTime, events, cardinalities)
+
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.Nil(t, err)
 	// Wrong userId.
-	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user2", userCreatedTime.Unix(), countOccurFlag)
+	events = []string{"J"}
+	etsList = createEtsStruct("user2", userCreatedTime, eventCreatedTime, events, cardinalities)
+	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.NotNil(t, err)
+	etsList = createEtsStruct("user1", eventCreatedTime, eventCreatedTime, events, cardinalities)
+
 	// Wrong userCreatedTime. Error is ignored.
-	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user1", eventCreatedTime.Unix(), countOccurFlag)
+	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.Nil(t, err)
 
 	// Test Events out of order. Out of order events are noticed only when
@@ -993,17 +1036,17 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	assert.NotNil(t, err)*/
 
 	// Event2 and Event1 are out of order.
-	userId := "user2"
+	userId = "user2"
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	event1CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	event2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:59:59Z")
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	err = p.CountForEvent(project.ID, "A", event1CreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), countOccurFlag)
+	etsList = createEtsStruct(userId, userCreatedTime, event1CreatedTime, []string{"A"}, []uint{1})
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.Nil(t, err)
-	err = p.CountForEvent(project.ID, "B", event2CreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), countOccurFlag)
+	etsList = createEtsStruct(userId, userCreatedTime, event2CreatedTime, []string{"B"}, []uint{1})
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
 	assert.NotNil(t, err)
 
 }
