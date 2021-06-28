@@ -1063,3 +1063,31 @@ func CleanSplitByDelimiter(str string, del string) []string {
 	}
 	return cleanSplit
 }
+
+// StringIn Check if string is in given list of strings
+func StringIn(strList []string, s string) (bool, string, int) {
+
+	if len(strList) == 0 {
+		return false, "", -1
+	}
+
+	for idx, v := range strList {
+
+		if strings.Compare(v, s) == 0 {
+			return true, s, idx
+		}
+	}
+
+	return false, "", -1
+
+}
+
+// Remove  remove string from given index
+func Remove(s []string, i int) ([]string, error) {
+	if len(s) > 0 {
+		s[len(s)-1], s[i] = s[i], s[len(s)-1]
+		return s[:len(s)-1], nil
+	} else {
+		return nil, fmt.Errorf("len of string slice is 0 : %v", s)
+	}
+}

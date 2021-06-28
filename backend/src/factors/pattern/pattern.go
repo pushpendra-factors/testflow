@@ -87,7 +87,7 @@ type EventConstraints struct {
 func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern, error) {
 	pLen := len(events)
 	if pLen == 0 {
-		err := fmt.Errorf("No events in pattern")
+		err := fmt.Errorf("no events in pattern")
 		return nil, err
 	}
 
@@ -319,18 +319,24 @@ func (p *Pattern) updateGenericHistogram() error {
 		// Update Generic Histogram.
 		histMap := map[string]float64{}
 		histMap[U.UP_JOIN_TIME] = float64(p.currentUserJoinTimestamp)
+
 		for i, eventName := range p.EventNames {
 			ocList := p.currentUserEventOccurenceCounts[eventName]
-			histMap[PatternPropertyKey(i, U.EP_FIRST_SEEN_OCCURRENCE_COUNT)] = float64(ocList[0])
-			histMap[PatternPropertyKey(i, U.EP_LAST_SEEN_OCCURRENCE_COUNT)] = float64(ocList[len(ocList)-1])
+			if len(ocList) > 0 {
+				histMap[PatternPropertyKey(i, U.EP_FIRST_SEEN_OCCURRENCE_COUNT)] = float64(ocList[0])
+				histMap[PatternPropertyKey(i, U.EP_LAST_SEEN_OCCURRENCE_COUNT)] = float64(ocList[len(ocList)-1])
+			}
 
 			stList := p.currentUserEventTimestamps[eventName]
-			histMap[PatternPropertyKey(i, U.EP_FIRST_SEEN_TIME)] = float64(stList[0])
-			histMap[PatternPropertyKey(i, U.EP_LAST_SEEN_TIME)] = float64(stList[len(ocList)-1])
-			firstSeenSinceUserJoin := math.Max(0, float64(stList[0]-p.currentUserJoinTimestamp))
-			lastSeenSinceUserJoin := math.Max(0, float64(stList[len(stList)-1]-p.currentUserJoinTimestamp))
-			histMap[PatternPropertyKey(i, U.EP_FIRST_SEEN_SINCE_USER_JOIN)] = firstSeenSinceUserJoin
-			histMap[PatternPropertyKey(i, U.EP_LAST_SEEN_SINCE_USER_JOIN)] = lastSeenSinceUserJoin
+			if len(stList) > 0 {
+				histMap[PatternPropertyKey(i, U.EP_FIRST_SEEN_TIME)] = float64(stList[0])
+				histMap[PatternPropertyKey(i, U.EP_LAST_SEEN_TIME)] = float64(stList[len(ocList)-1])
+				firstSeenSinceUserJoin := math.Max(0, float64(stList[0]-p.currentUserJoinTimestamp))
+				lastSeenSinceUserJoin := math.Max(0, float64(stList[len(stList)-1]-p.currentUserJoinTimestamp))
+
+				histMap[PatternPropertyKey(i, U.EP_FIRST_SEEN_SINCE_USER_JOIN)] = firstSeenSinceUserJoin
+				histMap[PatternPropertyKey(i, U.EP_LAST_SEEN_SINCE_USER_JOIN)] = lastSeenSinceUserJoin
+			}
 		}
 		err := p.GenericPropertiesHistogram.AddMap(histMap)
 		return err
@@ -345,9 +351,8 @@ func (p *Pattern) ResetAfterLastUser() error {
 
 func (p *Pattern) ResetForNewUser(userId string, userJoinTimestamp int64) error {
 	if userId == "" || userJoinTimestamp <= 0 {
-		return fmt.Errorf("Missing userId or userCreatedTime.")
+		return fmt.Errorf("missing userId or userCreatedTime")
 	}
-
 	p.TotalUserCount += 1
 	if err := p.updateGenericHistogram(); err != nil {
 		return err
@@ -421,13 +426,16 @@ func AddNumericAndCategoricalProperties(projectID uint64, eventName string,
 // [U3: E1(T12) -> E5(T13)].
 // Further the distribution of timestamps, event properties and number of occurrences
 // are stored with the patterns.
-func (p *Pattern) CountForEvent(projectID uint64,
-	eventName string, eventTimestamp int64, eventProperties map[string]interface{},
-	userProperties map[string]interface{}, eventCardinality uint, userId string,
-	userJoinTimestamp int64, shouldCountOccurence bool) error {
+func (p *Pattern) CountForEvent(projectID uint64, userId string,
+	userJoinTimestamp int64, shouldCountOccurence bool, ets EvSameTs) error {
 
-	if eventName == "" || eventTimestamp <= 0 {
-		return fmt.Errorf("Missing eventId or eventTimestamp.")
+	eventNames := ets.EventsNames
+	evMap := ets.EventsMap
+	eventTimestamp := ets.EventTimestamp
+	var err error
+
+	if len(eventNames) == 0 || eventTimestamp <= 0 {
+		return fmt.Errorf("missing eventId or eventTimestamp")
 	}
 
 	if userId != p.currentUserId {
@@ -449,7 +457,7 @@ func (p *Pattern) CountForEvent(projectID uint64,
 	if eventTimestamp < p.previousEventTimestamp {
 		return fmt.Errorf(
 			"Event Timings not in order. user: %s, event %s, userJoinTime:%d, eventTimestamp :%d, previousEventTimestamp: %d",
-			userId, eventName, p.currentUserJoinTimestamp, eventTimestamp, p.previousEventTimestamp)
+			userId, eventNames, p.currentUserJoinTimestamp, eventTimestamp, p.previousEventTimestamp)
 	}
 	if eventTimestamp < p.currentUserJoinTimestamp {
 		// Ignoring this error for now, since there are no DB checks to avoid
@@ -458,28 +466,47 @@ func (p *Pattern) CountForEvent(projectID uint64,
 	}
 	p.previousEventTimestamp = eventTimestamp
 
-	// Start collecting timestamps and occurrences of an event
-	// only after we have seen atleast one occurrence of
-	// preceding events in sequence.
-	if len(p.currentUserEventTimestamps[eventName]) == 0 {
-		if eventName == p.EventNames[p.waitIndex] {
-			p.currentUserEventTimestamps[eventName] = []int64{eventTimestamp}
+	for _, eventName := range eventNames {
+		eventCardinality := evMap[eventName].EventCardinality
+
+		// Start collecting timestamps and occurrences of an event
+		// only after we have seen atleast one occurrence of
+		// preceding events in sequence.
+		if len(p.currentUserEventTimestamps[eventName]) == 0 {
+			if eventName == p.EventNames[p.waitIndex] {
+				p.currentUserEventTimestamps[eventName] = []int64{eventTimestamp}
+			}
+		} else {
+			p.currentUserEventTimestamps[eventName] = append(
+				p.currentUserEventTimestamps[eventName], eventTimestamp)
 		}
-	} else {
-		p.currentUserEventTimestamps[eventName] = append(
-			p.currentUserEventTimestamps[eventName], eventTimestamp)
-	}
-	if len(p.currentUserEventOccurenceCounts[eventName]) == 0 {
-		if eventName == p.EventNames[p.waitIndex] {
-			p.currentUserEventOccurenceCounts[eventName] = []uint{eventCardinality}
+		if len(p.currentUserEventOccurenceCounts[eventName]) == 0 {
+			if eventName == p.EventNames[p.waitIndex] {
+				p.currentUserEventOccurenceCounts[eventName] = []uint{eventCardinality}
+			}
+		} else {
+			p.currentUserEventOccurenceCounts[eventName] = append(
+				p.currentUserEventOccurenceCounts[eventName], eventCardinality)
 		}
-	} else {
-		p.currentUserEventOccurenceCounts[eventName] = append(
-			p.currentUserEventOccurenceCounts[eventName], eventCardinality)
+
 	}
 
-	if eventName == p.EventNames[p.waitIndex] {
-		// Update seen properties.
+	for {
+		_, eventName, idx := U.StringIn(eventNames, p.EventNames[p.waitIndex])
+		if idx < 0 {
+			break
+		}
+		if idx >= 0 {
+			eventNames, err = U.Remove(eventNames, idx)
+			if err != nil {
+				return err
+			}
+
+		}
+		e := evMap[eventName]
+		eventProperties := e.EventProperties
+		userProperties := e.UserProperties
+
 		AddNumericAndCategoricalProperties(projectID, eventName,
 			p.waitIndex, eventProperties, p.currentEPropertiesNMap, p.currentEPropertiesCMap, false)
 		AddNumericAndCategoricalProperties(projectID, "",
@@ -492,7 +519,7 @@ func (p *Pattern) CountForEvent(projectID uint64,
 			p.currentUserOccurrenceCount += 1
 
 			// Record the pattern occurrence.
-			if shouldCountOccurence == true {
+			if shouldCountOccurence {
 				p.PerOccurrenceCount += 1
 				// Update properties histograms.
 				if p.PerOccurrenceEventNumericProperties != nil {
@@ -550,6 +577,7 @@ func (p *Pattern) CountForEvent(projectID uint64,
 			p.currentUPropertiesCMap = make(map[string]string)
 		}
 	}
+
 	return nil
 }
 
@@ -664,7 +692,7 @@ func (p *Pattern) GetPerUserCount(
 			"patternCount":       p.PerUserCount,
 			"finalCount":         count,
 		}).Info("Computed CDF's and PDF's")
-		errorString := "Final count is less than 0."
+		errorString := "final count is less than 0"
 		log.Error(errorString)
 		return 0, fmt.Errorf(errorString)
 	}
