@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type WeeklyInsightsMetadata struct {
 	ID                  string    `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
