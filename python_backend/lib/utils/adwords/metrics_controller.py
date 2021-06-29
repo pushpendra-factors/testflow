@@ -51,6 +51,7 @@ class MetricsController:
             return True
         return False
 
+    @classmethod
     def update_permission_cache(cls, key_string, refresh_token, message):
         key = "{0}:{1}".format(key_string, refresh_token)
         cls.permission_error_cache[key] = message
