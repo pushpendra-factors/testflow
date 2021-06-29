@@ -272,6 +272,10 @@ func TestCategoricalHistogramAddWithTemplate(t *testing.T) {
 				mp, numSymbolCombinations, numSamples,
 				maxBins, actualPdf, expectedPdf))
 	}
+	var nonExistingPropertyInHistogram = map[string]string{}
+	nonExistingPropertyInHistogram["no_prop"] = "abc"
+	actualPdf, _ := h.PDFFromMap(nonExistingPropertyInHistogram)
+	assert.Equal(t, actualPdf, 0.0)
 }
 
 func TestTrimFrequencyMap(t *testing.T) {

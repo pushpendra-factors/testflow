@@ -63,7 +63,7 @@ func (sd *S3Driver) GetProjectModelDir(projectId, modelId uint64) string {
 	return fmt.Sprintf("projects/%d/models/%d/", projectId, modelId)
 }
 
-func (sd *S3Driver) GetProjectEventFileDir(projectId, startTimestamp int64, modelType string) string {
+func (sd *S3Driver) GetProjectEventFileDir(projectId uint64, startTimestamp int64, modelType string) string {
 	dateFormatted := U.GetDateOnlyFromTimestamp(startTimestamp)
 	return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
 }
@@ -73,7 +73,7 @@ func (sd *S3Driver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) 
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
 }
 
-func (sd *S3Driver) GetModelEventsFilePathAndName(projectId, startTimestamp int64, modelType string) (string, string) {
+func (sd *S3Driver) GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, fmt.Sprintf("events.txt")
 }
@@ -106,4 +106,18 @@ func (sd *S3Driver) ListFiles(path string) []string {
 // GetBucketName - Placeholder definition. Has to be implemented.
 func (sd *S3Driver) GetBucketName() string {
 	return ""
+}
+
+func (sd *S3Driver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	return path, fmt.Sprintf("wpi.txt")
+}
+
+func (sd *S3Driver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
+	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
+	return path, fmt.Sprintf("cpi.txt")
+}
+
+func (sd *S3Driver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId uint64, k int) string {
+	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
 }

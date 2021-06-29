@@ -48,7 +48,7 @@ export default function SeqSelector({ seq, queryCount, setAnalysisSequence }) {
               if (item.selected) {
                 classNames.push(styles.seq_selector__container__selected);
               }
-              return (<span key={index} className={classNames.join(' ')} onClick={item.enabled ? () => setSeqState('from', item.key) : null}>{item.key}</span>);
+              return (<span key={index} className={classNames.join(' ')} onClick={item.enabled ? () => setSeqState('from', item.key) : () => setSeqState('from', 0) }>{item.key}</span>);
             })
           }
         </div>
@@ -63,7 +63,7 @@ export default function SeqSelector({ seq, queryCount, setAnalysisSequence }) {
               if (item.selected) {
                 classNames.push(styles.seq_selector__container__selected);
               }
-              return (<span key={index} className={classNames.join(' ')} onClick={item.enabled ? () => setSeqState('to', item.key) : null}>{item.key}</span>);
+              return (<span key={index} className={classNames.join(' ')} onClick={item.enabled ? () => setSeqState('to', item.key) : () => setSeqState('to', 0) }>{item.key}</span>);
             })
           }
         </div>

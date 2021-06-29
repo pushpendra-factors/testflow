@@ -52,21 +52,22 @@ func InitAppRoutes(r *gin.Engine) {
 	r.GET(routePrefix+"/agents/info", mid.SetLoggedInAgent(), AgentInfo)
 	r.PUT(routePrefix+"/agents/info", mid.SetLoggedInAgent(), UpdateAgentInfo)
 	r.GET(routePrefix+"/projectanalytics", mid.SetLoggedInAgentInternalOnly(), V1.GetFactorsAnalyticsHandler)
-	r.GET(routePrefix+"/registertask", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.RegisterTaskHandler))
-	r.GET(routePrefix+"/registertaskdependency", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.RegisterTaskDependencyHandler))
-
+	r.POST(routePrefix+"/registertask", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.RegisterTaskHandler))
+	r.POST(routePrefix+"/registertaskdependency", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.RegisterTaskDependencyHandler))
+	r.GET(routePrefix+"/GetAllProcessedIntervals",mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAllProcessedIntervalsHandler))
+	r.DELETE(routePrefix+"/DeleteTaskEndRecord",mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.DeleteTaskEndRecordHandler))
 	r.POST(routePrefix+ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
-
 	r.GET(routePrefix+ROUTE_PROJECTS_ROOT,
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		GetProjectsHandler)
-
-	// Auth route group with authentication an authorization middleware.
+	// Auth route group with authentication an authorization middleware.	
 	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	authRouteGroup.Use(mid.SetLoggedInAgent())
 	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
+	
+	authRouteGroup.GET("/:project_id/insights", responseWrapper(V1.GetWeeklyInsightsHandler))
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
 	authRouteGroup.GET("/:project_id/dashboards", GetDashboardsHandler)
 	authRouteGroup.POST("/:project_id/dashboards", CreateDashboardHandler)
@@ -84,6 +85,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/queries/search", SearchQueriesHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
+	authRouteGroup.GET("/:project_id/weekly_insights_metadata", responseWrapper(V1.GetWeeklyInsightsMetadata))
 	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
 	authRouteGroup.POST("/:project_id/filters", CreateFilterHandler)
 	authRouteGroup.PUT("/:project_id/filters/:filter_id", UpdateFilterHandler)

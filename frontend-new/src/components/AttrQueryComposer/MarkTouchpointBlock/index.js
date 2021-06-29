@@ -25,8 +25,8 @@ const MarkTouchpointBlock = ({
   const [selectVisible, setSelectVisible] = useState(false);
   const [filterDD, setFilterDD] = useState(false);
   const [filterProps, setFilterProperties] = useState({
-    user: [],
     event: [],
+    user: []
   });
 
   useEffect(() => {

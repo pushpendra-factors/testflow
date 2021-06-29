@@ -264,7 +264,7 @@ CREATE TABLE IF NOT EXISTS factors_goals (
 CREATE TABLE IF NOT EXISTS factors_tracked_events (
     id bigint AUTO_INCREMENT,
     project_id bigint,
-    event_name_id bigint,
+    event_name_id text,
     type varchar(2),
     created_by text,
     last_tracked_at timestamp(6), 
@@ -646,6 +646,25 @@ CREATE TABLE IF NOT EXISTS task_execution_dependency_details
     KEY (task_id) USING HASH
 );
 
+CREATE TABLE IF NOT EXISTS weekly_insights_metadata
+(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    query_id bigint NOT NULL,
+    insight_type text NOT NULL,
+    base_start_time  bigint NOT NULL, 
+    base_end_time bigint NOT NULL,
+    comparison_start_time  bigint NOT NULL, 
+    comparison_end_time bigint NOT NULL,
+    insight_id bigint NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id),
+    UNIQUE KEY  weekly_insights_metadata_project_id_stdate_enddate_unique_idx(project_id, query_id, base_start_time, base_end_time, comparison_start_time, comparison_end_time),
+    KEY (project_id) USING HASH
+    PRIMARY KEY (id),
+
+);
 -- DOWN
 
 -- DROP DATABASE factors;

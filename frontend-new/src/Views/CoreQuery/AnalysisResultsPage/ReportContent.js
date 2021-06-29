@@ -1,25 +1,29 @@
-import React, { useState, useCallback, useEffect } from "react";
-import ReportTitle from "./ReportTitle";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useContext,
+} from 'react';
+import ReportTitle from './ReportTitle';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
-  CHART_TYPE_LINECHART,
-  CHART_TYPE_BARCHART,
-  CHART_TYPE_SPARKLINES,
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
-} from "../../../utils/constants";
-import { Spin } from "antd";
-import FunnelsResultPage from "../FunnelsResultPage";
-import CalendarRow from "./CalendarRow";
-import AttributionsResult from "../AttributionsResult";
-import CampaignAnalytics from "../CampaignAnalytics";
-import { getChartTypeMenuItems } from "../../../utils/dataFormatter";
-import CampaignMetricsDropdown from "./CampaignMetricsDropdown";
-import EventsAnalytics from "../EventsAnalytics";
-import WebsiteAnalyticsTable from "../../Dashboard/WebsiteAnalytics/WebsiteAnalyticsTable";
+} from '../../../utils/constants';
+import { Spin } from 'antd';
+import FunnelsResultPage from '../FunnelsResultPage';
+import CalendarRow from './CalendarRow';
+import AttributionsResult from '../AttributionsResult';
+import CampaignAnalytics from '../CampaignAnalytics';
+import { getChartTypeMenuItems } from '../../../utils/dataFormatter';
+import CampaignMetricsDropdown from './CampaignMetricsDropdown';
+import EventsAnalytics from '../EventsAnalytics';
+import WebsiteAnalyticsTable from '../../Dashboard/WebsiteAnalytics/WebsiteAnalyticsTable';
+import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 
 function ReportContent({
   resultState,
@@ -28,7 +32,6 @@ function ReportContent({
   queries,
   breakdown,
   queryOptions,
-  savedChartType = null,
   handleDurationChange,
   campaignState,
   arrayMapper,
@@ -41,20 +44,56 @@ function ReportContent({
   cmprDuration,
   runAttrCmprQuery,
   cmprResultState,
-  campaignsArrayMapper
+  campaignsArrayMapper,
+  handleGranularityChange,
+  updateChartTypes,
 }) {
   let content = null,
     queryDetail = null,
     durationObj = {},
-    metricsDropdown = <div className="mr-2">Data from</div>;
+    metricsDropdown = <div className='mr-2'>Data from</div>;
+
+  const {
+    coreQueryState: { chartTypes },
+  } = useContext(CoreQueryContext);
+
+  const chartType = useMemo(() => {
+    let key;
+    if (queryType === QUERY_TYPE_EVENT) {
+      key = breakdown.length ? 'breakdown' : 'no_breakdown';
+      return chartTypes[queryType][key];
+    }
+    if (queryType === QUERY_TYPE_CAMPAIGN) {
+      key = campaignState.group_by.length ? 'breakdown' : 'no_breakdown';
+      return chartTypes[queryType][key];
+    }
+  }, [breakdown, campaignState.group_by, chartTypes, queryType]);
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
   const [chartTypeMenuItems, setChartTypeMenuItems] = useState([]);
-  const [chartType, setChartType] = useState(CHART_TYPE_LINECHART);
 
-  const handleChartTypeChange = useCallback(({ key }) => {
-    setChartType(key);
-  }, []);
+  const handleChartTypeChange = useCallback(
+    ({ key }) => {
+      console.log(key);
+      let changedKey;
+      if (queryType === QUERY_TYPE_EVENT) {
+        changedKey = breakdown.length ? 'breakdown' : 'no_breakdown';
+      }
+      if (queryType === QUERY_TYPE_CAMPAIGN) {
+        changedKey = campaignState.group_by.length
+          ? 'breakdown'
+          : 'no_breakdown';
+      }
+      updateChartTypes({
+        ...chartTypes,
+        [queryType]: {
+          ...chartTypes[queryType],
+          [changedKey]: key,
+        },
+      });
+    },
+    [queryType, updateChartTypes, breakdown, campaignState.group_by, chartTypes]
+  );
 
   useEffect(() => {
     let items = [];
@@ -70,38 +109,17 @@ function ReportContent({
     setChartTypeMenuItems(items);
   }, [queryType, campaignState.group_by, breakdown, breakdownType]);
 
-  useEffect(() => {
-    if (savedChartType) {
-      setChartType(savedChartType);
-    } else {
-      if (queryType === QUERY_TYPE_CAMPAIGN) {
-        if (campaignState.group_by.length) {
-          setChartType(CHART_TYPE_BARCHART);
-        } else {
-          setChartType(CHART_TYPE_SPARKLINES);
-        }
-      }
-      if (queryType === QUERY_TYPE_EVENT) {
-        if (breakdown.length) {
-          setChartType(CHART_TYPE_BARCHART);
-        } else {
-          setChartType(CHART_TYPE_SPARKLINES);
-        }
-      }
-    }
-  }, [savedChartType, queryType, campaignState.group_by, breakdown]);
-
   if (resultState.loading) {
     content = (
-      <div className="h-64 flex items-center justify-center w-full">
-        <Spin size={"large"} />
+      <div className='h-64 flex items-center justify-center w-full'>
+        <Spin size={'large'} />
       </div>
     );
   }
 
   if (resultState.error) {
     content = (
-      <div className="h-64 flex items-center justify-center w-full">
+      <div className='h-64 flex items-center justify-center w-full'>
         Something Went Wrong!
       </div>
     );
@@ -109,7 +127,7 @@ function ReportContent({
 
   if (queryType === QUERY_TYPE_WEB) {
     durationObj = queryOptions.date_range;
-    queryDetail = "Website Analytics";
+    queryDetail = 'Website Analytics';
   }
 
   if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
@@ -118,7 +136,7 @@ function ReportContent({
       .map((elem) => {
         return elem.eventName;
       })
-      .join(", ");
+      .join(', ');
   }
 
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
@@ -127,7 +145,7 @@ function ReportContent({
     if (attributionsState.models.length === 2) {
       metricsDropdown = (
         <CampaignMetricsDropdown
-          metrics={["Conversions", "Cost Per Conversion"]}
+          metrics={['Conversions', 'Cost Per Conversion']}
           currValue={currMetricsValue}
           onChange={setCurrMetricsValue}
         />
@@ -136,7 +154,7 @@ function ReportContent({
   }
 
   if (queryType === QUERY_TYPE_CAMPAIGN) {
-    queryDetail = campaignState.select_metrics.join(", ");
+    queryDetail = campaignState.select_metrics.join(', ');
     durationObj = campaignState.date_range;
     if (
       campaignState.select_metrics.length > 1 &&
@@ -230,7 +248,7 @@ function ReportContent({
         onReportClose={onReportClose}
         queryType={queryType}
       />
-      <div className="mt-6">
+      <div className='mt-6'>
         <CalendarRow
           queryType={queryType}
           handleDurationChange={handleDurationChange}
@@ -241,9 +259,11 @@ function ReportContent({
           metricsDropdown={metricsDropdown}
           triggerAttrComparision={runAttrCmprQuery}
           cmprResultState={cmprResultState}
+          handleGranularityChange={handleGranularityChange}
+          section={section}
         />
       </div>
-      <div className="mt-12">{content}</div>
+      <div className='mt-12'>{content}</div>
     </>
   );
 }

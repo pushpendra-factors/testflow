@@ -33,7 +33,7 @@ const (
 	lastSyncInfoForAProject = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
 		" " + "FROM adwords_documents WHERE project_id = ? GROUP BY project_id, customer_account_id, type"
 	insertAdwordsStr                   = "INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,campaign_id,ad_group_id,ad_id,keyword_id,value,created_at,updated_at) VALUES "
-	adwordsFilterQueryStr              = "SELECT DISTINCT(value->>?) as filter_value FROM adwords_documents WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND value->>? IS NOT NULL LIMIT 5000"
+	adwordsFilterQueryStr              = "SELECT DISTINCT(LOWER(value->>?)) as filter_value FROM adwords_documents WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND value->>? IS NOT NULL LIMIT 5000"
 	staticWhereStatementForAdwords     = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument                = " FROM adwords_documents "
 	shareHigherOrderExpression         = "sum(case when value->>'%s' IS NOT NULL THEN (value->>'%s')::float else 0 END)/NULLIF(sum(case when value->>'%s' IS NOT NULL THEN (value->>'%s')::float else 0 END), 0)"
@@ -475,7 +475,7 @@ func (pg *Postgres) GetAdwordsLastSyncInfoForProject(projectID uint64) ([]model.
 		return []model.AdwordsLastSyncInfo{}, errCode
 	}
 
-	return sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
+	return pg.sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
 }
 
 // GetAllAdwordsLastSyncInfoForAllProjects - @TODO Kark v1
@@ -491,7 +491,7 @@ func (pg *Postgres) GetAllAdwordsLastSyncInfoForAllProjects() ([]model.AdwordsLa
 		return []model.AdwordsLastSyncInfo{}, errCode
 	}
 
-	return sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
+	return pg.sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
 }
 
 func getAdwordsLastSyncInfo(query string, params []interface{}) ([]model.AdwordsLastSyncInfo, int) {
@@ -519,13 +519,15 @@ func getAdwordsLastSyncInfo(query string, params []interface{}) ([]model.Adwords
 }
 
 // This method handles adding additionalInformation to lastSyncInfo, Skipping inactive Projects and adding missed LastSync.
-func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, adwordsSettings []model.AdwordsProjectSettings) ([]model.AdwordsLastSyncInfo, int) {
+func (pg *Postgres) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, adwordsSettings []model.AdwordsProjectSettings) ([]model.AdwordsLastSyncInfo, int) {
 
 	adwordsSettingsByProjectAndCustomerAccount := make(map[uint64]map[string]*model.AdwordsProjectSettings, 0)
+	projectIDs := make([]uint64, 0, 0)
 
 	for i := range adwordsSettings {
 		customerAccountIDs := strings.Split(adwordsSettings[i].CustomerAccountId, ",")
 		adwordsSettingsByProjectAndCustomerAccount[adwordsSettings[i].ProjectId] = make(map[string]*model.AdwordsProjectSettings)
+		projectIDs = append(projectIDs, adwordsSettings[i].ProjectId)
 		for j := range customerAccountIDs {
 			var setting model.AdwordsProjectSettings
 			setting.ProjectId = adwordsSettings[i].ProjectId
@@ -548,7 +550,7 @@ func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, ad
 
 		settings, exists := adwordsSettingsByProjectAndCustomerAccount[adwordsLastSyncInfos[i].ProjectId][adwordsLastSyncInfos[i].CustomerAccountId]
 		if !exists {
-			logCtx.Error("Adwords project settings not found for customer account adwords synced earlier.")
+			logCtx.Warn("Adwords project settings not found for customer account adwords synced earlier.")
 		}
 
 		if settings == nil {
@@ -599,6 +601,15 @@ func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, ad
 			}
 		}
 
+	}
+
+	projects, _ := pg.GetProjectsByIDs(projectIDs)
+	for _, project := range projects {
+		for index := range selectedLastSyncInfos {
+			if selectedLastSyncInfos[index].ProjectId == project.ID {
+				selectedLastSyncInfos[index].Timezone = project.TimeZone
+			}
+		}
 	}
 
 	return selectedLastSyncInfos, http.StatusOK
@@ -1663,7 +1674,7 @@ func (pg *Postgres) GetAdwordsFilterValuesByType(projectID uint64, docType int) 
 		return []string{}, http.StatusBadRequest
 	}
 
-	queryStr := "SELECT DISTINCT(value->>?) as filter_value FROM adwords_documents WHERE project_id = ? AND" +
+	queryStr := "SELECT DISTINCT(LOWER(value->>?)) as filter_value FROM adwords_documents WHERE project_id = ? AND" +
 		" " + "customer_account_id = ? AND type = ? LIMIT 5000"
 	rows, err := db.Raw(queryStr, filterValueKey, projectID, customerAccountID, docType).Rows()
 	if err != nil {

@@ -13,7 +13,8 @@ const SegmentIntegration = ({
     udpateProjectSettings,
     activeProject,
     currentProjectSettings, 
-    setIsActive
+    setIsActive,
+    kbLink = false
 }) =>{  
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -81,7 +82,7 @@ return (
         <div className={'mt-4 flex'}>
         {currentProjectSettings?.int_segment ? <Button loading={loading} onClick={()=>onDisconnect()}>Disable</Button> : <Button type={'primary'} loading={loading} onClick={enableSegment}>Enable Now</Button>
         }
-            <Button className={'ml-2 '}>View documentation</Button> 
+            {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
         </div>
     </ErrorBoundary>
     </>

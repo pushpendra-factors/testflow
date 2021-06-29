@@ -14,7 +14,8 @@ const LinkedInIntegration = ({
     activeProject,
     currentProjectSettings,
     setIsActive,
-    addLinkedinAccessToken
+    addLinkedinAccessToken,
+    kbLink = false
 }) => {
     const [loading, setLoading] = useState(false);
     const [FbResponse, SetFbResponse] = useState(null);
@@ -253,7 +254,7 @@ const LinkedInIntegration = ({
 
             { !adAccounts && <div className={'mt-4 flex'}>
                 {renderLinkedinLogin()}
-                <Button className={'ml-2 '}>View documentation</Button>
+                {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
             </div>}
             </ErrorBoundary>
         </>

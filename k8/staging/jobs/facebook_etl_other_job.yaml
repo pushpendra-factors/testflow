@@ -3,9 +3,9 @@ kind: CronJob
 metadata:
   labels:
     nodePool: factors-staging-node-pool
-  name: facebook-sync-job
+  name: facebook-etl-other-job
 spec:
-  schedule: "0 19 * * *" # In UTC
+  schedule: "0 7 * * *" # In UTC
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
@@ -20,7 +20,7 @@ spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
-          - name: facebook-sync
+          - name: facebook-etl-other
             image: us.gcr.io/factors-staging/facebook-etl:v0.01-ea6b22e
             imagePullPolicy: IfNotPresent
             args:
@@ -28,6 +28,8 @@ spec:
             - $(ENV)
             - --data_service_host
             - $(DATA_SERVICE_HOST_URL)
+            - --timezone
+            - "Other"
             envFrom:
             - configMapRef:
                 name: config-env

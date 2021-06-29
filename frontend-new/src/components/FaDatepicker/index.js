@@ -9,6 +9,7 @@ import {
   getLastDayOfLastMonth,
   getRangeByLabel,
 } from './utils';
+
 const { RangePicker } = DatePicker;
 
 const FaDatepicker = ({
@@ -356,6 +357,9 @@ const FaDatepicker = ({
                       autoFocus={true}
                       allowClear={true}
                       open={true}
+                      onOpenChange={()=>{
+                        setShowDatePicker(false);
+                      }}
                       onChange={onCustomChange}
                     />
                   ) : (
@@ -365,6 +369,9 @@ const FaDatepicker = ({
                       dropdownClassName={'fa-custom-datepicker--datepicker'}
                       autoFocus={true}
                       open={true}
+                      onOpenChange={()=>{
+                        setShowDatePicker(false);
+                      }}
                       size={'small'}
                       suffixIcon={null}
                       showToday={false}

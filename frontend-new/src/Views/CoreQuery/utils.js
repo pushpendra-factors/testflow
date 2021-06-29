@@ -97,11 +97,42 @@ const getEventsWithProperties = (queries) => {
   return ewps;
 };
 
+const getGlobalFilters = (globalFilters = []) => {
+  const filterProps = [];
+  globalFilters.forEach((fil) => {
+    if (Array.isArray(fil.values)) {
+      fil.values.forEach((val, index) => {
+        filterProps.push({
+          en: 'user_g',
+          lop: !index ? 'AND' : 'OR',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: val,
+        });
+      });
+    } else {
+      filterProps.push({
+        en: 'user_g',
+        lop: 'AND',
+        op: operatorMap[fil.operator],
+        pr: fil.props[0],
+        ty: fil.props[1],
+        va: fil.values,
+      });
+    }
+  });
+
+  return filterProps;
+
+}
+
 export const getFunnelQuery = (
   groupBy,
   queries,
   session_analytics_seq,
-  dateRange
+  dateRange,
+  globalFilters = []
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_FUNNEL;
@@ -152,6 +183,7 @@ export const getFunnelQuery = (
     }
     return appGbp;
   });
+  query.gup = getGlobalFilters(globalFilters);
   if (session_analytics_seq.start && session_analytics_seq.end) {
     query.sse = session_analytics_seq.start;
     query.see = session_analytics_seq.end;
@@ -166,7 +198,8 @@ export const getQuery = (
   queries,
   result_criteria,
   user_type,
-  dateRange
+  dateRange,
+  globalFilters = []
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_EVENT;
@@ -192,6 +225,7 @@ export const getQuery = (
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
+  query.gup = getGlobalFilters(globalFilters);
   query.gbt = user_type === EACH_USER_TYPE ? dateRange.frequency : '';
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
@@ -235,6 +269,7 @@ export const getQuery = (
         pr: [],
       },
     ],
+    gup: [],
     gbt: '',
     ec: constantObj.each,
     tz: 'Asia/Kolkata',
@@ -474,6 +509,21 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       filters,
     };
   });
+
+
+  const globalFilters = [];
+  requestQuery?.gup?.forEach((pr) => {
+    if (pr.lop === 'AND') {
+      globalFilters.push({
+        operator: reverseOperatorMap[pr.op],
+        props: [pr.pr, pr.ty, pr.en],
+        values: [pr.va],
+      });
+    } else {
+      globalFilters[globalFilters.length - 1].values.push(pr.va);
+    }
+  });
+  
   const queryType = requestQuery.cl;
   const session_analytics_seq = INITIAL_SESSION_ANALYTICS_SEQ;
   if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
@@ -499,6 +549,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     events,
     queryType,
     session_analytics_seq,
+    globalFilters,
     breakdown: {
       event,
       global,
@@ -515,7 +566,7 @@ export const DefaultDateRangeFormat = {
   to:
     moment().format('dddd') === 'Sunday' || moment().format('dddd') === 'Monday'
       ? moment().subtract(3, 'days').endOf('week')
-      : moment().subtract(1, 'day'),
+      : moment().subtract(1, 'day').endOf('day'),
   frequency: 'date',
 };
 
@@ -679,14 +730,14 @@ export const getAttributionStateFromRequestQuery = (
     requestQuery.attribution_key_f.forEach((pr) => {
       if (pr.lop === 'AND') {
         let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
-      touchPointFilters.push({
-        operator: reverseOperatorMap[pr.op],
-        props: [pr.pr, pr.ty, pr.attribution_key],
-        values: val,
-      });
-    } else if (pr.ty === 'categorical') {
-      touchPointFilters[touchPointFilters.length - 1].values.push(pr.va);
-    }
+        touchPointFilters.push({
+          operator: reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.attribution_key],
+          values: val,
+        });
+      } else if (pr.ty === 'categorical') {
+        touchPointFilters[touchPointFilters.length - 1].values.push(pr.va);
+      }
     });
   }
 
@@ -782,7 +833,7 @@ export const getCampaignsQuery = (
       };
     }),
     filters: appliedFilters,
-    gbt: 'date',
+    gbt: dateRange.frequency,
   };
   if (dateRange.from && dateRange.to) {
     query.fr = moment(dateRange.from).startOf('day').utc().unix();

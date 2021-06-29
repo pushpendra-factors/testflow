@@ -20,7 +20,7 @@ const (
 	lastSyncInfoForAProjectGoogleOrganic = "SELECT project_id, url_prefix, max(timestamp) as last_timestamp, type" +
 		" " + "FROM google_organic_documents WHERE project_id = ? GROUP BY project_id, url_prefix, type"
 	insertGoogleOrganicDocumentsStr = "INSERT INTO google_organic_documents (id,project_id,url_prefix,timestamp,value,type,created_at,updated_at) VALUES "
-	googleOrganicFilterQueryStr     = "SELECT DISTINCT(value->>?) as filter_value FROM google_organic_documents WHERE project_id = ? AND" +
+	googleOrganicFilterQueryStr     = "SELECT DISTINCT(LOWER(value->>?)) as filter_value FROM google_organic_documents WHERE project_id = ? AND" +
 		" " + "value->>? IS NOT NULL LIMIT 5000"
 	fromGoogleOrganicDocuments                              = " FROM google_organic_documents "
 	staticWhereStatementForGoogleOrganic                    = "WHERE project_id = ? AND url_prefix IN ( ? ) AND timestamp between ? AND ? "
@@ -182,7 +182,7 @@ func sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos []model.Goog
 
 		settings, exists := googleOrganicSettingsByProjectAndURL[googleOrganicLastSyncInfos[i].ProjectId][googleOrganicLastSyncInfos[i].URLPrefix]
 		if !exists {
-			logCtx.Error("GoogleOrganic project settings not found for url googleOrganic synced earlier.")
+			logCtx.Warn("GoogleOrganic project settings not found for url googleOrganic synced earlier.")
 		}
 
 		if settings == nil {

@@ -54,7 +54,7 @@ import {
   EACH_USER_TYPE,
   REPORT_SECTION,
   INITIAL_SESSION_ANALYTICS_SEQ,
-  ATTRIBUTION_METRICS,
+  ATTRIBUTION_METRICS
 } from '../../utils/constants';
 import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
@@ -73,7 +73,9 @@ import {
   SET_COMPARISON_SUPPORTED,
   SET_COMPARE_DURATION,
   SET_NAVIGATED_FROM_DASHBOARD,
+  UPDATE_CHART_TYPES
 } from './constants';
+import { getValidGranularityOptions } from '../../utils/dataFormatter';
 
 function CoreQuery({
   activeProject,
@@ -108,6 +110,7 @@ function CoreQuery({
         eventIndex: 0,
       },
     ],
+    globalFilters: [],
     event_analysis_seq: '',
     session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
     date_range: { ...DefaultDateRangeFormat },
@@ -160,6 +163,7 @@ function CoreQuery({
 
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
+  const { globalFilters } = queryOptions;
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -179,6 +183,10 @@ function CoreQuery({
   const updateLocalReducer = useCallback((type, payload) => {
     localDispatch({ type, payload });
   }, []);
+
+  const updateChartTypes = useCallback((payload) => {
+    updateLocalReducer(UPDATE_CHART_TYPES, payload)
+  }, [updateLocalReducer]);
 
   const resetComparisonData = useCallback(() => {
     updateLocalReducer(RESET_COMPARISON_DATA);
@@ -249,7 +257,8 @@ function CoreQuery({
           queries,
           result_criteria,
           user_type,
-          durationObj
+          durationObj,
+          globalFilters
         );
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -321,6 +330,7 @@ function CoreQuery({
       user_type,
       activeProject.id,
       groupBy,
+      globalFilters,
       updateResultState,
       configActionsOnRunningQuery,
       updateLocalReducer,
@@ -339,7 +349,8 @@ function CoreQuery({
           groupBy,
           queries,
           session_analytics_seq,
-          durationObj
+          durationObj,
+          globalFilters
         );
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -374,6 +385,7 @@ function CoreQuery({
       session_analytics_seq,
       activeProject.id,
       groupBy,
+      globalFilters,
       dateRange,
       updateResultState,
       configActionsOnRunningQuery,
@@ -522,6 +534,41 @@ function CoreQuery({
     ]
   );
 
+  const handleGranularityChange = useCallback(
+    ({ key: frequency }) => {
+      if (queryType === QUERY_TYPE_EVENT) {
+        const appliedDateRange = {
+          ...queryOptions.date_range,
+          frequency,
+        };
+        setQueryOptions((currState) => {
+          return {
+            ...currState,
+            date_range: appliedDateRange,
+          };
+        });
+        runQuery(querySaved, appliedDateRange);
+      }
+      if (queryType === QUERY_TYPE_CAMPAIGN) {
+        const payload = {
+          ...camp_dateRange,
+          frequency,
+        };
+        dispatch({ type: SET_CAMP_DATE_RANGE, payload });
+        runCampaignsQuery(querySaved, payload);
+      }
+    },
+    [
+      queryOptions.date_range,
+      querySaved,
+      runQuery,
+      camp_dateRange,
+      dispatch,
+      queryType,
+      runCampaignsQuery,
+    ]
+  );
+
   const handleDurationChange = useCallback(
     (dates, isCompareDate) => {
       let from,
@@ -534,8 +581,8 @@ function CoreQuery({
         from = dates.startDate;
         to = dates.endDate;
       }
-      if (moment(to).diff(from, 'hours') < 24) {
-        frequency = 'hour';
+      if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) {
+        frequency = getValidGranularityOptions({ from, to }, queryType)[0];
       }
       if (!isCompareDate) {
         setQueryOptions((currState) => {
@@ -576,7 +623,7 @@ function CoreQuery({
         const payload = {
           from: moment(from).startOf('day'),
           to: moment(to).endOf('day'),
-          frequency: 'date',
+          frequency,
         };
         dispatch({ type: SET_CAMP_DATE_RANGE, payload });
         runCampaignsQuery(querySaved, payload);
@@ -586,7 +633,7 @@ function CoreQuery({
         const payload = {
           from: moment(from).startOf('day'),
           to: moment(to).endOf('day'),
-          frequency: 'date',
+          frequency,
         };
         dispatch({ type: SET_ATTR_DATE_RANGE, payload });
         runAttributionQuery(querySaved, payload);
@@ -836,6 +883,8 @@ function CoreQuery({
               runAttrCmprQuery={null}
               cmprResultState={null}
               campaignsArrayMapper={campaignsArrayMapper}
+              handleGranularityChange={handleGranularityChange}
+              updateChartTypes={updateChartTypes}
             />
           </CoreQueryContext.Provider>
         ) : (

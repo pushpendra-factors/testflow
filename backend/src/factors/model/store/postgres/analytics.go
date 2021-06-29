@@ -32,31 +32,6 @@ var queryOps = map[string]string{
 	model.NotContainsOpStr:        "NOT ILIKE",
 }
 
-// Query cache related constants.
-const (
-	QueryCacheInProgressPlaceholder string = "QUERY_CACHE_IN_PROGRESS"
-
-	DateRangePreset2MinLabel      string = "2MIN"
-	DateRangePreset30MinLabel     string = "30MIN"
-	DateRangePreset2MinInSeconds  int64  = 2 * 60
-	DateRangePreset30MinInSeconds int64  = 30 * 60
-
-	QueryCachePlaceholderExpirySeconds     float64 = 5 * 60            // 5 Minutes.
-	QueryCacheImmutableResultExpirySeconds float64 = 30 * 24 * 60 * 60 // 30 Days.
-	QueryCacheMutableResultExpirySeconds   float64 = 10 * 60           // 10 Minutes.
-
-	QueryCacheRequestSleepHeader       string = "QuerySleepSeconds"
-	QueryCacheResponseFromCacheHeader  string = "Fromcache"
-	QueryCacheResponseCacheRefreshedAt string = "Refreshedat"
-	QueryCacheRedisKeyPrefix           string = "query:cache"
-)
-
-// UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
-const UserPropertyGroupByPresent string = "$present"
-
-// NumericalValuePostgresRegex Used to remove non numerical values in numerical bucketing.
-const NumericalValuePostgresRegex string = "\\$none|^-?[0-9]+\\.?[0-9]*$"
-
 func with(stmnt string) string {
 	return fmt.Sprintf("WITH %s", stmnt)
 }
@@ -80,17 +55,6 @@ func getPropertyEntityField(projectID uint64, groupProp model.QueryGroupByProper
 
 		return "users.properties"
 	} else if groupProp.Entity == model.PropertyEntityEvent {
-		return "events.properties"
-	}
-
-	return ""
-}
-
-func getPropertyEntityFieldForFilter(projectID uint64, entityName string) string {
-	if entityName == model.PropertyEntityUser {
-		// Filtering is supported only with event level user_properties.
-		return "events.user_properties"
-	} else if entityName == model.PropertyEntityEvent {
 		return "events.properties"
 	}
 
@@ -131,6 +95,7 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 	groupIndex := 0
 	for _, propertyKey := range propertyKeys {
 		var groupStmnt string
+		hasNoneFilter := model.CheckIfHasNoneFilter(groupedProperties[propertyKey])
 		for i, p := range groupedProperties[propertyKey] {
 			// defaults logic op if not given.
 			if p.LogicalOp == "" {
@@ -141,7 +106,7 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 				return rStmnt, rParams, errors.New("invalid logical op on where condition")
 			}
 
-			propertyEntity := getPropertyEntityFieldForFilter(projectID, p.Entity)
+			propertyEntity := model.GetPropertyEntityFieldForFilter(p.Entity)
 			propertyOp := getOp(p.Operator)
 
 			if p.Value != model.PropertyValueNone {
@@ -162,14 +127,25 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 				} else {
 					// categorical property type.
 					var pValue string
+					pValue = p.Value
 					if p.Operator == model.ContainsOpStr || p.Operator == model.NotContainsOpStr {
 						pValue = fmt.Sprintf("%%%s%%", p.Value)
+						pStmnt = fmt.Sprintf("%s->>? %s ?", propertyEntity, propertyOp)
+						rParams = append(rParams, p.Property, pValue)
+					} else if !hasNoneFilter && p.Operator == model.NotEqualOpStr && pValue != model.PropertyValueNone {
+						// PR: 2342 - This change is to allow empty ('') or NULL values during a filter of != value
+						// ex: events.properties->>'$source' != 'google' OR events.properties->>'$source' = '' OR events.properties->>'$source' IS NULL
+						pStmnt1 := fmt.Sprintf("( %s->>? %s ? ", propertyEntity, propertyOp)
+						rParams = append(rParams, p.Property, pValue)
+						pStmnt2 := fmt.Sprintf(" OR %s->>? = '' ", propertyEntity)
+						rParams = append(rParams, p.Property)
+						pStmnt3 := fmt.Sprintf(" OR %s->>? IS NULL )", propertyEntity)
+						rParams = append(rParams, p.Property)
+						pStmnt = pStmnt1 + pStmnt2 + pStmnt3
 					} else {
-						pValue = p.Value
+						pStmnt = fmt.Sprintf("%s->>? %s ?", propertyEntity, propertyOp)
+						rParams = append(rParams, p.Property, pValue)
 					}
-
-					pStmnt = fmt.Sprintf("%s->>? %s ?", propertyEntity, propertyOp)
-					rParams = append(rParams, p.Property, pValue)
 				}
 
 				if i == 0 {
@@ -222,7 +198,7 @@ func getFilterSQLStmtForEventProperties(projectID uint64, properties []model.Que
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
 
-		propertyEntity := getPropertyEntityFieldForFilter(projectID, p.Entity)
+		propertyEntity := model.GetPropertyEntityFieldForFilter(p.Entity)
 		if propertyEntity == "events.properties" {
 			filteredProperty = append(filteredProperty, p)
 		}
@@ -239,8 +215,24 @@ func getFilterSQLStmtForUserProperties(projectID uint64, properties []model.Quer
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
-		propertyEntity := getPropertyEntityFieldForFilter(projectID, p.Entity)
+		propertyEntity := model.GetPropertyEntityFieldForFilter(p.Entity)
 		if propertyEntity == "events.user_properties" {
+			filteredProperty = append(filteredProperty, p)
+		}
+	}
+	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty)
+	if err != nil {
+		return "", nil, err
+	}
+	return wStmt, wParams, nil
+}
+
+// returns SQL query condition to address conditions for Users.properties
+func getFilterSQLStmtForLatestUserProperties(projectID uint64, properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+
+	var filteredProperty []model.QueryProperty
+	for _, p := range properties {
+		if p.Entity == model.PropertyEntityUserGlobal {
 			filteredProperty = append(filteredProperty, p)
 		}
 	}
@@ -357,7 +349,7 @@ func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, group
 			"percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) AS ubound FROM %s "+
 			"WHERE %s != '%s' AND %s != '' AND %s ~ ? ", model.NumericalLowerBoundPercentile, groupKey, model.NumericalUpperBoundPercentile,
 			groupKey, refStepName, groupKey, model.PropertyValueNone, groupKey, groupKey)
-		*qParams = append(*qParams, NumericalValuePostgresRegex)
+		*qParams = append(*qParams, model.NumericalValuePostgresRegex)
 		boundsStatement = as(boundsStepName, boundsStatement)
 		*qStmnt = joinWithComma(*qStmnt, boundsStatement)
 
@@ -382,7 +374,7 @@ func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, group
 		aggregateOrderBys = append(aggregateOrderBys, bucketKey)
 		bucketedNumericValueFilter = append(bucketedNumericValueFilter,
 			fmt.Sprintf("%s ~ ?", groupKey))
-		*qParams = append(*qParams, NumericalValuePostgresRegex)
+		*qParams = append(*qParams, model.NumericalValuePostgresRegex)
 	}
 
 	bucketedSelect = bucketedSelect + additionalSelectKeys
@@ -414,11 +406,21 @@ func buildEventGroupKeysWithStep(groupProps []model.QueryGroupByProperty,
 	return groupKeys
 }
 
-// Adds a step of events filter with QueryEventWithProperties.
+// addFilterEventsWithPropsQuery Adds a step of events filter with QueryEventWithProperties.
+// WITH step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='20426' AND name='$session') ,
+// step_0 AS (SELECT DISTINCT ON(coal_user_id) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
+// events.user_id as event_user_id , '0_$session'::text AS event_name FROM events JOIN users ON events.user_id=users.id
+// AND users.project_id = '20426' WHERE events.project_id='20426' AND timestamp>='1583001004' AND timestamp<='1585679399'
+// AND events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='20426' AND name='$session') AND
+// ( (( events.properties->>'$source' != 'google' OR events.properties->>'$source' = '' OR events.properties->>'$source' IS NULL ) AND
+// ( events.properties->>'$source' != 'facebook' OR events.properties->>'$source' = '' OR events.properties->>'$source' IS NULL )) )
+// ORDER BY coal_user_id, events.timestamp ASC) , each_users_union AS (SELECT step_0.event_user_id, step_0.coal_user_id, step_0.event_name, FROM step_0)
+// SELECT event_name, _group_key_0, _group_key_1, COUNT(DISTINCT(coal_user_id)) AS count FROM each_users_union GROUP BY event_name ,
+// _group_key_0, _group_key_1 ORDER BY count DESC LIMIT 100000;
 func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]interface{},
 	qep model.QueryEventWithProperties, from int64, to int64, fromStr string,
 	stepName string, addSelecStmnt string, addSelectParams []interface{},
-	addJoinStmnt string, groupBy string, orderBy string) error {
+	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty) error {
 
 	if (from == 0 && fromStr == "") || to == 0 {
 		return errors.New("invalid timerange on events filter")
@@ -459,6 +461,20 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 		*qParams = append(*qParams, from)
 	}
 	*qParams = append(*qParams, to, projectId, qep.Name)
+
+	// applying global user filter
+	gupStmt := ""
+	var gupParam []interface{}
+	var err error
+	if globalUserFilter != nil && len(globalUserFilter) != 0 {
+		// add user filter
+		gupStmt, gupParam, err = getFilterSQLStmtForLatestUserProperties(projectId, globalUserFilter)
+		if err != nil {
+			return errors.New("invalid user properties for global filter")
+		}
+		rStmnt = rStmnt + " AND " + gupStmt
+		*qParams = append(*qParams, gupParam...)
+	}
 
 	// mergeCond for whereProperties can also be 'OR'.
 	wStmnt, wParams, err := buildWhereFromProperties(projectId, qep.Properties)
@@ -821,10 +837,10 @@ func IsValidQuery(query *model.Query) (bool, string) {
 }
 
 func getQueryCacheRedisKeySuffix(hashString string, from, to int64) string {
-	if to-from == DateRangePreset2MinInSeconds {
-		return fmt.Sprintf("%s:%s", hashString, DateRangePreset2MinLabel)
-	} else if to-from == DateRangePreset30MinInSeconds {
-		return fmt.Sprintf("%s:%s", hashString, DateRangePreset30MinLabel)
+	if to-from == model.DateRangePreset2MinInSeconds {
+		return fmt.Sprintf("%s:%s", hashString, model.DateRangePreset2MinLabel)
+	} else if to-from == model.DateRangePreset30MinInSeconds {
+		return fmt.Sprintf("%s:%s", hashString, model.DateRangePreset30MinLabel)
 	} else if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
 		return fmt.Sprintf("%s:from:%d", hashString, from)
 	}
@@ -853,7 +869,7 @@ func GetQueryResultFromCache(projectID uint64, query model.BaseQuery, resultCont
 	}
 	if !exists {
 		return queryResult, http.StatusNotFound
-	} else if value == QueryCacheInProgressPlaceholder {
+	} else if value == model.QueryCacheInProgressPlaceholder {
 		return queryResult, http.StatusAccepted
 	}
 

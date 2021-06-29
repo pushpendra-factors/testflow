@@ -73,7 +73,7 @@ const coreQueryoptions = [
   {
     title: 'Templates',
     icon: 'templates_cq',
-    desc: 'A list of advanced queries crafter by experts',
+    desc: 'A list of advanced queries crafted by experts',
   },
 ];
 
@@ -195,6 +195,7 @@ function CoreQuery({
             ...equivalentQuery.breakdown.global,
             ...equivalentQuery.breakdown.event,
           ],
+          globalFilters: equivalentQuery.globalFilters,
           ...newDateRange,
         };
       });

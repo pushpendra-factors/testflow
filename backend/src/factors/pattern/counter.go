@@ -45,6 +45,14 @@ type PropertiesCount struct {
 	Count        uint
 }
 
+type EvSameTs struct {
+	// events with same timeStamp as collected in this
+	// struct
+	EventsNames    []string
+	EventsMap      map[string]CounterEventFormat
+	EventTimestamp int64
+}
+
 const CURRENT_MODEL_VERSION = 2.0
 
 func NewUserAndEventsInfo() *UserAndEventsInfo {
@@ -252,7 +260,7 @@ func GenCombinationPatternsEndingWithGoal(currentPatterns, GoalPatterns []*Patte
 	var currentMinCount uint
 
 	if numPatterns == 0 {
-		return nil, currentMinCount, fmt.Errorf("Zero Patterns")
+		return nil, currentMinCount, fmt.Errorf("zero patterns")
 	}
 	// Sort current patterns in decreasing order of frequency.
 	sort.Slice(
@@ -502,7 +510,9 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern, shouldCountOccurence bool) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 
-	numEventsProcessed := 0
+	var prEventTimeStamp int64
+	var prvUserId string
+	var numEventsProcessed int64
 	eventToPatternsMap := make(map[string][]*Pattern)
 	// Initialize.
 	for _, p := range patterns {
@@ -514,6 +524,8 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 		}
 	}
 
+	prEventTimeStamp = 0
+	eventDetailsList := make([]CounterEventFormat, 0)
 	for scanner.Scan() {
 		line := scanner.Text()
 		var eventDetails CounterEventFormat
@@ -521,42 +533,34 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
 			return err
 		}
-		userId := eventDetails.UserId
-		eventName := eventDetails.EventName
-		eventProperties := eventDetails.EventProperties
-		userProperties := eventDetails.UserProperties
-		userJoinTimestamp := eventDetails.UserJoinTimestamp
-		eventTimestamp := eventDetails.EventTimestamp
-		eventCardinality := eventDetails.EventCardinality
 
-		numEventsProcessed += 1
-		if math.Mod(float64(numEventsProcessed), 100000.0) == 0.0 {
-			log.Info(fmt.Sprintf("Processed %d events", numEventsProcessed))
-		}
-
-		_, isSeenUser := seenUsers[userId]
-		if !isSeenUser {
-			for _, p := range patterns {
-				if err := p.ResetForNewUser(userId, userJoinTimestamp); err != nil {
-					log.Fatal(err)
-				}
+		if (prEventTimeStamp != eventDetails.EventTimestamp && prEventTimeStamp != 0) || (strings.Compare(prvUserId, eventDetails.UserId) != 0 && prvUserId != "") {
+			// check if eventTimeStamp are same and put all same event time stamp in same container to process
+			// break if userId is same, else break and process container
+			err := CountPatternsWithTS(projectID, eventDetailsList, &numEventsProcessed, seenUsers, patterns,
+				eventToPatternsMap, shouldCountOccurence)
+			if err != nil {
+				return err
 			}
+			eventDetailsList = make([]CounterEventFormat, 0)
+			eventDetailsList = append(eventDetailsList, eventDetails)
+			prEventTimeStamp = eventDetails.EventTimestamp
+			prvUserId = eventDetails.UserId
+		} else {
+			eventDetailsList = append(eventDetailsList, eventDetails)
+			prEventTimeStamp = eventDetails.EventTimestamp
+			prvUserId = eventDetails.UserId
+
 		}
 
-		eventPatterns, _ := eventToPatternsMap[eventName]
-		for _, p := range eventPatterns {
-			if err := p.CountForEvent(projectID, eventName, eventTimestamp, eventProperties,
-				userProperties, uint(eventCardinality), userId, userJoinTimestamp, shouldCountOccurence); err != nil {
-				log.WithFields(log.Fields{
-					"error":           err,
-					"pattern":         p.EventNames,
-					"eventName":       eventName,
-					"eventProperties": eventProperties,
-					"userProperties":  userProperties,
-				}).Error("Error when counting event")
-			}
+	}
+	if len(eventDetailsList) > 0 {
+		// process the last event
+		err := CountPatternsWithTS(projectID, eventDetailsList, &numEventsProcessed, seenUsers, patterns,
+			eventToPatternsMap, shouldCountOccurence)
+		if err != nil {
+			return err
 		}
-		seenUsers[userId] = true
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -564,10 +568,59 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 	}
 
 	for _, p := range patterns {
+
 		if err := p.ResetAfterLastUser(); err != nil {
 			log.Fatal(err)
 		}
 	}
+
+	log.Infof("Total number of events Processed: %d", numEventsProcessed)
+
+	return nil
+}
+
+func CountPatternsWithTS(projectID uint64, eventsList []CounterEventFormat, numEventsProcessed *int64,
+	seenUsers map[string]bool, patterns []*Pattern, eventToPatternsMap map[string][]*Pattern, shouldCountOccurence bool) error {
+
+	// process all events with same timeStamp and userId
+	var eventPatterns []*Pattern
+
+	eventPatterns = make([]*Pattern, 0)
+	eventNames := make([]string, 0)
+	eventsMap := make(map[string]CounterEventFormat)
+
+	eventTimeStamp := eventsList[0].EventTimestamp
+	userId := eventsList[0].UserId
+	userJoinTimestamp := eventsList[0].UserJoinTimestamp
+
+	for _, v := range eventsList {
+		eventNames = append(eventNames, v.EventName)
+		eventsMap[v.EventName] = v
+		eventPatterns = eventToPatternsMap[v.EventName]
+		*numEventsProcessed += 1
+		if math.Mod(float64(*numEventsProcessed), 100000.0) == 0.0 {
+			log.Info(fmt.Sprintf("Processed %d events", numEventsProcessed))
+		}
+	}
+
+	ets := EvSameTs{EventsNames: eventNames, EventsMap: eventsMap, EventTimestamp: eventTimeStamp}
+
+	_, isSeenUser := seenUsers[userId]
+	if !isSeenUser {
+		for _, p := range patterns {
+
+			if err := p.ResetForNewUser(userId, userJoinTimestamp); err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
+	for _, p := range eventPatterns {
+		if err := p.CountForEvent(projectID, userId, userJoinTimestamp, shouldCountOccurence, ets); err != nil {
+			log.Error("Error when counting event")
+		}
+	}
+	seenUsers[userId] = true
 
 	return nil
 }

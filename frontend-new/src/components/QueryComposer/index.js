@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Button, Collapse, Select, Popover } from "antd";
 import moment from "moment";
@@ -10,19 +10,22 @@ import SeqSelector from "./AnalysisSeqSelector";
 import GroupBlock from "./GroupBlock";
 import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from "../../utils/constants";
 
-import FaDatepicker from "../../components/FaDatepicker";
+import FaDatepicker from '../../components/FaDatepicker';
 
-import ComposerBlock from "../QueryCommons/ComposerBlock";
+import ComposerBlock from '../QueryCommons/ComposerBlock';
 
-import CriteriaSection from "./CriteriaSection";
+import CriteriaSection from './CriteriaSection';
 
-import { DEFAULT_DATE_RANGE, displayRange } from "./DateRangeSelector/utils";
+import { DEFAULT_DATE_RANGE, displayRange } from './DateRangeSelector/utils';
 
 import {
   fetchEventNames,
   getUserProperties,
   getEventProperties,
-} from "../../reducers/coreQuery/middleware";
+} from "Reducers/coreQuery/middleware";
+
+import GLobalFilter from './GlobalFilter';
+import { getValidGranularityOptions } from '../../utils/dataFormatter';
 
 const { Option } = Select;
 
@@ -43,8 +46,10 @@ function QueryComposer({
   runFunnelQuery,
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
-  const [calendarLabel, setCalendarLabel] = useState("Pick Dates");
+  const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
   const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
+
+  const userProperties = useSelector((state) => state.coreQuery.userProperties);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -84,7 +89,7 @@ function QueryComposer({
 
     if (queries.length < 6) {
       blockList.push(
-        <div key={"init"} className={styles.composer_body__query_block}>
+        <div key={'init'} className={styles.composer_body__query_block}>
           <QueryBlock
             queryType={queryType}
             index={queries.length + 1}
@@ -99,6 +104,36 @@ function QueryComposer({
     return blockList;
   };
 
+  const setGlobalFiltersOption = (filters) => {
+    const opts = Object.assign({}, queryOptions)
+    opts.globalFilters = filters;
+    setQueryOptions(opts);
+  }
+
+  const renderGlobalFilterBlock = () => {
+    try {
+      if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+        return null;
+      }
+      if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+        return null;
+      }
+
+      return (
+        <ComposerBlock blockTitle={'FILTER BY'} isOpen={true} showIcon={false}>
+          <div key={0} className={"fa--query_block borderless no-padding "}>
+            <GLobalFilter filters={queryOptions.globalFilters} 
+              setGlobalFilters={setGlobalFiltersOption}
+              onFiltersLoad={[() => {getUserProperties(activeProject.id, queryType)}]}
+            ></GLobalFilter>
+          </div>
+        </ComposerBlock>
+
+      );
+    } catch (err) { console.log(err) };
+  };
+  
+
   const groupByBlock = () => {
     try {
       if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
@@ -110,13 +145,14 @@ function QueryComposer({
 
       return (
         <ComposerBlock blockTitle={'GROUP BY'} isOpen={true} showIcon={false}>
-          <div key={0} className={"fa--query_block borderless no-padding "}>
+          <div key={0} className={'fa--query_block borderless no-padding '}>
             <GroupBlock queryType={queryType} events={queries}></GroupBlock>
           </div>
         </ComposerBlock>
-
       );
-    } catch (err) { console.log(err) };
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const setEventSequence = (value) => {
@@ -158,16 +194,14 @@ function QueryComposer({
         queryOptionsState.date_range.from = dates.startDate;
         queryOptionsState.date_range.to = dates.endDate;
       }
-      if (
-        moment(queryOptionsState.date_range.to).diff(
-          queryOptionsState.date_range.from,
-          "hours"
-        ) < 24
-      ) {
-        queryOptionsState.date_range.frequency = "hour";
-      } else {
-        queryOptionsState.date_range.frequency = "date";
-      }
+      const frequency = getValidGranularityOptions(
+        {
+          from: queryOptionsState.date_range.from,
+          to: queryOptionsState.date_range.to,
+        },
+        queryType
+      )[0];
+      queryOptionsState.date_range.frequency = frequency;
       setQueryOptions(queryOptionsState);
     }
   };
@@ -199,43 +233,52 @@ function QueryComposer({
               customPicker
               presetRange
               monthPicker
-              placement="topRight"
+              placement='topRight'
               range={{
                 startDate: queryOptions.date_range.from,
                 endDate: queryOptions.date_range.to,
               }}
               onSelect={setDateRange}
             />
-            <Button size={"large"} type="primary" onClick={handleRunQuery}>
+            <Button size={'large'} type='primary' onClick={handleRunQuery}>
               Run Query
             </Button>
           </div>
         );
       }
-    } catch (err) { console.log(err) }
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const renderEACrit = () => {
     return (
       <div>
-        <CriteriaSection queryCount={queries.length}
-          queryType={QUERY_TYPE_EVENT}></CriteriaSection>
+        <CriteriaSection
+          queryCount={queries.length}
+          queryType={QUERY_TYPE_EVENT}
+        ></CriteriaSection>
       </div>
     );
   };
 
   const renderSeqSel = () => {
-    if(queryOptions.session_analytics_seq.start && queryOptions.session_analytics_seq.end) {
-      return (<><Text
-            type={"paragraph"}
+    if (
+      queryOptions.session_analytics_seq.start &&
+      queryOptions.session_analytics_seq.end
+    ) {
+      return (
+        <>
+          <Text
+            type={'paragraph'}
             mini
-            weight={"thin"}
-            extraClass={"m-0 ml-2 inline"}
+            weight={'thin'}
+            extraClass={'m-0 ml-2 inline'}
           >
             Where sequence
           </Text>
           <Popover
-            className="fa-event-popover"
+            className='fa-event-popover'
             content={
               <SeqSelector
                 seq={queryOptions.session_analytics_seq}
@@ -243,11 +286,11 @@ function QueryComposer({
                 setAnalysisSequence={setAnalysisSequence}
               />
             }
-            trigger="click"
+            trigger='click'
             visible={analyticsSeqOpen}
             onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
           >
-            <Button Button type="link" className={"ml-2"}>
+            <Button Button type='link' className={'ml-2'}>
               Between &nbsp;
               {queryOptions.session_analytics_seq.start}
               &nbsp; to &nbsp;
@@ -255,54 +298,59 @@ function QueryComposer({
             </Button>
           </Popover>
           <Text
-            type={"paragraph"}
+            type={'paragraph'}
             mini
-            weight={"thin"}
-            extraClass={"m-0 ml-2 inline"}
+            weight={'thin'}
+            extraClass={'m-0 ml-2 inline'}
           >
             happened in the same session
-          </Text> </>);
+          </Text>{' '}
+        </>
+      );
     } else {
-      return (<><Text
-        type={"paragraph"}
-        mini
-        weight={"thin"}
-        extraClass={"m-0 ml-2 inline"}
-      >
-        Where 
-      </Text>
-      <Popover
-        className="fa-event-popover"
-        content={
-          <SeqSelector
-            seq={queryOptions.session_analytics_seq}
-            queryCount={queries.length}
-            setAnalysisSequence={setAnalysisSequence}
-          />
-        }
-        trigger="click"
-        visible={analyticsSeqOpen}
-        onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
-      >
-        <Button Button type="link" className={"ml-2"}>
-          Select Sequence
-        </Button>
-      </Popover>
-      <Text
-        type={"paragraph"}
-        mini
-        weight={"thin"}
-        extraClass={"m-0 ml-2 inline"}
-      >
-        happened in the same session
-      </Text> </>);
-      
+      return (
+        <>
+          <Text
+            type={'paragraph'}
+            mini
+            weight={'thin'}
+            extraClass={'m-0 ml-2 inline'}
+          >
+            Where
+          </Text>
+          <Popover
+            className='fa-event-popover'
+            content={
+              <SeqSelector
+                seq={queryOptions.session_analytics_seq}
+                queryCount={queries.length}
+                setAnalysisSequence={setAnalysisSequence}
+              />
+            }
+            trigger='click'
+            visible={analyticsSeqOpen}
+            onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
+          >
+            <Button Button type='link' className={'ml-2'}>
+              Select Sequence
+            </Button>
+          </Popover>
+          <Text
+            type={'paragraph'}
+            mini
+            weight={'thin'}
+            extraClass={'m-0 ml-2 inline'}
+          >
+            happened in the same session
+          </Text>{' '}
+        </>
+      );
     }
-  }
+  };
 
   const renderFuCrit = () => {
     return (
-      <div className={"flex justify-start items-center mt-2"}>
+      <div className={'flex justify-start items-center mt-2'}>
         <div className={styles.composer_body__session_analytics__options}>
           {renderSeqSel()}
         </div>
@@ -316,27 +364,26 @@ function QueryComposer({
         if (queries.length <= 0) return null;
 
         return (
-          <ComposerBlock blockTitle={'CRITERIA'}
-          isOpen={true} showIcon={false}>
-            <div className={styles.criteria}>
-              {renderEACrit()}
-            </div>
+          <ComposerBlock blockTitle={'CRITERIA'} isOpen={true} showIcon={false}>
+            <div className={styles.criteria}>{renderEACrit()}</div>
           </ComposerBlock>
         );
       }
       if (queryType === QUERY_TYPE_FUNNEL) {
-        if (queries.length <= 1) return null;
-        return (
-          <ComposerBlock blockTitle={'CRITERIA'}
-          isOpen={true} showIcon={false}>
-            {renderFuCrit()}
+        return null;
+        // if (queries.length <= 1) return null;
+        // return (
+        //   <ComposerBlock blockTitle={'CRITERIA'}
+        //   isOpen={true} showIcon={false}>
+        //     {renderFuCrit()}
 
-          </ComposerBlock>
-        );
+        //   </ComposerBlock>
+        // );
       }
-    } catch (err) { console.log(err) }
-
-  }
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   const renderQueryList = () => {
     try {
@@ -344,16 +391,16 @@ function QueryComposer({
         <ComposerBlock blockTitle={'EVENTS'} isOpen={true} showIcon={false}>
           {queryList()}
         </ComposerBlock>
-      )
-    }
-    catch (err) {
+      );
+    } catch (err) {
       console.log(err);
     }
-  }
+  };
 
   return (
     <div className={styles.composer_body}>
       {renderQueryList()}
+      {renderGlobalFilterBlock()}
       {groupByBlock()}
       {renderCriteria()}
       {footer()}

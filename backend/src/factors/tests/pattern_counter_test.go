@@ -81,9 +81,9 @@ func TestCountPatterns(t *testing.T) {
 	assert.Nil(t, erronFalse)
 
 	// Test pABC output.
-	assert.Equal(t, uint(3), pABC.PerOccurrenceCount)
-	assert.Equal(t, uint(2), pABC.TotalUserCount)
-	assert.Equal(t, uint(2), pABC.PerUserCount)
+	assert.Equal(t, uint(3), pABC.PerOccurrenceCount, "pABC.PerOccurrenceCount")
+	assert.Equal(t, uint(2), pABC.TotalUserCount, "pABC.TotalUserCount")
+	assert.Equal(t, uint(2), pABC.PerUserCount, "pABC.PerUserCount")
 	assert.Equal(t, pLen, len(pABC.EventNames))
 	for i := 0; i < pLen; i++ {
 		assert.Equal(t, pABCEvents[i], pABC.EventNames[i])
@@ -638,7 +638,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	// C: lastSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+540seconds.
 	// C: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
 	// C: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+540seconds.
-	assert.Equal(t, uint(3), pABC.PerOccurrenceCount)
+	assert.Equal(t, uint(3), pABC.PerOccurrenceCount, "pABC.PerOccurrenceCount")
 	assert.Equal(t, uint(2), pABC.TotalUserCount)
 	assert.Equal(t, uint(2), pABC.PerUserCount)
 	assert.Equal(t, pLen, len(pABC.EventNames))
@@ -1026,10 +1026,10 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	}
 	count, err = pABC.GetPerUserCount(patternConstraints)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(1), count)
+	assert.Equal(t, uint(0), count) // was 1 previously
 	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(1), count)
+	assert.Equal(t, uint(0), count) //was 1 previously
 
 }
 
@@ -1674,7 +1674,7 @@ func TestCollectAndCountEventsWithPropertiesWithOccurenceFalse(t *testing.T) {
 	}
 	count, err = pABC.GetPerUserCount(patternConstraints)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(1), count)
+	assert.Equal(t, uint(0), count) // was 1 previously
 	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(0), count)
@@ -1927,4 +1927,92 @@ func TestGenCandidatesForGoals(t *testing.T) {
 	assert.Nil(t, patt, "Patterns should be empty")
 	assert.Nil(t, err)
 
+}
+
+func TestCountPatternsWithSameTimeStamp(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
+	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
+	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
+	countOccurFlag := true
+	u1CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
+	u1ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
+	u2CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:01:00Z")
+	u2ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
+	u1CTimestamp := u1CTime.Unix()
+	u1ETimestamp := u1ETime.Unix()
+	u2CTimestamp := u2CTime.Unix()
+	u2ETimestamp := u2ETime.Unix()
+
+	eventsInput := []P.CounterEventFormat{
+		// User 1.
+		// P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "F", EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(4)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp + (4 * 60), EventCardinality: uint(5)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventTimestamp: u1ETimestamp + (5 * 60), EventCardinality: uint(3)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp + (6 * 60), EventCardinality: uint(6)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventTimestamp: u1ETimestamp + (7 * 60), EventCardinality: uint(2)},
+		// // User 2.
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (1 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (1 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp + (3 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp + (4 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "Z", EventTimestamp: u2ETimestamp + (5 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp + (6 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (7 * 60), EventCardinality: uint(3)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp + (8 * 60), EventCardinality: uint(3)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp + (9 * 60), EventCardinality: uint(3)},
+	}
+	eventsInputString := ""
+	for _, event := range eventsInput {
+		lineBytes, _ := json.Marshal(event)
+		line := string(lineBytes)
+		eventsInputString += fmt.Sprintf("%s\n", line)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(eventsInputString))
+
+	pABCEvents := []string{"A", "B", "C"}
+	pCABEvents := []string{"C", "A", "B"}
+	pLen := len(pABCEvents)
+	pABC, _ := P.NewPattern(pABCEvents, nil)
+	pAB, _ := P.NewPattern([]string{"A", "B"}, nil)
+	pCAB, _ := P.NewPattern([]string{"C", "A", "B"}, nil)
+	pACB, _ := P.NewPattern([]string{"A", "C", "B"}, nil)
+	pBA, _ := P.NewPattern([]string{"B", "A"}, nil)
+	pBC, _ := P.NewPattern([]string{"B", "C"}, nil)
+	pAC, _ := P.NewPattern([]string{"A", "C"}, nil)
+	pA, _ := P.NewPattern([]string{"A"}, nil)
+	pB, _ := P.NewPattern([]string{"B"}, nil)
+	pC, _ := P.NewPattern([]string{"C"}, nil)
+
+	patterns := []*P.Pattern{pABC, pCAB, pACB, pAB, pBA, pBC, pAC, pA, pB, pC}
+
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag)
+	assert.Nil(t, erronFalse)
+
+	// Test pABC output.
+	assert.Equal(t, uint(3), pABC.PerOccurrenceCount, "pABC.PerOccurrenceCount")
+	assert.Equal(t, uint(2), pABC.TotalUserCount, "pABC.TotalUserCount")
+	assert.Equal(t, uint(2), pABC.PerUserCount, "pABC.PerUserCount")
+	assert.Equal(t, pLen, len(pABC.EventNames))
+	for i := 0; i < pLen; i++ {
+		assert.Equal(t, pABCEvents[i], pABC.EventNames[i])
+	}
+	// Test pCAB output.
+	assert.Equal(t, uint(2), pCAB.PerOccurrenceCount, "pCAB.PerOccurrenceCount")
+	assert.Equal(t, uint(2), pCAB.TotalUserCount, "pCAB.TotalUserCount")
+	assert.Equal(t, uint(2), pCAB.PerUserCount, "pCAB.PerUserCount")
+	assert.Equal(t, pLen, len(pCAB.EventNames))
+	for i := 0; i < pLen; i++ {
+		assert.Equal(t, pCABEvents[i], pCAB.EventNames[i])
+	}
+
+	assert.Equal(t, uint(2), pACB.PerOccurrenceCount, "pACB.PerOccurrenceCount")
+	assert.Equal(t, uint(2), pACB.TotalUserCount, "pACB.TotalUserCount")
+	assert.Equal(t, uint(2), pACB.PerUserCount, "pACB.PerUserCount")
 }

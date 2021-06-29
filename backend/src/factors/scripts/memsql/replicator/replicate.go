@@ -38,6 +38,7 @@ var includeTablesMap map[string]bool
 var excludeTablesMap map[string]bool
 
 var modeMigrate bool
+var skipPrimaryKeyDedupeTables []string
 
 const (
 	tableUsers                          = "users"
@@ -195,6 +196,9 @@ func main() {
 	includeTables := flag.String("include_tables", "*", "Comma separated tables to run or *")
 	excludeTables := flag.String("exclude_tables", "", "Comma separated tables to exclude from the run")
 	disableSyncColumnsFlag := flag.Bool("disable_sync_column", false, "To disable sync columns like jobs_metadata, synced etc")
+
+	skipDedupeTables := flag.String("skip_dedupe_tables", "", "Skip primary key deduplication for the tables.")
+
 	flag.Parse()
 
 	if *env != C.DEVELOPMENT &&
@@ -230,6 +234,8 @@ func main() {
 		excludeTablesMap[tableName] = true
 	}
 	disableSyncColumns = *disableSyncColumnsFlag
+
+	skipPrimaryKeyDedupeTables = U.CleanSplitByDelimiter(*skipDedupeTables, ",")
 
 	config := &C.Configuration{
 		AppName: "memsql_replicator",
@@ -711,7 +717,7 @@ func createIfNotExistOrUpdateIfChangedOnMemSQL(tableName string, pgRecord interf
 		WithField("table_name", tableName).
 		WithField("pg_record_id", pgTableRecord.ID)
 
-	if isTableWithoutUniquePrimaryKey(tableName) && !modeMigrate {
+	if isTableWithoutUniquePrimaryKey(tableName) && !modeMigrate && !U.StringValueIn(tableName, skipPrimaryKeyDedupeTables) {
 		// TODO: Try to add a procedure/trigger to do the existence check before create on memsql itself for long term.
 		// Now doing it on the script itself, as it is sequential.
 		currentMemsqlRecord, status := getTableRecordByIDFromMemSQL(pgTableRecord.ProjectID, tableName, pgTableRecord.ID, pgTableRecord)
@@ -1049,6 +1055,13 @@ func convertIDToUUIDFromInterface(id interface{}) (string, error) {
 		uuid, err = U.ConvertIntToUUID(id.(uint64))
 	case string:
 		uuid, err = U.ConvertIntStringToUUID(id.(string))
+	case *string:
+		if id == nil {
+			return "", nil
+		}
+
+		idString := id.(*string)
+		uuid, err = U.ConvertIntStringToUUID(*idString)
 	default:
 		return "", errors.New(fmt.Sprintf("Invalid type %T with value %v", id, id))
 	}
@@ -1106,6 +1119,28 @@ func convertColumnTypeByTable(tableName string, record interface{}) (interface{}
 		}
 		memsqlEvent.EventNameId = uuid
 		return &memsqlEvent, nil
+
+	case tablePropertyDetails:
+		record := record.(*model.PropertyDetail)
+		if record.EventNameID == nil {
+			return &record, nil
+		}
+
+		uuid, err := convertIDToUUIDFromInterface(record.EventNameID)
+		if err != nil {
+			return record, err
+		}
+		record.EventNameID = &uuid
+		return &record, nil
+
+	case tableFactorsTrackedEvents:
+		record := record.(*model.FactorsTrackedEvent)
+		uuid, err := convertIDToUUIDFromInterface(record.EventNameID)
+		if err != nil {
+			return record, err
+		}
+		record.EventNameID = uuid
+		return &record, nil
 	}
 
 	return record, nil

@@ -132,7 +132,11 @@ function ActiveUnitContent({
   return (
     <div className='p-4'>
       <CoreQueryContext.Provider
-        value={{ attributionMetrics, setAttributionMetrics }}
+        value={{
+          attributionMetrics,
+          setAttributionMetrics,
+          coreQueryState: {},
+        }}
       >
         <ReportContent
           queryType={queryType}

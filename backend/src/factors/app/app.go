@@ -100,6 +100,7 @@ func main() {
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
+	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -176,7 +177,7 @@ func main() {
 		return
 	}
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
-
+	C.InitFilemanager(*bucketName, *env, config)
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
 	}

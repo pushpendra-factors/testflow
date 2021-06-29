@@ -21,7 +21,7 @@ spec:
             cloud.google.com/gke-nodepool: persistent-pool-highmem
           containers:
           - name: add-session-job-dup
-            image: us.gcr.io/factors-production/add-session-job:ca0606c-1814
+            image: us.gcr.io/factors-production/add-session-job:6e22fbf74-nopr
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -42,14 +42,12 @@ spec:
             - $(REDIS_HOST_2)
             - --redis_port
             - $(REDIS_PORT_2)
-            - --project_ids
-            - "*"
             - --num_project_routines
             - $(ADD_SESSION_PROJECT_ROUTINES)
             - --num_user_routines
             - $(ADD_SESSION_USER_ROUTINES)
             - --max_lookback_hours
-            - "200"
+            - "720"
             - --redis_host_ps
             - $(REDIS_HOST_2)
             - --redis_port_ps
@@ -62,6 +60,10 @@ spec:
             - $(GCP_PROJECT_LOCATION)
             - --primary_datastore
             - "memsql"
+            - --app_name
+            - "add-session-job-dup"
+            - --disabled_project_ids
+            - "576"
             - --cache_with_sorted_set
             envFrom:
             - configMapRef:

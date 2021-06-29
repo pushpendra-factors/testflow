@@ -24,6 +24,7 @@ type AdwordsDocument struct {
 
 type AdwordsLastSyncInfo struct {
 	ProjectId         uint64 `json:"project_id"`
+	Timezone          string `json:"timezone"`
 	CustomerAccountId string `json:"customer_acc_id"`
 	RefreshToken      string `json:"refresh_token"`
 	DocumentType      int    `json:"-"`

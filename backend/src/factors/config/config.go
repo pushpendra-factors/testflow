@@ -22,6 +22,7 @@ import (
 
 	"github.com/coreos/etcd/mvcc/mvccpb"
 
+	"factors/filestore"
 	"factors/vendor_custom/machinery/v1"
 	machineryConfig "factors/vendor_custom/machinery/v1/config"
 
@@ -44,6 +45,9 @@ import (
 	serviceEtcd "factors/services/etcd"
 	"factors/services/mailer"
 	serviceSes "factors/services/ses"
+
+	serviceDisk "factors/services/disk"
+	serviceGCS "factors/services/gcstorage"
 
 	cache "github.com/hashicorp/golang-lru"
 )
@@ -167,6 +171,7 @@ type Configuration struct {
 	AllowedCampaignEnrichmentByProjectID string
 	UseOpportunityAssociationByProjectID string
 	AllowChannelGroupingForProjectIDs    string
+	CloudManager                         filestore.FileManager
 }
 
 type Services struct {
@@ -735,6 +740,19 @@ func InitDB(config Configuration) error {
 
 func InitRedisPersistent(host string, port int) {
 	initRedisConnection(host, port, true, 300, 100)
+}
+
+func InitFilemanager(bucketName string, env string, config *Configuration) {
+	if env == "development" {
+		config.CloudManager = serviceDisk.New(bucketName)
+	} else {
+		var err error
+		config.CloudManager, err = serviceGCS.New(bucketName)
+		if err != nil {
+			log.WithError(err).Errorln("Failed to init New GCS Client")
+			panic(err)
+		}
+	}
 }
 
 func InitRedis(host string, port int) {
@@ -1545,4 +1563,8 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 	}
 
 	return defaultAppName
+}
+
+func GetCloudManager() filestore.FileManager {
+	return configuration.CloudManager
 }

@@ -15,6 +15,7 @@ class AppConfig(Config):
     google_project_name = None
     data_service_host = None
 
+    timezone = None
     type_of_run = None
     dry = None
     last_timestamp = None
@@ -25,7 +26,7 @@ class AppConfig(Config):
     @classmethod
     def _init(cls, env, skip_today, 
               project_ids, exclude_project_ids, document_type, data_service_host,
-              type_of_run, dry, last_timestamp, to_timestamp):
+              timezone, type_of_run, dry, last_timestamp, to_timestamp):
         cls.env = env
         cls.skip_today = (skip_today == "True")
         cls.project_ids = project_ids
@@ -33,6 +34,7 @@ class AppConfig(Config):
         cls.document_type = document_type
         cls.data_service_host = data_service_host
 
+        cls.timezone = timezone
         cls.type_of_run = type_of_run
         cls.dry = (dry == "True")
         cls.last_timestamp = last_timestamp
@@ -53,7 +55,7 @@ class AppConfig(Config):
 
         cls._init(argv.env, argv.skip_today,
                   project_ids, exclude_project_ids, argv.document_type, argv.data_service_host,
-                  argv.type_of_run, argv.dry, argv.last_timestamp, argv.to_timestamp)
+                  argv.timezone, argv.type_of_run, argv.dry, argv.last_timestamp, argv.to_timestamp)
 
     @classmethod
     def get_session_cookie_key(cls):

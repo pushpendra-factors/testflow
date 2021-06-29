@@ -136,7 +136,7 @@ const platform = "platform"
 
 var errorEmptyFacebookDocument = errors.New("empty facebook document")
 
-const facebookFilterQueryStr = "SELECT DISTINCT(JSON_EXTRACT_STRING(value, ?)) as filter_value FROM facebook_documents WHERE project_id = ? AND" +
+const facebookFilterQueryStr = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM facebook_documents WHERE project_id = ? AND" +
 	" " + "customer_ad_account_id IN (?) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
 
 const fromFacebookDocuments = " FROM facebook_documents "

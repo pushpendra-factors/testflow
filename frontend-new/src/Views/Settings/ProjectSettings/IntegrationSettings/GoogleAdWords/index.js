@@ -25,7 +25,8 @@ const GoogleIntegration = ({
     setIsActive,
     fetchAdwordsCustomerAccounts,
     udpateProjectSettings,
-    fetchProjectSettings
+    fetchProjectSettings,
+    kbLink = false
 }) => {
 
     const [loading, setLoading] = useState(false);
@@ -245,7 +246,7 @@ const GoogleIntegration = ({
                 {
                     !currentProjectSettings?.int_adwords_enabled_agent_uuid && <>
                         <Button type={'primary'} loading={loading} onClick={enableAdwords}>Enable using Google</Button>
-                        <Button className={'ml-2 '}>View documentation</Button>
+                        {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
                     </>
                 }
             </div>
