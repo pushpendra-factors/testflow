@@ -5,6 +5,7 @@ import styles from './index.module.scss';
 import { SVG, Text } from '../../components/factorsComponents';
 import ConversionGoalBlock from './ConversionGoalBlock';
 import FaDatepicker from '../../components/FaDatepicker';
+
 import {
     fetchEventNames,
     getUserProperties,
