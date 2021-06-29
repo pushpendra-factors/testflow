@@ -109,7 +109,7 @@ function QueryBlock({
       newEvent.filters.push(filter);
     }
     
-    eventChange(newEvent, index - 1);
+    eventChange(newEvent, index - 1, 'filters_updated');
   };
 
   const removeFilters = (i) => {
@@ -117,7 +117,7 @@ function QueryBlock({
     if (newEvent.filters[i]) {
       newEvent.filters.splice(i, 1);
     }
-    eventChange(newEvent, index - 1);
+    eventChange(newEvent, index - 1, 'filters_updated');
   };
 
   const selectEventFilter = () => {
