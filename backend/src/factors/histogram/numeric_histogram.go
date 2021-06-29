@@ -3,6 +3,8 @@ package histogram
 import (
 	"fmt"
 	"math"
+
+	histlog "github.com/sirupsen/logrus"
 )
 
 const NHIST_MIN_BIN_SIZE = 12
@@ -118,7 +120,10 @@ func (h *NumericHistogramStruct) Add(values []float64) error {
 	}
 	h.Total++
 	h.Bins = append(h.Bins, numericBin{Count: 1, Min: v, Max: v})
-	h.trim()
+	err := h.trim()
+	if err != nil {
+		histlog.Infof("unable to trim : %v", err)
+	}
 	return nil
 }
 
@@ -258,7 +263,7 @@ func (h *NumericHistogramStruct) GetBinRanges(key string) [][2]float64 {
 	return ranges
 }
 
-func (h *NumericHistogramStruct) trim() {
+func (h *NumericHistogramStruct) trim() error {
 	for len(h.Bins) > h.Maxbins {
 		// Find closest bins in terms of value
 		minDelta := 1e99
@@ -269,7 +274,6 @@ func (h *NumericHistogramStruct) trim() {
 				if j <= i {
 					continue
 				}
-
 				vol_i := 1.0
 				vol_j := 1.0
 				vol := 1.0
@@ -321,21 +325,28 @@ func (h *NumericHistogramStruct) trim() {
 			}
 		}
 
-		// We need to merge bins min_i-1 and min_j
-		mergedbin := h.Bins[min_i].merge(h.Bins[min_j])
+		if min_i != min_j && min_j != 0 {
 
-		// Remove min_i and min_j bins
-		min, max := sortTuple(min_i, min_j)
+			// We need to merge bins min_i-1 and min_j
+			mergedbin := h.Bins[min_i].merge(h.Bins[min_j])
 
-		head := h.Bins[0:min]
-		mid := h.Bins[min+1 : max]
-		tail := h.Bins[max+1:]
+			// Remove min_i and min_j bins
+			min, max := sortTuple(min_i, min_j)
 
-		h.Bins = append(head, mid...)
-		h.Bins = append(h.Bins, tail...)
+			head := h.Bins[0:min]
+			mid := h.Bins[min+1 : max]
+			tail := h.Bins[max+1:]
 
-		h.Bins = append(h.Bins, mergedbin)
+			h.Bins = append(head, mid...)
+			h.Bins = append(h.Bins, tail...)
+			h.Bins = append(h.Bins, mergedbin)
+		} else {
+			histlog.Infof("Bins is of zero length : min_i:%d , min_j:%d", min_i, min_j)
+			return fmt.Errorf("unable to trim histogram")
+		}
+
 	}
+	return nil
 }
 
 func (h *NumericHistogramStruct) Count() uint64 {
@@ -353,7 +364,10 @@ func (h *NumericHistogramStruct) TrimByBinSize(trimFraction float64) error {
 			h.Maxbins, newMaxbins, trimFraction))
 	}
 	h.Maxbins = newMaxbins
-	h.trim()
+	err := h.trim()
+	if err != nil {
+		histlog.Infof("unable to trim : %v", err)
+	}
 	return nil
 }
 

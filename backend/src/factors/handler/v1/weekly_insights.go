@@ -1,8 +1,10 @@
 package v1
 
 import (
+	"errors"
 	"factors/delta"
 	mid "factors/middleware"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"strconv"
@@ -14,7 +16,7 @@ import (
 
 type WeeklyInsightsParams struct {
 	ProjectID       uint64    `json:"project_id"`
-	DashBoardUnitID uint64    `json:"dashboard_unit_id"`
+	QueryId         uint64    `json:"query_id"`
 	BaseStartTime   time.Time `json:"base_start_time"`
 	CompStartTime   time.Time `json:"comp_start_time"`
 	InsightsType    string    `json:"insights_type"`
@@ -25,11 +27,28 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 	params := WeeklyInsightsParams{}
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
-		c.AbortWithStatus(http.StatusBadRequest)
+		return nil, errors.New("Invalid Project ID")
 	}
-	DashBoardUnitID, err := strconv.ParseUint(c.Query("dashboard_unit_id"), 10, 64)
-	if err != nil {
-		return nil, err
+	var QueryId uint64
+	if c.Query("query_id") != "" {
+		Qid, err := strconv.ParseUint(c.Query("query_id"), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		QueryId = Qid
+	} else {
+		DashBoardUnitID, err := strconv.ParseUint(c.Query("dashboard_unit_id"), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		if DashBoardUnitID == 0 {
+			return nil, errors.New("Invalid Dashboard ID")
+		}
+		DashBoardUnit, status := store.GetStore().GetDashboardUnitByUnitID(projectID, DashBoardUnitID)
+		if status != http.StatusFound {
+			return nil, errors.New("Dashboard Not found given dashboard ID")
+		}
+		QueryId = DashBoardUnit.QueryId
 	}
 	BaseStartTimeTemp, err := strconv.ParseInt(c.Query("base_start_time"), 10, 64)
 	if err != nil {
@@ -48,7 +67,7 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 	NumberOfRecords := int(n)
 
 	params.ProjectID = projectID
-	params.DashBoardUnitID = DashBoardUnitID
+	params.QueryId = QueryId
 	params.BaseStartTime = BaseStartTime
 	params.CompStartTime = CompStartTime
 	params.InsightsType = insightsType
@@ -70,10 +89,10 @@ func GetWeeklyInsightsHandler(c *gin.Context) (interface{}, int, string, string,
 	if params.NumberOfRecords > 100 || params.NumberOfRecords <= 0 {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "number of records must be in range 1-100", true
 	}
-	if params.ProjectID == 0 || params.DashBoardUnitID == 0 {
-		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid projectId or DashboardUnitID", true
+	if params.ProjectID == 0 || params.QueryId == 0 {
+		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid projectId or QueryId", true
 	}
-	response, err := delta.GetWeeklyInsights(params.ProjectID, params.DashBoardUnitID, &params.BaseStartTime, &params.CompStartTime, params.InsightsType, params.NumberOfRecords)
+	response, err := delta.GetWeeklyInsights(params.ProjectID, params.QueryId, &params.BaseStartTime, &params.CompStartTime, params.InsightsType, params.NumberOfRecords)
 	if err != nil {
 		log.Error(err)
 		return err, http.StatusInternalServerError, "", "", true

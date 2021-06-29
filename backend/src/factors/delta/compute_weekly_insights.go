@@ -250,9 +250,9 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
 	return insights
 }
 
-func GetWeeklyInsights(projectId uint64, dashBoardUnitID uint64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
+func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
 
-	path, file := C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestamp(baseStartTime.Unix()), dashBoardUnitID, 10)
+	path, file := C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestamp(baseStartTime.Unix()), queryId, 10)
 	fmt.Println(path, file)
 	reader, err := C.GetCloudManager().Get(path, file)
 	if err != nil {

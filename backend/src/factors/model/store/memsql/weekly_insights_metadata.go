@@ -25,8 +25,8 @@ func (store *MemSQL) CreateWeeklyInsightsMetadata(wim *model.WeeklyInsightsMetad
 				"insight_id": wim.InsightId,
 				"updated_at": U.TimeNow(),
 			}
-			query := db.Model(&model.WeeklyInsightsMetadata{}).Where("project_id = ? AND base_start_time = ? AND base_end_time = ? AND comparison_start_time = ? AND comparison_end_time = ? AND dashboard_unit_id = ?",
-				wim.ProjectId, wim.BaseStartTime, wim.BaseEndTime, wim.ComparisonStartTime, wim.ComparisonEndTime, wim.DashboardUnitId).Updates(updateFields)
+			query := db.Model(&model.WeeklyInsightsMetadata{}).Where("project_id = ? AND base_start_time = ? AND base_end_time = ? AND comparison_start_time = ? AND comparison_end_time = ? AND query_id = ?",
+				wim.ProjectId, wim.BaseStartTime, wim.BaseEndTime, wim.ComparisonStartTime, wim.ComparisonEndTime, wim.QueryId).Updates(updateFields)
 			if err := query.Error; err != nil {
 				log.WithError(err).Error("Failed updating weekly insights metadata.")
 				return http.StatusInternalServerError, err.Error()

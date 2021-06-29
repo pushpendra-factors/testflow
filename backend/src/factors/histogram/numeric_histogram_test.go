@@ -1,9 +1,12 @@
 package histogram
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/rand"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -219,4 +222,30 @@ func TestNumericHistogramAddWithTemplate(t *testing.T) {
 			sum[k]*allowedMismatchFraction,
 			fmt.Sprintf("Mean mismatch %v != %v", mean, sum))
 	}
+}
+
+func TestNumericHistogramTrim(t *testing.T) {
+	var nHist NumericHistogramStruct
+	jsonFile := "numeric_histogram_struct_data1.json"
+	freader, _ := os.Open(jsonFile)
+	data, _ := ioutil.ReadAll(freader)
+	err := json.Unmarshal(data, &nHist)
+	assert.Nil(t, err)
+	err2 := nHist.trim()
+	assert.Nil(t, err2)
+	jsonFile = "numeric_histogram_struct_data2.json"
+	freader, _ = os.Open(jsonFile)
+	data, _ = ioutil.ReadAll(freader)
+	err = json.Unmarshal(data, &nHist)
+	assert.Nil(t, err)
+	err2 = nHist.trim()
+	assert.Nil(t, err2)
+	jsonFile = "numeric_histogram_struct_data3.json"
+	freader, _ = os.Open(jsonFile)
+	data, _ = ioutil.ReadAll(freader)
+	err = json.Unmarshal(data, &nHist)
+	assert.Nil(t, err)
+	err2 = nHist.trim()
+	assert.NotNil(t, err2)
+
 }
