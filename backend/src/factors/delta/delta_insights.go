@@ -46,11 +46,12 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	}
 	insightGranularity := configs["insightGranularity"].(string)
 	log.Info("Reading delta query.")
+	computedQueries := make(map[uint64]bool)
 	dashboardUnits, _ := store.GetStore().GetDashboardUnitsForProjectID(projectId)
 	for _, dashboardUnit := range dashboardUnits {
-		dashboarUnitIdString := fmt.Sprintf("%v", dashboardUnit.ID)
+		queryIdString := fmt.Sprintf("%v", dashboardUnit.QueryId)
 		deltaQuery, isEnabled := IsDashboardUnitWIEnabled(dashboardUnit)
-		if isEnabled == false {
+		if isEnabled == false || computedQueries[dashboardUnit.QueryId] == true {
 			continue
 		}
 		// Within Period Insights
@@ -61,7 +62,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 		err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, k, &unionOfFeatures, 1, insightGranularity)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 1"))
-			status["error-wpi-pass1-"+dashboarUnitIdString] = err.Error()
+			status["error-wpi-pass1-"+queryIdString] = err.Error()
 			continue
 		}
 		isDownloaded = true
@@ -69,20 +70,21 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 		err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, k, &unionOfFeatures, 2, insightGranularity)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 2"))
-			status["error-wpi-pass2-"+dashboarUnitIdString] = err.Error()
+			status["error-wpi-pass2-"+queryIdString] = err.Error()
 			continue
 		}
 		log.Info("Computing cross-period insights.")
 		err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, deltaQuery.Id, cloudManager)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 1"))
-			status["error-cpi-pass1-"+dashboarUnitIdString] = err.Error()
+			status["error-cpi-pass1-"+queryIdString] = err.Error()
 			continue
 		}
 		insightId = uint64(U.TimeNowUnix())
+		computedQueries[dashboardUnit.QueryId] = true
 		errCode, errMsg := store.GetStore().CreateWeeklyInsightsMetadata(&model.WeeklyInsightsMetadata{
 			ProjectId:           projectId,
-			DashboardUnitId:     dashboardUnit.ID,
+			QueryId:             dashboardUnit.QueryId,
 			BaseStartTime:       periodCodesWithWeekNMinus1[1].From,
 			BaseEndTime:         periodCodesWithWeekNMinus1[1].To,
 			ComparisonStartTime: periodCodesWithWeekNMinus1[0].From,
@@ -245,7 +247,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, bool) {
 
 		if query.Type == model.QueryTypeUniqueUsers {
 			if (query.EventsCondition == model.EventCondAnyGivenEvent || query.EventsCondition == model.EventCondAllGivenEvent) || (query.EventsCondition == model.EventCondEachGivenEvent && len(query.EventsWithProperties) == 1) {
-				deltaQuery = Query{Id: int(dashboardUnit.ID),
+				deltaQuery = Query{Id: int(dashboardUnit.QueryId),
 					Base: EventsCriteria{
 						Operator: "And",
 						EventCriterionList: []EventCriterion{EventCriterion{
@@ -288,7 +290,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, bool) {
 		if query.Type == model.QueryTypeUniqueUsers {
 			if query.EventsCondition == model.EventCondAnyGivenEvent {
 				if len(query.EventsWithProperties) == 2 {
-					deltaQuery = Query{Id: int(dashboardUnit.ID),
+					deltaQuery = Query{Id: int(dashboardUnit.QueryId),
 						Base: EventsCriteria{
 							Operator: "And",
 							EventCriterionList: []EventCriterion{EventCriterion{

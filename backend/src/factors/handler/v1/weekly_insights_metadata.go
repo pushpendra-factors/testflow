@@ -16,6 +16,11 @@ type WeeklyInsights struct {
 	InsightsRange map[int64][]int64
 }
 
+type Result struct {
+	QueryWiseResult         map[uint64]WeeklyInsights
+	DashboardUnitWiseResult map[uint64]WeeklyInsights
+}
+
 func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string, bool) {
 	// Get all the dashboard units for the project
 	// Get the metadata
@@ -31,15 +36,30 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 		"projectId": projectId,
 	})
 
-	weeklyInsights := make(map[uint64]WeeklyInsights)
+	weeklyInsightsByDashboard := make(map[uint64]WeeklyInsights)
+	weeklyInsightsByQuery := make(map[uint64]WeeklyInsights)
+	queryToDashboardUnitMap := make(map[uint64][]uint64)
+
 	dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(projectId)
 	if errCode != http.StatusFound {
 		logCtx.Error("Getting dashboardunits failed")
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "", true
 	}
+
+	for _, dashboardUnit := range dashboardUnits {
+		if queryToDashboardUnitMap[dashboardUnit.QueryId] == nil {
+			queryToDashboardUnitMap[dashboardUnit.QueryId] = make([]uint64, 0)
+		}
+		queryToDashboardUnitMap[dashboardUnit.QueryId] = append(queryToDashboardUnitMap[dashboardUnit.QueryId], dashboardUnit.ID)
+	}
+
 	for _, unit := range dashboardUnits {
 		_, enabled := delta.IsDashboardUnitWIEnabled(unit)
-		weeklyInsights[unit.ID] = WeeklyInsights{
+		weeklyInsightsByDashboard[unit.ID] = WeeklyInsights{
+			Enabled:       enabled,
+			InsightsRange: make(map[int64][]int64),
+		}
+		weeklyInsightsByQuery[unit.QueryId] = WeeklyInsights{
 			Enabled:       enabled,
 			InsightsRange: make(map[int64][]int64),
 		}
@@ -51,7 +71,7 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, msg, true
 	}
 	for _, detail := range metadata {
-		mapMetadata, ok := weeklyInsights[detail.DashboardUnitId]
+		mapMetadata, ok := weeklyInsightsByQuery[detail.QueryId]
 		if !ok {
 			continue
 		}
@@ -59,7 +79,14 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 			mapMetadata.InsightsRange[detail.BaseStartTime] = make([]int64, 0)
 		}
 		mapMetadata.InsightsRange[detail.BaseStartTime] = append(mapMetadata.InsightsRange[detail.BaseStartTime], detail.ComparisonStartTime)
-		weeklyInsights[detail.DashboardUnitId] = mapMetadata
+		weeklyInsightsByQuery[detail.QueryId] = mapMetadata
+		for _, dashboardId := range queryToDashboardUnitMap[detail.QueryId] {
+			weeklyInsightsByDashboard[dashboardId] = mapMetadata
+		}
 	}
-	return weeklyInsights, http.StatusOK, "", "", false
+	result := Result{
+		QueryWiseResult:         weeklyInsightsByQuery,
+		DashboardUnitWiseResult: weeklyInsightsByDashboard,
+	}
+	return result, http.StatusOK, "", "", false
 }

@@ -650,7 +650,7 @@ CREATE TABLE IF NOT EXISTS weekly_insights_metadata
 (
     id text NOT NULL,
     project_id bigint NOT NULL,
-    dashboard_unit_id bigint NOT NULL,
+    query_id bigint NOT NULL,
     insight_type text NOT NULL,
     base_start_time  bigint NOT NULL, 
     base_end_time bigint NOT NULL,
@@ -660,7 +660,7 @@ CREATE TABLE IF NOT EXISTS weekly_insights_metadata
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
-    UNIQUE KEY  weekly_insights_metadata_project_id_stdate_enddate_unique_idx(project_id, dashboard_unit_id, base_start_time, base_end_time, comparison_start_time, comparison_end_time),
+    UNIQUE KEY  weekly_insights_metadata_project_id_stdate_enddate_unique_idx(project_id, query_id, base_start_time, base_end_time, comparison_start_time, comparison_end_time),
     KEY (project_id) USING HASH
     PRIMARY KEY (id),
 
