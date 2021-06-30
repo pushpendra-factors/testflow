@@ -408,6 +408,7 @@ CREATE TABLE IF NOT EXISTS projects (
     updated_at timestamp(6) NOT NULL,
     interaction_settings json,
     jobs_metadata json,
+    channel_group_rules json,
     PRIMARY KEY (id),
     KEY (token),
     KEY (private_token)

@@ -1771,6 +1771,13 @@ func TestSDKBulk(t *testing.T) {
 	})
 
 	t.Run("DuplicateCustomerEventId", func(t *testing.T) {
+		if C.GetConfig().PrimaryDatastore == C.DatastoreTypeMemSQL {
+			// ADD SUPPORT FOR DEDUPLICATION for sdk_bulk.
+			// This is no supported as we cannot use user_id as part of
+			// deduplication of event, which is mandatory for memsql.
+			return
+		}
+
 		payload := fmt.Sprintf("[%s,%s,%s]",
 			`{"event_name": "signup", "event_properties": {"mobile" : "true"}}`,
 			`{"event_name":"test","c_event_id":"1", "event_properties": {"mobile" : "true"}}`,
