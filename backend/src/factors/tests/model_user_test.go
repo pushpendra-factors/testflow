@@ -917,21 +917,35 @@ func TestUsersUniquenessConstraints(t *testing.T) {
 	assert.Nil(t, err)
 
 	segAid := "seg_anon_id_1"
-	ampUserID := "amp_user_id_1"
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, SegmentAnonymousId: segAid, AMPUserId: ampUserID})
+	createdUser1, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix()-2)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user, errCode := store.GetStore().GetUser(project.ID, createdUserID1)
+
+	// Should not create new user. Should return same user_id.
+	createdUser2, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix()-2)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, createdUser1.ID, createdUser2.ID)
+
+	ampUserID := "amp_user_id_1"
+	createdUserID11, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampUserID, time.Now().Unix()-2)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Should not create new user. Should return same user_id.
+	createdUserID12, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampUserID, time.Now().Unix()-2)
 	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotNil(t, user)
-	assert.Equal(t, segAid, user.SegmentAnonymousId)
+	assert.Equal(t, createdUserID11, createdUserID12)
 
-	// Creating again with same project_id, seg_anon_id should fail.
-	createdUserID1, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, SegmentAnonymousId: segAid})
-	assert.Equal(t, http.StatusNotFound, errCode)
-	assert.Empty(t, createdUserID1)
+	userID := U.GetUUID()
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID})
+	assert.Equal(t, http.StatusCreated, errCode)
 
-	// Creating again with same project_id, amp_user_id should fail.
-	createdUserID1, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, AMPUserId: ampUserID})
-	assert.Equal(t, http.StatusNotFound, errCode)
-	assert.Empty(t, createdUserID1)
+	// Should not create new user. Should return same user_id.
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, createdUserID1, createdUserID2)
+
+	_, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID, SegmentAnonymousId: segAid})
+	assert.Equal(t, http.StatusBadRequest, errCode)
+
+	_, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID, AMPUserId: ampUserID})
+	assert.Equal(t, http.StatusBadRequest, errCode)
 }

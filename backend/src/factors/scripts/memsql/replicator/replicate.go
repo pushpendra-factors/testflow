@@ -72,6 +72,7 @@ const (
 	tableTaskDetails                    = "task_details"
 	tableTaskExecutionDetails           = "task_execution_details"
 	tableTaskExecutionDependencyDetails = "task_execution_dependency_details"
+	tableWeekyInsightsMetadata          = "weekly_insights_metadata"
 
 	healthcheckPingID = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
@@ -424,8 +425,6 @@ func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *Tabl
 	idColName := "id"
 	if tableName == tableAgents {
 		idColName = "uuid"
-	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails {
-		idColName = "project_id"
 	} else if isProjectAssociatedTable(tableName) {
 		idColName = "project_id"
 	}
@@ -582,7 +581,7 @@ func convertToTableRecord(tableName string, record interface{}) (*TableRecord, e
 		tableRecord.ID = tableRecord.UUID
 	}
 
-	// Project one-one tables uses project_id as ID column.
+	// Tables using project_id as id.
 	if isProjectAssociatedTable(tableName) {
 		tableRecord.ID = tableRecord.ProjectID
 	}
@@ -604,8 +603,14 @@ func isTableWithoutUniquePrimaryKey(tableName string) bool {
 }
 
 func isProjectAssociatedTable(tableName string) bool {
-	return U.StringValueIn(tableName, []string{tableProjectBillingAccountMappings,
-		tableProjectSettings, tableProjectAgentMappings})
+	return U.StringValueIn(tableName, []string{
+		tableProjectBillingAccountMappings,
+		tableProjectSettings,
+		tableProjectAgentMappings,
+		// project_id + additional keys
+		tableSmartProperties,
+		tablePropertyDetails,
+	})
 }
 
 func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interface{}, pgTableRecord, memsqlTableRecord *TableRecord) int {
@@ -615,7 +620,8 @@ func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interfac
 	if memsqlTableRecord == nil {
 		memsqlTableRecord, status = getTableRecordByIDFromMemSQL(projectID, tableName, pgTableRecord.ID, pgTableRecord)
 		if status == http.StatusInternalServerError || status == http.StatusBadRequest {
-			logCtx.WithField("status", status).Error("Failed to get the existing record from memsql.")
+			logCtx.WithField("status", status).WithField("pg_table_record", pgTableRecord).
+				Error("Failed to get the existing record from memsql.")
 			return http.StatusInternalServerError
 		}
 
@@ -822,6 +828,8 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.TaskExecutionDetails{}
 	case tableTaskExecutionDependencyDetails:
 		record = &model.TaskExecutionDependencyDetails{}
+	case tableWeekyInsightsMetadata:
+		record = &model.WeeklyInsightsMetadata{}
 
 	// Tables related to analytics.
 	case tableEvents:
@@ -1204,6 +1212,7 @@ func migrateAllTables(projectIDs []uint64) {
 		tableTaskDetails,
 		tableTaskExecutionDetails,
 		tableTaskExecutionDependencyDetails,
+		tableWeekyInsightsMetadata,
 	}
 
 	// Runs replication continiously for each table
