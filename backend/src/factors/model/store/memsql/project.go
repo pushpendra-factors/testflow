@@ -564,11 +564,10 @@ func (store *MemSQL) GetProjectIDByToken(token string) (uint64, int) {
 	}
 
 	project, errCode := store.GetProjectByToken(token)
-	if errCode == http.StatusFound {
-		return project.ID, errCode
+	if errCode != http.StatusFound {
+		return 0, errCode
 	}
 
 	model.SetCacheProjectIDByToken(token, project.ID)
-
-	return 0, errCode
+	return project.ID, errCode
 }

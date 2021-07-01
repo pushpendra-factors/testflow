@@ -46,6 +46,14 @@ func mainRunDeltaInsights() {
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+
 	isWeeklyEnabled := flag.Bool("weekly_enabled", false, "")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	flag.Parse()
@@ -70,6 +78,16 @@ func mainRunDeltaInsights() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     "compute_delta_insights",
+		},
+		PrimaryDatastore: *primaryDatastore,
 	}
 	C.InitConf(config)
 	err := C.InitDB(*config)

@@ -36,15 +36,18 @@ func satisfiesEventConstraints(event model.Event) int {
 
 	// Unique (project_id, customer_event_id)
 	if event.CustomerEventId != nil && *event.CustomerEventId != "" {
-		if exists := existsEventByCustomerEventID(event.ProjectId, *event.CustomerEventId); exists {
+		if exists := existsEventByCustomerEventID(event.ProjectId, event.UserId, *event.CustomerEventId); exists {
 			logCtx.WithField("customer_event_id", event.CustomerEventId).Warn("Event exists with customer event id")
 			return http.StatusNotAcceptable
 		}
 	}
 
-	if existsIDForProject(event.ProjectId, event.UserId, event.ID) {
-		logCtx.Warn("Event exists with user_id and project_id")
-		return http.StatusNotAcceptable
+	// Deduplicate by event_id if not done by customer_event_id.
+	if event.CustomerEventId == nil || (event.CustomerEventId != nil && *event.CustomerEventId == "") {
+		if existsIDForProject(event.ProjectId, event.UserId, event.ID) {
+			logCtx.Warn("Event exists with user_id and project_id")
+			return http.StatusNotAcceptable
+		}
 	}
 
 	if !U.IsValidUUID(event.ID) {
@@ -348,13 +351,14 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 }
 
 // existsEventByCustomerEventID Get events by projectID and customerEventID.
-func existsEventByCustomerEventID(projectID uint64, customerEventID string) bool {
+func existsEventByCustomerEventID(projectID uint64, userID, customerEventID string) bool {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var event model.Event
 
 	db := C.GetServices().Db
 	if err := db.Limit(1).Where("project_id = ?", projectID).
+		Where("user_id = ?", userID).
 		Where("customer_event_id = ?", customerEventID).
 		Select("id").Find(&event).Error; err != nil {
 		return false
