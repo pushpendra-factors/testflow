@@ -451,13 +451,15 @@ func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interfa
 	sourceTableRecord *TableRecord) (*TableRecord, int) {
 
 	logCtx := log.WithField("project_id", projectID).WithField("id", id).
-		WithField("table", tableName)
+		WithField("table_name", tableName)
 
 	if tableName == "" || id == nil {
+		logCtx.Error("Invalid table_name or id on getTableRecordByIDFromMemSQL.")
 		return nil, http.StatusBadRequest
 	}
 
 	if !isTableWithoutProjectID(tableName) && !isValidProjectID(tableName, projectID) {
+		logCtx.Error("Invalid project_id on getTableRecordByIDFromMemSQL")
 		return nil, http.StatusBadRequest
 	}
 
