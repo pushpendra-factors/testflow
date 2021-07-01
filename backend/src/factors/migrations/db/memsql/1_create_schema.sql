@@ -669,6 +669,15 @@ CREATE TABLE IF NOT EXISTS weekly_insights_metadata
     PRIMARY KEY (project_id, id)
 
 );
+
+CREATE TABLE IF NOT EXISTS public.templates (
+    project_id bigint NOT NULL,
+    type int NOT NULL,
+    thresholds JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    PRIMARY KEY (project_id, type)
+)
 -- DOWN
 
 -- DROP DATABASE factors;

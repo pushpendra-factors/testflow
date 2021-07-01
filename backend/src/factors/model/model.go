@@ -88,6 +88,11 @@ type Model interface {
 	ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error)
 	GetChannelConfig(projectID uint64, channel string, reqID string) (*model.ChannelConfigResult, int)
 
+	//templates
+	RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
+	GetTemplateConfig(projectID uint64, templateType int) (model.TemplateConfig, int)
+	UpdateTemplateConfig(projectID uint64, templateType int, thresholds []model.TemplateThreshold) ([]model.TemplateThreshold, string)
+
 	// dashboard_unit
 	CreateDashboardUnit(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit, queryType string) (*model.DashboardUnit, int, string)
 	CreateDashboardUnitForDashboardClass(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit, queryType, dashboardClass string) (*model.DashboardUnit, int, string)
