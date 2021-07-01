@@ -72,6 +72,7 @@ const (
 	tableTaskDetails                    = "task_details"
 	tableTaskExecutionDetails           = "task_execution_details"
 	tableTaskExecutionDependencyDetails = "task_execution_dependency_details"
+	tableWeekyInsightsMetadata          = "weekly_insights_metadata"
 
 	healthcheckPingID = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
@@ -822,6 +823,8 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.TaskExecutionDetails{}
 	case tableTaskExecutionDependencyDetails:
 		record = &model.TaskExecutionDependencyDetails{}
+	case tableWeekyInsightsMetadata:
+		record = &model.WeeklyInsightsMetadata{}
 
 	// Tables related to analytics.
 	case tableEvents:
@@ -1204,6 +1207,7 @@ func migrateAllTables(projectIDs []uint64) {
 		tableTaskDetails,
 		tableTaskExecutionDetails,
 		tableTaskExecutionDependencyDetails,
+		tableWeekyInsightsMetadata,
 	}
 
 	// Runs replication continiously for each table

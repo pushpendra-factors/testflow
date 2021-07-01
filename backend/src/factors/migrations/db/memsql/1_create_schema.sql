@@ -617,6 +617,7 @@ CREATE TABLE IF NOT EXISTS task_details
     delay_alert_threshold_hours integer,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    SHARD KEY (task_id),
     PRIMARY KEY (task_id)
 );
 
@@ -631,8 +632,9 @@ CREATE TABLE IF NOT EXISTS task_execution_details
     updated_at timestamp(6) NOT NULL,
     metadata json,
     is_completed boolean,
+    SHARD KEY (task_id),
     KEY (task_id) USING HASH,
-    PRIMARY KEY (execution_id)
+    PRIMARY KEY (task_id, execution_id)
 );
 
 CREATE TABLE IF NOT EXISTS task_execution_dependency_details
@@ -643,7 +645,8 @@ CREATE TABLE IF NOT EXISTS task_execution_dependency_details
     dependency_offset integer NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    PRIMARY KEY (id),
+    SHARD KEY (task_id),
+    PRIMARY KEY (task_id, id),
     KEY (task_id) USING HASH
 );
 
@@ -662,8 +665,8 @@ CREATE TABLE IF NOT EXISTS weekly_insights_metadata
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
     UNIQUE KEY  weekly_insights_metadata_project_id_stdate_enddate_unique_idx(project_id, query_id, base_start_time, base_end_time, comparison_start_time, comparison_end_time),
-    KEY (project_id) USING HASH
-    PRIMARY KEY (id),
+    KEY (project_id) USING HASH,
+    PRIMARY KEY (project_id, id)
 
 );
 -- DOWN
