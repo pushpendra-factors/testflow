@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"factors/util"
 	U "factors/util"
 	"testing"
 
@@ -95,4 +96,10 @@ func TestGetDashboardCacheResultExpiryInSeconds(t *testing.T) {
 	to = U.TimeNowIn(U.TimeZoneStringIST).Unix()
 	expiry = U.GetDashboardCacheResultExpiryInSeconds(from, to)
 	assert.Equal(t, float64(U.CacheExpiryDashboardTodaysDataInSeconds), expiry)
+}
+
+func TestEmailValidations(t *testing.T) {
+	assert.Equal(t, true, util.IsEmail("test.o’'brien@test123.com"))
+	assert.Equal(t, true, util.IsEmail("test.test1@test123.com-xn"))
+
 }
