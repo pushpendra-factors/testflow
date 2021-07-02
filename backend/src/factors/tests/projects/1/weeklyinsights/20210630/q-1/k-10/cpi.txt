@@ -19,7 +19,7 @@
       }
     },
     "feat":{
-      "browser":{
+      "#upbrowser":{
         "chrome":{
           "first":1,"second":1,"perc":0,"factor":1
         }
@@ -36,7 +36,7 @@
       }
     },
     "feat":{
-      "browser":{
+      "#upbrowser":{
         "chrome":{
           "first":1,"second":2,"perc":100,"factor":1
         }
@@ -53,7 +53,7 @@
       }
     },
     "feat":{
-      "browser":{
+      "#upbrowser":{
         "chrome":{
           "first":1,"second":2,"perc":100,"factor":1
         }
@@ -70,7 +70,7 @@
       }
     },
     "feat":{
-      "browser":{
+      "#upbrowser":{
         "chrome":{
           "first":1,"second":2,"perc":100,"factor":1
         }
@@ -78,13 +78,13 @@
    }
   },
   "delrat":{
-    "browser":{
+    "#upbrowser":{
       "chrome":1
       }
   },
   "jsd":{
     "base":{
-      "browser":{
+      "#upbrowser":{
         "chrome":1
       }
     }
