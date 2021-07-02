@@ -114,6 +114,7 @@ type Event struct {
 	UserId      string          `json:"userId"`
 	AnonymousID string          `json:"anonymousId"`
 	MessageID   *string         `json:"messageId"`
+	GroupID     *string         `json:"groupId"`
 	Channel     string          `json:"channel"`
 	Context     Context         `json:"context"`
 	Timestamp   string          `json:"timestamp"`
@@ -574,6 +575,10 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			response.Error = "Reception of identify event failed."
 			return status, response
 		}
+
+	case "group":
+		logCtx.WithFields(log.Fields{"event_payload": event}).Info("Segment group event.")
+		return http.StatusBadRequest, nil
 
 	default:
 		response.Error = fmt.Sprintf("Unknown event type %s", event.Type)
