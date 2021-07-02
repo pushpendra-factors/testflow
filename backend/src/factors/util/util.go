@@ -182,7 +182,7 @@ func IsNumber(num string) bool {
 }
 
 func IsEmail(str string) bool {
-	regexpEmail := regexp.MustCompile(`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,7}$`)
+	regexpEmail := regexp.MustCompile(`^[A-Za-z0-9._%+\-'’^!]+@[A-Za-z0-9.\-]+\.[A-Za-z-]{2,15}$`)
 	return regexpEmail.MatchString(str)
 }
 
