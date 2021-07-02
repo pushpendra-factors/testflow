@@ -1,0 +1,92 @@
+{
+  "periods": {
+    "first": {
+      "From": 1622937600,
+      "To": 1623542399
+    },
+    "second": {
+      "From": 1623542400,
+      "To": 1624147199
+    }
+  },
+  "base": {
+    "global": {
+      "#users": {
+        "first": 100,
+        "second": 150,
+        "perc": 50,
+        "factor": 1
+      }
+    },
+    "feat":{
+      "#upbrowser":{
+        "chrome":{
+          "first":1,"second":1,"perc":0,"factor":1
+        }
+      }
+    }
+  },
+  "target": {
+    "global": {
+      "#users": {
+        "first": 123,
+        "second": 246,
+        "perc": 100,
+        "factor": 1
+      }
+    },
+    "feat":{
+      "#upbrowser":{
+        "chrome":{
+          "first":1,"second":2,"perc":100,"factor":1
+        }
+      }
+    }
+  },
+  "base_target": {
+    "global": {
+      "#users": {
+        "first": 1395,
+        "second": 1395,
+        "perc": 0,
+        "factor": 1
+      }
+    },
+    "feat":{
+      "#upbrowser":{
+        "chrome":{
+          "first":1,"second":2,"perc":100,"factor":1
+        }
+      }
+   }
+  },
+  "conv": {
+    "global": {
+      "ratio": {
+        "first": 1,
+        "second": 2,
+        "perc": 100,
+        "factor": 1
+      }
+    },
+    "feat":{
+      "#upbrowser":{
+        "chrome":{
+          "first":1,"second":2,"perc":100,"factor":1
+        }
+      }
+   }
+  },
+  "delrat":{
+    "#upbrowser":{
+      "chrome":1
+      }
+  },
+  "jsd":{
+    "base":{
+      "#upbrowser":{
+        "chrome":1
+      }
+    }
+  }
+}

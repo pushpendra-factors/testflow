@@ -2,9 +2,12 @@ package delta
 
 import (
 	"encoding/json"
+//	"factors/model/model"
+//	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
+	//"net/http"
 	"sort"
 	"time"
 
@@ -20,8 +23,8 @@ type WeeklyInsights struct {
 	Insights []ActualMetrics `json:"actual_metrics"`
 }
 type Base struct {
-	W1          uint64  `json:"w1"`
-	W2          uint64  `json:"w2"`
+	W1          float64  `json:"w1"`
+	W2          float64  `json:"w2"`
 	IsIncreased bool    `json:"isIncrease"`
 	Percentage  float64 `json:"percentage"`
 }
@@ -29,6 +32,7 @@ type Base struct {
 type ActualMetrics struct {
 	Key                string `json:"key"`
 	Value              string `json:"value"`
+	Entity			   string `json:"entity"`
 	ActualValues       Base   `json:"actual_values"`
 	ChangeInConversion Base   `json:"change_in_conversion"`
 	ChangeInPrevalance Base   `json:"change_in_prevalance"`
@@ -39,31 +43,32 @@ type ActualMetrics struct {
 type ValueWithDetails struct {
 	Key                string            `json:"key"`
 	Value              string            `json:"value"`
+	Entity			   string 			 `json:"entity"`
 	ActualValues       BaseTargetMetrics `json:"actual_values"`
 	ChangeInConversion Base              `json:"change_in_conversion"`
 	ChangeInPrevalance Base              `json:"change_in_prevalance"`
 	Type               string            `json:"type"`
 }
 type BaseTargetMetrics struct {
-	W1           uint64  `json:"w1"`
-	W2           uint64  `json:"w2"`
+	W1           float64  `json:"w1"`
+	W2           float64  `json:"w2"`
 	Per          float64 `json:"per"`
 	DeltaRatio   float64 `json:"delrat"`
 	JSDivergence float64 `json:"jsd"`
 }
-
-func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
+var propertyMap = make(map[string]bool)
+func GetInsights(file CrossPeriodInsights, numberOfRecords int) WeeklyInsights {
 	var insights WeeklyInsights
 
 	if _, exists := file.Base.GlobalMetrics["#users"]; exists {
 
 		if file.Base.GlobalMetrics["#users"].First != nil {
-			insights.Base.W1 = uint64(file.Base.GlobalMetrics["#users"].First.(float64))
+			insights.Base.W1 = file.Base.GlobalMetrics["#users"].First.(float64)
 		} else {
 			insights.Base.W1 = 0
 		}
 		if file.Base.GlobalMetrics["#users"].Second != nil {
-			insights.Base.W2 = uint64(file.Base.GlobalMetrics["#users"].Second.(float64))
+			insights.Base.W2 = file.Base.GlobalMetrics["#users"].Second.(float64)
 		} else {
 			insights.Base.W2 = 0
 		}
@@ -72,12 +77,12 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
 	}
 	if _, exists := file.Target.GlobalMetrics["#users"]; exists {
 		if file.Target.GlobalMetrics["#users"].First != nil {
-			insights.Goal.W1 = uint64(file.Target.GlobalMetrics["#users"].First.(float64))
+			insights.Goal.W1 = file.Target.GlobalMetrics["#users"].First.(float64)
 		} else {
 			insights.Goal.W1 = 0
 		}
 		if file.Target.GlobalMetrics["#users"].Second != nil {
-			insights.Goal.W2 = uint64(file.Target.GlobalMetrics["#users"].Second.(float64))
+			insights.Goal.W2 = file.Target.GlobalMetrics["#users"].Second.(float64)
 		} else {
 			insights.Goal.W2 = 0
 		}
@@ -86,12 +91,12 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
 	}
 	if _, exists := file.Conversion.GlobalMetrics["ratio"]; exists {
 		if file.Conversion.GlobalMetrics["ratio"].First != nil {
-			insights.Conv.W1 = uint64(file.Conversion.GlobalMetrics["ratio"].First.(float64))
+			insights.Conv.W1 = file.Conversion.GlobalMetrics["ratio"].First.(float64)
 		} else {
 			insights.Conv.W1 = 0
 		}
 		if file.Conversion.GlobalMetrics["ratio"].Second != nil {
-			insights.Conv.W2 = uint64(file.Conversion.GlobalMetrics["ratio"].Second.(float64))
+			insights.Conv.W2 = file.Conversion.GlobalMetrics["ratio"].Second.(float64)
 		} else {
 			insights.Conv.W2 = 0
 		}
@@ -105,15 +110,16 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
 		var value ValueWithDetails
 		var temp BaseTargetMetrics
 		for keys2 := range file.BaseAndTarget.FeatureMetrics[keys] {
-			value.Key = keys
+			value.Key = keys[3:]
 			value.Value = keys2
+			value.Entity = keys[0:2]
 			if file.BaseAndTarget.FeatureMetrics[keys][keys2].First != nil {
-				temp.W1 = uint64(file.BaseAndTarget.FeatureMetrics[keys][keys2].First.(float64))
+				temp.W1 = file.BaseAndTarget.FeatureMetrics[keys][keys2].First.(float64)
 			} else {
 				temp.W1 = 0
 			}
 			if file.BaseAndTarget.FeatureMetrics[keys][keys2].Second != nil {
-				temp.W2 = uint64(file.BaseAndTarget.FeatureMetrics[keys][keys2].Second.(float64))
+				temp.W2 = file.BaseAndTarget.FeatureMetrics[keys][keys2].Second.(float64)
 			} else {
 				temp.W2 = 0
 			}
@@ -130,12 +136,12 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
 			value.ActualValues = temp
 
 			if file.Conversion.FeatureMetrics[keys][keys2].First != nil {
-				value.ChangeInConversion.W1 = uint64(file.Conversion.FeatureMetrics[keys][keys2].First.(float64))
+				value.ChangeInConversion.W1 = file.Conversion.FeatureMetrics[keys][keys2].First.(float64)
 			} else {
 				value.ChangeInConversion.W1 = 0
 			}
 			if file.Conversion.FeatureMetrics[keys][keys2].Second != nil {
-				value.ChangeInConversion.W2 = uint64(file.Conversion.FeatureMetrics[keys][keys2].Second.(float64))
+				value.ChangeInConversion.W2 = file.Conversion.FeatureMetrics[keys][keys2].Second.(float64)
 			} else {
 				value.ChangeInConversion.W2 = 0
 			}
@@ -145,12 +151,12 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
 			}
 
 			if file.Base.FeatureMetrics[keys][keys2].First != nil {
-				value.ChangeInPrevalance.W1 = uint64(file.Base.FeatureMetrics[keys][keys2].First.(float64))
+				value.ChangeInPrevalance.W1 = file.Base.FeatureMetrics[keys][keys2].First.(float64)
 			} else {
 				value.ChangeInPrevalance.W1 = 0
 			}
 			if file.Base.FeatureMetrics[keys][keys2].Second != nil {
-				value.ChangeInPrevalance.W2 = uint64(file.Base.FeatureMetrics[keys][keys2].Second.(float64))
+				value.ChangeInPrevalance.W2 = file.Base.FeatureMetrics[keys][keys2].Second.(float64)
 			} else {
 				value.ChangeInPrevalance.W2 = 0
 			}
@@ -181,8 +187,10 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
 			},			
 			
 		}
+		propertyMap[tempActualValue.Key] = true
 		tempActualValue.Key = data.Key
 		tempActualValue.Value = data.Value
+		tempActualValue.Entity = data.Entity
 		tempActualValue.ChangeInConversion = data.ChangeInConversion
 		tempActualValue.ChangeInPrevalance = data.ChangeInPrevalance
 		tempActualValue.Type = data.Type
@@ -201,15 +209,16 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
 
 		for keys2 := range file.Target.FeatureMetrics[keys] {
 
-			val2.Key = keys
+			val2.Key = keys[3:]
 			val2.Value = keys2
+			val2.Entity = keys[0:2]
 			if file.Target.FeatureMetrics[keys][keys2].First != nil {
-				temp.W1 = uint64(file.Target.FeatureMetrics[keys][keys2].First.(float64))
+				temp.W1 = file.Target.FeatureMetrics[keys][keys2].First.(float64)
 			} else {
 				temp.W1 = 0
 			}
 			if file.Target.FeatureMetrics[keys][keys2].Second != nil {
-				temp.W2 = uint64(file.Target.FeatureMetrics[keys][keys2].Second.(float64))
+				temp.W2 = file.Target.FeatureMetrics[keys][keys2].Second.(float64)
 			} else {
 				temp.W2 = 0
 			}
@@ -239,8 +248,10 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int) interface{} {
 			},			
 			
 		}
+		propertyMap[tempActualValue.Key] = true
 		tempActualValue.Key = data.Key
 		tempActualValue.Value = data.Value
+		tempActualValue.Entity = data.Entity
 		tempActualValue.Type = data.Type
 		ActualValuearr2 = append(ActualValuearr2, tempActualValue)
 

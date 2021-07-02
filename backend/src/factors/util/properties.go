@@ -895,6 +895,18 @@ var DISABLED_CORE_QUERY_EVENT_PROPERTIES = [...]string{
 	EP_SKIP_SESSION,
 }
 
+var DISABLED_USER_PROPERTIES_UI = [...]string{
+	UP_USER_AGENT,
+	UP_BROWSER_WITH_VERSION,
+	UP_OS_WITH_VERSION,
+}
+
+var DISABLED_EVENT_PROPERTIES_UI = [...]string{
+	UP_USER_AGENT,
+	UP_BROWSER_WITH_VERSION,
+	UP_OS_WITH_VERSION,
+}
+
 // DISABLED_FACTORS_USER_PROPERTIES User properties disabled for the factors analysis.
 var DISABLED_FACTORS_USER_PROPERTIES = [...]string{
 	UP_BROWSER_VERSION,
@@ -1154,10 +1166,11 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$latest_referrer":             "Latest Referrer",
 	"$latest_referrer_url":         "Latest Referrer URL",
 	"$latest_referrer_domain":      "Latest Referrer Domain",
+	"$joinTime":                    "Join Time",
 }
 
 var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
-	"$is_first_session ":           "Is First Session",
+	"$is_first_session":            "Is First Session",
 	"$session_time":                "Session Start Time",
 	"$initial_referrer":            "Referrer",
 	"$initial_referrer_url":        "Referrer URL",
@@ -1170,7 +1183,7 @@ var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$initial_page_raw_url":        "Landing Page Raw URL",
 	"$initial_page_domain":         "Landing Page Domain",
 	"$initial_page_load_time":      "Landing Page Load Time",
-	"$initial_page_spent_time ":    "Landing Page Time Spent",
+	"$initial_page_spent_time":     "Landing Page Time Spent",
 	"$initial_page_scroll_percent": "Landing Page Scroll Percent",
 	"$initial_cost":                "Initial Cost",
 	"$initial_revenue":             "Initial Revenue",
@@ -1871,12 +1884,18 @@ func FilterDisabledCoreUserProperties(propertiesByType *map[string][]string) {
 	for propertyType, properties := range *propertiesByType {
 		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_CORE_QUERY_USER_PROPERTIES[:])
 	}
+	for propertyType, properties := range *propertiesByType {
+		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_USER_PROPERTIES_UI[:])
+	}
 }
 
 // FilterDisabledCoreEventProperties Filters out less important properties from the list.
 func FilterDisabledCoreEventProperties(propertiesByType *map[string][]string) {
 	for propertyType, properties := range *propertiesByType {
 		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_CORE_QUERY_EVENT_PROPERTIES[:])
+	}
+	for propertyType, properties := range *propertiesByType {
+		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_EVENT_PROPERTIES_UI[:])
 	}
 }
 
