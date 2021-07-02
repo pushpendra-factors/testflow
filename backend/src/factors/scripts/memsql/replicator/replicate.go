@@ -443,6 +443,10 @@ func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *Tabl
 	return condition, params
 }
 
+func isValidProjectID(tableName string, id uint64) bool {
+	return id > 0 || tableName == tableTaskExecutionDetails
+}
+
 func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interface{},
 	sourceTableRecord *TableRecord) (*TableRecord, int) {
 
@@ -453,7 +457,7 @@ func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interfa
 		return nil, http.StatusBadRequest
 	}
 
-	if !isTableWithoutProjectID(tableName) && projectID == 0 {
+	if !isTableWithoutProjectID(tableName) && !isValidProjectID(tableName, projectID) {
 		return nil, http.StatusBadRequest
 	}
 
@@ -490,7 +494,7 @@ func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, sour
 	logCtx := log.WithField("project_id", projectID).WithField("table_name", tableName).
 		WithField("id", id).WithField("user_id", sourceTableRecord.UserID)
 
-	if (!isTableWithoutProjectID(tableName) && projectID == 0) || tableName == "" || id == nil {
+	if (!isTableWithoutProjectID(tableName) && !isValidProjectID(tableName, projectID)) || tableName == "" || id == nil {
 		return http.StatusBadRequest
 	}
 
