@@ -5,11 +5,11 @@ import { Text, SVG } from 'factorsComponents';
 import FAFilterSelect from '../../../../../components/FaFilterSelect';
 import PropertyFilter from '../PropertiesFilter';
 
-import { Modal, Form, Row, Col, Select, Input, Button, Radio } from 'antd';
+import {Modal, Form, Row, Col, Select, Input, Button, Radio} from 'antd';
 
 const { Option, OptGroup } = Select;
 
-function PropertyValueModal({ config, type = 'campaign', sources, rule, handleCancel, submitValues }) {
+function PropertyValueModal ({config, type = 'campaign', sources, rule, handleCancel, submitValues}) {
 
     const [showNewFilter, setShowNewFilter] = useState(false);
     const [modalForm] = Form.useForm();
@@ -19,10 +19,10 @@ function PropertyValueModal({ config, type = 'campaign', sources, rule, handleCa
     const [comboOp, setComboOper] = useState();
 
     useEffect(() => {
-        if (config) {
-            const src = config.sources ? config.sources.filter((sr) => sr.name === selectedSource) : [];
+        if(config) {
+            const src = config.sources? config.sources.filter((sr) => sr.name === selectedSource) : [];
             const propertyOptions = [];
-            if (src.length && src[0].objects_and_properties?.length) {
+            if(src.length && src[0].objects_and_properties?.length) {
                 src[0].objects_and_properties.forEach((grp) => {
                     propertyOptions.push({
                         label: grp.name,
@@ -36,20 +36,18 @@ function PropertyValueModal({ config, type = 'campaign', sources, rule, handleCa
     }, [config])
 
     useEffect(() => {
-        if (rule && rule.filters) {
-            const filterConverted = [...rule.filters.map((fil) => {
-                return {
-                    prop: { type: fil.name, name: fil.property, category: "categorical" },
-                    operator: fil.condition,
-                    values: fil.value
-                }
-            })];
+        if(rule && rule.filters) {
+            const filterConverted = [...rule.filters.map((fil) => {return {
+                prop: {type: fil.name, name: fil.property, category: "categorical"},
+                operator: fil.condition,
+                values: fil.value
+            }})];
             setFilters(filterConverted)
         }
     }, [rule])
 
     const onFinishValues = (data) => {
-        const modalResult = { ...data, filters: [...filters] }
+        const modalResult = {...data, filters: [...filters]}
         submitValues(modalResult, rule);
     }
 
@@ -58,7 +56,7 @@ function PropertyValueModal({ config, type = 'campaign', sources, rule, handleCa
     }
 
     const insertFilter = (index, filter) => {
-        if (index < 0) {
+        if(index < 0) {
             const filtersToUpdate = [...filters];
             filtersToUpdate.push(filter);
             setFilters(filtersToUpdate);
@@ -71,7 +69,7 @@ function PropertyValueModal({ config, type = 'campaign', sources, rule, handleCa
         setShowNewFilter(false);
     }
 
-    const onChangeValue = () => { }
+    const onChangeValue = () => {}
 
     const renderFilters = () => {
         const filterElements = [];
@@ -80,7 +78,7 @@ function PropertyValueModal({ config, type = 'campaign', sources, rule, handleCa
                 <div>
                     <PropertyFilter filter={fil} propOpts={propertyOpts} insertFilter={(filt) => insertFilter(i, filt)}></PropertyFilter>
 
-                    {i > 0 ? <span className={`ml-2`}>{comboOp}</span> : null}
+                    {i>0? <span className={`ml-2`}>{comboOp}</span> : null}
                 </div>
             )
         })
@@ -88,15 +86,38 @@ function PropertyValueModal({ config, type = 'campaign', sources, rule, handleCa
     }
 
     const renderSelectFilter = () => {
-        const filterSelect = !showNewFilter ?
+        const filterSelect = !showNewFilter ? 
             (<Button className={`mt-4`} size={'medium'} onClick={() => setShowNewFilter(true)}><SVG name={'plus'} extraClass={'mr-2'} size={16} />New Filter</Button>)
             :
             (<PropertyFilter propOpts={propertyOpts} insertFilter={(filt) => insertFilter(-1, filt)}></PropertyFilter>)
         return filterSelect;
     }
 
+    const renderCombinationOperator = () => {
+        return (
+            <Row className={'mt-8'}>
+                <Col span={24} >
+                    <div className={`flex justify-end items-baseline`}>
+                        <Text type={'title'} level={7} extraClass={'mr-2'}>Combination Operator</Text>
+                        <Form.Item
+                            name="combOperator"
+                                        rules={[{ required: true, message: 'Select one value' }]}
+                                >
+                                <Radio.Group onChange={e=>onSelectCombinationOperator(e)}>
+                                                        <Radio value={'AND'}>And</Radio>
+                                                        <Radio value={'OR'}>Or</Radio> 
+                                                    </Radio.Group> 
+                        </Form.Item>
+                    </div>
+                    
+                    
+                </Col>
+            </Row>
+        )
+    }
+
     const renderSourceOptions = () => {
-        if (!sources?.length) return null;
+        if(!sources?.length) return null;
         return sources.map((source) => {
             return <Option value={source} className={`capitalize`}> {source} </Option>
         })
@@ -107,78 +128,63 @@ function PropertyValueModal({ config, type = 'campaign', sources, rule, handleCa
             footer={null}
         >
             <Form
-                form={modalForm}
-                onFinish={onFinishValues}
-                className={'w-full'}
-                onChange={onChangeValue}
-                loading={false}
-                initialValues={{
-                    value: rule?.value ? rule.value : "",
-                    source: rule?.source ? rule.source : 'all',
-                    combOperator: rule?.filters && rule.filters[0].logical_operator ? rule.filters[0].logical_operator : 'AND'
-                }
-                }
-            >
+                    form={modalForm}
+                    onFinish={onFinishValues}
+                    className={'w-full'}
+                    onChange={onChangeValue}
+                    loading={false}
+                    initialValues={{
+                            value: rule?.value? rule.value : "",
+                            source: rule?.source? rule.source : 'all' ,
+                            combOperator: rule?.filters && rule.filters[0].logical_operator? rule.filters[0].logical_operator : 'AND'
+                        }
+                    }
+                    >
 
-                <Row className={'mt-8'}>
-                    <Col span={24}>
-                        <Text type={'title'} level={7} extraClass={'m-0'}>Value</Text>
-                        <Form.Item
-                            name="value"
-                            rules={[{ required: true, message: 'Please input value.' }]}
-                        >
-                            <Input disabled={false} size="large" className={'fa-input w-full'} placeholder="Value" />
-                        </Form.Item>
-                    </Col>
-                </Row>
-
-                <Row className={'mt-8'}>
-                    <Col span={24}>
-                        <Text type={'title'} level={7} extraClass={'m-0'}>Source</Text>
-                        <Form.Item
-                            name="source"
-                            rules={[{ required: true, message: 'Please input value.' }]}
-                        >
-                            <Select className={'fa-select w-full'} defaultValue="all" size={'large'}>
-                                {renderSourceOptions()}
-                            </Select>
-                        </Form.Item>
-                    </Col>
-                </Row>
-
-
-                <Row className={'mt-8'}>
-                    <Col span={24}>
-                        <Text type={'title'} level={7} extraClass={'m-0'}>Filters</Text>
-                        {renderFilters()}
-                        {renderSelectFilter()}
-                    </Col>
-                </Row>
-                <Row className={'mt-8'}>
-                    <Col span={24} >
-                        <div className={`flex justify-end items-baseline`}>
-                            <Text type={'title'} level={7} extraClass={'mr-2'}>Combination Operator</Text>
+                    <Row className={'mt-8'}>
+                            <Col span={24}>
+                            <Text type={'title'} level={7} extraClass={'m-0'}>Value</Text>
                             <Form.Item
-                                name="combOperator"
-                                rules={[{ required: true, message: 'Select one value' }]}
+                                    name="value"
+                                    rules={[{ required: true, message: 'Please input value.' }]}
                             >
-                                <Radio.Group onClick={e => onSelectCombinationOperator(e)}>
-                                    <Radio value={'AND'}>And</Radio>
-                                    <Radio value={'OR'}>Or</Radio>
-                                </Radio.Group>
-                            </Form.Item>
-                        </div>
-                    </Col>
-                </Row>
+                            <Input disabled={false} size="large" className={'fa-input w-full'} placeholder="Value" />
+                                    </Form.Item>
+                            </Col> 
+                    </Row>
 
-                <Row className={'mt-8'}>
-                    <Col span={24}>
-                        <div className="flex justify-end">
-                            <Button size={'large'} disabled={false} onClick={handleCancel}>Cancel</Button>
-                            <Button size={'large'} disabled={false} className={'ml-2'} type={'primary'} htmlType="submit">Save</Button>
+                    <Row className={'mt-8'}>
+                            <Col span={24}>
+                            <Text type={'title'} level={7} extraClass={'m-0'}>Source</Text>
+                            <Form.Item
+                                    name="source"
+                                    rules={[{ required: true, message: 'Please input value.' }]}
+                            >
+                                <Select className={'fa-select w-full'} defaultValue="all" size={'large'}>
+                                    {renderSourceOptions()}
+                                </Select>
+                            </Form.Item>
+                            </Col> 
+                    </Row>
+
+
+                    <Row className={'mt-8'}>
+                            <Col span={24}>
+                                <Text type={'title'} level={7} extraClass={'m-0'}>Filters</Text>
+                                {renderFilters()}
+                                {renderSelectFilter()}
+                                {renderCombinationOperator()}
+                            </Col> 
+                    </Row>
+
+                    <Row className={'mt-8'}>
+                        <Col span={24}>
+                            <div className="flex justify-end">
+                                <Button size={'large'} disabled={false} onClick={handleCancel}>Cancel</Button>
+                            <Button size={'large'} disabled={false}  className={'ml-2'} type={'primary'}  htmlType="submit">Save</Button>
                         </div>
-                    </Col>
-                </Row>
+                        </Col>
+                    </Row>
             </Form>
         </Modal>
     )
