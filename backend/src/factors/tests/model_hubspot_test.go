@@ -1844,3 +1844,157 @@ func TestHubspotLatestUserProperties(t *testing.T) {
 	assert.Equal(t, float64(1), result.Rows[0][2])
 
 }
+
+func TestHubspotCustomerUserIDChange(t *testing.T) {
+
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createdAt := time.Now().AddDate(0, 0, -11)
+	createdAtStr := fmt.Sprint(createdAt.Unix() * 1000)
+	email1 := getRandomEmail()
+
+	jsonContactMap := map[string]interface{}{
+		"vid":     1,
+		"addedAt": createdAtStr,
+		"properties": map[string]map[string]interface{}{
+			"createdate":       {"value": createdAtStr},
+			"lastmodifieddate": {"value": createdAtStr},
+			"lifecyclestage":   {"value": "lead"},
+		},
+		"identity-profiles": []map[string]interface{}{
+			{
+				"vid": 1,
+				"identities": []map[string]interface{}{
+					{
+						"type":  "EMAIL",
+						"value": email1,
+					},
+					{
+						"type":  "LEAD_GUID",
+						"value": "123-45",
+					},
+				},
+			},
+		},
+	}
+	w := sendCreateHubspotDocumentRequest(project.ID, r, agent, model.HubspotDocumentTypeNameContact, &jsonContactMap)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	email2 := getRandomEmail()
+	lastModifiedAt := createdAt.AddDate(0, 0, 1)
+	lastModifiedAtStr := fmt.Sprint(lastModifiedAt.Unix() * 1000)
+	jsonContactMap = map[string]interface{}{
+		"vid":     1,
+		"addedAt": lastModifiedAtStr,
+		"properties": map[string]map[string]interface{}{
+			"createdate":       {"value": createdAtStr},
+			"lastmodifieddate": {"value": lastModifiedAtStr},
+			"lifecyclestage":   {"value": "customer"},
+		},
+		"identity-profiles": []map[string]interface{}{
+			{
+				"vid": 1,
+				"identities": []map[string]interface{}{
+					{
+						"type":  "EMAIL",
+						"value": email2,
+					},
+					{
+						"type":  "LEAD_GUID",
+						"value": "123-45",
+					},
+				},
+			},
+		},
+	}
+	w = sendCreateHubspotDocumentRequest(project.ID, r, agent, model.HubspotDocumentTypeNameContact, &jsonContactMap)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	lastModifiedAt = lastModifiedAt.AddDate(0, 0, 1)
+	lastModifiedAtStr = fmt.Sprint(lastModifiedAt.Unix() * 1000)
+	jsonContactMap = map[string]interface{}{
+		"vid":     1,
+		"addedAt": lastModifiedAtStr,
+		"properties": map[string]map[string]interface{}{
+			"createdate":       {"value": createdAtStr},
+			"lastmodifieddate": {"value": lastModifiedAtStr},
+			"lifecyclestage":   {"value": "customer"},
+		},
+		"identity-profiles": []map[string]interface{}{
+			{
+				"vid": 1,
+				"identities": []map[string]interface{}{
+					{
+						"type":  "EMAIL",
+						"value": email2,
+					},
+					{
+						"type":  "LEAD_GUID",
+						"value": "123-45",
+					},
+				},
+			},
+		},
+	}
+	w = sendCreateHubspotDocumentRequest(project.ID, r, agent, model.HubspotDocumentTypeNameContact, &jsonContactMap)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	smartEventRule := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceHubspot,
+		ObjectType:           model.HubspotDocumentTypeNameContact,
+		Description:          "hubspot contact",
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
+			{
+				Name: "lifecyclestage",
+				Rules: []model.CRMFilterRule{
+					{
+						PropertyState: model.CurrentState,
+						Value:         "customer",
+						Operator:      model.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: model.PreviousState,
+						Value:         "customer",
+						Operator:      model.COMPARE_NOT_EQUAL,
+					},
+				},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: model.TimestampReferenceTypeDocument,
+	}
+
+	eventNameLifecycleStageLead := "lifecyclestage_customer"
+	requestPayload := make(map[string]interface{})
+	requestPayload["name"] = eventNameLifecycleStageLead
+	requestPayload["expr"] = smartEventRule
+
+	w = sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	IntHubspot.Sync(project.ID)
+
+	query := model.Query{
+		From: createdAt.Unix() - 500,
+		To:   lastModifiedAt.Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "lifecyclestage_customer",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassInsights,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, "count", result.Headers[0])
+	assert.Equal(t, float64(1), result.Rows[0][0])
+}
