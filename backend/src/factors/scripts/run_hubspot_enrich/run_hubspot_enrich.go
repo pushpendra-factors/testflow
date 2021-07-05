@@ -72,6 +72,7 @@ func main() {
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 
+	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
@@ -150,8 +151,19 @@ func main() {
 	var propertyDetailSyncStatus []IntHubspot.Status
 	anyFailure := false
 
+	allProjects, allowedProjects, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIDList, "")
+	if !allProjects {
+		log.WithField("projects", allowedProjects).Info("Running only for the given list of projects.")
+	}
+
 	projectIDs := make([]uint64, 0, 0)
 	for _, settings := range hubspotEnabledProjectSettings {
+		if !allProjects {
+			if _, exists := allowedProjects[settings.ProjectId]; !exists {
+				continue
+			}
+		}
+
 		if C.IsEnabledPropertyDetailByProjectID(settings.ProjectId) {
 			log.Info(fmt.Sprintf("Starting sync property details for project %d", settings.ProjectId))
 
