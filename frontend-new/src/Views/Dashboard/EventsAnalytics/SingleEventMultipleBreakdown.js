@@ -19,6 +19,7 @@ import {
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
 import { DashboardContext } from '../../../contexts/DashboardContext';
+import NoDataChart from '../../../components/NoDataChart';
 
 function SingleEventMultipleBreakdown({
   resultState,
@@ -70,7 +71,7 @@ function SingleEventMultipleBreakdown({
   }, [aggregateData]);
 
   if (!visibleProperties.length) {
-    return null;
+    return <NoDataChart />;
   }
 
   let chartContent = null;
