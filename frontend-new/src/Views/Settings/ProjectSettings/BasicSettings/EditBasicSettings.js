@@ -130,7 +130,7 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
               rules={[{ required: true, message: 'Please choose an option' }]}
             >
             <Select className={'fa-select w-full'} placeholder={'Time Zone'} size={'large'}>
-                <Option value="Asia/Calcutta">Asia/Calcutta</Option>
+                <Option value="Asia/Kolkata">Asia/Kolkata</Option>
                 <Option value="Africa/Cairo">Africa/Cairoa</Option>
                 <Option value="America/Chicago">America/Chicago</Option>
                 <Option value="Australia/Canberra">Australia/Canberra</Option>
