@@ -1,9 +1,6 @@
 import React, { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { Layout, Spin } from "antd";
-import Sidebar from "../../components/Sidebar";
-// import CoreQuery from "../CoreQuery";
-// import Dashboard from "../Dashboard";
-// import Factors from "../Factors";
+import Sidebar from "../../components/Sidebar"; 
 import ProjectSettings from "../Settings/ProjectSettings";
 import componentsLib from "../../Views/componentsLib";
 import { connect, useSelector, useDispatch } from "react-redux";
@@ -23,9 +20,13 @@ import retryDynamicImport from 'Utils/dynamicImport';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
 
-const CoreQuery = lazy(()=>retryDynamicImport(() => import("../CoreQuery")));
-const Dashboard = lazy(()=>retryDynamicImport(() => import("../Dashboard")));
-const Factors = lazy(()=>retryDynamicImport(() => import("../Factors")));
+// const CoreQuery = lazy(()=>retryDynamicImport(() => import("../CoreQuery")));
+// const Dashboard = lazy(()=>retryDynamicImport(() => import("../Dashboard")));
+// const Factors = lazy(()=>retryDynamicImport(() => import("../Factors")));
+
+import CoreQuery from "../CoreQuery";
+import Dashboard from "../Dashboard";
+import Factors from "../Factors";
 
 function AppLayout({ fetchProjects, 
   fetchEventNames,
