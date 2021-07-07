@@ -101,8 +101,10 @@ function SmartProperties({ activeProject,
     const menu = (obj) => {
         return (
             <Menu>
-                <Menu.Item key="0" onClick={() => showDeleteWidgetModal(obj)}>
-                    <a>Remove</a>
+                <Menu.Item disabled={rulesData.length == 1 ? true : false} key="0" onClick={() => showDeleteWidgetModal(obj)}>
+                    <Tooltip
+                        placement="top" title="Can't remove because the property should have atleast one value." trigger={rulesData.length == 1 ? ['hover'] : []}
+                    ><a>Remove</a></Tooltip>
                 </Menu.Item>
                 <Menu.Item key="0" onClick={() => editProp(obj)}>
                     <a>Edit</a>
