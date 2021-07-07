@@ -372,7 +372,8 @@ func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesfo
 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties, lastModifiedTimestamp)
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
+			properties, prevProperties, lastModifiedTimestamp)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
@@ -447,7 +448,8 @@ func enrichContact(projectID uint64, document *model.SalesforceDocument, salesfo
 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties, lastModifiedTimestamp)
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
+			properties, prevProperties, lastModifiedTimestamp)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
@@ -465,18 +467,22 @@ WITHOUT PREVIOUS PROPERTY :- A query will be made for previous synced record whi
 will require userID or customerUserID and doctType
 WITH PREVIOUS PROPERTY := userID, customerUserID and doctType won't be used
 */
-func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID, userID string, docType int,
+func GetSalesforceSmartEventPayload(projectID uint64, eventName, documentID, userID string, docType int,
 	currentProperties, prevProperties *map[string]interface{}, filter *model.SmartCRMEventFilter) (*model.CRMSmartEvent, *map[string]interface{}, bool) {
 
 	var crmSmartEvent model.CRMSmartEvent
 	var validProperty bool
 	var newProperties map[string]interface{}
 
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType, "document_id": documentID,
+		"doc_id": docType, "smart_event_rule": filter})
 	if projectID == 0 || eventName == "" || filter == nil || currentProperties == nil {
+		logCtx.Error("Missing required fields.")
 		return nil, prevProperties, false
 	}
 
-	if prevProperties == nil && (docType == 0 || userID == "") {
+	if prevProperties == nil && (documentID == "" || docType == 0 || userID == "") {
+		logCtx.Error("Missing required fields.")
 		return nil, prevProperties, false
 	}
 
@@ -486,15 +492,13 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 		validProperty = model.CRMFilterEvaluator(projectID, currentProperties, nil, filter, model.CompareStateCurr)
 	}
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
-
 	if !validProperty {
 		return nil, prevProperties, false
 	}
 
 	if prevProperties == nil {
-		prevDoc, status := store.GetStore().GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(
-			projectID, customerUserID, userID, docType)
+		prevDocs, status := store.GetStore().GetSyncedSalesforceDocumentByType(
+			projectID, []string{documentID}, docType)
 		if status != http.StatusFound && status != http.StatusNotFound {
 			return nil, prevProperties, false
 		}
@@ -503,7 +507,7 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 		if status == http.StatusNotFound {
 			prevProperties = &map[string]interface{}{}
 		} else {
-			_, prevProperties, err = GetSalesforceDocumentProperties(projectID, prevDoc)
+			_, prevProperties, err = GetSalesforceDocumentProperties(projectID, &prevDocs[len(prevDocs)-1])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to GetSalesforceDocumentProperties")
 				return nil, prevProperties, false
@@ -524,11 +528,13 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 }
 
 // TrackSalesforceSmartEvent valids current properties with CRM smart filter and creates a event
-func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *SalesforceSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64) *map[string]interface{} {
+func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *SalesforceSmartEventName, eventID, documentID, userID string, docType int,
+	currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType, "user_id": userID, "customer_user_id": customerUserID, "smart_event_rule": salesforceSmartEventName})
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType,
+		"user_id": userID, "document_id": documentID, "smart_event_rule": salesforceSmartEventName})
 	if projectID == 0 || currentProperties == nil || docType == 0 || userID == "" || lastModifiedTimestamp == 0 {
 		logCtx.Error("Missing required fields.")
 		return prevProperties
@@ -539,7 +545,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 		return prevProperties
 	}
 
-	smartEventPayload, prevProperties, valid = GetSalesforceSmartEventPayload(projectID, salesforceSmartEventName.EventName, customerUserID,
+	smartEventPayload, prevProperties, valid = GetSalesforceSmartEventPayload(projectID, salesforceSmartEventName.EventName, documentID,
 		userID, docType, currentProperties, prevProperties, salesforceSmartEventName.Filter)
 	if !valid {
 		return prevProperties
@@ -756,7 +762,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID,
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID,
 			document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
@@ -808,7 +814,8 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties, lastModifiedTimestamp)
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, document.ID, userID, document.Type,
+			properties, prevProperties, lastModifiedTimestamp)
 	}
 
 	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)

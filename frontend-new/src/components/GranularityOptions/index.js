@@ -6,10 +6,8 @@ import styles from './index.module.scss';
 import { SVG } from '../factorsComponents';
 
 function GranularityOptions({ durationObj, onClick, queryType }) {
-  const validDateBreakdowns =
-    queryType === QUERY_TYPE_CAMPAIGN
-      ? DateBreakdowns.slice(1)
-      : DateBreakdowns;
+  const validDateBreakdowns = [...DateBreakdowns];
+  
   const options = useMemo(() => {
     const enabledOptions = getValidGranularityOptions(durationObj, queryType);
     return validDateBreakdowns.map((db) => {

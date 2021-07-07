@@ -687,8 +687,13 @@ function CoreQuery({
         }
         queryupdated[index] = newEvent;
       } else {
-        deleteGroupByForEvent(newEvent, index);
-        queryupdated.splice(index, 1);
+        if (changeType === 'filters_updated') {
+          // dont remove group by if filter is changed
+          queryupdated[index] = newEvent;
+        } else {
+          deleteGroupByForEvent(newEvent, index);
+          queryupdated.splice(index, 1);
+        }
       }
     } else {
       queryupdated.push(newEvent);

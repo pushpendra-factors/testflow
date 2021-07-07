@@ -251,7 +251,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, bool) {
 					Base: EventsCriteria{
 						Operator: "And",
 						EventCriterionList: []EventCriterion{EventCriterion{
-							Name:         query.EventsWithProperties[0].Name,
+							Name:         "$session",
 							EqualityFlag: true,
 						}}},
 					Target: EventsCriteria{
@@ -261,22 +261,25 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, bool) {
 					if query.EventsCondition == model.EventCondEachGivenEvent {
 						deltaQuery.Target.Operator = "And"
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
-							Name:         event.Name,
-							EqualityFlag: true,
+							Name:                event.Name,
+							EqualityFlag:        true,
+							FilterCriterionList: MapFilterProperties(event.Properties),
 						})
 					}
 					if query.EventsCondition == model.EventCondAllGivenEvent {
 						deltaQuery.Target.Operator = "And"
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
-							Name:         event.Name,
-							EqualityFlag: true,
+							Name:                event.Name,
+							EqualityFlag:        true,
+							FilterCriterionList: MapFilterProperties(event.Properties),
 						})
 					}
 					if query.EventsCondition == model.EventCondAnyGivenEvent {
 						deltaQuery.Target.Operator = "Or"
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
-							Name:         event.Name,
-							EqualityFlag: true,
+							Name:                event.Name,
+							EqualityFlag:        true,
+							FilterCriterionList: MapFilterProperties(event.Properties),
 						})
 					}
 				}
@@ -294,14 +297,16 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, bool) {
 						Base: EventsCriteria{
 							Operator: "And",
 							EventCriterionList: []EventCriterion{EventCriterion{
-								Name:         query.EventsWithProperties[0].Name,
-								EqualityFlag: true,
+								Name:                query.EventsWithProperties[0].Name,
+								EqualityFlag:        true,
+								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[0].Properties),
 							}}},
 						Target: EventsCriteria{
 							Operator: "And",
 							EventCriterionList: []EventCriterion{EventCriterion{
-								Name:         query.EventsWithProperties[1].Name,
-								EqualityFlag: true,
+								Name:                query.EventsWithProperties[1].Name,
+								EqualityFlag:        true,
+								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[1].Properties),
 							}},
 						}}
 					return deltaQuery, true
@@ -310,4 +315,45 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, bool) {
 		}
 	}
 	return deltaQuery, false
+}
+
+func MapFilterProperties(qp []model.QueryProperty) []EventFilterCriterion {
+	filters := make(map[string]EventFilterCriterion)
+	for _, prop := range qp {
+		if prop.Type != "categorical" {
+			continue
+		}
+		filterProp := EventFilterCriterion{
+			Key: prop.Property,
+		}
+		if prop.Entity == "user" {
+			filterProp.PropertiesMode = "user"
+		} else if prop.Entity == "event" {
+			filterProp.PropertiesMode = "event"
+		} else {
+			log.Error("Incorrect entity type")
+			return nil
+		}
+		if prop.Operator == model.EqualsOpStr || prop.Operator == model.EqualsOp {
+			filterProp.EqualityFlag = true
+		} else {
+			filterProp.EqualityFlag = false
+		}
+		keyString := fmt.Sprintf("%s-%s", prop.Entity, prop.Property)
+		propertyInMap, exists := filters[keyString]
+		if exists == false {
+			values := make([]string, 0)
+			values = append(values, prop.Value)
+			filterProp.ValueSet = values
+			filters[keyString] = filterProp
+		} else {
+			propertyInMap.ValueSet = append(propertyInMap.ValueSet, prop.Value)
+			filters[keyString] = propertyInMap
+		}
+	}
+	criterias := make([]EventFilterCriterion, 0)
+	for _, criteria := range filters {
+		criterias = append(criterias, criteria)
+	}
+	return criterias
 }

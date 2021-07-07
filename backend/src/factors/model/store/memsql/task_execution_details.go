@@ -208,7 +208,12 @@ func (store *MemSQL) InsertTaskBeginRecord(taskId uint64, projectId uint64, delt
 	}
 
 	existingExecDetails := make([]model.TaskExecutionDetails, 0)
-	db.Where("task_id = ? AND delta = ?", taskId, delta).Find(&existingExecDetails)
+	if isProjectEnabled == true {
+		db.Where("task_id = ? AND delta = ? AND project_id = ?", taskId, delta, projectId).Find(&existingExecDetails)
+	} else {
+		db.Where("task_id = ? AND delta = ?", taskId, delta).Find(&existingExecDetails)
+	}
+
 	if len(existingExecDetails) > 0 {
 		logCtx.Error("Trying to insert duplicate record")
 		return http.StatusConflict, "Trying to insert duplicate record"

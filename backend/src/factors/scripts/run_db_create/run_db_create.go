@@ -703,4 +703,11 @@ func main() {
 	} else {
 		log.Info("display_names table token unique index created.")
 	}
+
+	// templates
+	if err := db.CreateTable(&model.Template{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("template table creation failed.")
+	} else {
+		log.Info("Created template table.")
+	}
 }

@@ -293,7 +293,8 @@ func getTimestampFromField(projectID uint64, propertyName string, properties *ma
 }
 
 // TrackHubspotSmartEvent validates hubspot current properties with CRM smart filter and creates a event
-func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}, defaultTimestamp int64) *map[string]interface{} {
+func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, customerUserID, userID string, docType int,
+	currentProperties, prevProperties *map[string]interface{}, defaultTimestamp int64, usingFallbackUserID bool) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
 
@@ -347,10 +348,18 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 	}
 
 	if !C.IsDryRunCRMSmartEvent() {
-		status, _ := SDK.Track(projectID, smartEventTrackPayload, true, SDK.SourceHubspot)
-		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			logCtx.Error("Failed to create hubspot smart event")
+		if usingFallbackUserID {
+			logCtx.WithFields(log.Fields{"properties": smartEventPayload.Properties, "event_name": smartEventPayload.Name,
+				"filter_exp":            *hubspotSmartEventName.Filter,
+				"smart_event_timestamp": smartEventTrackPayload.Timestamp}).Warning("Smart event using fallback user id detected.")
+
+		} else {
+			status, _ := SDK.Track(projectID, smartEventTrackPayload, true, SDK.SourceHubspot)
+			if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+				logCtx.Error("Failed to create hubspot smart event")
+			}
 		}
+
 	} else {
 		logCtx.WithFields(log.Fields{"properties": smartEventPayload.Properties, "event_name": smartEventPayload.Name,
 			"filter_exp":            *hubspotSmartEventName.Filter,
@@ -579,6 +588,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 
 	customerUserID := getCustomerUserIDFromProperties(projectID, *enProperties)
 	var eventID, userID string
+	var usingFallbackUserID, usingUserByLeadGUUID bool
 	if document.Action == model.HubspotDocumentActionCreated {
 
 		createdUserID, status := store.GetStore().CreateUser(&model.User{
@@ -612,18 +622,28 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 				lastSyncedDocument, errCode := store.GetStore().GetSyncedHubspotDocumentByFilter(projectID,
 					document.ID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated)
 				if errCode == http.StatusFound && lastSyncedDocument.UserId != "" {
-					logCtx.Info("Failed to get user with given lead_guid on contact updated event. Using user_id on contact created document.")
+					logCtx.Info("Failed to get user with given lead_guid on contact updated event. " +
+						"Using user_id on contact created document.")
 					userID = lastSyncedDocument.UserId
 				} else {
-					logCtx.Info("Failed to get user with given lead_guid on contact updated event. Not able to get user by last contact create document. Trying user by customer_user_id")
-					userByCustomerUserID, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectID, customerUserID)
-					if errCode == http.StatusFound && userByCustomerUserID != nil {
-						userID = userByCustomerUserID.ID
-					} else if lastSyncedDocument != nil && lastSyncedDocument.SyncId != "" {
+					logCtx.Info("Failed to get user with given lead_guid on contact updated event. " +
+						"Not able to get user by last contact create document. Trying user by sync id event.")
+					if lastSyncedDocument != nil && lastSyncedDocument.SyncId != "" {
 						event, status := store.GetStore().GetEventById(projectID, lastSyncedDocument.SyncId, "")
 						if status == http.StatusFound {
-							logCtx.Info("Failed to get user with given lead_guid on contact updated event. Not able to get user by customer user id. Using contact create event user id.")
+							logCtx.Info("Failed to get user with given lead_guid on contact updated event. " +
+								"Not able to get user by customer user id. Using contact create event user id.")
 							userID = event.UserId
+						}
+					}
+
+					if userID == "" {
+						logCtx.Info("Failed to get user with given lead_guid on contact updated event. " +
+							"Not able to get user by last contact create document. Trying user by customer_user_id")
+						usingFallbackUserID = true
+						userByCustomerUserID, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectID, customerUserID)
+						if errCode == http.StatusFound && userByCustomerUserID != nil {
+							userID = userByCustomerUserID.ID
 						}
 					}
 
@@ -635,11 +655,13 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 				}
 
 			} else {
-				logCtx.WithField("err_code", errCode).Error("Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
+				logCtx.WithField("err_code", errCode).Error("Failed to get user with given lead_guid. " +
+					"Failed to track hubspot contact updated event.")
 				return http.StatusInternalServerError
 			}
 		} else {
 			userID = user.ID
+			usingUserByLeadGUUID = true
 		}
 
 		if customerUserID != "" {
@@ -675,12 +697,47 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		defaultSmartEventTimestamp = timestamp
 	}
 
+	user, status := store.GetStore().GetUser(projectID, userID)
+	if status != http.StatusFound {
+		logCtx.WithField("error_code", status).Error("Failed to get user on sync contact.")
+	}
+
+	existingCustomerUserID := user.CustomerUserId
+
+	if existingCustomerUserID != customerUserID {
+		logCtx.WithFields(log.Fields{"existing_customer_user_id": existingCustomerUserID, "new_customer_user_id": customerUserID}).
+			Warn("Different customer user id seen on sync contact")
+	}
+
 	var prevProperties *map[string]interface{}
 	for i := range hubspotSmartEventNames {
-		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, customerUserID, userID, document.Type, properties, prevProperties, defaultSmartEventTimestamp)
+		/*
+			use existing customer user id for identifying previous user property.
+			Possible cases to handle
+			contact(U1,property_email - EMAIL1, identity - EMAIL1) -> contact(U2, property_email - EMAIL1, identity - EMAIL1)
+			contact(U1,property_email - EMAIL1, identity - EMAIL1) -> contact(U2, property_email - EMAIL2, identity - EMAIL1)
+			contact(U1,property_email - EMAIL1, identity - EMAIL1) -> contact(U2, property_email - EMAIL2, identity - EMAIL2) - will be fixed after marking it as synced
+		*/
+		// if usingUserByLeadGUUID then previous property would be previous property by same user
+		if usingUserByLeadGUUID {
+			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, "", userID, document.Type,
+				properties, prevProperties, defaultSmartEventTimestamp, false)
+		} else {
+			/*
+			 Case 1 - Using contact created, events user_id. This would be accurate - But user id could have changed. Use customer_user_id to find previous property.
+			 Case 2 - Using lastest user by customer_user_id(usingFallbackUserID), can be inaccurate. Avoid creating smart event.
+			*/
+			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, existingCustomerUserID, userID, document.Type,
+				properties, prevProperties, defaultSmartEventTimestamp, usingFallbackUserID)
+		}
+
 	}
 
 	// Mark as synced, if customer_user_id not present or present and identified.
+	/*
+		Fix - duplicate smart event. Use the user id from contact created or by lead guuid to restore smart event flow, as sync_id was used from beginning.
+		Possible impact - There can be one invalid smart event per user before restoring original flow.
+	*/
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
 		projectID, document.ID, eventID, document.Timestamp, document.Action, userID)
 	if errCode != http.StatusAccepted {
@@ -1068,7 +1125,8 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 		eventID = response.EventId
 		var prevProperties *map[string]interface{}
 		for i := range hubspotSmartEventNames {
-			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, "", userID, document.Type, properties, prevProperties, defaultSmartEventTimestamp)
+			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, "", userID, document.Type,
+				properties, prevProperties, defaultSmartEventTimestamp, false)
 		}
 	}
 

@@ -89,7 +89,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
-
+	path, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+	C.InitFilemanager(path, *env, config)
 	C.InitQueueClient(config.RedisHost, config.RedisPort)
 	C.InitDuplicateQueueClient(config.RedisHost, config.RedisPort)
 

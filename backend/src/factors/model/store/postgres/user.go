@@ -101,6 +101,13 @@ func (pg *Postgres) CreateUser(user *model.User) (string, int) {
 	logCtx := log.WithField("project_id", user.ProjectId).
 		WithField("user_id", user.ID)
 
+	if user.SegmentAnonymousId != "" || user.AMPUserId != "" {
+		// Corresponding create methods should be used for
+		// users from different platform.
+		logCtx.Error("Unsupported user of create_user method.")
+		return "", http.StatusBadRequest
+	}
+
 	newUser, err := pg.createUserWithError(user)
 	if err == nil {
 		return newUser.ID, http.StatusCreated

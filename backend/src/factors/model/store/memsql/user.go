@@ -30,31 +30,6 @@ func isConstraintViolationError(err error) bool {
 	return err.Error() == constraintViolationError
 }
 
-func (store *MemSQL) satisfiesUserConstraints(user model.User) int {
-	if user.ID != "" {
-		if errCode := store.IsUserExistByID(user.ProjectId, user.ID); errCode == http.StatusFound {
-			return http.StatusConflict
-		}
-	}
-
-	// Unique (project_id, segment_anonymous_id) constraint.
-	if user.SegmentAnonymousId != "" {
-		if exists := existsUserWithSegmentAnonymousID(user.ProjectId, user.SegmentAnonymousId); exists {
-			return http.StatusConflict
-		}
-	}
-
-	// Unique (project_id, amp_user_id) constraint.
-	if user.AMPUserId != "" {
-		_, errCode := store.GetUserIDByAMPUserID(user.ProjectId, user.AMPUserId)
-		if errCode == http.StatusFound {
-			return http.StatusConflict
-		}
-	}
-
-	return http.StatusOK
-}
-
 // createUserWithError - Returns error during create to match
 // with constraint errors.
 func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) {
@@ -72,11 +47,12 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		user.ID = U.GetUUID()
 	}
 
-	errCode := store.satisfiesUserConstraints(*user)
-	if errCode == http.StatusConflict {
-		return user, errors.New(constraintViolationError)
-	} else if errCode != http.StatusOK {
-		return nil, errors.New("failed to create user")
+	// Unique constraint (project_id, id)
+	errCode := store.IsUserExistByID(user.ProjectId, user.ID)
+	if errCode == http.StatusFound {
+		return user, nil
+	} else if errCode == http.StatusInternalServerError {
+		return nil, errors.New("unique constraint check failure")
 	}
 
 	// Add join timestamp before creation.
@@ -142,18 +118,16 @@ func (store *MemSQL) CreateUser(user *model.User) (string, int) {
 	logCtx := log.WithField("project_id", user.ProjectId).
 		WithField("user_id", user.ID)
 
+	if user.SegmentAnonymousId != "" || user.AMPUserId != "" {
+		// Corresponding create methods should be used for
+		// users from different platform.
+		logCtx.Error("Unsupported user of create_user method.")
+		return "", http.StatusBadRequest
+	}
+
 	newUser, err := store.createUserWithError(user)
 	if err == nil {
 		return newUser.ID, http.StatusCreated
-	}
-
-	if IsDuplicateRecordError(err) || isConstraintViolationError(err) {
-		if user.ID != "" {
-			return user.ID, http.StatusCreated
-		}
-
-		logCtx.WithError(err).Error("Failed to create user. Integrity violation.")
-		return "", http.StatusNotAcceptable
 	}
 
 	logCtx.WithError(err).Error("Failed to create user.")
@@ -350,26 +324,6 @@ func (store *MemSQL) GetExistingCustomerUserID(projectId uint64, arrayCustomerUs
 	return customerUserIDMap, http.StatusFound
 }
 
-func existsUserWithSegmentAnonymousID(projectID uint64, segAnonID string) bool {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
-
-	var user model.User
-	db := C.GetServices().Db
-	if err := db.Limit(1).Where("project_id = ?", projectID).Where(
-		"segment_anonymous_id = ?", segAnonID).Select("id").Find(&user).Error; err != nil {
-		if !gorm.IsRecordNotFoundError(err) {
-			log.WithField("project_id", projectID).WithField("segment_anonymous_id", segAnonID).
-				Error("Failed to get count of users by segment_anonymous_id.")
-		}
-		return false
-	}
-
-	if user.ID != "" {
-		return true
-	}
-	return false
-}
-
 func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*model.User, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
@@ -479,16 +433,6 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 
 		user, err := store.createUserWithError(cUser)
 		if err != nil {
-			if IsDuplicateRecordError(err) || isConstraintViolationError(err) {
-				user, errCode = store.GetUserBySegmentAnonymousId(projectId, segAnonId)
-				if errCode == http.StatusFound {
-					return user, http.StatusOK
-				}
-
-				logCtx.Error("Failed to get user by segment anonymous id after constraint failure.")
-				return nil, http.StatusInternalServerError
-			}
-
 			logCtx.WithError(err).Error(
 				"Failed to create user by segment anonymous id on CreateOrGetSegmentUser")
 			return nil, http.StatusInternalServerError
@@ -559,7 +503,6 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 	if errCode == http.StatusInternalServerError {
 		return "", errCode
 	}
-
 	if errCode == http.StatusFound {
 		return userID, errCode
 	}
@@ -567,12 +510,6 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 	user, err := store.createUserWithError(&model.User{ProjectId: projectId,
 		AMPUserId: ampUserId, JoinTimestamp: timestamp})
 	if err != nil {
-		// Handle user creation failure if already created between
-		// the execution by another thread.
-		if isConstraintViolationError(err) && user != nil {
-			return store.GetUserIDByAMPUserID(projectId, ampUserId)
-		}
-
 		logCtx.WithError(err).Error(
 			"Failed to create user by amp user id on CreateOrGetAMPUser")
 		return "", http.StatusInternalServerError

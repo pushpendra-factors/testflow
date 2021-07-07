@@ -543,8 +543,22 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       gbty: opt.gbty,
     };
   });
-  const event = breakdown.filter((b) => b.eventIndex);
-  const global = breakdown.filter((b) => !b.eventIndex);
+  const event = breakdown
+    .filter((b) => b.eventIndex)
+    .map((b, index) => {
+      return {
+        ...b,
+        overAllIndex: index,
+      };
+    });
+  const global = breakdown
+    .filter((b) => !b.eventIndex)
+    .map((b, index) => {
+      return {
+        ...b,
+        overAllIndex: index,
+      };
+    });
   const result = {
     events,
     queryType,
