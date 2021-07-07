@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { connect } from 'react-redux';
 import {
-    Row, Col, Form, Button, Input, Select, Table, notification, Dropdown, Menu,
+    Tooltip, ConfigProvider, Empty, Row, Col, Form, Button, Input, Select, Table, notification, Dropdown, Menu,
 } from 'antd';
 import { MoreOutlined } from "@ant-design/icons";
 import { Text, SVG } from 'factorsComponents';
@@ -12,7 +12,7 @@ import PropetyValueModal from '../PropetyValueModal';
 
 import { operatorMap, reverseOperatorMap } from '../utils';
 import ConfirmationModal from "../../../../../components/ConfirmationModal";
-
+import NoData from "/Users/vikas/repos/factors/frontend-new/src/assets/images/NoData.png";
 const { Option, OptGroup } = Select;
 
 function SmartProperties({ activeProject,
@@ -368,7 +368,14 @@ function SmartProperties({ activeProject,
                                             : null
                                     }
                                     {
-                                        formState !== 'view' ? <Button size={'large'} disabled={false} className={'ml-2'} type={'primary'} htmlType="submit">Save</Button>
+                                        formState !== 'view' ? <Tooltip
+                                            placement="top" title="Please add at least one value for this property" trigger={rulesData.length < 1 ? ['hover'] : []}
+                                        >
+                                            <Button
+                                            size={'large'} disabled={rulesData.length<1 ? true : false} className={'ml-2'} type={'primary'} htmlType="submit">
+                                                Save
+                                            </Button>
+                                        </Tooltip>
                                             : null
                                     }
                                 </div>
@@ -398,11 +405,30 @@ function SmartProperties({ activeProject,
                 </Row>
                 <Row>
                     <Col span={24}>
-                        <Table className="fa-table--basic mt-4"
-                            columns={columns}
-                            dataSource={rulesData}
-                            pagination={false}
-                        />
+                        <ConfigProvider
+
+                            renderEmpty={() =>
+                                <Empty
+                                    image={NoData}
+                                    imageStyle={{
+                                        display: "flex",
+                                        flexDirection: "vertical",
+                                        justifyContent: "center",
+                                    }}
+                                    description={
+                                        <span>
+                                            No values added yet. Please add few values before saving the property.
+                                        </span>
+                                    }
+                                >
+                                    <Button size={'medium'} onClick={() => setShowModalVisible(true)}><SVG name={'plus'} extraClass={'mr-2'} size={16} />Add New Value</Button>
+                                </Empty>}>
+                            <Table className="fa-table--basic mt-4"
+                                columns={columns}
+                                dataSource={rulesData}
+                                pagination={false}
+                            />
+                        </ConfigProvider>
                     </Col>
                 </Row>
                 {renderValuesModal()}
