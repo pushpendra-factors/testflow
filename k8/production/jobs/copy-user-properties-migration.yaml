@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: up-migration-pool1
+    nodePool: persistent-pool-highmem
   name: copy-user-properties-migration
 spec:
   schedule: "1 2 3 4 5"
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: up-migration-pool1
+            nodePool: persistent-pool-highmem
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: up-migration-pool1
+            cloud.google.com/gke-nodepool: persistent-pool-highmem
           containers:
           - name: copy-user-properties-migration
             image: us.gcr.io/factors-production/copy-user-properties-migration:859291fb0-1542

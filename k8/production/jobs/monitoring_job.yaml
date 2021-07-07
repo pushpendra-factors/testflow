@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-standard
+    nodePool: persistent-pool-highmem
   name: monitoring-job
 spec:
   schedule: "*/5 * * * *" # every 15 minutes
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-standard
+            nodePool: persistent-pool-highmem
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-standard
+            cloud.google.com/gke-nodepool: persistent-pool-highmem
           containers:
           - name: monitoring-job
             image: us.gcr.io/factors-production/monitoring:v0.15_eeb2024b
