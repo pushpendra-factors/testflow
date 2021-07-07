@@ -5,7 +5,7 @@ metadata:
     layer: integration-request-worker-dup
     env: production
     project: factors-production
-    nodePool: persistent-pool-standard
+    nodePool: workers-pool
   name: integration-request-worker-dup
   namespace: default
 spec:
@@ -24,10 +24,10 @@ spec:
     metadata:      
       labels:
         layer: integration-request-worker-dup
-        nodePool: persistent-pool-standard
+        nodePool: workers-pool
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-pool-standard
+        cloud.google.com/gke-nodepool: workers-pool
       containers:
       - name: integration-request-worker-dup
         image: us.gcr.io/factors-production/integration-request-worker:61f0c0941
@@ -39,7 +39,8 @@ spec:
         terminationMessagePolicy: File
         resources:
           requests:
-            memory: "100M"
+            cpu: 500m
+            memory: 100M
         securityContext: {}
         args:
           - --env
