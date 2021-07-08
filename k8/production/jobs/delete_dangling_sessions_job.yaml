@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-highmem
+    nodePool: shared-persistent-pool
   name: delete-dangling-sessions-job
 spec:
   schedule: "1 2 3 4 5" 
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-highmem
+            nodePool: shared-persistent-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem
+            cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: delete-dangling-sessions-job
             image: us.gcr.io/factors-production/delete-dangling-sessions-job:v0.03-xxx

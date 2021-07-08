@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-highmem
+    nodePool: shared-persistent-pool
   name: adhoc-archive-events-job
 spec:
   schedule: "1 2 3 4 5" # In UTC. Random time to avoid running periodically.
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-highmem
+            nodePool: shared-persistent-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem
+            cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: adhoc-archive-events-job
             image: us.gcr.io/factors-production/adhoc-archive-events-job:v0.71_4a75f686
