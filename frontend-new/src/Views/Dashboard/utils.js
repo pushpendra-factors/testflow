@@ -15,7 +15,7 @@ import {
   getItemFromLocalStorage,
   setItemToLocalStorage,
 } from '../../utils/dataFormatter';
-import { DefaultDateRangeFormat } from '../CoreQuery/utils';
+import { DashboardDefaultDateRangeFormat } from '../CoreQuery/utils';
 
 export const getDataFromServer = (
   query,
@@ -184,9 +184,9 @@ export const getDashboardDateRange = () => {
   }
   setItemToLocalStorage(
     LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION,
-    JSON.stringify(DefaultDateRangeFormat)
+    JSON.stringify(DashboardDefaultDateRangeFormat)
   );
   return {
-    ...DefaultDateRangeFormat,
+    ...DashboardDefaultDateRangeFormat,
   };
 };

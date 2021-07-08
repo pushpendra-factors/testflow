@@ -323,7 +323,7 @@ export const FUNNEL_CHART_MARGIN = {
 };
 
 export const LOCAL_STORAGE_ITEMS = {
-  DASHBOARD_DURATION: 'dashboard_duration',
+  DASHBOARD_DURATION: 'dashboard_duration_v1',
 };
 
 export const DateBreakdowns = [
