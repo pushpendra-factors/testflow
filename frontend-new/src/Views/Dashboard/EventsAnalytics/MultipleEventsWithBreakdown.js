@@ -21,6 +21,7 @@ import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
 import { useSelector } from 'react-redux';
 import { DashboardContext } from '../../../contexts/DashboardContext';
+import NoDataChart from '../../../components/NoDataChart';
 // import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
@@ -58,7 +59,11 @@ function MultipleEventsWithBreakdown({
         data: [],
       };
     }
-    return formatDataInStackedAreaFormat(resultState.data, aggregateData, eventNames);
+    return formatDataInStackedAreaFormat(
+      resultState.data,
+      aggregateData,
+      eventNames
+    );
   }, [resultState.data, aggregateData, chartType, eventNames]);
 
   const visibleSeriesData = useMemo(() => {
@@ -84,7 +89,7 @@ function MultipleEventsWithBreakdown({
   }, [aggregateData]);
 
   if (!visibleProperties.length) {
-    return null;
+    return <NoDataChart />;
   }
 
   let chartContent = null;

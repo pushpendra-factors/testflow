@@ -75,6 +75,7 @@ var (
 	// Add session for a specific window of events.
 	startTimestamp = flag.Int64("start_timestamp", 0, "Add session to specific window of events - start timestamp.")
 	endTimestamp   = flag.Int64("end_timestamp", 0, "Add session to specific window of events - end timestamp.")
+	logInfo        = flag.Int("log_info", 0, "Flag to enable and disable logging.")
 
 	sentryDSN = flag.String("sentry_dsn", "", "Sentry DSN")
 
@@ -376,12 +377,14 @@ func (f *addSessionsByUserIDProjectIDFn) ProcessElement(ctx context.Context, eve
 	})
 
 	startTime := time.Now().UnixNano() / 1000
-	getLogContext().WithField("log_type", stepTrace).WithFields(log.Fields{
-		"project_id": eventsInput.ProjectID,
-		"user_id":    eventsInput.UserID,
-		"time_micro": startTime,
-		"time_type":  "Start",
-	}).Info("ProcessElement log start addSessionsByUserIDProjectIDFn")
+	if f.JobProps.LogInfo == 1 {
+		getLogContext().WithField("log_type", stepTrace).WithFields(log.Fields{
+			"project_id": eventsInput.ProjectID,
+			"user_id":    eventsInput.UserID,
+			"time_micro": startTime,
+			"time_type":  "Start",
+		}).Info("ProcessElement log start addSessionsByUserIDProjectIDFn")
+	}
 
 	userAddSessionResponse := UserIDSessionCreationResponse{
 		ProjectID:  eventsInput.ProjectID,
@@ -438,12 +441,14 @@ func (f *addSessionsByUserIDProjectIDFn) ProcessElement(ctx context.Context, eve
 		}
 
 	}
-	getLogContext().WithField("log_type", stepTrace).WithFields(log.Fields{
-		"project_id": eventsInput.ProjectID,
-		"time_taken": time.Now().UnixNano()/1000 - startTime,
-		"time_micro": time.Now().UnixNano() / 1000,
-		"time_type":  "End",
-	}).WithField("error_code", errCode).Info("ProcessElement log end addSessionsByUserIDProjectIDFn")
+	if f.JobProps.LogInfo == 1 {
+		getLogContext().WithField("log_type", stepTrace).WithFields(log.Fields{
+			"project_id": eventsInput.ProjectID,
+			"time_taken": time.Now().UnixNano()/1000 - startTime,
+			"time_micro": time.Now().UnixNano() / 1000,
+			"time_type":  "End",
+		}).WithField("error_code", errCode).Info("ProcessElement log end addSessionsByUserIDProjectIDFn")
+	}
 }
 
 func emitProjectKeyUserSessionResponse(ctx context.Context, sessionResponse UserIDSessionCreationResponse,
@@ -630,6 +635,7 @@ type AddSessionJobProps struct {
 	MaxLookbackTimestampInSec           int64
 	StartTimestamp                      int64
 	EndTimestamp                        int64
+	LogInfo                             int
 }
 
 func main() {
@@ -663,6 +669,7 @@ func main() {
 		MaxLookbackTimestampInSec:           maxLookbackTimestamp,
 		StartTimestamp:                      *startTimestamp,
 		EndTimestamp:                        *endTimestamp,
+		LogInfo:                             *logInfo,
 	}
 
 	registerStructs()

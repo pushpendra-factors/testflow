@@ -19,6 +19,7 @@ import {
 } from '../../../utils/constants';
 import StackedBarChart from '../../../components/StackedBarChart';
 import { DashboardContext } from '../../../contexts/DashboardContext';
+import NoDataChart from '../../../components/NoDataChart';
 
 function SingleEventSingleBreakdown({
   resultState,
@@ -70,7 +71,7 @@ function SingleEventSingleBreakdown({
   }, [aggregateData]);
 
   if (!visibleProperties.length) {
-    return null;
+    return <NoDataChart />;
   }
 
   let chartContent = null;

@@ -1,11 +1,4 @@
-import React, { useEffect, lazy, Suspense } from "react";
-// import AppLayout from "./Views/AppLayout";
-// import Login from "./Views/Pages/Login";
-// import ForgotPassword from "./Views/Pages/ForgotPassword";
-// import ResetPassword from "./Views/Pages/ResetPassword";
-// import SignUp from "./Views/Pages/SignUp";
-// import Activate from "./Views/Pages/Activate";
-// import FactorsInsights from "./Views/Factors/FactorsInsights";
+import React, { useEffect, lazy, Suspense } from "react"; 
 import { connect } from "react-redux";
 import {
   BrowserRouter as Router,
@@ -20,13 +13,17 @@ import retryDynamicImport from 'Utils/dynamicImport';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
 
-const AppLayout = lazy(()=>retryDynamicImport(() => import("./Views/AppLayout")));
 const Login = lazy(()=>retryDynamicImport(() => import("./Views/Pages/Login")));
 const ForgotPassword = lazy(()=>retryDynamicImport(() => import("./Views/Pages/ForgotPassword")));
 const ResetPassword = lazy(()=>retryDynamicImport(() => import("./Views/Pages/ResetPassword")));
 const SignUp = lazy(()=>retryDynamicImport(() => import("./Views/Pages/SignUp")));
 const Activate = lazy(()=>retryDynamicImport(() => import("./Views/Pages/Activate")));
-const FactorsInsights = lazy(()=>retryDynamicImport(() => import("./Views/Factors/FactorsInsights")));
+// const AppLayout = lazy(()=>retryDynamicImport(() => import("./Views/AppLayout")));
+// const FactorsInsights = lazy(()=>retryDynamicImport(() => import("./Views/Factors/FactorsInsights")));
+import AppLayout from "./Views/AppLayout"; 
+import FactorsInsights from "./Views/Factors/FactorsInsights";
+
+
 
 function App({ isAgentLoggedIn, agent_details }) {
 
