@@ -62,8 +62,6 @@ spec:
             - "memsql"
             - --app_name
             - "add-session-job-dup"
-            - --disabled_project_ids
-            - "576"
             - --cache_with_sorted_set
             envFrom:
             - configMapRef:
