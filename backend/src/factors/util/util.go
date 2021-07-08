@@ -25,6 +25,13 @@ type Int64Tuple struct {
 	Second int64
 }
 
+// PatternProperties To be used in TakeTopK functions
+type PatternProperties interface {
+	Get_patternEventNames() []string
+	Get_count()       uint
+	Get_patternType() string
+}
+
 const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
 const EVENT_USER_CACHE_EXPIRY_SECS = 1728000
 
@@ -241,8 +248,6 @@ func GetSortWeightFromAnyType(value interface{}) float64 {
 		log.Info("Unsupported type used on GetSortWeightFromAnyType %+v", valueType)
 		return 0
 	}
-
-	return 0
 }
 
 // SafeConvertToFloat64 Converts an interface to float64 value.
@@ -1090,4 +1095,98 @@ func Remove(s []string, i int) ([]string, error) {
 	} else {
 		return nil, fmt.Errorf("len of string slice is 0 : %v", s)
 	}
+}
+
+func TakeTopKUC(allPatterns []PatternProperties, topK int, ptype string) []PatternProperties {
+
+	allPatternsType := make([]PatternProperties, 0)
+	for _, pattern := range allPatterns {
+
+		if pattern.Get_patternType() == ptype {
+			allPatternsType = append(allPatternsType, pattern)
+		}
+	}
+
+	if len(allPatternsType) > 0 {
+		return TakeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func TakeTopKpageView(allPatterns []PatternProperties, topK int, ptype1, ptype2 string) []PatternProperties {
+
+	allPatternsType := make([]PatternProperties, 0)
+	for _, pattern := range allPatterns {
+
+		if pattern.Get_patternType() == ptype1 || pattern.Get_patternType() == ptype2 {
+			allPatternsType = append(allPatternsType, pattern)
+		}
+	}
+	if len(allPatternsType) > 0 {
+		return TakeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func TakeTopKIE(allPatterns []PatternProperties, topK int, ptype string) []PatternProperties {
+
+	allPatternsType := make([]PatternProperties, 0)
+	for _, pattern := range allPatterns {
+
+		if pattern.Get_patternType() == ptype {
+			allPatternsType = append(allPatternsType, pattern)
+		}
+	}
+	if len(allPatternsType) > 0 {
+		return TakeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func TakeTopKspecialEvents(allPatterns []PatternProperties, topK int) []PatternProperties {
+
+	allPatternsType := make([]PatternProperties, 0)
+	for _, pt := range allPatterns {
+		ename := pt.Get_patternEventNames()[0]
+		if IsStandardEvent(ename) == true && IsCampaignAnalytics(ename) == false {
+			allPatternsType = append(allPatternsType, pt)
+		}
+	}
+	if len(allPatternsType) > 0 {
+		return TakeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func TakeTopKAllURL(allPatterns []PatternProperties, topK int) []PatternProperties {
+
+	allPatternsType := make([]PatternProperties, 0)
+	for _, pt := range allPatterns {
+
+		if IsValidUrl(pt.Get_patternEventNames()[0]) == true {
+			allPatternsType = append(allPatternsType, pt)
+		}
+	}
+	if len(allPatternsType) > 0 {
+		return TakeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func TakeTopK(patterns []PatternProperties, topKPatterns int) []PatternProperties {
+	// rewrite with heap. can hog the memory
+	if len(patterns) > 0 {
+		sort.Slice(patterns, func(i, j int) bool { return patterns[i].Get_count() > patterns[j].Get_count() })
+		if len(patterns) > topKPatterns {
+			return patterns[0:topKPatterns]
+		}
+		return patterns
+
+	}
+	return patterns
 }

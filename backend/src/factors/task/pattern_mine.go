@@ -66,6 +66,16 @@ type patternProperties struct {
 	patternType string
 }
 
+func (pp patternProperties) Get_patternEventNames() []string {
+	return pp.pattern.EventNames
+}
+func (pp patternProperties) Get_count() uint {
+	return pp.count
+}
+func (pp patternProperties) Get_patternType() string {
+	return pp.patternType
+}
+
 type CampaignEventLists struct {
 	CampaignList []string
 	MediumList   []string
@@ -1040,6 +1050,7 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
 	if err != nil {
 		log.Error("Unable to open events File")
+		return CampaignEventLists{}, err
 	}
 
 	mineLog.WithField("path", tmpPath).Info("Create a temp file to save and read events")
@@ -1047,6 +1058,7 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 	defer file.Close()
 
 	if err != nil {
+		log.Error("Unable to create temp File")
 		return CampaignEventLists{}, err
 	}
 	campEventsMap := make(map[string]int)
@@ -1092,136 +1104,20 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 			return CampaignEventLists{}, err
 		}
 
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.EP_CAMPAIGN] != nil {
-			var campEvent P.CounterEventFormat
-			campEventId, ok := eventDetails.EventProperties[U.EP_CAMPAIGN].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " CAMPAIGN ", eventDetails.EventProperties[U.EP_CAMPAIGN])
-			}
-			if len(campEventId) > 0 {
-				cmpEvent := eventDetails.EventName + "[campaign:" + campEventId + "]"
-				campEvent.EventName = cmpEvent
-				campEventsMap[cmpEvent] = campEventsMap[cmpEvent] + 1
-				campEvent.EventProperties = nil
-				campEvent.UserProperties = nil
-				campEvent.UserId = eventDetails.UserId
-				campEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-				campEvent.EventTimestamp = eventDetails.EventTimestamp
-				campEvent.EventCardinality = eventDetails.EventCardinality
-				eventDetailsBytes, _ := json.Marshal(campEvent)
-				lineWrite := string(eventDetailsBytes)
-
-				if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-					peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-					return CampaignEventLists{}, err
-				}
-
-			}
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_CAMPAIGN, "campaign", campEventsMap, eventDetails, file, line); err!=nil {
+			return CampaignEventLists{}, err
 		}
-
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.EP_MEDIUM] != nil {
-			var mediumEvent P.CounterEventFormat
-			mediumEventId, ok := eventDetails.EventProperties[U.EP_MEDIUM].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " MEDIUM ", eventDetails.EventProperties[U.EP_MEDIUM])
-			}
-			if len(mediumEventId) > 0 {
-				medEvent := eventDetails.EventName + "[medium:" + mediumEventId + "]"
-				mediumEvent.EventName = medEvent
-				mediumEventsMap[medEvent] = mediumEventsMap[medEvent] + 1
-				mediumEvent.EventProperties = nil
-				mediumEvent.UserProperties = nil
-				mediumEvent.UserId = eventDetails.UserId
-				mediumEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-				mediumEvent.EventTimestamp = eventDetails.EventTimestamp
-				mediumEvent.EventCardinality = eventDetails.EventCardinality
-				eventDetailsBytes, _ := json.Marshal(mediumEvent)
-				lineWrite := string(eventDetailsBytes)
-
-				if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-					peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-					return CampaignEventLists{}, err
-				}
-			}
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_MEDIUM, "medium", mediumEventsMap, eventDetails, file, line); err!=nil {
+			return CampaignEventLists{}, err
 		}
-
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.EP_SOURCE] != nil {
-			var sourceEvent P.CounterEventFormat
-			sourceEventId, ok := eventDetails.EventProperties[U.EP_SOURCE].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " SOURCE ", eventDetails.EventProperties[U.EP_SOURCE])
-			}
-			medEvent := eventDetails.EventName + "[source:" + sourceEventId + "]"
-			sourceEvent.EventName = medEvent
-			sourceEventsMap[medEvent] = sourceEventsMap[medEvent] + 1
-			sourceEvent.EventProperties = nil
-			sourceEvent.UserProperties = nil
-			sourceEvent.UserId = eventDetails.UserId
-			sourceEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-			sourceEvent.EventTimestamp = eventDetails.EventTimestamp
-			sourceEvent.EventCardinality = eventDetails.EventCardinality
-			eventDetailsBytes, _ := json.Marshal(sourceEvent)
-			lineWrite := string(eventDetailsBytes)
-
-			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-				peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-				return CampaignEventLists{}, err
-			}
-
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_SOURCE, "source", sourceEventsMap, eventDetails, file, line); err!=nil {
+			return CampaignEventLists{}, err
 		}
-
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.SP_INITIAL_REFERRER] != nil {
-			var referrerEvent P.CounterEventFormat
-			sourceEventId, ok := eventDetails.EventProperties[U.SP_INITIAL_REFERRER].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " INITIAL_REFERRER ", eventDetails.EventProperties[U.SP_INITIAL_REFERRER])
-			}
-			if len(sourceEventId) > 0 {
-				medEvent := eventDetails.EventName + "[initial_referrer:" + sourceEventId + "]"
-				referrerEvent.EventName = medEvent
-				referrerEventsMap[medEvent] = referrerEventsMap[medEvent] + 1
-				referrerEvent.EventProperties = nil
-				referrerEvent.UserProperties = nil
-				referrerEvent.UserId = eventDetails.UserId
-				referrerEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-				referrerEvent.EventTimestamp = eventDetails.EventTimestamp
-				referrerEvent.EventCardinality = eventDetails.EventCardinality
-				eventDetailsBytes, _ := json.Marshal(referrerEvent)
-				lineWrite := string(eventDetailsBytes)
-
-				if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-					peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-					return CampaignEventLists{}, err
-				}
-			}
-
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.SP_INITIAL_REFERRER, "initial_referrer", referrerEventsMap, eventDetails, file, line); err!=nil {
+			return CampaignEventLists{}, err
 		}
-
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.EP_ADGROUP] != nil {
-			var AdgroupEvent P.CounterEventFormat
-			sourceEventId, ok := eventDetails.EventProperties[U.EP_ADGROUP].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " EP_ADGROUP ", eventDetails.EventProperties[U.EP_ADGROUP])
-			}
-			if len(sourceEventId) > 0 {
-				medEvent := eventDetails.EventName + "[adgroup:" + sourceEventId + "]"
-				AdgroupEvent.EventName = medEvent
-				AdgroupEventsMap[medEvent] = AdgroupEventsMap[medEvent] + 1
-				AdgroupEvent.EventProperties = nil
-				AdgroupEvent.UserProperties = nil
-				AdgroupEvent.UserId = eventDetails.UserId
-				AdgroupEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-				AdgroupEvent.EventTimestamp = eventDetails.EventTimestamp
-				AdgroupEvent.EventCardinality = eventDetails.EventCardinality
-				eventDetailsBytes, _ := json.Marshal(AdgroupEvent)
-				lineWrite := string(eventDetailsBytes)
-
-				if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-					peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-					return CampaignEventLists{}, err
-				}
-			}
-
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_ADGROUP, "adgroup", AdgroupEventsMap, eventDetails, file, line); err!=nil {
+			return CampaignEventLists{}, err
 		}
 
 	}
@@ -1240,6 +1136,41 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 		return CampaignEventLists{}, err
 	}
 	return smartEvents, nil
+}
+
+func writeEncodedEvent(eventName string, property string, propertyName string, propEventsMap map[string]int, eventDetails P.CounterEventFormat, file *os.File, line string) (error) {
+	//check if eventName and eventDetails.EventName match and property exists in eventDetails.EventProperties
+	//if exists with non-empty value, write encoded event to file
+
+	if strings.Compare(eventDetails.EventName, eventName) == 0 && eventDetails.EventProperties[property] != nil {
+
+		var tmpEvent P.CounterEventFormat
+		tmpEventId, ok := eventDetails.EventProperties[property].(string)
+
+		if ok == false {
+			mineLog.Info("Error in converting string : ", " ",strings.ToUpper(propertyName)," ", eventDetails.EventProperties[property])
+		}
+
+		if len(tmpEventId) > 0 {
+			tmpEventName := eventDetails.EventName + "[" + propertyName + ":" + tmpEventId + "]"
+			tmpEvent.EventName = tmpEventName
+			propEventsMap[tmpEventName] = propEventsMap[tmpEventName] + 1
+			tmpEvent.EventProperties = nil
+			tmpEvent.UserProperties = nil
+			tmpEvent.UserId = eventDetails.UserId
+			tmpEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
+			tmpEvent.EventTimestamp = eventDetails.EventTimestamp
+			tmpEvent.EventCardinality = eventDetails.EventCardinality
+			eventDetailsBytes, _ := json.Marshal(tmpEvent)
+			lineWrite := string(eventDetailsBytes)
+
+			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
+				peLog.WithFields(log.Fields{"line": line, "property":property, "err": err}).Error("Unable to write to file.")
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string, map[string]string, error) {
@@ -1610,16 +1541,46 @@ func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType m
 
 	}
 
-	ucTopk := takeTopKUC(allPatterns, k)
-	feAT_Topk := takeTopKpageView(allPatterns, k)
-	ieTopk := takeTopKIE(allPatterns, k)
-	specialTopK := takeTopKspecialEvents(allPatterns, keventsSpecial)
-	URLTopK := takeTopKAllURL(allPatterns, keventsURL)
+	//convert struct array allPatterns([]patternProperties) to interface array allPattern([]U.PatternProperties) to pass in takeTopK functions
+	allPattern := make([]U.PatternProperties, len(allPatterns))
+	for i,pat := range allPatterns {
+		var upat U.PatternProperties = pat
+		allPattern[i] = upat
+	}
+
+	//take top K for each property type
+	ucTopk := U.TakeTopKUC(allPattern, k, model.TYPE_USER_CREATED_EVENT_NAME)
+	feAT_Topk := U.TakeTopKpageView(allPattern, k, model.TYPE_FILTER_EVENT_NAME, model.TYPE_AUTO_TRACKED_EVENT_NAME)
+	ieTopk := U.TakeTopKIE(allPattern, k, model.TYPE_INTERNAL_EVENT_NAME)
+	specialTopk := U.TakeTopKspecialEvents(allPattern, keventsSpecial)
+	URLTopk := U.TakeTopKAllURL(allPattern, keventsURL)
+
+	//convert each interface array([]U.PatternProperties) back to struct array([]patternProperties)
+	ucTopK := make([]patternProperties, len(ucTopk))
+	for i,pat := range ucTopk {
+		ucTopK[i] = pat.(patternProperties)
+	}
+	feAT_TopK := make([]patternProperties, len(feAT_Topk))
+	for i,pat := range feAT_Topk {
+		feAT_TopK[i] = pat.(patternProperties)
+	}
+	ieTopK := make([]patternProperties, len(ieTopk))
+	for i,pat := range ieTopk {
+		ieTopK[i] = pat.(patternProperties)
+	}
+	specialTopK := make([]patternProperties, len(specialTopk))
+	for i,pat := range specialTopk {
+		specialTopK[i] = pat.(patternProperties)
+	}
+	URLTopK := make([]patternProperties, len(URLTopk))
+	for i,pat := range URLTopk {
+		URLTopK[i] = pat.(patternProperties)
+	}
 
 	allPatternsFiltered := make([]patternProperties, 0)
-	allPatternsFiltered = append(allPatternsFiltered, ucTopk...)
-	allPatternsFiltered = append(allPatternsFiltered, feAT_Topk...)
-	allPatternsFiltered = append(allPatternsFiltered, ieTopk...)
+	allPatternsFiltered = append(allPatternsFiltered, ucTopK...)
+	allPatternsFiltered = append(allPatternsFiltered, feAT_TopK...)
+	allPatternsFiltered = append(allPatternsFiltered, ieTopK...)
 	allPatternsFiltered = append(allPatternsFiltered, specialTopK...)
 	allPatternsFiltered = append(allPatternsFiltered, URLTopK...)
 
@@ -1634,71 +1595,6 @@ func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType m
 	}
 
 	return allPatternsTopk
-
-}
-
-func takeTopKUC(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pattern := range allPatterns {
-
-		if pattern.patternType == model.TYPE_USER_CREATED_EVENT_NAME {
-			allPatternsType = append(allPatternsType, pattern)
-		}
-	}
-
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
-
-}
-
-func takeTopKpageView(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pattern := range allPatterns {
-
-		if pattern.patternType == model.TYPE_FILTER_EVENT_NAME || pattern.patternType == model.TYPE_AUTO_TRACKED_EVENT_NAME {
-			allPatternsType = append(allPatternsType, pattern)
-		}
-	}
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
-
-}
-
-func takeTopKIE(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pattern := range allPatterns {
-
-		if pattern.patternType == model.TYPE_INTERNAL_EVENT_NAME {
-			allPatternsType = append(allPatternsType, pattern)
-		}
-	}
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
-
-}
-
-func takeTopKspecialEvents(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pt := range allPatterns {
-		ename := pt.pattern.EventNames[0]
-		if U.IsStandardEvent(ename) == true && U.IsCampaignAnalytics(ename) == false {
-			allPatternsType = append(allPatternsType, pt)
-		}
-	}
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
 
 }
 
@@ -1729,35 +1625,6 @@ func takeCampaignEvents(allPatterns []patternProperties, campaignEventsType Camp
 	}
 	return allPatternsType
 
-}
-
-func takeTopKAllURL(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pt := range allPatterns {
-
-		if U.IsValidUrl(pt.pattern.EventNames[0]) == true {
-			allPatternsType = append(allPatternsType, pt)
-		}
-	}
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
-
-}
-
-func takeTopK(patterns []patternProperties, topKPatterns int) []patternProperties {
-	// rewrite with heap. can hog the memory
-	if len(patterns) > 0 {
-		sort.Slice(patterns, func(i, j int) bool { return patterns[i].count > patterns[j].count })
-		if len(patterns) > topKPatterns {
-			return patterns[0:topKPatterns]
-		}
-		return patterns
-
-	}
-	return patterns
 }
 
 // GetAllCyclicEvents Filter all special events
@@ -1895,9 +1762,7 @@ func FilterEventsInfo(userAndEventsInfo *P.UserAndEventsInfo, userProp, eventPro
 
 		if userProp[propertyName] == false {
 			delete(userPropertiesInfo.NumericPropertyKeys, propertyName)
-		} else {
 		}
-
 	}
 
 	//delete both categorical and numerical properties for events
