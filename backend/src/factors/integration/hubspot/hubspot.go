@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -567,7 +568,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 	if !exists {
 		logCtx.Error("Missing lead_guid on hubspot contact properties. Sync failed.")
 		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
-			projectID, document.ID, "", document.Timestamp, document.Action, "")
+			projectID, document.ID, model.HubspotDocumentTypeContact, "", document.Timestamp, document.Action, "")
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update hubspot contact document as synced.")
 			return http.StatusInternalServerError
@@ -605,7 +606,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			logCtx.WithField("status", status).Error("Failed to track hubspot contact created event.")
+			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot contact created event.")
 			return http.StatusInternalServerError
 		}
 
@@ -679,7 +680,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		trackPayload.UserId = userID
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			logCtx.WithField("status", status).Error("Failed to track hubspot contact updated event.")
+			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot contact updated event.")
 			return http.StatusInternalServerError
 		}
 		eventID = response.EventId
@@ -739,7 +740,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		Possible impact - There can be one invalid smart event per user before restoring original flow.
 	*/
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
-		projectID, document.ID, eventID, document.Timestamp, document.Action, userID)
+		projectID, document.ID, model.HubspotDocumentTypeContact, eventID, document.Timestamp, document.Action, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot contact document as synced.")
 		return http.StatusInternalServerError
@@ -964,7 +965,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 	}
 
 	// No sync_id as no event or user or one user property created.
-	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, "", document.Timestamp, document.Action, "")
+	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "")
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot deal document as synced.")
 		return http.StatusInternalServerError
@@ -1131,7 +1132,7 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 	}
 
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID,
-		document.ID, eventID, document.Timestamp, document.Action, userID)
+		document.ID, model.HubspotDocumentTypeDeal, eventID, document.Timestamp, document.Action, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot deal document as synced.")
 		return http.StatusInternalServerError
@@ -1140,15 +1141,50 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 	return http.StatusOK
 }
 
+// GetBatchedOrderedDocumentsByID return list of document in batches. Order is maintained on document id.
+func GetBatchedOrderedDocumentsByID(documents []model.HubspotDocument, batchSize int) []map[string][]model.HubspotDocument {
+
+	if len(documents) < 0 {
+		return nil
+	}
+
+	documentsMap := make(map[string][]model.HubspotDocument)
+	for i := range documents {
+		if _, exist := documentsMap[documents[i].ID]; !exist {
+			documentsMap[documents[i].ID] = make([]model.HubspotDocument, 0)
+		}
+		documentsMap[documents[i].ID] = append(documentsMap[documents[i].ID], documents[i])
+	}
+
+	batchedDocumentsByID := make([]map[string][]model.HubspotDocument, 1)
+	isBatched := make(map[string]bool)
+	batchLen := 0
+	batchedDocumentsByID[batchLen]  = make(map[string][]model.HubspotDocument)
+	for i := range documents {
+		if isBatched[documents[i].ID] {
+			continue
+		}
+
+		if len(batchedDocumentsByID[batchLen]) >= batchSize {
+			batchedDocumentsByID = append(batchedDocumentsByID, make(map[string][]model.HubspotDocument))
+			batchLen++
+		}
+
+		batchedDocumentsByID[batchLen][documents[i].ID] = documentsMap[documents[i].ID]
+		isBatched[documents[i].ID] = true
+	}
+
+	return batchedDocumentsByID
+}
+
 func syncAll(projectID uint64, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	logCtx := log.WithField("project_id", projectID)
-
 	var seenFailures bool
 	for i := range documents {
 		logCtx = logCtx.WithField("document", documents[i])
 		startTime := time.Now().Unix()
-
 		switch documents[i].Type {
+
 		case model.HubspotDocumentTypeContact:
 			errCode := syncContact(projectID, &documents[i], hubspotSmartEventNames)
 			if errCode != http.StatusOK {
@@ -1184,34 +1220,140 @@ type Status struct {
 	Status    string `json:"status"`
 }
 
+// GetHubspotTimeSeriesByStartTimestamp returns time series for batch processing -> {Day1,Day2}, {Day2,Day3},{Day3,Day4} upto current day
+func GetHubspotTimeSeriesByStartTimestamp(projectID uint64, from int64) [][]int64 {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "from": from})
+	if from < 1 {
+		logCtx.Error("Invalid timestamp from batch processing by day.")
+		return nil
+	}
+
+	timeSeries := [][]int64{}
+	startTime := time.Unix(from/1000, 0)
+	startDate := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
+	currentTime := time.Now()
+	for ;startDate.Unix() < currentTime.Unix(); startDate = startDate.AddDate(0, 0, 1){
+		timeSeries = append(timeSeries, []int64{startTime.Unix() * 1000, startDate.AddDate(0, 0, 1).Unix() * 1000})
+		startTime = startDate.AddDate(0, 0, 1)
+	}
+
+	return timeSeries
+}
+
+type syncWorkerStatus struct {
+	HasFailure bool
+	Lock       sync.Mutex
+}
+
+// syncAllWorker is a wrapper over syncAll function for providing concurrency
+func syncAllWorker(projectID uint64, wg *sync.WaitGroup, syncStatus *syncWorkerStatus, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) {
+	defer wg.Done()
+
+	errCode := syncAll(projectID, documents, hubspotSmartEventNames)
+
+	syncStatus.Lock.Lock()
+	defer syncStatus.Lock.Unlock()
+	if errCode != http.StatusOK {
+		syncStatus.HasFailure = true
+	}
+}
+
 // Sync - Syncs hubspot documents in an order of type.
-func Sync(projectID uint64) ([]Status, bool) {
+func Sync(projectID uint64, workersPerProject int) ([]Status, bool) {
 	logCtx := log.WithField("project_id", projectID)
 
 	statusByProjectAndType := make([]Status, 0, 0)
 	hubspotSmartEventNames := GetHubspotSmartEventNames(projectID)
+	status := CreateOrGetHubspotEventName(projectID)
+	if status != http.StatusOK {
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
+			Status: "Failed to create event names"})
+		return statusByProjectAndType, true
+	}
 
-	anyFailure := false
-	for i := range syncOrderByType {
-		logCtx = logCtx.WithField("type", syncOrderByType[i])
-
-		documents, errCode := store.GetStore().
-			GetHubspotDocumentsByTypeForSync(projectID, syncOrderByType[i])
-		if errCode != http.StatusFound {
-			logCtx.Error("Failed to get hubspot document by type for sync.")
-			continue
+	var orderedTimeSeries [][]int64
+	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID)
+	if errCode != http.StatusFound {
+		if errCode == http.StatusNotFound {
+			statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
+				Status: U.CRM_SYNC_STATUS_SUCCESS})
+			return statusByProjectAndType, false
 		}
 
-		docTypeAlias := model.GetHubspotTypeAliasByType(syncOrderByType[i])
+		logCtx.WithField("err_code", errCode).Error("Failed to get time series.")
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
+			Status: "Failed to get time series."})
+		return statusByProjectAndType, true
+	}
+
+	if workersPerProject > 1 {
+		orderedTimeSeries = GetHubspotTimeSeriesByStartTimestamp(projectID, minTimestamp)
+	} else {
+		// generate single time series
+		orderedTimeSeries = append(orderedTimeSeries, []int64{minTimestamp, time.Now().Unix() * 1000})
+	}
+
+	anyFailure := false
+	overAllSyncStatus := make(map[string]bool)
+	for _, timeRange := range orderedTimeSeries {
+
+		for i := range syncOrderByType {
+
+			logCtx = logCtx.WithFields(log.Fields{"type": syncOrderByType[i], "time_range": timeRange})
+
+			logCtx.Info("Processing started for given time range")
+			var documents []model.HubspotDocument
+			var errCode int
+			if workersPerProject > 1 {
+				documents, errCode = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(projectID, syncOrderByType[i], timeRange[0], timeRange[1])
+			} else {
+				documents, errCode = store.GetStore().
+					GetHubspotDocumentsByTypeForSync(projectID, syncOrderByType[i])
+			}
+
+			if errCode != http.StatusFound {
+				logCtx.WithFields(log.Fields{"time_range": timeRange, "doc_type": syncOrderByType[i]}).Error("Failed to get hubspot document by type for sync.")
+				continue
+			}
+
+			docTypeAlias := model.GetHubspotTypeAliasByType(syncOrderByType[i])
+
+			batches := GetBatchedOrderedDocumentsByID(documents, workersPerProject)
+
+			var syncStatus syncWorkerStatus
+			var workerIndex int
+			for bi := range batches {
+				batch := batches[bi]
+				var wg sync.WaitGroup
+				for docID := range batch {
+					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": syncOrderByType[i]}).Info("Processing Batch by doc_id")
+					workerIndex++
+					wg.Add(1)
+					go syncAllWorker(projectID, &wg, &syncStatus, batch[docID], (*hubspotSmartEventNames)[docTypeAlias])
+				}
+				wg.Wait()
+			}
+
+			if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
+				overAllSyncStatus[docTypeAlias] = false
+			}
+
+			if syncStatus.HasFailure {
+				overAllSyncStatus[docTypeAlias] = true
+			}
+
+			logCtx.Info("Processing completed for given time range")
+		}
+	}
+
+	for docTypeAlias, failure := range overAllSyncStatus {
 		status := Status{ProjectId: projectID,
 			Type: docTypeAlias}
-
-		errCode = syncAll(projectID, documents, (*hubspotSmartEventNames)[docTypeAlias])
-		if errCode == http.StatusOK {
-			status.Status = U.CRM_SYNC_STATUS_SUCCESS
-		} else {
+		if failure {
 			status.Status = U.CRM_SYNC_STATUS_FAILURES
 			anyFailure = true
+		} else {
+			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		}
 		statusByProjectAndType = append(statusByProjectAndType, status)
 	}

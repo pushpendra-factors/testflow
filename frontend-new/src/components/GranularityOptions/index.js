@@ -16,7 +16,7 @@ function GranularityOptions({ durationObj, onClick, queryType }) {
         disabled: enabledOptions.indexOf(db.key) === -1,
       };
     });
-  }, [durationObj, queryType]);
+  }, [durationObj, queryType, validDateBreakdowns]);
 
   const currentValue = useMemo(() => {
     if (!durationObj) {
@@ -24,7 +24,7 @@ function GranularityOptions({ durationObj, onClick, queryType }) {
     }
     const { frequency } = durationObj;
     return validDateBreakdowns.find((elem) => elem.key === frequency);
-  }, [durationObj]);
+  }, [durationObj, validDateBreakdowns]);
 
   const menu = (
     <Menu className={styles.dropdownMenu}>

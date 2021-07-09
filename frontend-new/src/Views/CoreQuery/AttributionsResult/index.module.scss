@@ -1,37 +1,53 @@
 .heading {
-    &:hover {
-        border-bottom: 1px solid #3E516C;
-    }
+  &:hover {
+    border-bottom: 1px solid #3e516c;
+  }
 }
 
 .cmprCell {
+  display: flex;
+  flex-direction: column;
 
+  &__first {
+    font-weight: 600;
+    font-size: 14px;
+    color: #0e2647;
+    margin-bottom: 4px;
+  }
+
+  &__second {
+    font-weight: 600;
+    font-size: 12px;
+    color: #8692a3;
+    margin-bottom: 4px;
+  }
+
+  &__change {
     display: flex;
-    flex-direction: column;
-
-    &__first {
-        font-weight: 600;
-        font-size: 14px;
-        color: #0E2647;
-        margin-bottom: 4px;
-    }
-
-    &__second {
-        font-weight: 600;
-        font-size: 12px;
-        color: #8692A3;
-        margin-bottom: 4px;
-    }
-
-    &__change {
-        display: flex;
-        font-size: 12px;
-        color: #8692A3;
-    }
+    font-size: 12px;
+    color: #8692a3;
+  }
 }
 
 .metricOptionsToggler {
-    height: 40px;
-    width: 40px;
-    border-radius: 20px;
+  height: 40px;
+  width: 40px;
+  border-radius: 20px;
+}
+
+td.touchPointCol {
+  padding: 0 !important;
+}
+
+.compareNumber {
+  color: #8692a3;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.changePercent {
+  display: flex;
+  color: #8692a3;
+  font-size: 12px;
+  line-height: 16px;
 }

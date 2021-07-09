@@ -6,7 +6,6 @@ import {
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_LINECHART,
   CHART_TYPE_STACKED_BAR,
-  QUERY_TYPE_FUNNEL,
   CHART_TYPE_SPARKLINES,
 } from './constants';
 
@@ -64,6 +63,20 @@ export const SortData = (arr, key, order) => {
     }
     if (order === 'descend') {
       return parseFloat(a[key]) <= parseFloat(b[key]) ? 1 : -1;
+    }
+    return 0;
+  });
+  return result;
+};
+
+export const SortDataByObject = (arr, key, subkey, order) => {
+  const result = [...arr];
+  result.sort((a, b) => {
+    if (order === 'ascend') {
+      return parseFloat(a[key][subkey]) >= parseFloat(b[key][subkey]) ? 1 : -1;
+    }
+    if (order === 'descend') {
+      return parseFloat(a[key][subkey]) <= parseFloat(b[key][subkey]) ? 1 : -1;
     }
     return 0;
   });
@@ -303,4 +316,11 @@ export const getQueryType = (query) => {
     ? query.query_group[0].cl
     : QUERY_TYPE_EVENT;
   return cl;
+};
+
+export const renderBigLengthTicks = (text, allowdLength) => {
+  if (text.length > allowdLength) {
+    return text.slice(0, allowdLength) + '...';
+  }
+  return text;
 };

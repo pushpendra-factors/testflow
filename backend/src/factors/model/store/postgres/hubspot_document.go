@@ -532,6 +532,59 @@ func (pg *Postgres) GetHubspotDocumentsByTypeForSync(projectId uint64, typ int) 
 	return documents, http.StatusFound
 }
 
+// GetHubspotDocumentBeginingTimestampByDocumentTypeForSync returns the minimum timestamp for unsynced document
+func (pg *Postgres) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64) (int64, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	if projectID == 0 {
+		logCtx.Error("Invalid project_id.")
+		return 0, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	rows, err := db.Raw("SELECT MIN(timestamp) FROM hubspot_documents WHERE project_id=? AND synced=false", projectID).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot minimum timestamp.")
+		return 0, http.StatusInternalServerError
+	}
+
+	var minTimestamp *int64
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(&minTimestamp); err != nil {
+			log.WithError(err).Error("Failed scanning rows on get hubspot minimum timestamp for sync.")
+		}
+	}
+
+	if minTimestamp == nil {
+		return 0, http.StatusNotFound
+	}
+
+	return *minTimestamp, http.StatusFound
+}
+
+// GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
+func (pg *Postgres) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "type": docType, "from": from, "to": to})
+
+	if projectID == 0 || docType == 0 || from < 0 {
+		logCtx.Error("Invalid project_id or type on get hubspot documents by type.")
+		return nil, http.StatusBadRequest
+	}
+
+	var documents []model.HubspotDocument
+
+	db := C.GetServices().Db
+	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ?",
+		projectID, docType, from, to).Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return documents, http.StatusFound
+}
+
 func (pg *Postgres) GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string,
 	stage string) (*model.HubspotDocument, int) {
 
@@ -726,7 +779,7 @@ func (pg *Postgres) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, ob
 	return getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments, propertyName, 100)
 }
 
-func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, syncId string, timestamp int64, action int, userID string) int {
+func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int, syncId string, timestamp int64, action int, userID string) int {
 	logCtx := log.WithField("project_id", projectId).WithField("id", id)
 
 	updates := make(map[string]interface{}, 0)
@@ -740,8 +793,8 @@ func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, s
 	}
 
 	db := C.GetServices().Db
-	err := db.Model(&model.HubspotDocument{}).Where("project_id = ? AND id = ? AND timestamp= ? AND action = ?",
-		projectId, id, timestamp, action).Updates(updates).Error
+	err := db.Model(&model.HubspotDocument{}).Where("project_id = ? AND id = ? AND timestamp= ? AND action = ? AND type= ?",
+		projectId, id, timestamp, action, docType).Updates(updates).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update hubspot document as synced.")
 		return http.StatusInternalServerError

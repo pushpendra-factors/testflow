@@ -41,9 +41,7 @@ function ReportContent({
   eventPage,
   section,
   onReportClose,
-  cmprDuration,
   runAttrCmprQuery,
-  cmprResultState,
   campaignsArrayMapper,
   handleGranularityChange,
   updateChartTypes,
@@ -198,9 +196,7 @@ function ReportContent({
       content = (
         <AttributionsResult
           resultState={resultState}
-          compareResult={cmprResultState}
           durationObj={durationObj}
-          cmprDuration={cmprDuration}
           attributionsState={attributionsState}
           section={section}
           currMetricsValue={currMetricsValue}
@@ -258,7 +254,6 @@ function ReportContent({
           chartType={chartType}
           metricsDropdown={metricsDropdown}
           triggerAttrComparision={runAttrCmprQuery}
-          cmprResultState={cmprResultState}
           handleGranularityChange={handleGranularityChange}
           section={section}
         />

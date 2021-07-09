@@ -31,10 +31,10 @@ func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) 
 	}
 }
 
-func syncWorker(projectID uint64, wg *sync.WaitGroup, syncStatus *SyncStatus) {
+func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus) {
 	defer wg.Done()
 
-	status, hasFailure := IntHubspot.Sync(projectID)
+	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines)
 	syncStatus.AddSyncStatus(status, hasFailure)
 }
 
@@ -74,6 +74,7 @@ func main() {
 
 	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
+	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -188,7 +189,7 @@ func main() {
 		var wg sync.WaitGroup
 		for pi := range batch {
 			wg.Add(1)
-			go syncWorker(batch[pi], &wg, &syncStatus)
+			go syncWorker(batch[pi], &wg, *numDocRoutines, &syncStatus)
 		}
 		wg.Wait()
 	}
