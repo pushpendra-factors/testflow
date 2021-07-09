@@ -52,18 +52,27 @@ export const formatData = (
     };
   }
   const { headers, rows } = data;
+  const touchpointIdx = headers.indexOf(touchPoint);
   const enabledDimensions = attr_dimensions.filter(
     (d) => d.touchPoint === touchPoint && d.enabled
   );
-  const firstDimensionIdx = headers.findIndex(
-    (h) => h === enabledDimensions[0].responseHeader
-  );
-  const lastDimensionIdx = headers.findIndex(
-    (h) => h === enabledDimensions[enabledDimensions.length - 1].responseHeader
-  );
-  const categories = rows.map((row) => {
-    return row.slice(firstDimensionIdx, lastDimensionIdx + 1).join(', ');
-  });
+  let categories;
+  if (enabledDimensions.length) {
+    const firstDimensionIdx = headers.findIndex(
+      (h) => h === enabledDimensions[0].responseHeader
+    );
+    const lastDimensionIdx = headers.findIndex(
+      (h) =>
+        h === enabledDimensions[enabledDimensions.length - 1].responseHeader
+    );
+    categories = rows.map((row) => {
+      return row.slice(firstDimensionIdx, lastDimensionIdx + 1).join(', ');
+    });
+  } else {
+    categories = rows.map((row) => {
+      return row[touchpointIdx];
+    });
+  }
   const conversionIdx = headers.findIndex((h) => h === `${event} - Users`);
   const costIdx = headers.findIndex((h) => h === 'Cost Per Conversion');
   const equivalentIndicesMapper = comparison_data
