@@ -24,28 +24,28 @@ const EventGroupBlock = ({
 }) => {
   const [filterOptions, setFilterOptions] = useState([
     {
-      label: 'User Properties',
-      icon: 'user',
-      values: [],
-    },
-    {
       label: 'Event Properties',
       icon: 'mouseclick',
       values: [],
     },
+    {
+      label: 'User Properties',
+      icon: 'user',
+      values: [],
+    }
   ]);
 
   const [propSelVis, setSelVis] = useState(false);
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
-    filterOpts[0].values = userProperties;
+    filterOpts[1].values = userProperties;
     setFilterOptions(filterOpts);
   }, [userProperties]);
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
-    filterOpts[1].values = eventProperties[event.label];
+    filterOpts[0].values = eventProperties[event.label];
     setFilterOptions(filterOpts);
   }, [eventProperties]);
 

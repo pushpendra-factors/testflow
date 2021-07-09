@@ -24,7 +24,8 @@ function GroupedChart({
   useEffect(() => {
     const formattedGroups = generateGroups(
       resultState.data,
-      maxAllowedVisibleProperties
+      maxAllowedVisibleProperties,
+      resultState.data.meta?.query?.gbp
     );
     setGroups(formattedGroups);
   }, [queries, resultState.data, maxAllowedVisibleProperties]);
@@ -37,7 +38,8 @@ function GroupedChart({
     resultState.data,
     queries,
     groups,
-    arrayMapper
+    arrayMapper,
+    resultState.data.meta?.query?.gbp
   );
   const eventsData = generateEventsData(resultState.data, queries, arrayMapper);
 
@@ -68,6 +70,7 @@ function GroupedChart({
         arrayMapper={arrayMapper}
         maxAllowedVisibleProperties={maxAllowedVisibleProperties}
         durations={resultState.data.meta}
+        resultData={resultState.data}
       />
     );
   }

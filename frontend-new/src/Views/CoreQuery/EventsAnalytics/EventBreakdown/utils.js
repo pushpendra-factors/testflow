@@ -1,8 +1,15 @@
 import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
+import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
+import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
 
 export const formatData = (data) => {
+  const headerSlice = data.headers.slice(0, data.headers.length - 1);
+  const breakdowns = data.meta.query.gbp ? [...data.meta.query.gbp] : [];
+  const grns = getBreakDownGranularities(headerSlice, breakdowns);
+
   const result = data.rows.map((d, index) => {
-    const str = d.slice(0, d.length - 1).join(',');
+    const str = d.slice(0, d.length - 1).map((x, ind) => 
+      parseForDateTimeLabel(grns[ind], x)).join(',');
     return {
       index,
       label: str,
