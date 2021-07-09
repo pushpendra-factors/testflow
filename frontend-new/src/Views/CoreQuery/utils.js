@@ -510,6 +510,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   });
 
   const globalFilters = [];
+
   if (requestQuery && requestQuery.gup && Array.isArray(requestQuery.gup)) {
     requestQuery.gup.forEach((pr) => {
       if (pr.lop === 'AND') {
@@ -1027,7 +1028,13 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
   }
 };
 
-export const isComparisonEnabled = (queryType, events, groupBy) => {
+export const isComparisonEnabled = (
+  queryType,
+  events,
+  groupBy,
+  linkedEvents,
+  models
+) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
     const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
     return newAppliedBreakdown.length === 0;
@@ -1037,7 +1044,9 @@ export const isComparisonEnabled = (queryType, events, groupBy) => {
   //   return !(events.length > 1 && newAppliedBreakdown.length > 0);
   // }
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
-    return false;
+    if (!linkedEvents.length && models.length === 1) {
+      return true;
+    }
   }
   return false;
 };

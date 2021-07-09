@@ -7,18 +7,15 @@ import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 
 function GroupedAttributionsChart({
   data,
-  isWidgetModal,
   event,
   attribution_method,
   attribution_method_compare,
   touchpoint,
   linkedEvents,
   section,
-  data2,
   currMetricsValue,
   durationObj,
-  cmprDuration,
-  attr_dimensions
+  attr_dimensions,
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -100,7 +97,7 @@ function GroupedAttributionsChart({
           linkedEvents={linkedEvents}
           event={event}
           data={data}
-          data2={data2}
+          data2={null}
           isWidgetModal={section === DASHBOARD_MODAL}
           visibleIndices={visibleIndices}
           setVisibleIndices={setVisibleIndices}
@@ -108,7 +105,6 @@ function GroupedAttributionsChart({
           attribution_method={attribution_method}
           attribution_method_compare={attribution_method_compare}
           durationObj={durationObj}
-          cmprDuration={cmprDuration}
           attributionMetrics={attributionMetrics}
           setAttributionMetrics={setAttributionMetrics}
           section={section}

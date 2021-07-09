@@ -1,0 +1,51 @@
+.barLineChart {
+  :global(.highcharts-series.highcharts-series-1.highcharts-column-series.highcharts-tracker
+      rect) {
+    fill: url(#hatch-left);
+  }
+  :global(.highcharts-axis.highcharts-yaxis text) {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  :global(.highcharts-axis-labels.highcharts-yaxis-labels text),
+  :global(.highcharts-axis-labels.highcharts-xaxis-labels text) {
+    font-size: 12px !important;
+    line-height: 18px;
+  }
+}
+
+.leftRedBar {
+  border-left: 6px solid #d4787d;
+}
+
+.leftDashedRedBar {
+  border-left: 6px dashed #d4787d;
+}
+
+.leftBlueBar {
+  border-left: 6px solid #4d7db4;
+}
+
+.categoryBottomBorder {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e7e9ed;
+}
+
+.leftDashedBlueBar {
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    display: block;
+    height: 45px;
+    width: 7px;
+    background: #4d7db4;
+    background: repeating-linear-gradient(
+      -45deg,
+      #4d7db4,
+      #4d7db4 1px,
+      #fff 3px,
+      #fff 3px
+    );
+  }
+}
