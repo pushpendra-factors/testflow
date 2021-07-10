@@ -21,7 +21,7 @@ spec:
             cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: delete-dangling-sessions-job
-            image: us.gcr.io/factors-production/delete-dangling-sessions-job:v0.03-xxx
+            image: us.gcr.io/factors-production/delete-dangling-sessions-job:379d833e5-nopr
             imagePullPolicy: IfNotPresent
             args:
             - --env
