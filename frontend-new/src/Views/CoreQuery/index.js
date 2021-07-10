@@ -54,7 +54,7 @@ import {
   EACH_USER_TYPE,
   REPORT_SECTION,
   INITIAL_SESSION_ANALYTICS_SEQ,
-  ATTRIBUTION_METRICS
+  ATTRIBUTION_METRICS,
 } from '../../utils/constants';
 import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
@@ -73,7 +73,7 @@ import {
   SET_COMPARISON_SUPPORTED,
   SET_COMPARE_DURATION,
   SET_NAVIGATED_FROM_DASHBOARD,
-  UPDATE_CHART_TYPES
+  UPDATE_CHART_TYPES,
 } from './constants';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
 
@@ -184,9 +184,12 @@ function CoreQuery({
     localDispatch({ type, payload });
   }, []);
 
-  const updateChartTypes = useCallback((payload) => {
-    updateLocalReducer(UPDATE_CHART_TYPES, payload)
-  }, [updateLocalReducer]);
+  const updateChartTypes = useCallback(
+    (payload) => {
+      updateLocalReducer(UPDATE_CHART_TYPES, payload);
+    },
+    [updateLocalReducer]
+  );
 
   const resetComparisonData = useCallback(() => {
     updateLocalReducer(RESET_COMPARISON_DATA);
@@ -214,7 +217,13 @@ function CoreQuery({
       }
       localDispatch({
         type: SET_COMPARISON_SUPPORTED,
-        payload: isComparisonEnabled(queryType, queries, groupBy),
+        payload: isComparisonEnabled(
+          queryType,
+          queries,
+          groupBy,
+          linkedEvents,
+          models
+        ),
       });
       if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
         setAppliedQueries(queries.map((elem) => elem.label));
@@ -226,6 +235,8 @@ function CoreQuery({
       groupBy,
       queries,
       queryType,
+      linkedEvents,
+      models,
       updateAppliedBreakdown,
       setNavigatedFromDashboard,
     ]
@@ -396,25 +407,11 @@ function CoreQuery({
   );
 
   const runAttributionQuery = useCallback(
-    async (isQuerySaved, durationObj) => {
+    async (isQuerySaved, durationObj, isCompareQuery) => {
       try {
-        closeDrawer();
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        setShowResult(true);
-        setQuerySaved(isQuerySaved);
-        if (!isQuerySaved) {
-          setNavigatedFromDashboard(false);
-        }
-        localDispatch({
-          type: SET_COMPARISON_SUPPORTED,
-          payload: isComparisonEnabled(QUERY_TYPE_ATTRIBUTION),
-        });
-        updateResultState({
-          ...initialState,
-          loading: true,
-        });
         if (!durationObj) {
           durationObj = attr_dateRange;
+          resetComparisonData();
         }
         const query = getAttributionQuery(
           eventGoal,
@@ -427,24 +424,37 @@ function CoreQuery({
           linkedEvents,
           durationObj
         );
-        updateRequestQuery(query);
-        setAttributionsState({
-          eventGoal,
-          touchpoint,
-          models,
-          linkedEvents,
-          attr_dimensions,
-          date_range: { ...durationObj },
-        });
+        if (!isCompareQuery) {
+          configActionsOnRunningQuery(isQuerySaved);
+          updateResultState({ ...initialState, loading: true });
+          updateRequestQuery(query);
+          setAttributionsState({
+            eventGoal,
+            touchpoint,
+            models,
+            linkedEvents,
+            attr_dimensions,
+            date_range: { ...durationObj },
+          });
+        } else {
+          updateLocalReducer(COMPARISON_DATA_LOADING);
+        }
         const res = await getAttributionsData(
           activeProject.id,
           query,
           getDashboardConfigs(isQuerySaved)
         );
-        updateResultState({
-          ...initialState,
-          data: res.data.result || res.data,
-        });
+        if (isCompareQuery) {
+          updateLocalReducer(
+            COMPARISON_DATA_FETCHED,
+            res.data.result || res.data
+          );
+        } else {
+          updateResultState({
+            ...initialState,
+            data: res.data.result || res.data,
+          });
+        }
       } catch (err) {
         console.log(err);
         updateResultState({
@@ -454,7 +464,6 @@ function CoreQuery({
       }
     },
     [
-      dispatch,
       activeProject.id,
       eventGoal,
       linkedEvents,
@@ -466,8 +475,10 @@ function CoreQuery({
       attr_dateRange,
       updateResultState,
       attr_dimensions,
-      setNavigatedFromDashboard,
       getDashboardConfigs,
+      configActionsOnRunningQuery,
+      resetComparisonData,
+      updateLocalReducer,
     ]
   );
 
@@ -635,8 +646,11 @@ function CoreQuery({
           to: moment(to).endOf('day'),
           frequency,
         };
-        dispatch({ type: SET_ATTR_DATE_RANGE, payload });
-        runAttributionQuery(querySaved, payload);
+        if (!isCompareDate) {
+          // set range in reducer only when original date is changed and not the comparisom date
+          dispatch({ type: SET_ATTR_DATE_RANGE, payload });
+        }
+        runAttributionQuery(querySaved, payload, isCompareDate);
       }
     },
     [
@@ -876,7 +890,6 @@ function CoreQuery({
               querySaved={querySaved}
               setQuerySaved={setQuerySaved}
               durationObj={queryOptions.date_range}
-              cmprDuration={null}
               handleDurationChange={handleDurationChange}
               arrayMapper={arrayMapper}
               queryOptions={queryOptions}

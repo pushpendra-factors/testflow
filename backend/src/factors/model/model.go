@@ -223,11 +223,13 @@ type Model interface {
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
 	GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int)
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
+	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64) (int64, int)
 	GetHubspotFormDocuments(projectID uint64) ([]model.HubspotDocument, int)
 	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
-	UpdateHubspotDocumentAsSynced(projectID uint64, id string, syncId string, timestamp int64, action int, userID string) int
+	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID string) int
 	GetLastSyncedHubspotDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.HubspotDocument, int)
 	GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{}
 

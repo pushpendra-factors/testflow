@@ -3,6 +3,8 @@ import moment from 'moment';
 import { labelsObj } from '../../utils';
 import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
+import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
+import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
 
 export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -51,9 +53,19 @@ export const formatData = (data, queries, colors, eventNames) => {
   const countIndex = headers.findIndex((elem) => elem === 'count');
   const eventIndex = headers.findIndex((elem) => elem === 'event_name');
 
+  const headerSlice = headers.slice(eventIndex + 1, countIndex);
+  const breakdowns = data.meta.query.gbp ? [...data.meta.query.gbp] : [];
+  const grns = getBreakDownGranularities(headerSlice, breakdowns);
+
   const result = rows.map((d, index) => {
     const eventName = eventNames[d[eventIndex]] || d[eventIndex];
-    const str = eventName + ',' + d.slice(eventIndex + 1, countIndex).join(',');
+    const str =
+      eventName +
+      ',' +
+      d
+        .slice(eventIndex + 1, countIndex)
+        .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
+        .join(',');
     const queryIndex = queries.findIndex(
       (_, index) => index === d[event_indexIndex]
     );
@@ -153,7 +165,11 @@ export const getTableData = (data, breakdown, searchText, currentSorter) => {
   filteredData.forEach((d) => {
     const breakdownValues = {};
     breakdown.forEach((b, index) => {
-      breakdownValues[b.property + ';' + index] = d.label.split(',')[index + 1];
+      let brkLabel = d.label.split(',')[index + 1];
+      if (b.grn) {
+        brkLabel = parseForDateTimeLabel(b.grn, brkLabel);
+      }
+      breakdownValues[b.property + ';' + index] = brkLabel;
     });
     result.push({
       ...d,
@@ -282,10 +298,20 @@ export const formatDataInStackedAreaFormat = (
       },
     };
   });
+
+  const headerSlice = data.headers.slice(eventIndex + 1, countIndex);
+  let breakdowns = data.meta.query.gbp ? [...data.meta.query.gbp] : [];
+  let grns = getBreakDownGranularities(headerSlice, breakdowns);
+
   data.rows.forEach((row) => {
     const eventName = eventNames[row[eventIndex]] || row[eventIndex];
     const breakdownJoin =
-      eventName + ',' + row.slice(eventIndex + 1, countIndex).join(',');
+      eventName +
+      ',' +
+      row
+        .slice(eventIndex + 1, countIndex)
+        .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
+        .join(',');
     const bIdx = labelsMapper[breakdownJoin];
     const idx = differentDates.indexOf(row[dateIndex]);
     if (resultantData[bIdx]) {

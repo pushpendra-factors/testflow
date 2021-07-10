@@ -124,8 +124,7 @@ const getGlobalFilters = (globalFilters = []) => {
   });
 
   return filterProps;
-
-}
+};
 
 export const getFunnelQuery = (
   groupBy,
@@ -184,10 +183,10 @@ export const getFunnelQuery = (
     return appGbp;
   });
   query.gup = getGlobalFilters(globalFilters);
-  if (session_analytics_seq.start && session_analytics_seq.end) {
-    query.sse = session_analytics_seq.start;
-    query.see = session_analytics_seq.end;
-  }
+  // if (session_analytics_seq.start && session_analytics_seq.end) {
+  //   query.sse = session_analytics_seq.start;
+  //   query.see = session_analytics_seq.end;
+  // }
   query.ec = 'any_given_event';
   query.tz = 'Asia/Kolkata';
   return query;
@@ -510,28 +509,30 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     };
   });
 
-
   const globalFilters = [];
-  requestQuery?.gup?.forEach((pr) => {
-    if (pr.lop === 'AND') {
-      globalFilters.push({
-        operator: reverseOperatorMap[pr.op],
-        props: [pr.pr, pr.ty, pr.en],
-        values: [pr.va],
-      });
-    } else {
-      globalFilters[globalFilters.length - 1].values.push(pr.va);
-    }
-  });
-  
+
+  if (requestQuery && requestQuery.gup && Array.isArray(requestQuery.gup)) {
+    requestQuery.gup.forEach((pr) => {
+      if (pr.lop === 'AND') {
+        globalFilters.push({
+          operator: reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+        });
+      } else {
+        globalFilters[globalFilters.length - 1].values.push(pr.va);
+      }
+    });
+  }
+
   const queryType = requestQuery.cl;
   const session_analytics_seq = INITIAL_SESSION_ANALYTICS_SEQ;
-  if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
-    if (requestQuery.sse && requestQuery.see) {
-      session_analytics_seq.start = requestQuery.sse;
-      session_analytics_seq.end = requestQuery.see;
-    }
-  }
+  // if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
+  //   if (requestQuery.sse && requestQuery.see) {
+  //     session_analytics_seq.start = requestQuery.sse;
+  //     session_analytics_seq.end = requestQuery.see;
+  //   }
+  // }
   const breakdown = requestQuery.gbp.map((opt) => {
     return {
       property: opt.pr,
@@ -581,6 +582,12 @@ export const DefaultDateRangeFormat = {
     moment().format('dddd') === 'Sunday' || moment().format('dddd') === 'Monday'
       ? moment().subtract(3, 'days').endOf('week')
       : moment().subtract(1, 'day').endOf('day'),
+  frequency: 'date',
+};
+
+export const DashboardDefaultDateRangeFormat = {
+  from: moment().subtract(7, 'days').startOf('week'),
+  to: moment().subtract(7, 'days').endOf('week'),
   frequency: 'date',
 };
 
@@ -1021,7 +1028,13 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
   }
 };
 
-export const isComparisonEnabled = (queryType, events, groupBy) => {
+export const isComparisonEnabled = (
+  queryType,
+  events,
+  groupBy,
+  linkedEvents,
+  models
+) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
     const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
     return newAppliedBreakdown.length === 0;
@@ -1031,7 +1044,9 @@ export const isComparisonEnabled = (queryType, events, groupBy) => {
   //   return !(events.length > 1 && newAppliedBreakdown.length > 0);
   // }
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
-    return false;
+    if (!linkedEvents.length && models.length === 1) {
+      return true;
+    }
   }
   return false;
 };

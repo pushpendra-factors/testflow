@@ -75,6 +75,7 @@ var (
 	// Add session for a specific window of events.
 	startTimestamp = flag.Int64("start_timestamp", 0, "Add session to specific window of events - start timestamp.")
 	endTimestamp   = flag.Int64("end_timestamp", 0, "Add session to specific window of events - end timestamp.")
+	logInfo        = flag.Int("log_info", 0, "Flag to enable and disable logging.")
 
 	sentryDSN = flag.String("sentry_dsn", "", "Sentry DSN")
 
@@ -288,10 +289,6 @@ func (f *pullEventsByProjectIdFn) ProcessElement(ctx context.Context,
 		NoOfUserPropertiesUpdates: 0,
 		ErrorDetail:               "",
 	}
-	beamEventsPayload := EventsByProjectResponse{
-		ProjectID: projectID,
-		Status:    beamStatus,
-	}
 
 	shouldReturn, sessionEventName, errCode, userEventsMap,
 		noOfEventsDownloaded, errorDetail := session.GetNextSessionAndPullEvent(projectID, f.JobProps.MaxLookbackTimestampInSec, f.JobProps.StartTimestamp,
@@ -299,24 +296,13 @@ func (f *pullEventsByProjectIdFn) ProcessElement(ctx context.Context,
 
 	logCtx.Info(fmt.Sprintf("For ProjectID: %v, sessionEventName: %v and noOfEventsDownloaded: %v", projectID, sessionEventName, noOfEventsDownloaded))
 
-	emitted := false
 	// return if getNextSessionAndPullEvent failed or NOT_MODIFIED
 	if shouldReturn {
-		beamEventsPayload.Status.SeenFailure = true // Execution for project has failed
-		beamEventsPayload.TimeTaken = (time.Now().UnixNano() / 1000) - startTime
-		beamEventsPayload.Status.ErrorDetail = errorDetail
-		if errCode == http.StatusNotFound {
-			beamEventsPayload.ErrorCode = http.StatusNotFound
-			beamEventsPayload.Status.Status = session.StatusNotModified
-		} else {
-			beamEventsPayload.ErrorCode = http.StatusInternalServerError
-			beamEventsPayload.Status.Status = session.StatusFailed
-		}
-		emit(beamEventsPayload)
-		emitted = true
+		logCtx.WithField("log_type", stepTrace).WithFields(log.Fields{"project_id": projectID, "err_code": errCode, "error_detail": errorDetail}).Info("No events found for the project. Exiting.")
+		return
 	}
 	usersCount := 0
-	if emitted == false && noOfEventsDownloaded > 0 {
+	if noOfEventsDownloaded > 0 {
 		beamStatus.NoOfEvents = noOfEventsDownloaded
 		beamStatus.NoOfUsers = len(*userEventsMap)
 		for userId, events := range *userEventsMap {
@@ -376,74 +362,61 @@ func (f *addSessionsByUserIDProjectIDFn) ProcessElement(ctx context.Context, eve
 	})
 
 	startTime := time.Now().UnixNano() / 1000
-	getLogContext().WithField("log_type", stepTrace).WithFields(log.Fields{
-		"project_id": eventsInput.ProjectID,
-		"user_id":    eventsInput.UserID,
-		"time_micro": startTime,
-		"time_type":  "Start",
-	}).Info("ProcessElement log start addSessionsByUserIDProjectIDFn")
+	if f.JobProps.LogInfo == 1 {
+		getLogContext().WithField("log_type", stepTrace).WithFields(log.Fields{
+			"project_id": eventsInput.ProjectID,
+			"user_id":    eventsInput.UserID,
+			"time_micro": startTime,
+			"time_type":  "Start",
+		}).Info("ProcessElement log start addSessionsByUserIDProjectIDFn")
+	}
 
 	userAddSessionResponse := UserIDSessionCreationResponse{
 		ProjectID:  eventsInput.ProjectID,
 		EventCount: len(eventsInput.Events),
 		Status:     eventsInput.Status,
 	}
-	emitted := false
 	if eventsInput.Status.SeenFailure {
 		// Logged this error already, exiting with failed status
-		userAddSessionResponse.TimeTaken = (time.Now().UnixNano() / 1000) - startTime
-		emit(userAddSessionResponse)
-		emitted = true
+		return
 	}
 
-	if emitted == false && len(eventsInput.Events) == 0 {
-		logCtx.Info("No events found for the project. Exiting.")
-		userAddSessionResponse.TimeTaken = (time.Now().UnixNano() / 1000) - startTime
-		emit(userAddSessionResponse)
-		emitted = true
+	if len(eventsInput.Events) == 0 {
+		logCtx.WithField("log_type", stepTrace).WithFields(log.Fields{"project_id": eventsInput.ProjectID, "user_id": eventsInput.UserID}).Info("No events found for the project. Exiting.")
+		return
 	}
 	var errCode int
-	if emitted == false {
-		// Min event time for given user.
-		lastEventTimestamp := eventsInput.Events[len(eventsInput.Events)-1].Timestamp
-		userAddSessionResponse.LastEventTimestamp = lastEventTimestamp
 
-		noOfProcessedEvents, noOfCreated, isContinuedFirst, noOfUserPropUpdates,
-			errCode := store.GetStore().AddSessionForUser(eventsInput.ProjectID, eventsInput.UserID, eventsInput.Events,
-			f.JobProps.BufferTimeBeforeSessionCreateInSecs, eventsInput.SessionEventName.ID)
+	// Min event time for given user.
+	lastEventTimestamp := eventsInput.Events[len(eventsInput.Events)-1].Timestamp
+	userAddSessionResponse.LastEventTimestamp = lastEventTimestamp
 
-		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-			msg := fmt.Sprintf("failed to get user events map on add session for project, errCode: %v", errCode)
+	noOfProcessedEvents, noOfCreated, isContinuedFirst, noOfUserPropUpdates,
+		errCode := store.GetStore().AddSessionForUser(eventsInput.ProjectID, eventsInput.UserID, eventsInput.Events,
+		f.JobProps.BufferTimeBeforeSessionCreateInSecs, eventsInput.SessionEventName.ID)
 
-			logCtx.WithField("log_type", stepTrace).
-				WithField("error_code", errCode).
-				WithField("events_input_UserID", eventsInput.UserID).
-				WithField("events_input_events_count", len(eventsInput.Events)).Error(msg)
-
-			userAddSessionResponse.Status.SeenFailure = true
-			userAddSessionResponse.Status.Status = session.StatusFailed
-			userAddSessionResponse.Status.ErrorDetail = msg
-			userAddSessionResponse.TimeTaken = (time.Now().UnixNano() / 1000) - startTime
-			userAddSessionResponse.ErrorCode = errCode
-			emit(userAddSessionResponse)
-			emitted = true
-		}
-
-		if emitted == false {
-			userAddSessionResponse.Status.Status = session.StatusSuccess
-			userAddSessionResponse.Status.Set(noOfProcessedEvents, noOfCreated, isContinuedFirst,
-				noOfUserPropUpdates, false, userAddSessionResponse.Status)
-
-			emit(userAddSessionResponse)
-		}
-
+	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+		msg := fmt.Sprintf("failed to get user events map on add session for project, errCode: %v", errCode)
+		logCtx.WithField("log_type", stepTrace).
+			WithField("error_code", errCode).
+			WithField("events_input_UserID", eventsInput.UserID).
+			WithField("events_input_events_count", len(eventsInput.Events)).Error(msg)
+		return
 	}
-	getLogContext().WithField("log_type", stepTrace).WithFields(log.Fields{
-		"project_id": eventsInput.ProjectID,
-		"time_taken": time.Now().UnixNano()/1000 - startTime,
-		"time_micro": time.Now().UnixNano() / 1000,
-		"time_type":  "End",
-	}).WithField("error_code", errCode).Info("ProcessElement log end addSessionsByUserIDProjectIDFn")
+
+	userAddSessionResponse.Status.Status = session.StatusSuccess
+	userAddSessionResponse.Status.Set(noOfProcessedEvents, noOfCreated, isContinuedFirst,
+		noOfUserPropUpdates, false, userAddSessionResponse.Status)
+	emit(userAddSessionResponse)
+
+	if f.JobProps.LogInfo == 1 {
+		getLogContext().WithField("log_type", stepTrace).WithFields(log.Fields{
+			"project_id": eventsInput.ProjectID,
+			"time_taken": time.Now().UnixNano()/1000 - startTime,
+			"time_micro": time.Now().UnixNano() / 1000,
+			"time_type":  "End",
+		}).WithField("error_code", errCode).Info("Completed ProcessElement log end addSessionsByUserIDProjectIDFn")
+	}
 }
 
 func emitProjectKeyUserSessionResponse(ctx context.Context, sessionResponse UserIDSessionCreationResponse,
@@ -554,6 +527,7 @@ func (f *reportProjectLevelSummary) ProcessElement(ctx context.Context, projectI
 		WithField("seen_failure", projectReport.Status.SeenFailure).
 		WithField("avg_success_time_taken_for_user", projectReport.AvgSuccessTimeTakenForUser).
 		Info("project summary before emit.")
+
 	emit(projectReport)
 }
 
@@ -630,6 +604,7 @@ type AddSessionJobProps struct {
 	MaxLookbackTimestampInSec           int64
 	StartTimestamp                      int64
 	EndTimestamp                        int64
+	LogInfo                             int
 }
 
 func main() {
@@ -663,6 +638,7 @@ func main() {
 		MaxLookbackTimestampInSec:           maxLookbackTimestamp,
 		StartTimestamp:                      *startTimestamp,
 		EndTimestamp:                        *endTimestamp,
+		LogInfo:                             *logInfo,
 	}
 
 	registerStructs()

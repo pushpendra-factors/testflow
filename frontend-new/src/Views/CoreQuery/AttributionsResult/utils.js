@@ -1,18 +1,22 @@
 import React from 'react';
+import moment from 'moment';
 import {
   SortData,
   getTitleWithSorter,
   formatCount,
+  SortDataByObject,
 } from '../../../utils/dataFormatter';
 import {
   ATTRIBUTION_METHODOLOGY,
-  MARKETING_TOUCHPOINTS,
+  FIRST_METRIC_IN_ATTR_RESPOSE,
+  ARR_JOINER,
 } from '../../../utils/constants';
 import styles from './index.module.scss';
 
 import {
   SVG,
   Number as NumFormat,
+  Text,
 } from '../../../components/factorsComponents';
 import { Popover } from 'antd';
 
@@ -26,18 +30,110 @@ export const getDifferentCampaingns = (data) => {
   return Array.from(differentCampaigns);
 };
 
-export const formatData = (data, event, visibleIndices, touchpoint) => {
-  const { headers } = data;
-  const touchpointIdx = headers.indexOf(touchpoint);
-  const costIdx = headers.indexOf('Cost Per Conversion');
-  const userIdx = headers.indexOf(`${event} - Users`);
-  const rows = data.rows.filter(
-    (_, index) => visibleIndices.indexOf(index) > -1
+export const formatData = (
+  data,
+  touchPoint,
+  event,
+  attr_dimensions,
+  comparison_data
+) => {
+  if (
+    !data ||
+    !data.headers ||
+    !Array.isArray(data.headers) ||
+    !data.headers.length ||
+    !data.rows ||
+    !Array.isArray(data.rows) ||
+    !data.rows.length
+  ) {
+    return {
+      categories: [],
+      series: [],
+    };
+  }
+  const { headers, rows } = data;
+  const touchpointIdx = headers.indexOf(touchPoint);
+  const enabledDimensions = attr_dimensions.filter(
+    (d) => d.touchPoint === touchPoint && d.enabled
   );
-  const result = rows.map((row) => {
-    return [row[touchpointIdx], row[costIdx], row[userIdx]];
-  });
-  return SortData(result, 2, 'descend');
+  let categories;
+  if (enabledDimensions.length) {
+    const firstDimensionIdx = headers.findIndex(
+      (h) => h === enabledDimensions[0].responseHeader
+    );
+    const lastDimensionIdx = headers.findIndex(
+      (h) =>
+        h === enabledDimensions[enabledDimensions.length - 1].responseHeader
+    );
+    categories = rows.map((row) => {
+      return row.slice(firstDimensionIdx, lastDimensionIdx + 1).join(', ');
+    });
+  } else {
+    categories = rows.map((row) => {
+      return row[touchpointIdx];
+    });
+  }
+  const conversionIdx = headers.findIndex((h) => h === `${event} - Users`);
+  const costIdx = headers.findIndex((h) => h === 'Cost Per Conversion');
+  const equivalentIndicesMapper = comparison_data
+    ? getEquivalentIndicesMapper(data, comparison_data)
+    : {};
+  const series = [
+    {
+      type: 'column',
+      yAxis: 0,
+      data: rows.map((row) => row[conversionIdx]),
+      color: '#4d7db4',
+    },
+    {
+      type: 'line',
+      yAxis: 1,
+      data: rows.map((row) => row[costIdx]),
+      color: '#d4787d',
+      marker: {
+        symbol: 'circle',
+      },
+    },
+  ];
+  if (comparison_data) {
+    series.push({
+      type: 'column',
+      yAxis: 0,
+      data: rows.map((_, index) => {
+        const equivalent_compare_row =
+          equivalentIndicesMapper[index] > -1
+            ? comparison_data.rows[equivalentIndicesMapper[index]]
+            : null;
+        return equivalent_compare_row
+          ? equivalent_compare_row[conversionIdx]
+          : 0;
+      }),
+      color: '#4d7db4',
+    });
+    series.push({
+      type: 'line',
+      yAxis: 1,
+      data: rows.map((_, index) => {
+        const equivalent_compare_row =
+          equivalentIndicesMapper[index] > -1
+            ? comparison_data.rows[equivalentIndicesMapper[index]]
+            : null;
+        return equivalent_compare_row ? equivalent_compare_row[costIdx] : 0;
+      }),
+      color: '#d4787d',
+      marker: {
+        symbol: 'circle',
+      },
+      dashStyle: 'dash',
+    });
+    let temp = series[1];
+    series[1] = series[2];
+    series[2] = temp;
+  }
+  return {
+    categories,
+    series,
+  };
 };
 
 export const formatGroupedData = (
@@ -67,263 +163,91 @@ export const formatGroupedData = (
   return chartData;
 };
 
-const renderComparCell = (obj) => {
-  let changeMetric = null;
-  if (obj.change) {
-    if (obj.change > 0 || obj.change < 0) {
-      const change = Math.abs(obj.change);
-      changeMetric = (
-        <div className={`${styles.cmprCell__change}`}>
-          <SVG
-            name={obj.change > 0 ? `arrowLift` : `arrowDown`}
-            size={16}
-          ></SVG>
-          <span>
-            {obj.change === 'Infinity' ? <>&#8734;</> : <>{change} &#37;</>}
-          </span>
+const firstColumn = (d, durationObj, cmprDuration) => {
+  if (cmprDuration) {
+    return (
+      <div className='flex items-center'>
+        <Text
+          type='title'
+          weight='normal'
+          color='grey-8'
+          extraClass='text-sm mb-0 py-2 px-4 w-1/2'
+        >
+          {d}
+        </Text>
+        <div
+          style={{ borderLeft: '1px solid #E7E9ED' }}
+          className='flex py-2 flex-col px-4 w-1/2'
+        >
+          <Text
+            type='title'
+            weight='normal'
+            color='grey-8'
+            extraClass='text-sm mb-0'
+          >
+            {`${moment(durationObj.from).format('MMM DD')} - ${moment(
+              durationObj.to
+            ).format('MMM DD')}`}
+          </Text>
+          <Text
+            type='title'
+            weight='normal'
+            color='grey'
+            extraClass='text-xs mb-0'
+          >{`vs ${moment(cmprDuration.from).format('MMM DD')} - ${moment(
+            cmprDuration.to
+          ).format('MMM DD')}`}</Text>
         </div>
-      );
-    }
+      </div>
+    );
   }
-
-  return (
-    <div className={styles.cmprCell}>
-      <span className={styles.cmprCell__first}>
-        <NumFormat number={obj.first} />
-      </span>
-      <span className={styles.cmprCell__second}>
-        <NumFormat number={obj.second} />
-      </span>
-      {changeMetric}
-    </div>
-  );
+  return d;
 };
 
-export const getCompareTableColumns = (
-  currentSorter,
-  handleSorting,
-  attribution_method,
-  attribution_method_compare,
-  touchpoint,
-  linkedEvents,
-  event,
-  eventNames,
-  metrics,
-  OptionsPopover
-) => {
-  const metricsColumns = metrics
-    .filter((metric) => metric.enabled)
-    .map((metric, index, arr) => {
-      return {
-        title:
-          index !== arr.length - 1 ? (
-            getTitleWithSorter(
-              metric.title,
-              metric.title,
-              currentSorter,
-              handleSorting
-            )
-          ) : (
-            <div className='flex flex-col'>
-              <div className='mb-6 flex justify-end '>
-                <Popover
-                  placement='bottomLeft'
-                  trigger='click'
-                  content={OptionsPopover}
-                >
-                  <span
-                    className={`text-2xl font-normal inline-flex items-center justify-center cursor-pointer absolute bg-white top-4 -right-4 z-10 shadow ${styles.metricOptionsToggler}`}
-                  >
-                    +
-                  </span>
-                </Popover>
-              </div>
-              {getTitleWithSorter(
-                metric.title,
-                metric.title,
-                currentSorter,
-                handleSorting
-              )}
-            </div>
-          ),
-        dataIndex: metric.title,
-        width: 150,
-        className: 'align-bottom',
-        render: renderComparCell,
-      };
-    });
-  const result = [
-    {
-      title: touchpoint,
-      dataIndex: touchpoint,
-      fixed: 'left',
-      width: 150,
-      className: 'align-bottom',
-    },
-    ...metricsColumns,
-    {
-      title: eventNames[event] || event,
-      className: 'tableParentHeader',
-      children: [
-        {
-          title: getTitleWithSorter(
-            <div className='flex flex-col items-start justify-ceneter'>
-              <div>Conversion</div>
-              <div style={{ fontSize: '10px', color: '#8692A3' }}>
-                {
-                  ATTRIBUTION_METHODOLOGY.find(
-                    (m) => m.value === attribution_method
-                  ).text
-                }
-              </div>
-            </div>,
-            'conversion',
-            currentSorter,
-            handleSorting
-          ),
-          dataIndex: 'conversion',
-          width: 150,
-          render: renderComparCell,
-        },
-        {
-          title: getTitleWithSorter(
-            <div className='flex flex-col items-start justify-ceneter'>
-              <div>Cost per Conversion</div>
-              <div style={{ fontSize: '10px', color: '#8692A3' }}>
-                {
-                  ATTRIBUTION_METHODOLOGY.find(
-                    (m) => m.value === attribution_method
-                  ).text
-                }
-              </div>
-            </div>,
-            'cost',
-            currentSorter,
-            handleSorting
-          ),
-          dataIndex: 'cost',
-          width: 150,
-          render: renderComparCell,
-        },
-      ],
-    },
-  ];
-  if (attribution_method_compare) {
-    result[result.length - 1].children.push({
-      title: getTitleWithSorter(
-        <div className='flex flex-col items-start justify-ceneter'>
-          <div>Conversion</div>
-          <div style={{ fontSize: '10px', color: '#8692A3' }}>
-            {
-              ATTRIBUTION_METHODOLOGY.find(
-                (m) => m.value === attribution_method_compare
-              ).text
-            }
-          </div>
-        </div>,
-        'conversion_compare',
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'conversion_compare',
-      width: 150,
-      render: renderComparCell,
-    });
-    result[result.length - 1].children.push({
-      title: getTitleWithSorter(
-        <div className='flex flex-col items-start justify-ceneter'>
-          <div>Cost per Conversion</div>
-          <div style={{ fontSize: '10px', color: '#8692A3' }}>
-            {
-              ATTRIBUTION_METHODOLOGY.find(
-                (m) => m.value === attribution_method_compare
-              ).text
-            }
-          </div>
-        </div>,
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'cost_compare',
-      width: 150,
-      render: renderComparCell,
-    });
+const renderMetric = (d, comparison_data) => {
+  if (!comparison_data) {
+    return <NumFormat number={d} />;
   }
-  let linkedEventsColumns = [];
-  if (linkedEvents.length) {
-    linkedEventsColumns = linkedEvents.map((le) => {
-      return {
-        title: eventNames[le.label] || le.label,
-        className: 'tableParentHeader',
-        children: [
-          {
-            title: getTitleWithSorter(
-              <div className='flex flex-col items-start justify-ceneter'>
-                <div>Users</div>
-              </div>,
-              le.label + ' - Users',
-              currentSorter,
-              handleSorting
-            ),
-            dataIndex: le.label + ' - Users',
-            width: 150,
-            render: renderComparCell,
-          },
-          {
-            title: getTitleWithSorter(
-              <div className='flex flex-col items-start justify-ceneter'>
-                <div>Cost per Conversion</div>
-              </div>,
-              le.label + ' - CPC',
-              currentSorter,
-              handleSorting
-            ),
-            dataIndex: le.label + ' - CPC',
-            width: 150,
-            render: renderComparCell,
-          },
-        ],
-      };
-    });
+  let changePercent = calcChangePerc(d.value, d.compare_value);
+  let compareText = null;
+  if (isNaN(changePercent) || changePercent === 0) {
+    compareText = (
+      <>
+        <NumFormat number={0} />%
+      </>
+    );
+  } else if (changePercent === 'Infinity') {
+    compareText = (
+      <>
+        <SVG color='#5ACA89' name={`arrowLift`} size={16}></SVG>
+        <span>&#8734; %</span>
+      </>
+    );
+  } else {
+    compareText = (
+      <>
+        <SVG
+          color={changePercent > 0 ? '#5ACA89' : '#FF0000'}
+          name={changePercent > 0 ? `arrowLift` : `arrowDown`}
+          size={16}
+        ></SVG>
+        <NumFormat number={Math.abs(changePercent)} />%
+      </>
+    );
   }
-  let extraCols = [];
-  if (touchpoint === MARKETING_TOUCHPOINTS.ADGROUP) {
-    extraCols = [
-      {
-        title: MARKETING_TOUCHPOINTS.CAMPAIGN,
-        dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
-        fixed: 'left',
-        width: 150,
-        className: 'align-bottom',
-      },
-    ];
-  }
-  if (touchpoint === MARKETING_TOUCHPOINTS.KEYWORD) {
-    extraCols = [
-      {
-        title: MARKETING_TOUCHPOINTS.CAMPAIGN,
-        dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
-        fixed: 'left',
-        width: 150,
-        className: 'align-bottom',
-      },
-      {
-        title: MARKETING_TOUCHPOINTS.ADGROUP,
-        dataIndex: MARKETING_TOUCHPOINTS.ADGROUP,
-        fixed: 'left',
-        width: 150,
-        className: 'align-bottom',
-      },
-      {
-        title: MARKETING_TOUCHPOINTS.MATCHTYPE,
-        dataIndex: MARKETING_TOUCHPOINTS.MATCHTYPE,
-        fixed: 'left',
-        width: 150,
-        className: 'align-bottom',
-      },
-    ];
-  }
-  return [...extraCols, ...result, ...linkedEventsColumns];
+  return (
+    <div className='flex flex-col justify-center items-start'>
+      <div className='flex items-center'>
+        <div className='mr-2'>
+          <NumFormat number={d.value} />
+        </div>
+        <div className={styles.changePercent}>{compareText}</div>
+      </div>
+      <div className={styles.compareNumber}>
+        <NumFormat number={d.compare_value} />
+      </div>
+    </div>
+  );
 };
 
 export const getTableColumns = (
@@ -337,7 +261,10 @@ export const getTableColumns = (
   eventNames,
   metrics,
   OptionsPopover,
-  attr_dimensions
+  attr_dimensions,
+  durationObj,
+  comparison_data,
+  cmprDuration
 ) => {
   const enabledDimensions = attr_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
@@ -345,13 +272,26 @@ export const getTableColumns = (
   let dimensionColumns;
   if (enabledDimensions.length) {
     dimensionColumns = enabledDimensions.map((d, index) => {
-      return {
-        title: d.title,
-        dataIndex: d.title,
-        fixed: !index ? 'left' : '',
-        width: 150,
-        className: 'align-bottom',
-      };
+      if (!index) {
+        return {
+          title: d.title,
+          dataIndex: d.title,
+          fixed: 'left',
+          width: comparison_data ? 300 : 200,
+          className: `align-bottom ${
+            comparison_data ? styles.touchPointCol : ''
+          }`,
+          render: (d) =>
+            firstColumn(d, durationObj, comparison_data ? cmprDuration : null),
+        };
+      } else {
+        return {
+          title: d.title,
+          dataIndex: d.title,
+          width: 200,
+          className: 'align-bottom',
+        };
+      }
     });
   } else {
     dimensionColumns = [
@@ -359,7 +299,7 @@ export const getTableColumns = (
         title: touchpoint,
         dataIndex: touchpoint,
         fixed: 'left',
-        width: 150,
+        width: 200,
         className: 'align-bottom',
       },
     ];
@@ -400,10 +340,10 @@ export const getTableColumns = (
             </div>
           ),
         dataIndex: metric.title,
-        width: 150,
+        width: 200,
         className: 'align-bottom',
         render: (d) => {
-          return <NumFormat number={d} />;
+          return renderMetric(d, comparison_data);
         },
       };
     });
@@ -431,9 +371,9 @@ export const getTableColumns = (
             handleSorting
           ),
           dataIndex: 'conversion',
-          width: 150,
+          width: 200,
           render: (d) => {
-            return <NumFormat number={d} />;
+            return renderMetric(d, comparison_data);
           },
         },
         {
@@ -453,9 +393,9 @@ export const getTableColumns = (
             handleSorting
           ),
           dataIndex: 'cost',
-          width: 150,
+          width: 200,
           render: (d) => {
-            return <NumFormat number={d} />;
+            return renderMetric(d, comparison_data);
           },
         },
       ],
@@ -548,170 +488,28 @@ export const getTableColumns = (
       };
     });
   }
-  // let extraCols = [];
-  // if (touchpoint === MARKETING_TOUCHPOINTS.ADGROUP) {
-  //   extraCols = [
-  //     {
-  //       title: MARKETING_TOUCHPOINTS.CAMPAIGN,
-  //       dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
-  //       fixed: 'left',
-  //       width: 150,
-  //       className: 'align-bottom',
-  //     },
-  //   ];
-  // }
-  // if (touchpoint === MARKETING_TOUCHPOINTS.KEYWORD) {
-  //   extraCols = [
-  //     {
-  //       title: MARKETING_TOUCHPOINTS.CAMPAIGN,
-  //       dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
-  //       fixed: 'left',
-  //       width: 150,
-  //       className: 'align-bottom',
-  //     },
-  //     {
-  //       title: MARKETING_TOUCHPOINTS.ADGROUP,
-  //       dataIndex: MARKETING_TOUCHPOINTS.ADGROUP,
-  //       fixed: 'left',
-  //       width: 150,
-  //       className: 'align-bottom',
-  //     },
-  //     {
-  //       title: MARKETING_TOUCHPOINTS.MATCHTYPE,
-  //       dataIndex: MARKETING_TOUCHPOINTS.MATCHTYPE,
-  //       fixed: 'left',
-  //       width: 150,
-  //       className: 'align-bottom',
-  //     },
-  //   ];
-  // }
   return [...result, ...linkedEventsColumns];
-};
-
-const constrComparisionCellData = (row, row2, index) => {
-  return {
-    first: formatCount(row[index], 1),
-    second: row2 ? formatCount(row2[index], 1) : NaN,
-    change: row2 ? calcChangePerc(row[index], row2[index]) : NaN,
-  };
-};
-
-export const getCompareTableData = (
-  data,
-  data2,
-  event,
-  searchText,
-  currentSorter,
-  attribution_method_compare,
-  touchpoint,
-  linkedEvents,
-  metrics
-) => {
-  const { headers } = data;
-  const touchpointIdx = headers.indexOf(touchpoint);
-  const costIdx = headers.indexOf('Cost Per Conversion');
-  const userIdx = headers.indexOf(`${event} - Users`);
-  const compareUsersIdx = headers.indexOf(`Compare - Users`);
-  const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
-  const data2Rows = data2.rows;
-  const result = data.rows
-    .map((row, index) => {
-      const row2 = data2Rows.filter(
-        (r) => r[touchpointIdx] === row[touchpointIdx]
-      )[0];
-      const metricsData = {};
-      const enabledMetrics = metrics.filter((metric) => metric.enabled);
-      enabledMetrics.forEach((metric) => {
-        const index = headers.indexOf(metric.header);
-        metricsData[metric.title] = constrComparisionCellData(row, row2, index);
-      });
-      let resultantRow = {
-        index,
-        [touchpoint]: row[touchpointIdx],
-        ...metricsData,
-        conversion: constrComparisionCellData(row, row2, userIdx),
-        cost: constrComparisionCellData(row, row2, costIdx),
-      };
-      if (touchpoint === MARKETING_TOUCHPOINTS.ADGROUP) {
-        const campaignIdx = headers.indexOf(MARKETING_TOUCHPOINTS.CAMPAIGN);
-        resultantRow = {
-          [MARKETING_TOUCHPOINTS.CAMPAIGN]: row[campaignIdx],
-          ...resultantRow,
-        };
-      }
-      if (touchpoint === MARKETING_TOUCHPOINTS.KEYWORD) {
-        const campaignIdx = headers.indexOf(MARKETING_TOUCHPOINTS.CAMPAIGN);
-        const adGroupIdx = headers.indexOf(MARKETING_TOUCHPOINTS.ADGROUP);
-        const matchTypeIdx = headers.indexOf(MARKETING_TOUCHPOINTS.MATCHTYPE);
-        resultantRow = {
-          [MARKETING_TOUCHPOINTS.CAMPAIGN]: row[campaignIdx],
-          [MARKETING_TOUCHPOINTS.ADGROUP]: row[adGroupIdx],
-          [MARKETING_TOUCHPOINTS.MATCHTYPE]: row[matchTypeIdx],
-          ...resultantRow,
-        };
-      }
-      if (linkedEvents.length) {
-        linkedEvents.forEach((le) => {
-          const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
-          const eventCPCIdx = headers.indexOf(`${le.label} - CPC`);
-          resultantRow[`${le.label} - Users`] = constrComparisionCellData(
-            row,
-            row2,
-            eventUsersIdx
-          );
-          resultantRow[`${le.label} - CPC`] = constrComparisionCellData(
-            row,
-            row2,
-            eventCPCIdx
-          );
-        });
-      }
-      if (attribution_method_compare) {
-        resultantRow['conversion_compare'] = constrComparisionCellData(
-          row,
-          row2,
-          [compareUsersIdx]
-        );
-        resultantRow['cost_compare'] = constrComparisionCellData(row, row2, [
-          compareCostIdx,
-        ]);
-      }
-      return resultantRow;
-    })
-    .filter(
-      (row) =>
-        row[touchpoint].toLowerCase().indexOf(searchText.toLowerCase()) > -1
-    );
-
-  if (!currentSorter.key) {
-    result.sort((a, b) => {
-      return parseFloat(a['conversion'].first) <=
-        parseFloat(b['conversion'].first)
-        ? 1
-        : -1;
-    });
-  } else {
-    result.sort((a, b) => {
-      if (currentSorter.order === 'ascend') {
-        return parseFloat(a[currentSorter.key].first) >=
-          parseFloat(b[currentSorter.key].first)
-          ? 1
-          : -1;
-      }
-      if (currentSorter.order === 'descend') {
-        return parseFloat(a[currentSorter.key].first) <=
-          parseFloat(b[currentSorter.key].first)
-          ? 1
-          : -1;
-      }
-      return 0;
-    });
-  }
-  return result;
 };
 
 export const calcChangePerc = (val1, val2) => {
   return formatCount(((val1 - val2) / val2) * 100, 1);
+};
+
+export const getEquivalentIndicesMapper = (data, comparison_data) => {
+  const { headers, rows } = data;
+  const firstMetricIndex = headers.indexOf(FIRST_METRIC_IN_ATTR_RESPOSE);
+  const dataStrings = rows.map((row) => {
+    return row.slice(0, firstMetricIndex).join(ARR_JOINER);
+  });
+  const compareDataStrings = comparison_data.rows.map((row) => {
+    return row.slice(0, firstMetricIndex).join(ARR_JOINER);
+  });
+  const equivalentIndicesMapper = {};
+  dataStrings.forEach((string, index) => {
+    const compareIndex = compareDataStrings.indexOf(string);
+    equivalentIndicesMapper[index] = compareIndex;
+  });
+  return equivalentIndicesMapper;
 };
 
 export const getTableData = (
@@ -723,7 +521,8 @@ export const getTableData = (
   touchpoint,
   linkedEvents,
   metrics,
-  attr_dimensions
+  attr_dimensions,
+  comparison_data
 ) => {
   const { headers } = data;
   const costIdx = headers.indexOf('Cost Per Conversion');
@@ -733,13 +532,29 @@ export const getTableData = (
   const enabledDimensions = attr_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
+  const equivalentIndicesMapper = comparison_data
+    ? getEquivalentIndicesMapper(data, comparison_data)
+    : {};
   const result = data.rows
     .map((row, index) => {
       const metricsData = {};
       const enabledMetrics = metrics.filter((metric) => metric.enabled);
+      const equivalent_compare_row =
+        comparison_data && equivalentIndicesMapper[index] > -1
+          ? comparison_data.rows[equivalentIndicesMapper[index]]
+          : null;
       enabledMetrics.forEach((metric) => {
-        const index = headers.indexOf(metric.header);
-        metricsData[metric.title] = row[index];
+        const metricIndex = headers.indexOf(metric.header);
+        if (comparison_data) {
+          metricsData[metric.title] = {
+            value: row[metricIndex],
+            compare_value: equivalent_compare_row
+              ? equivalent_compare_row[metricIndex]
+              : 0,
+          };
+        } else {
+          metricsData[metric.title] = row[metricIndex];
+        }
       });
 
       const dimensionsData = {};
@@ -757,8 +572,22 @@ export const getTableData = (
         index,
         ...dimensionsData,
         ...metricsData,
-        conversion: formatCount(row[userIdx], 1),
-        cost: formatCount(row[costIdx], 1),
+        conversion: !comparison_data
+          ? formatCount(row[userIdx], 1)
+          : {
+              value: formatCount(row[userIdx], 1),
+              compare_value: equivalent_compare_row
+                ? equivalent_compare_row[userIdx]
+                : 0,
+            },
+        cost: !comparison_data
+          ? formatCount(row[costIdx], 1)
+          : {
+              value: formatCount(row[costIdx], 1),
+              compare_value: equivalent_compare_row
+                ? formatCount(equivalent_compare_row[costIdx], 1)
+                : 0,
+            },
       };
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
@@ -787,6 +616,18 @@ export const getTableData = (
         return row[touchpoint].toLowerCase().includes(searchText.toLowerCase());
       }
     });
+
+  if (comparison_data) {
+    if (!currentSorter.key) {
+      return SortDataByObject(result, 'conversion', 'value', 'descend');
+    }
+    return SortDataByObject(
+      result,
+      currentSorter.key,
+      'value',
+      currentSorter.order
+    );
+  }
 
   if (!currentSorter.key) {
     return SortData(result, 'conversion', 'descend');

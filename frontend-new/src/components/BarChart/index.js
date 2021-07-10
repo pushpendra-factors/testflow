@@ -1,23 +1,23 @@
-import React, { useRef, useCallback, useEffect } from "react";
-import * as d3 from "d3";
-import styles from "../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index.module.scss";
-import { checkForWindowSizeChange } from "../../Views/CoreQuery/FunnelsResultPage/utils";
-import { getMaxYpoint, getBarChartLeftMargin } from "./utils";
-import ChartLegends from "./ChartLegends";
-import { numberWithCommas } from "../../utils/dataFormatter";
+import React, { useRef, useCallback, useEffect } from 'react';
+import * as d3 from 'd3';
+import styles from '../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index.module.scss';
+import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPage/utils';
+import { getMaxYpoint, getBarChartLeftMargin } from './utils';
+import ChartLegends from './ChartLegends';
+import { numberWithCommas } from '../../utils/dataFormatter';
 import {
   BAR_CHART_XAXIS_TICK_LENGTH,
   REPORT_SECTION,
   DASHBOARD_MODAL,
   DASHBOARD_WIDGET_SECTION,
   BAR_COUNT,
-} from "../../utils/constants";
-import DashboardWidgetLegends from "../DashboardWidgetLegends";
+} from '../../utils/constants';
+import DashboardWidgetLegends from '../DashboardWidgetLegends';
 
 function BarChart({
   chartData,
   queries,
-  title = "chart",
+  title = 'chart',
   height: widgetHeight,
   section,
   cardSize = 1,
@@ -26,16 +26,16 @@ function BarChart({
   const chartRef = useRef(null);
 
   const getLabel = useCallback(
-    (str, position = "tick") => {
-      let label = str.split(";")[0];
+    (str, position = 'tick') => {
+      let label = str.split(';')[0];
       label = label
-        .split(",")
+        .split(',')
         .filter((elem) => elem)
-        .join(",");
+        .join(',');
 
       const tickLength = BAR_CHART_XAXIS_TICK_LENGTH[cardSize];
-      if (label.length > tickLength && position === "tick") {
-        return label.substr(0, tickLength) + "...";
+      if (label.length > tickLength && position === 'tick') {
+        return label.substr(0, tickLength) + '...';
       }
       return label;
     },
@@ -44,10 +44,10 @@ function BarChart({
 
   const showTooltip = useCallback(
     (d, i) => {
-      const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
+      const nodes = d3.select(chartRef.current).selectAll('.bar').nodes();
       nodes.forEach((node, index) => {
         if (index !== i) {
-          d3.select(node).attr("class", "bar opaque");
+          d3.select(node).attr('class', 'bar opaque');
         }
       });
 
@@ -68,31 +68,33 @@ function BarChart({
               document.body
             ).scrollTop;
       const top = nodePosition.y + scrollTop;
-      const toolTipHeight = d3.select(".toolTip").node()?.getBoundingClientRect()
-        .height;
+      const toolTipHeight = d3
+        .select('.toolTip')
+        .node()
+        ?.getBoundingClientRect().height;
 
       tooltip.current
         .html(
           `
-                  <div>${getLabel(d.label, "tooltip")}</div>
+                  <div>${getLabel(d.label, 'tooltip')}</div>
                   <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${numberWithCommas(
                     d.value
                   )}</span></div>
                 `
         )
-        .style("opacity", 1)
-        .style("left", left + "px")
-        .style("top", top - toolTipHeight + 5 + "px");
+        .style('opacity', 1)
+        .style('left', left + 'px')
+        .style('top', top - toolTipHeight + 5 + 'px');
     },
     [getLabel]
   );
 
   const hideTooltip = useCallback(() => {
-    const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
+    const nodes = d3.select(chartRef.current).selectAll('.bar').nodes();
     nodes.forEach((node) => {
-      d3.select(node).attr("class", "bar");
+      d3.select(node).attr('class', 'bar');
     });
-    tooltip.current.style("opacity", 0);
+    tooltip.current.style('opacity', 0);
   }, []);
 
   const drawChart = useCallback(() => {
@@ -101,11 +103,11 @@ function BarChart({
       .node()
       ?.getBoundingClientRect().width;
     d3.select(chartRef.current)
-      .html("")
-      .append("svg")
-      .attr("width", availableWidth)
-      .attr("height", widgetHeight || 300)
-      .attr("id", `chart-${title}`);
+      .html('')
+      .append('svg')
+      .attr('width', availableWidth)
+      .attr('height', widgetHeight || 300)
+      .attr('id', `chart-${title}`);
     const svg = d3.select(`#chart-${title}`);
     const max = getMaxYpoint(
       Math.max(...chartData.map((elem) => parseInt(elem.value)))
@@ -116,17 +118,17 @@ function BarChart({
       bottom: 30,
       left: getBarChartLeftMargin(max),
     };
-    const width = +svg.attr("width") - margin.left - margin.right;
-    const height = +svg.attr("height") - margin.top - margin.bottom;
+    const width = +svg.attr('width') - margin.left - margin.right;
+    const height = +svg.attr('height') - margin.top - margin.bottom;
 
     const minBarHeight = 0.05 * height;
 
     tooltip.current = d3
       .select(chartRef.current)
-      .append("div")
-      .attr("class", "toolTip")
-      .style("opacity", 0)
-      .style("transition", "0.5s");
+      .append('div')
+      .attr('class', 'toolTip')
+      .style('opacity', 0)
+      .style('transition', '0.5s');
 
     const xScale = d3
       .scaleBand()
@@ -140,30 +142,30 @@ function BarChart({
     const yAxisGrid = d3
       .axisLeft(yScale)
       .tickSize(-width)
-      .tickFormat("")
+      .tickFormat('')
       .ticks(5);
 
     const g = svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+      .append('g')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    g.append("g")
-      .attr("class", "y axis-grid")
+    g.append('g')
+      .attr('class', 'y axis-grid')
       .call(yAxisGrid)
-      .selectAll("line")
-      .attr("stroke", "#E7E9ED");
+      .selectAll('line')
+      .attr('stroke', '#E7E9ED');
 
-    g.append("g")
-      .attr("class", "axis axis--x")
-      .attr("transform", `translate(0,${height})`)
+    g.append('g')
+      .attr('class', 'axis axis--x')
+      .attr('transform', `translate(0,${height})`)
       .call(
         d3.axisBottom(xScale).tickFormat((d) => {
           return getLabel(d);
         })
       );
 
-    g.append("g")
-      .attr("class", "axis axis--y")
+    g.append('g')
+      .attr('class', 'axis axis--y')
       .call(
         d3
           .axisLeft(yScale)
@@ -173,32 +175,32 @@ function BarChart({
           .ticks(5)
       );
 
-    g.selectAll(".bar")
+    g.selectAll('.bar')
       .data(chartData.slice(0, BAR_COUNT[cardSize]))
       .enter()
-      .append("rect")
-      .attr("class", () => {
-        return "bar";
+      .append('rect')
+      .attr('class', () => {
+        return 'bar';
       })
-      .attr("fill", (d) => {
-        return d.color ? d.color : "#4D7DB4";
+      .attr('fill', (d) => {
+        return d.color ? d.color : '#4D7DB4';
       })
-      .attr("x", (d) => xScale(d.label))
-      .attr("y", (d) => {
+      .attr('x', (d) => xScale(d.label))
+      .attr('y', (d) => {
         return height - yScale(d.value) > minBarHeight
           ? yScale(d.value)
           : height - minBarHeight;
       })
-      .attr("width", xScale.bandwidth())
-      .attr("height", (d) => {
+      .attr('width', xScale.bandwidth())
+      .attr('height', (d) => {
         return height - yScale(d.value) > minBarHeight
           ? height - yScale(d.value)
           : minBarHeight;
       })
-      .on("mousemove", (d, i) => {
+      .on('mousemove', (d, i) => {
         showTooltip(d, i);
       })
-      .on("mouseout", () => {
+      .on('mouseout', () => {
         hideTooltip();
       });
     // g.selectAll(".bar")
@@ -209,10 +211,10 @@ function BarChart({
     //   .delay(function (d, i) { console.log(i); return (i * 1000) })
 
     d3.select(chartRef.current)
-      .select(".axis.axis--x")
-      .selectAll(".tick")
-      .select("text")
-      .attr("dy", "16px");
+      .select('.axis.axis--x')
+      .selectAll('.tick')
+      .select('text')
+      .attr('dy', '16px');
   }, [
     chartData,
     showTooltip,
@@ -228,11 +230,11 @@ function BarChart({
   }, [drawChart]);
 
   useEffect(() => {
-    window.addEventListener("resize", () =>
+    window.addEventListener('resize', () =>
       checkForWindowSizeChange(displayChart)
     );
     return () => {
-      window.removeEventListener("resize", () =>
+      window.removeEventListener('resize', () =>
         checkForWindowSizeChange(displayChart)
       );
     };
@@ -259,7 +261,7 @@ function BarChart({
   }
 
   return (
-    <div className="w-full bar-chart">
+    <div className='w-full bar-chart'>
       {queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION ? (
         <DashboardWidgetLegends
           arrayMapper={legendsMapper}
@@ -272,7 +274,7 @@ function BarChart({
       {queries &&
       queries.length > 1 &&
       (section === REPORT_SECTION || section === DASHBOARD_MODAL) ? (
-        <div className="mt-4">
+        <div className='mt-4'>
           <ChartLegends events={queries} chartData={chartData} />
         </div>
       ) : null}

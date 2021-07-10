@@ -164,6 +164,7 @@ function CardContent({ unit, resultState, durationObj }) {
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       content = (
         <Attributions
+          durationObj={durationObj}
           unit={unit}
           resultState={resultState}
           attributionsState={attributionsState}

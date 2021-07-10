@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"testing"
 	"time"
 
@@ -79,7 +80,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, createdAt.Unix(), hubspotDocument.Timestamp)
-	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID1)
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID1)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	// updated to opportunity
@@ -144,7 +145,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, updatedDate.Unix(), hubspotDocument.Timestamp)
-	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID1)
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID1)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	currentProperties = make(map[string]interface{})
@@ -165,7 +166,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, updatedDate.Unix(), hubspotDocument.Timestamp)
-	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID3)
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID3)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	currentProperties = make(map[string]interface{})
@@ -279,7 +280,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, createdDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus, _ := IntHubspot.Sync(project.ID)
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 3)
 	projectIndex := -1
 	for i := range enrichStatus {
 		if enrichStatus[i].ProjectId == project.ID {
@@ -738,7 +739,7 @@ func TestHubspotPropertyDetails(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, createdDate*1000, hubspotDocument.Timestamp)
 
-	allStatus, _ := IntHubspot.Sync(project.ID)
+	allStatus, _ := IntHubspot.Sync(project.ID, 3)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -961,7 +962,7 @@ func TestHubspotCreateActionUpdatedOnCreate(t *testing.T) {
 	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus, _ := IntHubspot.Sync(project.ID)
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 3)
 	projectIndex := -1
 	for i := range enrichStatus {
 		if enrichStatus[i].ProjectId == project.ID {
@@ -1217,7 +1218,7 @@ func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus, _ := IntHubspot.Sync(project.ID)
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 1)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectId)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
@@ -1766,7 +1767,7 @@ func TestHubspotLatestUserProperties(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, companyCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
 
-	IntHubspot.Sync(project.ID)
+	IntHubspot.Sync(project.ID, 3)
 
 	query := model.Query{
 		From: createdAt.Unix() - 500,
@@ -1834,7 +1835,7 @@ func TestHubspotLatestUserProperties(t *testing.T) {
 		Value:     &contactPJson,
 	}
 
-	IntHubspot.Sync(project.ID)
+	IntHubspot.Sync(project.ID, 3)
 
 	result, status, _ = store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, status)
@@ -1977,7 +1978,7 @@ func TestHubspotCustomerUserIDChange(t *testing.T) {
 	w = sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	IntHubspot.Sync(project.ID)
+	IntHubspot.Sync(project.ID, 3)
 
 	query := model.Query{
 		From: createdAt.Unix() - 500,
@@ -1997,4 +1998,213 @@ func TestHubspotCustomerUserIDChange(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "count", result.Headers[0])
 	assert.Equal(t, float64(1), result.Rows[0][0])
+}
+
+func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
+	/*
+		generate per day time series -> {Day1,Day2}, {Day2,Day3},{Day3,Day4} upto current day
+	*/
+	startTimestamp := time.Now().AddDate(0, 0, -10) // 10 days excluding today
+	startDate := time.Date(startTimestamp.Year(), startTimestamp.Month(), startTimestamp.Day(), 0, 0, 0, 0, time.UTC)
+	expectedTimeSeries := [][]int64{}
+	for i := 0; i < 11; i++ {
+		expectedTimeSeries = append(expectedTimeSeries, []int64{startDate.AddDate(0, 0, i).Unix() * 1000, startDate.AddDate(0, 0, i+1).Unix() * 1000})
+	}
+
+	resultTimeSeries := IntHubspot.GetHubspotTimeSeriesByStartTimestamp(1, startTimestamp.Unix()*1000)
+	assert.Equal(t, 11, len(resultTimeSeries)) // expected length 11
+
+	for i := 0; i < 11; i++ {
+		if i == 0 {
+			assert.Equal(t, startTimestamp.Unix()*1000, resultTimeSeries[i][0])
+		} else {
+			assert.Equal(t, expectedTimeSeries[i][0], resultTimeSeries[i][0])
+		}
+
+		assert.Equal(t, expectedTimeSeries[i][1], resultTimeSeries[i][1])
+	}
+
+	/*
+		Split documents to batches. Mainting order
+	*/
+	documents := []model.HubspotDocument{}
+	for i := 0; i < 10; i++ {
+		documents = append(documents, model.HubspotDocument{
+			ID: fmt.Sprintf("%d", i),
+		})
+	}
+
+	batchedDocuments := IntHubspot.GetBatchedOrderedDocumentsByID(documents, 4)
+	for i := 0; i < 3; i++ {
+		for docID := 4 * i; docID < 4*(i+1); docID++ {
+			if docID > 9 {
+				break
+			}
+			assert.NotNil(t, documents[docID].ID, batchedDocuments[i][fmt.Sprintf("%d", docID)])
+		}
+	}
+
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	intHubspot := true
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	createdAt := time.Now().AddDate(0, 0, -11)
+	emails := []string{getRandomEmail(), getRandomEmail(), getRandomEmail()}
+	leadGUIDS := []string{U.RandomString(5), U.RandomString(5), U.RandomString(5)}
+
+	// created 3 unique document_id with 11 updates
+	for contactID := 1; contactID < 4; contactID++ {
+		lastModified := createdAt
+		for i := 0; i < 10; i++ {
+			jsonContactMap := map[string]interface{}{
+				"vid":     contactID,
+				"addedAt": U.GetPropertyValueAsString(createdAt.Unix() * 1000),
+				"properties": map[string]map[string]interface{}{
+					"createdate":       {"value": U.GetPropertyValueAsString(createdAt.Unix() * 1000)},
+					"lastmodifieddate": {"value": U.GetPropertyValueAsString(lastModified.Unix() * 1000)},
+					"lifecyclestage":   {"value": "lead"},
+					"count":            {"value": U.GetPropertyValueAsString(i)},
+				},
+				"identity-profiles": []map[string]interface{}{
+					{
+						"vid": 1,
+						"identities": []map[string]interface{}{
+							{
+								"type":  "EMAIL",
+								"value": emails[contactID-1],
+							},
+							{
+								"type":  "LEAD_GUID",
+								"value": leadGUIDS[contactID-1],
+							},
+						},
+					},
+				},
+			}
+			w := sendCreateHubspotDocumentRequest(project.ID, r, agent, model.HubspotDocumentTypeNameContact, &jsonContactMap)
+			assert.Equal(t, http.StatusCreated, w.Code)
+
+			lastModified = lastModified.AddDate(0, 0, 1)
+		}
+	}
+
+	resultTimeSeries = IntHubspot.GetHubspotTimeSeriesByStartTimestamp(1, createdAt.Unix()*1000)
+	assert.Equal(t, 12, len(resultTimeSeries))
+
+	for i := 0; i < 10; i++ {
+		documents, _ := store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(project.ID, model.HubspotDocumentTypeContact, resultTimeSeries[i][0], resultTimeSeries[i][1])
+		if i == 0 {
+			assert.Equal(t, 6, len(documents))
+		} else {
+			assert.Equal(t, 3, len(documents))
+		}
+
+		var contact IntHubspot.Contact
+		json.Unmarshal(documents[0].Value.RawMessage, &contact)
+		assert.Equal(t, fmt.Sprintf("%d", i), contact.Properties["count"].Value)
+	}
+
+	var companyUpdatedDate time.Time
+	for companyID := int64(1); companyID < 4; companyID++ {
+		companyCreatedDate := createdAt
+		companyUpdatedDate = companyCreatedDate
+		for i := 0; i < 9; i++ {
+			company := IntHubspot.Company{
+				CompanyId:  companyID,
+				ContactIds: []int64{companyID},
+				Properties: map[string]IntHubspot.Property{
+					"createdate":             {Value: fmt.Sprintf("%d", companyCreatedDate.Unix()*1000)},
+					"hs_lastmodifieddate":    {Value: fmt.Sprintf("%d", companyUpdatedDate.Unix()*1000)},
+					"company_lifecyclestage": {Value: "lead"},
+					"name": {
+						Value:     "testcompany",
+						Timestamp: companyCreatedDate.Unix() * 1000,
+					},
+					"count": {Value: fmt.Sprintf("%d", i)},
+				},
+			}
+
+			enJSON, err := json.Marshal(company)
+			assert.Nil(t, err)
+			companyPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+			hubspotDocument := model.HubspotDocument{
+				TypeAlias: model.HubspotDocumentTypeNameCompany,
+				Value:     &companyPJson,
+			}
+			status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+			assert.Equal(t, http.StatusCreated, status)
+			if i == 0 {
+				assert.Equal(t, companyCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+			} else {
+				assert.Equal(t, companyUpdatedDate.Unix()*1000, hubspotDocument.Timestamp)
+			}
+			companyUpdatedDate = companyUpdatedDate.AddDate(0, 0, 1)
+		}
+
+	}
+
+	numParallelDocuments := 3
+	enrichStatus, _ := IntHubspot.Sync(project.ID, numParallelDocuments)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	query := model.Query{
+		From: createdAt.AddDate(0, 0, -1).Unix(),
+		To:   companyUpdatedDate.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondEachGivenEvent,
+		Class:           model.QueryClassEvents,
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				Property:       "$hubspot_contact_lastmodifieddate",
+				EventName:      U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+				EventNameIndex: 1,
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				Property:       "$hubspot_company_hs_lastmodifieddate",
+				EventName:      U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+				EventNameIndex: 1,
+			},
+		},
+	}
+
+	result, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	rows := result.Results[0].Rows
+	sort.Slice(rows, func(i, j int) bool {
+		p1, _ := U.GetPropertyValueAsFloat64(rows[i][2])
+		p2, _ := U.GetPropertyValueAsFloat64(rows[j][2])
+		return p1 < p2
+	})
+	contactTimestamp := createdAt
+	companyTimestamp := createdAt
+	for i := 0; i < 10; i++ {
+		if i == 0 {
+			assert.Equal(t, fmt.Sprintf("%d", contactTimestamp.Unix()), rows[i][2])
+			assert.Equal(t, "$none", rows[0][3])
+		} else {
+			assert.Equal(t, fmt.Sprintf("%d", contactTimestamp.Unix()), rows[i][2])
+			assert.Equal(t, fmt.Sprintf("%d", companyTimestamp.Unix()*1000), rows[i][3])
+			companyTimestamp = companyTimestamp.AddDate(0, 0, 1)
+		}
+		contactTimestamp = contactTimestamp.AddDate(0, 0, 1)
+	}
 }

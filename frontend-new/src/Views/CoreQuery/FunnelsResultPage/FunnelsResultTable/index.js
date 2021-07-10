@@ -18,6 +18,7 @@ function FunnelsResultTable({
   comparisonChartDurations,
   durationObj,
   comparison_duration,
+  resultData
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -58,7 +59,8 @@ function FunnelsResultTable({
       comparisonChartDurations,
       comparisonChartData,
       durationObj,
-      comparison_duration
+      comparison_duration,
+      resultData
     );
   }, [
     chartData,
@@ -73,6 +75,7 @@ function FunnelsResultTable({
     comparisonChartDurations,
     comparison_duration,
     durationObj,
+    resultData
   ]);
 
   const getCSVData = () => {

@@ -1,13 +1,22 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useContext, useMemo, useCallback } from 'react';
+import moment from 'moment';
+import ReactDOMServer from 'react-dom/server';
 import { formatData } from '../../CoreQuery/AttributionsResult/utils';
 import AttributionTable from '../../CoreQuery/AttributionsResult/AttributionTable';
-import BarLineChart from '../../../components/BarLineChart';
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT,
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+  BAR_COUNT,
 } from '../../../utils/constants';
 import { DashboardContext } from '../../../contexts/DashboardContext';
+import HCBarLineChart from '../../../components/HCBarLineChart';
+import {
+  Text,
+  Number as NumFormat,
+} from '../../../components/factorsComponents';
+import chartStyles from '../../../components/HCBarLineChart/styles.module.scss';
 
 function SingleTouchPoint({
   data,
@@ -21,32 +30,137 @@ function SingleTouchPoint({
   unit,
   section,
   attr_dimensions,
+  durationObj,
 }) {
-  const maxAllowedVisibleProperties = 5;
-  const [chartsData, setChartsData] = useState([]);
+  const aggregateData = useMemo(() => {
+    return formatData(data, touchpoint, event, attr_dimensions);
+  }, [data, touchpoint, event, attr_dimensions]);
+
   const [visibleIndices, setVisibleIndices] = useState(
-    Array.from(Array(maxAllowedVisibleProperties).keys())
+    Array.from(Array(MAX_ALLOWED_VISIBLE_PROPERTIES).keys())
   );
+
   const {
     attributionMetrics,
     setAttributionMetrics,
     handleEditQuery,
   } = useContext(DashboardContext);
 
-  useEffect(() => {
-    const firstEnabledDimension = attr_dimensions.filter(
-      (d) => d.touchPoint === touchpoint && d.enabled
-    )[0];
-    const formattedData = formatData(
-      data,
-      event,
-      visibleIndices,
-      firstEnabledDimension ? firstEnabledDimension.responseHeader : touchpoint
-    );
-    setChartsData(formattedData);
-  }, [data, event, visibleIndices, touchpoint, attr_dimensions]);
+  const chartData = useMemo(() => {
+    if (!aggregateData.categories.length) {
+      return {
+        ...aggregateData,
+      };
+    }
+    return {
+      categories: aggregateData.categories
+        .filter((_, index) => visibleIndices.includes(index))
+        .slice(0, BAR_COUNT[unit.cardSize]),
+      series: aggregateData.series.map((s) => {
+        return {
+          ...s,
+          data: s.data
+            .filter((_, index) => visibleIndices.includes(index))
+            .slice(0, BAR_COUNT[unit.cardSize]),
+        };
+      }),
+    };
+  }, [aggregateData, visibleIndices, unit.cardSize]);
 
-  if (!chartsData.length) {
+  const generateTooltip = useCallback(
+    (category) => {
+      const categoryIdx = chartData.categories.findIndex((d) => d === category);
+      const conversionIdx = 0;
+      const costIdx = 1;
+      return ReactDOMServer.renderToString(
+        <>
+          <Text
+            color='grey-6'
+            weight='normal'
+            type='title'
+            extraClass={`text-sm mb-0 ${chartStyles.categoryBottomBorder}`}
+          >
+            {category}
+          </Text>
+          <span className='flex items-center mt-3'>
+            <Text
+              color='grey'
+              type='title'
+              weight='bold'
+              extraClass='text-sm mb-0'
+            >
+              Opportunities
+            </Text>
+          </span>
+          <span className='flex justify-between items-center mt-3'>
+            <span
+              className={`flex flex-col justify-center items-start pl-2 ${chartStyles.leftBlueBar}`}
+            >
+              <Text
+                color='grey'
+                type='title'
+                weight='normal'
+                extraClass='text-sm mb-0'
+              >
+                {moment(durationObj.from).format('MMM DD')}
+                {' - '}
+                {moment(durationObj.to).format('MMM DD')}
+              </Text>
+              <Text
+                color='grey-6'
+                type='title'
+                weight='bold'
+                extraClass='text-base mb-0'
+              >
+                <NumFormat
+                  number={chartData.series[conversionIdx].data[categoryIdx]}
+                />
+              </Text>
+            </span>
+          </span>
+          <span className='flex items-center mt-3'>
+            <Text
+              color='grey'
+              type='title'
+              weight='bold'
+              extraClass='text-sm mb-0'
+            >
+              Cost per conversion
+            </Text>
+          </span>
+          <span className='flex justify-between items-center mt-3'>
+            <span
+              className={`flex flex-col justify-center items-start pl-2 ${chartStyles.leftRedBar}`}
+            >
+              <Text
+                color='grey'
+                type='title'
+                weight='normal'
+                extraClass='text-sm mb-0'
+              >
+                {moment(durationObj.from).format('MMM DD')}
+                {' - '}
+                {moment(durationObj.to).format('MMM DD')}
+              </Text>
+              <Text
+                color='grey-6'
+                type='title'
+                weight='bold'
+                extraClass='text-base mb-0'
+              >
+                <NumFormat
+                  number={chartData.series[costIdx].data[categoryIdx]}
+                />
+              </Text>
+            </span>
+          </span>
+        </>
+      );
+    },
+    [chartData.categories, chartData.series, durationObj]
+  );
+
+  if (!chartData.categories.length) {
     return null;
   }
 
@@ -59,16 +173,15 @@ function SingleTouchPoint({
 
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <BarLineChart
-        responseRows={data.rows}
-        responseHeaders={data.headers}
-        visibleIndices={visibleIndices}
-        title={unit.id}
-        chartData={chartsData}
-        section={section}
+      <HCBarLineChart
         height={DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT}
+        legendsPosition='top'
         cardSize={unit.cardSize}
+        chartId={`barLine-${unit.id}`}
         legends={legends}
+        categories={chartData.categories}
+        series={chartData.series}
+        generateTooltip={generateTooltip}
       />
     );
   } else {
@@ -81,7 +194,7 @@ function SingleTouchPoint({
         isWidgetModal={isWidgetModal}
         visibleIndices={visibleIndices}
         setVisibleIndices={setVisibleIndices}
-        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        maxAllowedVisibleProperties={MAX_ALLOWED_VISIBLE_PROPERTIES}
         attribution_method={attribution_method}
         attributionMetrics={attributionMetrics}
         setAttributionMetrics={setAttributionMetrics}
