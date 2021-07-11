@@ -62,7 +62,7 @@ func eventMatchesFilterCriterion(event P.CounterEventFormat, filterCriterion Eve
 		props = event.EventProperties
 	}
 	if _, ok := props[filterKey]; !ok {
-		fmt.Println("Error: Filter key not found in properties. Defaulting match flag as false.")
+		//fmt.Println("Error: Filter key not found in properties. Defaulting match flag as false.")
 		return false
 	}
 	propertyValue := props[filterKey]
@@ -142,9 +142,7 @@ func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUser
 		QueryEvent(event, deltaQuery, perUserQueryResult)
 		baseFlag := (*perUserQueryResult).baseResult.criteriaMatchFlag
 		targetFlag := (*perUserQueryResult).targetResult.criteriaMatchFlag
-		if !baseFlag && targetFlag {
-			log.Info("WARNING: Target matched before base!")
-		} else if baseFlag && targetFlag {
+		if baseFlag && targetFlag {
 			break
 		}
 	}
@@ -233,7 +231,7 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int
 	lineNum := 0
 	for scanner.Scan() {
 		lineNum++
-		if lineNum%1000 == 0 {
+		if lineNum%10000 == 0 {
 			fmt.Printf("%d lines scanned\n", lineNum)
 		}
 		line := scanner.Text()
@@ -408,7 +406,7 @@ func updateMetricsWithProperties(featureMetrics *Level3CatRatioDist, properties 
 		keyStr := keyPrefix + key
 		valStr := fmt.Sprintf("%v", val)
 		if passId == 2 { // In passId 1, we would have featSoftWhitelist as empty.
-			if featSoftWhitelist[keyStr] != nil && featSoftWhitelist[keyStr][valStr] == true {
+			if !(featSoftWhitelist[keyStr] != nil && featSoftWhitelist[keyStr][valStr] == true) {
 				continue
 			}
 		}

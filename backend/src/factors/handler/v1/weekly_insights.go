@@ -2,6 +2,7 @@ package v1
 
 import (
 	"errors"
+	C "factors/config"
 	"factors/delta"
 	mid "factors/middleware"
 	"factors/model/store"
@@ -77,11 +78,16 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 
 }
 func GetWeeklyInsightsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	var resp delta.WeeklyInsights
 	params, err := GetWeeklyInsightsParams(c)
 	if err != nil {
 		log.Error(err)
-		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
+		return resp, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
 
+	}
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentUUID) {
+		return nil, http.StatusOK, "", "", false
 	}
 	if params.InsightsType != "w" && params.InsightsType != "m" {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Enter w or m ", true
