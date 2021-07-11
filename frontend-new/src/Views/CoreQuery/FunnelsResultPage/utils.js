@@ -11,6 +11,7 @@ import {
   Text,
 } from '../../../components/factorsComponents';
 import styles from './index.module.scss';
+import {parseForDateTimeLabel} from '../EventsAnalytics/SingleEventSingleBreakdown/utils';
 
 const windowSize = {
   w: window.outerWidth,
@@ -73,7 +74,7 @@ export const generateGroupedChartsData = (
   response,
   queries,
   groups,
-  arrayMapper
+  arrayMapper, grn
 ) => {
   if (!response) {
     return [];
@@ -84,8 +85,12 @@ export const generateGroupedChartsData = (
       return { name: g.name };
     });
   const firstEventIdx = response.headers.findIndex((elem) => elem === 'step_0');
+  let breakdowns = [...response.meta.query.gbp];
+  let grns = grnByIndex(response.headers.slice(0, firstEventIdx), breakdowns);
   response.rows.forEach((row) => {
-    const breakdownName = row.slice(0, firstEventIdx).join(',');
+    const breakdownName = row.slice(0, firstEventIdx).map((x, ind) => 
+      parseForDateTimeLabel(grns[ind], x)).join(',');
+
     const obj = result.find((r) => r.name === breakdownName);
     if (obj) {
       const netCounts = row.filter((val) => typeof val === 'number');
@@ -103,17 +108,37 @@ export const generateGroupedChartsData = (
   return result;
 };
 
-export const generateGroups = (response, maxAllowedVisibleProperties) => {
+const renderGrpLabel = (label, grn) => {
+  if(moment(label).isValid()) {
+    return getWeekFormat(moment(new Date(label)))
+  } else return label;
+}
+
+export const grnByIndex = (headersSlice, breakdowns) => {
+  let grns = [];
+  headersSlice.forEach((h) => {
+    const brkIndex = breakdowns.findIndex((x) => h===x.pr);
+    grns.push(breakdowns[brkIndex]?.grn);
+    breakdowns.splice(brkIndex, 1)
+  })
+  return grns;
+}
+
+export const generateGroups = (response, maxAllowedVisibleProperties, grn) => {
   if (!response) {
     return [];
   }
+  let breakdowns = [...response.meta.query.gbp];
   const firstEventIdx = response.headers.findIndex((elem) => elem === 'step_0');
+  let grns = grnByIndex(response.headers.slice(0, firstEventIdx), breakdowns);
   const result = response.rows.map((elem, index) => {
     const row = elem.map((item) => {
       return item;
     });
     const netCounts = row.filter((row) => typeof row === 'number');
-    const name = row.slice(0, firstEventIdx).join(',');
+    const name = row.slice(0, firstEventIdx)?.map((label, ind) => {
+      return parseForDateTimeLabel(grns[ind], label);
+    })?.join(',');
     return {
       index,
       name,
@@ -283,16 +308,15 @@ export const generateTableData = (
   comparisonChartDurations,
   comparisonChartData,
   durationObj,
-  comparison_duration
+  comparison_duration,
+  resultData
 ) => {
   if (!breakdown.length) {
     const queryData = {};
-
     const overallDuration = getOverAllDuration(durations);
     const comparisonOverallDuration = getOverAllDuration(
       comparisonChartDurations
     );
-
     queries.forEach((q, index) => {
       queryData[arrayMapper[index].mapper] = {
         percentage: data[index].value,
@@ -304,11 +328,9 @@ export const generateTableData = (
       };
       if (index < queries.length - 1) {
         const time = getStepDuration(durations, index, index + 1);
-
         const compare_time =
           comparisonChartData &&
           getStepDuration(comparisonChartDurations, index, index + 1);
-
         queryData[`time[${index}-${index + 1}]`] = comparisonChartData
           ? {
               time,
@@ -318,11 +340,9 @@ export const generateTableData = (
       }
     });
     const conversion = data[data.length - 1].value + '%';
-
     const comparsion_conversion =
       comparisonChartData &&
       comparisonChartData[comparisonChartData.length - 1].value + '%';
-
     return [
       {
         index: 0,
@@ -350,19 +370,28 @@ export const generateTableData = (
     const firstEventIdx = durationMetric.headers.findIndex(
       (elem) => elem === 'step_0_1_time'
     );
+
+    let breakdowns = [...resultData?.meta?.query?.gbp];
+    let grns = grnByIndex(resultData?.headers?.slice(0, firstEventIdx), breakdowns);
+
     const result = appliedGroups.map((grp, index) => {
       const group = grp;
       const durationGrp = durationMetric.rows.find(
-        (elem) => elem.slice(0, firstEventIdx).join(',') === grp
+        (elem) =>
+          elem
+            .slice(0, firstEventIdx)
+            .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
+            .join(',') === grp
       );
       const eventsData = {};
       let totalDuration = 0;
+      let grps;
       data.forEach((d, idx) => {
         eventsData[`${d.name}`] = {
           percentage: calculatePercentage(d.data[group], data[0].data[group]),
           count: d.data[group],
         };
-
+        grps = breakdown.filter((x) => x.eventIndex === d.index);
         if (idx < data.length - 1) {
           const durationIdx = durationMetric.headers.findIndex(
             (elem) => elem === `step_${idx}_${idx + 1}_time`
@@ -373,9 +402,10 @@ export const generateTableData = (
           totalDuration += durationGrp ? Number(durationGrp[durationIdx]) : 0;
         }
       });
+      // const groupLabel = group.split(',')?.map((lbl) => );
       return {
         index,
-        Grouping: grp,
+        Grouping: group,
         'Converstion Time': formatDuration(totalDuration),
         Conversion:
           calculatePercentage(
@@ -385,7 +415,6 @@ export const generateTableData = (
         ...eventsData,
       };
     });
-
     if (currentSorter.key) {
       const sortKey = currentSorter.key;
       const { order } = currentSorter;
@@ -406,6 +435,16 @@ export const generateTableData = (
     return result;
   }
 };
+
+const getWeekFormat = (m) => {
+  const weekInYear = m.isoWeek();
+  const startOfMonthWeek = moment(m).startOf('month').isoWeek();
+  const result = weekInYear - startOfMonthWeek;
+  const dt = result < 0 ? weekInYear : result;
+  const startDate = m.format("D-MMM-YYYY");
+  const endDate = m.endOf("week").format("D-MMM-YYYY");
+  return startDate + ' to ' + endDate;
+}
 
 export const generateUngroupedChartsData = (response, arrayMapper) => {
   if (!response) {
@@ -469,7 +508,9 @@ export const generateEventsData = (response, queries, arrayMapper) => {
   const result = queries.map((q, idx) => {
     const data = {};
     response.rows.forEach((r) => {
-      const name = r.slice(0, firstEventIdx).join(',');
+      const name = r.slice(0, firstEventIdx)?.map((label) => {
+        return renderGrpLabel(label);
+      })?.join(',');
       const netCounts = r.filter((elem) => typeof elem === 'number');
       data[name] = netCounts[idx];
     });

@@ -50,6 +50,7 @@ function UngroupedChart({
         groups={[]}
         arrayMapper={arrayMapper}
         durations={resultState.data.meta}
+        resultData={resultState.data}
       />
     );
   }
