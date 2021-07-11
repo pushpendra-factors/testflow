@@ -7,6 +7,12 @@ import { EVENT_BREADCRUMB } from '../../../utils/constants';
 import SaveQuery from '../../../components/SaveQuery';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import { useHistory } from 'react-router-dom';
+import { Tabs } from 'antd';
+import { useSelector } from 'react-redux';
+import _ from 'lodash';
+
+const { TabPane } = Tabs;
+
 
 function AnalysisHeader({
   queryType,
@@ -15,12 +21,16 @@ function AnalysisHeader({
   queryTitle,
   setQuerySaved,
   breakdownType,
+  changeTab,
+  activeTab
 }) {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const {
     coreQueryState: { navigatedFromDashboard },
   } = useContext(CoreQueryContext);
-  const history = useHistory();
+  const history = useHistory();  
+
+  const { metadata } = useSelector((state) => state.insights); 
 
   const addShadowToHeader = useCallback(() => {
     const scrollTop =
@@ -53,11 +63,16 @@ function AnalysisHeader({
     };
   }, [addShadowToHeader]);
 
+  // const isInsightsEnabled = metadata?.QueryWiseResult!=null || !metadata?.DashboardUnitWiseResult!=null ||  !_.isEmpty(metadata.QueryWiseResult) || !_.isEmpty(metadata?.DashboardUnitWiseResult)
+  const isInsightsEnabled = (metadata?.QueryWiseResult!=null && !metadata?.DashboardUnitWiseResult!=null)  || (!_.isEmpty(metadata?.QueryWiseResult) && !_.isEmpty(metadata?.DashboardUnitWiseResult))
+  // console.log('isInsightsEnabled',isInsightsEnabled);
   return (
     <div
       id='app-header'
-      className={`bg-white z-50	flex fixed items-center justify-between py-3 px-8 ${styles.topHeader}`}
+      className={`bg-white z-50	fixed flex flex-col pt-3 px-8 w-full ${isInsightsEnabled? 'pb-0 border-bottom--thin-2' : "pb-3"} ${styles.topHeader}`}
     >
+      <div className={'items-center flex justify-between w-full'}>
+
       <div
         onClick={onBreadCrumbClick}
         className='flex items-center cursor-pointer'
@@ -112,6 +127,22 @@ function AnalysisHeader({
           ></Button>
         ) : null}
       </div>
+
+      </div>
+
+
+
+
+      {isInsightsEnabled && 
+      <div className={'items-center flex justify-center w-full'}> 
+        <Tabs defaultActiveKey={activeTab} onChange={changeTab} className={'fa-tabs--dashboard'}>
+          <TabPane tab="Reports" key="1" /> 
+          <TabPane tab="Insights" key="2" /> 
+        </Tabs> 
+      </div>
+      }
+
+
     </div>
   );
 }
