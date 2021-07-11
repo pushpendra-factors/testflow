@@ -460,7 +460,24 @@ func (pg *Postgres) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dashb
 	}
 	return
 }
-
+func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string){
+	var temp_query model.Query
+	var queryGroup model.QueryGroup
+	// try decoding for Query
+	U.DecodePostgresJsonbToStructType(&query.Query, &temp_query)
+	if temp_query.Class == "" {
+		// if fails, try decoding for QueryGroup
+		err1 := U.DecodePostgresJsonbToStructType(&query.Query, &queryGroup)
+		if err1 != nil {
+			errMsg = fmt.Sprintf("Failed to decode jsonb query")
+			return
+		}
+		queryClass = queryGroup.GetClass()
+	} else {
+		queryClass = temp_query.Class
+	}
+	return
+}
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
