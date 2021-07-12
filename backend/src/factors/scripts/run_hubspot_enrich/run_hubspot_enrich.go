@@ -128,7 +128,7 @@ func main() {
 	C.InitConf(config)
 	C.InitSortedSetCache(config.CacheSortedSet)
 
-	err := C.InitDB(*config)
+	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 200, 100)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"env": *env,
 			"host": *dbHost, "port": *dbPort}).Panic("Failed to initialize DB.")

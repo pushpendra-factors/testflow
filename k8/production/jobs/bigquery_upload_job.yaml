@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-standard
+    nodePool: shared-persistent-pool
   name: bigquery-upload-job
 spec:
   schedule: "30 03 * * *" # In UTC
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-standard
+            nodePool: shared-persistent-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-standard
+            cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: bigquery-upload-job
             image: us.gcr.io/factors-production/bigquery-upload-job:v0.71_4a75f686

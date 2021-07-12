@@ -5,7 +5,7 @@ metadata:
     layer: integration-request-worker
     env: production
     project: factors-production
-    nodePool: persistent-pool-standard
+    nodePool: workers-pool
   name: integration-request-worker
   namespace: default
 spec:
@@ -24,10 +24,10 @@ spec:
     metadata:      
       labels:
         layer: integration-request-worker
-        nodePool: persistent-pool-standard
+        nodePool: workers-pool
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-pool-standard
+        cloud.google.com/gke-nodepool: workers-pool
       containers:
       - name: integration-request-worker
         image: us.gcr.io/factors-production/integration-request-worker:v1.13-1d6b430-721
