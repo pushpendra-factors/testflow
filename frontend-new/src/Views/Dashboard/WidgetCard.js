@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
+import {connect, useDispatch} from 'react-redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { Text, SVG } from '../../components/factorsComponents';
 import { RightOutlined, LeftOutlined } from '@ant-design/icons';
@@ -23,6 +24,7 @@ import {
 } from '../../utils/constants';
 import { DashboardContext } from '../../contexts/DashboardContext';
 import { useHistory, useLocation } from 'react-router-dom';
+import {  fetchWeeklyIngishts } from 'Reducers/insights';
 
 function WidgetCard({
   unit,
@@ -31,6 +33,7 @@ function WidgetCard({
   durationObj,
   refreshClicked,
   setRefreshClicked,
+  fetchWeeklyIngishts
 }) {
   const cardRef = useRef(null);
   const history = useHistory();
@@ -38,6 +41,8 @@ function WidgetCard({
   const [resultState, setResultState] = useState(initialState);
   const { active_project } = useSelector((state) => state.global);
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
+  const { metadata } = useSelector((state) => state.insights);
+  const dispatch = useDispatch();
   const [attributionMetrics, setAttributionMetrics] = useState([
     ...ATTRIBUTION_METRICS,
   ]);
@@ -231,7 +236,38 @@ function WidgetCard({
     [unit, activeDashboardUnits.data, onDrop]
   );
 
+ 
   const handleEditQuery = useCallback(() => {
+
+    console.log('dashboard unit id-->>',unit);
+    // console.log('metadata',metadata);
+    // console.log('metadata',metadata.DashboardUnitWiseResult[unit.id]);
+
+    if(metadata?.DashboardUnitWiseResult){
+      const insightsItem = metadata?.DashboardUnitWiseResult[unit.id];
+      if(insightsItem){
+        dispatch({type:'SET_ACTIVE_INSIGHT', payload: insightsItem});
+      }
+      else{
+        dispatch({type:'SET_ACTIVE_INSIGHT', payload: false});
+      }
+      
+      if(insightsItem?.Enabled){
+        if(!_.isEmpty(insightsItem?.InsightsRange)){
+          fetchWeeklyIngishts(active_project.id, unit.id, Object.keys(insightsItem.InsightsRange)[0],insightsItem.InsightsRange[Object.keys(insightsItem.InsightsRange)[0]][0]).catch((e)=>{
+            console.log("weekly-ingishts fetch error",e)
+          });  
+        }
+        else{
+          dispatch({type:'SET_ACTIVE_INSIGHT', payload: insightsItem});
+        }
+      }
+      else{
+        dispatch({type:'RESET_WEEKLY_INSIGHTS', payload: false})
+      } 
+    }
+
+
     history.push({
       pathname: '/analyse',
       state: {
@@ -347,4 +383,4 @@ function WidgetCard({
   );
 }
 
-export default React.memo(WidgetCard);
+export default connect(null,{fetchWeeklyIngishts})(React.memo(WidgetCard));

@@ -11,7 +11,7 @@ import { Row, Col, Table, Avatar, Button, Dropdown, Menu, Tag } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
 import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
-import { useSelector, useDispatch } from 'react-redux';
+import { connect, useSelector, useDispatch } from 'react-redux';
 import moment from 'moment';
 import {
   getStateQueryFromRequestQuery,
@@ -48,6 +48,8 @@ import {
 } from '../../reducers/analyticsQuery';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { getDashboardDateRange } from '../Dashboard/utils';
+import {  fetchWeeklyIngishts } from 'Reducers/insights';
+import _ from 'lodash';
 
 const coreQueryoptions = [
   {
@@ -122,6 +124,8 @@ function CoreQuery({
   location,
   setBreakdownType,
   setNavigatedFromDashboard,
+  fetchWeeklyIngishts,
+  activeProject
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
@@ -129,6 +133,7 @@ function CoreQuery({
   const dispatch = useDispatch();
   const { attr_dimensions } = useSelector((state) => state.coreQuery);
   const history = useHistory();
+  const { metadata } = useSelector((state) => state.insights);
 
   const getFormattedRow = (q) => {
     let svgName = 'funnels_cq';
@@ -171,8 +176,10 @@ function CoreQuery({
   }, []);
 
   const handleViewResult = useCallback((row, event) => {
+    console.log('row id-->>',row);
     event.stopPropagation();
     event.preventDefault();
+    getWeeklyIngishts(row);
     setQueryToState(getFormattedRow(row));
   }, []);
 
@@ -202,6 +209,32 @@ function CoreQuery({
     },
     [dispatch]
   );
+
+  const getWeeklyIngishts = (record) =>{
+    if(metadata?.QueryWiseResult){
+      console.log("saved query unit id-->>", record);
+        const insightsItem = metadata?.QueryWiseResult[record.key]; 
+        if(insightsItem){
+          dispatch({type:'SET_ACTIVE_INSIGHT', payload: insightsItem});
+        }
+        else{
+          dispatch({type:'SET_ACTIVE_INSIGHT', payload: false});
+        }
+        if(insightsItem?.Enabled){
+          if(!_.isEmpty(insightsItem?.InsightsRange)){
+            fetchWeeklyIngishts(activeProject.id, record.key, Object.keys(insightsItem.InsightsRange)[0],insightsItem.InsightsRange[Object.keys(insightsItem.InsightsRange)[0]][0],false).catch((e)=>{
+              console.log("weekly-ingishts fetch error",e)
+            }); 
+          }
+          else{
+            dispatch({type:'SET_ACTIVE_INSIGHT', payload: insightsItem});
+          }
+        }
+        else{
+          dispatch({type:'RESET_WEEKLY_INSIGHTS', payload: false})
+        } 
+    }
+  }
 
   const setQueryToState = useCallback(
     (record, navigatedFromDashboard) => {
@@ -503,7 +536,8 @@ function CoreQuery({
               <Table
                 onRow={(record) => {
                   return {
-                    onClick: (e) => {
+                    onClick: (e) => { 
+                      getWeeklyIngishts(record); 
                       setQueryToState(record);
                     },
                   };
@@ -522,5 +556,8 @@ function CoreQuery({
     </>
   );
 }
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+});
 
-export default CoreQuery;
+export default connect(mapStateToProps, {fetchWeeklyIngishts})(CoreQuery);

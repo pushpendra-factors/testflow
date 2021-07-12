@@ -8,6 +8,7 @@ import DashboardReducer from './dashboard';
 import factors from './factors';
 import events from './events';
 import settingsReducer from './settings';
+import insights from './insights';
 
 const rootReducer = combineReducers({
   global: GlobalReducer,
@@ -18,7 +19,8 @@ const rootReducer = combineReducers({
   queries: QueriesReducer,
   settings: settingsReducer,
   factors,
-  events
+  events,
+  insights
 });
 
 export default rootReducer;
