@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-highmem
+    nodePool: shared-persistent-pool
   name: hubspot-enrich-job
 spec:
   schedule: "0 21 * * *" # In UTC
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-highmem
+            nodePool: shared-persistent-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem
+            cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: hubspot-enrich-job
             image: us.gcr.io/factors-production/hubspot-enrich-job:4e644a2a-2445

@@ -5,7 +5,7 @@ metadata:
     layer: persistent-redis
     env: production
     project: factors-production
-    nodePool: persistent-redis-pool2
+    nodePool: persistent-redis-pool
   name: persistent-redis
   namespace: default
 spec:
@@ -24,10 +24,10 @@ spec:
     metadata:      
       labels:
         layer: persistent-redis
-        nodePool: persistent-redis-pool2
+        nodePool: persistent-redis-pool
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-redis-pool2
+        cloud.google.com/gke-nodepool: persistent-redis-pool
       terminationGracePeriodSeconds: 30
       volumes:
         - name: persistent-redis-storage-new
@@ -44,8 +44,8 @@ spec:
           mountPath: "/usr/local/var/db/redis"
         resources:
           requests:
-            memory: 122"G"
-            cpu: "20"
+            memory: "61G"
+            cpu: "7"
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext: {}

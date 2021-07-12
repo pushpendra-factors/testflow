@@ -1526,7 +1526,7 @@ func (pg *Postgres) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, 
 		}
 	}
 
-	unusedSessions = make([]string, len(unusedSessionIDMap), len(unusedSessionIDMap))
+	unusedSessions = make([]string, 0, 0)
 	for sessionID := range unusedSessionIDMap {
 		unusedSessions = append(unusedSessions, sessionID)
 	}

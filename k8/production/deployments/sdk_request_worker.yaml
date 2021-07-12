@@ -5,7 +5,7 @@ metadata:
     layer: sdk-request-worker
     env: production
     project: factors-production
-    nodePool: persistent-pool-standard
+    nodePool: workers-pool
   name: sdk-request-worker
   namespace: default
 spec:
@@ -24,10 +24,10 @@ spec:
     metadata:      
       labels:
         layer: sdk-request-worker
-        nodePool: persistent-pool-standard
+        nodePool: workers-pool
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-pool-standard
+        cloud.google.com/gke-nodepool: workers-pool
       containers:
       - name: sdk-request-worker
         image: us.gcr.io/factors-production/sdk-request-worker:v1.13-1d6b430-721
@@ -39,8 +39,7 @@ spec:
         terminationMessagePolicy: File
         resources:
           requests:
-            memory: "100M"
-            cpu: "0.5"
+            cpu: "300m"
         securityContext: {}
         args:
           - --env

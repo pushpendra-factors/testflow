@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: shared-persistent-pool
   name: beam-dashboard-caching-job
 spec:
   schedule: "0 1/6 * * *" # In UTC. Every 6 hours.
@@ -13,9 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
+            nodePool: shared-persistent-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-standard-dataflow
+            cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: beam-dashboard-caching-job
             image: us.gcr.io/factors-production/beam-dashboard-caching-job:v0.50-d5b8ae8
