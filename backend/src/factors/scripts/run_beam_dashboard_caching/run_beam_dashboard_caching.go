@@ -58,6 +58,9 @@ var (
 	excludeProjectIDs = flag.String("exclude_project_id", "", "Comma separated project ids to exclude for the run")
 	onlyWebAnalytics  = flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
 	skipWebAnalytics  = flag.Bool("skip_web_analytics", false, "Skip the web analytics and run other.")
+	// better to have 0 or 1 values instead of false/true
+	onlyAttribution = flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
+	skipAttribution = flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
 
 	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName           = flag.String("app_name", "", "Override default app_name.")
@@ -252,10 +255,12 @@ func main() {
 	// Create initial PCollection for the projectIDs string passed to be processed.
 	projectIDString := beam.Create(s, fmt.Sprintf("%s|%s", *projectIDs, *excludeProjectIDs))
 
+	dashboardJobProps := &FB.CachingJobProps{OnlyAttribution: *onlyAttribution, SkipAttribution: *skipAttribution}
+
 	var cacheResponses, webAnalyticsCacheResponses beam.PCollection
 	if !*onlyWebAnalytics {
 		// Fetches dashboard_units for all project_id and emits a unit of work along with query and date range.
-		cachePayloads := beam.ParDo(s, &FB.GetDashboardUnitCachePayloadsFn{Config: config}, projectIDString)
+		cachePayloads := beam.ParDo(s, &FB.GetDashboardUnitCachePayloadsFn{Config: config, JobProps: dashboardJobProps}, projectIDString)
 		reShuffledCachePayloads := beam.Reshuffle(s, cachePayloads)
 		// Processes each DashboardUnitCachePayload and emits a cache response which includes errCode, errMsg, time etc.
 		cacheResponses = beam.ParDo(s, &FB.CacheDashboardUnitDoFn{Config: config}, reShuffledCachePayloads)

@@ -1279,8 +1279,8 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			} else {
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, GCLID: gclID})
 			}
-		} else if (query.AttributionKey == AttributionKeyCampaign || query.AttributionKey == AttributionKeyAdgroup) &&
-			(U.IsNonEmptyKey(campaignID) || U.IsNonEmptyKey(adgroupID)) {
+		} else if (query.AttributionKey == AttributionKeyCampaign && U.IsNonEmptyKey(campaignID)) ||
+			(query.AttributionKey == AttributionKeyAdgroup && U.IsNonEmptyKey(adgroupID)) {
 			// enrich for campaign/adgroup based session having campaign_id/adgroup_id
 			var attributionIdBasedOnEnrichment string
 			attributionIdBasedOnEnrichment, marketingValues = EnrichUsingMarketingID(query.AttributionKey, marketingValues, reports)

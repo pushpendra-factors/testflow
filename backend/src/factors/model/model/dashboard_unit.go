@@ -115,3 +115,50 @@ func IsValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 	// Todo(Dinesh): Validate query based on query class here.
 	return true, ""
 }
+
+func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, onlyAttribution, skipAttribution int) (bool, int64, int64) {
+
+	if queryClass == QueryClassAttribution {
+		// Rule 1: Skip attribution class queries if skipAttribution = 1
+		if skipAttribution == 1 {
+			return false, 0, 0
+		}
+	} else {
+		// Rule 2: Skip other class queries if onlyAttribution = 1
+		if onlyAttribution == 1 {
+			return false, 0, 0
+		}
+	}
+	// Using one minute as a buffer time in taking out difference
+	epsilonSeconds := int64(60)
+	if queryClass == QueryClassAttribution {
+
+		// Rule 2: Skip for Today or Yesterday for attribution class queries
+		if preset == U.DateRangePresetToday || preset == U.DateRangePresetYesterday {
+			return false, 0, 0
+		}
+
+		if preset == U.DateRangePresetLastWeek || preset == U.DateRangePresetLastMonth {
+			// Rule 2': If last week/last month is well before one day in past, compute for entire range
+			now := U.TimeNow().Unix()
+			if (to + U.SECONDS_IN_A_DAY) <= (now - epsilonSeconds) {
+				return true, from, to
+			}
+		}
+
+		// Cases for this week, this month, last week, last month with no complete data
+		// For other presets, we skip computing yesterday's data, hence effective to = to - SECONDS_IN_A_DAY
+		effectiveTo := to - U.SECONDS_IN_A_DAY
+
+		// Rule 3: If the computation data is Equal to or more than 1 day, we should run attribution else skip it.
+		if (effectiveTo - from) >= (U.SECONDS_IN_A_DAY + epsilonSeconds) {
+			return true, from, effectiveTo
+		}
+
+		// Cases for Sunday, Monday of ThisWeek & 1st, 2nd of ThisMonth, it shouldn't cache.
+		return false, 0, 0
+	}
+
+	// For other units, caching should run without changing `to`.
+	return true, from, to
+}
