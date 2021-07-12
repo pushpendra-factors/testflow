@@ -83,7 +83,7 @@ var (
 	gcpProjectLocation                = flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 	cacheSortedSet                    = flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	allowChannelGroupingForProjectIDs = flag.String("allow_channel_grouping_for_projects",
-		"", "List of projects to allow channel property population in sesion events.")
+		"", "List of projects to allow channel property population in session events.")
 )
 
 func registerStructs() {

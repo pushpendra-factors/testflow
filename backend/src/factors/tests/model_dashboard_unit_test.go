@@ -1173,3 +1173,56 @@ func getAnalyticsQueryUrlAandPayload(queryClass string, baseQuery model.BaseQuer
 	}
 	return queryURL, queryPayload
 }
+
+func TestShouldCacheUnitForTimeRange(t *testing.T) {
+	type args struct {
+		queryClass      string
+		preset          string
+		from            int64
+		to              int64
+		onlyAttribution int
+		skipAttribution int
+	}
+	july1Start := int64(1625077800)
+	july1End := int64(1625164199)
+	july2End := int64(1625250599)
+	july3End := int64(1625336999)
+
+	sundayStart := int64(1625337000)
+	sundayEnd := int64(1625423399)
+	mondayEnd := int64(1625509799)
+	tuesdayEnd := int64(1625596199)
+
+	tests := []struct {
+		name  string
+		args  args
+		want  bool
+		want1 int64
+		want2 int64
+	}{
+		{"TestDateRangePresetToday", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetToday, from: july1Start, to: july1End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetYesterday", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetYesterday, from: july1Start, to: july1End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+
+		{"TestDateRangePresetCurrentMonth1", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july1End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetCurrentMonth2", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july2End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetCurrentMonth3", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july3End, onlyAttribution: 0, skipAttribution: 0}, true, july1Start, july3End - U.SECONDS_IN_A_DAY},
+
+		{"TestDateRangePresetCurrentWeek1", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: sundayEnd, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetCurrentWeek2", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: mondayEnd, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetCurrentWeek3", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: tuesdayEnd, onlyAttribution: 0, skipAttribution: 0}, true, sundayStart, tuesdayEnd - U.SECONDS_IN_A_DAY},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1, got2 := model.ShouldCacheUnitForTimeRange(tt.args.queryClass, tt.args.preset, tt.args.from, tt.args.to, tt.args.onlyAttribution, tt.args.skipAttribution)
+			if got != tt.want {
+				t.Errorf("ShouldCacheUnitForTimeRange() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("ShouldCacheUnitForTimeRange() got1 = %v, want %v", got1, tt.want1)
+			}
+			if got2 != tt.want2 {
+				t.Errorf("ShouldCacheUnitForTimeRange() got2 = %v, want %v", got2, tt.want2)
+			}
+		})
+	}
+}
