@@ -172,6 +172,7 @@ type Configuration struct {
 	UseOpportunityAssociationByProjectID string
 	AllowChannelGroupingForProjectIDs    string
 	CloudManager                         filestore.FileManager
+	SegmentExcludedCustomerIDByProject   map[uint64]string // map[project_id]customer_user_id
 }
 
 type Services struct {
@@ -1304,6 +1305,32 @@ func ParseConfigStringToMap(configStr string) map[string]string {
 	}
 
 	return configMap
+}
+
+func ParseProjectIDToStringMapFromConfig(configValue, configName string) map[uint64]string {
+	cMap := make(map[uint64]string, 0)
+
+	cStringMap := ParseConfigStringToMap(configValue)
+
+	for projectIDString, customerUserID := range cStringMap {
+		projectID, err := strconv.ParseUint(projectIDString, 10, 64)
+		if err != nil {
+			log.WithError(err).WithField("value", configValue).
+				Fatal("Invalid project_id on ParseProjectIDToStringMapFromConfig from %s", configName)
+		}
+
+		customerUserID = strings.TrimSpace(customerUserID)
+		if customerUserID != "" {
+			cMap[projectID] = customerUserID
+		}
+	}
+
+	return cMap
+}
+
+func IsSegmentExcludedCustomerUserID(projectID uint64, sourceCustomerUserID string) bool {
+	customerUserID, projectExists := configuration.SegmentExcludedCustomerIDByProject[projectID]
+	return projectExists && customerUserID == sourceCustomerUserID
 }
 
 func GetTokensFromStringListAsUint64(stringList string) []uint64 {

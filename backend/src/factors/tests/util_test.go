@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	"factors/util"
 	U "factors/util"
 	"testing"
@@ -101,5 +102,13 @@ func TestGetDashboardCacheResultExpiryInSeconds(t *testing.T) {
 func TestEmailValidations(t *testing.T) {
 	assert.Equal(t, true, util.IsEmail("test.o’'brien@test123.com"))
 	assert.Equal(t, true, util.IsEmail("test.test1@test123.com-xn"))
+}
 
+func TestParseProjectIDToStringMapFromConfig(t *testing.T) {
+	cMap := C.ParseProjectIDToStringMapFromConfig("1:User Identify1,2:Customer User ID ", "")
+	assert.Contains(t, cMap, uint64(1))
+	assert.Equal(t, "User Identify1", cMap[uint64(1)])
+	// Test after trimmed space.
+	assert.Contains(t, cMap, uint64(2))
+	assert.Equal(t, "Customer User ID", cMap[uint64(2)])
 }

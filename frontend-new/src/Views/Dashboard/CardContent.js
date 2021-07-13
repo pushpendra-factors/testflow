@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Spin } from 'antd';
 import {
   getStateQueryFromRequestQuery,
@@ -27,6 +27,67 @@ function CardContent({ unit, resultState, durationObj }) {
     (state) => state.coreQuery
   );
 
+  const equivalentQuery = useMemo(() => {
+    if (unit.query.query.query_group) {
+      const isCampaignQuery =
+        unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN;
+      if (isCampaignQuery) {
+        return getCampaignStateFromRequestQuery(
+          unit.query.query.query_group[0]
+        );
+      } else {
+        return getStateQueryFromRequestQuery(unit.query.query.query_group[0]);
+      }
+    } else if (
+      unit.query.query.cl &&
+      unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
+    ) {
+      return getAttributionStateFromRequestQuery(
+        unit.query.query.query,
+        attr_dimensions
+      );
+    } else {
+      return getStateQueryFromRequestQuery(unit.query.query);
+    }
+  }, [unit.query.query, attr_dimensions]);
+
+  const { queryType } = equivalentQuery;
+  const breakdownType = useMemo(() => {
+    if (queryType === QUERY_TYPE_EVENT) {
+      return reverse_user_types[unit.query.query.query_group[0].ec];
+    }
+  }, [queryType, unit.query.query]);
+
+  const events = useMemo(() => {
+    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+      return equivalentQuery.events.map((elem) => elem.label);
+    }
+  }, [equivalentQuery.events, queryType]);
+
+  const breakdown = useMemo(() => {
+    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+      return [
+        ...equivalentQuery.breakdown.event,
+        ...equivalentQuery.breakdown.global,
+      ];
+    }
+  }, [queryType, equivalentQuery.breakdown]);
+
+  const arrayMapper = useMemo(() => {
+    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+      const am = [];
+      equivalentQuery.events.forEach((q, index) => {
+        am.push({
+          eventName: q.label,
+          index,
+          mapper: `event${index + 1}`,
+          displayName: eventNames[q.label] || q.label,
+        });
+      });
+      return am;
+    }
+  }, [equivalentQuery.events, eventNames, queryType]);
+
   if (resultState.loading) {
     content = (
       <div className='flex justify-center items-center w-full h-64'>
@@ -44,58 +105,9 @@ function CardContent({ unit, resultState, durationObj }) {
   }
 
   if (resultState.data) {
-    let equivalentQuery;
-    if (unit.query.query.query_group) {
-      const isCampaignQuery =
-        unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN;
-      if (isCampaignQuery) {
-        equivalentQuery = getCampaignStateFromRequestQuery(
-          unit.query.query.query_group[0]
-        );
-      } else {
-        equivalentQuery = getStateQueryFromRequestQuery(
-          unit.query.query.query_group[0]
-        );
-      }
-    } else if (
-      unit.query.query.cl &&
-      unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
-    ) {
-      equivalentQuery = getAttributionStateFromRequestQuery(
-        unit.query.query.query,
-        attr_dimensions
-      );
-    } else {
-      equivalentQuery = getStateQueryFromRequestQuery(unit.query.query);
-    }
-
-    let breakdown,
-      events,
-      arrayMapper = [],
+    let campaignsArrayMapper = [],
       attributionsState,
-      campaignState,
-      breakdownType;
-
-    const { queryType } = equivalentQuery;
-    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
-      breakdown = [
-        ...equivalentQuery.breakdown.event,
-        ...equivalentQuery.breakdown.global,
-      ];
-      events = [...equivalentQuery.events];
-      events.forEach((q, index) => {
-        arrayMapper.push({
-          eventName: q.label,
-          index,
-          mapper: `event${index + 1}`,
-          displayName: eventNames[q.label] || q.label,
-        });
-      });
-    }
-
-    if (queryType === QUERY_TYPE_EVENT) {
-      breakdownType = reverse_user_types[unit.query.query.query_group[0].ec];
-    }
+      campaignState;
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       attributionsState = {
@@ -114,28 +126,25 @@ function CardContent({ unit, resultState, durationObj }) {
         select_metrics: unit.query.query.query_group[0].select_metrics,
         group_by: unit.query.query.query_group[0].group_by,
       };
-      arrayMapper = campaignState.select_metrics.map((metric, index) => {
-        return {
-          eventName: metric,
-          index,
-          mapper: `event${index + 1}`,
-        };
-      });
+      campaignsArrayMapper = campaignState.select_metrics.map(
+        (metric, index) => {
+          return {
+            eventName: metric,
+            index,
+            mapper: `event${index + 1}`,
+          };
+        }
+      );
     }
 
-    let dashboardPresentation = 'pl';
-
-    try {
-      dashboardPresentation = unit.settings.chart;
-    } catch (err) {
-      console.log(err);
-    }
+    const dashboardPresentation =
+      unit.settings && unit.settings.chart ? unit.settings.chart : 'pl';
 
     if (queryType === QUERY_TYPE_FUNNEL) {
       content = (
         <Funnels
           breakdown={breakdown}
-          events={events.map((elem) => elem.label)}
+          events={events}
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           unit={unit}
@@ -150,7 +159,7 @@ function CardContent({ unit, resultState, durationObj }) {
         <EventsAnalytics
           durationObj={durationObj}
           breakdown={breakdown}
-          events={events.map((elem) => elem.label)}
+          events={events}
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           unit={unit}
@@ -181,7 +190,7 @@ function CardContent({ unit, resultState, durationObj }) {
           resultState={resultState}
           campaignState={campaignState}
           chartType={presentationObj[dashboardPresentation]}
-          arrayMapper={arrayMapper}
+          arrayMapper={campaignsArrayMapper}
           section={DASHBOARD_WIDGET_SECTION}
         />
       );
