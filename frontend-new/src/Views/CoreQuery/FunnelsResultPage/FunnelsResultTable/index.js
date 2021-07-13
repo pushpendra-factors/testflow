@@ -2,13 +2,13 @@ import React, { useCallback, useState, useMemo } from 'react';
 import moment from 'moment';
 import { generateTableColumns, generateTableData } from '../utils';
 import DataTable from '../../../../components/DataTable';
+import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
 
 function FunnelsResultTable({
   breakdown,
   setGroups,
   queries,
   groups,
-  maxAllowedVisibleProperties,
   isWidgetModal,
   arrayMapper,
   reportTitle = 'FunnelAnalysis',
@@ -152,7 +152,7 @@ function FunnelsResultTable({
   const onSelectionChange = (selectedRowKeys) => {
     if (
       !selectedRowKeys.length ||
-      selectedRowKeys.length > maxAllowedVisibleProperties
+      selectedRowKeys.length > MAX_ALLOWED_VISIBLE_PROPERTIES
     ) {
       return false;
     }

@@ -15,6 +15,7 @@ function Funnels({
     return (
       <UngroupedChart
         resultState={resultState}
+        breakdown={breakdown}
         queries={events}
         chartType={chartType}
         unit={unit}
