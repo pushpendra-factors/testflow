@@ -14,7 +14,7 @@ import {
   getStateQueryFromRequestQuery,
 } from '../CoreQuery/utils';
 import { cardClassNames } from '../../reducers/dashboard/utils';
-import { getDataFromServer } from './utils';
+import { getDataFromServer, getSavedAttributionMetrics } from './utils';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
@@ -215,7 +215,9 @@ function WidgetCard({
 
   useEffect(() => {
     if (unit.settings && unit.settings.attributionMetrics) {
-      setAttributionMetrics(JSON.parse(unit.settings.attributionMetrics));
+      setAttributionMetrics(
+        getSavedAttributionMetrics(JSON.parse(unit.settings.attributionMetrics))
+      );
     }
   }, [unit.settings]);
 

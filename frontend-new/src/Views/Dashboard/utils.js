@@ -10,6 +10,7 @@ import {
   QUERY_TYPE_CAMPAIGN,
   NAMED_QUERY,
   LOCAL_STORAGE_ITEMS,
+  ATTRIBUTION_METRICS,
 } from '../../utils/constants';
 import {
   getItemFromLocalStorage,
@@ -189,4 +190,22 @@ export const getDashboardDateRange = () => {
   return {
     ...DashboardDefaultDateRangeFormat,
   };
+};
+
+export const getSavedAttributionMetrics = (metrics) => {
+  const result = ATTRIBUTION_METRICS.map((am) => {
+    const possibleHeaders = am.header.split(' OR ');
+    const currentMetric = metrics.filter((m) => {
+      const headers = m.header.split(' OR ');
+      const intersection = possibleHeaders.filter(
+        (h) => headers.indexOf(h) > -1
+      );
+      return intersection.length > 0;
+    });
+    return {
+      ...am,
+      enabled: currentMetric.length ? currentMetric[0].enabled : am.enabled,
+    };
+  });
+  return result;
 };

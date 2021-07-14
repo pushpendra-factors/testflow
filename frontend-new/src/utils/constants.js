@@ -197,8 +197,8 @@ export const ATTRIBUTION_METRICS = [
     enabled: false,
   },
   {
-    title: 'Conversion Rate (%)',
-    header: 'ConversionRate(%)',
+    title: 'Click Conversion Rate (%)',
+    header: 'ConversionRate(%) OR ClickConversionRate(%)',
     enabled: false,
   },
   {
@@ -215,6 +215,18 @@ export const ATTRIBUTION_METRICS = [
     title: 'Page Views',
     header: 'PageViews',
     enabled: false,
+  },
+  {
+    title: 'All Cost/Conv',
+    header: 'ALL CPC',
+    enabled: true,
+    isEventMetric: true,
+  },
+  {
+    title: 'All Conv Rate (%)',
+    header: 'ALL CR',
+    enabled: true,
+    isEventMetric: true,
   },
 ];
 
