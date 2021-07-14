@@ -6,8 +6,7 @@ import (
 
 // ApplyAttribution This method maps the user to the attribution key based on given attribution methodology.
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
-	sessions map[string]map[string]UserSessionData,
-	coalUserIdConversionTimestamp map[string]int64,
+	sessions map[string]map[string]UserSessionData, coalUserIdConversionTimestamp map[string]int64,
 	lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error) {
 
 	usersAttribution := make(map[string][]string)
@@ -51,7 +50,7 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 		if len(attributionKeys) == 0 {
 			delete(usersAttribution, userId)
 		}
-		if eventName == conversionEvent {
+		if eventName == conversionEvent && val.EventType == EventTypeGoalEvent {
 			usersAttribution[userId] = attributionKeys
 		} else {
 			if _, exist := linkedEventUserCampaign[eventName]; !exist {

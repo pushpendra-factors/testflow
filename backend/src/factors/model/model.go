@@ -57,7 +57,7 @@ type Model interface {
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error)
 	GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
-		userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error
+		userIDInfo map[string]model.UserInfo) (error, []model.UserEventInfo)
 	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error)
 	GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
 		goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
