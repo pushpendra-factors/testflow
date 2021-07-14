@@ -133,7 +133,7 @@ function TemplateResults({
           {cards?.map((item, j) => {
             let isIncreased = item?.percentage_change >= 0;
             return (
-              <div className={`py-4 px-6 border--thin-2 flex w-full items-center flex-wrap border-radius--sm ${j == 1 ? 'mx-4' : ''}`}>
+              <div className={`py-4 px-4 border--thin-2 flex w-full items-center border-radius--sm ${j == 1 ? 'mx-4' : ''}`}>
                 <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mr-3 capitalize'}>{configMatrix.map((element) => { if (element.metric == item.metric) return element.display_name })}</Text>
                 {item.is_infinity ? <Text type={'title'} level={5} extraClass={'m-0'}>∞</Text> : <>
                   <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={20} />
@@ -260,7 +260,7 @@ function TemplateResults({
 
         {(queryResult && !loading) ?
           <>
-            {queryResult?.queryResult?.breakdown_analysis?.primary_level_data ? <>
+            {queryResult?.breakdown_analysis?.primary_level_data ? <>
             <div className={'my-6 w-full'}>
               <CardInsights queryResult={queryResult} />
             </div>
@@ -271,7 +271,7 @@ function TemplateResults({
                     <div className={'py-4 px-6 background-color--brand-color-1 border-radius--sm flex justify-between'}>
                       <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 capitalize'}>{column1}</Text>
                     </div>
-                    <div className={'fa-vertical-scrolling-card'}>
+                    <div className={'fa-vertical-scrolling-card px-4'}>
                       <InsightItem queryResult={queryResult} />
                     </div>
                   </div>
@@ -283,7 +283,7 @@ function TemplateResults({
                       <div className={'py-4 px-6 background-color--brand-color-1 border-radius--sm flex justify-between'}>
                         <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 capitalize'}>{metaTitle?.sub_level?.column_name}</Text>
                       </div>
-                      <div className={'fa-vertical-scrolling-card'}>
+                      <div className={'fa-vertical-scrolling-card px-4'}>
                         {subInsightData ? <SubInsightItem queryResult={queryResult} /> : <NoSubInsightsData />}
                       </div>
                     </div>
