@@ -65,7 +65,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		return nil, err
 	}
 	// coalUserId[Key][UserSessionData]
-	sessions := updateSessionsMapWithCoalesceID(_sessions, usersInfo)
+	sessions := model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo)
 
 	attributionData, isCompare, err := store.FireAttribution(projectID, query, eventNameToIDList, sessions)
 
@@ -139,7 +139,7 @@ func (store *MemSQL) FireAttribution(projectID uint64, query *model.AttributionQ
 	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
 		conversionFrom = query.From
-		conversionTo = lookbackAdjustedTo(query.To, query.LookbackDays)
+		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 	var attributionData *map[string]*model.AttributionData
 	if query.AttributionMethodologyCompare != "" {
@@ -215,12 +215,11 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 			EventName: query.ConversionEvent.Name})
 	}
 
-	err = store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo,
-		linkedEvents, eventNameToIDList, userIDToInfoConverted,
-		&usersToBeAttributed)
+	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, linkedEvents, eventNameToIDList, userIDToInfoConverted)
 	if err != nil {
 		return nil, err
 	}
+	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
 
 	// Attribution based on given attribution methodology.
 	userConversionHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
@@ -286,11 +285,11 @@ func (store *MemSQL) runAttribution(projectID uint64,
 			EventName: goalEventName})
 	}
 
-	err = store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents,
-		eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
+	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted)
 	if err != nil {
 		return nil, err
 	}
+	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
 
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
@@ -342,12 +341,12 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId string, query *model.AttributionQuery, reports *model.MarketingReports) (map[string]map[string]model.UserSessionData, []string, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
-	effectiveFrom := lookbackAdjustedFrom(query.From, query.LookbackDays)
+	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
 	effectiveTo := query.To
 	// extend the campaign window for engagement based attribution
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
-		effectiveFrom = lookbackAdjustedFrom(query.From, query.LookbackDays)
-		effectiveTo = lookbackAdjustedTo(query.To, query.LookbackDays)
+		effectiveFrom = model.LookbackAdjustedFrom(query.From, query.LookbackDays)
+		effectiveTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 
 	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)
@@ -397,26 +396,12 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	return model.ProcessEventRows(rows, query, logCtx, reports)
 }
 
-// Returns the concatenated list of conversion event + funnel events names
-func buildEventNamesPlaceholder(query *model.AttributionQuery) []string {
-	enames := make([]string, 0)
-	enames = append(enames, query.ConversionEvent.Name)
-	// add name of compare event if given
-	if query.ConversionEventCompare.Name != "" {
-		enames = append(enames, query.ConversionEventCompare.Name)
-	}
-	for _, linkedEvent := range query.LinkedEvents {
-		enames = append(enames, linkedEvent.Name)
-	}
-	return enames
-}
-
 // Return conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
 func (store *MemSQL) getEventInformation(projectId uint64,
 	query *model.AttributionQuery) (string, map[string][]interface{}, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
-	names := buildEventNamesPlaceholder(query)
+	names := model.BuildEventNamesPlaceholder(query)
 	conversionAndFunnelEventMap := make(map[string]bool)
 	for _, name := range names {
 		conversionAndFunnelEventMap[name] = true
@@ -461,8 +446,9 @@ func (store *MemSQL) getEventInformation(projectId uint64,
 // GetLinkedFunnelEventUsersFilter Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
 func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
 	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
-	userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error {
+	userIDInfo map[string]model.UserInfo) (error, []model.UserEventInfo) {
 
+	var usersToBeAttributed []model.UserEventInfo
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	var usersHitConversion []string
 	for key := range userIDInfo {
@@ -492,9 +478,9 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			qParams = append(qParams, value...)
 
 			// add event filter
-			wStmtEvent, wParamsEvent, err := getFilterSQLStmtForEventProperties(projectID, linkedEvent.Properties) // query.ConversionEvent.Properties)
+			wStmtEvent, wParamsEvent, err := getFilterSQLStmtForEventProperties(projectID, linkedEvent.Properties)
 			if err != nil {
-				return err
+				return err, nil
 			}
 			if wStmtEvent != "" {
 				queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
@@ -502,9 +488,9 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			}
 
 			// add user filter
-			wStmtUser, wParamsUser, err := getFilterSQLStmtForUserProperties(projectID, linkedEvent.Properties) // query.ConversionEvent.Properties)
+			wStmtUser, wParamsUser, err := getFilterSQLStmtForUserProperties(projectID, linkedEvent.Properties)
 			if err != nil {
-				return err
+				return err, nil
 			}
 			if wStmtUser != "" {
 				queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmtUser)
@@ -515,7 +501,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			rows, err := store.ExecQueryWithContext(queryEventHits, qParams)
 			if err != nil {
 				logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
-				return err
+				return err, nil
 			}
 			defer rows.Close()
 			for rows.Next() {
@@ -528,17 +514,23 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 				if _, ok := userIDHitGoalEventTimestamp[userID]; !ok {
 					userIDList = append(userIDList, userID)
 					userIDHitGoalEventTimestamp[userID] = timestamp
+				} else {
+					// record the fist occurrence of the event by userID
+					if timestamp < userIDHitGoalEventTimestamp[userID] {
+						userIDHitGoalEventTimestamp[userID] = timestamp
+					}
 				}
 			}
 		}
 
-		// Part-III add the filtered users with eventId usersToBeAttributed
+		// add the filtered users with eventId usersToBeAttributed
 		for _, userId := range userIDList {
-			*usersToBeAttributed = append(*usersToBeAttributed,
-				model.UserEventInfo{CoalUserID: userIDInfo[userId].CoalUserID, EventName: linkedEvent.Name})
+			usersToBeAttributed = append(usersToBeAttributed,
+				model.UserEventInfo{CoalUserID: userIDInfo[userId].CoalUserID, EventName: linkedEvent.Name,
+					Timestamp: userIDHitGoalEventTimestamp[userId], EventType: model.EventTypeLinkedFunnelEvent})
 		}
 	}
-	return nil
+	return nil, usersToBeAttributed
 }
 
 // GetConvertedUsersWithFilter Returns the list of eligible users who hit conversion
@@ -599,6 +591,11 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 		if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
 			userIDList = append(userIDList, userID)
 			userIdHitGoalEventTimestamp[userID] = timestamp
+		} else {
+			// record the fist occurrence of the event by userID
+			if timestamp < userIdHitGoalEventTimestamp[userID] {
+				userIdHitGoalEventTimestamp[userID] = timestamp
+			}
 		}
 	}
 
@@ -618,11 +615,11 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 	coalUserIdConversionTimestamp := make(map[string]int64)
 
 	for _, userID := range filteredUserIdList {
+
 		timestamp := userIdHitGoalEventTimestamp[userID]
 		coalUserID := userIDToCoalIDInfo[userID].CoalUserID
-		filteredCoalIDToUserIDInfo[coalUserID] =
-			append(filteredCoalIDToUserIDInfo[coalUserID],
-				model.UserIDPropID{UserID: userID, Timestamp: timestamp})
+
+		filteredCoalIDToUserIDInfo[coalUserID] = append(filteredCoalIDToUserIDInfo[coalUserID], model.UserIDPropID{UserID: userID, Timestamp: timestamp})
 		filteredUserIdToUserIDInfo[userID] = model.UserInfo{CoalUserID: coalUserID, Timestamp: timestamp}
 
 		if _, ok := coalUserIdConversionTimestamp[coalUserID]; ok {
@@ -636,55 +633,6 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 	}
 
 	return filteredUserIdToUserIDInfo, filteredCoalIDToUserIDInfo, coalUserIdConversionTimestamp, nil
-}
-
-// lookbackAdjustedFrom Returns the effective From timestamp considering lookback days
-func lookbackAdjustedFrom(from int64, lookbackDays int) int64 {
-	lookbackDaysTimestamp := int64(lookbackDays) * model.SecsInADay
-	if model.LookbackCapInDays < lookbackDays {
-		lookbackDaysTimestamp = int64(model.LookbackCapInDays) * model.SecsInADay
-	}
-	validFrom := from - lookbackDaysTimestamp
-	return validFrom
-}
-
-// lookbackAdjustedTo Returns the effective To timestamp considering lookback days
-func lookbackAdjustedTo(to int64, lookbackDays int) int64 {
-	lookbackDaysTimestamp := int64(lookbackDays) * model.SecsInADay
-	if model.LookbackCapInDays < lookbackDays {
-		lookbackDaysTimestamp = int64(model.LookbackCapInDays) * model.SecsInADay
-	}
-	validTo := to + lookbackDaysTimestamp
-	return validTo
-}
-
-// updateSessionsMapWithCoalesceID Clones a new map replacing userId by coalUserId.
-func updateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[string]model.UserSessionData,
-	usersInfo map[string]model.UserInfo) map[string]map[string]model.UserSessionData {
-
-	newSessionsMap := make(map[string]map[string]model.UserSessionData)
-	for userID, attributionIdMap := range attributedSessionsByUserID {
-		userInfo := usersInfo[userID]
-		for attributionID, newUserSession := range attributionIdMap {
-			if _, ok := newSessionsMap[userInfo.CoalUserID]; ok {
-				if existingUserSession, ok := newSessionsMap[userInfo.CoalUserID][attributionID]; ok {
-					// Update the existing attribution first and last touch.
-					existingUserSession.MinTimestamp = U.Min(existingUserSession.MinTimestamp, newUserSession.MinTimestamp)
-					existingUserSession.MaxTimestamp = U.Max(existingUserSession.MaxTimestamp, newUserSession.MaxTimestamp)
-					// Merging timestamp of same customer having 2 userIds.
-					existingUserSession.TimeStamps = append(existingUserSession.TimeStamps, newUserSession.TimeStamps...)
-					existingUserSession.WithinQueryPeriod = existingUserSession.WithinQueryPeriod || newUserSession.WithinQueryPeriod
-					newSessionsMap[userInfo.CoalUserID][attributionID] = existingUserSession
-					continue
-				}
-				newSessionsMap[userInfo.CoalUserID][attributionID] = newUserSession
-				continue
-			}
-			newSessionsMap[userInfo.CoalUserID] = make(map[string]model.UserSessionData)
-			newSessionsMap[userInfo.CoalUserID][attributionID] = newUserSession
-		}
-	}
-	return newSessionsMap
 }
 
 // GetAdwordsCurrency Returns currency used for adwords customer_account_id
