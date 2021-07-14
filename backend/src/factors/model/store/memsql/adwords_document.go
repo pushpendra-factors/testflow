@@ -52,7 +52,70 @@ const (
 		"project_id = ? AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) " +
 		"AND (campaign_id, timestamp) in (select campaign_id, max(timestamp) from adwords_documents where type = ? " +
 		"AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) group by campaign_id)"
+	semChecklistKeywordsQuery = "With keyword_analysis_last_week as (select %s as analysis_metric, %s " +
+		"keyword_id, campaign_id, (JSON_EXTRACT(value,'criteria')) as keyword_name, (JSON_EXTRACT(value,'keyword_match_type')) as keyword_match_type from adwords_documents " +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? group by campaign_id, keyword_id, keyword_name," +
+		" keyword_match_type), keyword_analysis_previous_week as (select %s as analysis_metric, %s keyword_id, campaign_id, " +
+		"(JSON_EXTRACT(value,'criteria')) as keyword_name, (JSON_EXTRACT(value,'keyword_match_type')) as keyword_match_type from adwords_documents" +
+		" where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? group by campaign_id, keyword_id, " +
+		"keyword_name, keyword_match_type) Select keyword_analysis_last_week.keyword_name, " +
+		"keyword_analysis_previous_week.analysis_metric as previous_week_value, keyword_analysis_last_week.analysis_metric as last_week_value, " +
+		"(((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric::float, 0), 0.0000001))) as percentage_change, " +
+		"ABS((((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric::float, 0), 0.0000001)))) as abs_percentage_change, " +
+		"(keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float as absolute_change, %s " +
+		"keyword_analysis_last_week.keyword_id, keyword_analysis_last_week.campaign_id, keyword_analysis_last_week.keyword_match_type from keyword_analysis_last_week " +
+		"full outer join keyword_analysis_previous_week on keyword_analysis_last_week.keyword_id = keyword_analysis_previous_week.keyword_id and " +
+		"keyword_analysis_last_week.keyword_match_type=keyword_analysis_previous_week.keyword_match_type and keyword_analysis_last_week.campaign_id = keyword_analysis_previous_week.campaign_id" +
+		" and keyword_analysis_last_week.keyword_name = keyword_analysis_previous_week.keyword_name " +
+		"where ABS((((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric::float, 0), 1)))) >= ?" +
+		" AND ABS((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)) > ? order by abs_percentage_change DESC limit 10000"
+
+	semChecklistCampaignQuery = "With campaign_analysis_last_week as (select %s as analysis_metric, " +
+		"campaign_id, (JSON_EXTRACT(value,'campaign_name')) as campaign_name from adwords_documents " +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) group by campaign_id, campaign_name)," +
+		" campaign_analysis_previous_week as (select %s as analysis_metric, " +
+		"campaign_id, (JSON_EXTRACT(value,'campaign_name')) as campaign_name from adwords_documents " +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) group by campaign_id, campaign_name)" +
+		" Select campaign_analysis_last_week.campaign_name, " +
+		"campaign_analysis_previous_week.analysis_metric as previous_week_value, campaign_analysis_last_week.analysis_metric as last_week_value, " +
+		"(((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(campaign_analysis_previous_week.analysis_metric::float, 0), 0.0000001))) as percentage_change, " +
+		"ABS((((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(campaign_analysis_previous_week.analysis_metric::float, 0), 0.0000001)))) as abs_percentage_change, " +
+		"(campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float as absolute_change, " +
+		" campaign_analysis_last_week.campaign_id from campaign_analysis_last_week " +
+		"full outer join campaign_analysis_previous_week on campaign_analysis_last_week.campaign_id = campaign_analysis_previous_week.campaign_id " +
+		"order by abs_percentage_change DESC limit 10000"
+	semChecklistOverallAnalysisQuery = "select %s from adwords_documents " +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ?"
+	semChecklistExtraSelectForLeads                = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as cost_per_lead, "
+	semChecklistExtraSelectForLeadsForWeekAnalysis = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as cost_per_lead, " +
+		"%s as prev_impressions, %s as prev_search_impression_share, %s as prev_conversion_rate, %s as prev_cost_per_lead, " +
+		"%s as last_impressions, %s as last_search_impression_share, %s as last_conversion_rate, %s as last_cost_per_lead, "
+	percentageChangeForSemChecklistKeyword = "(((keyword_analysis_last_week.%s - keyword_analysis_previous_week.%s)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.%s::float, 0), 0.0000001)))"
 )
+
+var templateMetricsToSelectStatement = map[string]string{
+	model.Clicks:                "sum(JSON_EXTRACT_STRING(value, 'clicks'))",
+	model.Impressions:           "sum(JSON_EXTRACT_STRING(value, 'impressions'))",
+	model.ClickThroughRate:      fmt.Sprintf(higherOrderExpressionsWithMultiply, "clicks", "100", "impressions"),
+	model.CostPerClick:          fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "clicks"),
+	model.SearchImpressionShare: fmt.Sprintf(shareHigherOrderExpression, model.SearchImpressionShare, model.Impressions, model.SearchImpressionShare, model.TotalSearchImpression),
+	"cost":                      "sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000",
+	model.Conversion:            "sum(JSON_EXTRACT_STRING(value, 'conversions'))",
+	"cost_per_lead":             fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions"),
+	model.ConversionRate:        fmt.Sprintf(higherOrderExpressionsWithMultiply, "conversions", "100", "clicks"),
+}
+
+var templateMetricsToSelectStatementForOverallAnalysis = map[string]string{
+	model.Clicks:                "sum(JSON_EXTRACT_STRING(value, 'clicks')) as clicks, sum(JSON_EXTRACT_STRING(value, 'conversions')) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
+	model.Impressions:           "sum(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, sum(JSON_EXTRACT_STRING(value, 'conversions')) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
+	model.ClickThroughRate:      fmt.Sprintf(higherOrderExpressionsWithMultiply, "clicks", "100", "impressions") + fmt.Sprintf("as %s, ", model.ClickThroughRate) + "sum(JSON_EXTRACT_STRING(value, 'conversions')) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
+	model.CostPerClick:          fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "clicks") + fmt.Sprintf("as %s, ", model.CostPerClick) + "sum(JSON_EXTRACT_STRING(value, 'conversions')) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
+	model.SearchImpressionShare: fmt.Sprintf(shareHigherOrderExpression, model.SearchImpressionShare, model.Impressions, model.SearchImpressionShare, model.TotalSearchImpression) + fmt.Sprintf("as %s, ", model.SearchImpressionShare) + "sum(JSON_EXTRACT_STRING(value, 'conversions')) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
+	"cost":                      "sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000 as cost, sum(JSON_EXTRACT_STRING(value, 'conversions')) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
+	model.Conversion:            "sum(JSON_EXTRACT_STRING(value, 'conversions')) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
+	"cost_per_lead":             fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + fmt.Sprintf(" as %s, ", "cost_per_lead") + "sum(JSON_EXTRACT_STRING(value, 'conversions')) as conversion ",
+	model.ConversionRate:        fmt.Sprintf(higherOrderExpressionsWithMultiply, "conversions", "100", "clicks") + fmt.Sprintf("as %s, ", model.ConversionRate) + "sum(JSON_EXTRACT_STRING(value, 'conversions')) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
+}
 
 var selectableMetricsForAdwords = []string{
 	model.Conversion,
@@ -1779,11 +1842,11 @@ func GetAdwordsDocumentTypeForFilterKey(filter string) (int, error) {
 
 /*
 GetAdwordsMetricsQuery
-SELECT value->>'criteria', SUM(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) as clicks,
+SELECT (JSON_EXTRACT(value,'criteria', SUM(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) as clicks,
 SUM(JSON_EXTRACT_STRING(value, 'cost')) as total_cost, SUM(JSON_EXTRACT_STRING(value, 'conversions')) as all_conversions,
 SUM(JSON_EXTRACT_STRING(value, 'all_conversions')) as all_conversions FROM adwords_documents
 WHERE type='5' AND timestamp BETWEEN '20191122' and '20191129' AND JSON_EXTRACT_STRING(value, 'campaign_name')='Desktop Only'
-GROUP BY value->>'criteria';
+GROUP BY (JSON_EXTRACT(value,'criteria';
 */
 func (store *MemSQL) getAdwordsMetricsQuery(projectID uint64, customerAccountID string, query *model.ChannelQuery,
 	withBreakdown bool) (string, []interface{}, error) {
@@ -1991,4 +2054,327 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 	}
 
 	return channelDocumentsCampaign, channelDocumentsAdGroup
+}
+
+func (store *MemSQL) ExecuteAdwordsSEMChecklistQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int) {
+	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	customerAccountID, err := store.validateIntegratonAndMetricsForAdwordsSEMChecklist(projectID, query, reqID)
+	if err != nil && err.Error() == integrationNotAvailable {
+		logCtx.WithError(err).Info(model.AdwordsSpecificError)
+		return model.TemplateResponse{}, http.StatusNotFound
+	}
+	templateQueryResponse, errCode := store.getAdwordsSEMChecklistQueryData(query, projectID, *customerAccountID, reqID)
+	if errCode != http.StatusOK {
+		logCtx.Error("Failed to get template query response. ErrCode: ", errCode)
+		return model.TemplateResponse{}, http.StatusNotFound
+	}
+	return templateQueryResponse, http.StatusOK
+}
+func (store *MemSQL) validateIntegratonAndMetricsForAdwordsSEMChecklist(projectID uint64, query model.TemplateQuery, reqID string) (*string, error) {
+	logCtx := log.WithField("req_id", reqID)
+	var err error
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return nil, errors.New("Project setting not found")
+	}
+	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
+	if customerAccountID == nil || len(*customerAccountID) == 0 {
+		return nil, errors.New(integrationNotAvailable)
+	}
+
+	_, isValidMetric := model.TemplateAdwordsMetricsMapForAdwords[query.Metric]
+	if !isValidMetric {
+		logCtx.Warn("Request failed in validation: ", err)
+		return nil, err
+	}
+	return customerAccountID, nil
+}
+
+func (store *MemSQL) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, projectID uint64, customerAccountID string,
+	reqID string) (model.TemplateResponse, int) {
+	var result model.TemplateResponse
+	lastWeekFromTimestamp, lastWeekToTimestamp, prevWeekFromTimestamp, prevWeekToTimestamp := model.GetTimestampsForTemplateQueryWithDays(query, 7)
+	thresholdPercentage, thresholdAbsolute := float64(10), float64(0)
+	templateThresholds, err := store.getTemplateThresholds(projectID, model.TemplateAliasToType["sem_checklist"])
+	if err != nil {
+		return model.TemplateResponse{}, http.StatusInternalServerError
+	}
+	for _, threshold := range templateThresholds {
+		if threshold.Metric == query.Metric {
+			thresholdPercentage, thresholdAbsolute = threshold.PercentageChange, threshold.AbsoluteChange
+			break
+		}
+	}
+
+	db := C.GetServices().Db
+	var keywordAnalysisResult []KeywordAnalysis
+	finalKeywordQuery := ""
+	if query.Metric != model.Conversion {
+		finalKeywordQuery = fmt.Sprintf(semChecklistKeywordsQuery, templateMetricsToSelectStatement[query.Metric], "", templateMetricsToSelectStatement[query.Metric], "", "")
+	} else {
+		extraSelectForLeadsForWeekAnalysis := fmt.Sprintf(semChecklistExtraSelectForLeads,
+			templateMetricsToSelectStatement[model.Impressions], templateMetricsToSelectStatement[model.SearchImpressionShare],
+			templateMetricsToSelectStatement[model.ConversionRate], templateMetricsToSelectStatement["cost_per_lead"],
+		)
+		extraSelectForLeadsFinalAnalysis := fmt.Sprintf(semChecklistExtraSelectForLeadsForWeekAnalysis,
+			fmt.Sprintf(percentageChangeForSemChecklistKeyword, model.Impressions, model.Impressions, model.Impressions),
+			fmt.Sprintf(percentageChangeForSemChecklistKeyword, model.SearchImpressionShare, model.SearchImpressionShare, model.SearchImpressionShare),
+			fmt.Sprintf(percentageChangeForSemChecklistKeyword, model.ConversionRate, model.ConversionRate, model.ConversionRate),
+			fmt.Sprintf(percentageChangeForSemChecklistKeyword, "cost_per_lead", "cost_per_lead", "cost_per_lead"),
+			"keyword_analysis_previous_week.impressions", "keyword_analysis_previous_week.search_impression_share", "keyword_analysis_previous_week.conversion_rate", "keyword_analysis_previous_week.cost_per_lead",
+			"keyword_analysis_last_week.impressions", "keyword_analysis_last_week.search_impression_share", "keyword_analysis_last_week.conversion_rate", "keyword_analysis_last_week.cost_per_lead")
+		finalKeywordQuery = fmt.Sprintf(semChecklistKeywordsQuery, templateMetricsToSelectStatement[query.Metric], extraSelectForLeadsForWeekAnalysis, templateMetricsToSelectStatement[query.Metric], extraSelectForLeadsForWeekAnalysis, extraSelectForLeadsFinalAnalysis)
+	}
+	err = db.Raw(finalKeywordQuery, projectID, customerAccountID,
+		model.AdwordsDocumentTypeAlias["keyword_performance_report"], lastWeekFromTimestamp, lastWeekToTimestamp,
+		projectID, customerAccountID,
+		model.AdwordsDocumentTypeAlias["keyword_performance_report"], prevWeekFromTimestamp, prevWeekToTimestamp, thresholdPercentage, thresholdAbsolute).Scan(&keywordAnalysisResult).Error
+	if err != nil {
+		return model.TemplateResponse{}, http.StatusInternalServerError
+	}
+	campaignIDToSubLevelDataMap := make(map[string][]model.SubLevelData)
+	for _, keywordAnalysis := range keywordAnalysisResult {
+		subLevelData := transformKeywordAnalysisToTemplateSubLevelData(query, keywordAnalysis)
+		campaignIDToSubLevelDataMap[keywordAnalysis.CampaignID] = append(campaignIDToSubLevelDataMap[keywordAnalysis.CampaignID], subLevelData)
+	}
+	campaignArray := make([]string, 0)
+	for key := range campaignIDToSubLevelDataMap {
+		campaignArray = append(campaignArray, key)
+	}
+	var campaignAnalysis []CampaignAnalysis
+	err = db.Raw(fmt.Sprintf(semChecklistCampaignQuery, templateMetricsToSelectStatement[query.Metric], templateMetricsToSelectStatement[query.Metric]), projectID, customerAccountID,
+		model.AdwordsDocumentTypeAlias["campaign_performance_report"], lastWeekFromTimestamp, lastWeekToTimestamp, campaignArray,
+		projectID, customerAccountID,
+		model.AdwordsDocumentTypeAlias["campaign_performance_report"], prevWeekFromTimestamp, prevWeekToTimestamp, campaignArray).Scan(&campaignAnalysis).Error
+	if err != nil {
+		return model.TemplateResponse{}, http.StatusInternalServerError
+	}
+	for _, campaignAnalysisRow := range campaignAnalysis {
+		primaryLevelData := transfromCammpaignLevelDataToTemplatePrimaryLevelData(campaignAnalysisRow, campaignIDToSubLevelDataMap)
+		result.BreakdownAnalysis.PrimaryLevelData = append(result.BreakdownAnalysis.PrimaryLevelData, primaryLevelData)
+	}
+	overallAnalysisQuery := fmt.Sprintf(semChecklistOverallAnalysisQuery, templateMetricsToSelectStatementForOverallAnalysis[query.Metric])
+	rows, err := db.Raw(overallAnalysisQuery, projectID, customerAccountID,
+		model.AdwordsDocumentTypeAlias["campaign_performance_report"], lastWeekFromTimestamp, lastWeekToTimestamp).Rows()
+	if err != nil {
+		return model.TemplateResponse{}, http.StatusInternalServerError
+	}
+
+	resultHeadersLastWeek, resultRowsLastWeek, err := U.DBReadRows(rows)
+	if err != nil {
+		return model.TemplateResponse{}, http.StatusInternalServerError
+	}
+
+	rows, err = db.Raw(overallAnalysisQuery, projectID, customerAccountID,
+		model.AdwordsDocumentTypeAlias["campaign_performance_report"], prevWeekFromTimestamp, prevWeekToTimestamp).Rows()
+	if err != nil {
+		return model.TemplateResponse{}, http.StatusInternalServerError
+	}
+
+	_, resultRowsPreviousWeek, err := U.DBReadRows(rows)
+
+	if err != nil {
+		return model.TemplateResponse{}, http.StatusInternalServerError
+	}
+
+	for index, value := range resultHeadersLastWeek {
+		var percentageChange float64
+		var previousValue, lastValue float64
+		if resultRowsPreviousWeek[0][index] == nil {
+			previousValue = 0
+		} else {
+			previousValue = resultRowsPreviousWeek[0][index].(float64)
+		}
+		if resultRowsLastWeek[0][index] == nil {
+			lastValue = 0
+		} else {
+			lastValue = resultRowsLastWeek[0][index].(float64)
+		}
+		if previousValue == 0 && lastValue == 0 {
+			percentageChange = 0
+		} else if previousValue == 0 && lastValue != 0 {
+			percentageChange = lastValue * 100 / 0.0000001
+		} else {
+			percentageChange = (lastValue - previousValue) * 100 / previousValue
+		}
+		var overallChangesData model.OverallChanges
+		overallChangesData.Metric = value
+		overallChangesData.PercentageChange = percentageChange
+		overallChangesData.LastValue = lastValue
+		overallChangesData.PreviousValue = previousValue
+		if overallChangesData.PreviousValue == 0 && overallChangesData.LastValue != 0 {
+			overallChangesData.IsInfinity = true
+		}
+		result.BreakdownAnalysis.OverallChangesData = append(result.BreakdownAnalysis.OverallChangesData, overallChangesData)
+	}
+	result.Meta = model.TemplateResponseMeta{
+		PrimaryLevel: model.LevelMeta{
+			ColumnName: "campaign",
+		},
+		SubLevel: model.LevelMeta{
+			ColumnName: "keyword",
+		},
+	}
+	return result, http.StatusOK
+}
+func transformKeywordAnalysisToTemplateSubLevelData(query model.TemplateQuery, keywordAnalysis KeywordAnalysis) model.SubLevelData {
+	var subLevelData model.SubLevelData
+	switch keywordAnalysis.KeywordMatchType {
+	case "Exact":
+		subLevelData.Name = "[" + keywordAnalysis.KeywordName + "]"
+	case "Phrase":
+		subLevelData.Name = `"` + keywordAnalysis.KeywordName + `"`
+	default:
+		subLevelData.Name = keywordAnalysis.KeywordName
+	}
+	subLevelData.PercentageChange = keywordAnalysis.PercentageChange
+	subLevelData.AbsoluteChange = keywordAnalysis.AbsoluteChange
+	subLevelData.PreviousValue = keywordAnalysis.PreviousWeekValue
+	subLevelData.LastValue = keywordAnalysis.LastWeekValue
+	if keywordAnalysis.PreviousWeekValue == 0 && keywordAnalysis.LastWeekValue != 0 {
+		subLevelData.IsInfinity = true
+	}
+	if query.Metric == model.Conversion {
+		rootCauseMetrics := make([]model.RootCauseMetric, 0)
+		if keywordAnalysis.PercentageChange < 0 {
+			if keywordAnalysis.Impressions < 0 {
+				rootCauseMetric := model.RootCauseMetric{Metric: model.Impressions, PercentageChange: keywordAnalysis.Impressions}
+				if keywordAnalysis.PrevImpressions == 0 {
+					if keywordAnalysis.LastImpressions == 0 {
+						rootCauseMetric.PercentageChange = 0
+					} else {
+						rootCauseMetric.IsInfinity = true
+					}
+				}
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+			if keywordAnalysis.SearchImpressionShare < 0 {
+				rootCauseMetric := model.RootCauseMetric{Metric: model.SearchImpressionShare, PercentageChange: keywordAnalysis.SearchImpressionShare}
+				if keywordAnalysis.PrevSearchImpressionShare == 0 {
+					if keywordAnalysis.LastSearchImpressionShare == 0 {
+						rootCauseMetric.PercentageChange = 0
+					} else {
+						rootCauseMetric.IsInfinity = true
+					}
+				}
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+			if keywordAnalysis.ConversionRate < 0 {
+				rootCauseMetric := model.RootCauseMetric{Metric: model.ConversionRate, PercentageChange: keywordAnalysis.ConversionRate}
+				if keywordAnalysis.PrevConversionRate == 0 {
+					if keywordAnalysis.LastConversionRate == 0 {
+						rootCauseMetric.PercentageChange = 0
+					} else {
+						rootCauseMetric.IsInfinity = true
+					}
+				}
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+			if keywordAnalysis.CostPerLead > 0 {
+				rootCauseMetric := model.RootCauseMetric{Metric: "cost_per_lead", PercentageChange: keywordAnalysis.CostPerLead}
+				if keywordAnalysis.PrevCostPerLead == 0 {
+					if keywordAnalysis.LastCostPerLead == 0 {
+						rootCauseMetric.PercentageChange = 0
+					} else {
+						rootCauseMetric.IsInfinity = true
+					}
+				}
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+		if keywordAnalysis.PercentageChange > 0 {
+			if keywordAnalysis.Impressions > 0 {
+				rootCauseMetric := model.RootCauseMetric{Metric: model.Impressions, PercentageChange: keywordAnalysis.Impressions}
+				if keywordAnalysis.PrevImpressions == 0 {
+					if keywordAnalysis.LastImpressions == 0 {
+						rootCauseMetric.PercentageChange = 0
+					} else {
+						rootCauseMetric.IsInfinity = true
+					}
+				}
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+			if keywordAnalysis.SearchImpressionShare > 0 {
+				rootCauseMetric := model.RootCauseMetric{Metric: model.SearchImpressionShare, PercentageChange: keywordAnalysis.SearchImpressionShare}
+				if keywordAnalysis.PrevSearchImpressionShare == 0 {
+					if keywordAnalysis.LastSearchImpressionShare == 0 {
+						rootCauseMetric.PercentageChange = 0
+					} else {
+						rootCauseMetric.IsInfinity = true
+					}
+				}
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+			if keywordAnalysis.ConversionRate > 0 {
+				rootCauseMetric := model.RootCauseMetric{Metric: model.ConversionRate, PercentageChange: keywordAnalysis.ConversionRate}
+				if keywordAnalysis.PrevConversionRate == 0 {
+					if keywordAnalysis.LastConversionRate == 0 {
+						rootCauseMetric.PercentageChange = 0
+					} else {
+						rootCauseMetric.IsInfinity = true
+					}
+				}
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+			if keywordAnalysis.CostPerLead < 0 {
+				rootCauseMetric := model.RootCauseMetric{Metric: "cost_per_lead", PercentageChange: keywordAnalysis.CostPerLead}
+				if keywordAnalysis.PrevCostPerLead == 0 {
+					if keywordAnalysis.LastCostPerLead == 0 {
+						rootCauseMetric.PercentageChange = 0
+					} else {
+						rootCauseMetric.IsInfinity = true
+					}
+				}
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+		subLevelData.RootCauseMetrics = rootCauseMetrics
+	}
+	return subLevelData
+}
+func transfromCammpaignLevelDataToTemplatePrimaryLevelData(campaignAnalysisRow CampaignAnalysis, campaignIDToSubLevelDataMap map[string][]model.SubLevelData) model.PrimaryLevelData {
+	var primaryLevelData model.PrimaryLevelData
+	primaryLevelData.Name = campaignAnalysisRow.CampaignName
+	primaryLevelData.PreviousValue = campaignAnalysisRow.PreviousWeekValue
+	primaryLevelData.LastValue = campaignAnalysisRow.LastWeekValue
+	primaryLevelData.PercentageChange = campaignAnalysisRow.PercentageChange
+	primaryLevelData.AbsoluteChange = campaignAnalysisRow.AbsoluteChange
+	primaryLevelData.SubLevelData = campaignIDToSubLevelDataMap[campaignAnalysisRow.CampaignID]
+	if campaignAnalysisRow.PreviousWeekValue == 0 && campaignAnalysisRow.LastWeekValue != 0 {
+		primaryLevelData.IsInfinity = true
+	}
+
+	return primaryLevelData
+}
+
+type KeywordAnalysis struct {
+	KeywordID                 int64   `json:"keyword_id"`
+	KeywordName               string  `json:"keyword_name"`
+	PreviousWeekValue         float64 `json:"previous_week_value"`
+	LastWeekValue             float64 `json:"last_week_value"`
+	PercentageChange          float64 `json:"percentage_change"`
+	AbsoluteChange            float64 `json:"absolute_change"`
+	CampaignID                string  `json:"campaign_id"`
+	KeywordMatchType          string  `json:"keyword_match_type"`
+	Impressions               float64 `json:"impressions"`
+	SearchImpressionShare     float64 `json:"search_impression_share"`
+	CostPerLead               float64 `json:"cost_per_lead"`
+	ConversionRate            float64 `json:"conversion_rate"`
+	PrevImpressions           float64 `json:"prev_impressions"`
+	PrevSearchImpressionShare float64 `json:"prev_search_impression_share"`
+	PrevCostPerLead           float64 `json:"prev_cost_per_lead"`
+	PrevConversionRate        float64 `json:"prev_conversion_rate"`
+	LastImpressions           float64 `json:"last_impressions"`
+	LastSearchImpressionShare float64 `json:"last_search_impression_share"`
+	LastCostPerLead           float64 `json:"last_cost_per_lead"`
+	LastConversionRate        float64 `json:"last_conversion_rate"`
+}
+
+type CampaignAnalysis struct {
+	CampaignName      string  `json:"campaign_name"`
+	PreviousWeekValue float64 `json:"previous_week_value"`
+	LastWeekValue     float64 `json:"last_week_value"`
+	PercentageChange  float64 `json:"percentage_change"`
+	AbsoluteChange    float64 `json:"absolute_change"`
+	CampaignID        string  `json:"campaign_id"`
 }

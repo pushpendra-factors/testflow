@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -35,6 +36,7 @@ type PrimaryLevelData struct {
 	AbsoluteChange   float64        `json:"absolute_change"`
 	PreviousValue    float64        `json:"previous_value"`
 	LastValue        float64        `json:"last_value"`
+	IsInfinity       bool           `json:"is_infinity"`
 	SubLevelData     []SubLevelData `json:"sub_level_data"`
 }
 type SubLevelData struct {
@@ -43,12 +45,21 @@ type SubLevelData struct {
 	AbsoluteChange   float64           `json:"absolute_change"`
 	PreviousValue    float64           `json:"previous_value"`
 	LastValue        float64           `json:"last_value"`
+	IsInfinity       bool              `json:"is_infinity"`
 	RootCauseMetrics []RootCauseMetric `json:"root_cause_metrics"`
 }
 
 type RootCauseMetric struct {
 	Metric           string  `json:"metric"`
 	PercentageChange float64 `json:"percentage_change"`
+	IsInfinity       bool    `json:"is_infinity"`
+}
+type OverallChanges struct {
+	Metric           string  `json:"metric"`
+	PercentageChange float64 `json:"percentage_change"`
+	PreviousValue    float64 `json:"previous_value"`
+	LastValue        float64 `json:"last_value"`
+	IsInfinity       bool    `json:"is_infinity"`
 }
 
 type TemplateResponse struct {
@@ -56,7 +67,7 @@ type TemplateResponse struct {
 	Meta              TemplateResponseMeta `json:"meta"`
 }
 type TemplateData struct {
-	OverallChangesData []RootCauseMetric  `json:"overall_changes_data"`
+	OverallChangesData []OverallChanges   `json:"overall_changes_data"`
 	PrimaryLevelData   []PrimaryLevelData `json:"primary_level_data"`
 }
 type TemplateThreshold struct {
@@ -66,156 +77,105 @@ type TemplateThreshold struct {
 }
 
 type TemplateConfig struct {
-	Metrics    []string            `json:"metrics"`
-	Thresholds []TemplateThreshold `json:"thresholds"`
+	Metrics    []TemplateMetricWithDisplayName `json:"metrics"`
+	Thresholds []TemplateThreshold             `json:"thresholds"`
+}
+type TemplateMetricWithDisplayName struct {
+	Metric      string `json:"metric"`
+	DisplayName string `json:"display_name"`
 }
 
-var mockMeta = TemplateResponseMeta{
-	PrimaryLevel: LevelMeta{
-		ColumnName: "campaign",
-	},
-	SubLevel: LevelMeta{
-		ColumnName: "keyword",
-	},
+var TemplateAliasToType = map[string]int{
+	"sem_checklist": 1,
 }
-var mockPrimaryData = []PrimaryLevelData{
+var TemplateAdwordsMetricsMapForAdwords = map[string]bool{
+	Clicks:                true,
+	Impressions:           true,
+	ClickThroughRate:      true,
+	CostPerClick:          true,
+	SearchImpressionShare: true,
+	"cost":                true,
+	Conversion:            true,
+	"cost_per_lead":       true,
+	ConversionRate:        true,
+}
+
+var TemplateMetricsForAdwordsWithDisplayName = []TemplateMetricWithDisplayName{
 	{
-		Name:             "campaign_1",
-		PercentageChange: 20,
-		AbsoluteChange:   20,
-		PreviousValue:    100,
-		LastValue:        120,
-		SubLevelData: []SubLevelData{
-			{
-				Name:             "keyword_1",
-				PercentageChange: 50,
-				AbsoluteChange:   25,
-				PreviousValue:    50,
-				LastValue:        75,
-				RootCauseMetrics: []RootCauseMetric{},
-			},
-			{
-				Name:             "keyword_2",
-				PercentageChange: -10,
-				AbsoluteChange:   -5,
-				PreviousValue:    50,
-				LastValue:        45,
-				RootCauseMetrics: []RootCauseMetric{},
-			},
-		},
+		Metric:      SearchImpressionShare,
+		DisplayName: "SI Share",
 	},
 	{
-		Name:             "campaign_2",
-		PercentageChange: -20,
-		AbsoluteChange:   -20,
-		PreviousValue:    100,
-		LastValue:        80,
-		SubLevelData: []SubLevelData{
-			{
-				Name:             "keyword_3",
-				PercentageChange: -20,
-				AbsoluteChange:   -20,
-				PreviousValue:    100,
-				LastValue:        80,
-				RootCauseMetrics: []RootCauseMetric{},
-			},
-		},
-	},
-}
-var mockPrimaryDataForLeads = []PrimaryLevelData{
-	{
-		Name:             "campaign_1",
-		PercentageChange: 20,
-		AbsoluteChange:   20,
-		PreviousValue:    100,
-		LastValue:        120,
-		SubLevelData: []SubLevelData{
-			{
-				Name:             "keyword_1",
-				PercentageChange: 50,
-				AbsoluteChange:   25,
-				PreviousValue:    50,
-				LastValue:        75,
-				RootCauseMetrics: []RootCauseMetric{
-					{
-						Metric:           "impressions",
-						PercentageChange: 20,
-					},
-					{
-						Metric:           "si_share",
-						PercentageChange: 10,
-					},
-				},
-			},
-			{
-				Name:             "keyword_2",
-				PercentageChange: -10,
-				AbsoluteChange:   -5,
-				PreviousValue:    50,
-				LastValue:        45,
-				RootCauseMetrics: []RootCauseMetric{
-					{
-						Metric:           "impressions",
-						PercentageChange: -10,
-					},
-					{
-						Metric:           "si_share",
-						PercentageChange: -5,
-					},
-				},
-			},
-		},
+		Metric:      Impressions,
+		DisplayName: "Impr.",
 	},
 	{
-		Name:             "campaign_2",
-		PercentageChange: -20,
-		AbsoluteChange:   -20,
-		PreviousValue:    100,
-		LastValue:        80,
-		SubLevelData: []SubLevelData{
-			{
-				Name:             "keyword_1",
-				PercentageChange: -20,
-				AbsoluteChange:   -20,
-				PreviousValue:    100,
-				LastValue:        80,
-				RootCauseMetrics: []RootCauseMetric{
-					{
-						Metric:           "impressions",
-						PercentageChange: -20,
-					},
-					{
-						Metric:           "si_share",
-						PercentageChange: -10,
-					},
-				},
-			},
-		},
-	},
-}
-var mockHeaderData = []RootCauseMetric{
-	{
-		Metric:           "si_share",
-		PercentageChange: -10,
+		Metric:      Clicks,
+		DisplayName: "Clicks",
 	},
 	{
-		Metric:           "leads",
-		PercentageChange: 10,
+		Metric:      ClickThroughRate,
+		DisplayName: "CTR",
+	},
+	{
+		Metric:      "cost",
+		DisplayName: "Cost",
+	},
+	{
+		Metric:      CostPerClick,
+		DisplayName: "Avg. CPC",
+	},
+	{
+		Metric:      Conversion,
+		DisplayName: "Conv.",
+	},
+	{
+		Metric:      "cost_per_lead",
+		DisplayName: "Cost/Conv",
+	},
+	{
+		Metric:      ConversionRate,
+		DisplayName: "Conv. Rate",
 	},
 }
-var mockData = TemplateData{
-	OverallChangesData: mockHeaderData,
-	PrimaryLevelData:   mockPrimaryData,
+var TemplateMetricsForAdwordsMap = map[string]bool{
+	Clicks:                true,
+	Impressions:           true,
+	ClickThroughRate:      true,
+	CostPerClick:          true,
+	SearchImpressionShare: true,
+	"cost":                true,
+	Conversion:            true,
+	"cost_per_lead":       true,
+	ConversionRate:        true,
 }
-var mockDataForLeads = TemplateData{
-	OverallChangesData: mockHeaderData,
-	PrimaryLevelData:   mockPrimaryDataForLeads,
+
+//validates if the thresholds metric is part of allowed metrics and is not repeated. e.g: [{metric: clicks}, {metric: clicks}] not allowed
+func ValidateTemplateThresholds(thresholds []TemplateThreshold) bool {
+	metricsCountMap := make(map[string]int)
+	for _, threshold := range thresholds {
+		_, isExistsMetric := TemplateAdwordsMetricsMapForAdwords[threshold.Metric]
+		if !isExistsMetric {
+			return false
+		}
+		metricsCountMap[threshold.Metric]++
+	}
+	for _, count := range metricsCountMap {
+		if count > 1 {
+			return false
+		}
+	}
+	return true
 }
-var MockResponse = TemplateResponse{
-	BreakdownAnalysis: mockData,
-	Meta:              mockMeta,
-}
-var MockResponseLeads = TemplateResponse{
-	BreakdownAnalysis: mockDataForLeads,
-	Meta:              mockMeta,
+
+func GetTimestampsForTemplateQueryWithDays(query TemplateQuery, days int) (int64, int64, int64, int64) {
+	lastWeekFromTime := time.Unix(query.From, 0)
+	lastWeekToTime := time.Unix(query.To, 0)
+	prevWeekFromTime := lastWeekFromTime.AddDate(0, 0, -days)
+	prevWeekToTime := lastWeekToTime.AddDate(0, 0, -days)
+	lastWeekFromTimestamp, _ := strconv.ParseInt(lastWeekFromTime.Format("20060102"), 10, 64)
+	lastWeekToTimestamp, _ := strconv.ParseInt(lastWeekToTime.Format("20060102"), 10, 64)
+	prevWeekFromTimestamp, _ := strconv.ParseInt(prevWeekFromTime.Format("20060102"), 10, 64)
+	prevWeekToTimestamp, _ := strconv.ParseInt(prevWeekToTime.Format("20060102"), 10, 64)
+	return lastWeekFromTimestamp, lastWeekToTimestamp, prevWeekFromTimestamp, prevWeekToTimestamp
 }

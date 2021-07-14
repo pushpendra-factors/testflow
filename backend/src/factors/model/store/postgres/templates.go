@@ -10,36 +10,13 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
-var templateMetrics = []string{
-	model.Clicks,
-	model.Impressions,
-	model.ClickThroughRate,
-	model.CostPerClick,
-	model.SearchImpressionShare,
-	"cost",
-	"leads",
-	"cost_per_lead",
-	"click_to_lead_rate",
-}
-var templateMetricsMap = map[string]bool{
-	model.Clicks:                true,
-	model.Impressions:           true,
-	model.ClickThroughRate:      true,
-	model.CostPerClick:          true,
-	model.SearchImpressionShare: true,
-	"cost":                      true,
-	"leads":                     true,
-	"cost_per_lead":             true,
-	"click_to_lead_rate":        true,
-}
-
 func (pg *Postgres) RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int) {
-	if query.Type == 1 {
-		if query.Metric == "leads" {
-			return model.MockResponseLeads, http.StatusOK
-		} else {
-			return model.MockResponse, http.StatusOK
+	if query.Type == model.TemplateAliasToType["sem_checklist"] {
+		templateResponse, errCode := pg.ExecuteAdwordsSEMChecklistQuery(projectID, query, reqID)
+		if errCode != http.StatusOK {
+			return model.TemplateResponse{}, errCode
 		}
+		return templateResponse, http.StatusOK
 	}
 	return model.TemplateResponse{}, http.StatusOK
 }
@@ -50,7 +27,7 @@ func (pg *Postgres) GetTemplateConfig(projectID uint64, templateType int) (model
 		return model.TemplateConfig{}, http.StatusBadRequest
 	}
 	var templateConfig model.TemplateConfig
-	templateConfig.Metrics = templateMetrics
+	templateConfig.Metrics = model.TemplateMetricsForAdwordsWithDisplayName
 	templateThresholds, err := pg.getTemplateThresholds(projectID, templateType)
 	if err != nil {
 		return model.TemplateConfig{}, http.StatusInternalServerError
@@ -69,25 +46,8 @@ func (pg *Postgres) getTemplateThresholds(projectID uint64, templateType int) ([
 	return templateThresholds, nil
 }
 
-//validates if the thresholds metric is part of allowed metrics and is not repeated. e.g: [{metric: clicks}, {metric: clicks}] not allowed
-func validateTemplateThresholds(thresholds []model.TemplateThreshold) bool {
-	metricsCountMap := make(map[string]int)
-	for _, threshold := range thresholds {
-		_, isExistsMetric := templateMetricsMap[threshold.Metric]
-		if !isExistsMetric {
-			return false
-		}
-		metricsCountMap[threshold.Metric]++
-	}
-	for _, count := range metricsCountMap {
-		if count > 1 {
-			return false
-		}
-	}
-	return true
-}
 func (pg *Postgres) UpdateTemplateConfig(projectID uint64, templateType int, thresholds []model.TemplateThreshold) ([]model.TemplateThreshold, string) {
-	isValidConfig := validateTemplateThresholds(thresholds)
+	isValidConfig := model.ValidateTemplateThresholds(thresholds)
 	if !isValidConfig {
 		return []model.TemplateThreshold{}, "Invalid config input"
 	}
