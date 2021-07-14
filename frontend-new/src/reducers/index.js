@@ -8,6 +8,7 @@ import DashboardReducer from './dashboard';
 import factors from './factors';
 import events from './events';
 import settingsReducer from './settings';
+import templates from './templates';
 import insights from './insights';
 
 const rootReducer = combineReducers({
@@ -20,6 +21,7 @@ const rootReducer = combineReducers({
   settings: settingsReducer,
   factors,
   events,
+  templates,
   insights
 });
 

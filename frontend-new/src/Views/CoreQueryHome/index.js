@@ -48,7 +48,8 @@ import {
 } from '../../reducers/analyticsQuery';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { getDashboardDateRange } from '../Dashboard/utils';
-import { fetchWeeklyIngishts } from '../../reducers/insights';
+import TemplatesModal from '../CoreQuery/Templates';
+import {  fetchWeeklyIngishts } from 'Reducers/insights'; 
 import _ from 'lodash';
 
 const coreQueryoptions = [
@@ -134,6 +135,7 @@ function CoreQuery({
   const { attr_dimensions } = useSelector((state) => state.coreQuery);
   const history = useHistory();
   const { metadata } = useSelector((state) => state.insights);
+  const [ templatesModalVisible, setTemplatesModalVisible] = useState(false);
 
   const getFormattedRow = (q) => {
     let svgName = 'funnels_cq';
@@ -371,8 +373,14 @@ function CoreQuery({
       return getFormattedRow(q);
     });
 
-  const setQueryTypeTab = (item) => {
-    setDrawerVisible(true);
+  const setQueryTypeTab = (item) => { 
+    if (item.title === 'Templates') {
+      setTemplatesModalVisible(true); 
+      // setQueryType(QUERY_TYPE_TEMPLATE);
+    }
+    else{
+      setDrawerVisible(true);  
+    }
 
     if (item.title === 'Funnels') {
       setQueryType(QUERY_TYPE_FUNNEL);
@@ -406,9 +414,7 @@ function CoreQuery({
       setQueryType(QUERY_TYPE_CAMPAIGN);
     }
 
-    if (item.title === 'Templates') {
-      setQueryType(QUERY_TYPE_TEMPLATE);
-    }
+   
   };
 
   return (
@@ -434,6 +440,7 @@ function CoreQuery({
           okText='Confirm'
           cancelText='Cancel'
         />
+        <TemplatesModal templatesModalVisible={templatesModalVisible} setTemplatesModalVisible={setTemplatesModalVisible} />
         <Header>
           <div className='w-full h-full py-4 flex flex-col justify-center items-center'>
             <SearchBar setQueryToState={setQueryToState} />
@@ -465,21 +472,19 @@ function CoreQuery({
                     <div
                       key={index}
                       onClick={() => setQueryTypeTab(item)}
-                      className={`fai--custom-card-new flex flex-col ${
-                        item.title == 'Templates' ? 'disabled' : null
-                      }`}
+                      className={`fai--custom-card-new flex flex-col`}
                     >
                       <div
                         className={`fai--custom-card-new--top-section flex justify-center items-center`}
                       >
-                        {item.title == 'Templates' && (
+                        {/* {item.title == 'Templates' && (
                           <Tag
                             color='red'
                             className={'fai--custom-card--badge'}
                           >
                             Coming Soon
                           </Tag>
-                        )}
+                        )} */}
                         <SVG name={item.icon} size={40} />
                       </div>
 
@@ -556,6 +561,7 @@ function CoreQuery({
               />
             </Col>
           </Row>
+          
         </div>
       </ErrorBoundary>
     </>

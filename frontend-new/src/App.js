@@ -17,7 +17,8 @@ const Login = lazy(()=>retryDynamicImport(() => import("./Views/Pages/Login")));
 const ForgotPassword = lazy(()=>retryDynamicImport(() => import("./Views/Pages/ForgotPassword")));
 const ResetPassword = lazy(()=>retryDynamicImport(() => import("./Views/Pages/ResetPassword")));
 const SignUp = lazy(()=>retryDynamicImport(() => import("./Views/Pages/SignUp")));
-const Activate = lazy(()=>retryDynamicImport(() => import("./Views/Pages/Activate")));
+const Activate = lazy(()=>retryDynamicImport(() => import("./Views/Pages/Activate"))); 
+const Templates = lazy(()=>retryDynamicImport(() => import("./Views/CoreQuery/Templates/ResultsPage")));
 // const AppLayout = lazy(()=>retryDynamicImport(() => import("./Views/AppLayout")));
 // const FactorsInsights = lazy(()=>retryDynamicImport(() => import("./Views/Factors/FactorsInsights")));
 import AppLayout from "./Views/AppLayout"; 
@@ -147,21 +148,28 @@ function App({ isAgentLoggedIn, agent_details }) {
               component={ForgotPassword}
             />
             <Route exact path="/login" name="login" component={Login} />
-            {isAgentLoggedIn ? (
+            {isAgentLoggedIn ? ( 
               <Route
                 exact
                 path="/explain/insights"
-                name="login"
+                name="explainInsights"
                 component={FactorsInsights}
-              />
+              />  
+
             ) : (
               <Redirect to="/login" />
             )}
-            {isAgentLoggedIn ? (
-              <Route path="/" name="Home" component={AppLayout} />
+            {isAgentLoggedIn ? ( 
+                <Route exact path="/templates" name="templates" component={Templates} />   
+
             ) : (
               <Redirect to="/login" />
             )}
+            {isAgentLoggedIn ? ( 
+              <Route path="/" name="Home" component={AppLayout} /> 
+            ) : (
+              <Redirect to="/login" />
+            )} 
           </Switch>
         </Router>
       </Suspense>

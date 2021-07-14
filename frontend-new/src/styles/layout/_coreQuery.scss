@@ -346,14 +346,6 @@ $cq-card-transition: transform .2s ease-in-out;
         padding: 2.75em 0;
         position: relative;
        
-        .fai--custom-card--badge
-        {
-            position: absolute;
-            top:-12px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-radius: 4px;
-        }
     }
     .fai--custom-card-new--bottom-section
     {
@@ -362,5 +354,29 @@ $cq-card-transition: transform .2s ease-in-out;
             font-size: 12px;
             line-height: 1.4;
         }
+    }
+}
+
+.fai--custom-card--badge
+{
+    position: absolute;
+    border-radius: 4px;
+    // top:-12px;
+    // left: 50%;
+    // transform: translateX(-50%);
+    top:-10px;
+    right: 8px; 
+}
+.fa-template--card{
+    .fai--custom-card--badge{
+        opacity: 0;
+    }
+    transition: all 0.3s;
+    &:hover{
+        .fai--custom-card--badge{
+            opacity: 1;
+        }
+        background-color: rgba($fa-color--mono-1,0.7);
+
     }
 }
