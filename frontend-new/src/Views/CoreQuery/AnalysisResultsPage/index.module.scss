@@ -10,6 +10,8 @@
   opacity: 0.56;
 }
 
-.comparisonCalendar {
-  
+.apiCallStatusMsgTooltip {
+  :global(.ant-tooltip-arrow) {
+    right: 4px;
+  }
 }

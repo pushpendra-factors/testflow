@@ -20,6 +20,7 @@ import Attributions from './Attributions';
 import CampaignAnalytics from './CampaignAnalytics';
 import NoDataChart from '../../components/NoDataChart';
 import { useSelector } from 'react-redux';
+import { SVG, Text } from '../../components/factorsComponents';
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
@@ -90,7 +91,7 @@ function CardContent({ unit, resultState, durationObj }) {
 
   if (resultState.loading) {
     content = (
-      <div className='flex justify-center items-center w-full h-64'>
+      <div className='flex justify-center items-center w-full h-full'>
         <Spin size='small' />
       </div>
     );
@@ -98,8 +99,19 @@ function CardContent({ unit, resultState, durationObj }) {
 
   if (resultState.error) {
     content = (
-      <div className='flex justify-center items-center w-full h-64'>
+      <div className='flex justify-center items-center w-full h-full'>
         <NoDataChart />
+      </div>
+    );
+  }
+
+  if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {
+    content = (
+      <div className='flex justify-center flex-col items-center w-full h-full px-2 text-center'>
+        <SVG name='nodata' />
+        <Text type='title' color='grey' extraClass='mb-0'>
+          {resultState.apiCallStatus.message}
+        </Text>
       </div>
     );
   }

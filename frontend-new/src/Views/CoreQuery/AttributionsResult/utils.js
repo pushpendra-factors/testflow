@@ -609,7 +609,7 @@ export const getTableData = (
     .filter((row) => {
       if (enabledDimensions.length) {
         const filteredRows = enabledDimensions.filter((dimension) =>
-          row[dimension.title].toLowerCase().includes(searchText.toLowerCase())
+          row[dimension.title]?.toLowerCase().includes(searchText.toLowerCase())
         );
         return filteredRows.length > 0;
       } else {

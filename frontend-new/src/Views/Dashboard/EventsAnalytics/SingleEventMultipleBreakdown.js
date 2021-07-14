@@ -71,7 +71,11 @@ function SingleEventMultipleBreakdown({
   }, [aggregateData]);
 
   if (!visibleProperties.length) {
-    return <NoDataChart />;
+    return (
+      <div className='flex justify-center items-center w-full h-full'>
+        <NoDataChart />
+      </div>
+    );
   }
 
   let chartContent = null;

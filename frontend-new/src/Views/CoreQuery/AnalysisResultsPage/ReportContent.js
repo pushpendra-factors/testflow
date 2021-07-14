@@ -24,6 +24,7 @@ import CampaignMetricsDropdown from './CampaignMetricsDropdown';
 import EventsAnalytics from '../EventsAnalytics';
 import WebsiteAnalyticsTable from '../../Dashboard/WebsiteAnalytics/WebsiteAnalyticsTable';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
+import { Text, SVG } from '../../../components/factorsComponents';
 
 function ReportContent({
   resultState,
@@ -119,6 +120,17 @@ function ReportContent({
     content = (
       <div className='h-64 flex items-center justify-center w-full'>
         Something Went Wrong!
+      </div>
+    );
+  }
+
+  if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {
+    content = (
+      <div className='h-64 flex flex-col items-center justify-center w-full'>
+        <SVG name='nodata' />
+        <Text type='title' color='grey' extraClass='mb-0'>
+          {resultState.apiCallStatus.message}
+        </Text>
       </div>
     );
   }
@@ -243,6 +255,7 @@ function ReportContent({
         section={section}
         onReportClose={onReportClose}
         queryType={queryType}
+        apiCallStatus={resultState.apiCallStatus}
       />
       <div className='mt-6'>
         <CalendarRow

@@ -376,3 +376,12 @@ export const QUERY_TYPE_TEXT = {
 export const FIRST_METRIC_IN_ATTR_RESPOSE = 'Impressions';
 
 export const ARR_JOINER = ';;;';
+
+export const PREDEFINED_DATES = {
+  THIS_WEEK: 'this_week',
+  LAST_WEEK: 'last_week',
+  THIS_MONTH: 'this_month',
+  LAST_MONTH: 'last_month',
+  TODAY: 'today',
+  YESTERDAY: 'yesterday',
+};

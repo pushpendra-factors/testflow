@@ -89,7 +89,7 @@ function AttributionsChart({
               weight='bold'
               extraClass='text-sm mb-0'
             >
-              Opportunities
+              Conversions
             </Text>
           </span>
           <span className='flex justify-between items-center mt-3'>

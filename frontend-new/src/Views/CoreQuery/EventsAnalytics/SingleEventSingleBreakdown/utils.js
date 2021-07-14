@@ -74,18 +74,14 @@ export const getDataInTableFormat = (
 };
 
 const getWeekFormat = (m) => {
-  const weekInYear = m.isoWeek();
-  const startOfMonthWeek = moment(m).startOf('month').isoWeek();
-  const result = weekInYear - startOfMonthWeek;
-  const dt = result < 0 ? weekInYear : result;
-  const startDate = m.format("D-MMM-YYYY");
-  const endDate = m.endOf("week").format("D-MMM-YYYY");
+  const startDate = m.format('D-MMM-YYYY');
+  const endDate = m.endOf('week').format('D-MMM-YYYY');
   return startDate + ' to ' + endDate;
-}
+};
 
 export const parseForDateTimeLabel = (grn, label) => {
   let labelValue = label;
-  if(grn && moment(label).isValid()) {
+  if (grn && moment(label).isValid()) {
     let dateLabel;
     try {
       const newDatr = new Date(label);
@@ -94,22 +90,21 @@ export const parseForDateTimeLabel = (grn, label) => {
       return label;
     }
 
-    if(grn === 'date') {
+    if (grn === 'date') {
       labelValue = dateLabel.format('D-MMM-YYYY');
-    } else if (grn === 'day') { 
+    } else if (grn === 'day') {
       labelValue = dateLabel.format('D-MMM-YYYY');
     } else if (grn === 'week') {
       labelValue = getWeekFormat(dateLabel);
     } else if (grn === 'hour') {
-      labelValue = dateLabel.format('D-MMM-YYYY H')+'h';
+      labelValue = dateLabel.format('D-MMM-YYYY H') + 'h';
     } else if (grn === 'month') {
       labelValue = dateLabel.format('MMM-YYYY');
     }
   }
 
   return labelValue;
-
-}
+};
 
 export const formatData = (data) => {
   if (
@@ -121,7 +116,10 @@ export const formatData = (data) => {
     return [];
   }
   const result = data.metrics.rows.map((elem, index) => {
-    const labelVal = parseForDateTimeLabel(data.meta?.query?.gbp[0]?.grn, elem[2])
+    const labelVal = parseForDateTimeLabel(
+      data.meta?.query?.gbp[0]?.grn,
+      elem[2]
+    );
     // console.log(labelVal);
     return {
       label: labelVal,
@@ -238,7 +236,10 @@ export const formatDataInStackedAreaFormat = (data, aggregateData) => {
   });
 
   data.rows.forEach((row) => {
-    let breakdownJoin = row.slice(breakdownIndex, countIndex).map((x) => parseForDateTimeLabel(data.meta?.query?.gbp[0]?.grn, x)).join(',');
+    let breakdownJoin = row
+      .slice(breakdownIndex, countIndex)
+      .map((x) => parseForDateTimeLabel(data.meta?.query?.gbp[0]?.grn, x))
+      .join(',');
     console.log(breakdownJoin);
     const bIdx = labelsMapper[breakdownJoin];
     const idx = differentDates.indexOf(row[dateIndex]);
@@ -246,7 +247,7 @@ export const formatDataInStackedAreaFormat = (data, aggregateData) => {
       resultantData[bIdx].data[idx] = row[countIndex];
     }
   });
-  
+
   return {
     categories: differentDates,
     data: resultantData,

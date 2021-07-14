@@ -4,8 +4,8 @@ import ReportContent from './ReportContent';
 import { FaErrorComp, FaErrorLog } from '../../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
-import WeeklyInsights from '../WeeklyInsights'; 
-import {  fetchWeeklyIngishts } from 'Reducers/insights';
+import WeeklyInsights from '../WeeklyInsights';
+import { fetchWeeklyIngishts } from '../../../reducers/insights';
 import { connect, useDispatch } from 'react-redux';
 
 function ReportsLayout({
@@ -21,7 +21,7 @@ function ReportsLayout({
 }) {
   const { setNavigatedFromDashboard } = useContext(CoreQueryContext);
   const [activeTab, setActiveTab] = useState(1);
-  const [insights, setInsights] = useState(null);
+  // const [insights, setInsights] = useState(null);
   const dispatch = useDispatch();
 
   const handleBreadCrumbClick = useCallback(() => {
@@ -32,18 +32,14 @@ function ReportsLayout({
   function changeTab(key) {
     // console.log('current tab is=-->>',key);
     setActiveTab(key);
-
   }
 
-  useEffect(()=>{ 
-
-    return () =>{
-        dispatch({type:'SET_ACTIVE_INSIGHT', payload: false});
-        dispatch({type:'RESET_WEEKLY_INSIGHTS', payload: false})
-    }
-}, [activeProject, insights]); 
-
- 
+  useEffect(() => {
+    return () => {
+      dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
+      dispatch({ type: 'RESET_WEEKLY_INSIGHTS', payload: false });
+    };
+  }, [dispatch, activeProject]);
 
   return (
     <>
@@ -70,25 +66,26 @@ function ReportsLayout({
           }
           onError={FaErrorLog}
         >
-
-          {activeTab == 1 && <> 
-          <ReportContent
-            breakdownType={breakdownType}
-            queryTitle={querySaved}
-            queryType={queryType}
-            {...rest}
-            />
+          {Number(activeTab) === 1 && (
+            <>
+              <ReportContent
+                breakdownType={breakdownType}
+                queryTitle={querySaved}
+                queryType={queryType}
+                {...rest}
+              />
             </>
-          }
+          )}
 
-          {activeTab == 2 && <> 
-            <WeeklyInsights
-               requestQuery={requestQuery}
-               queryType={queryType}
-               queryTitle={querySaved}
-                />
+          {Number(activeTab) === 2 && (
+            <>
+              <WeeklyInsights
+                requestQuery={requestQuery}
+                queryType={queryType}
+                queryTitle={querySaved}
+              />
             </>
-          }
+          )}
         </ErrorBoundary>
       </div>
     </>
@@ -100,5 +97,4 @@ const mapStateToProps = (state) => ({
   insights: state.insights,
 });
 
-
-export default connect(mapStateToProps,{fetchWeeklyIngishts})(ReportsLayout);
+export default connect(mapStateToProps, { fetchWeeklyIngishts })(ReportsLayout);
