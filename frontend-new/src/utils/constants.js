@@ -178,7 +178,7 @@ export const ATTRIBUTION_METRICS = [
   },
   {
     title: 'Sessions',
-    header: 'Sessions',
+    header: 'Sessions OR Website Visitors',
     enabled: true,
   },
   {
@@ -225,7 +225,7 @@ export const ATTRIBUTION_METRICS = [
   {
     title: 'All Conv Rate (%)',
     header: 'ALL CR',
-    enabled: true,
+    enabled: false,
     isEventMetric: true,
   },
 ];
