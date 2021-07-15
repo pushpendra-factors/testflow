@@ -794,10 +794,6 @@ function CoreQuery({
     );
   };
 
-  let eventsMapper = {};
-  let reverseEventsMapper = {};
-  let arrayMapper = [];
-
   const campaignsArrayMapper = useMemo(() => {
     return campaignState.select_metrics.map((metric, index) => {
       return {
@@ -808,16 +804,16 @@ function CoreQuery({
     });
   }, [campaignState.select_metrics]);
 
-  appliedQueries.forEach((q, index) => {
-    eventsMapper[`${q}`] = `event${index + 1}`;
-    reverseEventsMapper[`event${index + 1}`] = q;
-    arrayMapper.push({
-      eventName: q,
-      index,
-      mapper: `event${index + 1}`,
-      displayName: eventNames[q] || q,
+  const arrayMapper = useMemo(() => {
+    return appliedQueries.map((q, index) => {
+      return {
+        eventName: q,
+        index,
+        mapper: `event${index + 1}`,
+        displayName: eventNames[q] || q,
+      };
     });
-  });
+  }, [appliedQueries, eventNames]);
 
   const renderQueryComposer = () => {
     if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
