@@ -162,3 +162,17 @@ func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, only
 	// For other units, caching should run without changing `to`.
 	return true, from, to
 }
+
+func GetEffectiveTimeRangeForDashboardUnitAttributionQuery(from, to int64) (int64, int64) {
+
+	epsilonSeconds := int64(60)
+	now := U.TimeNow().Unix()
+	if (to + U.SECONDS_IN_A_DAY) <= (now - epsilonSeconds) {
+		return from, to
+	}
+	effectiveTo := to - U.SECONDS_IN_A_DAY
+	if (effectiveTo - from) >= (U.SECONDS_IN_A_DAY + epsilonSeconds) {
+		return from, effectiveTo
+	}
+	return 0, 0
+}

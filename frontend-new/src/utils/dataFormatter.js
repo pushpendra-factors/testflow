@@ -7,6 +7,7 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_SPARKLINES,
+  PREDEFINED_DATES,
 } from './constants';
 
 const visualizationColors = [
@@ -323,4 +324,76 @@ export const renderBigLengthTicks = (text, allowdLength) => {
     return text.slice(0, allowdLength) + '...';
   }
   return text;
+};
+
+export const shouldDataFetch = (durationObj) => {
+  if (durationObj.dateType === PREDEFINED_DATES.THIS_MONTH) {
+    if (moment().format('D') === '1') {
+      return {
+        required: false,
+        message: `Attribution reports don't show data for today`,
+      };
+    }
+    if (moment().format('D') === '2') {
+      return {
+        required: false,
+        message: `Attribution reports don't show data for yesterday`,
+      };
+    }
+    return {
+      required: true,
+      message:
+        'Attribution reports for "This Month" cover data till the day before yesterday.',
+    };
+  }
+  if (durationObj.dateType === PREDEFINED_DATES.THIS_WEEK) {
+    if (moment().format('dddd') === 'Sunday') {
+      return {
+        required: false,
+        message: `Attribution reports don't show data for today`,
+      };
+    }
+    if (moment().format('dddd') === 'Monday') {
+      return {
+        required: false,
+        message: `Attribution reports don't show data for yesterday`,
+      };
+    }
+    return {
+      required: true,
+      message: `Attribution reports for "This Week" cover data till the day before yesterday.`,
+    };
+  }
+  if (durationObj.dateType === PREDEFINED_DATES.TODAY) {
+    return {
+      required: false,
+      message: `Attribution reports don't show data for today`,
+    };
+  }
+  if (durationObj.dateType === PREDEFINED_DATES.YESTERDAY) {
+    return {
+      required: false,
+      message: `Attribution reports don't show data for yesterday`,
+    };
+  }
+  if (durationObj.dateType === PREDEFINED_DATES.LAST_MONTH) {
+    if (moment().format('D') === '1') {
+      return {
+        required: true,
+        message: `Attribution reports for "Last Month" cover data till the day before yesterday.`,
+      };
+    }
+  }
+  if (durationObj.dateType === PREDEFINED_DATES.LAST_WEEK) {
+    if (moment().format('dddd') === 'Sunday') {
+      return {
+        required: true,
+        message: `Attribution reports for "Last Week" cover data till the day before yesterday.`,
+      };
+    }
+  }
+  return {
+    required: true,
+    message: null,
+  };
 };

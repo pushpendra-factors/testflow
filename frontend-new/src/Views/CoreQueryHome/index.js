@@ -48,7 +48,8 @@ import {
 } from '../../reducers/analyticsQuery';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { getDashboardDateRange } from '../Dashboard/utils';
-import {  fetchWeeklyIngishts } from 'Reducers/insights';
+import TemplatesModal from '../CoreQuery/Templates';
+import {  fetchWeeklyIngishts } from 'Reducers/insights'; 
 import _ from 'lodash';
 
 const coreQueryoptions = [
@@ -125,7 +126,7 @@ function CoreQuery({
   setBreakdownType,
   setNavigatedFromDashboard,
   fetchWeeklyIngishts,
-  activeProject
+  activeProject,
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
@@ -134,6 +135,7 @@ function CoreQuery({
   const { attr_dimensions } = useSelector((state) => state.coreQuery);
   const history = useHistory();
   const { metadata } = useSelector((state) => state.insights);
+  const [ templatesModalVisible, setTemplatesModalVisible] = useState(false);
 
   const getFormattedRow = (q) => {
     let svgName = 'funnels_cq';
@@ -176,7 +178,7 @@ function CoreQuery({
   }, []);
 
   const handleViewResult = useCallback((row, event) => {
-    console.log('row id-->>',row);
+    console.log('row id-->>', row);
     event.stopPropagation();
     event.preventDefault();
     getWeeklyIngishts(row);
@@ -210,31 +212,36 @@ function CoreQuery({
     [dispatch]
   );
 
-  const getWeeklyIngishts = (record) =>{
-    if(metadata?.QueryWiseResult){
-      console.log("saved query unit id-->>", record);
-        const insightsItem = metadata?.QueryWiseResult[record.key]; 
-        if(insightsItem){
-          dispatch({type:'SET_ACTIVE_INSIGHT', payload: insightsItem});
+  const getWeeklyIngishts = (record) => {
+    if (metadata?.QueryWiseResult) {
+      console.log('saved query unit id-->>', record);
+      const insightsItem = metadata?.QueryWiseResult[record.key];
+      if (insightsItem) {
+        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
+      } else {
+        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
+      }
+      if (insightsItem?.Enabled) {
+        if (!_.isEmpty(insightsItem?.InsightsRange)) {
+          fetchWeeklyIngishts(
+            activeProject.id,
+            record.key,
+            Object.keys(insightsItem.InsightsRange)[0],
+            insightsItem.InsightsRange[
+              Object.keys(insightsItem.InsightsRange)[0]
+            ][0],
+            false
+          ).catch((e) => {
+            console.log('weekly-ingishts fetch error', e);
+          });
+        } else {
+          dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
         }
-        else{
-          dispatch({type:'SET_ACTIVE_INSIGHT', payload: false});
-        }
-        if(insightsItem?.Enabled){
-          if(!_.isEmpty(insightsItem?.InsightsRange)){
-            fetchWeeklyIngishts(activeProject.id, record.key, Object.keys(insightsItem.InsightsRange)[0],insightsItem.InsightsRange[Object.keys(insightsItem.InsightsRange)[0]][0],false).catch((e)=>{
-              console.log("weekly-ingishts fetch error",e)
-            }); 
-          }
-          else{
-            dispatch({type:'SET_ACTIVE_INSIGHT', payload: insightsItem});
-          }
-        }
-        else{
-          dispatch({type:'RESET_WEEKLY_INSIGHTS', payload: false})
-        } 
+      } else {
+        dispatch({ type: 'RESET_WEEKLY_INSIGHTS', payload: false });
+      }
     }
-  }
+  };
 
   const setQueryToState = useCallback(
     (record, navigatedFromDashboard) => {
@@ -366,8 +373,14 @@ function CoreQuery({
       return getFormattedRow(q);
     });
 
-  const setQueryTypeTab = (item) => {
-    setDrawerVisible(true);
+  const setQueryTypeTab = (item) => { 
+    if (item.title === 'Templates') {
+      setTemplatesModalVisible(true); 
+      // setQueryType(QUERY_TYPE_TEMPLATE);
+    }
+    else{
+      setDrawerVisible(true);  
+    }
 
     if (item.title === 'Funnels') {
       setQueryType(QUERY_TYPE_FUNNEL);
@@ -401,9 +414,7 @@ function CoreQuery({
       setQueryType(QUERY_TYPE_CAMPAIGN);
     }
 
-    if (item.title === 'Templates') {
-      setQueryType(QUERY_TYPE_TEMPLATE);
-    }
+   
   };
 
   return (
@@ -429,6 +440,7 @@ function CoreQuery({
           okText='Confirm'
           cancelText='Cancel'
         />
+        <TemplatesModal templatesModalVisible={templatesModalVisible} setTemplatesModalVisible={setTemplatesModalVisible} />
         <Header>
           <div className='w-full h-full py-4 flex flex-col justify-center items-center'>
             <SearchBar setQueryToState={setQueryToState} />
@@ -460,21 +472,19 @@ function CoreQuery({
                     <div
                       key={index}
                       onClick={() => setQueryTypeTab(item)}
-                      className={`fai--custom-card-new flex flex-col ${
-                        item.title == 'Templates' ? 'disabled' : null
-                      }`}
+                      className={`fai--custom-card-new flex flex-col`}
                     >
                       <div
                         className={`fai--custom-card-new--top-section flex justify-center items-center`}
                       >
-                        {item.title == 'Templates' && (
+                        {/* {item.title == 'Templates' && (
                           <Tag
                             color='red'
                             className={'fai--custom-card--badge'}
                           >
                             Coming Soon
                           </Tag>
-                        )}
+                        )} */}
                         <SVG name={item.icon} size={40} />
                       </div>
 
@@ -536,8 +546,8 @@ function CoreQuery({
               <Table
                 onRow={(record) => {
                   return {
-                    onClick: (e) => { 
-                      getWeeklyIngishts(record); 
+                    onClick: (e) => {
+                      getWeeklyIngishts(record);
                       setQueryToState(record);
                     },
                   };
@@ -551,6 +561,7 @@ function CoreQuery({
               />
             </Col>
           </Row>
+          
         </div>
       </ErrorBoundary>
     </>
@@ -560,4 +571,4 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
 });
 
-export default connect(mapStateToProps, {fetchWeeklyIngishts})(CoreQuery);
+export default connect(mapStateToProps, { fetchWeeklyIngishts })(CoreQuery);

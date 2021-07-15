@@ -24,6 +24,7 @@ import {
   apiChartAnnotations,
   INITIAL_SESSION_ANALYTICS_SEQ,
   MARKETING_TOUCHPOINTS,
+  PREDEFINED_DATES,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 
@@ -34,7 +35,12 @@ export const labelsObj = {
   [FREQUENCY_CRITERIA]: 'Count',
 };
 
-export const initialState = { loading: false, error: false, data: null };
+export const initialState = {
+  loading: false,
+  error: false,
+  data: null,
+  apiCallStatus: { required: true, message: null },
+};
 
 export const initialResultState = [1, 2, 3, 4].map(() => {
   return initialState;
@@ -583,12 +589,17 @@ export const DefaultDateRangeFormat = {
       ? moment().subtract(3, 'days').endOf('week')
       : moment().subtract(1, 'day').endOf('day'),
   frequency: 'date',
+  dateType:
+    moment().format('dddd') === 'Sunday' || moment().format('dddd') === 'Monday'
+      ? PREDEFINED_DATES.LAST_WEEK
+      : PREDEFINED_DATES.THIS_WEEK,
 };
 
 export const DashboardDefaultDateRangeFormat = {
   from: moment().subtract(7, 'days').startOf('week'),
   to: moment().subtract(7, 'days').endOf('week'),
   frequency: 'date',
+  dateType: PREDEFINED_DATES.LAST_WEEK,
 };
 
 const getFilters = (filters) => {

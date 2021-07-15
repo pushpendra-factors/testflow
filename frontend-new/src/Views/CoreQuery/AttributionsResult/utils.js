@@ -305,7 +305,7 @@ export const getTableColumns = (
     ];
   }
   const metricsColumns = metrics
-    .filter((metric) => metric.enabled)
+    .filter((metric) => metric.enabled && !metric.isEventMetric)
     .map((metric, index, arr) => {
       return {
         title:
@@ -340,65 +340,95 @@ export const getTableColumns = (
             </div>
           ),
         dataIndex: metric.title,
-        width: 200,
+        width: 150,
         className: 'align-bottom',
         render: (d) => {
           return renderMetric(d, comparison_data);
         },
       };
     });
+
+  const showCPC = metrics.find((elem) => elem.header === 'ALL CPC')?.enabled;
+  const showCR = metrics.find((elem) => elem.header === 'ALL CR')?.enabled;
+  const eventColumns = [
+    {
+      title: getTitleWithSorter(
+        <div className='flex flex-col items-start justify-center'>
+          <div>Conversion</div>
+          <div style={{ fontSize: '10px', color: '#8692A3' }}>
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method
+              ).text
+            }
+          </div>
+        </div>,
+        'Conversion',
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: 'Conversion',
+      width: 150,
+      render: (d) => {
+        return renderMetric(d, comparison_data);
+      },
+    },
+  ];
+  if (showCPC) {
+    eventColumns.push({
+      title: getTitleWithSorter(
+        <div className='flex flex-col items-start justify-ceneter'>
+          <div>Cost Per Conversion</div>
+          <div style={{ fontSize: '10px', color: '#8692A3' }}>
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method
+              ).text
+            }
+          </div>
+        </div>,
+        'Cost per Conversion',
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: 'Cost per Conversion',
+      width: 150,
+      render: (d) => {
+        return renderMetric(d, comparison_data);
+      },
+    });
+  }
+  if (showCR) {
+    eventColumns.push({
+      title: getTitleWithSorter(
+        <div className='flex flex-col items-start justify-ceneter'>
+          <div>Conversion Rate</div>
+          <div style={{ fontSize: '10px', color: '#8692A3' }}>
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method
+              ).text
+            }
+          </div>
+        </div>,
+        'Conversion Rate',
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: 'Conversion Rate',
+      width: 150,
+      render: (d) => {
+        return renderMetric(d, comparison_data);
+      },
+    });
+  }
   const result = [
     ...dimensionColumns,
     ...metricsColumns,
     {
       title: eventNames[event] || event,
       className: 'tableParentHeader',
-      children: [
-        {
-          title: getTitleWithSorter(
-            <div className='flex flex-col items-start justify-center'>
-              <div>Conversion</div>
-              <div style={{ fontSize: '10px', color: '#8692A3' }}>
-                {
-                  ATTRIBUTION_METHODOLOGY.find(
-                    (m) => m.value === attribution_method
-                  ).text
-                }
-              </div>
-            </div>,
-            'conversion',
-            currentSorter,
-            handleSorting
-          ),
-          dataIndex: 'conversion',
-          width: 200,
-          render: (d) => {
-            return renderMetric(d, comparison_data);
-          },
-        },
-        {
-          title: getTitleWithSorter(
-            <div className='flex flex-col items-start justify-ceneter'>
-              <div>Cost per Conversion</div>
-              <div style={{ fontSize: '10px', color: '#8692A3' }}>
-                {
-                  ATTRIBUTION_METHODOLOGY.find(
-                    (m) => m.value === attribution_method
-                  ).text
-                }
-              </div>
-            </div>,
-            'cost',
-            currentSorter,
-            handleSorting
-          ),
-          dataIndex: 'cost',
-          width: 200,
-          render: (d) => {
-            return renderMetric(d, comparison_data);
-          },
-        },
-      ],
+      children: eventColumns,
     },
   ];
   if (attribution_method_compare) {
@@ -424,67 +454,134 @@ export const getTableColumns = (
         return <NumFormat number={d} />;
       },
     });
-    result[result.length - 1].children.push({
-      title: getTitleWithSorter(
-        <div className='flex flex-col items-start justify-ceneter'>
-          <div>Cost per Conversion</div>
-          <div style={{ fontSize: '10px', color: '#8692A3' }}>
-            {
-              ATTRIBUTION_METHODOLOGY.find(
-                (m) => m.value === attribution_method_compare
-              ).text
-            }
-          </div>
-        </div>,
-        'cost_compare',
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'cost_compare',
-      width: 150,
-      render: (d) => {
-        return <NumFormat number={d} />;
-      },
-    });
+    if (showCPC) {
+      result[result.length - 1].children.push({
+        title: getTitleWithSorter(
+          <div className='flex flex-col items-start justify-ceneter'>
+            <div>Cost Per Conversion</div>
+            <div style={{ fontSize: '10px', color: '#8692A3' }}>
+              {
+                ATTRIBUTION_METHODOLOGY.find(
+                  (m) => m.value === attribution_method_compare
+                ).text
+              }
+            </div>
+          </div>,
+          'cost_compare',
+          currentSorter,
+          handleSorting
+        ),
+        dataIndex: 'cost_compare',
+        width: 150,
+        render: (d) => {
+          return <NumFormat number={d} />;
+        },
+      });
+    }
+    if (showCR) {
+      result[result.length - 1].children.push({
+        title: getTitleWithSorter(
+          <div className='flex flex-col items-start justify-ceneter'>
+            <div>Conversion Rate</div>
+            <div style={{ fontSize: '10px', color: '#8692A3' }}>
+              {
+                ATTRIBUTION_METHODOLOGY.find(
+                  (m) => m.value === attribution_method_compare
+                ).text
+              }
+            </div>
+          </div>,
+          'conversion_rate_compare',
+          currentSorter,
+          handleSorting
+        ),
+        dataIndex: 'conversion_rate_compare',
+        width: 150,
+        render: (d) => {
+          return <NumFormat number={d} />;
+        },
+      });
+    }
   }
   let linkedEventsColumns = [];
   if (linkedEvents.length) {
     linkedEventsColumns = linkedEvents.map((le) => {
+      const linkedEventsChildren = [
+        {
+          title: getTitleWithSorter(
+            <div className='flex flex-col items-start justify-center'>
+              <div>Conversion</div>
+              <div style={{ fontSize: '10px', color: '#8692A3' }}>
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
+              </div>
+            </div>,
+            'Conversion',
+            currentSorter,
+            handleSorting
+          ),
+          dataIndex: le.label + ' - Users',
+          width: 150,
+          render: (d) => {
+            return <NumFormat number={d} />;
+          },
+        },
+      ];
+      if (showCPC) {
+        linkedEventsChildren.push({
+          title: getTitleWithSorter(
+            <div className='flex flex-col items-start justify-ceneter'>
+              <div>Cost Per Conversion</div>
+              <div style={{ fontSize: '10px', color: '#8692A3' }}>
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
+              </div>
+            </div>,
+            'Cost per Conversion',
+            currentSorter,
+            handleSorting
+          ),
+          dataIndex: le.label + ' - CPC',
+          width: 150,
+          render: (d) => {
+            return <NumFormat number={d} />;
+          },
+        });
+      }
+      if (showCR) {
+        linkedEventsChildren.push({
+          title: getTitleWithSorter(
+            <div className='flex flex-col items-start justify-ceneter'>
+              <div>Conversion Rate</div>
+              <div style={{ fontSize: '10px', color: '#8692A3' }}>
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
+              </div>
+            </div>,
+            'Conversion Rate',
+            currentSorter,
+            handleSorting
+          ),
+          dataIndex: le.label + ' - Conversion Rate',
+          width: 150,
+          render: (d) => {
+            return <NumFormat number={d} />;
+          },
+        });
+      }
       return {
         title: eventNames[le.label] || le.label,
         className: 'tableParentHeader',
-        children: [
-          {
-            title: getTitleWithSorter(
-              <div className='flex flex-col items-start justify-ceneter'>
-                <div>Users</div>
-              </div>,
-              le.label + ' - Users',
-              currentSorter,
-              handleSorting
-            ),
-            dataIndex: le.label + ' - Users',
-            width: 150,
-            render: (d) => {
-              return <NumFormat number={d} />;
-            },
-          },
-          {
-            title: getTitleWithSorter(
-              <div className='flex flex-col items-start justify-ceneter'>
-                <div>Cost per Conversion</div>
-              </div>,
-              le.label + ' - CPC',
-              currentSorter,
-              handleSorting
-            ),
-            dataIndex: le.label + ' - CPC',
-            width: 150,
-            render: (d) => {
-              return <NumFormat number={d} />;
-            },
-          },
-        ],
+        children: linkedEventsChildren,
       };
     });
   }
@@ -512,6 +609,19 @@ export const getEquivalentIndicesMapper = (data, comparison_data) => {
   return equivalentIndicesMapper;
 };
 
+const getHeaderIndexForMetric = (headers, metric) => {
+  const result = metric.header
+    .split(' OR ')
+    .map((ph) => {
+      return headers.indexOf(ph);
+    })
+    .filter((d) => d > -1);
+  if (result.length) {
+    return result[0];
+  }
+  return -1;
+};
+
 export const getTableData = (
   data,
   event,
@@ -527,8 +637,10 @@ export const getTableData = (
   const { headers } = data;
   const costIdx = headers.indexOf('Cost Per Conversion');
   const userIdx = headers.indexOf(`${event} - Users`);
+  const conversionRateIdx = headers.indexOf(`UserConversionRate(%)`);
   const compareUsersIdx = headers.indexOf(`Compare - Users`);
   const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
+  const compareConvRateIdx = headers.indexOf(`Compare UserConversionRate(%)`);
   const enabledDimensions = attr_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
@@ -538,13 +650,15 @@ export const getTableData = (
   const result = data.rows
     .map((row, index) => {
       const metricsData = {};
-      const enabledMetrics = metrics.filter((metric) => metric.enabled);
+      const enabledMetrics = metrics.filter(
+        (metric) => metric.enabled && !metric.isEventMetric
+      );
       const equivalent_compare_row =
         comparison_data && equivalentIndicesMapper[index] > -1
           ? comparison_data.rows[equivalentIndicesMapper[index]]
           : null;
       enabledMetrics.forEach((metric) => {
-        const metricIndex = headers.indexOf(metric.header);
+        const metricIndex = getHeaderIndexForMetric(headers, metric);
         if (comparison_data) {
           metricsData[metric.title] = {
             value: row[metricIndex],
@@ -561,7 +675,7 @@ export const getTableData = (
       if (enabledDimensions.length) {
         enabledDimensions.forEach((dimension) => {
           const index = headers.indexOf(dimension.responseHeader);
-          dimensionsData[dimension.title] = row[index];
+          dimensionsData[dimension.title] = index > -1 ? row[index] : '';
         });
       } else {
         const touchpointIdx = headers.indexOf(touchpoint);
@@ -572,7 +686,7 @@ export const getTableData = (
         index,
         ...dimensionsData,
         ...metricsData,
-        conversion: !comparison_data
+        Conversion: !comparison_data
           ? formatCount(row[userIdx], 1)
           : {
               value: formatCount(row[userIdx], 1),
@@ -580,7 +694,7 @@ export const getTableData = (
                 ? equivalent_compare_row[userIdx]
                 : 0,
             },
-        cost: !comparison_data
+        'Cost per Conversion': !comparison_data
           ? formatCount(row[costIdx], 1)
           : {
               value: formatCount(row[costIdx], 1),
@@ -588,28 +702,47 @@ export const getTableData = (
                 ? formatCount(equivalent_compare_row[costIdx], 1)
                 : 0,
             },
+        'Conversion Rate': !comparison_data
+          ? formatCount(row[conversionRateIdx], 1)
+          : {
+              value: formatCount(row[conversionRateIdx], 1),
+              compare_value: equivalent_compare_row
+                ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
+                : 0,
+            },
       };
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
           const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
           const eventCPCIdx = headers.indexOf(`${le.label} - CPC`);
+          const eventConvRateIdx = headers.indexOf(
+            `${le.label} - UserConversionRate(%)`
+          );
           resultantRow[`${le.label} - Users`] = formatCount(
             row[eventUsersIdx],
-            0
+            1
           );
-          resultantRow[`${le.label} - CPC`] = formatCount(row[eventCPCIdx], 0);
+          resultantRow[`${le.label} - CPC`] = formatCount(row[eventCPCIdx], 1);
+          resultantRow[`${le.label} - Conversion Rate`] = formatCount(
+            row[eventConvRateIdx],
+            1
+          );
         });
       }
       if (attribution_method_compare) {
         resultantRow['conversion_compare'] = row[compareUsersIdx];
-        resultantRow['cost_compare'] = formatCount(row[compareCostIdx], 0);
+        resultantRow['cost_compare'] = formatCount(row[compareCostIdx], 1);
+        resultantRow['conversion_rate_compare'] = formatCount(
+          row[compareConvRateIdx],
+          1
+        );
       }
       return resultantRow;
     })
     .filter((row) => {
       if (enabledDimensions.length) {
         const filteredRows = enabledDimensions.filter((dimension) =>
-          row[dimension.title].toLowerCase().includes(searchText.toLowerCase())
+          row[dimension.title]?.toLowerCase().includes(searchText.toLowerCase())
         );
         return filteredRows.length > 0;
       } else {
@@ -619,7 +752,7 @@ export const getTableData = (
 
   if (comparison_data) {
     if (!currentSorter.key) {
-      return SortDataByObject(result, 'conversion', 'value', 'descend');
+      return SortDataByObject(result, 'Conversion', 'value', 'descend');
     }
     return SortDataByObject(
       result,
@@ -630,7 +763,7 @@ export const getTableData = (
   }
 
   if (!currentSorter.key) {
-    return SortData(result, 'conversion', 'descend');
+    return SortData(result, 'Conversion', 'descend');
   }
   return SortData(result, currentSorter.key, currentSorter.order);
 };

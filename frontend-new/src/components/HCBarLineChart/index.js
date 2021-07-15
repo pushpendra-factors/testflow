@@ -1,7 +1,6 @@
 import React, { useEffect, memo, useCallback } from 'react';
 import Highcharts from 'highcharts';
 import styles from './styles.module.scss';
-import { Text, Number as NumFormat } from '../factorsComponents';
 import {
   high_charts_barLine_default_spacing,
   BAR_CHART_XAXIS_TICK_LENGTH,
@@ -102,7 +101,7 @@ function HCBarLineChart({
       },
       series,
     });
-  }, [cardSize, categories, chartId, height, series, spacing]);
+  }, [cardSize, categories, chartId, height, series, spacing, generateTooltip]);
 
   useEffect(() => {
     drawChart();

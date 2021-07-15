@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   generateEventsData,
   generateGroups,
   generateGroupedChartsData,
-} from "../utils";
-import Chart from "./Chart";
-import FunnelsResultTable from "../FunnelsResultTable";
-import { DASHBOARD_MODAL } from "../../../../utils/constants";
+} from '../utils';
+import Chart from './Chart';
+import FunnelsResultTable from '../FunnelsResultTable';
+import { DASHBOARD_MODAL } from '../../../../utils/constants';
+import NoDataChart from '../../../../components/NoDataChart';
 
 function GroupedChart({
   resultState,
@@ -22,28 +23,40 @@ function GroupedChart({
   useEffect(() => {
     const formattedGroups = generateGroups(
       resultState.data,
-      maxAllowedVisibleProperties, 
+      maxAllowedVisibleProperties,
       resultState.data.meta?.query?.gbp[0]?.grn
     );
     setGroups(formattedGroups);
   }, [resultState.data]);
 
+  const chartData = useMemo(() => {
+    if (groups.length) {
+      return generateGroupedChartsData(
+        resultState.data,
+        queries,
+        groups,
+        arrayMapper,
+        resultState.data.meta?.query?.gbp
+      );
+    }
+  }, [resultState.data, groups, arrayMapper, queries]);
+
+  const eventsData = useMemo(() => {
+    if (groups.length) {
+      return generateEventsData(resultState.data, queries, arrayMapper);
+    }
+  }, [resultState.data, queries, arrayMapper, groups]);
+
   if (!groups.length) {
-    return null;
+    return (
+      <div className='mt-4 flex justify-center items-center w-full h-full '>
+        <NoDataChart />
+      </div>
+    );
   }
 
-  const chartData = generateGroupedChartsData(
-    resultState.data,
-    queries,
-    groups,
-    arrayMapper,
-    resultState.data.meta?.query?.gbp
-  );
-
-  const eventsData = generateEventsData(resultState.data, queries, arrayMapper);
-
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       <Chart
         isWidgetModal={isWidgetModal}
         chartData={chartData}
@@ -54,7 +67,7 @@ function GroupedChart({
         durations={resultState.data.meta}
       />
 
-      <div className="mt-12 w-full">
+      <div className='mt-12 w-full'>
         <FunnelsResultTable
           breakdown={breakdown}
           queries={queries}
@@ -66,7 +79,6 @@ function GroupedChart({
           isWidgetModal={section === DASHBOARD_MODAL}
           durations={resultState.data.meta}
           resultData={resultState.data}
-          //grn
         />
       </div>
     </div>

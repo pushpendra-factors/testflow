@@ -389,13 +389,11 @@ export const generateTableData = (
       );
       const eventsData = {};
       let totalDuration = 0;
-      let grps;
       data.forEach((d, idx) => {
         eventsData[`${d.name}`] = {
           percentage: calculatePercentage(d.data[group], data[0].data[group]),
           count: d.data[group],
         };
-        grps = breakdown.filter((x) => x.eventIndex === d.index);
         if (idx < data.length - 1) {
           const durationIdx = durationMetric.headers.findIndex(
             (elem) => elem === `step_${idx}_${idx + 1}_time`

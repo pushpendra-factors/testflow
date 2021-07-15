@@ -140,8 +140,9 @@ function AttributionTable({
       Object.keys(rest).forEach((key) => {
         if (
           !enabledAttributionMetricKeys.includes(key) &&
-          key !== 'conversion' &&
-          key !== 'cost'
+          key !== 'Conversion' &&
+          key !== 'Cost per Conversion' &&
+          key !== 'Conversion Rate'
         ) {
           result[key] = rest[key];
         } else {
@@ -154,8 +155,8 @@ function AttributionTable({
             rest[key].compare_value;
           result[`${key} change`] = isNaN(changePercent)
             ? 0
-            : changePercent === 'Infinity'
-            ? `&#8734;`
+            : changePercent === 'Infinity' || changePercent === '-Infinity'
+            ? 'Infinity'
             : changePercent;
         }
       });

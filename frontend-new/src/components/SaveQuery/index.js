@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext } from 'react'; 
+import React, { useState, useCallback, useContext } from 'react';
 import moment from 'moment';
 import {
   Button,
@@ -26,7 +26,7 @@ import {
 } from '../../utils/constants';
 import { getSaveChartOptions } from '../../Views/CoreQuery/utils';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
-import {fetchWeeklyIngishtsMetaData} from 'Reducers/insights';
+import { fetchWeeklyIngishtsMetaData } from '../../reducers/insights';
 
 function SaveQuery({
   requestQuery,
@@ -34,7 +34,7 @@ function SaveQuery({
   setVisible,
   queryType,
   setQuerySaved,
-  fetchWeeklyIngishtsMetaData
+  fetchWeeklyIngishtsMetaData,
 }) {
   const [title, setTitle] = useState('');
   const [addToDashboard, setAddToDashboard] = useState(false);
@@ -202,7 +202,7 @@ function SaveQuery({
     selectedDashboards,
     queryType,
     setQuerySaved,
-    attributionMetrics
+    attributionMetrics,
   ]);
 
   let dashboardHelpText = 'Create a dashboard widget for regular monitoring';
@@ -313,4 +313,4 @@ function SaveQuery({
   );
 }
 
-export default connect(null,{fetchWeeklyIngishtsMetaData})(SaveQuery);
+export default connect(null, { fetchWeeklyIngishtsMetaData })(SaveQuery);

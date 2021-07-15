@@ -178,7 +178,7 @@ export const ATTRIBUTION_METRICS = [
   },
   {
     title: 'Sessions',
-    header: 'Sessions',
+    header: 'Sessions OR Website Visitors',
     enabled: true,
   },
   {
@@ -197,8 +197,8 @@ export const ATTRIBUTION_METRICS = [
     enabled: false,
   },
   {
-    title: 'Conversion Rate (%)',
-    header: 'ConversionRate(%)',
+    title: 'Click Conversion Rate (%)',
+    header: 'ConversionRate(%) OR ClickConversionRate(%)',
     enabled: false,
   },
   {
@@ -215,6 +215,18 @@ export const ATTRIBUTION_METRICS = [
     title: 'Page Views',
     header: 'PageViews',
     enabled: false,
+  },
+  {
+    title: 'All Cost/Conv',
+    header: 'ALL CPC',
+    enabled: true,
+    isEventMetric: true,
+  },
+  {
+    title: 'All Conv Rate (%)',
+    header: 'ALL CR',
+    enabled: false,
+    isEventMetric: true,
   },
 ];
 
@@ -376,3 +388,12 @@ export const QUERY_TYPE_TEXT = {
 export const FIRST_METRIC_IN_ATTR_RESPOSE = 'Impressions';
 
 export const ARR_JOINER = ';;;';
+
+export const PREDEFINED_DATES = {
+  THIS_WEEK: 'this_week',
+  LAST_WEEK: 'last_week',
+  THIS_MONTH: 'this_month',
+  LAST_MONTH: 'last_month',
+  TODAY: 'today',
+  YESTERDAY: 'yesterday',
+};

@@ -11,8 +11,8 @@ import DashboardSubMenu from "./DashboardSubMenu";
 import ExpandableView from "./ExpandableView";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import styles from "./index.module.scss";
-import NoDataChart from 'Components/NoDataChart';
-import { SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import NoDataChart from '../../components/NoDataChart';
+import { SVG, FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
 
 const { TabPane } = Tabs;

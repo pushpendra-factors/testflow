@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import {connect, useDispatch} from 'react-redux';
+import _ from 'lodash';
+import { connect, useDispatch } from 'react-redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { Text, SVG } from '../../components/factorsComponents';
 import { RightOutlined, LeftOutlined } from '@ant-design/icons';
@@ -13,7 +14,7 @@ import {
   getStateQueryFromRequestQuery,
 } from '../CoreQuery/utils';
 import { cardClassNames } from '../../reducers/dashboard/utils';
-import { getDataFromServer } from './utils';
+import { getDataFromServer, getSavedAttributionMetrics } from './utils';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
@@ -24,7 +25,8 @@ import {
 } from '../../utils/constants';
 import { DashboardContext } from '../../contexts/DashboardContext';
 import { useHistory, useLocation } from 'react-router-dom';
-import {  fetchWeeklyIngishts } from 'Reducers/insights';
+import { shouldDataFetch } from '../../utils/dataFormatter';
+import { fetchWeeklyIngishts } from '../../reducers/insights';
 
 function WidgetCard({
   unit,
@@ -33,7 +35,7 @@ function WidgetCard({
   durationObj,
   refreshClicked,
   setRefreshClicked,
-  fetchWeeklyIngishts
+  fetchWeeklyIngishts,
 }) {
   const cardRef = useRef(null);
   const history = useHistory();
@@ -70,7 +72,11 @@ function WidgetCard({
           loading: true,
         });
 
-        let queryType;
+        let queryType,
+          apiCallStatus = {
+            required: true,
+            message: null,
+          };
 
         if (unit.query.query.query_group) {
           if (
@@ -85,6 +91,7 @@ function WidgetCard({
           unit.query.query.cl &&
           unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
         ) {
+          apiCallStatus = shouldDataFetch(durationObj);
           queryType = QUERY_TYPE_ATTRIBUTION;
         } else if (
           unit.query.query.cl &&
@@ -94,80 +101,92 @@ function WidgetCard({
         } else {
           queryType = QUERY_TYPE_FUNNEL;
         }
-        const res = await getDataFromServer(
-          unit.query,
-          unit.id,
-          unit.dashboard_id,
-          durationObj,
-          refresh,
-          active_project.id
-        );
 
-        if (queryType === QUERY_TYPE_FUNNEL) {
-          setResultState({
-            ...initialState,
-            data: res.data.result,
-          });
-        } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
-          setResultState({
-            ...initialState,
-            data: res.data.result,
-          });
-        } else if (queryType === QUERY_TYPE_CAMPAIGN) {
-          setResultState({
-            ...initialState,
-            data: res.data.result,
-          });
-        } else {
-          const result_group = res.data.result.result_group;
-          const equivalentQuery = getStateQueryFromRequestQuery(
-            unit.query.query.query_group[0]
+        if (apiCallStatus.required) {
+          const res = await getDataFromServer(
+            unit.query,
+            unit.id,
+            unit.dashboard_id,
+            durationObj,
+            refresh,
+            active_project.id
           );
-          const appliedBreakdown = [
-            ...equivalentQuery.breakdown.event,
-            ...equivalentQuery.breakdown.global,
-          ];
-
-          if (unit.query.query.query_group.length === 1) {
+          if (queryType === QUERY_TYPE_FUNNEL) {
             setResultState({
               ...initialState,
-              data: result_group[0],
+              data: res.data.result,
             });
-          } else if (unit.query.query.query_group.length === 3) {
-            const userData = formatApiData(result_group[0], result_group[1]);
-            const sessionsData = result_group[2];
-            const activeUsersData = calculateActiveUsersData(
-              userData,
-              sessionsData,
-              appliedBreakdown
-            );
+          } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
             setResultState({
               ...initialState,
-              data: activeUsersData,
+              data: res.data.result,
+              apiCallStatus,
             });
-          } else if (unit.query.query.query_group.length === 4) {
-            const eventsData = formatApiData(result_group[0], result_group[1]);
-            const userData = formatApiData(result_group[2], result_group[3]);
-            const frequencyData = calculateFrequencyData(
-              eventsData,
-              userData,
-              appliedBreakdown
-            );
+          } else if (queryType === QUERY_TYPE_CAMPAIGN) {
             setResultState({
               ...initialState,
-              data: frequencyData,
+              data: res.data.result,
             });
           } else {
-            setResultState({
-              ...initialState,
-              data: formatApiData(result_group[0], result_group[1]),
-            });
+            const result_group = res.data.result.result_group;
+            const equivalentQuery = getStateQueryFromRequestQuery(
+              unit.query.query.query_group[0]
+            );
+            const appliedBreakdown = [
+              ...equivalentQuery.breakdown.event,
+              ...equivalentQuery.breakdown.global,
+            ];
+
+            if (unit.query.query.query_group.length === 1) {
+              setResultState({
+                ...initialState,
+                data: result_group[0],
+              });
+            } else if (unit.query.query.query_group.length === 3) {
+              const userData = formatApiData(result_group[0], result_group[1]);
+              const sessionsData = result_group[2];
+              const activeUsersData = calculateActiveUsersData(
+                userData,
+                sessionsData,
+                appliedBreakdown
+              );
+              setResultState({
+                ...initialState,
+                data: activeUsersData,
+              });
+            } else if (unit.query.query.query_group.length === 4) {
+              const eventsData = formatApiData(
+                result_group[0],
+                result_group[1]
+              );
+              const userData = formatApiData(result_group[2], result_group[3]);
+              const frequencyData = calculateFrequencyData(
+                eventsData,
+                userData,
+                appliedBreakdown
+              );
+              setResultState({
+                ...initialState,
+                data: frequencyData,
+              });
+            } else {
+              setResultState({
+                ...initialState,
+                data: formatApiData(result_group[0], result_group[1]),
+              });
+            }
           }
-          setRefreshClicked(false);
+        } else {
+          setResultState({
+            ...initialState,
+            apiCallStatus,
+          });
         }
+        setRefreshClicked(false);
       } catch (err) {
         console.log(err);
         console.log(err.response);
+        setRefreshClicked(false);
         setResultState({
           ...initialState,
           error: true,
@@ -196,7 +215,9 @@ function WidgetCard({
 
   useEffect(() => {
     if (unit.settings && unit.settings.attributionMetrics) {
-      setAttributionMetrics(JSON.parse(unit.settings.attributionMetrics));
+      setAttributionMetrics(
+        getSavedAttributionMetrics(JSON.parse(unit.settings.attributionMetrics))
+      );
     }
   }, [unit.settings]);
 
@@ -236,37 +257,38 @@ function WidgetCard({
     [unit, activeDashboardUnits.data, onDrop]
   );
 
- 
   const handleEditQuery = useCallback(() => {
-
-    console.log('dashboard unit id-->>',unit);
+    console.log('dashboard unit id-->>', unit);
     // console.log('metadata',metadata);
     // console.log('metadata',metadata.DashboardUnitWiseResult[unit.id]);
 
-    if(metadata?.DashboardUnitWiseResult){
+    if (metadata?.DashboardUnitWiseResult) {
       const insightsItem = metadata?.DashboardUnitWiseResult[unit.id];
-      if(insightsItem){
-        dispatch({type:'SET_ACTIVE_INSIGHT', payload: insightsItem});
+      if (insightsItem) {
+        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
+      } else {
+        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
       }
-      else{
-        dispatch({type:'SET_ACTIVE_INSIGHT', payload: false});
-      }
-      
-      if(insightsItem?.Enabled){
-        if(!_.isEmpty(insightsItem?.InsightsRange)){
-          fetchWeeklyIngishts(active_project.id, unit.id, Object.keys(insightsItem.InsightsRange)[0],insightsItem.InsightsRange[Object.keys(insightsItem.InsightsRange)[0]][0]).catch((e)=>{
-            console.log("weekly-ingishts fetch error",e)
-          });  
-        }
-        else{
-          dispatch({type:'SET_ACTIVE_INSIGHT', payload: insightsItem});
-        }
-      }
-      else{
-        dispatch({type:'RESET_WEEKLY_INSIGHTS', payload: false})
-      } 
-    }
 
+      if (insightsItem?.Enabled) {
+        if (!_.isEmpty(insightsItem?.InsightsRange)) {
+          fetchWeeklyIngishts(
+            active_project.id,
+            unit.id,
+            Object.keys(insightsItem.InsightsRange)[0],
+            insightsItem.InsightsRange[
+              Object.keys(insightsItem.InsightsRange)[0]
+            ][0]
+          ).catch((e) => {
+            console.log('weekly-ingishts fetch error', e);
+          });
+        } else {
+          dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
+        }
+      } else {
+        dispatch({ type: 'RESET_WEEKLY_INSIGHTS', payload: false });
+      }
+    }
 
     history.push({
       pathname: '/analyse',
@@ -327,7 +349,19 @@ function WidgetCard({
                 </div> */}
                 </div>
               </Tooltip>
-              <div>
+              <div className='flex items-center'>
+                {resultState.apiCallStatus &&
+                resultState.apiCallStatus.required &&
+                resultState.apiCallStatus.message ? (
+                  <Tooltip
+                    mouseEnterDelay={0.2}
+                    title={resultState.apiCallStatus.message}
+                  >
+                    <div className='cursor-pointer'>
+                      <SVG color='#dea069' name={'warning'} />
+                    </div>
+                  </Tooltip>
+                ) : null}
                 <Dropdown overlay={getMenu()} trigger={['hover']}>
                   <Button
                     type='text'
@@ -383,4 +417,4 @@ function WidgetCard({
   );
 }
 
-export default connect(null,{fetchWeeklyIngishts})(React.memo(WidgetCard));
+export default connect(null, { fetchWeeklyIngishts })(React.memo(WidgetCard));
