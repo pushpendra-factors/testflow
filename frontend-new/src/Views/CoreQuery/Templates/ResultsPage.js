@@ -77,12 +77,12 @@ function TemplateResults({
             <div className={`my-1 py-2 px-4 mx-2 flex items-center justify-between cursor-pointer  border-radius--sm border--thin-2--transparent ${selectedInsight == j ? 'border--thin-2--brand' : ''}`} onClick={() => showSubInsight(item.sub_level_data, j)}>
               <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3 capitalize'}>{item?.name}</Text>
               <div className={'flex items-end flex-col'}>
-              <div className={'flex items-center'}>
-                {item.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> : <>
-                  <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={18} />
-                  <Text type={'title'} level={7} weight={'bold'} color={isIncreased ? 'green' : 'red'} extraClass={'m-0 ml-1'}><Number number={item?.percentage_change} suffix={'%'} /></Text>
-                </>
-                }
+                <div className={'flex items-center'}>
+                  {item.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> : <>
+                    <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={18} />
+                    <Text type={'title'} level={7} weight={'bold'} color={isIncreased ? 'green' : 'red'} extraClass={'m-0 ml-1'}><Number number={item?.percentage_change} suffix={'%'} /></Text>
+                  </>
+                  }
                 </div>
                 <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>{`(`}<Number suffix={suffixSymbol} number={roundNumb(item?.previous_value)} shortHand={true} />{` -> `}<Number suffix={suffixSymbol} number={roundNumb(item?.last_value)} shortHand={true} />{`)`}</Text>
               </div>
@@ -93,11 +93,11 @@ function TemplateResults({
     }
     else return <NoData />
   }
-  
 
-  const metricDisplayName = (item) =>{
-    let findItem = configMatrix.find((element) => { if (element.metric == item) return element.display_name }) 
-    return findItem ? findItem.display_name : item 
+
+  const metricDisplayName = (item) => {
+    let findItem = configMatrix.find((element) => { if (element.metric == item) return element.display_name })
+    return findItem ? findItem.display_name : item
   }
 
   const SubInsightItem = () => {
@@ -106,8 +106,7 @@ function TemplateResults({
         subInsightData?.map((item, j) => {
           let isIncreased = item?.percentage_change >= 0;
           return (
-            <div className={`py-3 px-6  flex flex-col cursor-pointer`}>
-              <div className={`flex items-center justify-between cursor-pointer`}>
+            <div className={`py-3 px-6  flex items-center justify-between`}> 
                 <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3 capitalize'}>{item?.name}</Text>
                 <div className={'flex items-center'}>
 
@@ -115,38 +114,34 @@ function TemplateResults({
                     <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={18} />
                     <Text type={'title'} level={7} weight={'bold'} color={isIncreased ? 'green' : 'red'} extraClass={'m-0 ml-1'}><Number number={item?.percentage_change} suffix={'%'} /></Text>
                   </>}
-                  
-              { item?.root_cause_metrics ?
-                  <div className={'flex items-center '}>
+
+                  <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>{`(`}<Number suffix={suffixSymbol} number={roundNumb(item?.previous_value)} shortHand={true} />{` -> `}<Number suffix={suffixSymbol} number={roundNumb(item?.last_value)} shortHand={true} />{`)`}</Text>
+
+                  {item?.root_cause_metrics && <div className={'flex items-center '}>
                     {/* <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>Due to</Text> */}
                     <Popover placement="top" content={
-                         item?.root_cause_metrics?.map((subitem) => {
-                          let isIncreased = subitem?.percentage_change >= 0;
-                          return (
-                            <div className={'flex items-center'}>
-                              <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}> 
-                                {metricDisplayName(subitem?.metric)}
-                              </Text>
-                              <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 mx-1'}>
-                                {`${isIncreased ? 'increased' : 'decreased'}`}
-                              </Text>
-                              {subitem.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> :
-                                <Number number={subitem?.percentage_change} suffix={'%'} />}
-                            </div>
-                          )
-                        })
+                      item?.root_cause_metrics?.map((subitem) => {
+                        let isIncreased = subitem?.percentage_change >= 0;
+                        return (
+                          <div className={'flex items-center'}>
+                            <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}>
+                              {metricDisplayName(subitem?.metric)}
+                            </Text>
+                            <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 mx-1'}>
+                              {`${isIncreased ? 'increased' : 'decreased'}`}
+                            </Text>
+                            {subitem.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> :
+                              <Number number={subitem?.percentage_change} suffix={'%'} />}
+                          </div>
+                        )
+                      })
                     } trigger="hover">
-        <Button type={'text'} icon={<SVG name={'infoCircle'} size={16} />} className={'ml-2'}/>
-      </Popover>
-
-                 
+                      <Button type={'text'} icon={<SVG name={'infoCircle'} size={16} />} className={'ml-1'} />
+                    </Popover>
                   </div>
-                  : <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>{`(`}<Number suffix={suffixSymbol} number={roundNumb(item?.previous_value)} shortHand={true} />{` -> `}<Number suffix={suffixSymbol} number={roundNumb(item?.last_value)} shortHand={true} />{`)`}</Text>
-                 }
+                  }
                 </div>
-              </div>
-
-            </div>
+            </div> 
           )
         })
       )
@@ -163,7 +158,7 @@ function TemplateResults({
             let isIncreased = item?.percentage_change >= 0;
             let symbolPecent = item.metric == 'search_impression_share' || item.metric == 'click_through_rate' || item.metric == 'conversion_rate';
             return (
-              <div className={`py-4 px-6 border--thin-2 flex flex-col w-full  border-radius--sm ${j == 1 ? 'mx-4' : ''}`} style={{maxWidth: '380px'}}>
+              <div className={`py-4 px-6 border--thin-2 flex flex-col w-full  border-radius--sm ${j == 1 ? 'mx-4' : ''}`} style={{ maxWidth: '380px' }}>
                 <div className={`flex  items-center`}>
                   <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mr-3 capitalize'}>{metricDisplayName(item.metric)}</Text>
                   {item.is_infinity ? <Text type={'title'} level={5} extraClass={'m-0'}>∞</Text> : <>
@@ -224,14 +219,14 @@ function TemplateResults({
     setSubInsightData(null)
     setSelectedInsight(null);
     fetchInsights(key);
-    if(key == 'search_impression_share' || key == 'click_through_rate' || key == 'conversion_rate'){
+    if (key == 'search_impression_share' || key == 'click_through_rate' || key == 'conversion_rate') {
       setSuffixSymbol("%")
     }
-    else{
-      setSuffixSymbol("") 
-    } 
+    else {
+      setSuffixSymbol("")
+    }
   }
- 
+
 
   return (<>
     <div
@@ -257,7 +252,7 @@ function TemplateResults({
             lineHeight={'small'}
             onClick={() => { routeChange('/analyse') }}
           >
-            {`Templates / Template-Name`}
+            {`Templates / Google Search Ads Anomaly`}
           </Text>
         </div>
       </div>
