@@ -80,8 +80,12 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
-			reqId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+
+		effectiveFrom, effectiveTo := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(requestPayload.Query.From, requestPayload.Query.To)
+		if effectiveFrom == 0 || effectiveTo == 0 {
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query time range is not valid for attribution.", true
+		}
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo)
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false

@@ -1226,3 +1226,54 @@ func TestShouldCacheUnitForTimeRange(t *testing.T) {
 		})
 	}
 }
+
+func TestGetEffectiveTimeRangeForDashboardUnitAttributionQuery(t *testing.T) {
+	type args struct {
+		from int64
+		to   int64
+	}
+	// Past
+	july1Start := int64(1625077800)
+	july1End := int64(1625164199)
+	july2End := int64(1625250599)
+	july3End := int64(1625336999)
+
+	// Today
+	toValid1 := U.GetBeginningOfDayTimestampZ(U.TimeNow().Unix(), U.TimeZoneStringIST) - 1
+	fromValid1 := toValid1 - 7*U.SECONDS_IN_A_DAY + 1
+	toValid2 := U.GetBeginningOfDayTimestampZ(U.TimeNow().Unix(), U.TimeZoneStringIST) - 1
+	fromValid2 := toValid2 - 1*U.SECONDS_IN_A_DAY + 1
+
+	/*sundayStart := int64(1625337000)
+	sundayEnd := int64(1625423399)
+	mondayEnd := int64(1625509799)
+	tuesdayEnd := int64(1625596199)*/
+
+	tests := []struct {
+		name  string
+		args  args
+		want  int64
+		want1 int64
+	}{
+		// Past
+		{"Test1", args{from: july1Start, to: july1End}, july1Start, july1End},
+		{"Test2", args{from: july1Start, to: july2End}, july1Start, july2End},
+		{"Test3", args{from: july1Start, to: july3End}, july1Start, july3End},
+		{"Test3", args{from: july1Start, to: july3End + 10*U.SECONDS_IN_A_DAY}, july1Start, july3End + 10*U.SECONDS_IN_A_DAY},
+
+		// Current
+		{"Test4", args{from: fromValid1, to: toValid1}, fromValid1, toValid1 - U.SECONDS_IN_A_DAY},
+		{"Test4", args{from: fromValid2, to: toValid2}, 0, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(tt.args.from, tt.args.to)
+			if got != tt.want {
+				t.Errorf("GetEffectiveTimeRangeForDashboardUnitAttributionQuery() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("GetEffectiveTimeRangeForDashboardUnitAttributionQuery() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
