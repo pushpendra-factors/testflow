@@ -27,6 +27,9 @@
 }
 
 .ant-tabs.fa-tabs--dashboard {
+
+
+  
   &.ant-tabs-top {
     .ant-tabs-nav-wrap {
       padding: 0 3em;
@@ -77,6 +80,14 @@
       border-bottom-left-radius: 0px;
     }
   }
+
+  &.fa-tabs--no-padding{ 
+    .ant-tabs-nav-wrap {
+      padding: 0;
+      flex: none !important;
+    } 
+}
+
 }
 .ant-tabs.fa-tabs--dashboard.fa-tabs--white{
   .ant-tabs-content-holder {
