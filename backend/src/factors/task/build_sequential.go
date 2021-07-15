@@ -41,6 +41,7 @@ func BuildSequential(projectId uint64, configs map[string]interface{}) (map[stri
 	numCampaignsLimit := configs["numCampaignsLimit"].(int)
 	startTimestamp := configs["startTimestamp"].(int64)
 	endTimestamp := configs["endTimestamp"].(int64)
+	beamConfig := configs["beamConfig"].(*RunBeamConfig)
 
 	status := make(map[string]interface{})
 	defer util.NotifyOnPanic(taskID, env)
@@ -64,7 +65,7 @@ func BuildSequential(projectId uint64, configs map[string]interface{}) (map[stri
 	startAt := time.Now().UnixNano()
 	numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
 		bucketName, noOfPatternWorkers, projectId, modelId, modelType,
-		startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit)
+		startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit, beamConfig)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to mine patterns.")
 		status["error"] = "Failed to mine patterns."
