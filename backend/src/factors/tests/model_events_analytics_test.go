@@ -3097,3 +3097,236 @@ func TestNoneFilterGroup2(t *testing.T) {
 		}
 	})
 }
+
+func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	customerIDUser1 := "customerIDUser1"
+	customerIDUser2 := "customerIDUser2"
+	customerIDUser3 := "customerIDUser3"
+	commonUserProperty := make(map[string]interface{})
+	commonUserProperty[U.UP_BROWSER] = "Chrome"
+	commonUserProperty[U.UP_JOIN_TIME] = "1622636726"
+	commonUserPropertyBytes, _ := json.Marshal(commonUserProperty)
+
+	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID3)
+	createdUserID4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID4_1)
+	createdUserID5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID5_2)
+	createdUserID6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3,
+		Properties: postgres.Jsonb{RawMessage: commonUserPropertyBytes}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID6_3)
+
+	startTimestamp := int64(1622636726)
+	stepTimestamp := startTimestamp
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", createdUserID1, stepTimestamp, "A", 1234)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", createdUserID1, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", createdUserID1, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", createdUserID2, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", createdUserID2, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s3", createdUserID3, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", createdUserID3, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", createdUserID4_1, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s3", createdUserID4_1, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", createdUserID5_2, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", createdUserID5_2, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", createdUserID6_3, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", createdUserID6_3, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("TestEventCountGroupByWeekTimeGroup", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + (30 * 24 * 60 * 60),
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondEachGivenEvent,
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:      model.PropertyEntityUser,
+					Property:    U.UP_JOIN_TIME,
+					Type:        U.PropertyTypeDateTime,
+					EventName:   "present",
+					Granularity: "week",
+				},
+			},
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		for i := 0; i < len(result.Headers); i++ {
+			if "$joinTime" == result.Headers[i] {
+				// Grouping starts from sunday
+				assert.Equal(t, "2021-07-11 00:00:00", result.Rows[0][i].(string))
+			}
+		}
+	})
+	t.Run("TestCoalUniqueUsersCountGroupByWeekTimeGroup", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + (30 * 24 * 60 * 60),
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:      model.PropertyEntityUser,
+					Property:    U.UP_JOIN_TIME,
+					Type:        U.PropertyTypeDateTime,
+					EventName:   "present",
+					Granularity: "week",
+				},
+			},
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		assert.Equal(t, "$joinTime", result.Headers[2])
+		// Grouping starts from sunday
+		assert.Equal(t, "2021-07-11 00:00:00", result.Rows[0][2].(string))
+	})
+}
