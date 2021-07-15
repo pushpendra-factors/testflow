@@ -1,6 +1,7 @@
 package model
 
 import (
+	U "factors/util"
 	"strconv"
 	"time"
 
@@ -16,10 +17,11 @@ type Template struct {
 }
 
 type TemplateQuery struct {
-	Metric string `json:"metric"`
-	Type   int    `json:"type"`
-	From   int64  `json:"from"`
-	To     int64  `json:"to"`
+	Metric   string `json:"metric"`
+	Type     int    `json:"type"`
+	From     int64  `json:"from"`
+	To       int64  `json:"to"`
+	Timezone string `json:"timezone"`
 }
 
 type TemplateResponseMeta struct {
@@ -169,8 +171,13 @@ func ValidateTemplateThresholds(thresholds []TemplateThreshold) bool {
 }
 
 func GetTimestampsForTemplateQueryWithDays(query TemplateQuery, days int) (int64, int64, int64, int64) {
-	lastWeekFromTime := time.Unix(query.From, 0)
-	lastWeekToTime := time.Unix(query.To, 0)
+	var timeZoneString U.TimeZoneString
+	if len(query.Timezone) < 1 {
+		timeZoneString = U.TimeZoneStringIST
+	}
+	location, _ := time.LoadLocation(string(timeZoneString))
+	lastWeekFromTime := time.Unix(query.From, 0).In(location)
+	lastWeekToTime := time.Unix(query.To, 0).In(location)
 	prevWeekFromTime := lastWeekFromTime.AddDate(0, 0, -days)
 	prevWeekToTime := lastWeekToTime.AddDate(0, 0, -days)
 	lastWeekFromTimestamp, _ := strconv.ParseInt(lastWeekFromTime.Format("20060102"), 10, 64)
