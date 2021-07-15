@@ -184,7 +184,7 @@ cd $GOPATH/bin
     ```
 
 ## Frontend.
-* Download and install Nodejs. https://nodejs.org/en/download/
+* Download and install Nodejs. https://nodejs.org/en/download/ (Node version 12 or 14.)
 ```
 export PATH_TO_FACTORS=~/repos
 cd $PATH_TO_FACTORS/factors/frontend-new

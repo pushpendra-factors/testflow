@@ -55,7 +55,8 @@ background-color: rgba(#EA6262,0.2) !important;
     border-radius: 4px;
     color: $fa-color--mono-color;
     margin: initial;
-    display: flex;
+    margin-right: 4px;
+    display: inline-flex !important;
     align-items: center;
     svg{
         margin-right: 4px;
