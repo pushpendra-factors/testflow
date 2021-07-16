@@ -55,11 +55,11 @@ const (
 		"AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) group by campaign_id)"
 	semChecklistKeywordsQuery = "With keyword_analysis_last_week as (select %s as analysis_metric, %s " +
 		"keyword_id, campaign_id, (JSON_EXTRACT(value,'criteria')) as keyword_name, (JSON_EXTRACT(value,'keyword_match_type')) as keyword_match_type from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ?  and JSON_EXTARCT(value,'criteria') NOT RLIKE 'automaticcontent' and JSON_EXTARCT(value,'criteria') NOT RLIKE 'automatickeywords'" +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ?  and JSON_EXTRACT(value,'criteria') NOT RLIKE 'automaticcontent' and JSON_EXTRACT(value,'criteria') NOT RLIKE 'automatickeywords'" +
 		" group by campaign_id, keyword_id, keyword_name," +
 		" keyword_match_type), keyword_analysis_previous_week as (select %s as analysis_metric, %s keyword_id, campaign_id, " +
 		"(JSON_EXTRACT(value,'criteria')) as keyword_name, (JSON_EXTRACT(value,'keyword_match_type')) as keyword_match_type from adwords_documents" +
-		" where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and JSON_EXTARCT(value,'criteria') NOT RLIKE 'automaticcontent' and JSON_EXTARCT(value,'criteria') NOT RLIKE 'automatickeywords'" +
+		" where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and JSON_EXTRACT(value,'criteria') NOT RLIKE 'automaticcontent' and JSON_EXTRACT(value,'criteria') NOT RLIKE 'automatickeywords'" +
 		" group by campaign_id, keyword_id, " +
 		"keyword_name, keyword_match_type) Select keyword_analysis_last_week.keyword_name, " +
 		"keyword_analysis_previous_week.analysis_metric as previous_week_value, keyword_analysis_last_week.analysis_metric as last_week_value, " +
@@ -75,10 +75,10 @@ const (
 
 	semChecklistCampaignQuery = "With campaign_analysis_last_week as (select %s as analysis_metric, " +
 		"campaign_id, (JSON_EXTRACT(value,'campaign_name')) as campaign_name from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and JSON_EXTARCT(value,'advertising_channel_type') RLIKE 'search' group by campaign_id, campaign_name)," +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and JSON_EXTRACT(value,'advertising_channel_type') RLIKE 'search' group by campaign_id, campaign_name)," +
 		" campaign_analysis_previous_week as (select %s as analysis_metric, " +
 		"campaign_id, (JSON_EXTRACT(value,'campaign_name')) as campaign_name from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and JSON_EXTARCT(value,'advertising_channel_type') RLIKE 'search' group by campaign_id, campaign_name)" +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and JSON_EXTRACT(value,'advertising_channel_type') RLIKE 'search' group by campaign_id, campaign_name)" +
 		" Select campaign_analysis_last_week.campaign_name, " +
 		"campaign_analysis_previous_week.analysis_metric as previous_week_value, campaign_analysis_last_week.analysis_metric as last_week_value, " +
 		"(((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(campaign_analysis_previous_week.analysis_metric::float, 0), 0.0000001))) as percentage_change, " +
@@ -88,7 +88,7 @@ const (
 		"full outer join campaign_analysis_previous_week on campaign_analysis_last_week.campaign_id = campaign_analysis_previous_week.campaign_id " +
 		"order by abs_change DESC limit 10000"
 	semChecklistOverallAnalysisQuery = "select %s from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ?"
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? AND JSON_EXTRACT(value,'advertising_channel_type') RLIKE 'search'"
 	semChecklistExtraSelectForLeads                = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as click_through_rate, %s as cost_per_click, "
 	semChecklistExtraSelectForLeadsForWeekAnalysis = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as click_through_rate, %s as cost_per_click, " +
 		"%s as prev_impressions, %s as prev_search_impression_share, %s as prev_conversion_rate,%s as prev_click_through_rate, %s as prev_cost_per_click, " +
@@ -2250,7 +2250,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 	rootCauseMetrics := make([]model.RootCauseMetric, 0)
 	prevTotalAdImpressions := calcTotalAdImpressions(keywordAnalysis.PrevSearchImpressionShare, keywordAnalysis.PrevImpressions)
 	lastTotalAdImpressions := calcTotalAdImpressions(keywordAnalysis.LastSearchImpressionShare, keywordAnalysis.LastImpressions)
-	percentageChangeTotalAdImpressions := (lastTotalAdImpressions - prevTotalAdImpressions) / prevTotalAdImpressions
+	percentageChangeTotalAdImpressions := (lastTotalAdImpressions - prevTotalAdImpressions) * 100 / prevTotalAdImpressions
 	if keywordAnalysis.PercentageChange < 0 {
 		if keywordAnalysis.ClickThroughRate < 0 {
 			rootCauseMetric := model.RootCauseMetric{Metric: model.ClickThroughRate, PercentageChange: keywordAnalysis.ClickThroughRate}
@@ -2262,7 +2262,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
@@ -2276,7 +2276,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
@@ -2290,7 +2290,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
@@ -2304,7 +2304,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
@@ -2320,7 +2320,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
@@ -2334,7 +2334,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
@@ -2348,7 +2348,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
@@ -2362,7 +2362,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
@@ -2382,7 +2382,7 @@ func getRootCasueMetricsForCostPerLead(keywordAnalysis KeywordAnalysis) []model.
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
@@ -2397,7 +2397,7 @@ func getRootCasueMetricsForCostPerLead(keywordAnalysis KeywordAnalysis) []model.
 					rootCauseMetric.IsInfinity = true
 				}
 			}
-			if rootCauseMetric.PercentageChange != 0 {
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
