@@ -1386,14 +1386,14 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
 		int64(2), int64(2), float64(2), int64(2),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(2), float64(2), float64(2), float64(2)}
+		float64(2), float64(2), float64(2), float64(2), float64(2), float64(2)}
 	row2 := []interface{}{"Campaign1", int64(3), int64(3), float64(3),
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(3), float64(3), float64(3), float64(3),
 		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
 		int64(3), int64(3), float64(3), int64(3),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(3), float64(3), float64(3), float64(3)}
+		float64(3), float64(3), float64(3), float64(3), float64(3), float64(3)}
 	rows = append(rows, row1, row2)
 
 	mergedRows := make([][]interface{}, 0)
@@ -1403,7 +1403,7 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 		// Sessions, (users), (AvgSessionTime), (pageViews),
 		int64(5), int64(5), float64(5), int64(5),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(5), float64(1), float64(5), float64(1)}
+		float64(5), float64(1), float64(100), float64(5), float64(1), float64(100)}
 
 	mergedRows = append(mergedRows, row3)
 	type args struct {
