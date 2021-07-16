@@ -851,37 +851,53 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 
 			seenRow[keyIndex+10] = seenRow[keyIndex+10].(float64) + row[keyIndex+10].(float64) // AvgSessionTime.
 			seenRow[keyIndex+11] = seenRow[keyIndex+11].(int64) + row[keyIndex+11].(int64)     // PageViews.
-
 			seenRow[keyIndex+12] = seenRow[keyIndex+12].(float64) + row[keyIndex+12].(float64) // Conversion.
-			seenRow[keyIndex+14] = seenRow[keyIndex+14].(float64) + row[keyIndex+14].(float64) // Compare Conversion.
+			seenRow[keyIndex+15] = seenRow[keyIndex+15].(float64) + row[keyIndex+15].(float64) // Compare Conversion.
 
 			impressions := (seenRow[keyIndex+1]).(int64)
 			clicks := (seenRow[keyIndex+2]).(int64)
 			spend := seenRow[keyIndex+3].(float64)
 			if impressions > 0 {
-				seenRow[keyIndex+4] = 100 * float64(clicks) / float64(impressions) // CTR.
-				seenRow[keyIndex+6] = 1000 * float64(spend) / float64(impressions) // CPM.
+				seenRow[keyIndex+4], _ = U.FloatRoundOffWithPrecision(100*float64(clicks)/float64(impressions), U.DefaultPrecision) // CTR.
+				seenRow[keyIndex+6], _ = U.FloatRoundOffWithPrecision(1000*float64(spend)/float64(impressions), U.DefaultPrecision) // CPM.
 			} else {
 				seenRow[keyIndex+4] = float64(0) // CTR.
 				seenRow[keyIndex+6] = float64(0) // CPM.
 			}
 			if clicks > 0 {
-				seenRow[keyIndex+5] = float64(spend) / float64(clicks)                                // AvgCPC.
-				seenRow[keyIndex+7] = 100 * float64(seenRow[keyIndex+12].(float64)) / float64(clicks) // ClickConversionRate.
+				seenRow[keyIndex+5], _ = U.FloatRoundOffWithPrecision(float64(spend)/float64(clicks), U.DefaultPrecision)                              // AvgCPC.
+				seenRow[keyIndex+7], _ = U.FloatRoundOffWithPrecision(100*float64(seenRow[keyIndex+12].(float64))/float64(clicks), U.DefaultPrecision) // ClickConversionRate.
 			} else {
 				seenRow[keyIndex+5] = float64(0) // AvgCPC.
 				seenRow[keyIndex+7] = float64(0) // ClickConversionRate.
 			}
+
+			// Normal conversion [12, 13, 14] = [Conversion, CPC, Rate]
 			if seenRow[keyIndex+12].(float64) > 0 {
 				seenRow[keyIndex+13] = spend / seenRow[keyIndex+12].(float64) // Conversion - CPC.
 			} else {
 				seenRow[keyIndex+13] = float64(0) // Conversion - CPC.
 			}
-			if seenRow[keyIndex+14].(float64) > 0 {
-				seenRow[keyIndex+15] = spend / seenRow[keyIndex+14].(float64) // Compare Conversion - CPC.
+
+			if seenRow[keyIndex+9] != 0 {
+				seenRow[keyIndex+14], _ = U.FloatRoundOffWithPrecision(seenRow[keyIndex+12].(float64)/float64(seenRow[keyIndex+9].(int64))*100, U.DefaultPrecision)
 			} else {
-				seenRow[keyIndex+15] = float64(0) // Compare Conversion - CPC.
+				seenRow[keyIndex+14] = 0
 			}
+
+			// Compare conversion [15, 16, 17] = [Conversion, CPC, Rate]
+			if seenRow[keyIndex+15].(float64) > 0 {
+				seenRow[keyIndex+16], _ = U.FloatRoundOffWithPrecision(spend/seenRow[keyIndex+15].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
+			} else {
+				seenRow[keyIndex+16] = float64(0) // Compare Conversion - CPC.
+			}
+
+			if seenRow[keyIndex+9] != 0 {
+				seenRow[keyIndex+17], _ = U.FloatRoundOffWithPrecision(seenRow[keyIndex+15].(float64)/float64(seenRow[keyIndex+9].(int64))*100, U.DefaultPrecision)
+			} else {
+				seenRow[keyIndex+17] = 0
+			}
+
 			// Remaining linked funnel events & CPCs
 			for i := keyIndex + 18; i < len(seenRow); i += 3 {
 				seenRow[i] = seenRow[i].(float64) + row[i].(float64)
