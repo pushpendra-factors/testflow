@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useContext } from 'react';
 import { SVG, Text, FaErrorComp, FaErrorLog, Number } from 'Components/factorsComponents';
-import { Button, Tabs, Row, Col, Skeleton, Spin, message, Form, InputNumber, Popover } from 'antd';
+import { Button, Tabs, Row, Col, Skeleton, Spin, message, Form, Tooltip, Popover } from 'antd';
 import { useHistory } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
 import { fetchTemplateConfig, fetchTemplateInsights } from 'Reducers/templates';
@@ -193,7 +193,7 @@ function TemplateResults({
     setLoading(true);
     const queryData = {
       "metric": key,
-      "from": moment().subtract(1, 'weeks').startOf('week').unix(), //last week timestamp, will calculate previous week in backend
+      "from": moment().subtract(1, 'weeks').startOf('week').unix(),
       "to": moment().subtract(1, 'weeks').endOf('week').unix(),
       // "from": 1621708200,
       // "to": 1622312999
@@ -226,6 +226,9 @@ function TemplateResults({
       setSuffixSymbol("")
     }
   }
+
+  const PrevWeekDateString = `${moment().subtract(2, 'weeks').startOf('week').format('DD MMM YYYY')} - ${moment().subtract(2, 'weeks').endOf('week').format('DD MMM YYYY')}`;
+  const LastWeekDateString = `${moment().subtract(1, 'weeks').startOf('week').format('DD MMM YYYY')} - ${moment().subtract(1, 'weeks').endOf('week').format('DD MMM YYYY')}`;
 
 
   return (<>
@@ -276,9 +279,13 @@ function TemplateResults({
         >
 
           <div className={'flex items-center'}>
-            <Button><SVG name={'calendar'} size={16} extraClass={'mr-1'} />Prev. Week</Button>
+            <Tooltip placement="top" title={PrevWeekDateString}> 
+              <Button><SVG name={'calendar'} size={16} extraClass={'mr-1'} />Prev. Week</Button>
+            </Tooltip>
             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mx-2'}>vs</Text>
-            <Button><SVG name={'calendar'} size={16} extraClass={'mr-1'} />Last Week</Button>
+            <Tooltip placement="top" title={LastWeekDateString}>
+              <Button><SVG name={'calendar'} size={16} extraClass={'mr-1'} />Last Week</Button> 
+            </Tooltip>
           </div>
 
           {configMatrix ? <div className='mt-8'>

@@ -298,7 +298,14 @@ function WidgetCard({
         navigatedFromDashboard: unit,
       },
     });
-  }, [history, unit]);
+  }, [
+    history,
+    unit,
+    active_project.id,
+    dispatch,
+    fetchWeeklyIngishts,
+    metadata.DashboardUnitWiseResult,
+  ]);
 
   return (
     <div
