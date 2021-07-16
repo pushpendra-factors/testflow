@@ -6,7 +6,8 @@ import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
 
 function FunnelsResultTable({
   breakdown,
-  setGroups,
+  visibleProperties,
+  setVisibleProperties,
   queries,
   groups,
   isWidgetModal,
@@ -18,7 +19,7 @@ function FunnelsResultTable({
   comparisonChartDurations,
   durationObj,
   comparison_duration,
-  resultData
+  resultData,
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -75,7 +76,7 @@ function FunnelsResultTable({
     comparisonChartDurations,
     comparison_duration,
     durationObj,
-    resultData
+    resultData,
   ]);
 
   const getCSVData = () => {
@@ -149,32 +150,34 @@ function FunnelsResultTable({
     }
   };
 
-  const onSelectionChange = (selectedRowKeys) => {
-    if (
-      !selectedRowKeys.length ||
-      selectedRowKeys.length > MAX_ALLOWED_VISIBLE_PROPERTIES
-    ) {
-      return false;
+  const onSelectionChange = useCallback(
+    (selectedRowKeys) => {
+      if (
+        !selectedRowKeys.length ||
+        selectedRowKeys.length > MAX_ALLOWED_VISIBLE_PROPERTIES
+      ) {
+        return false;
+      }
+      setVisibleProperties(
+        groups.filter((g) => selectedRowKeys.indexOf(g.index) > -1)
+      );
+    },
+    [groups, setVisibleProperties]
+  );
+
+  const selectedRowKeys = useMemo(() => {
+    if (breakdown.length) {
+      return visibleProperties.map((elem) => elem.index);
     }
-    setGroups((currData) => {
-      return currData.map((c) => {
-        if (selectedRowKeys.indexOf(c.index) > -1) {
-          return { ...c, is_visible: true };
-        } else {
-          return { ...c, is_visible: false };
-        }
-      });
-    });
-  };
+    return null;
+  }, [visibleProperties, breakdown]);
 
-  const selectedRowKeys = groups
-    .filter((elem) => elem.is_visible)
-    .map((elem) => elem.index);
-
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: onSelectionChange,
-  };
+  const rowSelection = useMemo(() => {
+    return {
+      selectedRowKeys,
+      onChange: onSelectionChange,
+    };
+  }, [selectedRowKeys, onSelectionChange]);
 
   return (
     <DataTable

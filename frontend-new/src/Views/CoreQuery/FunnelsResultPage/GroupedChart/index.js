@@ -1,12 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import {
-  generateEventsData,
-  generateGroups,
-  generateGroupedChartsData,
-} from '../utils';
+import React, { useEffect, useState } from 'react';
+import { formatData } from '../utils';
 import Chart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
-import { DASHBOARD_MODAL } from '../../../../utils/constants';
+import {
+  DASHBOARD_MODAL,
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+} from '../../../../utils/constants';
 import NoDataChart from '../../../../components/NoDataChart';
 
 function GroupedChart({
@@ -17,39 +16,20 @@ function GroupedChart({
   arrayMapper,
   section,
 }) {
+  const [visibleProperties, setVisibleProperties] = useState([]);
+  const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
-  const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
-    const formattedGroups = generateGroups(
-      resultState.data,
-      maxAllowedVisibleProperties,
-      resultState.data.meta?.query?.gbp[0]?.grn
-    );
-    setGroups(formattedGroups);
-  }, [resultState.data]);
+    const { groups: appliedGroups, events } = formatData(resultState.data, arrayMapper);
+    setGroups(appliedGroups);
+    setEventsData(events);
+    setVisibleProperties([...appliedGroups.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES)]);
+  }, [resultState.data, arrayMapper]);
 
-  const chartData = useMemo(() => {
-    if (groups.length) {
-      return generateGroupedChartsData(
-        resultState.data,
-        queries,
-        groups,
-        arrayMapper,
-        resultState.data.meta?.query?.gbp
-      );
-    }
-  }, [resultState.data, groups, arrayMapper, queries]);
-
-  const eventsData = useMemo(() => {
-    if (groups.length) {
-      return generateEventsData(resultState.data, queries, arrayMapper);
-    }
-  }, [resultState.data, queries, arrayMapper, groups]);
-
-  if (!groups.length) {
+  if (!visibleProperties.length) {
     return (
-      <div className='mt-4 flex justify-center items-center w-full h-full '>
+      <div className='mt-4 flex justify-center items-center w-full h-full'>
         <NoDataChart />
       </div>
     );
@@ -59,8 +39,7 @@ function GroupedChart({
     <div className='flex items-center justify-center flex-col'>
       <Chart
         isWidgetModal={isWidgetModal}
-        chartData={chartData}
-        groups={groups.filter((elem) => elem.is_visible)}
+        groups={visibleProperties}
         eventsData={eventsData}
         arrayMapper={arrayMapper}
         section={section}
@@ -72,10 +51,11 @@ function GroupedChart({
           breakdown={breakdown}
           queries={queries}
           groups={groups}
-          setGroups={setGroups}
+          visibleProperties={visibleProperties}
+          setVisibleProperties={setVisibleProperties}
           chartData={eventsData}
           arrayMapper={arrayMapper}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+          maxAllowedVisibleProperties={MAX_ALLOWED_VISIBLE_PROPERTIES}
           isWidgetModal={section === DASHBOARD_MODAL}
           durations={resultState.data.meta}
           resultData={resultState.data}

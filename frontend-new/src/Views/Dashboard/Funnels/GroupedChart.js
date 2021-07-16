@@ -1,8 +1,6 @@
-import React, { useEffect, useState, useContext, useMemo } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
-  generateEventsData,
-  generateGroups,
-  generateGroupedChartsData,
+  formatData,
 } from '../../CoreQuery/FunnelsResultPage/utils';
 import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
@@ -19,35 +17,22 @@ function GroupedChart({
   unit,
   section,
 }) {
+  const [visibleProperties, setVisibleProperties] = useState([]);
+  const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
 
   useEffect(() => {
-    const formattedGroups = generateGroups(
+    const { groups: appliedGroups, events } = formatData(
       resultState.data,
-      MAX_ALLOWED_VISIBLE_PROPERTIES,
-      resultState.data.meta?.query?.gbp
+      arrayMapper
     );
-    setGroups(formattedGroups);
-  }, [queries, resultState.data]);
-
-  const chartData = useMemo(() => {
-    if (groups.length) {
-      return generateGroupedChartsData(
-        resultState.data,
-        queries,
-        groups,
-        arrayMapper,
-        resultState.data.meta?.query?.gbp
-      );
-    }
-  }, [resultState.data, queries, groups, arrayMapper]);
-
-  const eventsData = useMemo(() => {
-    if (groups.length) {
-      return generateEventsData(resultState.data, queries, arrayMapper);
-    }
-  }, [groups, arrayMapper, queries, resultState.data]);
+    setGroups(appliedGroups);
+    setEventsData(events);
+    setVisibleProperties([
+      ...appliedGroups.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
+    ]);
+  }, [resultState.data, arrayMapper]);
 
   if (!groups.length) {
     return (
@@ -62,8 +47,7 @@ function GroupedChart({
   if (chartType === 'barchart') {
     chartContent = (
       <Chart
-        chartData={chartData}
-        groups={groups.filter((elem) => elem.is_visible)}
+        groups={visibleProperties}
         eventsData={eventsData}
         title={unit.id}
         arrayMapper={arrayMapper}
@@ -78,6 +62,8 @@ function GroupedChart({
       <FunnelsResultTable
         breakdown={breakdown}
         queries={queries}
+        visibleProperties={visibleProperties}
+        setVisibleProperties={setVisibleProperties}
         groups={groups}
         setGroups={setGroups}
         chartData={eventsData}
