@@ -1298,7 +1298,10 @@ var CUSTOM_BLACKLIST_DELTA = []string{"$initial_page_domain",
 	"$salesforce_lead_page__c",
 	"$salesforce_lead_page_url__c",
 	"$salesforce_lead_pre_qualified_date__c",
-	"$session_latest_page_raw_url"}
+	"$session_latest_page_raw_url",
+	"device_brand",
+	"browser_with_version",
+	"os_with_version"}
 
 const SamplePropertyValuesLimit = 100
 

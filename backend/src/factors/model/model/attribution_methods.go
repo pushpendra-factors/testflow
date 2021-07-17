@@ -49,6 +49,7 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 		// In case a successful attribution could not happen, remove converted user.
 		if len(attributionKeys) == 0 {
 			delete(usersAttribution, userId)
+			continue
 		}
 		if eventName == conversionEvent && val.EventType == EventTypeGoalEvent {
 			usersAttribution[userId] = attributionKeys
@@ -78,16 +79,16 @@ func getMergedInteractions(attributionTimerange map[string]UserSessionData) []In
 	return interactions
 }
 
-func sortInteractionTime(interactions []Interaction, sortingType string) []Interaction {
+func SortInteractionTime(interactions []Interaction, sortingType string) []Interaction {
 
 	// sort the interactions by interaction time ascending order
 	if sortingType == SortASC {
 		sort.Slice(interactions, func(i, j int) bool {
-			return interactions[i].InteractionTime < interactions[j].InteractionTime
+			return interactions[i].InteractionTime <= interactions[j].InteractionTime
 		})
 	} else if sortingType == SortDESC {
 		sort.Slice(interactions, func(i, j int) bool {
-			return interactions[i].InteractionTime > interactions[j].InteractionTime
+			return interactions[i].InteractionTime >= interactions[j].InteractionTime
 		})
 	}
 	return interactions
@@ -122,7 +123,7 @@ func getLinearTouch(attributionType string, attributionTimerange map[string]User
 func getFirstTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
-	interactions = sortInteractionTime(interactions, SortASC)
+	interactions = SortInteractionTime(interactions, SortASC)
 
 	if len(interactions) > 0 {
 
@@ -150,7 +151,7 @@ func getFirstTouchId(attributionType string, attributionTimerange map[string]Use
 func getLastTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
-	interactions = sortInteractionTime(interactions, SortDESC)
+	interactions = SortInteractionTime(interactions, SortDESC)
 
 	if len(interactions) > 0 {
 
@@ -179,7 +180,7 @@ func getLastTouchId(attributionType string, attributionTimerange map[string]User
 func getFirstTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
-	interactions = sortInteractionTime(interactions, SortASC)
+	interactions = SortInteractionTime(interactions, SortASC)
 
 	if len(interactions) > 0 {
 
@@ -201,14 +202,14 @@ func getFirstTouchNDId(attributionType string, attributionTimerange map[string]U
 		}
 
 	}
-	return []string{}
+	return []string{PropertyValueNone}
 }
 
 // returns the last non $none attributionId
 func getLastTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
-	interactions = sortInteractionTime(interactions, SortDESC)
+	interactions = SortInteractionTime(interactions, SortDESC)
 
 	if len(interactions) > 0 {
 
@@ -230,7 +231,7 @@ func getLastTouchNDId(attributionType string, attributionTimerange map[string]Us
 		}
 
 	}
-	return []string{}
+	return []string{PropertyValueNone}
 }
 
 // isAdTouchWithinCampaignOrQueryPeriod checks if attribution time is within query (campaign) period.

@@ -1429,3 +1429,68 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 		})
 	}
 }
+
+func TestSortInteractionTime(t *testing.T) {
+	type args struct {
+		interactions []model.Interaction
+		sortingType  string
+	}
+	sortedAsc1 := []model.Interaction{
+		{"key1", int64(111)},
+		{"key2", int64(112)},
+		{"key3", int64(113)},
+		{"key4", int64(114)},
+	}
+	sortedDesc1 := []model.Interaction{
+		{"key4", int64(114)},
+		{"key3", int64(113)},
+		{"key2", int64(112)},
+		{"key1", int64(111)},
+	}
+
+	sortedEqual1 := []model.Interaction{
+		{"key1", int64(112)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key4", int64(112)},
+	}
+
+	sortedSomeEqual1 := []model.Interaction{
+		{"key1", int64(111)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key4", int64(114)},
+	}
+	sortedDescSomeEqual1 := []model.Interaction{
+		{"key4", int64(114)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key1", int64(111)},
+	}
+	/*sortedEqual1 := []model.Interaction{
+		{"key1", int64(112)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key4", int64(112)},
+	}*/
+
+	tests := []struct {
+		name string
+		args args
+		want []model.Interaction
+	}{
+		{"Test1", args{interactions: sortedAsc1, sortingType: model.SortASC}, sortedAsc1},
+		{"Test2", args{interactions: sortedAsc1, sortingType: model.SortDESC}, sortedDesc1},
+		{"Test2", args{interactions: sortedEqual1, sortingType: model.SortASC}, sortedEqual1},
+		{"Test2", args{interactions: sortedEqual1, sortingType: model.SortDESC}, sortedEqual1},
+		{"Test2", args{interactions: sortedSomeEqual1, sortingType: model.SortASC}, sortedSomeEqual1},
+		{"Test2", args{interactions: sortedSomeEqual1, sortingType: model.SortDESC}, sortedDescSomeEqual1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := model.SortInteractionTime(tt.args.interactions, tt.args.sortingType); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("sortInteractionTime() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

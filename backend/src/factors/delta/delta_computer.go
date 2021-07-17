@@ -10,6 +10,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"math"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -97,24 +98,22 @@ func eventMatchesCriterion(event P.CounterEventFormat, eventCriterion EventCrite
 	return filterMatchFlag
 }
 
-func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult) {
-	if criteriaResult.criteriaMatchFlag { // If criteria already met, do nothing.
-		return
+func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult, isBase bool) bool {
+	if criteriaResult.criteriaMatchFlag && isBase { // If criteria already met, do nothing.
+		return false
 	}
 	if len(criteria.EventCriterionList) == 0 { // If criteria has no event criterion to match
 		log.Info("Criteria has empty criterion list. By default, making the user match the first event.")
 		(*criteriaResult).anyFlag = true
 		(*criteriaResult).allFlag = true
+		if (*criteriaResult).criteriaMatchFlag == false {
+			(*criteriaResult).firstEvent = event
+		}
 		(*criteriaResult).criteriaMatchFlag = true
 		(*criteriaResult).mostRecentEvent = event
-		return
+		return true
 	}
 	for i, eventCriterion := range criteria.EventCriterionList {
-		if (*criteriaResult).criterionResultList[i].matchId != -1 {
-			// This criterion has already been matched. So make no more changes.
-			// TODO: For now, we are going with "first occurrence" model. Might need to update.
-			continue
-		}
 		if eventMatchesCriterion(event, eventCriterion) {
 			(*criteriaResult).criterionResultList[i].matchId = (*criteriaResult).numCriterionMatched
 			(*criteriaResult).numCriterionMatched++
@@ -125,26 +124,37 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, c
 			}
 			if ((criteria.Operator == "And") && (*criteriaResult).allFlag) ||
 				((criteria.Operator == "Or") && (*criteriaResult).anyFlag) {
+				if (*criteriaResult).criteriaMatchFlag == false {
+					(*criteriaResult).firstEvent = event
+				}
 				(*criteriaResult).criteriaMatchFlag = true
-				break
+				return true
 			}
 		}
 	}
+	return false
 }
 
-func QueryEvent(event P.CounterEventFormat, deltaQuery Query, perUserQueryResult *PerUserQueryResult) {
-	updateCriteriaResult(event, deltaQuery.Base, &(*perUserQueryResult).baseResult)
-	updateCriteriaResult(event, deltaQuery.Target, &(*perUserQueryResult).targetResult)
+func QueryEvent(event P.CounterEventFormat, deltaQuery Query, perUserQueryResult *PerUserQueryResult) (bool, bool) {
+	base := updateCriteriaResult(event, deltaQuery.Base, &(*perUserQueryResult).baseResult, true)
+	target := updateCriteriaResult(event, deltaQuery.Target, &(*perUserQueryResult).targetResult, false)
+	return base, target
 }
 
-func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult) {
+func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult, baseIndex *int, targetIndex *int, i int) {
+	index := i
 	for _, event := range session.Events {
-		QueryEvent(event, deltaQuery, perUserQueryResult)
-		baseFlag := (*perUserQueryResult).baseResult.criteriaMatchFlag
-		targetFlag := (*perUserQueryResult).targetResult.criteriaMatchFlag
-		if baseFlag && targetFlag {
+		base, target := QueryEvent(event, deltaQuery, perUserQueryResult)
+		if base == true {
+			(*baseIndex) = index
+		}
+		if target == true {
+			(*targetIndex) = index
+		}
+		if *baseIndex < *targetIndex && *baseIndex != -1 && *targetIndex != -1 {
 			break
 		}
+		index++
 	}
 }
 
@@ -171,35 +181,74 @@ type Session struct {
 	Events []P.CounterEventFormat
 }
 
-func QueryUser(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery Query) (PerUserQueryResultSummary, error) {
+func QueryUser(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery Query) (PerEventProperties, error) {
+	baseIndex, targetIndex := int(-1), int(-1)
+	i := int(0)
 	var err error = nil
 	userResult := makePerUserQueryResult(deltaQuery)
 	var extendedSessions []Session // Extended sessions are preSessionEvents + sessions.
 	extendedSessions = append(extendedSessions, Session{Events: preSessionEvents})
 	extendedSessions = append(extendedSessions, sessions...)
 	for _, session := range extendedSessions {
-		QuerySession(session, deltaQuery, &userResult)
-		if userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag {
+		QuerySession(session, deltaQuery, &userResult, &baseIndex, &targetIndex, i)
+		if userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseIndex < targetIndex {
 			break
 		}
+		i = i + len(session.Events)
 	}
-	summary := PerUserQueryResultSummary{BaseFlag: userResult.baseResult.criteriaMatchFlag,
-		TargetFlag: userResult.targetResult.criteriaMatchFlag, ChosenEvent: P.CounterEventFormat{}}
-	summary.BaseAndTargetFlag = summary.BaseFlag && summary.TargetFlag
+	summary := PerEventProperties{BaseFlag: userResult.baseResult.criteriaMatchFlag,
+		TargetFlag: userResult.targetResult.criteriaMatchFlag}
+	summary.BaseAndTargetFlag = userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseIndex < targetIndex
+	summary.EventProperties = make(map[string]interface{})
+	summary.UserProperties = make(map[string]interface{})
+	if summary.BaseAndTargetFlag {
+		// both source and target properties
+		combineSourceAndTargetProperties(userResult.baseResult.mostRecentEvent, userResult.targetResult.mostRecentEvent, &summary.EventProperties, &summary.UserProperties)
+	}
 	if summary.BaseFlag {
-		if summary.TargetFlag {
-			// If user hits both base and target, then choose the target event (properties) for the analysis.
-			summary.ChosenEvent = userResult.targetResult.mostRecentEvent
-		} else {
-			// If user hits base but misses target, then choose base event (properties) for the analysis.
-			summary.ChosenEvent = userResult.baseResult.mostRecentEvent
-		}
-	} else {
-		if summary.TargetFlag {
-			summary.ChosenEvent = userResult.targetResult.mostRecentEvent
-		}
+		combineSourceAndTargetProperties(userResult.baseResult.mostRecentEvent, P.CounterEventFormat{}, &summary.EventProperties, &summary.UserProperties)
+	}
+	if summary.TargetFlag {
+		combineSourceAndTargetProperties(userResult.baseResult.firstEvent, P.CounterEventFormat{}, &summary.EventProperties, &summary.UserProperties)
 	}
 	return summary, err
+}
+
+func combineSourceAndTargetProperties(base P.CounterEventFormat, target P.CounterEventFormat, eventProperties *map[string]interface{}, userProperties *map[string]interface{}) {
+	if base.EventProperties != nil {
+		for key, value := range base.EventProperties {
+			propertyKey := fmt.Sprintf("s#%s", key)
+			(*eventProperties)[propertyKey] = value
+		}
+	}
+	if target.EventProperties != nil {
+		for key, value := range target.EventProperties {
+			propertyKey := fmt.Sprintf("s#%s", key)
+			_, ok := (*eventProperties)[propertyKey]
+			if ok {
+				continue
+			}
+			propertyKey = fmt.Sprintf("t#%s", key)
+			(*eventProperties)[propertyKey] = value
+		}
+	}
+	if base.UserProperties != nil {
+		for key, value := range base.UserProperties {
+			propertyKey := fmt.Sprintf("s#%s", key)
+			(*userProperties)[propertyKey] = value
+		}
+	}
+	if target.UserProperties != nil {
+		for key, value := range target.UserProperties {
+			propertyKey := fmt.Sprintf("s#%s", key)
+			_, ok := (*userProperties)[propertyKey]
+			if ok {
+				continue
+			}
+			propertyKey = fmt.Sprintf("t#%s", key)
+			(*userProperties)[propertyKey] = value
+		}
+	}
 }
 
 func getEventMatchFlag(event P.CounterEventFormat, eventCriterion EventCriterion) bool {
@@ -220,10 +269,10 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int
 	var err error
 	var wpInsights WithinPeriodInsights
 	var prevUserId string = ""
-	var matchSummary PerUserQueryResultSummary
-	var matchedBaseEvents []P.CounterEventFormat
-	var matchedTargetEvents []P.CounterEventFormat
-	var matchedBaseAndTargetEvents []P.CounterEventFormat
+	var matchSummary PerEventProperties
+	var matchedBaseEvents []PerEventProperties
+	var matchedTargetEvents []PerEventProperties
+	var matchedBaseAndTargetEvents []PerEventProperties
 	var sessions []Session
 	var preSessionEvents []P.CounterEventFormat = nil
 	customBlacklist := getCustomBlacklist()
@@ -253,13 +302,13 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int
 				return wpInsights, err
 			}
 			if matchSummary.BaseFlag {
-				matchedBaseEvents = append(matchedBaseEvents, matchSummary.ChosenEvent)
+				matchedBaseEvents = append(matchedBaseEvents, matchOnlyPrefixedPropertiesWithPrefix(matchSummary, "s#"))
 			}
 			if matchSummary.TargetFlag {
-				matchedTargetEvents = append(matchedTargetEvents, matchSummary.ChosenEvent)
+				matchedTargetEvents = append(matchedTargetEvents, matchOnlyPrefixedPropertiesWithPrefix(matchSummary, "t#"))
 			}
 			if matchSummary.BaseAndTargetFlag {
-				matchedBaseAndTargetEvents = append(matchedBaseAndTargetEvents, matchSummary.ChosenEvent)
+				matchedBaseAndTargetEvents = append(matchedBaseAndTargetEvents, matchSummary)
 			}
 			preSessionEvents = nil
 			sessions = nil
@@ -275,6 +324,23 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int
 		selectTopKFeatures(&(wpInsights), k)
 	}
 	return wpInsights, err
+}
+
+func matchOnlyPrefixedPropertiesWithPrefix(event PerEventProperties, prefix string) PerEventProperties {
+	changedEvent := PerEventProperties{}
+	changedEvent.EventProperties = make(map[string]interface{})
+	changedEvent.UserProperties = make(map[string]interface{})
+	for key, value := range event.UserProperties {
+		if strings.HasPrefix(key, prefix) {
+			changedEvent.UserProperties[key] = value
+		}
+	}
+	for key, value := range event.EventProperties {
+		if strings.HasPrefix(key, prefix) {
+			changedEvent.EventProperties[key] = value
+		}
+	}
+	return changedEvent
 }
 
 // RFDParams stands for Parameters of a Rank-Frequency Distribution
@@ -376,13 +442,23 @@ func sanitizeScreenSizeProperties(properties *(map[string]interface{})) {
 	}
 }
 
-func eventsToMetrics(events []P.CounterEventFormat, featSoftWhitelist map[string]map[string]bool, passId int) WithinPeriodMetrics {
+func eventsToMetrics(events []PerEventProperties, featSoftWhitelist map[string]map[string]bool, passId int) WithinPeriodMetrics {
 	globalMetrics := make(Level1CatFreqDist)
 	featureMetrics := make(Level3CatRatioDist)
 	for _, event := range events {
 		updateLevel1CatFreqDist(&globalMetrics, "#users", 1)
-		updateMetricsWithProperties(&featureMetrics, event.UserProperties, "up#", featSoftWhitelist, passId)
-		updateMetricsWithProperties(&featureMetrics, event.EventProperties, "ep#", featSoftWhitelist, passId)
+		eventProperties := make(map[string]interface{})
+		userProperties := make(map[string]interface{})
+		for key, value := range event.UserProperties {
+			splits := strings.SplitN(key, "#", 2)
+			userProperties[fmt.Sprintf("%v#%v#%v", splits[0], "up", splits[1])] = value
+		}
+		for key, value := range event.EventProperties {
+			splits := strings.SplitN(key, "#", 2)
+			eventProperties[fmt.Sprintf("%v#%v#%v", splits[0], "ep", splits[1])] = value
+		}
+		updateMetricsWithProperties(&featureMetrics, userProperties, featSoftWhitelist, passId)
+		updateMetricsWithProperties(&featureMetrics, eventProperties, featSoftWhitelist, passId)
 	}
 	populatePrevalence(&featureMetrics, float64(globalMetrics["#users"]))
 	metrics := WithinPeriodMetrics{GlobalMetrics: globalMetrics, FeatureMetrics: featureMetrics}
@@ -399,19 +475,18 @@ func populatePrevalence(featureMetrics *Level3CatRatioDist, totalUserCount float
 	}
 }
 
-func updateMetricsWithProperties(featureMetrics *Level3CatRatioDist, properties map[string]interface{}, keyPrefix string, featSoftWhitelist map[string]map[string]bool, passId int) {
+func updateMetricsWithProperties(featureMetrics *Level3CatRatioDist, properties map[string]interface{}, featSoftWhitelist map[string]map[string]bool, passId int) {
 	for key, val := range properties {
 		// TODO: As of now, we are treating all (user/event) properties as categorical variables.
 		// Need to support numerical ones.
-		keyStr := keyPrefix + key
 		valStr := fmt.Sprintf("%v", val)
 		if passId == 2 { // In passId 1, we would have featSoftWhitelist as empty.
-			if !(featSoftWhitelist[keyStr] != nil && featSoftWhitelist[keyStr][valStr] == true) {
+			if !(featSoftWhitelist[key] != nil && featSoftWhitelist[key][valStr] == true) {
 				continue
 			}
 		}
 		// This increments the frequency of #users by 1.
-		updateLevel3CatRatioDist(featureMetrics, keyStr, valStr, "#users", 1.0)
+		updateLevel3CatRatioDist(featureMetrics, key, valStr, "#users", 1.0)
 	}
 }
 
@@ -467,56 +542,84 @@ func updateLevel3CatRatioDist(freqDist *Level3CatRatioDist, key1, key2, key3 str
 	(*freqDist)[key1] = level2RatioDist
 }
 
-func translateToWPMetrics(baseEvents, targetEvents, baseAndTargetEvents []P.CounterEventFormat, featSoftWhitelist map[string]map[string]bool, passId int) WithinPeriodInsights {
+func translateToWPMetrics(baseEvents, targetEvents, baseAndTargetEvents []PerEventProperties, featSoftWhitelist map[string]map[string]bool, passId int) WithinPeriodInsights {
 	// TODO: Assert that in baseEvents, each user has only one row, not more. Same for targetEvents.
 	baseMetrics := eventsToMetrics(baseEvents, featSoftWhitelist, passId)
 	targetMetrics := eventsToMetrics(targetEvents, featSoftWhitelist, passId)
 	baseAndTargetMetrics := eventsToMetrics(baseAndTargetEvents, featSoftWhitelist, passId)
-	convMetrics := WithinPeriodRatioMetrics{}
+	// TODO: commenting out conversions for now
+	/*convMetrics := WithinPeriodRatioMetrics{}
 	if passId == 2 {
 		convMetrics = computeConversionMetrics(baseMetrics, targetMetrics, baseAndTargetMetrics)
-	}
+	}*/
 	wpInsights := WithinPeriodInsights{Base: baseMetrics, Target: targetMetrics,
-		BaseAndTarget: baseAndTargetMetrics, Conversion: convMetrics}
+		BaseAndTarget: baseAndTargetMetrics}
 	return wpInsights
 }
 
-func computeConversionMetrics(baseMetrics, targetMetrics, baseAndTargetMetrics WithinPeriodMetrics) WithinPeriodRatioMetrics {
-	globalConvRatio := SmartDivide(float64(baseAndTargetMetrics.GlobalMetrics["#users"]), float64(baseMetrics.GlobalMetrics["#users"]))
-	globalMetrics := Level1CatRatioDist{"ratio": globalConvRatio}
-	featureMetrics := make(Level2CatRatioDist)
-	for key, valBaseCounts := range baseMetrics.FeatureMetrics {
-		if _, ok := baseAndTargetMetrics.FeatureMetrics[key]; !ok {
-			continue
-		}
-		featureMetrics[key] = make(Level1CatRatioDist)
-		valBaseAndTargetCounts := baseAndTargetMetrics.FeatureMetrics[key]
-		for val, baseStats := range valBaseCounts {
-			baseCount := baseStats["#users"]
-			if _, ok := valBaseAndTargetCounts[val]; !ok {
-				continue
-			}
-			baseAndTargetCount := valBaseAndTargetCounts[val]["#users"]
-			convRate := SmartDivide(float64(baseAndTargetCount), float64(baseCount))
-			featureMetrics[key][val] = convRate
-		}
-	}
-	convMetrics := WithinPeriodRatioMetrics{GlobalMetrics: globalMetrics, FeatureMetrics: featureMetrics}
-	return convMetrics
-}
+// func computeConversionMetrics(baseMetrics, targetMetrics, baseAndTargetMetrics WithinPeriodMetrics) WithinPeriodRatioMetrics {
+// 	globalConvRatio := SmartDivide(float64(baseAndTargetMetrics.GlobalMetrics["#users"]), float64(baseMetrics.GlobalMetrics["#users"]))
+// 	globalMetrics := Level1CatRatioDist{"ratio": globalConvRatio}
+// 	featureMetrics := make(Level2CatRatioDist)
+// 	for key, valBaseCounts := range baseMetrics.FeatureMetrics {
+// 		if _, ok := baseAndTargetMetrics.FeatureMetrics[key]; !ok {
+// 			continue
+// 		}
+// 		featureMetrics[key] = make(Level1CatRatioDist)
+// 		valBaseAndTargetCounts := baseAndTargetMetrics.FeatureMetrics[key]
+// 		for val, baseStats := range valBaseCounts {
+// 			baseCount := baseStats["#users"]
+// 			if _, ok := valBaseAndTargetCounts[val]; !ok {
+// 				continue
+// 			}
+// 			baseAndTargetCount := valBaseAndTargetCounts[val]["#users"]
+// 			convRate := SmartDivide(float64(baseAndTargetCount), float64(baseCount))
+// 			featureMetrics[key][val] = convRate
+// 		}
+// 	}
+// 	convMetrics := WithinPeriodRatioMetrics{GlobalMetrics: globalMetrics, FeatureMetrics: featureMetrics}
+// 	return convMetrics
+// }
 
-func findTopKCountThres(featureMetrics Level3CatRatioDist, k int) int {
-	var counts []int = nil
-	var tempCounts []int = nil
-	for _, valStats := range featureMetrics {
-		for _, stats := range valStats {
-			count := int(stats["#users"])
-			counts = append(counts, count)
-			tempCounts = append(tempCounts, count)
+func findTopKCountThres(featureMetrics Level3CatRatioDist, k int) (int, int) {
+	baseMetrics := Level3CatRatioDist{}
+	targetMetrics := Level3CatRatioDist{}
+	for key, valStats := range featureMetrics {
+		if strings.HasPrefix(key, "s#") {
+			baseMetrics[key] = valStats
+		}
+		if strings.HasPrefix(key, "t#") {
+			targetMetrics[key] = valStats
 		}
 	}
-	kthMaxCount := findKthMaxVal(tempCounts, k)
-	return kthMaxCount
+	kthMaxCountBase, kthMaxCountTarget := int(0), int(0)
+	if len(baseMetrics) > 0 {
+		var counts []int = nil
+		var tempCounts []int = nil
+		for _, valStats := range baseMetrics {
+			for _, stats := range valStats {
+				count := int(stats["#users"])
+				counts = append(counts, count)
+				tempCounts = append(tempCounts, count)
+			}
+		}
+		kthMaxCountBase = findKthMaxVal(tempCounts, k)
+	}
+
+	if len(targetMetrics) > 0 {
+		var counts []int = nil
+		var tempCounts []int = nil
+		for _, valStats := range targetMetrics {
+			for _, stats := range valStats {
+				count := int(stats["#users"])
+				counts = append(counts, count)
+				tempCounts = append(tempCounts, count)
+			}
+		}
+		kthMaxCountTarget = findKthMaxVal(tempCounts, k)
+	}
+
+	return kthMaxCountBase, kthMaxCountTarget
 }
 
 func selectTopKFeatures(wpInsights *WithinPeriodInsights, k int) {
@@ -525,28 +628,67 @@ func selectTopKFeatures(wpInsights *WithinPeriodInsights, k int) {
 	}
 	numBase := len((*wpInsights).Base.FeatureMetrics)
 	if k < numBase {
-		kthMaxCountBase := findTopKCountThres((*wpInsights).Base.FeatureMetrics, k)
+		kthMaxCountBase, _ := findTopKCountThres((*wpInsights).Base.FeatureMetrics, k)
 		totalUserCount := (*wpInsights).Base.GlobalMetrics["#users"]
-		filterFeatureCounts(&(*wpInsights).Base.FeatureMetrics, totalUserCount, kthMaxCountBase)
+		filterFeatureCounts(&(*wpInsights).Base.FeatureMetrics, totalUserCount, kthMaxCountBase, 0)
 	}
 	numBaseAndTarget := len((*wpInsights).BaseAndTarget.FeatureMetrics)
 	if k < numBaseAndTarget {
-		kthMaxCountTarget := findTopKCountThres((*wpInsights).BaseAndTarget.FeatureMetrics, k)
+		kthMaxCountBase, kthMaxCountTarget := findTopKCountThres((*wpInsights).BaseAndTarget.FeatureMetrics, k)
 		totalUserCount := (*wpInsights).BaseAndTarget.GlobalMetrics["#users"]
-		filterFeatureCounts(&(*wpInsights).BaseAndTarget.FeatureMetrics, totalUserCount, kthMaxCountTarget)
+		filterFeatureCounts(&(*wpInsights).BaseAndTarget.FeatureMetrics, totalUserCount, kthMaxCountBase, kthMaxCountTarget)
 	}
-	// TODO: Should we compute this for (*wpInsights).Target.FeatureMetrics as well?
+	numTarget := len((*wpInsights).Target.FeatureMetrics)
+	if k < numTarget {
+		_, kthMaxCountTarget := findTopKCountThres((*wpInsights).Target.FeatureMetrics, k)
+		totalUserCount := (*wpInsights).Target.GlobalMetrics["#users"]
+		filterFeatureCounts(&(*wpInsights).Target.FeatureMetrics, totalUserCount, 0, kthMaxCountTarget)
+	}
 }
 
-func filterFeatureCounts(featureMetrics *Level3CatRatioDist, totalCount int, kthMaxCount int) {
-	var othersCount int = 0
+func filterFeatureCounts(featureMetrics *Level3CatRatioDist, totalCount int, kthMaxCountBase int, kthMaxCountTarget int) {
+	baseMetrics := Level3CatRatioDist{}
+	targetMetrics := Level3CatRatioDist{}
 	for key, valStats := range *featureMetrics {
+		if strings.HasPrefix(key, "s#") {
+			baseMetrics[key] = valStats
+		}
+		if strings.HasPrefix(key, "t#") {
+			targetMetrics[key] = valStats
+		}
+	}
+	for key, valStats := range baseMetrics {
 		retainKey := false
 		othersFlag := false
-		othersCount = 0
+		othersCount := 0
 		for val, stats := range valStats {
 			count := int(stats["#users"])
-			if count < kthMaxCount {
+			if count < kthMaxCountBase {
+				delete((*featureMetrics)[key], val)
+				othersCount += count
+				othersFlag = true
+			} else {
+				retainKey = true
+			}
+		}
+		if retainKey {
+			if othersFlag {
+				(*featureMetrics)[key][OTHERS_VALUE] = make(Level1CatRatioDist)
+				(*featureMetrics)[key][OTHERS_VALUE]["#users"] = float64(othersCount)
+				(*featureMetrics)[key][OTHERS_VALUE]["prev"] = SmartDivide(float64(othersCount), float64(totalCount))
+			}
+		} else {
+			// TODO: When all values of a key are infrequent (or not in the whitelist), we delete the key itself. Have to see what to do when we have "Others".
+			delete((*featureMetrics), key)
+		}
+	}
+	for key, valStats := range targetMetrics {
+		retainKey := false
+		othersFlag := false
+		othersCount := 0
+		for val, stats := range valStats {
+			count := int(stats["#users"])
+			if count < kthMaxCountTarget {
 				delete((*featureMetrics)[key], val)
 				othersCount += count
 				othersFlag = true
@@ -775,11 +917,12 @@ func ComputeCrossPeriodInsights(wpi1, wpi2 WithinPeriodInsights) (CrossPeriodIns
 	baseMetrics := ComputeCrossPeriodMetrics(wpi1.Base, wpi2.Base)
 	targetMetrics := ComputeCrossPeriodMetrics(wpi1.Target, wpi2.Target)
 	baseAndTargetMetrics := ComputeCrossPeriodMetrics(wpi1.BaseAndTarget, wpi2.BaseAndTarget)
-	convMetrics := ComputeCrossPeriodRatioMetrics(wpi1.Conversion, wpi2.Conversion)
+	// TODO : janani uncomment this
+	//convMetrics := ComputeCrossPeriodRatioMetrics(wpi1.Conversion, wpi2.Conversion)
 	deltaRatioMetrics := ComputeDeltaRatioMetrics(wpi1, wpi2)
 	jsdMetrics := ComputeJSDMetrics(wpi1, wpi2)
 	cpInsights := CrossPeriodInsights{Base: baseMetrics, Target: targetMetrics, BaseAndTarget: baseAndTargetMetrics,
-		Conversion: convMetrics, DeltaRatio: deltaRatioMetrics, JSDivergence: jsdMetrics}
+		DeltaRatio: deltaRatioMetrics, JSDivergence: jsdMetrics}
 	return cpInsights, err
 }
 
