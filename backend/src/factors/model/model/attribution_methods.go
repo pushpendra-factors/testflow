@@ -158,15 +158,14 @@ func getLastTouchId(attributionType string, attributionTimerange map[string]User
 		switch attributionType {
 		case AttributionQueryTypeConversionBased:
 			for i := 0; i < len(interactions); i++ {
-				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime,
-					lookbackPeriod) {
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
 					return []string{interactions[i].AttributionKey}
 				}
 			}
 		case AttributionQueryTypeEngagementBased:
 			for i := 0; i < len(interactions); i++ {
-				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime,
-					lookbackPeriod) && isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
+					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
 					return []string{interactions[i].AttributionKey}
 				}
 			}
@@ -181,28 +180,37 @@ func getFirstTouchNDId(attributionType string, attributionTimerange map[string]U
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = SortInteractionTime(interactions, SortASC)
+	directSessionExists := false
 
 	if len(interactions) > 0 {
 
 		switch attributionType {
 		case AttributionQueryTypeConversionBased:
 			for i := 0; i < len(interactions); i++ {
-				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime,
-					lookbackPeriod) && interactions[i].AttributionKey != PropertyValueNone {
-					return []string{interactions[i].AttributionKey}
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
+					if interactions[i].AttributionKey != PropertyValueNone {
+						return []string{interactions[i].AttributionKey}
+					}
+					directSessionExists = true
 				}
 			}
 		case AttributionQueryTypeEngagementBased:
 			for i := 0; i < len(interactions); i++ {
-				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
-					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) && interactions[i].AttributionKey != PropertyValueNone {
-					return []string{interactions[i].AttributionKey}
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
+					if interactions[i].AttributionKey != PropertyValueNone {
+						return []string{interactions[i].AttributionKey}
+					}
+					directSessionExists = true
 				}
 			}
 		}
 
 	}
-	return []string{PropertyValueNone}
+	if directSessionExists {
+		return []string{PropertyValueNone}
+	} else {
+		return []string{}
+	}
 }
 
 // returns the last non $none attributionId
@@ -210,28 +218,37 @@ func getLastTouchNDId(attributionType string, attributionTimerange map[string]Us
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = SortInteractionTime(interactions, SortDESC)
+	directSessionExists := false
 
 	if len(interactions) > 0 {
 
 		switch attributionType {
 		case AttributionQueryTypeConversionBased:
 			for i := 0; i < len(interactions); i++ {
-				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime,
-					lookbackPeriod) && interactions[i].AttributionKey != PropertyValueNone {
-					return []string{interactions[i].AttributionKey}
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
+					if interactions[i].AttributionKey != PropertyValueNone {
+						return []string{interactions[i].AttributionKey}
+					}
+					directSessionExists = true
 				}
 			}
 		case AttributionQueryTypeEngagementBased:
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
-					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) && interactions[i].AttributionKey != PropertyValueNone {
-					return []string{interactions[i].AttributionKey}
+					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
+					if interactions[i].AttributionKey != PropertyValueNone {
+						return []string{interactions[i].AttributionKey}
+					}
+					directSessionExists = true
 				}
 			}
 		}
-
 	}
-	return []string{PropertyValueNone}
+	if directSessionExists {
+		return []string{PropertyValueNone}
+	} else {
+		return []string{}
+	}
 }
 
 // isAdTouchWithinCampaignOrQueryPeriod checks if attribution time is within query (campaign) period.
