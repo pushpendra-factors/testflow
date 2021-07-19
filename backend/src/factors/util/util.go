@@ -28,7 +28,7 @@ type Int64Tuple struct {
 // PatternProperties To be used in TakeTopK functions
 type PatternProperties interface {
 	Get_patternEventNames() []string
-	Get_count()       uint
+	Get_count() uint
 	Get_patternType() string
 }
 
@@ -1189,4 +1189,26 @@ func TakeTopK(patterns []PatternProperties, topKPatterns int) []PatternPropertie
 
 	}
 	return patterns
+}
+
+func GetFilteredMapBySkipList(sourceMap *map[string]interface{}, propertySkipList []string) *map[string]interface{} {
+	if sourceMap == nil {
+		return nil
+	}
+
+	skipListMap := make(map[string]bool)
+	for i := range propertySkipList {
+		skipListMap[propertySkipList[i]] = true
+	}
+
+	filteredMap := make(map[string]interface{})
+	for property := range *sourceMap {
+		if skipListMap[property] {
+			continue
+		}
+
+		filteredMap[property] = (*sourceMap)[property]
+	}
+
+	return &filteredMap
 }

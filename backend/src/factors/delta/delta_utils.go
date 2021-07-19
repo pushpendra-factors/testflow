@@ -122,11 +122,20 @@ type PerUserQueryResultSummary struct {
 	ChosenEvent       P.CounterEventFormat
 }
 
+type PerEventProperties struct {
+	BaseFlag          bool
+	TargetFlag        bool
+	BaseAndTargetFlag bool
+	EventProperties   map[string]interface{} `json:"epr"`
+	UserProperties    map[string]interface{} `json:"upr"`
+}
+
 type PerUserCriteriaResult struct {
 	criterionResultList []CriterionResult
 	allFlag             bool
 	anyFlag             bool
 	mostRecentEvent     P.CounterEventFormat
+	firstEvent          P.CounterEventFormat
 	numCriterionMatched int
 	criteriaMatchFlag   bool
 }

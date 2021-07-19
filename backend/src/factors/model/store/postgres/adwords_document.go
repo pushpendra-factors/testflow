@@ -8,6 +8,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -52,42 +53,42 @@ const (
 		"and project_id = ? and timestamp BETWEEN ? and ? AND customer_account_id in (?) group by campaign_id)"
 	semChecklistKeywordsQuery = "With keyword_analysis_last_week as (select %s as analysis_metric, %s " +
 		"keyword_id, campaign_id, value->>'criteria' as keyword_name, value->>'keyword_match_type' as keyword_match_type from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? group by campaign_id, keyword_id, keyword_name," +
-		" keyword_match_type), keyword_analysis_previous_week as (select %s as analysis_metric, %s keyword_id, campaign_id, " +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and value->>'criteria' NOT ILIKE 'automaticcontent' and value->>'criteria' NOT ILIKE 'automatickeywords'" +
+		" group by campaign_id, keyword_id, keyword_name, keyword_match_type), keyword_analysis_previous_week as (select %s as analysis_metric, %s keyword_id, campaign_id, " +
 		"value->>'criteria' as keyword_name, value->>'keyword_match_type' as keyword_match_type from adwords_documents" +
-		" where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? group by campaign_id, keyword_id, " +
-		"keyword_name, keyword_match_type) Select keyword_analysis_last_week.keyword_name, " +
+		" where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and value->>'criteria' NOT ILIKE 'automaticcontent' and value->>'criteria' NOT ILIKE 'automatickeywords'" +
+		" group by campaign_id, keyword_id, keyword_name, keyword_match_type) Select keyword_analysis_last_week.keyword_name, " +
 		"keyword_analysis_previous_week.analysis_metric as previous_week_value, keyword_analysis_last_week.analysis_metric as last_week_value, " +
 		"(((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric::float, 0), 0.0000001))) as percentage_change, " +
-		"ABS((((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric::float, 0), 0.0000001)))) as abs_percentage_change, " +
+		"ABS((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float) as abs_change, " +
 		"(keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float as absolute_change, %s " +
 		"keyword_analysis_last_week.keyword_id, keyword_analysis_last_week.campaign_id, keyword_analysis_last_week.keyword_match_type from keyword_analysis_last_week " +
 		"full outer join keyword_analysis_previous_week on keyword_analysis_last_week.keyword_id = keyword_analysis_previous_week.keyword_id and " +
 		"keyword_analysis_last_week.keyword_match_type=keyword_analysis_previous_week.keyword_match_type and keyword_analysis_last_week.campaign_id = keyword_analysis_previous_week.campaign_id" +
 		" and keyword_analysis_last_week.keyword_name = keyword_analysis_previous_week.keyword_name " +
 		"where ABS((((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric::float, 0), 1)))) >= ?" +
-		" AND ABS((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)) > ? order by abs_percentage_change DESC limit 10000"
+		" AND ABS((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)) > ? order by abs_change DESC"
 
 	semChecklistCampaignQuery = "With campaign_analysis_last_week as (select %s as analysis_metric, " +
 		"campaign_id, value->>'campaign_name' as campaign_name from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) group by campaign_id, campaign_name)," +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and value->>'advertising_channel_type' ILIKE 'search' group by campaign_id, campaign_name)," +
 		" campaign_analysis_previous_week as (select %s as analysis_metric, " +
 		"campaign_id, value->>'campaign_name' as campaign_name from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) group by campaign_id, campaign_name)" +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and value->>'advertising_channel_type' ILIKE 'search' group by campaign_id, campaign_name)" +
 		" Select campaign_analysis_last_week.campaign_name, " +
 		"campaign_analysis_previous_week.analysis_metric as previous_week_value, campaign_analysis_last_week.analysis_metric as last_week_value, " +
 		"(((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(campaign_analysis_previous_week.analysis_metric::float, 0), 0.0000001))) as percentage_change, " +
-		"ABS((((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(campaign_analysis_previous_week.analysis_metric::float, 0), 0.0000001)))) as abs_percentage_change, " +
+		"ABS((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float) as abs_change, " +
 		"(campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float as absolute_change, " +
 		" campaign_analysis_last_week.campaign_id from campaign_analysis_last_week " +
 		"full outer join campaign_analysis_previous_week on campaign_analysis_last_week.campaign_id = campaign_analysis_previous_week.campaign_id " +
-		"order by abs_percentage_change DESC limit 10000"
+		"order by abs_change DESC limit 10000"
 	semChecklistOverallAnalysisQuery = "select %s from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ?"
-	semChecklistExtraSelectForLeads                = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as cost_per_lead, "
-	semChecklistExtraSelectForLeadsForWeekAnalysis = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as cost_per_lead, " +
-		"%s as prev_impressions, %s as prev_search_impression_share, %s as prev_conversion_rate, %s as prev_cost_per_lead, " +
-		"%s as last_impressions, %s as last_search_impression_share, %s as last_conversion_rate, %s as last_cost_per_lead, "
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? AND value->>'advertising_channel_type' ILIKE 'search'"
+	semChecklistExtraSelectForLeads                = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as click_through_rate, %s as cost_per_click, "
+	semChecklistExtraSelectForLeadsForWeekAnalysis = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as click_through_rate, %s as cost_per_click, " +
+		"%s as prev_impressions, %s as prev_search_impression_share, %s as prev_conversion_rate,%s as prev_click_through_rate, %s as prev_cost_per_click, " +
+		"%s as last_impressions, %s as last_search_impression_share, %s as last_conversion_rate,%s as last_click_through_rate, %s as last_cost_per_click, "
 	percentageChangeForSemChecklistKeyword = "(((keyword_analysis_last_week.%s - keyword_analysis_previous_week.%s)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.%s::float, 0), 0.0000001)))"
 )
 
@@ -2053,20 +2054,21 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 	db := C.GetServices().Db
 	var keywordAnalysisResult []KeywordAnalysis
 	finalKeywordQuery := ""
-	if query.Metric != model.Conversion {
+	if query.Metric != model.Conversion && query.Metric != "cost_per_lead" {
 		finalKeywordQuery = fmt.Sprintf(semChecklistKeywordsQuery, templateMetricsToSelectStatement[query.Metric], "", templateMetricsToSelectStatement[query.Metric], "", "")
 	} else {
 		extraSelectForLeadsForWeekAnalysis := fmt.Sprintf(semChecklistExtraSelectForLeads,
 			templateMetricsToSelectStatement[model.Impressions], templateMetricsToSelectStatement[model.SearchImpressionShare],
-			templateMetricsToSelectStatement[model.ConversionRate], templateMetricsToSelectStatement["cost_per_lead"],
+			templateMetricsToSelectStatement[model.ConversionRate], templateMetricsToSelectStatement[model.ClickThroughRate], templateMetricsToSelectStatement[model.CostPerClick],
 		)
 		extraSelectForLeadsFinalAnalysis := fmt.Sprintf(semChecklistExtraSelectForLeadsForWeekAnalysis,
 			fmt.Sprintf(percentageChangeForSemChecklistKeyword, model.Impressions, model.Impressions, model.Impressions),
 			fmt.Sprintf(percentageChangeForSemChecklistKeyword, model.SearchImpressionShare, model.SearchImpressionShare, model.SearchImpressionShare),
 			fmt.Sprintf(percentageChangeForSemChecklistKeyword, model.ConversionRate, model.ConversionRate, model.ConversionRate),
-			fmt.Sprintf(percentageChangeForSemChecklistKeyword, "cost_per_lead", "cost_per_lead", "cost_per_lead"),
-			"keyword_analysis_previous_week.impressions", "keyword_analysis_previous_week.search_impression_share", "keyword_analysis_previous_week.conversion_rate", "keyword_analysis_previous_week.cost_per_lead",
-			"keyword_analysis_last_week.impressions", "keyword_analysis_last_week.search_impression_share", "keyword_analysis_last_week.conversion_rate", "keyword_analysis_last_week.cost_per_lead")
+			fmt.Sprintf(percentageChangeForSemChecklistKeyword, model.ClickThroughRate, model.ClickThroughRate, model.ClickThroughRate),
+			fmt.Sprintf(percentageChangeForSemChecklistKeyword, model.CostPerClick, model.CostPerClick, model.CostPerClick),
+			"keyword_analysis_previous_week.impressions", "keyword_analysis_previous_week.search_impression_share", "keyword_analysis_previous_week.conversion_rate", "keyword_analysis_previous_week.click_through_rate", "keyword_analysis_previous_week.cost_per_click",
+			"keyword_analysis_last_week.impressions", "keyword_analysis_last_week.search_impression_share", "keyword_analysis_last_week.conversion_rate", "keyword_analysis_last_week.click_through_rate", "keyword_analysis_last_week.cost_per_click")
 		finalKeywordQuery = fmt.Sprintf(semChecklistKeywordsQuery, templateMetricsToSelectStatement[query.Metric], extraSelectForLeadsForWeekAnalysis, templateMetricsToSelectStatement[query.Metric], extraSelectForLeadsForWeekAnalysis, extraSelectForLeadsFinalAnalysis)
 	}
 	err = db.Raw(finalKeywordQuery, projectID, customerAccountID,
@@ -2078,6 +2080,15 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 	}
 	campaignIDToSubLevelDataMap := make(map[string][]model.SubLevelData)
 	for _, keywordAnalysis := range keywordAnalysisResult {
+		if keywordAnalysis.PreviousWeekValue < 0.1 && keywordAnalysis.LastWeekValue < 0.1 {
+			continue
+		}
+		if keywordAnalysis.PreviousWeekValue < 0.1 {
+			keywordAnalysis.PreviousWeekValue = math.Round(keywordAnalysis.PreviousWeekValue)
+		}
+		if keywordAnalysis.LastWeekValue < 0.1 {
+			keywordAnalysis.LastWeekValue = math.Round(keywordAnalysis.LastWeekValue)
+		}
 		subLevelData := transformKeywordAnalysisToTemplateSubLevelData(query, keywordAnalysis)
 		campaignIDToSubLevelDataMap[keywordAnalysis.CampaignID] = append(campaignIDToSubLevelDataMap[keywordAnalysis.CampaignID], subLevelData)
 	}
@@ -2094,6 +2105,15 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 		return model.TemplateResponse{}, http.StatusInternalServerError
 	}
 	for _, campaignAnalysisRow := range campaignAnalysis {
+		if campaignAnalysisRow.PreviousWeekValue < 0.1 && campaignAnalysisRow.LastWeekValue < 0.1 {
+			continue
+		}
+		if campaignAnalysisRow.PreviousWeekValue < 0.1 {
+			campaignAnalysisRow.PreviousWeekValue = math.Round(campaignAnalysisRow.PreviousWeekValue)
+		}
+		if campaignAnalysisRow.LastWeekValue < 0.1 {
+			campaignAnalysisRow.LastWeekValue = math.Round(campaignAnalysisRow.LastWeekValue)
+		}
 		primaryLevelData := transfromCammpaignLevelDataToTemplatePrimaryLevelData(campaignAnalysisRow, campaignIDToSubLevelDataMap)
 		result.BreakdownAnalysis.PrimaryLevelData = append(result.BreakdownAnalysis.PrimaryLevelData, primaryLevelData)
 	}
@@ -2160,6 +2180,172 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 	}
 	return result, http.StatusOK
 }
+func calcTotalAdImpressions(siShare float64, impressions float64) float64 {
+	if siShare == 0 {
+		return 0
+	} else {
+		return (impressions * 100 / siShare)
+	}
+}
+func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCauseMetric {
+	rootCauseMetrics := make([]model.RootCauseMetric, 0)
+	prevTotalAdImpressions := calcTotalAdImpressions(keywordAnalysis.PrevSearchImpressionShare, keywordAnalysis.PrevImpressions)
+	lastTotalAdImpressions := calcTotalAdImpressions(keywordAnalysis.LastSearchImpressionShare, keywordAnalysis.LastImpressions)
+	percentageChangeTotalAdImpressions := (lastTotalAdImpressions - prevTotalAdImpressions) * 100 / prevTotalAdImpressions
+	if keywordAnalysis.PercentageChange < 0 {
+		if keywordAnalysis.ClickThroughRate < 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: model.ClickThroughRate, PercentageChange: keywordAnalysis.ClickThroughRate}
+			if keywordAnalysis.PrevClickThroughRate < 0.1 {
+				if keywordAnalysis.LastClickThroughRate < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if keywordAnalysis.LastClickThroughRate > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+		if percentageChangeTotalAdImpressions < 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: "Total Ad Impr.", PercentageChange: percentageChangeTotalAdImpressions}
+			if prevTotalAdImpressions < 0.1 {
+				if lastTotalAdImpressions < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if lastTotalAdImpressions > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+		if keywordAnalysis.SearchImpressionShare < 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: model.SearchImpressionShare, PercentageChange: keywordAnalysis.SearchImpressionShare}
+			if keywordAnalysis.PrevSearchImpressionShare < 0.1 {
+				if keywordAnalysis.LastSearchImpressionShare < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if keywordAnalysis.LastSearchImpressionShare > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+		if keywordAnalysis.ConversionRate < 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: model.ConversionRate, PercentageChange: keywordAnalysis.ConversionRate}
+			if keywordAnalysis.PrevConversionRate < 0.1 {
+				if keywordAnalysis.LastConversionRate < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if keywordAnalysis.LastConversionRate > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+	}
+	if keywordAnalysis.PercentageChange > 0 {
+		if keywordAnalysis.ClickThroughRate > 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: model.ClickThroughRate, PercentageChange: keywordAnalysis.ClickThroughRate}
+			if keywordAnalysis.PrevClickThroughRate < 0.1 {
+				if keywordAnalysis.LastClickThroughRate < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if keywordAnalysis.LastClickThroughRate > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+		if percentageChangeTotalAdImpressions > 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: "Total Ad Impr.", PercentageChange: percentageChangeTotalAdImpressions}
+			if prevTotalAdImpressions < 0.1 {
+				if lastTotalAdImpressions < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if lastTotalAdImpressions > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+		if keywordAnalysis.SearchImpressionShare > 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: model.SearchImpressionShare, PercentageChange: keywordAnalysis.SearchImpressionShare}
+			if keywordAnalysis.PrevSearchImpressionShare < 0.1 {
+				if keywordAnalysis.LastSearchImpressionShare < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if keywordAnalysis.LastSearchImpressionShare > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+		if keywordAnalysis.ConversionRate > 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: model.ConversionRate, PercentageChange: keywordAnalysis.ConversionRate}
+			if keywordAnalysis.PrevConversionRate < 0.1 {
+				if keywordAnalysis.LastConversionRate < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if keywordAnalysis.LastConversionRate > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+	}
+	return rootCauseMetrics
+}
+func getRootCasueMetricsForCostPerLead(keywordAnalysis KeywordAnalysis) []model.RootCauseMetric {
+	rootCauseMetrics := getRootCasueMetricsForLeads(keywordAnalysis)
+	if keywordAnalysis.PercentageChange < 0 {
+		if keywordAnalysis.CostPerClick < 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: model.CostPerClick, PercentageChange: keywordAnalysis.CostPerClick}
+			if keywordAnalysis.PrevCostPerClick < 0.1 {
+				if keywordAnalysis.LastCostPerClick < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if keywordAnalysis.LastCostPerClick > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+	} else {
+		if keywordAnalysis.CostPerClick > 0 {
+			rootCauseMetric := model.RootCauseMetric{Metric: model.CostPerClick, PercentageChange: keywordAnalysis.CostPerClick}
+			if keywordAnalysis.PrevCostPerClick < 0.1 {
+				if keywordAnalysis.LastCostPerClick < 0.1 {
+					rootCauseMetric.PercentageChange = math.Round(rootCauseMetric.PercentageChange)
+				}
+				if keywordAnalysis.LastCostPerClick > 0 {
+					rootCauseMetric.IsInfinity = true
+				}
+			}
+			if math.Round(rootCauseMetric.PercentageChange) != 0 {
+				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
+			}
+		}
+	}
+	return rootCauseMetrics
+}
+
 func transformKeywordAnalysisToTemplateSubLevelData(query model.TemplateQuery, keywordAnalysis KeywordAnalysis) model.SubLevelData {
 	var subLevelData model.SubLevelData
 	switch keywordAnalysis.KeywordMatchType {
@@ -2178,101 +2364,14 @@ func transformKeywordAnalysisToTemplateSubLevelData(query model.TemplateQuery, k
 		subLevelData.IsInfinity = true
 	}
 	if query.Metric == model.Conversion {
-		rootCauseMetrics := make([]model.RootCauseMetric, 0)
-		if keywordAnalysis.PercentageChange < 0 {
-			if keywordAnalysis.Impressions < 0 {
-				rootCauseMetric := model.RootCauseMetric{Metric: model.Impressions, PercentageChange: keywordAnalysis.Impressions}
-				if keywordAnalysis.PrevImpressions == 0 {
-					if keywordAnalysis.LastImpressions == 0 {
-						rootCauseMetric.PercentageChange = 0
-					} else {
-						rootCauseMetric.IsInfinity = true
-					}
-				}
-				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
-			}
-			if keywordAnalysis.SearchImpressionShare < 0 {
-				rootCauseMetric := model.RootCauseMetric{Metric: model.SearchImpressionShare, PercentageChange: keywordAnalysis.SearchImpressionShare}
-				if keywordAnalysis.PrevSearchImpressionShare == 0 {
-					if keywordAnalysis.LastSearchImpressionShare == 0 {
-						rootCauseMetric.PercentageChange = 0
-					} else {
-						rootCauseMetric.IsInfinity = true
-					}
-				}
-				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
-			}
-			if keywordAnalysis.ConversionRate < 0 {
-				rootCauseMetric := model.RootCauseMetric{Metric: model.ConversionRate, PercentageChange: keywordAnalysis.ConversionRate}
-				if keywordAnalysis.PrevConversionRate == 0 {
-					if keywordAnalysis.LastConversionRate == 0 {
-						rootCauseMetric.PercentageChange = 0
-					} else {
-						rootCauseMetric.IsInfinity = true
-					}
-				}
-				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
-			}
-			if keywordAnalysis.CostPerLead > 0 {
-				rootCauseMetric := model.RootCauseMetric{Metric: "cost_per_lead", PercentageChange: keywordAnalysis.CostPerLead}
-				if keywordAnalysis.PrevCostPerLead == 0 {
-					if keywordAnalysis.LastCostPerLead == 0 {
-						rootCauseMetric.PercentageChange = 0
-					} else {
-						rootCauseMetric.IsInfinity = true
-					}
-				}
-				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
-			}
-		}
-		if keywordAnalysis.PercentageChange > 0 {
-			if keywordAnalysis.Impressions > 0 {
-				rootCauseMetric := model.RootCauseMetric{Metric: model.Impressions, PercentageChange: keywordAnalysis.Impressions}
-				if keywordAnalysis.PrevImpressions == 0 {
-					if keywordAnalysis.LastImpressions == 0 {
-						rootCauseMetric.PercentageChange = 0
-					} else {
-						rootCauseMetric.IsInfinity = true
-					}
-				}
-				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
-			}
-			if keywordAnalysis.SearchImpressionShare > 0 {
-				rootCauseMetric := model.RootCauseMetric{Metric: model.SearchImpressionShare, PercentageChange: keywordAnalysis.SearchImpressionShare}
-				if keywordAnalysis.PrevSearchImpressionShare == 0 {
-					if keywordAnalysis.LastSearchImpressionShare == 0 {
-						rootCauseMetric.PercentageChange = 0
-					} else {
-						rootCauseMetric.IsInfinity = true
-					}
-				}
-				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
-			}
-			if keywordAnalysis.ConversionRate > 0 {
-				rootCauseMetric := model.RootCauseMetric{Metric: model.ConversionRate, PercentageChange: keywordAnalysis.ConversionRate}
-				if keywordAnalysis.PrevConversionRate == 0 {
-					if keywordAnalysis.LastConversionRate == 0 {
-						rootCauseMetric.PercentageChange = 0
-					} else {
-						rootCauseMetric.IsInfinity = true
-					}
-				}
-				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
-			}
-			if keywordAnalysis.CostPerLead < 0 {
-				rootCauseMetric := model.RootCauseMetric{Metric: "cost_per_lead", PercentageChange: keywordAnalysis.CostPerLead}
-				if keywordAnalysis.PrevCostPerLead == 0 {
-					if keywordAnalysis.LastCostPerLead == 0 {
-						rootCauseMetric.PercentageChange = 0
-					} else {
-						rootCauseMetric.IsInfinity = true
-					}
-				}
-				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
-			}
-		}
+		rootCauseMetrics := getRootCasueMetricsForLeads(keywordAnalysis)
 		subLevelData.RootCauseMetrics = rootCauseMetrics
 	}
+	if query.Metric == "cost_per_lead" {
+		rootCauseMetrics := getRootCasueMetricsForCostPerLead(keywordAnalysis)
+		subLevelData.RootCauseMetrics = rootCauseMetrics
+	}
+
 	return subLevelData
 }
 func transfromCammpaignLevelDataToTemplatePrimaryLevelData(campaignAnalysisRow CampaignAnalysis, campaignIDToSubLevelDataMap map[string][]model.SubLevelData) model.PrimaryLevelData {
@@ -2301,16 +2400,19 @@ type KeywordAnalysis struct {
 	KeywordMatchType          string  `json:"keyword_match_type"`
 	Impressions               float64 `json:"impressions"`
 	SearchImpressionShare     float64 `json:"search_impression_share"`
-	CostPerLead               float64 `json:"cost_per_lead"`
 	ConversionRate            float64 `json:"conversion_rate"`
+	ClickThroughRate          float64 `json:"click_through_rate"`
+	CostPerClick              float64 `json:"cost_per_click"`
 	PrevImpressions           float64 `json:"prev_impressions"`
 	PrevSearchImpressionShare float64 `json:"prev_search_impression_share"`
-	PrevCostPerLead           float64 `json:"prev_cost_per_lead"`
 	PrevConversionRate        float64 `json:"prev_conversion_rate"`
+	PrevCostPerClick          float64 `json:"prev_cost_per_click"`
+	PrevClickThroughRate      float64 `json:"prev_click_through_rate"`
 	LastImpressions           float64 `json:"last_impressions"`
 	LastSearchImpressionShare float64 `json:"last_search_impression_share"`
-	LastCostPerLead           float64 `json:"last_cost_per_lead"`
 	LastConversionRate        float64 `json:"last_conversion_rate"`
+	LastCostPerClick          float64 `json:"last_cost_per_click"`
+	LastClickThroughRate      float64 `json:"last_click_through_rate"`
 }
 
 type CampaignAnalysis struct {

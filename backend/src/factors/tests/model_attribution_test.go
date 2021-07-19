@@ -1386,14 +1386,14 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
 		int64(2), int64(2), float64(2), int64(2),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(2), float64(2), float64(2), float64(2)}
+		float64(2), float64(2), float64(2), float64(2), float64(2), float64(2)}
 	row2 := []interface{}{"Campaign1", int64(3), int64(3), float64(3),
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(3), float64(3), float64(3), float64(3),
 		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
 		int64(3), int64(3), float64(3), int64(3),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(3), float64(3), float64(3), float64(3)}
+		float64(3), float64(3), float64(3), float64(3), float64(3), float64(3)}
 	rows = append(rows, row1, row2)
 
 	mergedRows := make([][]interface{}, 0)
@@ -1403,7 +1403,7 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 		// Sessions, (users), (AvgSessionTime), (pageViews),
 		int64(5), int64(5), float64(5), int64(5),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(5), float64(1), float64(5), float64(1)}
+		float64(5), float64(1), float64(100), float64(5), float64(1), float64(100)}
 
 	mergedRows = append(mergedRows, row3)
 	type args struct {
@@ -1425,6 +1425,71 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 						t.Errorf("MergeDataRowsHavingSameKey()col No: %v=,  = %v, want %v", colNo, got[rowNo][colNo], tt.want[rowNo][colNo])
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestSortInteractionTime(t *testing.T) {
+	type args struct {
+		interactions []model.Interaction
+		sortingType  string
+	}
+	sortedAsc1 := []model.Interaction{
+		{"key1", int64(111)},
+		{"key2", int64(112)},
+		{"key3", int64(113)},
+		{"key4", int64(114)},
+	}
+	sortedDesc1 := []model.Interaction{
+		{"key4", int64(114)},
+		{"key3", int64(113)},
+		{"key2", int64(112)},
+		{"key1", int64(111)},
+	}
+
+	sortedEqual1 := []model.Interaction{
+		{"key1", int64(112)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key4", int64(112)},
+	}
+
+	sortedSomeEqual1 := []model.Interaction{
+		{"key1", int64(111)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key4", int64(114)},
+	}
+	sortedDescSomeEqual1 := []model.Interaction{
+		{"key4", int64(114)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key1", int64(111)},
+	}
+	/*sortedEqual1 := []model.Interaction{
+		{"key1", int64(112)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key4", int64(112)},
+	}*/
+
+	tests := []struct {
+		name string
+		args args
+		want []model.Interaction
+	}{
+		{"Test1", args{interactions: sortedAsc1, sortingType: model.SortASC}, sortedAsc1},
+		{"Test2", args{interactions: sortedAsc1, sortingType: model.SortDESC}, sortedDesc1},
+		{"Test2", args{interactions: sortedEqual1, sortingType: model.SortASC}, sortedEqual1},
+		{"Test2", args{interactions: sortedEqual1, sortingType: model.SortDESC}, sortedEqual1},
+		{"Test2", args{interactions: sortedSomeEqual1, sortingType: model.SortASC}, sortedSomeEqual1},
+		{"Test2", args{interactions: sortedSomeEqual1, sortingType: model.SortDESC}, sortedDescSomeEqual1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := model.SortInteractionTime(tt.args.interactions, tt.args.sortingType); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("sortInteractionTime() = %v, want %v", got, tt.want)
 			}
 		})
 	}

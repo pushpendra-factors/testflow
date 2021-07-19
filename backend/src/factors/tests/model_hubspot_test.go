@@ -83,20 +83,6 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID1)
 	assert.Equal(t, http.StatusAccepted, status)
 
-	// updated to opportunity
-	updatedDate = updatedDate.AddDate(0, 0, 1)
-	jsonContact = fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", "test@gmail.com", "123-45")
-	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
-
-	hubspotDocument = model.HubspotDocument{
-		TypeAlias: model.HubspotDocumentTypeNameContact,
-		Value:     &contactPJson,
-	}
-
-	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
-	assert.Equal(t, http.StatusCreated, status)
-	assert.Equal(t, updatedDate.Unix(), hubspotDocument.Timestamp)
-
 	filter := model.SmartCRMEventFilter{
 		Source:               model.SmartCRMEventSourceHubspot,
 		ObjectType:           "contact",
@@ -126,11 +112,39 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 
 	currentProperties := make(map[string]interface{})
 	currentProperties["lifecyclestage"] = "opportunity"
-	smartEvent, _, ok := IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID3, hubspotDocument.Type, &currentProperties, nil, &filter)
+	smartEvent, _, ok := IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "1", hubspotDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "test", smartEvent.Name)
 	assert.Equal(t, "lead", smartEvent.Properties["$prev_hubspot_contact_lifecyclestage"])
 	assert.Equal(t, "opportunity", smartEvent.Properties["$curr_hubspot_contact_lifecyclestage"])
+
+	// updated to opportunity
+	updatedDate = updatedDate.AddDate(0, 0, 1)
+	jsonContact = fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "opportunity", "test@gmail.com", "123-45")
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, updatedDate.Unix(), hubspotDocument.Timestamp)
+
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID2)
+	assert.Equal(t, http.StatusAccepted, status)
+	// previous rule should fail
+	currentProperties = make(map[string]interface{})
+	currentProperties["lifecyclestage"] = "opportunity"
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "1", hubspotDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, false, ok)
+	// use any change should also fail
+	filter.FilterEvaluationType = model.FilterEvaluationTypeAny
+	currentProperties = make(map[string]interface{})
+	currentProperties["lifecyclestage"] = "opportunity"
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "1", hubspotDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, false, ok)
 
 	// updated last synced to customer
 	updatedDate = updatedDate.AddDate(0, 0, 2)
@@ -148,12 +162,29 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID1)
 	assert.Equal(t, http.StatusAccepted, status)
 
+	filter.FilterEvaluationType = model.FilterEvaluationTypeSpecific
+	filter.Filters[0].Rules = []model.CRMFilterRule{
+		{
+			PropertyState: model.CurrentState,
+			Value:         "opportunity",
+			Operator:      model.COMPARE_EQUAL,
+		},
+		{
+			PropertyState: model.PreviousState,
+			Value:         "customer",
+			Operator:      model.COMPARE_EQUAL,
+		},
+	}
+
 	currentProperties = make(map[string]interface{})
 	currentProperties["lifecyclestage"] = "opportunity"
-	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID1, hubspotDocument.Type, &currentProperties, nil, &filter)
-	assert.Equal(t, false, ok)
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "1", hubspotDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "test", smartEvent.Name)
+	assert.Equal(t, "customer", smartEvent.Properties["$prev_hubspot_contact_lifecyclestage"])
+	assert.Equal(t, "opportunity", smartEvent.Properties["$curr_hubspot_contact_lifecyclestage"])
 
-	// updated last synced to lead with different user_id having same customer_user_id
+	// updated last synced to lead with different user_id having same customer_user_id should not have affect
 	updatedDate = updatedDate.AddDate(0, 0, 3)
 	jsonContact = fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", cuid, "123-45")
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
@@ -169,50 +200,112 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID3)
 	assert.Equal(t, http.StatusAccepted, status)
 
-	currentProperties = make(map[string]interface{})
-	currentProperties["lifecyclestage"] = "opportunity"
-	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID1, hubspotDocument.Type, &currentProperties, nil, &filter)
-	assert.Equal(t, true, ok)
-
-	// use empty records if no previous record exist
-	filter = model.SmartCRMEventFilter{
-		Source:               model.SmartCRMEventSourceHubspot,
-		ObjectType:           "contact",
-		Description:          "hubspot booked",
-		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
-		Filters: []model.PropertyFilter{
-			{
-				Name: "lifecyclestage",
-				Rules: []model.CRMFilterRule{
-					{
-						PropertyState: model.CurrentState,
-						Value:         U.PROPERTY_VALUE_ANY,
-						Operator:      model.COMPARE_EQUAL,
-					},
-					{
-						PropertyState: model.PreviousState,
-						Value:         U.PROPERTY_VALUE_ANY,
-						Operator:      model.COMPARE_NOT_EQUAL,
-					},
-				},
-				LogicalOp: model.LOGICAL_OP_AND,
-			},
+	filter.Filters[0].Rules = []model.CRMFilterRule{
+		{
+			PropertyState: model.CurrentState,
+			Value:         "opportunity",
+			Operator:      model.COMPARE_EQUAL,
 		},
-		LogicalOp:               model.LOGICAL_OP_AND,
-		TimestampReferenceField: "time",
+		{
+			PropertyState: model.PreviousState,
+			Value:         "lead",
+			Operator:      model.COMPARE_EQUAL,
+		},
 	}
 
-	cuid = "123-456-789" // new customer user id
-	userID4 := "1230234" // new user id no previous record
+	currentProperties = make(map[string]interface{})
+	currentProperties["lifecyclestage"] = "opportunity"
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "1", hubspotDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "test", smartEvent.Name)
+	assert.Equal(t, "lead", smartEvent.Properties["$prev_hubspot_contact_lifecyclestage"])
+	assert.Equal(t, "opportunity", smartEvent.Properties["$curr_hubspot_contact_lifecyclestage"])
+
+	// updated last synced to lead with different user_id having same customer_user_id should not have affect
+	updatedDate = updatedDate.AddDate(0, 0, 3)
+	jsonContact = fmt.Sprintf(jsonContactModel, 2, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", cuid, "123-45")
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix(), hubspotDocument.Timestamp)
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID3)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	// use empty records if no previous record exist
+	filter.Filters[0].Rules = []model.CRMFilterRule{
+		{
+			PropertyState: model.CurrentState,
+			Value:         U.PROPERTY_VALUE_ANY,
+			Operator:      model.COMPARE_EQUAL,
+		},
+		{
+			PropertyState: model.PreviousState,
+			Value:         "lead",
+			Operator:      model.COMPARE_EQUAL,
+		},
+	}
+
 	currentProperties = make(map[string]interface{})
 	currentProperties["lifecyclestage"] = "opportunity1"
-	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID4, hubspotDocument.Type, &currentProperties, nil, &filter)
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "2", hubspotDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, true, ok)
+
+	assert.Equal(t, "test", smartEvent.Name)
+	assert.Equal(t, "lead", smartEvent.Properties["$prev_hubspot_contact_lifecyclestage"])
+	assert.Equal(t, "opportunity1", smartEvent.Properties["$curr_hubspot_contact_lifecyclestage"])
+
+	// negative case for above
+	currentProperties = make(map[string]interface{})
+	currentProperties["lifecyclestage"] = "lead"
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "2", hubspotDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, false, ok)
+
+	//use empty records if no previous record exist
+	filter.Filters[0].Rules = []model.CRMFilterRule{
+		{
+			PropertyState: model.CurrentState,
+			Value:         U.PROPERTY_VALUE_ANY,
+			Operator:      model.COMPARE_EQUAL,
+		},
+		{
+			PropertyState: model.PreviousState,
+			Value:         U.PROPERTY_VALUE_ANY,
+			Operator:      model.COMPARE_NOT_EQUAL,
+		},
+	}
+
+	// no previous record by document id
+	currentProperties = make(map[string]interface{})
+	currentProperties["lifecyclestage"] = "opportunity1"
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "3", hubspotDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, true, ok)
+	assert.Nil(t, smartEvent.Properties["$prev_hubspot_contact_lifecyclestage"])
+	assert.Equal(t, "opportunity1", smartEvent.Properties["$curr_hubspot_contact_lifecyclestage"])
+
+	//use empty records if no previous record exist
+	filter.Filters[0].Rules = []model.CRMFilterRule{
+		{
+			PropertyState: model.CurrentState,
+			Value:         U.PROPERTY_VALUE_ANY,
+			Operator:      model.COMPARE_EQUAL,
+		},
+		{
+			PropertyState: model.PreviousState,
+			Value:         U.PROPERTY_VALUE_ANY,
+			Operator:      model.COMPARE_NOT_EQUAL,
+		},
+	}
 
 	// if property value nil
 	PrevProperties := make(map[string]interface{})
 	PrevProperties["lifecyclestage"] = nil
-	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID4, hubspotDocument.Type, &currentProperties, &PrevProperties, &filter)
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", "2", hubspotDocument.Type, &currentProperties, &PrevProperties, &filter)
 	assert.Equal(t, true, ok)
 }
 
@@ -2207,4 +2300,156 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 		}
 		contactTimestamp = contactTimestamp.AddDate(0, 0, 1)
 	}
+
+	// query unqiue users and total events
+	query = model.Query{
+		From: createdAt.AddDate(0, 0, -1).Unix(),
+		To:   companyUpdatedDate.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondEachGivenEvent,
+		Class:           model.QueryClassEvents,
+	}
+	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	assert.Equal(t, http.StatusOK, status)
+	count := 0
+	for i := range result.Results[0].Rows {
+		if result.Results[0].Rows[i][1] == U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED {
+			assert.Equal(t, float64(30), result.Results[0].Rows[i][2])
+			count++
+		}
+		if result.Results[0].Rows[i][1] == U.EVENT_NAME_HUBSPOT_CONTACT_CREATED {
+			assert.Equal(t, float64(3), result.Results[0].Rows[i][2])
+			count++
+		}
+	}
+	assert.Equal(t, 2, count)
+
+	query = model.Query{
+		From: createdAt.AddDate(0, 0, -1).Unix(),
+		To:   companyUpdatedDate.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+		Class:           model.QueryClassEvents,
+	}
+	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	assert.Equal(t, http.StatusOK, status)
+	count = 0
+	for i := range result.Results[0].Rows {
+		if result.Results[0].Rows[i][1] == U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED {
+			assert.Equal(t, float64(3), result.Results[0].Rows[i][2])
+			count++
+		}
+		if result.Results[0].Rows[i][1] == U.EVENT_NAME_HUBSPOT_CONTACT_CREATED {
+			assert.Equal(t, float64(3), result.Results[0].Rows[i][2])
+			count++
+		}
+	}
+	assert.Equal(t, 2, count)
+}
+
+func TestGetHubspotContactCreatedSyncIDAndUserID(t *testing.T) {
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	H.InitAppRoutes(r)
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	intHubspot := true
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	createdAt := time.Now().AddDate(0, 0, -11)
+	updatedDate := createdAt.AddDate(0, 0, 1)
+	cuid := getRandomEmail()
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	jsonContact := fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", cuid, "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix(), hubspotDocument.Timestamp)
+	eventID := "123-45"
+	userID1 := "456-12"
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, eventID, hubspotDocument.Timestamp, model.HubspotDocumentActionCreated, userID1)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	documents, status := store.GetStore().GetHubspotContactCreatedSyncIDAndUserID(project.ID, hubspotDocument.ID)
+	assert.Equal(t, eventID, documents[0].SyncId)
+	assert.Equal(t, userID1, documents[0].UserId)
+	assert.Equal(t, createdAt.Unix(), documents[0].Timestamp)
+	assert.Equal(t, 0, documents[0].Action)
+	assert.Nil(t, documents[0].Value)
+	assert.Equal(t, 0, documents[0].Type)
+	assert.Equal(t, "", documents[0].ID)
+
+	document, status := store.GetStore().GetLastSyncedHubspotDocumentByID(project.ID, "1", model.HubspotDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "1", document.ID)
+	assert.Equal(t, createdAt.Unix(), document.Timestamp)
+	assert.Equal(t, model.HubspotDocumentActionCreated, document.Action)
+	assert.Equal(t, model.HubspotDocumentTypeContact, document.Type)
+
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, model.HubspotDocumentTypeContact, eventID, updatedDate.Unix(), model.HubspotDocumentActionUpdated, userID1)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	document, status = store.GetStore().GetLastSyncedHubspotDocumentByID(project.ID, "1", model.HubspotDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "1", document.ID)
+	assert.Equal(t, updatedDate.Unix(), document.Timestamp)
+	assert.Equal(t, model.HubspotDocumentActionUpdated, model.HubspotDocumentTypeContact)
+
+	document, status = store.GetStore().GetLastSyncedHubspotDocumentByID(project.ID, "2", model.HubspotDocumentTypeContact)
+	assert.Equal(t, http.StatusNotFound, status)
 }
