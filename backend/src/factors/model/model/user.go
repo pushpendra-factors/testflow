@@ -62,7 +62,7 @@ type SessionUserProperties struct {
 // indexed hubspot user property.
 const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
 
-var UserPropertiesToSkipOnMergeByCustomerUserID = [...]string{
+var UserPropertiesToSkipOnMergeByCustomerUserID = []string{
 	UserPropertyHubspotContactLeadGUID,
 }
 
