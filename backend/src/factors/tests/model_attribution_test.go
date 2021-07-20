@@ -1494,3 +1494,43 @@ func TestSortInteractionTime(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterRows(t *testing.T) {
+	type args struct {
+		rows           [][]interface{}
+		attributionKey string
+		keyIndex       int
+	}
+	rowIn1 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword2", 1, 2, 3, 4, 5, 65}}
+	rowOut1 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword2", 1, 2, 3, 4, 5, 65}}
+
+	rowIn2 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", "matchType1", "$none", 1, 2, 3, 4, 5, 65}}
+	rowOut2 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}}
+
+	rowIn3 := [][]interface{}{[]interface{}{"adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adgroup1", "matchType1", "keyword2", 1, 2, 3, 4, 5, 65}}
+	rowOut3 := [][]interface{}{[]interface{}{"adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adgroup1", "matchType1", "keyword2", 1, 2, 3, 4, 5, 65}}
+	rowIn4 := [][]interface{}{[]interface{}{"adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adgroup1", "matchType1", "$none", 1, 2, 3, 4, 5, 65}}
+	rowOut4 := [][]interface{}{[]interface{}{"adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}}
+
+	rowIn5 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", 1, 2, 3, 4, 5, 65}}
+	rowOut5 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", 1, 2, 3, 4, 5, 65}}
+
+	tests := []struct {
+		name string
+		args args
+		want [][]interface{}
+	}{
+		{"Test1", args{rows: rowIn1, attributionKey: model.AttributionKeyKeyword, keyIndex: 4}, rowOut1},
+		{"Test2", args{rows: rowIn2, attributionKey: model.AttributionKeyKeyword, keyIndex: 4}, rowOut2},
+		{"Test3", args{rows: rowIn3, attributionKey: model.AttributionKeyKeyword, keyIndex: 2}, rowOut3},
+		{"Test4", args{rows: rowIn4, attributionKey: model.AttributionKeyKeyword, keyIndex: 2}, rowOut4},
+		{"Test5", args{rows: rowIn5, attributionKey: model.AttributionKeyAdgroup, keyIndex: 2}, rowOut5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := model.FilterRows(tt.args.rows, tt.args.attributionKey, tt.args.keyIndex); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FilterRows() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

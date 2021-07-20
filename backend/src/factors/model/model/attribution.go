@@ -925,6 +925,24 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 	return resultRows
 }
 
+// FilterRows filters rows based on attribution key. ex. $none exclusion for 'Keyword' type report.
+func FilterRows(rows [][]interface{}, attributionKey string, keyIndex int) [][]interface{} {
+
+	// Select the best value for attributionKey
+	switch attributionKey {
+	case AttributionKeyKeyword:
+		filteredRows := make([][]interface{}, 0)
+		for _, mapRow := range rows {
+			if mapRow[keyIndex].(string) != PropertyValueNone {
+				filteredRows = append(filteredRows, mapRow)
+			}
+		}
+		return filteredRows
+	default:
+	}
+	return rows
+}
+
 // AddUpConversionEventCount Groups all unique users by attributionId and adds it to attributionData
 func AddUpConversionEventCount(usersIdAttributionIdMap map[string][]string) map[string]*AttributionData {
 	attributionData := make(map[string]*AttributionData)
