@@ -144,8 +144,8 @@ spec:
           - "1b993a1b-8a76-4ddd-a827-fa3c579ba8b9"
           - --show_smart_properties_allowed_projects
           - "446,386"
-          - --allow_channel_grouping_for_projects
-          - "597"
+          - --attribution_debug
+          - 0
           - --disable_mql_db_writes
           - --disable_mql_redis_writes
           - --allow_smart_event_rule_creation

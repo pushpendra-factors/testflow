@@ -97,6 +97,7 @@ func main() {
 	allowSmartEventRuleCreation := flag.Bool("allow_smart_event_rule_creation", false, "Should allow smart event rule creation")
 	projectAnalyticsWhitelistedUUIds := flag.String("project_analytics_whitelisted_uuids",
 		"", "List of UUIDs whitelisted for project analytics API")
+	attributionDebug := flag.Int("attribution_debug", 0, "Enables debug logging for attribution queries")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
@@ -167,6 +168,7 @@ func main() {
 		DisableMemSQLDBWrites:                   disableMemSQLDBWrites,
 		DisableMemSQLRedisWrites:                disableMemSQLRedisWrites,
 		DisableMemSQLQueryCache:                 disableMemSQLQueryCache,
+		AttributionDebug:                        *attributionDebug,
 	}
 	C.InitConf(config)
 

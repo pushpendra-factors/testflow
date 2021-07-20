@@ -126,6 +126,8 @@ spec:
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
+          - --attribution_debug
+          - 0
           - --whitelisted_projects_ids_event_user_cache
           - "2,37"
         env:

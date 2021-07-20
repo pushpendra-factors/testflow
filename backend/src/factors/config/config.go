@@ -173,6 +173,7 @@ type Configuration struct {
 	AllowChannelGroupingForProjectIDs    string
 	CloudManager                         filestore.FileManager
 	SegmentExcludedCustomerIDByProject   map[uint64]string // map[project_id]customer_user_id
+	AttributionDebug                     int
 }
 
 type Services struct {
@@ -1368,6 +1369,10 @@ func GetTokensFromStringListAsString(stringList string) []string {
 	}
 
 	return stringTokens
+}
+
+func GetAttributionDebug() int {
+	return configuration.AttributionDebug
 }
 
 func GetSDKRequestQueueAllowedTokens() []string {

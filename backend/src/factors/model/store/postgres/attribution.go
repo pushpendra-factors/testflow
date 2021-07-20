@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"errors"
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -23,6 +24,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
+	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 
 	// supporting existing old/saved queries
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
@@ -67,10 +69,20 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	// coalUserId[Key][UserSessionData]
 	sessions := model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo)
 
+	if C.GetAttributionDebug() == 1 {
+		uniqUsers := len(sessions)
+		logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
+	}
+
 	attributionData, isCompare, err := pg.FireAttribution(projectID, query, eventNameToIDList, sessions)
 
 	if err != nil {
 		return nil, err
+	}
+
+	if C.GetAttributionDebug() == 1 {
+		uniqueKeys := len(*attributionData)
+		logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 	}
 
 	// Add the Added keys
@@ -106,7 +118,6 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	// Additional filtering based on AttributionKey.
 	result.Rows = model.FilterRows(result.Rows, query.AttributionKey, model.GetLastKeyValueIndex(result.Headers))
 
-	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// sort the rows by conversionEvent
 	conversionIndex := model.GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
@@ -196,6 +207,8 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	conversionFrom, conversionTo int64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, error) {
 
+	logCtx := log.WithFields(log.Fields{"Method": "RunAttributionForMethodologyComparison"})
+
 	// Empty linkedEvents as they are not analyzed in compare events.
 	var linkedEvents []model.QueryEventWithProperties
 
@@ -241,7 +254,62 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	if err != nil {
 		return nil, err
 	}
+
 	attributionDataCompare := model.AddUpConversionEventCount(userConversionCompareHit)
+	if C.GetAttributionDebug() == 1 {
+		uniqueKeys1 := len(userConversionHit)
+		logCtx.WithFields(log.Fields{"AttributionDebug": "userIDToInfoConverted",
+			"AttributionMethodology": query.AttributionMethodology}).Info(fmt.Sprintf("Total userConversionHit got attributed: %d", uniqueKeys1))
+		uniqueKeys2 := len(userConversionCompareHit)
+		logCtx.WithFields(log.Fields{"AttributionDebug": "userConversionCompareHit",
+			"AttributionMethodology": query.AttributionMethodologyCompare}).Info(fmt.Sprintf("Total userConversionCompareHit got attributed: %d", uniqueKeys2))
+
+		for k, _ := range userConversionHit {
+			if _, exists := userConversionCompareHit[k]; !exists {
+				logCtx.WithFields(log.Fields{"AttributionDebug": "userConversionHit vs userConversionCompareHit",
+					"UserID": k, "UserIDAttribution": k, "Session": sessions[k]}).Info(fmt.Sprintf("User in userConversionHit but not userConversionCompareHit"))
+			}
+		}
+		for k, _ := range userConversionCompareHit {
+			if _, exists := userConversionHit[k]; !exists {
+				logCtx.WithFields(log.Fields{"AttributionDebug": "userConversionCompareHit vs userConversionHit",
+					"UserIDAttribution": k, "Session": sessions[k]}).Info(fmt.Sprintf("User in userConversionCompareHit but not userConversionHit "))
+			}
+		}
+		// for $none case
+
+		for k, v := range userConversionHit {
+			if v != nil && v[0] == model.PropertyValueNone {
+				if _, exists := userConversionCompareHit[k]; !exists {
+					logCtx.WithFields(log.Fields{"AttributionDebug": "$none userConversionHit - un match",
+						"UserID": k, "UserIDAttribution": v, "Session": sessions[k]}).Info(fmt.Sprintf("User unmatch"))
+					continue
+				}
+				// if exists
+				v2, _ := userConversionCompareHit[k]
+				if v[0] != v2[0] {
+					logCtx.WithFields(log.Fields{"AttributionDebug": "$none userConversionHit - user match, value mismatch",
+						"UserID": k, "UserIDAttribution_Hit": v, "UserIDAttribution_CompareHit": v2, "Session": sessions[k]}).Info(fmt.Sprintf("User match"))
+				}
+			}
+		}
+
+		for k, v := range userConversionCompareHit {
+			if v != nil && v[0] == model.PropertyValueNone {
+				if _, exists := userConversionHit[k]; !exists {
+					logCtx.WithFields(log.Fields{"AttributionDebug": "$none userConversionCompareHit - un match",
+						"UserID": k, "UserIDAttribution": v, "Session": sessions[k]}).Info(fmt.Sprintf("User unmatch"))
+					continue
+				}
+				// if exists
+				v2, _ := userConversionHit[k]
+				if v[0] != v2[0] {
+					logCtx.WithFields(log.Fields{"AttributionDebug": "$none userConversionCompareHit - user match, value mismatch",
+						"UserID": k, "UserIDAttribution_Hit": v, "UserIDAttribution_CompareHit": v2, "Session": sessions[k]}).Info(fmt.Sprintf("User match"))
+				}
+			}
+		}
+	}
 
 	// Merge compare data into attributionData.
 	for key := range attributionData {
@@ -256,6 +324,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 		if _, exists := attributionData[missingKey]; !exists {
 			attributionData[missingKey] = &model.AttributionData{}
 			attributionData[missingKey].ConversionEventCompareCount = attributionDataCompare[missingKey].ConversionEventCount
+			attributionData[missingKey].ConversionEventCompareCount = 0
 		}
 	}
 	return &attributionData, nil
