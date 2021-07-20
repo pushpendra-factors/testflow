@@ -6,9 +6,10 @@ export const convertToEventOptions = (eventNames, display_names = []) => {
   const options = [];
   
   Object.keys(eventNames).forEach(key => {
+    const icon = key.toLowerCase().split(' ').join('_')
     options.push({
       label: key,
-      icon: 'fav',
+      icon: icon,
       values: eventNames[key].map(v => {
         const name = display_names[v];
         return [name? name : v, v]

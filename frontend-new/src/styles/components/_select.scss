@@ -34,23 +34,26 @@
     animation-name: fa-fadeInDown; 
     animation-timing-function: ease-in-out;
     animation-duration: 0.2s;
-    overflow: hidden;
 
-        width: 360px;
-        padding: 0px;
+        position: absolute;
+        width: 400px;
+        max-height: 583px;
+        padding: 15px 9px;
         background: #FFFFFF;
-        border: 1px solid $fa-color--mono-2;
         box-shadow: 0px 6px 20px $fa-color--mono-2;
-        border-radius: 10px;
+        border-radius: 5px;
         z-index: 75;
+        overflow-y: scroll;
+        overflow-x: hidden;
 
         .fa-select-group-select--options
         {
-            padding: 10px 10px;
+            padding: 10px 30px;
             color: $fa-color--mono-5;
             font-weight: $font-weight--regular;
             cursor: pointer;
             display: inline-flex;
+            
             &:hover{
                 background-color: rgba($fa-color--brand-1, 1);
             }
@@ -58,7 +61,7 @@
             span {
                 overflow: hidden;
                 text-overflow: ellipsis;
-                word-wrap: normal;
+                overflow-wrap: break-word;
                 max-height: 22px;
             }
         }
@@ -67,11 +70,11 @@
         {
             display: flex;
             flex-direction: column;
-            border-top: 1px solid $fa-color--mono-2;
         }
         .fa-select-group-select--option-group
         {
-            padding: 12px 10px;
+            padding: 20px 8px 12px 8px;
+            border-bottom: 1px solid $fa-color--mono-2;
             display: flex;
             justify-content: space-between;
             color: #5949BC;
@@ -89,17 +92,24 @@
 
 
     .ant-input-affix-wrapper{
-        padding: 8px 0 8px 10px;
-        border-top-right-radius: 10px;
-        border-top-left-radius: 10px;
-        border: none !important;
+        position: sticky;
+        width: 374px;
+        left: calc(50% - 374px/2);
+        top: 0px;
+        background: #f5f6f8;
+        padding: 8px;
+        border-radius: 10px;
+        border: 1px solid #eee!important;
         box-shadow: none !important;
         input.ant-input{
-            height: 40px !important;
+            height: 30px !important;
+            background-color: #f5f6f8;
         }
         &:focus, &:hover, &:active{ 
-            border: none !important;
-            box-shadow: none !important
+            border: 1px solid #d9d9d9 !important;
+            border-radius: 8px;
+            box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3) !important;
+            transition: all 0.3s;
         } 
     }
 }

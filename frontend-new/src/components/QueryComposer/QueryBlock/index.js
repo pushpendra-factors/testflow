@@ -11,7 +11,7 @@ import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FilterBlock from '../FilterBlock';
 import EventFilterWrapper from '../EventFilterWrapper';
 
-import GroupSelect from '../GroupSelect';
+import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 
@@ -75,13 +75,13 @@ function QueryBlock({
       <div className={styles.query_block__event_selector}>
         {isDDVisible ? (
           <div className={styles.query_block__event_selector__btn}>
-            <GroupSelect
+            <GroupSelect2
               groupedProperties={eventOptions}
               placeholder='Select Event'
               optionClick={(group, val) => onChange(val[1]? val[1]: val[0])}
               onClickOutside={() => setDDVisible(false)}
               allowEmpty={true}
-            ></GroupSelect>
+            ></GroupSelect2>
           </div>
         ) : null}
       </div>
