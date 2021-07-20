@@ -11,12 +11,16 @@ import {
   NAMED_QUERY,
   LOCAL_STORAGE_ITEMS,
   ATTRIBUTION_METRICS,
+  PREDEFINED_DATES,
 } from '../../utils/constants';
 import {
   getItemFromLocalStorage,
   setItemToLocalStorage,
 } from '../../utils/dataFormatter';
-import { DashboardDefaultDateRangeFormat } from '../CoreQuery/utils';
+import {
+  DashboardDefaultDateRangeFormat,
+  DefaultDateRangeFormat,
+} from '../CoreQuery/utils';
 
 export const getDataFromServer = (
   query,
@@ -181,7 +185,60 @@ export const getDashboardDateRange = () => {
     LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION
   );
   if (lastAppliedDuration) {
-    return JSON.parse(lastAppliedDuration);
+    const dateType = JSON.parse(lastAppliedDuration)?.dateType;
+    if (dateType) {
+      switch (dateType) {
+        case PREDEFINED_DATES.TODAY: {
+          return {
+            ...lastAppliedDuration,
+            from: moment().startOf('day'),
+            to: moment().endOf('day'),
+          };
+        }
+        case PREDEFINED_DATES.YESTERDAY: {
+          return {
+            ...lastAppliedDuration,
+            from: moment().subtract(1, 'day').startOf('day'),
+            to: moment().subtract(1, 'day').endOf('day'),
+          };
+        }
+        case PREDEFINED_DATES.THIS_WEEK: {
+          return {
+            ...DefaultDateRangeFormat,
+          };
+        }
+        case PREDEFINED_DATES.LAST_WEEK: {
+          return {
+            ...DashboardDefaultDateRangeFormat,
+          };
+        }
+        case PREDEFINED_DATES.LAST_MONTH: {
+          return {
+            ...lastAppliedDuration,
+            from: moment().subtract(1, 'month').startOf('month'),
+            to: moment().subtract(1, 'month').endOf('month'),
+          };
+        }
+        case PREDEFINED_DATES.THIS_MONTH: {
+          if (moment().format('D') === '1') {
+            return {
+              ...lastAppliedDuration,
+              from: moment().subtract(1, 'day').startOf('month'),
+              to: moment().subtract(1, 'day').endOf('month'),
+              dateType: PREDEFINED_DATES.LAST_MONTH,
+            };
+          } else {
+            return {
+              ...lastAppliedDuration,
+              from: moment().startOf('month'),
+              to: moment().subtract(1, 'day').endOf('day'),
+            };
+          }
+        }
+        default:
+          return lastAppliedDuration;
+      }
+    }
   }
   setItemToLocalStorage(
     LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION,

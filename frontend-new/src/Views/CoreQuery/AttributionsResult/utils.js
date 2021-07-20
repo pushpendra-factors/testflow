@@ -340,7 +340,7 @@ export const getTableColumns = (
             </div>
           ),
         dataIndex: metric.title,
-        width: 150,
+        width: 180,
         className: 'align-bottom',
         render: (d) => {
           return renderMetric(d, comparison_data);
@@ -368,7 +368,8 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: 'Conversion',
-      width: 150,
+      width: 180,
+      className: 'align-bottom',
       render: (d) => {
         return renderMetric(d, comparison_data);
       },
@@ -392,7 +393,8 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: 'Cost per Conversion',
-      width: 150,
+      width: 180,
+      className: 'align-bottom',
       render: (d) => {
         return renderMetric(d, comparison_data);
       },
@@ -416,7 +418,8 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: 'Conversion Rate',
-      width: 150,
+      width: 180,
+      className: 'align-bottom',
       render: (d) => {
         return renderMetric(d, comparison_data);
       },
@@ -449,7 +452,8 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: 'conversion_compare',
-      width: 150,
+      width: 180,
+      className: 'align-bottom',
       render: (d) => {
         return <NumFormat number={d} />;
       },
@@ -472,7 +476,8 @@ export const getTableColumns = (
           handleSorting
         ),
         dataIndex: 'cost_compare',
-        width: 150,
+        width: 180,
+        className: 'align-bottom',
         render: (d) => {
           return <NumFormat number={d} />;
         },
@@ -496,7 +501,8 @@ export const getTableColumns = (
           handleSorting
         ),
         dataIndex: 'conversion_rate_compare',
-        width: 150,
+        width: 180,
+        className: 'align-bottom',
         render: (d) => {
           return <NumFormat number={d} />;
         },
@@ -523,10 +529,11 @@ export const getTableColumns = (
             currentSorter,
             handleSorting
           ),
-          dataIndex: le.label + ' - Users',
-          width: 150,
+          dataIndex: 'Linked Event - ' + le.label + ' - Users',
+          width: 180,
+          className: 'align-bottom',
           render: (d) => {
-            return <NumFormat number={d} />;
+            return renderMetric(d, comparison_data);
           },
         },
       ];
@@ -547,10 +554,11 @@ export const getTableColumns = (
             currentSorter,
             handleSorting
           ),
-          dataIndex: le.label + ' - CPC',
-          width: 150,
+          dataIndex: 'Linked Event - ' + le.label + ' - CPC',
+          width: 180,
+          className: 'align-bottom',
           render: (d) => {
-            return <NumFormat number={d} />;
+            return renderMetric(d, comparison_data);
           },
         });
       }
@@ -571,10 +579,11 @@ export const getTableColumns = (
             currentSorter,
             handleSorting
           ),
-          dataIndex: le.label + ' - Conversion Rate',
-          width: 150,
+          dataIndex: 'Linked Event - ' + le.label + ' - Conversion Rate',
+          width: 180,
+          className: 'align-bottom',
           render: (d) => {
-            return <NumFormat number={d} />;
+            return renderMetric(d, comparison_data);
           },
         });
       }
@@ -718,15 +727,32 @@ export const getTableData = (
           const eventConvRateIdx = headers.indexOf(
             `${le.label} - UserConversionRate(%)`
           );
-          resultantRow[`${le.label} - Users`] = formatCount(
-            row[eventUsersIdx],
-            1
-          );
-          resultantRow[`${le.label} - CPC`] = formatCount(row[eventCPCIdx], 1);
-          resultantRow[`${le.label} - Conversion Rate`] = formatCount(
-            row[eventConvRateIdx],
-            1
-          );
+          resultantRow[`Linked Event - ${le.label} - Users`] = !comparison_data
+            ? formatCount(row[eventUsersIdx], 1)
+            : {
+                value: formatCount(row[eventUsersIdx], 1),
+                compare_value: equivalent_compare_row
+                  ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
+                  : 0,
+              };
+          resultantRow[`Linked Event - ${le.label} - CPC`] = !comparison_data
+            ? formatCount(row[eventCPCIdx], 1)
+            : {
+                value: formatCount(row[eventCPCIdx], 1),
+                compare_value: equivalent_compare_row
+                  ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
+                  : 0,
+              };
+          resultantRow[
+            `Linked Event - ${le.label} - Conversion Rate`
+          ] = !comparison_data
+            ? formatCount(row[eventConvRateIdx], 1)
+            : {
+                value: formatCount(row[eventConvRateIdx], 1),
+                compare_value: equivalent_compare_row
+                  ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
+                  : 0,
+              };
         });
       }
       if (attribution_method_compare) {

@@ -49,7 +49,7 @@ import {
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { getDashboardDateRange } from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
-import {  fetchWeeklyIngishts } from 'Reducers/insights'; 
+import {  fetchWeeklyIngishts } from '../../reducers/insights'; 
 import _ from 'lodash';
 
 const coreQueryoptions = [
