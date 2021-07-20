@@ -1,7 +1,7 @@
 import React, { useMemo, memo } from 'react';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
 import { Dropdown, Menu, Button } from 'antd';
-import { DateBreakdowns, QUERY_TYPE_CAMPAIGN } from '../../utils/constants';
+import { DateBreakdowns } from '../../utils/constants';
 import styles from './index.module.scss';
 import { SVG } from '../factorsComponents';
 

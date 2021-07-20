@@ -27,6 +27,7 @@ function GroupedBarChart({
   allValues,
   legends,
   tooltipTitle,
+  attributionMethodsMapper,
 }) {
   const renderedData = chartData.slice(0, FUNNELS_COUNT[cardSize]);
   const keys = Object.keys(renderedData[0]).slice(1);
@@ -89,7 +90,7 @@ function GroupedBarChart({
                     weight='bold'
                     level={8}
                   >
-                    {method1}
+                    {attributionMethodsMapper[method1]}
                   </Text>
                   <Text color='grey2' type='title' extraClass='mb-0'>
                     <NumFormat number={data[method1]} />
@@ -103,7 +104,7 @@ function GroupedBarChart({
                     weight='bold'
                     level={8}
                   >
-                    {method2}
+                    {attributionMethodsMapper[method2]}
                   </Text>
                   <Text color='grey2' type='title' extraClass='mb-0'>
                     <NumFormat number={data[method2]} />
@@ -323,6 +324,7 @@ function GroupedBarChart({
     section,
     title,
     widgetHeight,
+    attributionMethodsMapper
   ]);
 
   useEffect(() => {
@@ -332,11 +334,21 @@ function GroupedBarChart({
   return (
     <div className='w-full'>
       {section === DASHBOARD_WIDGET_SECTION ? (
-        <TopLegends legends={legends} cardSize={cardSize} colors={colors} />
+        <TopLegends
+          showFullLengthLegends={cardSize === 1}
+          legends={legends}
+          cardSize={cardSize}
+          colors={colors}
+        />
       ) : null}
       <div ref={chartRef} className={styles.groupedChart}></div>
       {section === REPORT_SECTION || section === DASHBOARD_MODAL ? (
-        <TopLegends legends={legends} cardSize={cardSize} colors={colors} />
+        <TopLegends
+          showFullLengthLegends={cardSize === 1}
+          legends={legends}
+          cardSize={cardSize}
+          colors={colors}
+        />
       ) : null}
       <div ref={tooltipRef} className={styles.groupedChartTooltip}></div>
     </div>

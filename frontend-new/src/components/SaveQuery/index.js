@@ -203,6 +203,7 @@ function SaveQuery({
     queryType,
     setQuerySaved,
     attributionMetrics,
+    fetchWeeklyIngishtsMetaData
   ]);
 
   let dashboardHelpText = 'Create a dashboard widget for regular monitoring';

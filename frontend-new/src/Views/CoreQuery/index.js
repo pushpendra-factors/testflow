@@ -224,7 +224,6 @@ function CoreQuery({
           queryType,
           queries,
           groupBy,
-          linkedEvents,
           models
         ),
       });
@@ -238,7 +237,6 @@ function CoreQuery({
       groupBy,
       queries,
       queryType,
-      linkedEvents,
       models,
       updateAppliedBreakdown,
       setNavigatedFromDashboard,

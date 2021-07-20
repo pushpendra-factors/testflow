@@ -49,7 +49,7 @@ const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
 // standard events, campaigns, source, referrer, medium, adgroup
 const countURL = 25
 const countUDE = 20
-const countSME = 10
+const countSME = 0
 const countStdEvents = -1 // all events
 const countCampaigns = 25
 const countSource = 10
@@ -1840,6 +1840,10 @@ func MergePatterns(patternA, patternB []*P.Pattern) []*P.Pattern {
 }
 
 func getTopPatterns(patterns []*P.Pattern, topKPatterns int) []*P.Pattern {
+
+	if topKPatterns == 0 {
+		return []*P.Pattern{}
+	}
 
 	if len(patterns) > 0 && topKPatterns > 1 {
 		sort.Slice(patterns, func(i, j int) bool { return patterns[i].PerUserCount > patterns[j].PerUserCount })

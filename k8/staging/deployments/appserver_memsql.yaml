@@ -135,6 +135,8 @@ spec:
           - --allow_smart_event_rule_creation
           - --lookback_window_event_user_cache
           - "10"
+          - --attribution_debug
+          - 0
           - --project_analytics_whitelisted_uuids
           - a2d600fc-75b4-4384-9bda-7a039f6e64c9
           - --primary_datastore

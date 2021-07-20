@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import AttributionTable from './AttributionTable';
 import { formatGroupedData } from './utils';
 import GroupedBarChart from '../../../components/GroupedBarChart';
-import { DASHBOARD_MODAL } from '../../../utils/constants';
+import { DASHBOARD_MODAL, ATTRIBUTION_METHODOLOGY } from '../../../utils/constants';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 
 function GroupedAttributionsChart({
@@ -45,6 +45,14 @@ function GroupedAttributionsChart({
     currMetricsValue,
   ]);
 
+  const attributionMethodsMapper = useMemo(() => {
+    const mapper = {};
+    ATTRIBUTION_METHODOLOGY.forEach((am) => {
+      mapper[am.value] = am.text;
+    });
+    return mapper;
+  }, []);
+
   if (!chartsData.length) {
     return null;
   }
@@ -63,14 +71,14 @@ function GroupedAttributionsChart({
   let legends, tooltipTitle;
   if (currMetricsValue) {
     legends = [
-      `Cost Per Conversion (${attribution_method})`,
-      `Cost Per Conversion (${attribution_method_compare})`,
+      `Cost Per Conversion (${attributionMethodsMapper[attribution_method]})`,
+      `Cost Per Conversion (${attributionMethodsMapper[attribution_method_compare]})`,
     ];
     tooltipTitle = 'Cost Per Conversion';
   } else {
     legends = [
-      `Conversions as Unique users (${attribution_method})`,
-      `Conversions as Unique users (${attribution_method_compare})`,
+      `Conversions as Unique users (${attributionMethodsMapper[attribution_method]})`,
+      `Conversions as Unique users (${attributionMethodsMapper[attribution_method_compare]})`,
     ];
     tooltipTitle = 'Conversions';
   }
@@ -90,6 +98,7 @@ function GroupedAttributionsChart({
         allValues={allValues}
         legends={legends}
         tooltipTitle={tooltipTitle}
+        attributionMethodsMapper={attributionMethodsMapper}
       />
       <div className='mt-12 w-full'>
         <AttributionTable

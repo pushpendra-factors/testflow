@@ -135,14 +135,15 @@ function AttributionTable({
       const fromDate = moment(durationObj.from).format('MMM DD');
       const toDate = moment(durationObj.to).format('MMM DD');
       const compareFromDate = moment(cmprDuration.from).format('MMM DD');
-      const compareToDate = moment(durationObj.to).format('MMM DD');
+      const compareToDate = moment(cmprDuration.to).format('MMM DD');
       const result = {};
       Object.keys(rest).forEach((key) => {
         if (
           !enabledAttributionMetricKeys.includes(key) &&
           key !== 'Conversion' &&
           key !== 'Cost per Conversion' &&
-          key !== 'Conversion Rate'
+          key !== 'Conversion Rate' &&
+          !key.includes('Linked Event')
         ) {
           result[key] = rest[key];
         } else {
@@ -154,10 +155,10 @@ function AttributionTable({
           result[`${key} (${compareFromDate} - ${compareToDate})`] =
             rest[key].compare_value;
           result[`${key} change`] = isNaN(changePercent)
-            ? 0
+            ? '0%'
             : changePercent === 'Infinity' || changePercent === '-Infinity'
             ? 'Infinity'
-            : changePercent;
+            : changePercent + '%';
         }
       });
       return result;

@@ -581,16 +581,16 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
 
 export const DefaultDateRangeFormat = {
   from:
-    moment().format('dddd') === 'Sunday' || moment().format('dddd') === 'Monday'
-      ? moment().subtract(3, 'days').startOf('week')
+    moment().format('dddd') === 'Sunday'
+      ? moment().subtract(1, 'day').startOf('week')
       : moment().startOf('week'),
   to:
-    moment().format('dddd') === 'Sunday' || moment().format('dddd') === 'Monday'
-      ? moment().subtract(3, 'days').endOf('week')
+    moment().format('dddd') === 'Sunday'
+      ? moment().subtract(1, 'day').endOf('week')
       : moment().subtract(1, 'day').endOf('day'),
   frequency: 'date',
   dateType:
-    moment().format('dddd') === 'Sunday' || moment().format('dddd') === 'Monday'
+    moment().format('dddd') === 'Sunday'
       ? PREDEFINED_DATES.LAST_WEEK
       : PREDEFINED_DATES.THIS_WEEK,
 };
@@ -1043,7 +1043,6 @@ export const isComparisonEnabled = (
   queryType,
   events,
   groupBy,
-  linkedEvents,
   models
 ) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
@@ -1055,7 +1054,7 @@ export const isComparisonEnabled = (
   //   return !(events.length > 1 && newAppliedBreakdown.length > 0);
   // }
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
-    if (!linkedEvents.length && models.length === 1) {
+    if (models.length === 1) {
       return true;
     }
   }
