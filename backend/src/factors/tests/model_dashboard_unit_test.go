@@ -818,6 +818,12 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		for unitID, queryMap := range dashboardUnitQueriesMap {
 			queryClass := queryMap["class"].(string)
 			query := queryMap["query"].(model.BaseQuery)
+			if queryClass == model.QueryClassAttribution {
+				f, _ := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(from, to)
+				if f == 0 {
+					continue
+				}
+			}
 			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
 
 			query.SetQueryDateRange(from, to)
@@ -1204,11 +1210,11 @@ func TestShouldCacheUnitForTimeRange(t *testing.T) {
 		{"TestDateRangePresetYesterday", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetYesterday, from: july1Start, to: july1End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
 
 		{"TestDateRangePresetCurrentMonth1", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july1End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
-		{"TestDateRangePresetCurrentMonth2", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july2End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetCurrentMonth2", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july2End, onlyAttribution: 0, skipAttribution: 0}, true, july1Start, july1End},
 		{"TestDateRangePresetCurrentMonth3", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july3End, onlyAttribution: 0, skipAttribution: 0}, true, july1Start, july3End - U.SECONDS_IN_A_DAY},
 
 		{"TestDateRangePresetCurrentWeek1", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: sundayEnd, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
-		{"TestDateRangePresetCurrentWeek2", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: mondayEnd, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetCurrentWeek2", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: mondayEnd, onlyAttribution: 0, skipAttribution: 0}, true, sundayStart, sundayEnd},
 		{"TestDateRangePresetCurrentWeek3", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: tuesdayEnd, onlyAttribution: 0, skipAttribution: 0}, true, sundayStart, tuesdayEnd - U.SECONDS_IN_A_DAY},
 	}
 	for _, tt := range tests {
@@ -1243,11 +1249,6 @@ func TestGetEffectiveTimeRangeForDashboardUnitAttributionQuery(t *testing.T) {
 	fromValid1 := toValid1 - 7*U.SECONDS_IN_A_DAY + 1
 	toValid2 := U.GetBeginningOfDayTimestampZ(U.TimeNow().Unix(), U.TimeZoneStringIST) - 1
 	fromValid2 := toValid2 - 1*U.SECONDS_IN_A_DAY + 1
-
-	/*sundayStart := int64(1625337000)
-	sundayEnd := int64(1625423399)
-	mondayEnd := int64(1625509799)
-	tuesdayEnd := int64(1625596199)*/
 
 	tests := []struct {
 		name  string

@@ -151,7 +151,8 @@ func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, only
 		effectiveTo := to - U.SECONDS_IN_A_DAY
 
 		// Rule 3: If the computation data is Equal to or more than 1 day, we should run attribution else skip it.
-		if (effectiveTo - from) >= (U.SECONDS_IN_A_DAY + epsilonSeconds) {
+		// Since From/To is always start/end of the day, if the diff is > 0, it is effectively a day
+		if (effectiveTo - from) > 0 {
 			return true, from, effectiveTo
 		}
 
@@ -170,8 +171,10 @@ func GetEffectiveTimeRangeForDashboardUnitAttributionQuery(from, to int64) (int6
 	if (to + U.SECONDS_IN_A_DAY) <= (now - epsilonSeconds) {
 		return from, to
 	}
+
 	effectiveTo := to - U.SECONDS_IN_A_DAY
-	if (effectiveTo - from) >= (U.SECONDS_IN_A_DAY + epsilonSeconds) {
+	// Since From/To is always start/end of the day, if the diff is > 0, it is effectively a day
+	if (effectiveTo - from) > 0 {
 		return from, effectiveTo
 	}
 	return 0, 0
