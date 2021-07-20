@@ -2008,9 +2008,9 @@ func (pg *Postgres) ExecuteAdwordsSEMChecklistQuery(projectID uint64, query mode
 		logCtx.WithError(err).Info(model.AdwordsSpecificError)
 		return model.TemplateResponse{}, http.StatusNotFound
 	}
-	templateQueryResponse, errCode := pg.getAdwordsSEMChecklistQueryData(query, projectID, *customerAccountID, reqID)
-	if errCode != http.StatusOK {
-		logCtx.Error("Failed to get template query response. ErrCode: ", errCode)
+	templateQueryResponse, err := pg.getAdwordsSEMChecklistQueryData(query, projectID, *customerAccountID, reqID)
+	if err != nil {
+		logCtx.Error("Failed to get template query response. Error: ", err.Error())
 		return model.TemplateResponse{}, http.StatusNotFound
 	}
 	return templateQueryResponse, http.StatusOK
@@ -2036,13 +2036,13 @@ func (pg *Postgres) validateIntegratonAndMetricsForAdwordsSEMChecklist(projectID
 }
 
 func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, projectID uint64, customerAccountID string,
-	reqID string) (model.TemplateResponse, int) {
+	reqID string) (model.TemplateResponse, error) {
 	var result model.TemplateResponse
 	lastWeekFromTimestamp, lastWeekToTimestamp, prevWeekFromTimestamp, prevWeekToTimestamp := model.GetTimestampsForTemplateQueryWithDays(query, 7)
 	thresholdPercentage, thresholdAbsolute := float64(10), float64(0)
 	templateThresholds, err := pg.getTemplateThresholds(projectID, model.TemplateAliasToType["sem_checklist"])
 	if err != nil {
-		return model.TemplateResponse{}, http.StatusInternalServerError
+		return model.TemplateResponse{}, err
 	}
 	for _, threshold := range templateThresholds {
 		if threshold.Metric == query.Metric {
@@ -2076,7 +2076,7 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 		projectID, customerAccountID,
 		model.AdwordsDocumentTypeAlias["keyword_performance_report"], prevWeekFromTimestamp, prevWeekToTimestamp, thresholdPercentage, thresholdAbsolute).Scan(&keywordAnalysisResult).Error
 	if err != nil {
-		return model.TemplateResponse{}, http.StatusInternalServerError
+		return model.TemplateResponse{}, err
 	}
 	campaignIDToSubLevelDataMap := make(map[string][]model.SubLevelData)
 	for _, keywordAnalysis := range keywordAnalysisResult {
@@ -2102,7 +2102,7 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 		projectID, customerAccountID,
 		model.AdwordsDocumentTypeAlias["campaign_performance_report"], prevWeekFromTimestamp, prevWeekToTimestamp, campaignArray).Scan(&campaignAnalysis).Error
 	if err != nil {
-		return model.TemplateResponse{}, http.StatusInternalServerError
+		return model.TemplateResponse{}, err
 	}
 	for _, campaignAnalysisRow := range campaignAnalysis {
 		if campaignAnalysisRow.PreviousWeekValue < 0.1 && campaignAnalysisRow.LastWeekValue < 0.1 {
@@ -2121,24 +2121,24 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 	rows, err := db.Raw(overallAnalysisQuery, projectID, customerAccountID,
 		model.AdwordsDocumentTypeAlias["campaign_performance_report"], lastWeekFromTimestamp, lastWeekToTimestamp).Rows()
 	if err != nil {
-		return model.TemplateResponse{}, http.StatusInternalServerError
+		return model.TemplateResponse{}, err
 	}
 
 	resultHeadersLastWeek, resultRowsLastWeek, err := U.DBReadRows(rows)
 	if err != nil {
-		return model.TemplateResponse{}, http.StatusInternalServerError
+		return model.TemplateResponse{}, err
 	}
 
 	rows, err = db.Raw(overallAnalysisQuery, projectID, customerAccountID,
 		model.AdwordsDocumentTypeAlias["campaign_performance_report"], prevWeekFromTimestamp, prevWeekToTimestamp).Rows()
 	if err != nil {
-		return model.TemplateResponse{}, http.StatusInternalServerError
+		return model.TemplateResponse{}, err
 	}
 
 	_, resultRowsPreviousWeek, err := U.DBReadRows(rows)
 
 	if err != nil {
-		return model.TemplateResponse{}, http.StatusInternalServerError
+		return model.TemplateResponse{}, err
 	}
 	for index, value := range resultHeadersLastWeek {
 		var percentageChange float64
@@ -2178,7 +2178,7 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 			ColumnName: "keyword",
 		},
 	}
-	return result, http.StatusOK
+	return result, nil
 }
 func calcTotalAdImpressions(siShare float64, impressions float64) float64 {
 	if siShare == 0 {
@@ -2189,9 +2189,14 @@ func calcTotalAdImpressions(siShare float64, impressions float64) float64 {
 }
 func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCauseMetric {
 	rootCauseMetrics := make([]model.RootCauseMetric, 0)
+	percentageChangeTotalAdImpressions := 0.0
 	prevTotalAdImpressions := calcTotalAdImpressions(keywordAnalysis.PrevSearchImpressionShare, keywordAnalysis.PrevImpressions)
 	lastTotalAdImpressions := calcTotalAdImpressions(keywordAnalysis.LastSearchImpressionShare, keywordAnalysis.LastImpressions)
-	percentageChangeTotalAdImpressions := (lastTotalAdImpressions - prevTotalAdImpressions) * 100 / prevTotalAdImpressions
+	if prevTotalAdImpressions == 0 {
+		percentageChangeTotalAdImpressions = (lastTotalAdImpressions - prevTotalAdImpressions) * 100 / 0.0000001
+	} else {
+		percentageChangeTotalAdImpressions = (lastTotalAdImpressions - prevTotalAdImpressions) * 100 / prevTotalAdImpressions
+	}
 	if keywordAnalysis.PercentageChange < 0 {
 		if keywordAnalysis.ClickThroughRate < 0 {
 			rootCauseMetric := model.RootCauseMetric{Metric: model.ClickThroughRate, PercentageChange: keywordAnalysis.ClickThroughRate}
