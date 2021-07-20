@@ -17,29 +17,30 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 		eventName := val.EventName
 		conversionTime := coalUserIdConversionTimestamp[val.CoalUserID]
 		attributionKeys := []string{PropertyValueNone}
+		userSessions := sessions[userId]
 		switch method {
 		case AttributionMethodFirstTouch:
-			attributionKeys = getFirstTouchId(attributionType, sessions[userId], conversionTime,
+			attributionKeys = getFirstTouchId(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLastTouch:
-			attributionKeys = getLastTouchId(attributionType, sessions[userId], conversionTime,
+			attributionKeys = getLastTouchId(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodFirstTouchNonDirect:
-			attributionKeys = getFirstTouchNDId(attributionType, sessions[userId], conversionTime,
+			attributionKeys = getFirstTouchNDId(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLastTouchNonDirect:
-			attributionKeys = getLastTouchNDId(attributionType, sessions[userId], conversionTime,
+			attributionKeys = getLastTouchNDId(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLinear:
-			attributionKeys = getLinearTouch(attributionType, sessions[userId], conversionTime,
+			attributionKeys = getLinearTouch(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 

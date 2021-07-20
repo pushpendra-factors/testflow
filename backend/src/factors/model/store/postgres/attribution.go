@@ -103,6 +103,9 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	result.Rows = model.MergeDataRowsHavingSameKey(result.Rows, model.GetLastKeyValueIndex(result.Headers))
 
+	// Additional filtering based on AttributionKey.
+	result.Rows = model.FilterRows(result.Rows, query.AttributionKey, model.GetLastKeyValueIndex(result.Headers))
+
 	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// sort the rows by conversionEvent
 	conversionIndex := model.GetConversionIndex(result.Headers)
