@@ -5,6 +5,7 @@ import (
 	H "factors/handler"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/sdk"
 	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
@@ -993,4 +994,54 @@ func TestUserPropertySkipOnMerge(t *testing.T) {
 	userProperties, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, leadGUID2, (*userProperties)[model.UserPropertyHubspotContactLeadGUID])
+}
+
+func TestIdentifiersSkipOnMerge(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	cuid := getRandomEmail()
+	userID1, status := store.GetStore().CreateUser(&model.User{
+		ProjectId: project.ID,
+	})
+	assert.Equal(t, http.StatusCreated, status)
+
+	status, _ = sdk.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId: userID1, CustomerUserId: cuid, Source: sdk.SourceJSSDK,
+	}, true)
+	assert.Equal(t, http.StatusOK, status)
+
+	cuid2 := getRandomEmail()
+	userID2, status := store.GetStore().CreateUser(&model.User{
+		ProjectId: project.ID,
+	})
+	assert.Equal(t, http.StatusCreated, status)
+
+	status, _ = sdk.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId: userID2, CustomerUserId: cuid2, Source: sdk.SourceJSSDK,
+	}, true)
+	assert.Equal(t, http.StatusOK, status)
+
+	status, _ = sdk.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId: userID2, CustomerUserId: cuid, Source: sdk.SourceJSSDK,
+	}, true)
+	assert.Equal(t, http.StatusOK, status)
+	user1, status := store.GetStore().GetUser(project.ID, userID1)
+	assert.Equal(t, http.StatusFound, status)
+	user2, status := store.GetStore().GetUser(project.ID, userID2)
+	assert.Equal(t, http.StatusFound, status)
+	user1PropertiesMap, err := U.DecodePostgresJsonb(&user1.Properties)
+	assert.Nil(t, err)
+	user2PropertiesMap, err := U.DecodePostgresJsonb(&user2.Properties)
+	assert.Nil(t, err)
+	user1MetaObject, err := model.GetDecodedUserPropertiesIdentifierMetaObject(user1PropertiesMap)
+	assert.Nil(t, err)
+	user2MetaObject, err := model.GetDecodedUserPropertiesIdentifierMetaObject(user2PropertiesMap)
+	assert.Nil(t, err)
+	assert.Contains(t, *user1MetaObject, cuid)
+	assert.NotContains(t, *user1MetaObject, cuid2)
+
+	assert.Contains(t, *user2MetaObject, cuid)
+	assert.Contains(t, *user2MetaObject, cuid2)
+
 }
