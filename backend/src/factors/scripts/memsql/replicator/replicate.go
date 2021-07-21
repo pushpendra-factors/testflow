@@ -542,11 +542,15 @@ func isDefaultValue(x interface{}) bool {
 	return x == nil || reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
 }
 
-func createOnMemSQL(projectID uint64, tableName string, record interface{}, id interface{}) int {
+func createOnMemSQL(projectID uint64, tableName string, record interface{}, id interface{}, isFromUpdate bool) int {
 	logCtx := log.WithField("project_id", projectID).WithField("table_name", tableName).
 		WithField("record", record)
 
-	record = disallowCreateWithSyncColumns(tableName, record)
+	// Avoid resetting of fields for create calls from update.
+	if !isFromUpdate {
+		record = disallowCreateWithSyncColumns(tableName, record)
+	}
+
 	if err := memSQLDB.Table(tableName).Create(record).Error; err != nil {
 		if isDuplicateError(err) {
 			return http.StatusConflict
@@ -649,8 +653,7 @@ func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interfac
 
 		// Copy old memsql record values for selected sync columns.
 		pgRecord = disallowUpdateOnSyncColumns(tableName, memsqlTableRecord, pgRecord)
-
-		status = createOnMemSQL(projectID, tableName, pgRecord, pgTableRecord.ID)
+		status = createOnMemSQL(projectID, tableName, pgRecord, pgTableRecord.ID, true)
 		if status != http.StatusCreated && status != http.StatusConflict {
 			return http.StatusInternalServerError
 		}
@@ -757,7 +760,7 @@ func createIfNotExistOrUpdateIfChangedOnMemSQL(tableName string, pgRecord interf
 
 	// If the table has unique primary key. Do not do getOnMemSQL in the beginning.
 	// Only do it, when there is a conflict for checking the updatedAt.
-	status := createOnMemSQL(pgTableRecord.ProjectID, tableName, pgRecord, pgTableRecord.ID)
+	status := createOnMemSQL(pgTableRecord.ProjectID, tableName, pgRecord, pgTableRecord.ID, false)
 	if status == http.StatusConflict {
 		if status := updateIfExistOnMemSQL(pgTableRecord.ProjectID,
 			tableName, pgRecord, pgTableRecord, nil); status != http.StatusOK {
