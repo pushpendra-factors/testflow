@@ -227,7 +227,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 	// Attribution based on given attribution methodology.
 	userConversionHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		query.ConversionEvent.Name, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To)
+		query.LookbackDays, query.From, query.To, query.AttributionKey)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 	// Attribution based on given attributionMethodologyCompare methodology.
 	userConversionCompareHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodologyCompare,
 		query.ConversionEvent.Name, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To)
+		query.LookbackDays, query.From, query.To, query.AttributionKey)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (store *MemSQL) runAttribution(projectID uint64,
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
-		query.LookbackDays, query.From, query.To)
+		query.LookbackDays, query.From, query.To, query.AttributionKey)
 	if err != nil {
 		return nil, err
 	}
