@@ -113,6 +113,7 @@ function HCBarLineChart({
           cardSize={cardSize}
           legends={legends}
           colors={['#4d7db4', '#d4787d']}
+          showFullLengthLegends={cardSize === 1}
         />
       ) : null}
       <div className={styles.barLineChart} id={chartId}></div>

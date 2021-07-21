@@ -207,7 +207,7 @@ export const ATTRIBUTION_METRICS = [
     enabled: false,
   },
   {
-    title: 'Average Session Time (in sec)',
+    title: 'Avg Session Time (in sec)',
     header: 'Average Session Time',
     enabled: false,
   },
