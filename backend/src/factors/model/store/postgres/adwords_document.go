@@ -2008,7 +2008,8 @@ func (pg *Postgres) ExecuteAdwordsSEMChecklistQuery(projectID uint64, query mode
 		logCtx.WithError(err).Info(model.AdwordsSpecificError)
 		return model.TemplateResponse{}, http.StatusNotFound
 	}
-	templateQueryResponse, err := pg.getAdwordsSEMChecklistQueryData(query, projectID, *customerAccountID, reqID)
+	customerAccountIDs := strings.Split(*customerAccountID, ",")
+	templateQueryResponse, err := pg.getAdwordsSEMChecklistQueryData(query, projectID, customerAccountIDs, reqID)
 	if err != nil {
 		logCtx.Error("Failed to get template query response. Error: ", err.Error())
 		return model.TemplateResponse{}, http.StatusNotFound
@@ -2035,7 +2036,7 @@ func (pg *Postgres) validateIntegratonAndMetricsForAdwordsSEMChecklist(projectID
 	return customerAccountID, nil
 }
 
-func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, projectID uint64, customerAccountID string,
+func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, projectID uint64, customerAccountID []string,
 	reqID string) (model.TemplateResponse, error) {
 	var result model.TemplateResponse
 	lastWeekFromTimestamp, lastWeekToTimestamp, prevWeekFromTimestamp, prevWeekToTimestamp := model.GetTimestampsForTemplateQueryWithDays(query, 7)
