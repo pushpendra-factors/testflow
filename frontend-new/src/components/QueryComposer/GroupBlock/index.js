@@ -5,7 +5,7 @@ import { SVG, Text } from 'factorsComponents';
 import { bindActionCreators } from 'redux';
 
 import { Button, Tooltip } from 'antd';
-import GroupSelect from '../GroupSelect';
+import GroupSelect2 from '../GroupSelect2';
 
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
@@ -86,13 +86,13 @@ function GroupBlock({
       {!isDDVisible[index] &&
         <Button className={`fa-button--truncate`} type="text" onClick={() => triggerDropDown(index)} icon={<SVG name="plus" />}> Add new </Button> }
       {isDDVisible[index]
-        ? (<GroupSelect groupedProperties={filterOptions}
+        ? (<GroupSelect2 groupedProperties={filterOptions}
           placeholder="Select Property"
           optionClick={(group, val) => onChange([group, val], index)}
           onClickOutside={() => triggerDropDown(index, true)}
 
           >
-            </GroupSelect>
+            </GroupSelect2>
 
         )
 
@@ -190,13 +190,13 @@ function GroupBlock({
         </>
         }
         {isDDVisible[index]
-          ? (<GroupSelect groupedProperties={filterOptions}
+          ? (<GroupSelect2 groupedProperties={filterOptions}
             placeholder="Add new"
             optionClick={(group, val) => onChange([group, val], index)}
             onClickOutside={() => triggerDropDown(index, true)}
 
             >
-              </GroupSelect>
+              </GroupSelect2>
 
           )
 

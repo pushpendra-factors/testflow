@@ -3,7 +3,7 @@ import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
-import GroupSelect from '../../QueryComposer/GroupSelect';
+import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
 
 import { Button, Tooltip } from 'antd';
@@ -147,13 +147,13 @@ const ConversionGoalBlock = ({
         return (
             <div className={styles.query_block__event_selector}>
                    {selectVisible
-                     ? <GroupSelect
+                     ? <GroupSelect2
                             groupedProperties={eventNameOptions}
                             placeholder="Select Event"
                             optionClick={(group, val) => onEventSelect(val[1]? val[1]: val[0])}
                             onClickOutside={() => setSelectVisible(false)}
 
-                        ></GroupSelect>
+                        ></GroupSelect2>
 
                      : null }
             </div>

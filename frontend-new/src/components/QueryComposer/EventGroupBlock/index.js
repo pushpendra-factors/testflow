@@ -6,7 +6,7 @@ import { Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 
 import { connect } from 'react-redux';
-import GroupSelect from '../GroupSelect';
+import GroupSelect2 from '../GroupSelect2';
 import FaSelect from '../../FaSelect';
 
 const EventGroupBlock = ({
@@ -161,12 +161,12 @@ const EventGroupBlock = ({
 
   const renderGroupBySelect = () => {
     return (
-      <GroupSelect
+      <GroupSelect2
         groupedProperties={filterOptions}
         placeholder='Select Property'
         optionClick={(group, val) => onChange(group, val)}
         onClickOutside={() => closeDropDown()}
-      ></GroupSelect>
+      ></GroupSelect2>
     );
   };
 

@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from '../factorsComponents';
 import { Button, InputNumber, Tooltip } from 'antd';
-import GroupSelect from '../QueryComposer/GroupSelect';
+import GroupSelect2 from '../QueryComposer/GroupSelect2';
 import FaDatepicker from '../FaDatepicker';
 import FaSelect from '../FaSelect';
 import moment from 'moment';
@@ -196,13 +196,13 @@ const FAFilterSelect = ({
                 </Button>
             </Tooltip>
             {propSelectOpen &&
-                <GroupSelect
+                <GroupSelect2
                     groupedProperties={propOpts}
                     placeholder="Select Property"
                     optionClick={(group, val) => propSelect([...val, group])}
                     onClickOutside={() => setPropSelectOpen(false)}
 
-                ></GroupSelect>
+                ></GroupSelect2>
             }
 
         </div>)

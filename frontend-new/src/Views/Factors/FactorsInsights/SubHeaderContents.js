@@ -4,7 +4,7 @@ import { SVG, Text} from 'factorsComponents';
 import { Link } from 'react-router-dom'; 
 import {connect} from 'react-redux'; 
 import _, { isEmpty } from 'lodash'; 
-import GroupSelect from '../../../components/QueryComposer/GroupSelect'; 
+import GroupSelect2 from '../../../components/QueryComposer/GroupSelect2'; 
 import moment from 'moment';
 import { fetchGoalInsights} from 'Reducers/factors';
 
@@ -65,7 +65,7 @@ function Header({factors_insight_rules, factors_models, fetchGoalInsights, activ
                 <div className={'relative'}>
                 {!showDateTime && <Button  loading={fetchingIngishts} onClick={()=>setShowDateTime(true)}><SVG name={'calendar'} extraClass={'mr-1'} />{dateTime ? dateTime : factors_insight_model} </Button>}
                 {showDateTime && 
-                <GroupSelect 
+                <GroupSelect2 
                         groupedProperties={factorsModels ? [
                         {             
                         label: 'MOST RECENT',

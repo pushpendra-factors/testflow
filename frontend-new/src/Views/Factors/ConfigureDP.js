@@ -5,7 +5,7 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons'; 
 import { connect } from 'react-redux';
-import GroupSelect from '../../components/QueryComposer/GroupSelect';
+import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import {addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, delEventTracked, delUserPropertyTracked} from 'Reducers/factors' 
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 const { confirm } = Modal;
@@ -230,7 +230,7 @@ const ConfigureDP = (props) => {
                                     <div className={'relative'}>
                                         { ! showDropDown && <Button onClick={() => setShowDropDown(true)} size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>}
                                         { showDropDown && <>
-                                          <GroupSelect 
+                                          <GroupSelect2 
                                             extraClass={'right-0'}
                                             groupedProperties={ events ? events : null}
                                             placeholder="Select Events"
@@ -288,7 +288,7 @@ const ConfigureDP = (props) => {
                                     <div> 
                                         { ! showDropDown1 && <Button onClick={() => setShowDropDown1(true)} size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>}
                                         { showDropDown1 && <>
-                                          <GroupSelect 
+                                          <GroupSelect2 
                                             extraClass={'right-0'}
                                             groupedProperties={ userProperties ? [
                                               {             

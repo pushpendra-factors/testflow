@@ -3,7 +3,7 @@ import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
-import GroupSelect from '../../QueryComposer/GroupSelect';
+import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import AttrFilterBlock from '../AttrFilterBlock';
 
 import { setTouchPointFilters } from '../../../reducers/coreQuery/middleware';
@@ -79,13 +79,13 @@ const MarkTouchpointBlock = ({
     return (
       <div className={styles.query_block__event_selector}>
         {selectVisible ? (
-          <GroupSelect
+          <GroupSelect2
             groupedProperties={touchPointOptions}
             placeholder='Select Touchpoint'
             optionClick={(group, val) => onEventSelect(val[0])}
             onClickOutside={() => setSelectVisible(false)}
             extraClass={touchPoint ? styles.touchPointSelector : ''}
-          ></GroupSelect>
+          ></GroupSelect2>
         ) : null}
       </div>
     );

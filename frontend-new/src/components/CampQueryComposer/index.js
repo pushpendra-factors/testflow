@@ -5,7 +5,7 @@ import styles from './index.module.scss';
 import { SVG, Text } from '../../components/factorsComponents';
 import { Button, Popover, Radio } from 'antd';
 import ChannelBlock from './ChannelBlock';
-import GroupSelect from '../QueryComposer/GroupSelect';
+import GroupSelect2 from '../QueryComposer/GroupSelect2';
 import {
   getCampaignConfigData,
   setCampChannel,
@@ -311,12 +311,12 @@ const CampQueryComposer = ({
           </>
         )}
         {groupByDD[index] ? (
-          <GroupSelect
+          <GroupSelect2
             groupedProperties={groupByProps}
             placeholder='Select Property'
             optionClick={(group, val) => onGroupBySet([group, val], index)}
             onClickOutside={() => triggerGroupDD(index)}
-          ></GroupSelect>
+          ></GroupSelect2>
         ) : null}
       </div>
     );
