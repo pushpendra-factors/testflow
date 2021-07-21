@@ -9,6 +9,7 @@ import {
   DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   BAR_COUNT,
+  ATTRIBUTION_METHODOLOGY,
 } from '../../../utils/constants';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 import HCBarLineChart from '../../../components/HCBarLineChart';
@@ -160,6 +161,14 @@ function SingleTouchPoint({
     [chartData.categories, chartData.series, durationObj]
   );
 
+  const attributionMethodsMapper = useMemo(() => {
+    const mapper = {};
+    ATTRIBUTION_METHODOLOGY.forEach((am) => {
+      mapper[am.value] = am.text;
+    });
+    return mapper;
+  }, []);
+
   if (!chartData.categories.length) {
     return null;
   }
@@ -167,7 +176,7 @@ function SingleTouchPoint({
   let chartContent = null;
 
   const legends = [
-    `Conversions as Unique users (${attribution_method})`,
+    `Conversions as Unique users (${attributionMethodsMapper[attribution_method]})`,
     'Cost per conversion',
   ];
 

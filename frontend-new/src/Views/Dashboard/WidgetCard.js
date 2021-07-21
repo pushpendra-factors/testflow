@@ -37,6 +37,7 @@ function WidgetCard({
   setRefreshClicked,
   fetchWeeklyIngishts,
 }) {
+  const hasComponentUnmounted = useRef(false);
   const cardRef = useRef(null);
   const history = useHistory();
   const location = useLocation();
@@ -67,6 +68,7 @@ function WidgetCard({
   const getData = useCallback(
     async (refresh = false) => {
       try {
+        hasComponentUnmounted.current = false;
         setResultState({
           ...initialState,
           loading: true,
@@ -111,69 +113,86 @@ function WidgetCard({
             refresh,
             active_project.id
           );
-          if (queryType === QUERY_TYPE_FUNNEL) {
+          if (
+            queryType === QUERY_TYPE_FUNNEL &&
+            !hasComponentUnmounted.current
+          ) {
             setResultState({
               ...initialState,
               data: res.data.result,
             });
-          } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
+          } else if (
+            queryType === QUERY_TYPE_ATTRIBUTION &&
+            !hasComponentUnmounted.current
+          ) {
             setResultState({
               ...initialState,
               data: res.data.result,
               apiCallStatus,
             });
-          } else if (queryType === QUERY_TYPE_CAMPAIGN) {
+          } else if (
+            queryType === QUERY_TYPE_CAMPAIGN &&
+            !hasComponentUnmounted.current
+          ) {
             setResultState({
               ...initialState,
               data: res.data.result,
             });
           } else {
-            const result_group = res.data.result.result_group;
-            const equivalentQuery = getStateQueryFromRequestQuery(
-              unit.query.query.query_group[0]
-            );
-            const appliedBreakdown = [
-              ...equivalentQuery.breakdown.event,
-              ...equivalentQuery.breakdown.global,
-            ];
+            if (!hasComponentUnmounted.current) {
+              const result_group = res.data.result.result_group;
+              const equivalentQuery = getStateQueryFromRequestQuery(
+                unit.query.query.query_group[0]
+              );
+              const appliedBreakdown = [
+                ...equivalentQuery.breakdown.event,
+                ...equivalentQuery.breakdown.global,
+              ];
 
-            if (unit.query.query.query_group.length === 1) {
-              setResultState({
-                ...initialState,
-                data: result_group[0],
-              });
-            } else if (unit.query.query.query_group.length === 3) {
-              const userData = formatApiData(result_group[0], result_group[1]);
-              const sessionsData = result_group[2];
-              const activeUsersData = calculateActiveUsersData(
-                userData,
-                sessionsData,
-                appliedBreakdown
-              );
-              setResultState({
-                ...initialState,
-                data: activeUsersData,
-              });
-            } else if (unit.query.query.query_group.length === 4) {
-              const eventsData = formatApiData(
-                result_group[0],
-                result_group[1]
-              );
-              const userData = formatApiData(result_group[2], result_group[3]);
-              const frequencyData = calculateFrequencyData(
-                eventsData,
-                userData,
-                appliedBreakdown
-              );
-              setResultState({
-                ...initialState,
-                data: frequencyData,
-              });
-            } else {
-              setResultState({
-                ...initialState,
-                data: formatApiData(result_group[0], result_group[1]),
-              });
+              if (unit.query.query.query_group.length === 1) {
+                setResultState({
+                  ...initialState,
+                  data: result_group[0],
+                });
+              } else if (unit.query.query.query_group.length === 3) {
+                const userData = formatApiData(
+                  result_group[0],
+                  result_group[1]
+                );
+                const sessionsData = result_group[2];
+                const activeUsersData = calculateActiveUsersData(
+                  userData,
+                  sessionsData,
+                  appliedBreakdown
+                );
+                setResultState({
+                  ...initialState,
+                  data: activeUsersData,
+                });
+              } else if (unit.query.query.query_group.length === 4) {
+                const eventsData = formatApiData(
+                  result_group[0],
+                  result_group[1]
+                );
+                const userData = formatApiData(
+                  result_group[2],
+                  result_group[3]
+                );
+                const frequencyData = calculateFrequencyData(
+                  eventsData,
+                  userData,
+                  appliedBreakdown
+                );
+                setResultState({
+                  ...initialState,
+                  data: frequencyData,
+                });
+              } else {
+                setResultState({
+                  ...initialState,
+                  data: formatApiData(result_group[0], result_group[1]),
+                });
+              }
             }
           }
         } else {
@@ -205,6 +224,9 @@ function WidgetCard({
 
   useEffect(() => {
     getData();
+    return () => {
+      hasComponentUnmounted.current = true;
+    };
   }, [getData, durationObj]);
 
   useEffect(() => {

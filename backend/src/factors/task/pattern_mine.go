@@ -2056,24 +2056,24 @@ func GetTopCampaignAnalyticsPatterns(allPatterns []*P.Pattern, cNum, refNum, med
 func FilterAllCausualEvents(allPatterns []*P.Pattern, eventNamesWithType map[string]string) ([]*P.Pattern, error) {
 
 	causalURLs := GetTopURLs(allPatterns, countURL)
-	for _, v := range causalURLs {
-		mineLog.Info("Top Url ->", v.EventNames, v.PerUserCount)
-	}
+	// for _, v := range causalURLs {
+	// 	mineLog.Info("Top Url ->", v.EventNames, v.PerUserCount)
+	// }
 
 	causalUDE := GetTopUDE(allPatterns, eventNamesWithType, countUDE)
-	for _, v := range causalUDE {
-		mineLog.Info("Top UDE ->", v.EventNames, v.PerUserCount)
-	}
+	// for _, v := range causalUDE {
+	// 	mineLog.Info("Top UDE ->", v.EventNames, v.PerUserCount)
+	// }
 
 	causalSME := GetTopSmartEvents(allPatterns, eventNamesWithType, countSME)
-	for _, v := range causalSME {
-		mineLog.Info("Top SME ->", v.EventNames, v.PerUserCount)
-	}
+	// for _, v := range causalSME {
+	// 	mineLog.Info("Top SME ->", v.EventNames, v.PerUserCount)
+	// }
 
 	causalStandardEvents := GetTopStandardPatterns(allPatterns, countStdEvents)
-	for _, v := range causalStandardEvents {
-		mineLog.Info("Top standard Events ->", v.EventNames, v.PerUserCount)
-	}
+	// for _, v := range causalStandardEvents {
+	// 	mineLog.Info("Top standard Events ->", v.EventNames, v.PerUserCount)
+	// }
 
 	campaignAnalyticsEvents := GetTopCampaignAnalyticsPatterns(allPatterns, countCampaigns, countReferrer, countMedium, countSource, countAdgroup)
 	filteredPatterns := MergePatterns(causalURLs, causalUDE)

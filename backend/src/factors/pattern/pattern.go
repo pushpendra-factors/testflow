@@ -428,7 +428,6 @@ func AddNumericAndCategoricalProperties(projectID uint64, eventName string,
 // are stored with the patterns.
 func (p *Pattern) CountForEvent(projectID uint64, userId string,
 	userJoinTimestamp int64, shouldCountOccurence bool, ets EvSameTs) error {
-
 	eventNames := ets.EventsNames
 	evMap := ets.EventsMap
 	eventTimestamp := ets.EventTimestamp
@@ -491,13 +490,20 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 
 	}
 
+	// eventNames copy contains all events which will be
+	// removed in each iteration based on waitindex,
+	// eventNames contain all the original events
+	eventNameCopy := make([]string, len(eventNames))
+	copy(eventNameCopy, eventNames)
+
 	for {
-		_, eventName, idx := U.StringIn(eventNames, p.EventNames[p.waitIndex])
+
+		_, eventName, idx := U.StringIn(eventNameCopy, p.EventNames[p.waitIndex])
 		if idx < 0 {
 			break
 		}
 		if idx >= 0 {
-			eventNames, err = U.Remove(eventNames, idx)
+			eventNameCopy, err = U.Remove(eventNameCopy, idx)
 			if err != nil {
 				return err
 			}

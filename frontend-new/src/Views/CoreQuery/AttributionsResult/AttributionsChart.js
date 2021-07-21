@@ -7,6 +7,7 @@ import AttributionTable from './AttributionTable';
 import {
   DASHBOARD_MODAL,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
+  ATTRIBUTION_METHODOLOGY,
 } from '../../../utils/constants';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import HCBarLineChart from '../../../components/HCBarLineChart';
@@ -225,12 +226,20 @@ function AttributionsChart({
     ]
   );
 
+  const attributionMethodsMapper = useMemo(() => {
+    const mapper = {};
+    ATTRIBUTION_METHODOLOGY.forEach((am) => {
+      mapper[am.value] = am.text;
+    });
+    return mapper;
+  }, []);
+
   if (!chartData.categories.length) {
     return null;
   }
 
   const legends = [
-    `Conversions as Unique users (${attribution_method})`,
+    `Conversions as Unique users (${attributionMethodsMapper[attribution_method]})`,
     'Cost per conversion',
   ];
 
