@@ -613,6 +613,17 @@ func GetKeyIndexOrAddedKeySize(attributionKey string) int {
 	return addedKeysSize
 }
 
+func GetNoneKeyForAttributionType(attributionKey string) string {
+
+	key := ""
+	for i := 0; i < GetKeyIndexOrAddedKeySize(attributionKey); i++ {
+		key = key + PropertyValueNone + KeyDelimiter
+	}
+	key = key + PropertyValueNone
+	return key
+
+}
+
 func GetConversionIndex(headers []string) int {
 	for index, val := range headers {
 		if val == "PageViews" {
