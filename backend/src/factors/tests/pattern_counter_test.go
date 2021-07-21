@@ -2016,3 +2016,205 @@ func TestCountPatternsWithSameTimeStamp(t *testing.T) {
 	assert.Equal(t, uint(2), pACB.TotalUserCount, "pACB.TotalUserCount")
 	assert.Equal(t, uint(2), pACB.PerUserCount, "pACB.PerUserCount")
 }
+
+func TestCountPatternsWithSameTimeStamp2(t *testing.T) {
+	// all three events with same timestamp -> checking counts of all combinations
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	countOccurFlag := false
+	u1CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
+	u1ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
+
+	u1CTimestamp := u1CTime.Unix()
+	u1ETimestamp := u1ETime.Unix()
+
+	eventsInput := []P.CounterEventFormat{
+		// User 1.
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
+	}
+	eventsInputString := ""
+	for _, event := range eventsInput {
+		lineBytes, _ := json.Marshal(event)
+		line := string(lineBytes)
+		eventsInputString += fmt.Sprintf("%s\n", line)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(eventsInputString))
+
+	pABC, _ := P.NewPattern([]string{"A", "B", "C"}, nil)
+	pAB, _ := P.NewPattern([]string{"A", "B"}, nil)
+	pCAB, _ := P.NewPattern([]string{"C", "A", "B"}, nil)
+	pCBA, _ := P.NewPattern([]string{"C", "B", "A"}, nil)
+
+	pACB, _ := P.NewPattern([]string{"A", "C", "B"}, nil)
+	pBAC, _ := P.NewPattern([]string{"B", "A", "C"}, nil)
+	pBCA, _ := P.NewPattern([]string{"B", "C", "A"}, nil)
+
+	pBA, _ := P.NewPattern([]string{"B", "A"}, nil)
+	pBC, _ := P.NewPattern([]string{"B", "C"}, nil)
+	pAC, _ := P.NewPattern([]string{"A", "C"}, nil)
+	pCA, _ := P.NewPattern([]string{"C", "A"}, nil)
+	pCB, _ := P.NewPattern([]string{"C", "B"}, nil)
+
+	pA, _ := P.NewPattern([]string{"A"}, nil)
+	pB, _ := P.NewPattern([]string{"B"}, nil)
+	pC, _ := P.NewPattern([]string{"C"}, nil)
+
+	patterns := []*P.Pattern{pA, pB, pC,
+		pAB, pAC, pBA, pBC, pCA, pCB, pABC,
+		pACB, pBAC, pBCA, pCAB, pCBA}
+
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag)
+	assert.Nil(t, erronFalse)
+
+	for _, v := range patterns {
+		txt := fmt.Sprintf("PerUserCount : %v", v.EventNames)
+		assert.Equal(t, uint(1), v.PerUserCount, txt)
+
+	}
+
+}
+
+func TestCountPatternsWithSameTimeStamp3(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	countOccurFlag := false
+	u1CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
+	u1ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
+
+	u1CTimestamp := u1CTime.Unix()
+	u1ETimestamp := u1ETime.Unix()
+
+	eventsInput := []P.CounterEventFormat{
+		// User 1.
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "D", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(1)},
+	}
+	eventsInputString := ""
+	for _, event := range eventsInput {
+		lineBytes, _ := json.Marshal(event)
+		line := string(lineBytes)
+		eventsInputString += fmt.Sprintf("%s\n", line)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(eventsInputString))
+
+	pABC, _ := P.NewPattern([]string{"A", "B", "C"}, nil)
+	pAB, _ := P.NewPattern([]string{"A", "B"}, nil)
+	pCAB, _ := P.NewPattern([]string{"C", "A", "B"}, nil)
+	pCBA, _ := P.NewPattern([]string{"C", "B", "A"}, nil)
+
+	pACB, _ := P.NewPattern([]string{"A", "C", "B"}, nil)
+	pBAC, _ := P.NewPattern([]string{"B", "A", "C"}, nil)
+	pBCA, _ := P.NewPattern([]string{"B", "C", "A"}, nil)
+
+	pBA, _ := P.NewPattern([]string{"B", "A"}, nil)
+	pBC, _ := P.NewPattern([]string{"B", "C"}, nil)
+	pAC, _ := P.NewPattern([]string{"A", "C"}, nil)
+	pCA, _ := P.NewPattern([]string{"C", "A"}, nil)
+	pCB, _ := P.NewPattern([]string{"C", "B"}, nil)
+
+	pA, _ := P.NewPattern([]string{"A"}, nil)
+	pB, _ := P.NewPattern([]string{"B"}, nil)
+	pC, _ := P.NewPattern([]string{"C"}, nil)
+	pD, _ := P.NewPattern([]string{"D"}, nil)
+
+	pABD, _ := P.NewPattern([]string{"A", "B", "D"}, nil)
+	pACD, _ := P.NewPattern([]string{"A", "C", "D"}, nil)
+	pBCD, _ := P.NewPattern([]string{"B", "C", "D"}, nil)
+
+	pAD, _ := P.NewPattern([]string{"A", "D"}, nil)
+	pCD, _ := P.NewPattern([]string{"C", "D"}, nil)
+	pBD, _ := P.NewPattern([]string{"B", "D"}, nil)
+
+	patterns := []*P.Pattern{pA, pB, pC, pAB, pAC, pBA, pBC, pCA, pCB, pABC, pACB,
+		pBAC, pBCA, pCAB, pCBA, pD, pABD, pACD, pBCD, pAD, pBD, pCD}
+
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag)
+	assert.Nil(t, erronFalse)
+
+	for _, v := range patterns {
+		txt := fmt.Sprintf("PerUserCount : %v", v.EventNames)
+		assert.Equal(t, uint(1), v.PerUserCount, txt)
+
+	}
+
+}
+
+func TestCountPatternsWithSameTimeStamp4(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
+	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
+	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
+	countOccurFlag := true
+	u1CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
+	u1ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
+	u2CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:01:00Z")
+	u2ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
+	u1CTimestamp := u1CTime.Unix()
+	u1ETimestamp := u1ETime.Unix()
+	u2CTimestamp := u2CTime.Unix()
+	u2ETimestamp := u2ETime.Unix()
+
+	eventsInput := []P.CounterEventFormat{
+		// User 1.
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(4)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(1)},
+
+		// // User 2.
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp, EventCardinality: uint(2)},
+	}
+	eventsInputString := ""
+	for _, event := range eventsInput {
+		lineBytes, _ := json.Marshal(event)
+		line := string(lineBytes)
+		eventsInputString += fmt.Sprintf("%s\n", line)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(eventsInputString))
+
+	pABC, _ := P.NewPattern([]string{"A", "B", "C"}, nil)
+	pAB, _ := P.NewPattern([]string{"A", "B"}, nil)
+	pCAB, _ := P.NewPattern([]string{"C", "A", "B"}, nil)
+	pCBA, _ := P.NewPattern([]string{"C", "B", "A"}, nil)
+
+	pACB, _ := P.NewPattern([]string{"A", "C", "B"}, nil)
+	pBAC, _ := P.NewPattern([]string{"B", "A", "C"}, nil)
+	pBCA, _ := P.NewPattern([]string{"B", "C", "A"}, nil)
+
+	pBA, _ := P.NewPattern([]string{"B", "A"}, nil)
+	pBC, _ := P.NewPattern([]string{"B", "C"}, nil)
+	pAC, _ := P.NewPattern([]string{"A", "C"}, nil)
+	pCA, _ := P.NewPattern([]string{"C", "A"}, nil)
+	pCB, _ := P.NewPattern([]string{"C", "B"}, nil)
+
+	pA, _ := P.NewPattern([]string{"A"}, nil)
+	pB, _ := P.NewPattern([]string{"B"}, nil)
+	pC, _ := P.NewPattern([]string{"C"}, nil)
+
+	patterns := []*P.Pattern{pA, pB, pC,
+		pAB, pAC, pBA, pBC, pCA, pCB, pABC,
+		pACB, pBAC, pBCA, pCAB, pCBA}
+
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag)
+	assert.Nil(t, erronFalse)
+
+	for _, v := range patterns {
+		txt := fmt.Sprintf("PerUserCount : %v", v.EventNames)
+		assert.Equal(t, uint(2), v.PerUserCount, txt)
+		txt = fmt.Sprintf("TotalUserCount : %v", v.EventNames)
+		assert.Equal(t, uint(2), v.TotalUserCount, txt)
+
+	}
+}
