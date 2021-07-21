@@ -64,6 +64,7 @@ const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
 
 var UserPropertiesToSkipOnMergeByCustomerUserID = []string{
 	UserPropertyHubspotContactLeadGUID,
+	U.UP_META_OBJECT_IDENTIFIER_KEY,
 }
 
 var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")
