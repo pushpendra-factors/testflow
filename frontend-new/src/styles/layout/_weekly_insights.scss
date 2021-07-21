@@ -3,7 +3,7 @@
     
     .fa-insights--panel-item{
         background-color: $fa-color--white !important;
-        border-color: $fa-color--mono-2;
+        border-color: $fa-color--mono-2; 
         .ant-collapse-header{
             background-color: $fa-color--white !important; 
         }
@@ -24,6 +24,11 @@
     }
 }   
 
+
+.fa-insights--panel .ant-collapse-item-disabled > .ant-collapse-header, .fa-insights--panel .ant-collapse-item-disabled > .ant-collapse-header > .arrow
+{
+cursor: auto;
+}
 
 .fa-tag--green
 {
