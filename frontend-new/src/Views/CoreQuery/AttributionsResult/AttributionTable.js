@@ -56,12 +56,14 @@ function AttributionTable({
     [setAttributionMetrics]
   );
 
-  const metricsOptionsPopover = (
-    <OptionsPopover
-      options={attributionMetrics}
-      onChange={handleMetricsVisibilityChange}
-    />
-  );
+  const metricsOptionsPopover = useMemo(() => {
+    return (
+      <OptionsPopover
+        options={attributionMetrics}
+        onChange={handleMetricsVisibilityChange}
+      />
+    );
+  }, [attributionMetrics, handleMetricsVisibilityChange]);
 
   const columns = useMemo(() => {
     return getTableColumns(

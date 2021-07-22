@@ -32,9 +32,7 @@ function BreakdownCharts({
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const {
-    handleEditQuery,
-  } = useContext(DashboardContext);
+  const { handleEditQuery } = useContext(DashboardContext);
   const currentEventIndex = 0;
 
   const aggregateData = useMemo(() => {
@@ -57,12 +55,18 @@ function BreakdownCharts({
   }, [currentEventIndex, arrayMapper, aggregateData]);
 
   const { categories, highchartsData } = useMemo(() => {
+    if (chartType === CHART_TYPE_BARCHART || chartType === CHART_TYPE_TABLE) {
+      return {
+        categories: [],
+        highchartsData: [],
+      };
+    }
     return formatDataInHighChartsFormat(
       data.result_group[0],
       arrayMapper,
       aggregateData
     );
-  }, [data.result_group, arrayMapper, aggregateData]);
+  }, [data.result_group, arrayMapper, aggregateData, chartType]);
 
   const visibleSeriesData = useMemo(() => {
     const colors = generateColors(visibleProperties.length);

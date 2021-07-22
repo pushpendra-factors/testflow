@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: shared-persistent-pool
+    nodePool: default-pool
   name: add-session-job-dup
 spec:
   schedule: "*/30 * * * *" # every 30 minutes
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: shared-persistent-pool
+            nodePool: default-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: shared-persistent-pool
+            cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: add-session-job-dup
             image: us.gcr.io/factors-production/add-session-job:6e22fbf74-nopr

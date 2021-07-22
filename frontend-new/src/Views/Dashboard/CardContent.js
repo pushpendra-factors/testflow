@@ -89,6 +89,41 @@ function CardContent({ unit, resultState, durationObj }) {
     }
   }, [equivalentQuery.events, eventNames, queryType]);
 
+  const attributionsState = useMemo(() => {
+    if (queryType === QUERY_TYPE_ATTRIBUTION) {
+      return {
+        eventGoal: equivalentQuery.eventGoal,
+        touchpoint: equivalentQuery.touchpoint,
+        models: equivalentQuery.models,
+        linkedEvents: equivalentQuery.linkedEvents,
+        attr_dimensions: equivalentQuery.attr_dimensions,
+      };
+    }
+  }, [equivalentQuery, queryType]);
+
+  const campaignState = useMemo(() => {
+    if (queryType === QUERY_TYPE_CAMPAIGN) {
+      return {
+        channel: unit.query.query.query_group[0].channel,
+        filters: unit.query.query.query_group[0].filters,
+        select_metrics: unit.query.query.query_group[0].select_metrics,
+        group_by: unit.query.query.query_group[0].group_by,
+      };
+    }
+  }, [queryType, unit.query.query]);
+
+  const campaignsArrayMapper = useMemo(() => {
+    if (queryType === QUERY_TYPE_CAMPAIGN) {
+      return campaignState.select_metrics.map((metric, index) => {
+        return {
+          eventName: metric,
+          index,
+          mapper: `event${index + 1}`,
+        };
+      });
+    }
+  }, [queryType, campaignState]);
+
   if (resultState.loading) {
     content = (
       <div className='flex justify-center items-center w-full h-full'>
@@ -117,38 +152,6 @@ function CardContent({ unit, resultState, durationObj }) {
   }
 
   if (resultState.data) {
-    let campaignsArrayMapper = [],
-      attributionsState,
-      campaignState;
-
-    if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      attributionsState = {
-        eventGoal: equivalentQuery.eventGoal,
-        touchpoint: equivalentQuery.touchpoint,
-        models: equivalentQuery.models,
-        linkedEvents: equivalentQuery.linkedEvents,
-        attr_dimensions: equivalentQuery.attr_dimensions,
-      };
-    }
-
-    if (queryType === QUERY_TYPE_CAMPAIGN) {
-      campaignState = {
-        channel: unit.query.query.query_group[0].channel,
-        filters: unit.query.query.query_group[0].filters,
-        select_metrics: unit.query.query.query_group[0].select_metrics,
-        group_by: unit.query.query.query_group[0].group_by,
-      };
-      campaignsArrayMapper = campaignState.select_metrics.map(
-        (metric, index) => {
-          return {
-            eventName: metric,
-            index,
-            mapper: `event${index + 1}`,
-          };
-        }
-      );
-    }
-
     const dashboardPresentation =
       unit.settings && unit.settings.chart ? unit.settings.chart : 'pl';
 

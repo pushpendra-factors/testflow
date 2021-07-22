@@ -49,7 +49,7 @@ const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
 // standard events, campaigns, source, referrer, medium, adgroup
 const countURL = 25
 const countUDE = 20
-const countSME = 0
+const countSME = 5
 const countStdEvents = -1 // all events
 const countCampaigns = 25
 const countSource = 10
