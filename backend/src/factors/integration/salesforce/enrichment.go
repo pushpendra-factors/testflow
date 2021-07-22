@@ -26,8 +26,8 @@ type Status struct {
 }
 
 var salesforceSyncOrderByType = [...]int{
-	model.SalesforceDocumentTypeContact,
 	model.SalesforceDocumentTypeLead,
+	model.SalesforceDocumentTypeContact,
 	model.SalesforceDocumentTypeOpportunity,
 	model.SalesforceDocumentTypeCampaign,
 	model.SalesforceDocumentTypeCampaignMember,
