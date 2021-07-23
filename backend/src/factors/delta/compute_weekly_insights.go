@@ -664,7 +664,7 @@ func getEventType(query *model.Query, QueryClass string, project_id uint64) stri
 				log.Error("Not found "+name+" ", project_id)
 				continue
 			}
-			if eventNameObj.Type == model.EVENT_NAME_TYPE_SMART_EVENT || eventNameObj.Type == model.TYPE_CRM_SALESFORCE || eventNameObj.Type == model.TYPE_CRM_HUBSPOT || strings.HasPrefix("$hubspot", eventNameObj.Name) || strings.HasPrefix("$sf", eventNameObj.Name) {
+			if eventNameObj.Type == model.EVENT_NAME_TYPE_SMART_EVENT || eventNameObj.Type == model.TYPE_CRM_SALESFORCE || eventNameObj.Type == model.TYPE_CRM_HUBSPOT || strings.HasPrefix(eventNameObj.Name, "$hubspot") || strings.HasPrefix(eventNameObj.Name, "$sf") || strings.HasPrefix(eventNameObj.Name, "$session") {
 				EventType = CRM
 			} else {
 				EventType = WebsiteEvent
@@ -683,7 +683,7 @@ func removeNegativePercentageFromInsights(insightsObj *WeeklyInsights) {
 
 	for index := range insightsObj.Insights {
 		insightsObj.Insights[index].ActualValues.Percentage = math.Abs(insightsObj.Insights[index].ActualValues.Percentage)
-		insightsObj.Insights[index].ChangeInConversion.Percentage = math.Abs(insightsObj.Insights[index].ActualValues.Percentage)
+		insightsObj.Insights[index].ChangeInConversion.Percentage = math.Abs(insightsObj.Insights[index].ChangeInConversion.Percentage)
 		insightsObj.Insights[index].ChangeInPrevalance.Percentage = math.Abs(insightsObj.Insights[index].ChangeInPrevalance.Percentage)
 		insightsObj.Insights[index].ChangeInDistribution.Percentage = math.Abs(insightsObj.Insights[index].ChangeInDistribution.Percentage)
 	}
