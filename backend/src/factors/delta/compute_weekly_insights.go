@@ -683,7 +683,7 @@ func removeNegativePercentageFromInsights(insightsObj *WeeklyInsights) {
 
 	for index := range insightsObj.Insights {
 		insightsObj.Insights[index].ActualValues.Percentage = math.Abs(insightsObj.Insights[index].ActualValues.Percentage)
-		insightsObj.Insights[index].ChangeInConversion.Percentage = math.Abs(insightsObj.Insights[index].ActualValues.Percentage)
+		insightsObj.Insights[index].ChangeInConversion.Percentage = math.Abs(insightsObj.Insights[index].ChangeInConversion.Percentage)
 		insightsObj.Insights[index].ChangeInPrevalance.Percentage = math.Abs(insightsObj.Insights[index].ChangeInPrevalance.Percentage)
 		insightsObj.Insights[index].ChangeInDistribution.Percentage = math.Abs(insightsObj.Insights[index].ChangeInDistribution.Percentage)
 	}
