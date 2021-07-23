@@ -84,19 +84,19 @@ function GroupSelect2({
                                         );
                                     }
                                 });
-                                return showFull ? valuesOptions : valuesOptions.slice(0, 3);
+                                return showFull ? valuesOptions : valuesOptions.slice(0, 5);
                             })()
                             : null
                         }
                     </div>
 
-                    {(valuesOptions.length > 3 && collState) ?
+                    {(valuesOptions.length > 5 && collState) ?
                         !showFull ?
                             <Button
                                 className={styles.dropdown__filter_select__showhide}
                                 type='text'
                                 onClick={() => { setShowFull(true) }} icon={<CaretDownOutlined />}>
-                                Show More ({valuesOptions.length - 3})
+                                Show More ({valuesOptions.length - 5})
                             </Button> :
                             <Button
                                 className={styles.dropdown__filter_select__showhide}

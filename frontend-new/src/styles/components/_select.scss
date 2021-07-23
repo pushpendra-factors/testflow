@@ -48,7 +48,7 @@
 
         .fa-select-group-select--options
         {
-            padding: 10px 30px;
+            padding: 10px 15px 10px 30px;
             color: $fa-color--mono-5;
             font-weight: $font-weight--regular;
             cursor: pointer;
@@ -58,11 +58,11 @@
                 background-color: rgba($fa-color--brand-1, 1);
             }
 
-            span {
+            h4 {
                 overflow: hidden;
                 text-overflow: ellipsis;
-                overflow-wrap: break-word;
-                max-height: 22px;
+                overflow-wrap: normal;
+                height: 22px;
             }
         }
 
@@ -79,8 +79,8 @@
             justify-content: space-between;
             color: #5949BC;
             cursor: pointer;
-            span{
-                font-size: 12px;
+            h4 {
+                font-size: 14px;
                 font-weight:$font-weight--bold;
                 color:  $fa-color--mono-5;
                 text-transform: capitalize;
