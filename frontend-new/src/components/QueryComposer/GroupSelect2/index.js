@@ -117,23 +117,20 @@ function GroupSelect2({
 
     return (
         <>
-        <div className='block-header'>abc</div>
             <div className={`${styles.dropdown__filter_select} fa-select fa-select--group-select ${extraClass}`}>
-                <Input
-                    className={styles.dropdown__filter_select__input}
-                    placeholder={placeholder}
-                    onKeyUp={onInputSearch}
-                    prefix={(<SVG name="search" size={20} color={'grey'} />)}
-                />
-                <div
-                    className={styles.dropdown__filter_select__content}
-                >
-                    {renderOptions(groupedProperties)}
-                </div>
+              <Input
+                className={styles.dropdown__filter_select__input}
+                placeholder={placeholder}
+                onKeyUp={onInputSearch}
+                prefix={(<SVG name="search" size={16} color={'grey'} />)}
+              />
+              <div className={styles.dropdown__filter_select__content}>
+                {renderOptions(groupedProperties)}
+              </div>
             </div>
             <div className={styles.dropdown__hd_overlay} onClick={onClickOutside}></div>
         </>
-    );
-}
+      );
+    }
 
 export default GroupSelect2;
