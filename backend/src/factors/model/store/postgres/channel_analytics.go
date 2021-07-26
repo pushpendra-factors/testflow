@@ -2,6 +2,7 @@ package postgres
 
 import (
 	C "factors/config"
+	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -117,7 +118,7 @@ func (pg *Postgres) GetChannelConfig(projectID uint64, channel string, reqID str
 	var result *model.ChannelConfigResult
 	switch channel {
 	case CAAllChannelAds:
-		result = buildAllChannelConfig()
+		result = pg.buildAllChannelConfig(projectID)
 	case CAChannelFacebookAds:
 		result = pg.buildFbChannelConfig(projectID)
 	case CAChannelGoogleAds:
@@ -152,14 +153,24 @@ func isValidChannel(channel string) bool {
 }
 
 // @TODO Kark v1
-func buildAllChannelConfig() *model.ChannelConfigResult {
-	properties := buildProperties(allChannelsPropertyToRelated)
-	objectsAndProperties := buildObjectsAndProperties(properties, objectsForAllChannels)
+func (pg *Postgres) buildAllChannelConfig(projectID uint64) *model.ChannelConfigResult {
+	objectsAndProperties := pg.buildObjectAndPropertiesForAllChannel(projectID, objectsForAllChannels)
 
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectableMetricsForAllChannels,
 		ObjectsAndProperties: objectsAndProperties,
 	}
+}
+func (pg *Postgres) buildObjectAndPropertiesForAllChannel(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
+	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
+	for _, currentObject := range objects {
+		currentProperties := buildProperties(allChannelsPropertyToRelated)
+		smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "all")
+		currentPropertiesSmart := buildProperties(smartProperty)
+		currentProperties = append(currentProperties, currentPropertiesSmart...)
+		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
+	}
+	return objectsAndProperties
 }
 
 // @TODO Kark v1
@@ -226,6 +237,14 @@ func (pg *Postgres) GetChannelFilterValuesV1(projectID uint64, channel, filterOb
 // GetAllChannelFilterValues - @Kark TODO v1
 func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty string, reqID string) ([]interface{}, int) {
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	_, isPresent := Const.SmartPropertyReservedNames[filterProperty]
+	if !isPresent {
+		filterValues, errCode := pg.getSmartPropertyFilterValues(projectID, filterObject, filterProperty, "all", reqID)
+		if errCode != http.StatusFound {
+			return []interface{}{}, http.StatusInternalServerError
+		}
+		return filterValues, http.StatusFound
+	}
 	adwordsSQL, adwordsParams, adwordsErr := pg.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	facebookSQL, facebookParams, facebookErr := pg.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	linkedinSQL, linkedinParams, linkedinErr := pg.GetLinkedinSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
