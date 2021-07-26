@@ -2188,7 +2188,7 @@ func calcTotalAdImpressions(siShare float64, impressions float64) float64 {
 		return (impressions * 100 / siShare)
 	}
 }
-func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCauseMetric {
+func getRootCasueMetricsForLeads(query model.TemplateQuery, keywordAnalysis KeywordAnalysis) []model.RootCauseMetric {
 	rootCauseMetrics := make([]model.RootCauseMetric, 0)
 	percentageChangeTotalAdImpressions := 0.0
 	prevTotalAdImpressions := calcTotalAdImpressions(keywordAnalysis.PrevSearchImpressionShare, keywordAnalysis.PrevImpressions)
@@ -2241,7 +2241,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
-		if keywordAnalysis.ConversionRate < 0 {
+		if (query.Metric == model.Conversion && keywordAnalysis.ConversionRate < 0) || (query.Metric == "cost_per_lead" && keywordAnalysis.ConversionRate > 0) {
 			rootCauseMetric := model.RootCauseMetric{Metric: model.ConversionRate, PercentageChange: keywordAnalysis.ConversionRate}
 			if keywordAnalysis.PrevConversionRate < 0.1 {
 				if keywordAnalysis.LastConversionRate < 0.1 {
@@ -2299,7 +2299,7 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 				rootCauseMetrics = append(rootCauseMetrics, rootCauseMetric)
 			}
 		}
-		if keywordAnalysis.ConversionRate > 0 {
+		if (query.Metric == model.Conversion && keywordAnalysis.ConversionRate > 0) || (query.Metric == "cost_per_lead" && keywordAnalysis.ConversionRate < 0) {
 			rootCauseMetric := model.RootCauseMetric{Metric: model.ConversionRate, PercentageChange: keywordAnalysis.ConversionRate}
 			if keywordAnalysis.PrevConversionRate < 0.1 {
 				if keywordAnalysis.LastConversionRate < 0.1 {
@@ -2316,8 +2316,8 @@ func getRootCasueMetricsForLeads(keywordAnalysis KeywordAnalysis) []model.RootCa
 	}
 	return rootCauseMetrics
 }
-func getRootCasueMetricsForCostPerLead(keywordAnalysis KeywordAnalysis) []model.RootCauseMetric {
-	rootCauseMetrics := getRootCasueMetricsForLeads(keywordAnalysis)
+func getRootCasueMetricsForCostPerLead(query model.TemplateQuery, keywordAnalysis KeywordAnalysis) []model.RootCauseMetric {
+	rootCauseMetrics := getRootCasueMetricsForLeads(query, keywordAnalysis)
 	if keywordAnalysis.PercentageChange < 0 {
 		if keywordAnalysis.CostPerClick < 0 {
 			rootCauseMetric := model.RootCauseMetric{Metric: model.CostPerClick, PercentageChange: keywordAnalysis.CostPerClick}
@@ -2370,11 +2370,11 @@ func transformKeywordAnalysisToTemplateSubLevelData(query model.TemplateQuery, k
 		subLevelData.IsInfinity = true
 	}
 	if query.Metric == model.Conversion {
-		rootCauseMetrics := getRootCasueMetricsForLeads(keywordAnalysis)
+		rootCauseMetrics := getRootCasueMetricsForLeads(query, keywordAnalysis)
 		subLevelData.RootCauseMetrics = rootCauseMetrics
 	}
 	if query.Metric == "cost_per_lead" {
-		rootCauseMetrics := getRootCasueMetricsForCostPerLead(keywordAnalysis)
+		rootCauseMetrics := getRootCasueMetricsForCostPerLead(query, keywordAnalysis)
 		subLevelData.RootCauseMetrics = rootCauseMetrics
 	}
 
