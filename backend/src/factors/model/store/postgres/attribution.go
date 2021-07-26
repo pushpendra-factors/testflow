@@ -268,7 +268,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 		if _, exists := attributionData[missingKey]; !exists {
 			attributionData[missingKey] = &model.AttributionData{}
 			attributionData[missingKey].ConversionEventCompareCount = attributionDataCompare[missingKey].ConversionEventCount
-			attributionData[missingKey].ConversionEventCompareCount = 0
+			attributionData[missingKey].ConversionEventCount = 0
 		}
 	}
 	return &attributionData, nil

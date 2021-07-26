@@ -73,6 +73,7 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 
 	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
+	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 
@@ -152,13 +153,22 @@ func main() {
 	var propertyDetailSyncStatus []IntHubspot.Status
 	anyFailure := false
 
-	allProjects, allowedProjects, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIDList, "")
+	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
+		*projectIDList, *disabledProjectIDList)
 	if !allProjects {
 		log.WithField("projects", allowedProjects).Info("Running only for the given list of projects.")
 	}
 
+	if len(disabledProjects) > 0 {
+		log.WithField("excluded_projects", disabledProjectIDList).Info("Running with exclusion of projects.")
+	}
+
 	projectIDs := make([]uint64, 0, 0)
 	for _, settings := range hubspotEnabledProjectSettings {
+		if exists := disabledProjects[settings.ProjectId]; exists {
+			continue
+		}
+
 		if !allProjects {
 			if _, exists := allowedProjects[settings.ProjectId]; !exists {
 				continue

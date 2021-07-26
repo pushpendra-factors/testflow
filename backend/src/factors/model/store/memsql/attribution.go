@@ -256,6 +256,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 		if _, exists := attributionData[missingKey]; !exists {
 			attributionData[missingKey] = &model.AttributionData{}
 			attributionData[missingKey].ConversionEventCompareCount = attributionDataCompare[missingKey].ConversionEventCount
+			attributionData[missingKey].ConversionEventCount = 0
 		}
 	}
 	return &attributionData, nil
