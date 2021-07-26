@@ -554,6 +554,43 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 	lsEventProperties13, err := U.DecodePostgresJsonb(&sessionEvent13.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, (*lsEventProperties13)[U.EP_CHANNEL], "Referral")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties13 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_REFERRER_DOMAIN: "www.linkedin.com",
+	}
+	trackUserProperties13 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties13,
+		UserProperties:  trackUserProperties13,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent14 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 15")
+	// session event properties added from event properties.
+	lsEventProperties14, err := U.DecodePostgresJsonb(&sessionEvent14.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties14)[U.EP_CHANNEL], "Organic Social")
 }
 
 func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
