@@ -147,9 +147,9 @@ export const getDateBasedColumns = (
   ];
 
   let format = 'MMM D';
-  // if (frequency === 'hour') {
-  //   format = 'h A, MMM D';
-  // }
+  if (frequency === 'hour') {
+    format = 'h A, MMM D';
+  }
 
   const dateColumns = categories.map((cat) => {
     return {
