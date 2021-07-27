@@ -69,8 +69,6 @@ function QueryBlock({
   };
 
   const selectEvents = () => {
-    // const selectDisplay = isDDVisible ? 'block' : 'none';
-
     return (
       <div className={styles.query_block__event_selector}>
         {isDDVisible ? (
@@ -260,8 +258,7 @@ function QueryBlock({
         <div
           className={`${styles.query_block__event} flex justify-start items-center`}
         >
-          {!isDDVisible && (
-            
+          { 
               <Button
                 type='text'
                 onClick={triggerDropDown}
@@ -269,8 +266,7 @@ function QueryBlock({
               >
                 {ifQueries ? 'Add another event' : 'Add First Event'}
               </Button>
-            
-          )}
+            }
           {selectEvents()}
         </div>
       </div>
@@ -299,7 +295,7 @@ function QueryBlock({
             {queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}
           </Text>{' '}
         </div>
-        {!isDDVisible && (
+        {
           <Tooltip title={eventNames[event.label]? eventNames[event.label] : event.label}>
             <Button
               icon={<SVG name='mouseevent' size={16} color={'purple'} />}
@@ -311,7 +307,7 @@ function QueryBlock({
               {eventNames[event.label]? eventNames[event.label] : event.label}{' '}
             </Button>
           </Tooltip>
-        )}
+        }
         {additionalActions()}
         {selectEvents()}
       </div>

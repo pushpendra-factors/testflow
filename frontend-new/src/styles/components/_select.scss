@@ -35,7 +35,7 @@
     animation-timing-function: ease-in-out;
     animation-duration: 0.2s;
 
-        position: absolute;
+        position: relative;
         width: 400px;
         max-height: 583px;
         padding: 15px 9px;
@@ -63,6 +63,7 @@
                 text-overflow: ellipsis;
                 overflow-wrap: normal;
                 height: 22px;
+                min-width: 48px;
             }
         }
 
@@ -81,7 +82,7 @@
             cursor: pointer;
             h4 {
                 font-size: 14px;
-                font-weight:$font-weight--bold;
+                font-weight: 900;
                 color:  $fa-color--mono-5;
                 text-transform: capitalize;
             }
@@ -93,7 +94,7 @@
 
     .ant-input-affix-wrapper{
         position: sticky;
-        width: 374px;
+        max-width: 374px;
         left: calc(50% - 374px/2);
         top: 0px;
         background: #f5f6f8;

@@ -161,12 +161,15 @@ const EventGroupBlock = ({
 
   const renderGroupBySelect = () => {
     return (
-      <GroupSelect2
-        groupedProperties={filterOptions}
-        placeholder='Select Property'
-        optionClick={(group, val) => onChange(group, val)}
-        onClickOutside={() => closeDropDown()}
-      ></GroupSelect2>
+
+      <div className={styles.group_block__event_selector}>
+        <GroupSelect2
+          groupedProperties={filterOptions}
+          placeholder='Select Property'
+          optionClick={(group, val) => onChange(group, val)}
+          onClickOutside={() => closeDropDown()}
+        ></GroupSelect2>
+      </div>
     );
   };
 

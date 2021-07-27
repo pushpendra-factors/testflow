@@ -8,6 +8,8 @@
         top: 36px;
         left: 0;
 
+        width: 320px;
+
         &__content {
             display: flex;
             flex-direction: column;
@@ -18,8 +20,7 @@
 
     &__select_rt {
         @extend .dropdown__select;
-        right: 0;
-        left: unset;
+        left: 0;
     }
 
     &__hd_overlay {

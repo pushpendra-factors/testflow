@@ -147,16 +147,17 @@ const LinkedEventsBlock = ({
     const selectEvents = () => {
     
         return (
-            <div className={styles.query_block__event_selector}>
-                   {selectVisible
-                     ? <GroupSelect2
+            <div className={styles.block__event_selector}>
+                   {selectVisible ? 
+                   <div className={styles.block__event_selector__btn}>
+                   <GroupSelect2
                             groupedProperties={eventNameOptions}
                             placeholder="Select Event"
                             optionClick={(group, val) => onEventSelect(val[1]? val[1]: val[0])}
                             onClickOutside={() => setSelectVisible(false)}
 
                         ></GroupSelect2>
-
+                    </div>
                      : null }
             </div>
         );
@@ -165,7 +166,7 @@ const LinkedEventsBlock = ({
     const renderLinkEventBlockContent = () => {
         return (
             <div className={`${styles.block__content} fa--query_block_section--basic mt-2`}>
-                {!selectVisible && <Tooltip title={eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}> <Button 
+                {<Tooltip title={eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}> <Button 
                     type="link" 
                     className={`fa-button--truncate`}
                     onClick={toggleEventSelect}>
@@ -188,7 +189,7 @@ const LinkedEventsBlock = ({
                         <SVG name={'plus'} color={'purple'}></SVG>
                     </div>
                     
-                    {!selectVisible && <Button type="link" onClick={toggleEventSelect}>Add new</Button>}
+                    {<Button type="link" onClick={toggleEventSelect}>Add new</Button>}
                     
                     {selectEvents()}
             </div> 

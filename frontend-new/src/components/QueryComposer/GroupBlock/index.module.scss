@@ -33,6 +33,20 @@
         }
     }
 
+    &__event_selector { 
+        position: absolute;
+        top: 36px;
+        left: 0;
+
+        &__btn {
+            position: relative;
+        }
+
+        .ant-select-selector {
+            border-radius: 12px;
+        }
+    }
+
     &__remove {
         display: none;
         position: absolute;

@@ -271,7 +271,7 @@ const CampQueryComposer = ({
         key={0}
         className={` ${styles.groupItem} flex justify-start items-center mt-4`}
       >
-        {!groupByDD[index] && (
+        {(
           <>
             {init === false ? (
               <Button
@@ -310,14 +310,19 @@ const CampQueryComposer = ({
             </Button>
           </>
         )}
+        <div className={styles.group_block__event_selector}>
         {groupByDD[index] ? (
+          <div className={styles.group_block__event_selector__btn}>
           <GroupSelect2
             groupedProperties={groupByProps}
             placeholder='Select Property'
             optionClick={(group, val) => onGroupBySet([group, val], index)}
             onClickOutside={() => triggerGroupDD(index)}
           ></GroupSelect2>
+          </div>
         ) : null}
+        </div>
+        
       </div>
     );
   };

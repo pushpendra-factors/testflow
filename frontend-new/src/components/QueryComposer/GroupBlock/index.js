@@ -83,21 +83,21 @@ function GroupBlock({
 
   const renderInitGroupSelect = (index) => {
     return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center mt-2`} >
-      {!isDDVisible[index] &&
-        <Button className={`fa-button--truncate`} type="text" onClick={() => triggerDropDown(index)} icon={<SVG name="plus" />}> Add new </Button> }
+      {
+        <Button className={`fa-button--truncate`} type="text" onClick={() => triggerDropDown(index)} icon={<SVG name="plus" />}> Add new </Button>}
+      
+      <div className={styles.group_block__event_selector}>
       {isDDVisible[index]
-        ? (<GroupSelect2 groupedProperties={filterOptions}
+        ? (
+          <div className={styles.group_block__event_selector__btn}>
+            <GroupSelect2 groupedProperties={filterOptions}
           placeholder="Select Property"
           optionClick={(group, val) => onChange([group, val], index)}
           onClickOutside={() => triggerDropDown(index, true)}
-
-          >
-            </GroupSelect2>
-
-        )
-
-        : null
-      }
+        ></GroupSelect2>
+        </div>
+        ) : null}
+      </div>
     </div>);
   };
 
@@ -177,7 +177,8 @@ function GroupBlock({
     if (groupByState.global.length < 1) return;
     return (groupByState.global.map((opt, index) => (
       <div key={index} className={`${styles.group_block__select} flex justify-start items-center mt-2`} >
-        {!isDDVisible[index] && <>
+        {
+          <>
         <Button
         type="text"
         className={`fa-button--truncate`}

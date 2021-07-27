@@ -205,15 +205,20 @@ const GlobalFilterSelect = ({
                     onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderDisplayName(propState)}
                 </Button>
             </Tooltip>
-            {propSelectOpen &&
-                <GroupSelect2
-                    groupedProperties={propOpts}
-                    placeholder="Select Property"
-                    optionClick={(group, val) => propSelect([...val, group])}
-                    onClickOutside={() => setPropSelectOpen(false)}
 
-                ></GroupSelect2>
-            }
+            <div className={styles.filter__event_selector}>
+                {propSelectOpen && (
+                    <div className={styles.filter__event_selector__btn}>
+                        <GroupSelect2
+                            groupedProperties={propOpts}
+                            placeholder="Select Property"
+                            optionClick={(group, val) => propSelect([...val, group])}
+                            onClickOutside={() => setPropSelectOpen(false)}
+                        ></GroupSelect2>
+                    </div>
+                )
+                }
+            </div>
 
         </div>)
     }
@@ -232,10 +237,8 @@ const GlobalFilterSelect = ({
                     options={operatorOpts[propState.type].map(op => [op])}
                     optionClick={(val) => operatorSelect(val)}
                     onClickOutside={() => setOperSelectOpen(false)}
-                >
-                </FaSelect>
+                ></FaSelect>
             }
-
         </div>)
     }
 

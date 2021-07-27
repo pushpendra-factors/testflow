@@ -77,7 +77,7 @@ const MarkTouchpointBlock = ({
 
   const selectEvents = () => {
     return (
-      <div className={styles.query_block__event_selector}>
+      <div className={styles.block__event_selector}>
         {selectVisible ? (
           <GroupSelect2
             groupedProperties={touchPointOptions}
@@ -102,11 +102,10 @@ const MarkTouchpointBlock = ({
           <SVG name={'plus'} color={'purple'}></SVG>
         </div>
 
-        {!selectVisible && (
-          <Button size={'large'} type='link' onClick={toggleTouchPointSelect}>
+        {<Button size={'large'} type='link' onClick={toggleTouchPointSelect}>
             Add a Touchpoint
           </Button>
-        )}
+        }
 
         {selectEvents()}
       </div>
@@ -207,12 +206,11 @@ const MarkTouchpointBlock = ({
       <div
         className={`${styles.block__content} fa--query_block_section--basic`}
       >
-        {!selectVisible && (
-          <Button type='link' onClick={toggleTouchPointSelect}>
+        {<Button type='link' onClick={toggleTouchPointSelect}>
             <SVG name='mouseevent' extraClass={'mr-1'}></SVG>
             {touchPoint}
           </Button>
-        )}
+        }
 
         {touchPoint?.length ? (
           <TouchPointDimensions

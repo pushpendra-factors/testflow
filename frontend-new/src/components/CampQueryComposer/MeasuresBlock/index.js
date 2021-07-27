@@ -57,7 +57,7 @@ const MeasuresBlock = ({measures, onMeasureSelect, measures_metrics}) => {
     const renderMeasureBlockContent = (measure, index) => {
         return (
             <div key={index} className={`fa--query_block_section--basic flex items-center relative mt-3`}>
-                {!selectVisible[index] && <Button  
+                {<Button  
                     type="link"  
                     onClick={() => toggleSelect(index)}>
                          {measure && measure.replaceAll('_',' ')} 
@@ -73,7 +73,7 @@ const MeasuresBlock = ({measures, onMeasureSelect, measures_metrics}) => {
         return (
             <div key={index} className={`flex items-center relative mt-4`}> 
                     
-                    {!selectVisible[index] && <Button type="text" onClick={() => toggleSelect(index)} icon={<SVG name={'plus'} />}>Add new</Button>}
+                    {<Button type="text" onClick={() => toggleSelect(index)} icon={<SVG name={'plus'} />}>Add new</Button>}
                     
                     {selectEvents(index)}
             </div> 

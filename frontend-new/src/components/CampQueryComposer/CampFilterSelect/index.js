@@ -190,16 +190,20 @@ const CampFilterSelect = ({
                     onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderGroupDisplayName(propState)}
                 </Button>
             </Tooltip>
-            {propSelectOpen &&
-                <GroupSelect2
-                    groupedProperties={propOpts}
-                    placeholder="Select Property"
-                    optionClick={(group, val) => propSelect([...val, group])}
-                    onClickOutside={() => setPropSelectOpen(false)}
 
-                ></GroupSelect2>
-            }
-
+            <div className={styles.filter__event_selector}>
+                {propSelectOpen && (
+                    <div className={styles.filter__event_selector__btn}>
+                        <GroupSelect2
+                            groupedProperties={propOpts}
+                            placeholder="Select Property"
+                            optionClick={(group, val) => propSelect([...val, group])}
+                            onClickOutside={() => setPropSelectOpen(false)}
+                        ></GroupSelect2>
+                    </div>
+                )
+                }
+            </div>
         </div>)
     }
 

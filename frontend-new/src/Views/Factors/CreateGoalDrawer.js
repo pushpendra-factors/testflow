@@ -400,8 +400,8 @@ const renderFilterBlock = () => {
                                   allowEmpty={true}
                                   groupedProperties={TrackedEventNames ? [
                                     {             
-                                    label: 'MOST RECENT',
-                                    icon: 'fav',
+                                    label: 'Most Recent',
+                                    icon: 'most_recent',
                                     values: TrackedEventNames
                                     }
                                   ]:null}
@@ -449,8 +449,8 @@ const renderFilterBlock = () => {
                               allowEmpty={true}
                                groupedProperties={TrackedEventNames ? [
                                 {             
-                                label: 'MOST RECENT',
-                                icon: 'fav',
+                                label: 'Most Recent',
+                                icon: 'most_recent',
                                 values: TrackedEventNames
                                 }
                               ]:null}
@@ -501,8 +501,8 @@ const renderFilterBlock = () => {
                          <GroupSelect2 
                               groupedProperties={props.userProperties ? [
                                 {             
-                                label: 'MOST RECENT',
-                                icon: 'fav',
+                                label: 'Most Recent',
+                                icon: 'most_recent',
                                 values: props.userProperties
                                 }
                               ]:null}
@@ -524,8 +524,8 @@ const renderFilterBlock = () => {
             <GroupSelect2 
                     groupedProperties={factorsModels ? [
                     {             
-                    label: 'MOST RECENT',
-                    icon: 'fav',
+                    label: 'Most Recent',
+                    icon: 'most_recent',
                     values: factorsModels
                     }
                   ]:null}
