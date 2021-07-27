@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import {
-  formatData,
-} from '../../CoreQuery/FunnelsResultPage/utils';
+import { formatData } from '../../CoreQuery/FunnelsResultPage/utils';
 import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
 import { DashboardContext } from '../../../contexts/DashboardContext';
@@ -24,7 +22,10 @@ function GroupedChart({
 
   useEffect(() => {
     const { groups: appliedGroups, events } = formatData(
-      resultState.data,
+      {
+        ...resultState.data,
+        rows: resultState.data.rows.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
+      },
       arrayMapper
     );
     setGroups(appliedGroups);
