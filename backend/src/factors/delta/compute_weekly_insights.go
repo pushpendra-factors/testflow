@@ -135,10 +135,10 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		}
 	}
 	if EventType == Funnel || EventType == WebsiteEvent {
-		if insights.Conv.W1 != float64(0) {
+		if insights.Base.W1 != float64(0) {
 			insights.Conv.W1 = insights.Goal.W1 / insights.Base.W1 * 100
 		}
-		if insights.Conv.W2 != float64(0) {
+		if insights.Base.W2 != float64(0) {
 			insights.Conv.W2 = insights.Goal.W2 / insights.Base.W2 * 100
 		}
 		insights.Conv.IsIncreased = insights.Conv.W1 < insights.Conv.W2
@@ -198,10 +198,10 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						value.ChangeInPrevalance.IsIncreased = file.Base.FeatureMetrics[keys][keys2].PercentChange > 0
 						value.ChangeInPrevalance.Percentage = file.Base.FeatureMetrics[keys][keys2].PercentChange
 					}
-					if value.ChangeInConversion.W1 != float64(0) {
+					if value.ChangeInPrevalance.W1 != float64(0) {
 						value.ChangeInConversion.W1 = value.ActualValues.W1 / value.ChangeInPrevalance.W1 * 100
 					}
-					if value.ChangeInConversion.W2 != float64(0) {
+					if value.ChangeInPrevalance.W2 != float64(0) {
 						value.ChangeInConversion.W2 = value.ActualValues.W2 / value.ChangeInPrevalance.W2 * 100
 					}
 					if value.ChangeInConversion.W1 != float64(0) {
@@ -303,10 +303,10 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Base[keys][keys2]
 					}
 					val2.ActualValues = temp
-					if val2.ChangeInDistribution.W1 != float64(0) {
+					if insights.Goal.W1 != float64(0) {
 						val2.ChangeInDistribution.W1 = (val2.ActualValues.W1 / insights.Goal.W1) * 100
 					}
-					if val2.ChangeInDistribution.W2 != float64(0) {
+					if insights.Goal.W2 != float64(0) {
 						val2.ChangeInDistribution.W2 = (val2.ActualValues.W2 / insights.Goal.W2) * 100
 					}
 					val2.ChangeInDistribution.IsIncreased = val2.ChangeInDistribution.W1 < val2.ChangeInDistribution.W2
@@ -351,10 +351,10 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Base[keys][keys2]
 					}
 					val2.ActualValues = temp
-					if val2.ChangeInDistribution.W1 != float64(0) {
+					if insights.Goal.W1 != float64(0) {
 						val2.ChangeInDistribution.W1 = (val2.ActualValues.W1 / insights.Goal.W1) * 100
 					}
-					if val2.ChangeInDistribution.W2 != float64(0) {
+					if insights.Goal.W2 != float64(0) {
 						val2.ChangeInDistribution.W2 = (val2.ActualValues.W2 / insights.Goal.W2) * 100
 					}
 					val2.ChangeInDistribution.IsIncreased = val2.ChangeInDistribution.W1 < val2.ChangeInDistribution.W2
