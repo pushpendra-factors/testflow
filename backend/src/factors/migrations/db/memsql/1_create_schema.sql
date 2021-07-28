@@ -678,7 +678,8 @@ CREATE TABLE IF NOT EXISTS public.templates (
     thresholds JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
-    PRIMARY KEY (project_id, type)
+    PRIMARY KEY (project_id, type),
+    SHARD KEY (project_id)
 )
 -- DOWN
 
