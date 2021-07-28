@@ -40,7 +40,7 @@ const (
 
 	shareHigherOrderExpression         = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
 	higherOrderExpressionsWithMultiply = "SUM(JSON_EXTRACT_STRING(value, '%s'))*%s/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
-	higherOrderExpressionsWithDiv      = "(SUM(JSON_EXTRACT_STRING(value, '%s'))/1000000)/(COALESCE( NULLIF(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
+	higherOrderExpressionsWithDiv      = "(SUM(JSON_EXTRACT_STRING(value, '%s'))/1000000)/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
 
 	sumOfFloatExp                       = "sum((JSON_EXTRACT_STRING(value, '%s')))"
 	adwordsAdGroupMetadataFetchQueryStr = "select ad_group_id, campaign_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, " +
