@@ -87,7 +87,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		insights.InsightsType = "DistOnly"
 	}
 	if EventType == Funnel || EventType == WebsiteEvent { // change the values
-			if _, exists := file.Base.GlobalMetrics["#users"]; exists {
+		if _, exists := file.Base.GlobalMetrics["#users"]; exists {
 			if file.Base.GlobalMetrics["#users"].First != nil {
 				insights.Base.W1 = file.Base.GlobalMetrics["#users"].First.(float64)
 			} else {
@@ -135,9 +135,12 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		}
 	}
 	if EventType == Funnel || EventType == WebsiteEvent {
-
-		insights.Conv.W1 = insights.Goal.W1 / insights.Base.W1 * 100
-		insights.Conv.W2 = insights.Goal.W2 / insights.Base.W2 * 100
+		if insights.Conv.W1 != float64(0) {
+			insights.Conv.W1 = insights.Goal.W1 / insights.Base.W1 * 100
+		}
+		if insights.Conv.W2 != float64(0) {
+			insights.Conv.W2 = insights.Goal.W2 / insights.Base.W2 * 100
+		}
 		insights.Conv.IsIncreased = insights.Conv.W1 < insights.Conv.W2
 		if insights.Conv.W1 != float64(0) {
 			insights.Conv.Percentage = ((insights.Conv.W2 - insights.Conv.W1) / insights.Conv.W1) * 100
@@ -195,9 +198,12 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						value.ChangeInPrevalance.IsIncreased = file.Base.FeatureMetrics[keys][keys2].PercentChange > 0
 						value.ChangeInPrevalance.Percentage = file.Base.FeatureMetrics[keys][keys2].PercentChange
 					}
-
-					value.ChangeInConversion.W1 = value.ActualValues.W1 / value.ChangeInPrevalance.W1 * 100
-					value.ChangeInConversion.W2 = value.ActualValues.W2 / value.ChangeInPrevalance.W2 * 100
+					if value.ChangeInConversion.W1 != float64(0) {
+						value.ChangeInConversion.W1 = value.ActualValues.W1 / value.ChangeInPrevalance.W1 * 100
+					}
+					if value.ChangeInConversion.W2 != float64(0) {
+						value.ChangeInConversion.W2 = value.ActualValues.W2 / value.ChangeInPrevalance.W2 * 100
+					}
 					if value.ChangeInConversion.W1 != float64(0) {
 						value.ChangeInConversion.Percentage = ((value.ChangeInConversion.W2 - value.ChangeInConversion.W1) / value.ChangeInConversion.W1) * 100
 					}
@@ -297,9 +303,12 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Base[keys][keys2]
 					}
 					val2.ActualValues = temp
-
-					val2.ChangeInDistribution.W1 = (val2.ActualValues.W1 / insights.Goal.W1) * 100
-					val2.ChangeInDistribution.W2 = (val2.ActualValues.W2 / insights.Goal.W2) * 100
+					if val2.ChangeInDistribution.W1 != float64(0) {
+						val2.ChangeInDistribution.W1 = (val2.ActualValues.W1 / insights.Goal.W1) * 100
+					}
+					if val2.ChangeInDistribution.W2 != float64(0) {
+						val2.ChangeInDistribution.W2 = (val2.ActualValues.W2 / insights.Goal.W2) * 100
+					}
 					val2.ChangeInDistribution.IsIncreased = val2.ChangeInDistribution.W1 < val2.ChangeInDistribution.W2
 					val2.ChangeInDistribution.Percentage = (val2.ChangeInDistribution.W1) - (val2.ChangeInDistribution.W2)
 
@@ -342,9 +351,12 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Base[keys][keys2]
 					}
 					val2.ActualValues = temp
-
-					val2.ChangeInDistribution.W1 = (val2.ActualValues.W1 / insights.Goal.W1) * 100
-					val2.ChangeInDistribution.W2 = (val2.ActualValues.W2 / insights.Goal.W2) * 100
+					if val2.ChangeInDistribution.W1 != float64(0) {
+						val2.ChangeInDistribution.W1 = (val2.ActualValues.W1 / insights.Goal.W1) * 100
+					}
+					if val2.ChangeInDistribution.W2 != float64(0) {
+						val2.ChangeInDistribution.W2 = (val2.ActualValues.W2 / insights.Goal.W2) * 100
+					}
 					val2.ChangeInDistribution.IsIncreased = val2.ChangeInDistribution.W1 < val2.ChangeInDistribution.W2
 					val2.ChangeInDistribution.Percentage = (val2.ChangeInDistribution.W1) - (val2.ChangeInDistribution.W2)
 
@@ -458,10 +470,8 @@ func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Tim
 	// appending at top
 	insightsObj.Insights = append(gbpInsights, insightsObj.Insights...)
 	removeNegativePercentageFromInsights(&insightsObj)
-	fmt.Println(insightsObj)
 	return insightsObj, nil
 }
-
 
 func addGroupByProperties(query model.Query, EventType string, file CrossPeriodInsights, insights WeeklyInsights) []ActualMetrics {
 	ActualMetricsArr := make([]ActualMetrics, 0)
@@ -508,9 +518,12 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							newData.ChangeInPrevalance.IsIncreased = file.Base.FeatureMetrics[property][values].PercentChange > 0
 							newData.ChangeInPrevalance.Percentage = file.Base.FeatureMetrics[property][values].PercentChange
 						}
-
-						newData.ChangeInConversion.W1 = newData.ActualValues.W1 / newData.ChangeInPrevalance.W1 * 100
-						newData.ChangeInConversion.W2 = newData.ActualValues.W2 / newData.ChangeInPrevalance.W2 * 100
+						if newData.ChangeInPrevalance.W1 != float64(0) {
+							newData.ChangeInConversion.W1 = newData.ActualValues.W1 / newData.ChangeInPrevalance.W1 * 100
+						}
+						if newData.ChangeInPrevalance.W2 != float64(0) {
+							newData.ChangeInConversion.W2 = newData.ActualValues.W2 / newData.ChangeInPrevalance.W2 * 100
+						}
 						if newData.ChangeInConversion.W1 != float64(0) {
 							newData.ChangeInConversion.Percentage = ((newData.ChangeInConversion.W2 - newData.ChangeInConversion.W1) / newData.ChangeInConversion.W1) * 100
 						}
@@ -573,8 +586,12 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 
 						}
 						newData.ActualValues = temp
-						newData.ChangeInDistribution.W1 = (newData.ActualValues.W1 / insights.Goal.W1) * 100
-						newData.ChangeInDistribution.W2 = (newData.ActualValues.W2 / insights.Goal.W2) * 100
+						if insights.Goal.W1 != float64(0) {
+							newData.ChangeInDistribution.W1 = (newData.ActualValues.W1 / insights.Goal.W1) * 100
+						}
+						if insights.Goal.W2 != float64(0) {
+							newData.ChangeInDistribution.W2 = (newData.ActualValues.W2 / insights.Goal.W2) * 100
+						}
 						newData.ChangeInDistribution.IsIncreased = newData.ChangeInDistribution.W1 < newData.ChangeInDistribution.W2
 						newData.ChangeInDistribution.Percentage = (newData.ChangeInDistribution.W1) - (newData.ChangeInDistribution.W2)
 						newData.Type = "distribution"
@@ -605,8 +622,12 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						newData.ActualValues = temp
 
-						newData.ChangeInDistribution.W1 = (newData.ActualValues.W1 / insights.Goal.W1) * 100
-						newData.ChangeInDistribution.W2 = (newData.ActualValues.W2 / insights.Goal.W2) * 100
+						if insights.Goal.W1 != float64(0) {
+							newData.ChangeInDistribution.W1 = (newData.ActualValues.W1 / insights.Goal.W1) * 100
+						}
+						if insights.Goal.W2 != float64(0) {
+							newData.ChangeInDistribution.W2 = (newData.ActualValues.W2 / insights.Goal.W2) * 100
+						}
 						newData.ChangeInDistribution.IsIncreased = newData.ChangeInDistribution.W1 < newData.ChangeInDistribution.W2
 						newData.ChangeInDistribution.Percentage = (newData.ChangeInDistribution.W1) - (newData.ChangeInDistribution.W2)
 

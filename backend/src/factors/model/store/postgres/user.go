@@ -435,6 +435,15 @@ func (pg *Postgres) UpdateUserPropertiesV2(projectID uint64, id string,
 		}
 	}
 
+	usersLength := len(users)
+	if usersLength > 50 {
+		logCtx.WithField("project_id", projectID).WithField("id", id).WithField("user_count", usersLength).Info("More than 50 users on user_properties merge.")
+	}
+
+	if usersLength > 100 {
+		metrics.Increment(metrics.IncrUserPropertiesMergeMoreThan100)
+	}
+
 	mergedByCustomerUserIDMap, errCode := mergeUserPropertiesByCustomerUserID(projectID, users)
 	if errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
