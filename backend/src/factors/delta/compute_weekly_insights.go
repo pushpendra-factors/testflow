@@ -135,10 +135,10 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		}
 	}
 	if EventType == Funnel || EventType == WebsiteEvent {
-		if insights.Conv.W1 != float64(0) {
+		if insights.Base.W1 != float64(0) {
 			insights.Conv.W1 = insights.Goal.W1 / insights.Base.W1 * 100
 		}
-		if insights.Conv.W2 != float64(0) {
+		if insights.Base.W2 != float64(0) {
 			insights.Conv.W2 = insights.Goal.W2 / insights.Base.W2 * 100
 		}
 		insights.Conv.IsIncreased = insights.Conv.W1 < insights.Conv.W2
