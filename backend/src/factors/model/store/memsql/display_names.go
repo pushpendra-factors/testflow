@@ -60,7 +60,7 @@ func (store *MemSQL) CreateOrUpdateDisplayName(projectID uint64, eventName, prop
 		return http.StatusInternalServerError
 	}
 
-	if err := db.Create(displayNameObj).Error; err != nil {
+	if err := db.Create(&displayNameObj).Error; err != nil {
 		if strings.Contains(err.Error(), "display_names_project_id_event_name_property_name_tag_unique_idx") {
 			updateFields := map[string]interface{}{
 				"display_name": displayName,
@@ -106,7 +106,7 @@ func (store *MemSQL) CreateOrUpdateDisplayNameByObjectType(projectID uint64, pro
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
-	if err := db.Create(displayNameObj).Error; err != nil {
+	if err := db.Create(&displayNameObj).Error; err != nil {
 		if strings.Contains(err.Error(), "display_names_project_id_event_name_property_name_tag_unique_idx") {
 			updateFields := map[string]interface{}{
 				"display_name": displayName,

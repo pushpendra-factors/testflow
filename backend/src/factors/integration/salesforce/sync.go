@@ -1014,7 +1014,7 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, accessToken, instanceU
 					typAlias,
 					U.GetPropertyValueAsString(fieldName),
 				), typAlias, U.GetPropertyValueAsString(label), model.SmartCRMEventSourceSalesforce)
-				if err != http.StatusCreated {
+				if err != http.StatusCreated && err != http.StatusConflict {
 					logCtx.Error("Failed to create or update display name")
 				}
 			}
