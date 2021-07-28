@@ -54,46 +54,46 @@ const (
 		"AND (campaign_id, timestamp) in (select campaign_id, max(timestamp) from adwords_documents where type = ? " +
 		"AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) group by campaign_id)"
 	semChecklistKeywordsQuery = "With keyword_analysis_last_week as (select %s as analysis_metric, %s " +
-		"keyword_id, campaign_id, (JSON_EXTRACT(value,'criteria')) as keyword_name, (JSON_EXTRACT(value,'keyword_match_type')) as keyword_match_type from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ?  and JSON_EXTRACT(value,'criteria') NOT RLIKE 'automaticcontent' and JSON_EXTRACT(value,'criteria') NOT RLIKE 'automatickeywords'" +
+		"keyword_id, campaign_id, (JSON_EXTRACT_STRING(value,'criteria')) as keyword_name, (JSON_EXTRACT_STRING(value,'keyword_match_type')) as keyword_match_type from adwords_documents " +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ?  and JSON_EXTRACT_STRING(value,'criteria') NOT RLIKE 'automaticcontent' and JSON_EXTRACT_STRING(value,'criteria') NOT RLIKE 'automatickeywords'" +
 		" group by campaign_id, keyword_id, keyword_name," +
 		" keyword_match_type), keyword_analysis_previous_week as (select %s as analysis_metric, %s keyword_id, campaign_id, " +
-		"(JSON_EXTRACT(value,'criteria')) as keyword_name, (JSON_EXTRACT(value,'keyword_match_type')) as keyword_match_type from adwords_documents" +
-		" where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and JSON_EXTRACT(value,'criteria') NOT RLIKE 'automaticcontent' and JSON_EXTRACT(value,'criteria') NOT RLIKE 'automatickeywords'" +
+		"(JSON_EXTRACT_STRING(value,'criteria')) as keyword_name, (JSON_EXTRACT_STRING(value,'keyword_match_type')) as keyword_match_type from adwords_documents" +
+		" where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and JSON_EXTRACT_STRING(value,'criteria') NOT RLIKE 'automaticcontent' and JSON_EXTRACT_STRING(value,'criteria') NOT RLIKE 'automatickeywords'" +
 		" group by campaign_id, keyword_id, " +
 		"keyword_name, keyword_match_type) Select keyword_analysis_last_week.keyword_name, " +
 		"keyword_analysis_previous_week.analysis_metric as previous_week_value, keyword_analysis_last_week.analysis_metric as last_week_value, " +
-		"(((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric::float, 0), 0.0000001))) as percentage_change, " +
-		"ABS((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float) as abs_change, " +
-		"(keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float as absolute_change, %s " +
+		"(((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric))*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric, 0), 0.0000001))) as percentage_change, " +
+		"ABS((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)) as abs_change, " +
+		"(keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric) as absolute_change, %s " +
 		"keyword_analysis_last_week.keyword_id, keyword_analysis_last_week.campaign_id, keyword_analysis_last_week.keyword_match_type from keyword_analysis_last_week " +
 		"full outer join keyword_analysis_previous_week on keyword_analysis_last_week.keyword_id = keyword_analysis_previous_week.keyword_id and " +
 		"keyword_analysis_last_week.keyword_match_type=keyword_analysis_previous_week.keyword_match_type and keyword_analysis_last_week.campaign_id = keyword_analysis_previous_week.campaign_id" +
 		" and keyword_analysis_last_week.keyword_name = keyword_analysis_previous_week.keyword_name " +
-		"where ABS((((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric::float, 0), 1)))) >= ?" +
+		"where ABS((((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric))*100/(COALESCE(NULLIF(keyword_analysis_previous_week.analysis_metric, 0), 1)))) >= ?" +
 		" AND ABS((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)) > ? order by abs_change DESC"
 
 	semChecklistCampaignQuery = "With campaign_analysis_last_week as (select %s as analysis_metric, " +
-		"campaign_id, (JSON_EXTRACT(value,'campaign_name')) as campaign_name from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and JSON_EXTRACT(value,'advertising_channel_type') RLIKE 'search' group by campaign_id, campaign_name)," +
+		"campaign_id, (JSON_EXTRACT_STRING(value,'campaign_name')) as campaign_name from adwords_documents " +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and JSON_EXTRACT_STRING(value,'advertising_channel_type') RLIKE 'search' group by campaign_id, campaign_name)," +
 		" campaign_analysis_previous_week as (select %s as analysis_metric, " +
-		"campaign_id, (JSON_EXTRACT(value,'campaign_name')) as campaign_name from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and JSON_EXTRACT(value,'advertising_channel_type') RLIKE 'search' group by campaign_id, campaign_name)" +
+		"campaign_id, (JSON_EXTRACT_STRING(value,'campaign_name')) as campaign_name from adwords_documents " +
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? and campaign_id in (?) and JSON_EXTRACT_STRING(value,'advertising_channel_type') RLIKE 'search' group by campaign_id, campaign_name)" +
 		" Select campaign_analysis_last_week.campaign_name, " +
 		"campaign_analysis_previous_week.analysis_metric as previous_week_value, campaign_analysis_last_week.analysis_metric as last_week_value, " +
-		"(((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float)*100/(COALESCE(NULLIF(campaign_analysis_previous_week.analysis_metric::float, 0), 0.0000001))) as percentage_change, " +
-		"ABS((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float) as abs_change, " +
-		"(campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)::float as absolute_change, " +
+		"(((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric))*100/(COALESCE(NULLIF(campaign_analysis_previous_week.analysis_metric, 0), 0.0000001))) as percentage_change, " +
+		"ABS((campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric)) as abs_change, " +
+		"(campaign_analysis_last_week.analysis_metric - campaign_analysis_previous_week.analysis_metric) as absolute_change, " +
 		" campaign_analysis_last_week.campaign_id from campaign_analysis_last_week " +
 		"full outer join campaign_analysis_previous_week on campaign_analysis_last_week.campaign_id = campaign_analysis_previous_week.campaign_id " +
 		"order by abs_change DESC limit 10000"
 	semChecklistOverallAnalysisQuery = "select %s from adwords_documents " +
-		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? AND JSON_EXTRACT(value,'advertising_channel_type') RLIKE 'search'"
+		"where project_id = ? and customer_account_id in (?) and type = ? and timestamp between ? AND ? AND JSON_EXTRACT_STRING(value,'advertising_channel_type') RLIKE 'search'"
 	semChecklistExtraSelectForLeads                = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as click_through_rate, %s as cost_per_click, "
 	semChecklistExtraSelectForLeadsForWeekAnalysis = "%s as impressions, %s as search_impression_share, %s as conversion_rate, %s as click_through_rate, %s as cost_per_click, " +
 		"%s as prev_impressions, %s as prev_search_impression_share, %s as prev_conversion_rate,%s as prev_click_through_rate, %s as prev_cost_per_click, " +
 		"%s as last_impressions, %s as last_search_impression_share, %s as last_conversion_rate,%s as last_click_through_rate, %s as last_cost_per_click, "
-	percentageChangeForSemChecklistKeyword = "(((keyword_analysis_last_week.%s - keyword_analysis_previous_week.%s)::float)*100/(COALESCE(NULLIF(keyword_analysis_previous_week.%s::float, 0), 0.0000001)))"
+	percentageChangeForSemChecklistKeyword = "(((keyword_analysis_last_week.%s - keyword_analysis_previous_week.%s))*100/(COALESCE(NULLIF(keyword_analysis_previous_week.%s, 0), 0.0000001)))"
 )
 
 var templateMetricsToSelectStatement = map[string]string{
@@ -1845,11 +1845,11 @@ func GetAdwordsDocumentTypeForFilterKey(filter string) (int, error) {
 
 /*
 GetAdwordsMetricsQuery
-SELECT (JSON_EXTRACT(value,'criteria', SUM(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) as clicks,
+SELECT (JSON_EXTRACT_STRING(value,'criteria', SUM(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) as clicks,
 SUM(JSON_EXTRACT_STRING(value, 'cost')) as total_cost, SUM(JSON_EXTRACT_STRING(value, 'conversions')) as all_conversions,
 SUM(JSON_EXTRACT_STRING(value, 'all_conversions')) as all_conversions FROM adwords_documents
 WHERE type='5' AND timestamp BETWEEN '20191122' and '20191129' AND JSON_EXTRACT_STRING(value, 'campaign_name')='Desktop Only'
-GROUP BY (JSON_EXTRACT(value,'criteria';
+GROUP BY (JSON_EXTRACT_STRING(value,'criteria';
 */
 func (store *MemSQL) getAdwordsMetricsQuery(projectID uint64, customerAccountID string, query *model.ChannelQuery,
 	withBreakdown bool) (string, []interface{}, error) {
