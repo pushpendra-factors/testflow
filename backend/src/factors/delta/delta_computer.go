@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"factors/filestore"
+	"factors/model/model"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	T "factors/task"
 	U "factors/util"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -52,9 +54,14 @@ var USER_PROPERTIES_MODE PropertiesMode = "user"
 var EVENT_PROPERTIES_MODE PropertiesMode = "event"
 
 func eventMatchesFilterCriterion(event P.CounterEventFormat, filterCriterion EventFilterCriterion) bool {
+	// If catagorical property then there will be both AND and OR. Though AND doesnt makes sense there is a possiblity
+	// Will add log to check if there are any queries like that
+	// if numerical, it can never be OR it will always be AND
+	// if datetime, it can always be OR again
+	// even boolean are getting mapped as categorical but comparison doesnt work directly since the db and event file has it as boolen type
+	// if a key is missing in the event, we cant return false since the comparison can be against $none which will be true in case
 	filterKey := filterCriterion.Key
-	filterValues := filterCriterion.ValueSet
-	containmentFlag := filterCriterion.EqualityFlag
+	filterValues := filterCriterion.Values
 	mode := filterCriterion.PropertiesMode
 	var props map[string]interface{}
 	if mode == USER_PROPERTIES_MODE {
@@ -62,25 +69,212 @@ func eventMatchesFilterCriterion(event P.CounterEventFormat, filterCriterion Eve
 	} else if mode == EVENT_PROPERTIES_MODE {
 		props = event.EventProperties
 	}
-	if _, ok := props[filterKey]; !ok {
-		//fmt.Println("Error: Filter key not found in properties. Defaulting match flag as false.")
-		return false
+
+	propertyValue, ok := props[filterKey]
+	if filterCriterion.Type == U.PropertyTypeNumerical {
+		return matchFitlerValuesForNumerical(propertyValue, ok, filterValues)
 	}
-	propertyValue := props[filterKey]
-	for _, filterValue := range filterValues {
-		// "OR" logic for containment: If there's even a single match when asked for containment, return True.
-		// "AND" logic for non-containment: If there's even a single match when asked for non-containment, return False.
-		if filterValue == propertyValue {
-			return containmentFlag
+	if filterCriterion.Type == U.PropertyTypeCategorical {
+		return matchFitlerValuesForCategorical(propertyValue, ok, filterValues)
+	}
+	if filterCriterion.Type == U.PropertyTypeDateTime {
+		return matchFitlerValuesForDatetime(propertyValue, ok, filterValues)
+	}
+	return false
+}
+
+func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventPropValue bool, filterValues []OperatorValueTuple) bool {
+	/*
+		Categorical	,=, !=, contains, not contains
+		A = b	right
+		A != b	right
+		A= b and A = c	not logical but right
+		A = b OR A = c	right
+		A != b and A != c 	right
+		A != b OR A != c	wrong
+		A = b OR A != c	not possible
+		A != b OR A = c	not possible
+		A = b OR A = c and A = d	ordering is wrong
+		A != b OR A != c and A = d	ordering is wrong
+		A = b OR A = c and A != d	ordering is wrong
+		A != b OR A != c and A != d	ordering is wrong
+	*/
+	andCount, orCount := 0, 0
+	for _, value := range filterValues {
+		if value.LogicalOp == "AND" {
+			andCount++
+		}
+		if value.LogicalOp == "OR" {
+			orCount++
 		}
 	}
-	// Finally, for containment, if there's no match in the loop above, return False (!containmentFlag)
-	// For non-containment, if all are mismatches (in the loop above), return True (!containmentFlag)
-	return !containmentFlag
+	/*
+		Rejection cases
+		With same property in two different rows with atleast one containining multiple	count(AND) > 1 and count(OR) >= 1
+		multiple with !=	op = != and count(OR) >= 1
+	*/
+	if andCount > 1 && orCount >= 1 {
+		/*
+			A = b OR A = c and A = d	ordering is wrong
+			A != b OR A != c and A = d	ordering is wrong
+			A = b OR A = c and A != d	ordering is wrong
+			A != b OR A != c and A != d	ordering is wrong
+		*/
+		return false
+		// "Multiple filters with same property and any one with multi select"
+	}
+	if andCount == 1 && orCount >= 1 && (filterValues[0].Operator == model.NotEqualOpStr || filterValues[0].Operator == model.NotContainsOpStr) {
+		//A != b OR A != c	wrong
+		return false
+		// "Multi select filter with not equals"
+	}
+	// TODO What to do if there is a misclassification
+	results := make(map[int]bool)
+	propertyValue := fmt.Sprintf("%v", eventPropValue)
+
+	for i, value := range filterValues {
+		if value.Value == model.PropertyValueNone {
+			results[i] = handleNoneCase(propertyValue, isPresentEventPropValue, value.Operator)
+			continue
+		}
+		if value.Operator == model.EqualsOpStr {
+			results[i] = (propertyValue == value.Value)
+		}
+		if value.Operator == model.NotEqualOpStr {
+			results[i] = (propertyValue != value.Value)
+		}
+		if value.Operator == model.ContainsOpStr {
+			results[i] = strings.Contains(propertyValue, value.Value)
+		}
+		if value.Operator == model.NotContainsOpStr {
+			results[i] = !(strings.Contains(propertyValue, value.Value))
+		}
+	}
+	var soFar bool
+	var op string
+	for i, _ := range filterValues {
+		op = filterValues[i].LogicalOp
+		if i == 0 {
+			soFar = results[i]
+		} else {
+			if op == "AND" {
+				soFar = soFar && results[i]
+			}
+			if op == "OR" {
+				soFar = soFar || results[i]
+			}
+		}
+	}
+	return soFar
+}
+
+func handleNoneCase(eventPropValue string, isPresentEventPropValue bool, operator string) bool {
+	if operator == model.EqualsOpStr || operator == model.ContainsOpStr {
+		return isPresentEventPropValue == false || eventPropValue == "$none"
+	}
+	if operator == model.NotEqualOpStr || operator == model.NotContainsOpStr {
+		return isPresentEventPropValue == true && eventPropValue != "$none"
+	}
+	return false
+}
+
+func matchFitlerValuesForNumerical(eventPropValue interface{}, isPresentEventPropValue bool, filterValues []OperatorValueTuple) bool {
+	/*
+		Numerical	<, <=, >, >=, = , !=
+		A = 1 and A  = 2	right
+		a = 1 or a= 2	not possible
+	*/
+	// TODO What to do if there is a misclassification
+	results := make(map[int]bool)
+	propertyValue := fmt.Sprintf("%v", eventPropValue)
+	eventPropertyValue, err := strconv.ParseFloat(propertyValue, 64)
+	if err != nil {
+		return false
+	}
+	for i, value := range filterValues {
+		filterValue, err := strconv.ParseFloat(value.Value, 64)
+		if err != nil {
+			return false
+		}
+		if value.Operator == model.EqualsOpStr {
+			results[i] = eventPropertyValue == filterValue
+		}
+		if value.Operator == model.NotEqualOpStr {
+			results[i] = eventPropertyValue != filterValue
+		}
+		if value.Operator == model.GreaterThanOpStr {
+			results[i] = eventPropertyValue > filterValue
+		}
+		if value.Operator == model.LesserThanOpStr {
+			results[i] = eventPropertyValue < filterValue
+		}
+		if value.Operator == model.GreaterThanOrEqualOpStr {
+			results[i] = eventPropertyValue >= filterValue
+		}
+		if value.Operator == model.LesserThanOrEqualOpStr {
+			results[i] = eventPropertyValue <= filterValue
+		}
+	}
+	var soFar bool
+	var op string
+	for i, _ := range filterValues {
+		op = filterValues[i].LogicalOp
+
+		if i == 0 {
+			soFar = results[i]
+		} else {
+			if op == "AND" {
+				soFar = soFar && results[i]
+			}
+			if op == "OR" {
+				soFar = soFar || results[i]
+			}
+		}
+	}
+	return soFar
+}
+
+func matchFitlerValuesForDatetime(eventPropValue interface{}, isPresentEventPropValue bool, filterValues []OperatorValueTuple) bool {
+	results := make(map[int]bool)
+	propertyValue := fmt.Sprintf("%v", eventPropValue)
+	eventPropertyValue, err := strconv.ParseInt(propertyValue, 10, 64)
+	if err != nil {
+		return false
+	}
+	for i, value := range filterValues {
+		if value.Operator == model.EqualsOpStr {
+			dateTimeFilter, err := model.DecodeDateTimePropertyValue(value.Value)
+			if err != nil {
+				return false
+			}
+			if eventPropertyValue >= dateTimeFilter.From && eventPropertyValue <= dateTimeFilter.To {
+				results[i] = true
+			} else {
+				results[i] = false
+			}
+		}
+	}
+	var soFar bool
+	var op string
+	for i, _ := range filterValues {
+		op = filterValues[i].LogicalOp
+		if i == 0 {
+			soFar = results[i]
+		} else {
+			if op == "AND" {
+				soFar = soFar && results[i]
+			}
+			if op == "OR" {
+				soFar = soFar || results[i]
+			}
+		}
+	}
+	return soFar
 }
 
 func eventMatchesFilterCriterionList(event P.CounterEventFormat, filterCriterionList []EventFilterCriterion) bool {
 	for _, fc := range filterCriterionList {
+		// Today we dont support OR across filters. So retaining it this way. Its always a AND
 		if !eventMatchesFilterCriterion(event, fc) { // "AND" logic: If even a single filter fails, return False.
 			return false
 		}
@@ -88,7 +282,7 @@ func eventMatchesFilterCriterionList(event P.CounterEventFormat, filterCriterion
 	return true
 }
 
-func eventMatchesCriterion(event P.CounterEventFormat, eventCriterion EventCriterion) bool {
+func EventMatchesCriterion(event P.CounterEventFormat, eventCriterion EventCriterion) bool {
 	// TODO: Match event filters as well.
 	nameMatchFlag := eventCriterion.EqualityFlag == (event.EventName == eventCriterion.Name)
 	if !nameMatchFlag {
@@ -99,6 +293,7 @@ func eventMatchesCriterion(event P.CounterEventFormat, eventCriterion EventCrite
 }
 
 func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult, isBase bool) bool {
+	customBlacklist := getCustomBlacklist()
 	if criteriaResult.criteriaMatchFlag && isBase { // If criteria already met, do nothing.
 		return false
 	}
@@ -106,6 +301,7 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, c
 		log.Info("Criteria has empty criterion list. By default, making the user match the first event.")
 		(*criteriaResult).anyFlag = true
 		(*criteriaResult).allFlag = true
+		filterBlacklist(&event, &customBlacklist)
 		if (*criteriaResult).criteriaMatchFlag == false {
 			(*criteriaResult).firstEvent = event
 		}
@@ -114,10 +310,48 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, c
 		return true
 	}
 	for i, eventCriterion := range criteria.EventCriterionList {
-		if eventMatchesCriterion(event, eventCriterion) {
+		if EventMatchesCriterion(event, eventCriterion) {
 			(*criteriaResult).criterionResultList[i].matchId = (*criteriaResult).numCriterionMatched
 			(*criteriaResult).numCriterionMatched++
 			(*criteriaResult).anyFlag = true
+			filterBlacklist(&event, &customBlacklist)
+			(*criteriaResult).mostRecentEvent = event
+			if (*criteriaResult).numCriterionMatched == len(criteria.EventCriterionList) {
+				(*criteriaResult).allFlag = true
+			}
+			if ((criteria.Operator == "And") && (*criteriaResult).allFlag) ||
+				((criteria.Operator == "Or") && (*criteriaResult).anyFlag) {
+				if (*criteriaResult).criteriaMatchFlag == false {
+					(*criteriaResult).firstEvent = event
+				}
+				(*criteriaResult).criteriaMatchFlag = true
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func updateCriteriaResultEventOccurence(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult, isBase bool) bool {
+	customBlacklist := getCustomBlacklist()
+	if len(criteria.EventCriterionList) == 0 { // If criteria has no event criterion to match
+		log.Info("Criteria has empty criterion list. By default, making the user match the first event.")
+		(*criteriaResult).anyFlag = true
+		(*criteriaResult).allFlag = true
+		filterBlacklist(&event, &customBlacklist)
+		if (*criteriaResult).criteriaMatchFlag == false {
+			(*criteriaResult).firstEvent = event
+		}
+		(*criteriaResult).criteriaMatchFlag = true
+		(*criteriaResult).mostRecentEvent = event
+		return true
+	}
+	for i, eventCriterion := range criteria.EventCriterionList {
+		if EventMatchesCriterion(event, eventCriterion) {
+			(*criteriaResult).criterionResultList[i].matchId = (*criteriaResult).numCriterionMatched
+			(*criteriaResult).numCriterionMatched++
+			(*criteriaResult).anyFlag = true
+			filterBlacklist(&event, &customBlacklist)
 			(*criteriaResult).mostRecentEvent = event
 			if (*criteriaResult).numCriterionMatched == len(criteria.EventCriterionList) {
 				(*criteriaResult).allFlag = true
@@ -141,18 +375,37 @@ func QueryEvent(event P.CounterEventFormat, deltaQuery Query, perUserQueryResult
 	return base, target
 }
 
-func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult, baseIndex *int, targetIndex *int, i int) {
+func QueryEventEventOccurence(event P.CounterEventFormat, deltaQuery Query, perUserQueryResult *PerUserQueryResult) bool {
+	target := updateCriteriaResultEventOccurence(event, deltaQuery.Target, &(*perUserQueryResult).targetResult, false)
+	return target
+}
+
+func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult, baseTimestamp *int64, targetTimestamp *int64, baseIndex *int, targetIndex *int, i int) {
 	index := i
 	for _, event := range session.Events {
 		base, target := QueryEvent(event, deltaQuery, perUserQueryResult)
 		if base == true {
+			(*baseTimestamp) = event.EventTimestamp
 			(*baseIndex) = index
 		}
 		if target == true {
+			(*targetTimestamp) = event.EventTimestamp
 			(*targetIndex) = index
 		}
-		if *baseIndex < *targetIndex && *baseIndex != -1 && *targetIndex != -1 {
+		if *baseTimestamp <= *targetTimestamp && *baseTimestamp != -1 && *targetTimestamp != -1 && *baseIndex != *targetIndex {
 			break
+		}
+		index++
+	}
+}
+
+func QuerySessionEventOccurence(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult, targetTimestamp *[]int64, targetIndex *[]int, i int) {
+	index := i
+	for _, event := range session.Events {
+		target := QueryEventEventOccurence(event, deltaQuery, perUserQueryResult)
+		if target == true {
+			(*targetTimestamp) = append((*targetTimestamp), event.EventTimestamp)
+			(*targetIndex) = append((*targetIndex), index)
 		}
 		index++
 	}
@@ -170,7 +423,7 @@ func makeCriteriaResult(criteria EventsCriteria) PerUserCriteriaResult {
 	return criteriaResult
 }
 
-func makePerUserQueryResult(deltaQuery Query) PerUserQueryResult {
+func MakePerUserQueryResult(deltaQuery Query) PerUserQueryResult {
 	baseCriteriaResult := makeCriteriaResult(deltaQuery.Base)
 	targetCriteriaResult := makeCriteriaResult(deltaQuery.Target)
 	perUserQueryResult := PerUserQueryResult{baseResult: baseCriteriaResult, targetResult: targetCriteriaResult}
@@ -182,40 +435,79 @@ type Session struct {
 }
 
 func QueryUser(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery Query) (PerEventProperties, error) {
+	isSessionTarget := false
+	for _, target := range deltaQuery.Target.EventCriterionList {
+		if target.Name == "$session" {
+			isSessionTarget = true
+		}
+	}
+	baseTimestamp, targetTimestamp := int64(-1), int64(-1)
 	baseIndex, targetIndex := int(-1), int(-1)
 	i := int(0)
 	var err error = nil
-	userResult := makePerUserQueryResult(deltaQuery)
+	userResult := MakePerUserQueryResult(deltaQuery)
 	var extendedSessions []Session // Extended sessions are preSessionEvents + sessions.
 	extendedSessions = append(extendedSessions, Session{Events: preSessionEvents})
 	extendedSessions = append(extendedSessions, sessions...)
 	for _, session := range extendedSessions {
-		QuerySession(session, deltaQuery, &userResult, &baseIndex, &targetIndex, i)
-		if userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseIndex < targetIndex {
+		QuerySession(session, deltaQuery, &userResult, &baseTimestamp, &targetTimestamp, &baseIndex, &targetIndex, i)
+		if userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseTimestamp <= targetTimestamp && baseIndex <= targetIndex {
 			break
 		}
 		i = i + len(session.Events)
 	}
 	summary := PerEventProperties{BaseFlag: userResult.baseResult.criteriaMatchFlag,
 		TargetFlag: userResult.targetResult.criteriaMatchFlag}
-	summary.BaseAndTargetFlag = userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseIndex < targetIndex
+	summary.BaseAndTargetFlag = userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseTimestamp <= targetTimestamp && baseIndex <= targetIndex
 	summary.EventProperties = make(map[string]interface{})
 	summary.UserProperties = make(map[string]interface{})
 	if summary.BaseAndTargetFlag {
 		// both source and target properties
-		combineSourceAndTargetProperties(userResult.baseResult.mostRecentEvent, userResult.targetResult.mostRecentEvent, &summary.EventProperties, &summary.UserProperties)
+		combineSourceAndTargetProperties(userResult.baseResult.mostRecentEvent, userResult.targetResult.mostRecentEvent, &summary.EventProperties, &summary.UserProperties, isSessionTarget)
 	}
 	if summary.BaseFlag {
-		combineSourceAndTargetProperties(userResult.baseResult.mostRecentEvent, P.CounterEventFormat{}, &summary.EventProperties, &summary.UserProperties)
+		combineSourceAndTargetProperties(userResult.baseResult.mostRecentEvent, P.CounterEventFormat{}, &summary.EventProperties, &summary.UserProperties, isSessionTarget)
 	}
 	if summary.TargetFlag {
-		combineSourceAndTargetProperties(userResult.baseResult.firstEvent, P.CounterEventFormat{}, &summary.EventProperties, &summary.UserProperties)
+		combineSourceAndTargetProperties(P.CounterEventFormat{}, userResult.targetResult.firstEvent, &summary.EventProperties, &summary.UserProperties, isSessionTarget)
 	}
 	return summary, err
 }
 
-func combineSourceAndTargetProperties(base P.CounterEventFormat, target P.CounterEventFormat, eventProperties *map[string]interface{}, userProperties *map[string]interface{}) {
-	if base.EventProperties != nil {
+func QueryUserEventOccurence(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery Query) ([]PerEventProperties, error) {
+	isSessionTarget := false
+	for _, target := range deltaQuery.Target.EventCriterionList {
+		if target.Name == "$session" {
+			isSessionTarget = true
+		}
+	}
+	targetTimestamp := make([]int64, 0)
+	targetIndex := make([]int, 0)
+	i := int(0)
+	var err error = nil
+	userResult := MakePerUserQueryResult(deltaQuery)
+	var extendedSessions []Session // Extended sessions are preSessionEvents + sessions.
+	extendedSessions = append(extendedSessions, Session{Events: preSessionEvents})
+	extendedSessions = append(extendedSessions, sessions...)
+	for _, session := range extendedSessions {
+		QuerySessionEventOccurence(session, deltaQuery, &userResult, &targetTimestamp, &targetIndex, i)
+		i = i + len(session.Events)
+	}
+	events := make([]P.CounterEventFormat, 0)
+	for _, session := range extendedSessions {
+		events = append(events, session.Events...)
+	}
+	summary := make([]PerEventProperties, 0)
+	for _, selectedIndex := range targetIndex {
+		ep, up := make(map[string]interface{}), make(map[string]interface{})
+		combineSourceAndTargetProperties(P.CounterEventFormat{}, events[selectedIndex], &ep, &up, isSessionTarget)
+		summary = append(summary, PerEventProperties{EventProperties: ep, UserProperties: up})
+	}
+	return summary, err
+}
+
+func combineSourceAndTargetProperties(base P.CounterEventFormat, target P.CounterEventFormat, eventProperties *map[string]interface{}, userProperties *map[string]interface{}, isSessionTarget bool) {
+	if base.EventProperties != nil && isSessionTarget == false {
 		for key, value := range base.EventProperties {
 			propertyKey := fmt.Sprintf("s#%s", key)
 			(*eventProperties)[propertyKey] = value
@@ -232,7 +524,7 @@ func combineSourceAndTargetProperties(base P.CounterEventFormat, target P.Counte
 			(*eventProperties)[propertyKey] = value
 		}
 	}
-	if base.UserProperties != nil {
+	if base.UserProperties != nil && isSessionTarget == false {
 		for key, value := range base.UserProperties {
 			propertyKey := fmt.Sprintf("s#%s", key)
 			(*userProperties)[propertyKey] = value
@@ -265,7 +557,7 @@ func getCustomBlacklist() map[string]bool {
 	return customBlacklistMap
 }
 
-func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int, featSoftWhitelist map[string]map[string]bool, passId int) (WithinPeriodInsights, error) {
+func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int, featSoftWhitelist map[string]map[string]bool, passId int, isEventOccurence bool) (WithinPeriodInsights, error) {
 	var err error
 	var wpInsights WithinPeriodInsights
 	var prevUserId string = ""
@@ -275,7 +567,6 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int
 	var matchedBaseAndTargetEvents []PerEventProperties
 	var sessions []Session
 	var preSessionEvents []P.CounterEventFormat = nil
-	customBlacklist := getCustomBlacklist()
 	sessionId := -1
 	lineNum := 0
 	for scanner.Scan() {
@@ -286,7 +577,6 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int
 		line := scanner.Text()
 		var event P.CounterEventFormat
 		json.Unmarshal([]byte(line), &event) // TODO: Add error check.
-		filterBlacklist(&event, &customBlacklist)
 		sanitizeScreenSize(&event)
 		if prevUserId == "" {
 			prevUserId = event.UserId
@@ -297,24 +587,35 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int
 				continue
 			}
 		} else { // If a new user's events have started coming...
-			matchSummary, err = QueryUser(preSessionEvents, sessions, deltaQuery)
-			if err != nil {
-				return wpInsights, err
-			}
-			if matchSummary.BaseFlag {
-				matchedBaseEvents = append(matchedBaseEvents, matchOnlyPrefixedPropertiesWithPrefix(matchSummary, "s#"))
-			}
-			if matchSummary.TargetFlag {
-				matchedTargetEvents = append(matchedTargetEvents, matchOnlyPrefixedPropertiesWithPrefix(matchSummary, "t#"))
-			}
-			if matchSummary.BaseAndTargetFlag {
-				matchedBaseAndTargetEvents = append(matchedBaseAndTargetEvents, matchSummary)
+			if !isEventOccurence {
+				matchSummary, err = QueryUser(preSessionEvents, sessions, deltaQuery)
+				if err != nil {
+					return wpInsights, err
+				}
+				if matchSummary.BaseFlag {
+					matchedBaseEvents = append(matchedBaseEvents, matchOnlyPrefixedPropertiesWithPrefix(matchSummary, "s#"))
+				}
+				if matchSummary.TargetFlag {
+					matchedTargetEvents = append(matchedTargetEvents, matchOnlyPrefixedPropertiesWithPrefix(matchSummary, "t#"))
+				}
+				if matchSummary.BaseAndTargetFlag {
+					matchedBaseAndTargetEvents = append(matchedBaseAndTargetEvents, matchSummary)
+				}
+			} else {
+				matchSummaries, err := QueryUserEventOccurence(preSessionEvents, sessions, deltaQuery)
+				if err != nil {
+					return wpInsights, err
+				}
+				for _, matchSummary := range matchSummaries {
+					matchedTargetEvents = append(matchedTargetEvents, matchOnlyPrefixedPropertiesWithPrefix(matchSummary, "t#"))
+				}
 			}
 			preSessionEvents = nil
 			sessions = nil
 			sessionId = -1
 			sessionId = updateSessions(&preSessionEvents, &sessions, sessionId, event)
 			prevUserId = event.UserId
+
 		}
 	}
 	wpInsights = translateToWPMetrics(matchedBaseEvents, matchedTargetEvents,
