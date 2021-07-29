@@ -51,6 +51,12 @@ function GroupSelect2({
         </div>)
     }
 
+    const getGroupLabel = (grp) => {
+        if(grp === 'event') return 'Event Properties';
+        if(grp === 'user') return 'User Properties';
+        return grp;
+      }
+
     const renderOptions = (options) => {
         const renderGroupedOptions = [];
         console.log("rebuilding");
@@ -65,7 +71,7 @@ function GroupSelect2({
                     {<div className={'fa-select-group-select--option-group'}>
                         <div>
                             <SVG name={group.icon} color={'purple'} extraClass={'self-center'}></SVG>
-                            <Text level={8} type={'title'} extraClass={'m-0 ml-2'} weight={'bold'}>{group.label}</Text>
+                            <Text level={8} type={'title'} extraClass={'m-0 ml-2'} weight={'bold'}>{getGroupLabel(group.label)}</Text>
                         </div>
                     </div>}
 
@@ -118,19 +124,20 @@ function GroupSelect2({
     return (
         <>
             <div className={`${styles.dropdown__filter_select} fa-select fa-select--group-select ${extraClass}`}>
-              <Input
-                className={styles.dropdown__filter_select__input}
-                placeholder={placeholder}
-                onKeyUp={onInputSearch}
-                prefix={(<SVG name="search" size={16} color={'grey'} />)}
-              />
-              <div className={styles.dropdown__filter_select__content}>
-                {renderOptions(groupedProperties)}
-              </div>
+                <div className={styles.dropdown__filter_select__input}>
+                    <Input
+                        placeholder={placeholder}
+                        onKeyUp={onInputSearch}
+                        prefix={(<SVG name="search" size={16} color={'grey'} />)}
+                    />
+                </div>
+                <div className={styles.dropdown__filter_select__content}>
+                    {renderOptions(groupedProperties)}
+                </div>
             </div>
             <div className={styles.dropdown__hd_overlay} onClick={onClickOutside}></div>
         </>
-      );
-    }
+    );
+}
 
 export default GroupSelect2;

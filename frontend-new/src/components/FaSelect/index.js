@@ -203,7 +203,7 @@ const FaSelect = ({
     <>
       <div
         className={`${extraClass} ${
-          posRight ? styles.dropdown__select_rt : styles.dropdown__select
+          posRight ? styles.dropdown__select_rt : styles.dropdown__select_lt
         } fa-select ${
           posRight ? `fa-select--group-select-sm` : `fa-select--group-select`
         }`}

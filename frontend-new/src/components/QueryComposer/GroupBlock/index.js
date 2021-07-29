@@ -24,7 +24,7 @@ function GroupBlock({
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'User Properties',
-      icon: 'userplus',
+      icon: 'user',
       values: []
     }
   ]);
@@ -41,10 +41,10 @@ function GroupBlock({
 
   const onGrpPropChange = (val, index) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
-    if(newGroupByState.prop_type === 'numerical') {
+    if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = val;
     }
-    if(newGroupByState.prop_type === 'datetime') {
+    if (newGroupByState.prop_type === 'datetime') {
       newGroupByState.grn = val;
     }
     setGroupBy('global', newGroupByState, index);
@@ -59,13 +59,13 @@ function GroupBlock({
     newGroupByState.eventName = '$present';
     newGroupByState.property = value[1][1];
     newGroupByState.prop_type = value[1][2];
-    if(newGroupByState.prop_type === 'numerical') {
+    if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }
-    if(newGroupByState.prop_type === 'datetime') {
+    if (newGroupByState.prop_type === 'datetime') {
       newGroupByState.grn = 'day';
     }
-    
+
     setGroupBy('global', newGroupByState, index);
     const ddVis = [...isDDVisible];
     ddVis[index] = false;
@@ -83,31 +83,35 @@ function GroupBlock({
 
   const renderInitGroupSelect = (index) => {
     return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center mt-2`} >
-      {
-        <Button className={`fa-button--truncate`} type="text" onClick={() => triggerDropDown(index)} icon={<SVG name="plus" />}> Add new </Button>}
-      
+      {<Button
+        className={`fa-button--truncate`}
+        type="text"
+        onClick={() => triggerDropDown(index)}
+        icon={<SVG name="plus" />}> Add new
+      </Button>}
+
       <div className={styles.group_block__event_selector}>
-      {isDDVisible[index]
-        ? (
-          <div className={styles.group_block__event_selector__btn}>
-            <GroupSelect2 groupedProperties={filterOptions}
-          placeholder="Select Property"
-          optionClick={(group, val) => onChange([group, val], index)}
-          onClickOutside={() => triggerDropDown(index, true)}
-        ></GroupSelect2>
-        </div>
-        ) : null}
+        {isDDVisible[index]
+          ? (
+            <div className={styles.group_block__event_selector__btn}>
+              <GroupSelect2 groupedProperties={filterOptions}
+                placeholder="Select Property"
+                optionClick={(group, val) => onChange([group, val], index)}
+                onClickOutside={() => triggerDropDown(index, true)}
+              ></GroupSelect2>
+            </div>
+          ) : null}
       </div>
     </div>);
   };
 
   const renderGroupPropertyOptions = (opt, index) => {
-    if(!opt || opt.prop_type === 'categorical') return;
+    if (!opt || opt.prop_type === 'categorical') return;
 
     const propOpts = {
       'numerical': [
-          ['original values', null, 'raw_values'], 
-          ['bucketed values', null, 'with_buckets']],
+        ['original values', null, 'raw_values'],
+        ['bucketed values', null, 'with_buckets']],
       'datetime': [
         ['hour', null, 'hour'],
         ['date', null, 'day'],
@@ -117,14 +121,14 @@ function GroupBlock({
     }
 
     const getProp = (opt) => {
-      if(opt.prop_type === 'numerical') {
+      if (opt.prop_type === 'numerical') {
         const propSel = propOpts['numerical'].filter((v) => v[2] === opt.gbty);
-        return propSel[0]? propSel[0][0] : 'Select options';
+        return propSel[0] ? propSel[0][0] : 'Select options';
       }
-      if(opt.prop_type === 'datetime') {
+      if (opt.prop_type === 'datetime') {
         const propSel = propOpts['datetime'].filter((v) => v[2] === opt.grn);
-        return propSel[0]? propSel[0][0] : 'Select options';
-      } 
+        return propSel[0] ? propSel[0][0] : 'Select options';
+      }
     }
 
     const setProp = (opt, i = index) => {
@@ -140,30 +144,29 @@ function GroupBlock({
 
     return (<div className={styles.grpProps}>
       show as <div className={styles.grpProps__select}>
-          <span className={styles.grpProps__select__opt} 
-            onClick={() => selectVisToggle()}> 
-            { getProp(opt)}  
-          </span>
-          {propSelVis[index] && 
-            <FaSelect options={propOpts[opt.prop_type]}
-              optionClick={setProp}
-              onClickOutside={() => selectVisToggle()}
-            
-            ></FaSelect> 
-          }
-        </div>
+        <span className={styles.grpProps__select__opt}
+          onClick={() => selectVisToggle()}>
+          {getProp(opt)}
+        </span>
+        {propSelVis[index] &&
+          <FaSelect options={propOpts[opt.prop_type]}
+            optionClick={setProp}
+            onClickOutside={() => selectVisToggle()}
+          ></FaSelect>
+        }
+      </div>
     </div>);
   }
 
   const renderGroupDisplayName = (opt, index) => {
     let propertyName = '';
-    if(opt.property && opt.prop_category === 'user') {
-      propertyName = userPropNames[opt.property]?  userPropNames[opt.property] : opt.property;
+    if (opt.property && opt.prop_category === 'user') {
+      propertyName = userPropNames[opt.property] ? userPropNames[opt.property] : opt.property;
     }
-    if(opt.property && opt.prop_category === 'event') {
-      propertyName = eventPropNames[opt.property]?  eventPropNames[opt.property] : opt.property;
+    if (opt.property && opt.prop_category === 'event') {
+      propertyName = eventPropNames[opt.property] ? eventPropNames[opt.property] : opt.property;
     }
-    if(!opt.property) {
+    if (!opt.property) {
       propertyName = 'Select user property';
     }
     return (
@@ -177,32 +180,31 @@ function GroupBlock({
     if (groupByState.global.length < 1) return;
     return (groupByState.global.map((opt, index) => (
       <div key={index} className={`${styles.group_block__select} flex justify-start items-center mt-2`} >
-        {
-          <>
-        <Button
-        type="text"
-        className={`fa-button--truncate`}
-        onClick={() => delOption(index)}
-        className={`${styles.group_block__remove} mr-2`}
-        icon={<SVG name="delete" />}
-        /> 
-        {renderGroupDisplayName(opt, index)}
-        {renderGroupPropertyOptions(opt, index)}
+        {<>
+          <Button
+            type="text"
+            className={`fa-button--truncate`}
+            onClick={() => delOption(index)}
+            className={`${styles.group_block__remove} mr-2`}
+            icon={<SVG name="delete" />}
+          />
+          {renderGroupDisplayName(opt, index)}
+          {renderGroupPropertyOptions(opt, index)}
         </>
         }
-        {isDDVisible[index]
-          ? (<GroupSelect2 groupedProperties={filterOptions}
-            placeholder="Add new"
-            optionClick={(group, val) => onChange([group, val], index)}
-            onClickOutside={() => triggerDropDown(index, true)}
 
-            >
-              </GroupSelect2>
-
-          )
-
-          : null
-        }
+        <div className={styles.group_block__event_selector}>
+          {isDDVisible[index]
+            ? (
+              <div className={styles.group_block__event_selector__btn}>
+                <GroupSelect2 groupedProperties={filterOptions}
+                  placeholder="Select Property"
+                  optionClick={(group, val) => onChange([group, val], index)}
+                  onClickOutside={() => triggerDropDown(index, true)}
+                ></GroupSelect2>
+              </div>
+            ) : null}
+        </div>
       </div>
     )));
   };

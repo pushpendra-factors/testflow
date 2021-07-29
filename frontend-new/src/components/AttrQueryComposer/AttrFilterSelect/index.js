@@ -241,8 +241,7 @@ const AttrFilterSelect = ({
                 selectedOpts={valuesState ? valuesState : []}
                 allowSearch={true}
                 posRight={true}
-            >
-            </FaSelect>);
+            ></FaSelect>);
         }
 
         if (propState.type === 'datetime') {
