@@ -448,6 +448,7 @@ func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Tim
 		return nil, errors.New(errMsg)
 	}
 	var query model.Query
+	var isEventOccurence bool
 	if class == model.QueryClassFunnel {
 		err = U.DecodePostgresJsonbToStructType(&QueriesObj.Query, &query)
 		if err != nil {
@@ -462,8 +463,12 @@ func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Tim
 			return nil, err
 		}
 		query = queryGroup.Queries[0]
+		isEventOccurence = (query.Type == model.QueryTypeEventsOccurrence)
 	}
 	EventType := getEventType(&query, class, projectId)
+	if isEventOccurence{
+		EventType = CRM
+	}
 	insightsObj := GetInsights(insights, numberOfRecords, class, EventType)
 	// adding query groups
 	gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj)
