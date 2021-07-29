@@ -417,7 +417,7 @@ const CampQueryComposer = ({
           <div className={`${styles.composer__section} fa--query_block`}>
             <div className={styles.composer__section__title}>
               <Text type={'title'} level={7} weight={'bold'}>
-                Filter
+                FILTER BY
               </Text>
             </div>
             <div className={styles.composer__section__content}>
@@ -430,7 +430,7 @@ const CampQueryComposer = ({
           <div className={`${styles.composer__section} fa--query_block`}>
             <div className={styles.composer__section__title}>
               <Text type={'title'} level={7} weight={'bold'}>
-                Group By
+                GROUP BY
               </Text>
             </div>
             <div className={styles.composer__section__content}>

@@ -65,12 +65,14 @@ function GroupSelect2({
             const [showFull, setShowFull] = useState(false);
             let hasSearchTerm = false;
             const valuesOptions = [];
+
+            const icon = group?.icon? group.icon.toLowerCase().split(' ').join('_') : group.icon
             console.log(group.icon)
             const groupItem = (
                 <div key={group.label} className={`fa-select-group-select--content`}>
                     {<div className={'fa-select-group-select--option-group'}>
                         <div>
-                            <SVG name={group.icon} color={'purple'} extraClass={'self-center'}></SVG>
+                            <SVG name={icon} color={'purple'} extraClass={'self-center'}></SVG>
                             <Text level={8} type={'title'} extraClass={'m-0 ml-2'} weight={'bold'}>{getGroupLabel(group.label)}</Text>
                         </div>
                     </div>}
