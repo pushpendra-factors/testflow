@@ -633,7 +633,7 @@ func getSelectTimestampByType(timestampType, timezone string) string {
 		selectStr = fmt.Sprintf("date_trunc('hour', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', '%s'))", selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
 		// default week is Monday to Sunday for memsql, updating it to Sunday to Saturday
-		selectStr = fmt.Sprintf("date_trunc('week', CONVERT_TZ(FROM_UNIXTIME(timestamp + (24*60*60)), 'UTC', '%s')) - INTERVAL '1 day'", selectTz)
+		selectStr = fmt.Sprintf("date_trunc('week', CONVERT_TZ(FROM_UNIXTIME(timestamp + (24*60*60)), 'UTC', '%s')) - INTERVAL 1 day", selectTz)
 	} else if timestampType == model.GroupByTimestampMonth {
 		selectStr = fmt.Sprintf("date_trunc('month', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', '%s'))", selectTz)
 	} else if timestampType == model.GroupByTimestampQuarter {
@@ -660,7 +660,7 @@ func getSelectTimestampByTypeAndPropertyName(timestampType, propertyName, timezo
 		selectStr = fmt.Sprintf("date_trunc('hour', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
 		// default week is Monday to Sunday for memsql, updating it to Sunday to Saturday
-		selectStr = fmt.Sprintf("date_trunc('week', CONVERT_TZ(FROM_UNIXTIME(timestamp + (24*60*60)), 'UTC', '%s')) - INTERVAL '1 day'", selectTz)
+		selectStr = fmt.Sprintf("date_trunc('week', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+" + (24*60*60)), 'UTC', '%s')) - INTERVAL 1 day", selectTz)
 	} else if timestampType == model.GroupByTimestampMonth {
 		selectStr = fmt.Sprintf("date_trunc('month', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
 	} else if timestampType == model.GroupByTimestampQuarter {
