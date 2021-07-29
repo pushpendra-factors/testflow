@@ -648,6 +648,7 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 	adwordsSettingsByProjectAndCustomerAccount := make(map[uint64]map[string]*model.AdwordsProjectSettings, 0)
 	projectIDs := make([]uint64, 0, 0)
 
+	// Forming the MapOfProjectIdCustomerAccountToData.
 	for i := range adwordsSettings {
 		customerAccountIDs := strings.Split(adwordsSettings[i].CustomerAccountId, ",")
 		adwordsSettingsByProjectAndCustomerAccount[adwordsSettings[i].ProjectId] = make(map[string]*model.AdwordsProjectSettings)
@@ -657,6 +658,7 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 			setting.ProjectId = adwordsSettings[i].ProjectId
 			setting.AgentUUID = adwordsSettings[i].AgentUUID
 			setting.RefreshToken = adwordsSettings[i].RefreshToken
+			setting.IntGoogleIngestionTimezone = adwordsSettings[i].IntGoogleIngestionTimezone
 			setting.CustomerAccountId = customerAccountIDs[j]
 			adwordsSettingsByProjectAndCustomerAccount[adwordsSettings[i].ProjectId][customerAccountIDs[j]] = &setting
 		}
@@ -718,6 +720,7 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 						CustomerAccountId: accountID,
 						LastTimestamp:     0, // no sync yet.
 						DocumentTypeAlias: docTypeAlias,
+						Timezone:          adwordsSettings[i].IntGoogleIngestionTimezone,
 					}
 
 					selectedLastSyncInfos = append(selectedLastSyncInfos, syncInfo)
@@ -731,7 +734,9 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 	for _, project := range projects {
 		for index := range selectedLastSyncInfos {
 			if selectedLastSyncInfos[index].ProjectId == project.ID {
-				selectedLastSyncInfos[index].Timezone = project.TimeZone
+				if selectedLastSyncInfos[index].Timezone == "" {
+					selectedLastSyncInfos[index].Timezone = project.TimeZone
+				}
 			}
 		}
 	}
