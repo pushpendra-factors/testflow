@@ -53,6 +53,7 @@ type ProjectSetting struct {
 	IntLinkedinAccessTokenExpiry  int64   `json:"int_linkedin_access_token_expiry"`
 	IntLinkedinAgentUUID          *string `json:"int_linkedin_agent_uuid"`
 	IntDrift                      *bool   `gorm:"not null;default:false" json:"int_drift,omitempty"`
+	IntGoogleIngestionTimezone    string  `json:"int_google_ingestion_timezone"`
 }
 
 const ProjectSettingKeyToken = "token"
@@ -64,10 +65,11 @@ var projectSettingKeys = [...]string{
 }
 
 type AdwordsProjectSettings struct {
-	ProjectId         uint64
-	CustomerAccountId string
-	AgentUUID         string
-	RefreshToken      string
+	ProjectId                  uint64
+	CustomerAccountId          string
+	AgentUUID                  string
+	RefreshToken               string
+	IntGoogleIngestionTimezone string
 }
 
 type GoogleOrganicProjectSettings struct {
