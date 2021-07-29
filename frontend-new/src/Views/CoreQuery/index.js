@@ -220,12 +220,7 @@ function CoreQuery({
       }
       localDispatch({
         type: SET_COMPARISON_SUPPORTED,
-        payload: isComparisonEnabled(
-          queryType,
-          queries,
-          groupBy,
-          models
-        ),
+        payload: isComparisonEnabled(queryType, queries, groupBy, models),
       });
       if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
         setAppliedQueries(queries.map((elem) => elem.label));
@@ -259,7 +254,12 @@ function CoreQuery({
   );
 
   const runQuery = useCallback(
-    async (isQuerySaved, durationObj, isCompareQuery) => {
+    async (
+      isQuerySaved,
+      durationObj,
+      isGranularityChange = false,
+      isCompareQuery = false
+    ) => {
       try {
         if (!durationObj) {
           durationObj = dateRange;
@@ -283,7 +283,7 @@ function CoreQuery({
         const res = await getEventsData(
           activeProject.id,
           query,
-          getDashboardConfigs(isQuerySaved)
+          getDashboardConfigs(isGranularityChange ? false : isQuerySaved) //we need to call fresh query when granularity is changed
         );
         const data = res.data.result || res.data;
         if (result_criteria === TOTAL_EVENTS_CRITERIA) {
@@ -501,7 +501,7 @@ function CoreQuery({
   );
 
   const runCampaignsQuery = useCallback(
-    async (isQuerySaved, durationObj = null) => {
+    async (isQuerySaved, durationObj = null, isGranularityChange = false) => {
       try {
         closeDrawer();
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
@@ -535,7 +535,7 @@ function CoreQuery({
         const res = await getCampaignsData(
           activeProject.id,
           query,
-          getDashboardConfigs(isQuerySaved)
+          getDashboardConfigs(isGranularityChange ? false : isQuerySaved) //we need to call fresh query when granularity is changed
         );
         updateResultState({
           ...initialState,
@@ -576,7 +576,7 @@ function CoreQuery({
             date_range: appliedDateRange,
           };
         });
-        runQuery(querySaved, appliedDateRange);
+        runQuery(querySaved, appliedDateRange, true);
       }
       if (queryType === QUERY_TYPE_CAMPAIGN) {
         const payload = {
@@ -584,7 +584,7 @@ function CoreQuery({
           frequency,
         };
         dispatch({ type: SET_CAMP_DATE_RANGE, payload });
-        runCampaignsQuery(querySaved, payload);
+        runCampaignsQuery(querySaved, payload, true);
       }
     },
     [

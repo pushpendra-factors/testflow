@@ -283,10 +283,10 @@ export const getValidGranularityOptions = ({ from, to }, queryType) => {
   const daysDiff = moment(endDate).diff(startDate, 'days');
   //whatever will be returned, 0th element will be treated as default
   if (daysDiff > 93) {
-    return ['week', 'month', 'quarter'];
+    return ['date', 'week', 'month', 'quarter'];
   }
   if (daysDiff > 31) {
-    return ['week', 'date', 'month'];
+    return ['date', 'week', 'month'];
   }
   if (daysDiff > 7) {
     return ['date', 'week'];
