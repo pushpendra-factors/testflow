@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -191,9 +190,6 @@ func getUShaped(attributionType string, attributionTimerange map[string]UserSess
 	firstTouch := getFirstTouchId(attributionType, attributionTimerange, conversionTime, lookbackPeriod, from, to)
 	lastTouch := getLastTouchId(attributionType, attributionTimerange, conversionTime, lookbackPeriod, from, to)
 	keys := append(firstTouch, lastTouch...)
-	fmt.Println("**********************************")
-	fmt.Println("**********************************")
-	fmt.Println(keys)
 	return keys
 }
 
