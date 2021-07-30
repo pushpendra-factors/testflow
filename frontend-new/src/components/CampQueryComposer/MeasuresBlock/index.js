@@ -46,7 +46,6 @@ const MeasuresBlock = ({measures, onMeasureSelect, measures_metrics}) => {
                             options={measures_metrics.map(m => [m.replaceAll('_', ' '), m])}
                             onClickOutside={() => toggleSelect(index)}
                             optionClick={(opts) => setMeasures(opts[1], index)}
-                            allowSearch={true}
                         ></FaSelect>
 
                      : null }
