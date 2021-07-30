@@ -1042,6 +1042,10 @@ func TestAttributionMethodologies(t *testing.T) {
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
+
+	userSession2 := make(map[string]map[string]model.UserSessionData)
+	userSession2[user1] = make(map[string]model.UserSessionData)
+	userSession2[user1][camp1] = model.UserSessionData{MinTimestamp: 110, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
 	type args struct {
 		method                        string
 		conversionEvent               string
@@ -1105,7 +1109,7 @@ func TestAttributionMethodologies(t *testing.T) {
 			map[string]map[string][]string{},
 			false},
 
-		// Test for U_SHAPED
+		// Test1 for U_SHAPED
 		{"u_shaped",
 			args{model.AttributionMethodUShaped,
 				conversionEvent,
@@ -1117,6 +1121,20 @@ func TestAttributionMethodologies(t *testing.T) {
 				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp3, camp2}},
+			map[string]map[string][]string{},
+			false},
+		// Test2 for U_SHAPED
+		{"u_shaped",
+			args{model.AttributionMethodUShaped,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession2,
+				coalUserIdConversionTimestamp,
+				lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
+			},
+			map[string][]string{user1: {camp1, camp1}},
 			map[string]map[string][]string{},
 			false},
 	}
