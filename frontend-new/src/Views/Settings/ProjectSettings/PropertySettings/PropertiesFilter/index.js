@@ -3,7 +3,7 @@ import { connect } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
 import { Button, Tooltip, Input } from 'antd';
-import GroupSelect from '../../../../../components/QueryComposer/GroupSelect';
+import GroupSelect2 from '../../../../../components/QueryComposer/GroupSelect2';
 import FaSelect from '../../../../../components/FaSelect';
 import {operatorMap, reverseOperatorMap} from '../utils';
 
@@ -89,14 +89,14 @@ function PropertyFilter({activeProject, propOpts = [], filter, insertFilter}) {
             </Button>
 
             {propSelectOpen && 
-                <GroupSelect
+                <GroupSelect2
                     extraClass={`fa-grp_noshadow fa-grp_pos-btn`}
                     groupedProperties={propOpts}
                     placeholder="Select Property"
                     optionClick={(group, val) => propSelect([...val, group])}
                     onClickOutside={() => setPropSelectOpen(false)}
 
-                ></GroupSelect>
+                ></GroupSelect2>
             }
 
         </div>)
