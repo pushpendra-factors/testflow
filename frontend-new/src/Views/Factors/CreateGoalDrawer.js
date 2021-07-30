@@ -3,7 +3,7 @@ import {
   Drawer, Button, Row, Col, Select, message
 } from 'antd';
 import { SVG, Text } from 'factorsComponents'; 
-import GroupSelect from '../../components/QueryComposer/GroupSelect';
+import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import { fetchEventNames, getUserProperties, getEventProperties } from 'Reducers/coreQuery/middleware'; 
 import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel } from 'Reducers/factors';
 import {connect} from 'react-redux';
@@ -396,12 +396,12 @@ const renderFilterBlock = () => {
                             <div className='relative' style={{height: '42px'}}>
                               {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
                               { showDropDown && <>
-                                <GroupSelect 
+                                <GroupSelect2 
                                   allowEmpty={true}
                                   groupedProperties={TrackedEventNames ? [
                                     {             
-                                    label: 'MOST RECENT',
-                                    icon: 'fav',
+                                    label: 'Most Recent',
+                                    icon: 'most_recent',
                                     values: TrackedEventNames
                                     }
                                   ]:null}
@@ -445,12 +445,12 @@ const renderFilterBlock = () => {
                           {!showDropDown2 && !event2 && <Button onClick={()=>setShowDropDown2(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>Add next event</Button> }
                           { showDropDown2 && <>
 
-                            <GroupSelect 
+                            <GroupSelect2 
                               allowEmpty={true}
                                groupedProperties={TrackedEventNames ? [
                                 {             
-                                label: 'MOST RECENT',
-                                icon: 'fav',
+                                label: 'Most Recent',
+                                icon: 'most_recent',
                                 values: TrackedEventNames
                                 }
                               ]:null}
@@ -498,11 +498,11 @@ const renderFilterBlock = () => {
           <div className={'relative w-full'}>
           {!showFtDropDown && <Button size={'large'} loading={filterLoader} type={'text'} onClick={()=>setshowFtDropDown(true)} className={'mt-4'}><SVG name={'plus'} extraClass={'mr-1'} />{'Add Filter'} </Button>}
             {showFtDropDown &&  
-                         <GroupSelect 
+                         <GroupSelect2 
                               groupedProperties={props.userProperties ? [
                                 {             
-                                label: 'MOST RECENT',
-                                icon: 'fav',
+                                label: 'Most Recent',
+                                icon: 'most_recent',
                                 values: props.userProperties
                                 }
                               ]:null}
@@ -521,11 +521,11 @@ const renderFilterBlock = () => {
           <div className={'relative'}>
             {!showDateTime && <Button size={'large'} onClick={()=>setShowDateTime(true)}><SVG name={'calendar'} extraClass={'mr-1'} />{dateTime ? dateTime : 'Select Date Range'} </Button>}
             {showDateTime && 
-            <GroupSelect 
+            <GroupSelect2 
                     groupedProperties={factorsModels ? [
                     {             
-                    label: 'MOST RECENT',
-                    icon: 'fav',
+                    label: 'Most Recent',
+                    icon: 'most_recent',
                     values: factorsModels
                     }
                   ]:null}

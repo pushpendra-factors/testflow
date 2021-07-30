@@ -6,8 +6,9 @@ import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type AttributionQuery struct {
@@ -93,6 +94,7 @@ const (
 	AttributionMethodLastTouch           = "Last_Touch"
 	AttributionMethodLastTouchNonDirect  = "Last_Touch_ND"
 	AttributionMethodLinear              = "Linear"
+	AttributionMethodUShaped             = "U_Shaped"
 	AttributionKeyCampaign               = "Campaign"
 	AttributionKeySource                 = "Source"
 	AttributionKeyAdgroup                = "AdGroup"

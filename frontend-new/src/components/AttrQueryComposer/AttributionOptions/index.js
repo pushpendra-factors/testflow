@@ -109,15 +109,15 @@ const AttributionOptions = ({
               </div>
             )}
 
-            {!selectVisibleModel[index] && (
+            {
               <Button
-                size={'large'}
+                size={'normal'}
                 type='link'
                 onClick={() => toggleModelSelect(index)}
               >
                 Add Model
               </Button>
-            )}
+            }
 
             {selectModel(index)}
           </div>
@@ -226,15 +226,15 @@ const AttributionOptions = ({
               <SVG name={'plus'} color={'purple'}></SVG>
             </div>
 
-            {!selectVisibleWindow && (
+            {
               <Button
-                size={'large'}
+                size={'normal'}
                 type='link'
                 onClick={() => setSelectVisibleWindow(!selectVisibleWindow)}
               >
                 Add Window
               </Button>
-            )}
+            }
 
             {selectWindow()}
           </div>

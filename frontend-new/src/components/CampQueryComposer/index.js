@@ -5,7 +5,7 @@ import styles from './index.module.scss';
 import { SVG, Text } from '../../components/factorsComponents';
 import { Button, Popover, Radio } from 'antd';
 import ChannelBlock from './ChannelBlock';
-import GroupSelect from '../QueryComposer/GroupSelect';
+import GroupSelect2 from '../QueryComposer/GroupSelect2';
 import {
   getCampaignConfigData,
   setCampChannel,
@@ -271,7 +271,7 @@ const CampQueryComposer = ({
         key={0}
         className={` ${styles.groupItem} flex justify-start items-center mt-4`}
       >
-        {!groupByDD[index] && (
+        {(
           <>
             {init === false ? (
               <Button
@@ -310,14 +310,19 @@ const CampQueryComposer = ({
             </Button>
           </>
         )}
+        <div className={styles.group_block__event_selector}>
         {groupByDD[index] ? (
-          <GroupSelect
+          <div className={styles.group_block__event_selector__btn}>
+          <GroupSelect2
             groupedProperties={groupByProps}
             placeholder='Select Property'
             optionClick={(group, val) => onGroupBySet([group, val], index)}
             onClickOutside={() => triggerGroupDD(index)}
-          ></GroupSelect>
+          ></GroupSelect2>
+          </div>
         ) : null}
+        </div>
+        
       </div>
     );
   };
@@ -412,7 +417,7 @@ const CampQueryComposer = ({
           <div className={`${styles.composer__section} fa--query_block`}>
             <div className={styles.composer__section__title}>
               <Text type={'title'} level={7} weight={'bold'}>
-                Filter
+                FILTER BY
               </Text>
             </div>
             <div className={styles.composer__section__content}>
@@ -425,7 +430,7 @@ const CampQueryComposer = ({
           <div className={`${styles.composer__section} fa--query_block`}>
             <div className={styles.composer__section__title}>
               <Text type={'title'} level={7} weight={'bold'}>
-                Group By
+                GROUP BY
               </Text>
             </div>
             <div className={styles.composer__section__content}>

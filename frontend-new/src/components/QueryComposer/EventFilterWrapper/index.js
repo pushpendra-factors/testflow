@@ -106,12 +106,6 @@ export default function EventFilterWrapper({
 
   }, [filterProps])
 
-  // const getGroupLabel = (grp) => {
-  //   if(grp === 'event') return 'Event Properties';
-  //   if(grp === 'user') return 'User Properties';
-  //   return grp;
-  // }
-
   const parseDateRangeFilter = (fr, to) => {
     return (moment(fr).format('MMM DD, YYYY') + ' - ' +
               moment(to).format('MMM DD, YYYY'));
