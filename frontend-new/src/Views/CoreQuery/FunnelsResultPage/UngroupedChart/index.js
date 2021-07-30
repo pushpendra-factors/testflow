@@ -60,6 +60,7 @@ function UngroupedChart({
           }
           durationObj={durationObj}
           comparison_duration={comparison_duration}
+          resultData={resultState.data}
         />
       </div>
     </div>

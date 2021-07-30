@@ -231,3 +231,11 @@ padding: 0px !important;
         width: 18px !important;
     }
 }
+
+
+
+.fa-vertical-scrolling-card{
+    max-height: 450px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}

@@ -5,6 +5,7 @@ import (
 	H "factors/handler"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/sdk"
 	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
@@ -948,4 +949,99 @@ func TestUsersUniquenessConstraints(t *testing.T) {
 
 	_, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID, AMPUserId: ampUserID})
 	assert.Equal(t, http.StatusBadRequest, errCode)
+}
+
+func TestUserPropertySkipOnMerge(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	leadGUID1 := "123-45"
+	leadGUID2 := "12-345"
+	cUID1 := getRandomEmail()
+	joinTimestamp := time.Now().AddDate(0, 0, -11)
+
+	// Test user-1 lead guid1 user-2 no lead guid
+	user1, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cUID1, JoinTimestamp: joinTimestamp.Unix()})
+	assert.Equal(t, http.StatusCreated, status)
+
+	properties := &postgres.Jsonb{RawMessage: []byte(fmt.Sprintf(`{"%s":"%s","%s":"%s"}`, model.UserPropertyHubspotContactLeadGUID, leadGUID1, "$hubspot_contact_id", "1"))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user1, properties, joinTimestamp.Unix()+1)
+
+	user2, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cUID1, JoinTimestamp: joinTimestamp.Unix() + 2})
+	assert.Equal(t, http.StatusCreated, status)
+
+	user, status := store.GetStore().GetUser(project.ID, user2)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Nil(t, (*userProperties)[model.UserPropertyHubspotContactLeadGUID])
+	assert.Equal(t, "1", (*userProperties)["$hubspot_contact_id"])
+
+	user, status = store.GetStore().GetUser(project.ID, user1)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, leadGUID1, (*userProperties)[model.UserPropertyHubspotContactLeadGUID])
+
+	// Test user-3 lead guid2, same customer user id
+	user3, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cUID1, JoinTimestamp: joinTimestamp.Unix()})
+	assert.Equal(t, http.StatusCreated, status)
+
+	properties = &postgres.Jsonb{RawMessage: []byte(fmt.Sprintf(`{"%s":"%s"}`, model.UserPropertyHubspotContactLeadGUID, leadGUID2))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user3, properties, joinTimestamp.Unix()+3)
+	user, status = store.GetStore().GetUser(project.ID, user3)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, leadGUID2, (*userProperties)[model.UserPropertyHubspotContactLeadGUID])
+}
+
+func TestIdentifiersSkipOnMerge(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	cuid := getRandomEmail()
+	userID1, status := store.GetStore().CreateUser(&model.User{
+		ProjectId: project.ID,
+	})
+	assert.Equal(t, http.StatusCreated, status)
+
+	status, _ = sdk.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId: userID1, CustomerUserId: cuid, Source: sdk.SourceJSSDK,
+	}, true)
+	assert.Equal(t, http.StatusOK, status)
+
+	cuid2 := getRandomEmail()
+	userID2, status := store.GetStore().CreateUser(&model.User{
+		ProjectId: project.ID,
+	})
+	assert.Equal(t, http.StatusCreated, status)
+
+	status, _ = sdk.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId: userID2, CustomerUserId: cuid2, Source: sdk.SourceJSSDK,
+	}, true)
+	assert.Equal(t, http.StatusOK, status)
+
+	status, _ = sdk.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId: userID2, CustomerUserId: cuid, Source: sdk.SourceJSSDK,
+	}, true)
+	assert.Equal(t, http.StatusOK, status)
+	user1, status := store.GetStore().GetUser(project.ID, userID1)
+	assert.Equal(t, http.StatusFound, status)
+	user2, status := store.GetStore().GetUser(project.ID, userID2)
+	assert.Equal(t, http.StatusFound, status)
+	user1PropertiesMap, err := U.DecodePostgresJsonb(&user1.Properties)
+	assert.Nil(t, err)
+	user2PropertiesMap, err := U.DecodePostgresJsonb(&user2.Properties)
+	assert.Nil(t, err)
+	user1MetaObject, err := model.GetDecodedUserPropertiesIdentifierMetaObject(user1PropertiesMap)
+	assert.Nil(t, err)
+	user2MetaObject, err := model.GetDecodedUserPropertiesIdentifierMetaObject(user2PropertiesMap)
+	assert.Nil(t, err)
+	assert.Contains(t, *user1MetaObject, cuid)
+	assert.NotContains(t, *user1MetaObject, cuid2)
+
+	assert.Contains(t, *user2MetaObject, cuid)
+	assert.Contains(t, *user2MetaObject, cuid2)
+
 }

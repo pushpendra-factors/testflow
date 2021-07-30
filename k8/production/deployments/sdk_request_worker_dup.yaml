@@ -5,7 +5,7 @@ metadata:
     layer: sdk-request-worker-dup
     env: production
     project: factors-production
-    nodePool: persistent-pool-standard
+    nodePool: workers-pool
   name: sdk-request-worker-dup
   namespace: default
 spec:
@@ -24,10 +24,10 @@ spec:
     metadata:      
       labels:
         layer: sdk-request-worker-dup
-        nodePool: persistent-pool-standard
+        nodePool: workers-pool
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-pool-standard
+        cloud.google.com/gke-nodepool: workers-pool
       containers:
       - name: sdk-request-worker-dup
         image: us.gcr.io/factors-production/sdk-request-worker:ca0606c-1814

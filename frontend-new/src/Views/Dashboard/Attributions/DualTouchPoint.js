@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import AttributionTable from '../../CoreQuery/AttributionsResult/AttributionTable';
 import GroupedBarChart from '../../../components/GroupedBarChart';
 import { formatGroupedData } from '../../CoreQuery/AttributionsResult/utils';
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_TABLE,
+  ATTRIBUTION_METHODOLOGY,
 } from '../../../utils/constants';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 
@@ -18,9 +19,8 @@ function DualTouchPoint({
   linkedEvents,
   chartType,
   unit,
-  resultState,
   section,
-  attr_dimensions
+  attr_dimensions,
 }) {
   const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
   const [chartsData, setChartsData] = useState([]);
@@ -49,6 +49,14 @@ function DualTouchPoint({
     attribution_method_compare,
   ]);
 
+  const attributionMethodsMapper = useMemo(() => {
+    const mapper = {};
+    ATTRIBUTION_METHODOLOGY.forEach((am) => {
+      mapper[am.value] = am.text;
+    });
+    return mapper;
+  }, []);
+
   if (!chartsData.length) {
     return null;
   }
@@ -65,8 +73,8 @@ function DualTouchPoint({
   };
 
   const legends = [
-    `Conversions as Unique users (${attribution_method})`,
-    `Conversions as Unique users (${attribution_method_compare})`,
+    `Conversions as Unique users (${attributionMethodsMapper[attribution_method]})`,
+    `Conversions as Unique users (${attributionMethodsMapper[attribution_method_compare]})`,
   ];
 
   let chartContent = null;
@@ -89,6 +97,7 @@ function DualTouchPoint({
         allValues={allValues}
         legends={legends}
         tooltipTitle='Conversions'
+        attributionMethodsMapper={attributionMethodsMapper}
       />
     );
   } else {

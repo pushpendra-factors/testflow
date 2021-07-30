@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
+import { formatData } from '../utils';
+import Chart from './Chart';
+import FunnelsResultTable from '../FunnelsResultTable';
 import {
-  generateEventsData,
-  generateGroups,
-  generateGroupedChartsData,
-} from "../utils";
-import Chart from "./Chart";
-import FunnelsResultTable from "../FunnelsResultTable";
-import { DASHBOARD_MODAL } from "../../../../utils/constants";
+  DASHBOARD_MODAL,
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+} from '../../../../utils/constants';
+import NoDataChart from '../../../../components/NoDataChart';
 
 function GroupedChart({
   resultState,
@@ -16,52 +16,49 @@ function GroupedChart({
   arrayMapper,
   section,
 }) {
+  const [visibleProperties, setVisibleProperties] = useState([]);
+  const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
-  const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
-    const formattedGroups = generateGroups(
-      resultState.data,
-      maxAllowedVisibleProperties
-    );
-    setGroups(formattedGroups);
-  }, [resultState.data]);
+    const { groups: appliedGroups, events } = formatData(resultState.data, arrayMapper);
+    setGroups(appliedGroups);
+    setEventsData(events);
+    setVisibleProperties([...appliedGroups.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES)]);
+  }, [resultState.data, arrayMapper]);
 
-  if (!groups.length) {
-    return null;
+  if (!visibleProperties.length) {
+    return (
+      <div className='mt-4 flex justify-center items-center w-full h-full'>
+        <NoDataChart />
+      </div>
+    );
   }
 
-  const chartData = generateGroupedChartsData(
-    resultState.data,
-    queries,
-    groups,
-    arrayMapper
-  );
-  const eventsData = generateEventsData(resultState.data, queries, arrayMapper);
-
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       <Chart
         isWidgetModal={isWidgetModal}
-        chartData={chartData}
-        groups={groups.filter((elem) => elem.is_visible)}
+        groups={visibleProperties}
         eventsData={eventsData}
         arrayMapper={arrayMapper}
         section={section}
         durations={resultState.data.meta}
       />
 
-      <div className="mt-12 w-full">
+      <div className='mt-12 w-full'>
         <FunnelsResultTable
           breakdown={breakdown}
           queries={queries}
           groups={groups}
-          setGroups={setGroups}
+          visibleProperties={visibleProperties}
+          setVisibleProperties={setVisibleProperties}
           chartData={eventsData}
           arrayMapper={arrayMapper}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+          maxAllowedVisibleProperties={MAX_ALLOWED_VISIBLE_PROPERTIES}
           isWidgetModal={section === DASHBOARD_MODAL}
           durations={resultState.data.meta}
+          resultData={resultState.data}
         />
       </div>
     </div>

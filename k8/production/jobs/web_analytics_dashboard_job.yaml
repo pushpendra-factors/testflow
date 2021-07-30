@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-standard
+    nodePool: shared-persistent-pool
   name: web-analytics-dashboard-job
 spec:
   schedule: "1 2 3 4 5" # Random one time schedule to avoid running periodically.
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-standard
+            nodePool: shared-persistent-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-standard
+            cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: web-analytics-dashboard-job
             image: us.gcr.io/factors-production/web-analytics-dashboard-job:v0.55-ed2b9fdd

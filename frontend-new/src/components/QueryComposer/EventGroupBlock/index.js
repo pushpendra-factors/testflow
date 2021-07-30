@@ -6,7 +6,7 @@ import { Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 
 import { connect } from 'react-redux';
-import GroupSelect from '../GroupSelect';
+import GroupSelect2 from '../GroupSelect2';
 import FaSelect from '../../FaSelect';
 
 const EventGroupBlock = ({
@@ -24,28 +24,28 @@ const EventGroupBlock = ({
 }) => {
   const [filterOptions, setFilterOptions] = useState([
     {
-      label: 'User Properties',
-      icon: 'user',
-      values: [],
-    },
-    {
       label: 'Event Properties',
       icon: 'mouseclick',
       values: [],
     },
+    {
+      label: 'User Properties',
+      icon: 'user',
+      values: [],
+    }
   ]);
 
   const [propSelVis, setSelVis] = useState(false);
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
-    filterOpts[0].values = userProperties;
+    filterOpts[1].values = userProperties;
     setFilterOptions(filterOpts);
   }, [userProperties]);
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
-    filterOpts[1].values = eventProperties[event.label];
+    filterOpts[0].values = eventProperties[event.label];
     setFilterOptions(filterOpts);
   }, [eventProperties]);
 
@@ -132,6 +132,7 @@ const EventGroupBlock = ({
               options={propOpts[opt.prop_type]}
               optionClick={setProp}
               onClickOutside={() => setSelVis(false)}
+              posRight={true}
             ></FaSelect>
           )}
         </div>
@@ -161,12 +162,15 @@ const EventGroupBlock = ({
 
   const renderGroupBySelect = () => {
     return (
-      <GroupSelect
-        groupedProperties={filterOptions}
-        placeholder='Select Property'
-        optionClick={(group, val) => onChange(group, val)}
-        onClickOutside={() => closeDropDown()}
-      ></GroupSelect>
+
+      <div className={styles.group_block__event_selector}>
+        <GroupSelect2
+          groupedProperties={filterOptions}
+          placeholder='Select Property'
+          optionClick={(group, val) => onChange(group, val)}
+          onClickOutside={() => closeDropDown()}
+        ></GroupSelect2>
+      </div>
     );
   };
 

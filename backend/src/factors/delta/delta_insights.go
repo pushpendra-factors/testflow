@@ -31,6 +31,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	}
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	whitelistedDashboardUnits := configs["whitelistedDashboardUnits"].(map[string]bool)
 	log.Info((*cloudManager).GetBucketName())
 	k := configs["k"].(int)
 	// Cross Period Insights
@@ -49,8 +50,12 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	computedQueries := make(map[uint64]bool)
 	dashboardUnits, _ := store.GetStore().GetDashboardUnitsForProjectID(projectId)
 	for _, dashboardUnit := range dashboardUnits {
+		if !(whitelistedDashboardUnits["*"] == true || whitelistedDashboardUnits[fmt.Sprintf("%v", dashboardUnit.ID)] == true) {
+			continue
+		}
 		queryIdString := fmt.Sprintf("%v", dashboardUnit.QueryId)
-		deltaQuery, isEnabled := IsDashboardUnitWIEnabled(dashboardUnit)
+		deltaQuery, multiStepQuery, isEnabled, isEventOccurence, isMultiStep := IsDashboardUnitWIEnabled(dashboardUnit)
+		// Check if this is a valid query with valid filters
 		if isEnabled == false || computedQueries[dashboardUnit.QueryId] == true {
 			continue
 		}
@@ -59,7 +64,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 		// TODO: This was changed from set to map
 		unionOfFeatures := make(map[string]map[string]bool)
 		log.Info("1st pass: Scanning events file to get top-k base features for each period.")
-		err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, k, &unionOfFeatures, 1, insightGranularity)
+		err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 1"))
 			status["error-wpi-pass1-"+queryIdString] = err.Error()
@@ -67,14 +72,20 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 		}
 		isDownloaded = true
 		log.Info("2nd pass: Scanning events file again to compute counts for union of features.")
-		err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, k, &unionOfFeatures, 2, insightGranularity)
+		err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 2"))
 			status["error-wpi-pass2-"+queryIdString] = err.Error()
 			continue
 		}
 		log.Info("Computing cross-period insights.")
-		err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, deltaQuery.Id, cloudManager)
+		var queryId int
+		if deltaQuery.Id == 0 {
+			queryId = multiStepQuery.Id
+		} else {
+			queryId = deltaQuery.Id
+		}
+		err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, queryId, cloudManager)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 1"))
 			status["error-cpi-pass1-"+queryIdString] = err.Error()
@@ -145,9 +156,9 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 	return nil
 }
 
-func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string) error {
+func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool) error {
 	for _, periodCode := range periodCodes {
-		err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, k, unionOfFeatures, passId, insightGranularity)
+		err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
 		if err != nil {
 			return err
 		}
@@ -155,13 +166,13 @@ func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager
 	return nil
 }
 
-func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string) error {
+func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool) error {
 	scanner, err := GetEventFileScanner(projectId, periodCode, cloudManager, diskManager, insightGranularity, isDownloaded)
 	if err != nil {
 		log.WithError(err).Error(fmt.Sprintf("Scanner initialization failed for period %v", periodCode))
 		return err
 	}
-	withinPeriodInsights, err := ComputeWithinPeriodInsights(scanner, deltaQuery, k, *unionOfFeatures, passId)
+	withinPeriodInsights, err := ComputeWithinPeriodInsights(scanner, deltaQuery, multiStepQuery, k, *unionOfFeatures, passId, isEventOccurence, isMultiStep)
 	if err != nil {
 		log.WithError(err).Error(fmt.Sprintf("Could not mine features for period ", periodCode))
 		return err
@@ -185,6 +196,14 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 				features[key][val] = true
 			}
 		}
+		for key, valCounts := range withinPeriodInsights.Target.FeatureMetrics {
+			for val := range valCounts {
+				if features[key] == nil {
+					features[key] = make(map[string]bool)
+				}
+				features[key][val] = true
+			}
+		}
 		for key, valueStatus := range features {
 			for value, _ := range valueStatus {
 				if (*unionOfFeatures)[key] == nil {
@@ -199,6 +218,9 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 		if err != nil {
 			log.WithError(err).Error("Failed to unmarshal events Info.")
 			return err
+		}
+		if deltaQuery.Id == 0 {
+			deltaQuery.Id = multiStepQuery.Id
 		}
 		writeWpiPath(projectId, periodCode, uint64(deltaQuery.Id), k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager)
 		dateString := U.GetDateOnlyFromTimestamp(periodCode.From)
@@ -237,15 +259,15 @@ func writeCpiPath(projectId uint64, periodCode Period, queryId uint64, k int, ev
 	return err
 }
 
-func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, bool) {
+func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnelQuery, bool, bool, bool) {
 	var deltaQuery Query
 	queryClass, _ := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 	if queryClass == model.QueryClassEvents {
 		var queryGroup M.QueryGroup
 		U.DecodePostgresJsonbToStructType(&dashboardUnit.Query, &queryGroup)
 		query := queryGroup.Queries[0]
-
-		if query.Type == model.QueryTypeUniqueUsers {
+		if query.Type == model.QueryTypeUniqueUsers || query.Type == model.QueryTypeEventsOccurrence {
+			isEventOccurence := query.Type == model.QueryTypeEventsOccurrence
 			if (query.EventsCondition == model.EventCondAnyGivenEvent || query.EventsCondition == model.EventCondAllGivenEvent) || (query.EventsCondition == model.EventCondEachGivenEvent && len(query.EventsWithProperties) == 1) {
 				deltaQuery = Query{Id: int(dashboardUnit.QueryId),
 					Base: EventsCriteria{
@@ -283,7 +305,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, bool) {
 						})
 					}
 				}
-				return deltaQuery, true
+				return deltaQuery, MultiFunnelQuery{}, true, isEventOccurence, false
 			}
 		}
 	}
@@ -309,23 +331,52 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, bool) {
 								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[1].Properties),
 							}},
 						}}
-					return deltaQuery, true
+					return deltaQuery, MultiFunnelQuery{}, true, false, false
+				} else {
+					multiStepFunnel := MultiFunnelQuery{Id: int(dashboardUnit.QueryId),
+						Base: EventsCriteria{
+							Operator: "And",
+							EventCriterionList: []EventCriterion{EventCriterion{
+								Name:                query.EventsWithProperties[0].Name,
+								EqualityFlag:        true,
+								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[0].Properties),
+							}}},
+						Intermediate: make([]EventsCriteria, 0),
+						Target: EventsCriteria{
+							Operator: "And",
+							EventCriterionList: []EventCriterion{EventCriterion{
+								Name:                query.EventsWithProperties[len(query.EventsWithProperties)-1].Name,
+								EqualityFlag:        true,
+								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[len(query.EventsWithProperties)-1].Properties),
+							}},
+						}}
+					for i := 1; i <= len(query.EventsWithProperties)-2; i++ {
+						criteria := EventsCriteria{
+							Operator: "And",
+							EventCriterionList: []EventCriterion{EventCriterion{
+								Name:                query.EventsWithProperties[i].Name,
+								EqualityFlag:        true,
+								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[i].Properties),
+							}},
+						}
+						multiStepFunnel.Intermediate = append(multiStepFunnel.Intermediate, criteria)
+					}
+					return Query{}, multiStepFunnel, true, false, true
 				}
+
 			}
 		}
 	}
-	return deltaQuery, false
+	return deltaQuery, MultiFunnelQuery{}, false, false, false
 }
 
 func MapFilterProperties(qp []model.QueryProperty) []EventFilterCriterion {
 	filters := make(map[string]EventFilterCriterion)
 	for _, prop := range qp {
-		if prop.Type != "categorical" {
-			continue
-		}
 		filterProp := EventFilterCriterion{
 			Key: prop.Property,
 		}
+		filterProp.Type = prop.Type
 		if prop.Entity == "user" {
 			filterProp.PropertiesMode = "user"
 		} else if prop.Entity == "event" {
@@ -334,22 +385,21 @@ func MapFilterProperties(qp []model.QueryProperty) []EventFilterCriterion {
 			log.Error("Incorrect entity type")
 			return nil
 		}
-		if prop.Operator == model.EqualsOpStr || prop.Operator == model.EqualsOp {
-			filterProp.EqualityFlag = true
-		} else {
-			filterProp.EqualityFlag = false
-		}
 		keyString := fmt.Sprintf("%s-%s", prop.Entity, prop.Property)
 		propertyInMap, exists := filters[keyString]
+		var values []OperatorValueTuple
 		if exists == false {
-			values := make([]string, 0)
-			values = append(values, prop.Value)
-			filterProp.ValueSet = values
-			filters[keyString] = filterProp
+			values = make([]OperatorValueTuple, 0)
 		} else {
-			propertyInMap.ValueSet = append(propertyInMap.ValueSet, prop.Value)
-			filters[keyString] = propertyInMap
+			values = propertyInMap.Values
 		}
+		values = append(values, OperatorValueTuple{
+			Operator:  prop.Operator,
+			Value:     prop.Value,
+			LogicalOp: prop.LogicalOp,
+		})
+		filterProp.Values = values
+		filters[keyString] = filterProp
 	}
 	criterias := make([]EventFilterCriterion, 0)
 	for _, criteria := range filters {

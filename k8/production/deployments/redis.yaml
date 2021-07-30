@@ -5,7 +5,7 @@ metadata:
     layer: redis
     env: production
     project: factors-production
-    nodePool: persistent-pool-highmem
+    nodePool: shared-persistent-pool
   name: redis
   namespace: default
 spec:
@@ -24,10 +24,10 @@ spec:
     metadata:      
       labels:
         layer: redis
-        nodePool: persistent-pool-highmem
+        nodePool: shared-persistent-pool
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-pool-highmem
+        cloud.google.com/gke-nodepool: shared-persistent-pool
       containers:
       - name: redis
         image: us.gcr.io/factors-production/redis:v0.01-8b7c088

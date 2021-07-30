@@ -3,7 +3,7 @@ import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
-import GroupSelect from '../../QueryComposer/GroupSelect';
+import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
 
 import { Button, Tooltip } from 'antd';
@@ -145,16 +145,14 @@ const ConversionGoalBlock = ({
     const selectEvents = () => {
     
         return (
-            <div className={styles.query_block__event_selector}>
+            <div className={styles.block__event_selector}>
                    {selectVisible
-                     ? <GroupSelect
+                     ? <GroupSelect2
                             groupedProperties={eventNameOptions}
                             placeholder="Select Event"
                             optionClick={(group, val) => onEventSelect(val[1]? val[1]: val[0])}
                             onClickOutside={() => setSelectVisible(false)}
-
-                        ></GroupSelect>
-
+                        ></GroupSelect2>
                      : null }
             </div>
         );
@@ -163,8 +161,7 @@ const ConversionGoalBlock = ({
     const renderGoalBlockContent = () => {
         return (
             <div className={'flex items-center relative'}>
-                {!selectVisible && 
-                <Tooltip title={eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}>
+                {<Tooltip title={eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}>
                 <Button 
                     size={'large'} 
                     type="link" 
@@ -172,7 +169,6 @@ const ConversionGoalBlock = ({
                     icon={<SVG name="mouseevent" />}
                     className={'fa-button--truncate fa-button--truncate-xs'}
                     >
-
                         {eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}
                 </Button> 
                 </Tooltip> }
@@ -194,7 +190,7 @@ const ConversionGoalBlock = ({
                         <SVG name={'plus'} color={'purple'}></SVG>
                     </div>
                     
-                    {!selectVisible && <Button size={'large'} type="link" onClick={toggleEventSelect}>Add a goal event</Button>}
+                    {<Button size={'large'} type="link" onClick={toggleEventSelect}>Add a goal event</Button>}
                     
                     {selectEvents()}
             </div> 

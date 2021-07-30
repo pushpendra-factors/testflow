@@ -61,8 +61,14 @@ func (store *MemSQL) GetPropertyTypeFromDB(projectID uint64, eventName, property
 	}
 
 	if len(propertyDetails) > 1 {
-		logCtx.Error("More than one match found on getPropertyTypeFromDB.")
-		return http.StatusMultipleChoices, nil
+		pType := ""
+		for i := range propertyDetails {
+			if pType != "" && propertyDetails[i].Type != pType {
+				logCtx.Error("More than one match found on getPropertyTypeFromDB.")
+				return http.StatusMultipleChoices, &propertyDetails[0]
+			}
+			pType = propertyDetails[i].Type
+		}
 	}
 
 	if len(propertyDetails) < 1 {
@@ -100,10 +106,18 @@ func (store *MemSQL) CreatePropertyDetails(projectID uint64, eventName, property
 			return http.StatusConflict
 		}
 
-		status = store.updatePropertyDetails(projectID, *propertyDetail.EventNameID, propertyDetail.Key, propertyDetail.Type, propertyDetail.Entity, propertyType)
-		if status != http.StatusAccepted {
-			logCtx.Error("Failed to update property details.")
-			return http.StatusInternalServerError
+		if isUserProperty {
+			status = store.updatePropertyDetails(projectID, "", propertyDetail.Key, propertyDetail.Type, propertyDetail.Entity, propertyType)
+			if status != http.StatusAccepted {
+				logCtx.Error("Failed to update property details.")
+				return http.StatusInternalServerError
+			}
+		} else {
+			status = store.updatePropertyDetails(projectID, *propertyDetail.EventNameID, propertyDetail.Key, propertyDetail.Type, propertyDetail.Entity, propertyType)
+			if status != http.StatusAccepted {
+				logCtx.Error("Failed to update property details.")
+				return http.StatusInternalServerError
+			}
 		}
 
 		return http.StatusAccepted
@@ -278,13 +292,21 @@ func (store *MemSQL) deletePropertyDetailsIfExist(projectID uint64, eventName, k
 		return http.StatusNotFound
 	}
 
+	entity := model.GetEntity(isUserProperty)
+	whereStmnt := "project_id = ? AND `key` = ? AND entity = ?"
+	whereParams := []interface{}{projectID, key, entity}
+
+	if !isUserProperty {
+		whereStmnt = whereStmnt + " AND " + " event_name_id = ?"
+		whereParams = append(whereParams, *propertyDetail.EventNameID)
+	}
+
 	db := C.GetServices().Db
 
-	if err := db.Delete(propertyDetail).Error; err != nil {
+	if err := db.Where(whereStmnt, whereParams...).Delete(&model.PropertyDetail{}).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to delete property details")
 		return http.StatusInternalServerError
 	}
-
 	return http.StatusOK
 }
 
@@ -294,10 +316,12 @@ func (store *MemSQL) updatePropertyDetails(projectID uint64, eventNameID string,
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_key": key, "property_type": propertyType, "event_name_id": eventNameID})
 
 	if projectID == 0 || key == "" || propertyType == "" || newPropertyType == "" {
+		logCtx.Error("Invalid parameter.")
 		return http.StatusBadRequest
 	}
 
 	if entity != model.EntityUser && eventNameID == "" {
+		logCtx.Error("Invalid entity.")
 		return http.StatusBadRequest
 	}
 
@@ -305,9 +329,15 @@ func (store *MemSQL) updatePropertyDetails(projectID uint64, eventNameID string,
 		"type": newPropertyType,
 	}
 
+	whereStmnt := "project_id = ? AND `key` = ? AND type = ? AND entity = ?"
+	whereParams := []interface{}{projectID, key, propertyType, entity}
+	if eventNameID != "" {
+		whereStmnt = whereStmnt + " AND " + "event_name_id = ?"
+		whereParams = append(whereParams, eventNameID)
+	}
+
 	db := C.GetServices().Db
-	query := db.Model(&model.PropertyDetail{}).Where("project_id = ? AND `key` = ? AND `type` = ? ",
-		projectID, key, propertyType).Updates(updateFields)
+	query := db.Model(&model.PropertyDetail{}).Where(whereStmnt, whereParams...).Updates(updateFields)
 
 	if err := query.Error; err != nil {
 		logCtx.WithError(err).Error("Failed updating property details.")

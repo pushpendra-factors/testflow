@@ -391,6 +391,11 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 	}
 	requestTimestamp := parsedTimestamp.Unix()
 
+	// Reset the userId to avoid using same customer_user_id.
+	if event.UserId != "" && C.IsSegmentExcludedCustomerUserID(project.ID, event.UserId) {
+		event.UserId = ""
+	}
+
 	user, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, event.AnonymousID,
 		event.UserId, requestTimestamp)
 	if errCode != http.StatusOK && errCode != http.StatusCreated {

@@ -62,11 +62,17 @@ type PropertiesMode string
 // In other words, if equality flag is True, then key "can take any of the values" (OR),
 // and if it is False, key "cannot take any of the values" (AND).
 type EventFilterCriterion struct {
-	Id             int            `json:"id"`
-	Key            string         `json:"key"`
-	ValueSet       []string       `json:"values"`
-	EqualityFlag   bool           `json:"eq"`
+	Id             int    `json:"id"`
+	Key            string `json:"key"`
+	Type           string
+	Values         []OperatorValueTuple
 	PropertiesMode PropertiesMode `json:"propmode"`
+}
+
+type OperatorValueTuple struct {
+	Operator  string
+	Value     string
+	LogicalOp string
 }
 
 // EventCriterion abstracts a single event-criterion that users/events have to adhere to.
@@ -122,11 +128,20 @@ type PerUserQueryResultSummary struct {
 	ChosenEvent       P.CounterEventFormat
 }
 
+type PerEventProperties struct {
+	BaseFlag          bool
+	TargetFlag        bool
+	BaseAndTargetFlag bool
+	EventProperties   map[string]interface{} `json:"epr"`
+	UserProperties    map[string]interface{} `json:"upr"`
+}
+
 type PerUserCriteriaResult struct {
 	criterionResultList []CriterionResult
 	allFlag             bool
 	anyFlag             bool
 	mostRecentEvent     P.CounterEventFormat
+	firstEvent          P.CounterEventFormat
 	numCriterionMatched int
 	criteriaMatchFlag   bool
 }
@@ -140,6 +155,13 @@ type Query struct {
 	Id     int            `json:"id"`
 	Base   EventsCriteria `json:"base"`
 	Target EventsCriteria `json:"target"`
+}
+
+type MultiFunnelQuery struct {
+	Id           int              `json:"id"`
+	Base         EventsCriteria   `json:"base"`
+	Intermediate []EventsCriteria `json:"intermediate"`
+	Target       EventsCriteria   `json:"target"`
 }
 
 // ValCountTable is a map where feature-values are keys and their frequency counts are values.

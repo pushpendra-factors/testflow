@@ -1,9 +1,13 @@
-import React, { useEffect, useState, useContext } from "react";
-import { generateUngroupedChartsData } from "../../CoreQuery/FunnelsResultPage/utils";
-import Chart from "../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart";
-import FunnelsResultTable from "../../CoreQuery/FunnelsResultPage/FunnelsResultTable";
-import { CHART_TYPE_BARCHART, CHART_TYPE_TABLE, DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT } from "../../../utils/constants";
-import { DashboardContext } from "../../../contexts/DashboardContext";
+import React, { useContext, useMemo } from 'react';
+import { generateUngroupedChartsData } from '../../CoreQuery/FunnelsResultPage/utils';
+import Chart from '../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart';
+import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
+import {
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_TABLE,
+  DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT,
+} from '../../../utils/constants';
+import { DashboardContext } from '../../../contexts/DashboardContext';
 
 function UngroupedChart({
   resultState,
@@ -11,17 +15,17 @@ function UngroupedChart({
   chartType,
   unit,
   arrayMapper,
-  section
+  section,
+  breakdown,
 }) {
-  const [chartData, setChartData] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
-  useEffect(() => {
-    const formattedData = generateUngroupedChartsData(
-      resultState.data,
-      arrayMapper
-    );
-    setChartData(formattedData);
-  }, [arrayMapper, resultState.data]);
+  const groups = useMemo(() => {
+    return [];
+  }, []);
+
+  const chartData = useMemo(() => {
+    return generateUngroupedChartsData(resultState.data, arrayMapper);
+  }, [resultState.data, arrayMapper]);
 
   if (!chartData.length) {
     return null;
@@ -45,11 +49,12 @@ function UngroupedChart({
     chartContent = (
       <FunnelsResultTable
         chartData={chartData}
-        breakdown={[]}
+        breakdown={breakdown}
         queries={queries}
-        groups={[]}
+        groups={groups}
         arrayMapper={arrayMapper}
         durations={resultState.data.meta}
+        resultData={resultState.data}
       />
     );
   }
@@ -60,8 +65,8 @@ function UngroupedChart({
     tableContent = (
       <div
         onClick={handleEditQuery}
-        style={{ color: "#5949BC" }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+        style={{ color: '#5949BC' }}
+        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >
         Show More &rarr;
       </div>
@@ -69,9 +74,7 @@ function UngroupedChart({
   }
 
   return (
-    <div
-      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
-    >
+    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
       {chartContent}
       {tableContent}
     </div>

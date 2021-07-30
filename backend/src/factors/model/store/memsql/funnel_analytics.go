@@ -536,7 +536,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 			}
 		}
 		egSelect, egParams, egGroupKeys, _ := buildGroupKeyForStep(
-			projectId, &q.EventsWithProperties[i], q.GroupByProperties, i+1)
+			projectId, &q.EventsWithProperties[i], q.GroupByProperties, i+1, q.Timezone)
 		if egSelect != "" {
 			addSelect = joinWithComma(addSelect, egSelect)
 		}
@@ -616,7 +616,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
 	userGroupProps = removeEventSpecificUserGroupBys(userGroupProps)
-	ugSelect, ugParams, _ := buildGroupKeys(projectId, userGroupProps)
+	ugSelect, ugParams, _ := buildGroupKeys(projectId, userGroupProps, q.Timezone)
 
 	propertiesJoinStmnt := ""
 	if hasGroupEntity(q.GroupByProperties, model.PropertyEntityUser) {
@@ -665,7 +665,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
 		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
 	} else {
-		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties)
+		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties, q.Timezone)
 		aggregateSelectKeys = groupKeys + ", "
 		aggregateFromName = stepFunnelName
 		aggregateGroupBys = groupKeys
@@ -726,7 +726,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 
 // builds group keys for event properties for given step (event_with_properties).
 func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
-	groupProps []model.QueryGroupByProperty, ewpIndex int) (string, []interface{}, string, bool) {
+	groupProps []model.QueryGroupByProperty, ewpIndex int, timeZone string) (string, []interface{}, string, bool) {
 
 	groupPropsByStep := make([]model.QueryGroupByProperty, 0, 0)
 	groupByUserProperties := false
@@ -740,6 +740,6 @@ func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEven
 		}
 	}
 
-	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep)
+	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep, timeZone)
 	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }

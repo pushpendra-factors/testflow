@@ -4,6 +4,13 @@
 .border--thin-2{
     border: thin solid $fa-color--mono-2;
 }
+.border--thin-2--transparent{
+    border: thin solid transparent;
+}
+.border--thin-2--brand{
+    border: thin solid $fa-color--brand-color;
+}
+
 .border-bottom--thin{
     border-bottom: thin solid $fa-color--mono-1;
 }

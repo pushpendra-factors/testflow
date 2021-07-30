@@ -1,0 +1,121 @@
+{
+  "periods": {
+    "first": {
+      "From": 1624752000,
+      "To": 1625356799
+    },
+    "second": {
+      "From": 1625356800,
+      "To": 1625961599
+    }
+  },
+  "base": {
+    "global": {
+      "#users": {
+        "first": 3934,
+        "second": 4229,
+        "perc": 7.498729028978139,
+        "factor": 1.0749872902897815
+      }
+    },
+    "feat": {
+      "s#ep#Browser": {
+        "Chrome": {
+          "first": 1962,
+          "second": 1930,
+          "perc": -1.6309887869520898,
+          "factor": 0.9836901121304791
+        },
+        "Internet Explorer": {
+          "first": 975,
+          "second": 1051,
+          "perc": 7.794871794871796,
+          "factor": 1.077948717948718
+        }
+      }
+    }
+  },
+  "target": {
+    "global": {
+      "#users": {
+        "first": 3177,
+        "second": 3375,
+        "perc": 6.232294617563739,
+        "factor": 1.0623229461756374
+      }
+    },
+    "feat": {
+      "t#up#$initial_campaign": {
+        "Context_marketing": {
+          "first": 2,
+          "second": 1,
+          "perc": -50,
+          "factor": 1.5
+        }
+      }
+    }
+  },
+  "base_target": {
+    "global": {
+      "#users": {
+        "first": 949,
+        "second": 1007,
+        "perc": 6.111696522655427,
+        "factor": 1.0611169652265542
+      }
+    },
+    "feat": {
+      "s#ep#Browser": {
+        "Chrome": {
+          "first": 471,
+          "second": 455,
+          "perc": -3.397027600849257,
+          "factor": 0.9660297239915074
+        },
+        "Internet Explorer": {
+          "first": 236,
+          "second": 257,
+          "perc": 8.898305084745763,
+          "factor": 1.0889830508474576
+        }
+      },
+       "t#ep#Browser": {
+        "Chrome": {
+          "first": 471,
+          "second": 455,
+          "perc": -3.397027600849257,
+          "factor": 0.9660297239915074
+        },
+        "Internet Explorer": {
+          "first": 236,
+          "second": 257,
+          "perc": 8.898305084745763,
+          "factor": 1.0889830508474576
+        }
+      }
+    }
+  },
+  "conv": {
+    "global": null,
+    "feat": null
+  },
+  "delrat": {
+    "s#ep#Browser": {
+      "Chrome": 0,
+      "Internet Explorer": 0
+    }
+  },
+  "jsd": {
+    "base": {
+      "s#ep#Browser": {
+        "Chrome": 0.0012971478966534392,
+        "Internet Explorer": 4.505461329211511e-7
+      }
+    },
+    "target": {
+      "t#up#$initial_campaign": {
+        "Context_marketing": 0.00001606957476625896
+      }
+    }
+  }
+}

@@ -10,12 +10,17 @@ import {
   QUERY_TYPE_CAMPAIGN,
   NAMED_QUERY,
   LOCAL_STORAGE_ITEMS,
+  ATTRIBUTION_METRICS,
+  PREDEFINED_DATES,
 } from '../../utils/constants';
 import {
   getItemFromLocalStorage,
   setItemToLocalStorage,
 } from '../../utils/dataFormatter';
-import { DefaultDateRangeFormat } from '../CoreQuery/utils';
+import {
+  DashboardDefaultDateRangeFormat,
+  DefaultDateRangeFormat,
+} from '../CoreQuery/utils';
 
 export const getDataFromServer = (
   query,
@@ -176,17 +181,86 @@ export const getWebAnalyticsRequestBody = (units, durationObj) => {
 };
 
 export const getDashboardDateRange = () => {
-  const lastAppliedDuration = getItemFromLocalStorage(
-    LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION
+  const lastAppliedDuration = JSON.parse(
+    getItemFromLocalStorage(LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION)
   );
   if (lastAppliedDuration) {
-    return JSON.parse(lastAppliedDuration);
+    const dateType = lastAppliedDuration.dateType;
+    switch (dateType) {
+      case PREDEFINED_DATES.TODAY: {
+        return {
+          ...lastAppliedDuration,
+          from: moment().startOf('day'),
+          to: moment().endOf('day'),
+        };
+      }
+      case PREDEFINED_DATES.YESTERDAY: {
+        return {
+          ...lastAppliedDuration,
+          from: moment().subtract(1, 'day').startOf('day'),
+          to: moment().subtract(1, 'day').endOf('day'),
+        };
+      }
+      case PREDEFINED_DATES.THIS_WEEK: {
+        return {
+          ...DefaultDateRangeFormat,
+        };
+      }
+      case PREDEFINED_DATES.LAST_WEEK: {
+        return {
+          ...DashboardDefaultDateRangeFormat,
+        };
+      }
+      case PREDEFINED_DATES.LAST_MONTH: {
+        return {
+          ...lastAppliedDuration,
+          from: moment().subtract(1, 'month').startOf('month'),
+          to: moment().subtract(1, 'month').endOf('month'),
+        };
+      }
+      case PREDEFINED_DATES.THIS_MONTH: {
+        if (moment().format('D') === '1') {
+          return {
+            ...lastAppliedDuration,
+            from: moment().subtract(1, 'day').startOf('month'),
+            to: moment().subtract(1, 'day').endOf('month'),
+            dateType: PREDEFINED_DATES.LAST_MONTH,
+          };
+        } else {
+          return {
+            ...lastAppliedDuration,
+            from: moment().startOf('month'),
+            to: moment().subtract(1, 'day').endOf('day'),
+          };
+        }
+      }
+      default:
+        return lastAppliedDuration;
+    }
   }
   setItemToLocalStorage(
     LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION,
-    JSON.stringify(DefaultDateRangeFormat)
+    JSON.stringify(DashboardDefaultDateRangeFormat)
   );
   return {
-    ...DefaultDateRangeFormat,
+    ...DashboardDefaultDateRangeFormat,
   };
+};
+
+export const getSavedAttributionMetrics = (metrics) => {
+  const result = ATTRIBUTION_METRICS.map((am) => {
+    const possibleHeaders = am.header.split(' OR ');
+    const currentMetric = metrics.filter((m) => {
+      const headers = m.header.split(' OR ');
+      const intersection = possibleHeaders.filter(
+        (h) => headers.indexOf(h) > -1
+      );
+      return intersection.length > 0;
+    });
+    return {
+      ...am,
+      enabled: currentMetric.length ? currentMetric[0].enabled : am.enabled,
+    };
+  });
+  return result;
 };

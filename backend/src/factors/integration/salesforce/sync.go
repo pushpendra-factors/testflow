@@ -793,16 +793,28 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		}
 	}
 
-	// sync missing campaign if not available from first date of data pull
-	if objectName == model.SalesforceDocumentTypeNameCampaignMember {
-		campaignIDs := make([]string, 0)
-		for campaignID := range allCampaignIDs {
-			campaignIDs = append(campaignIDs, campaignID)
+	// sync missing campaign and campaignmember if not available from first date of data pull
+	if objectName == model.SalesforceDocumentTypeNameCampaignMember || objectName == model.SalesforceDocumentTypeNameCampaign {
+		docIDs := make([]string, 0)
+		var objectName string
+		// sync missing campaign from campaignmember
+		if objectName == model.SalesforceDocumentTypeNameCampaignMember {
+			for campaignID := range allCampaignIDs {
+				docIDs = append(docIDs, campaignID)
+			}
+			objectName = model.SalesforceDocumentTypeNameCampaign
+		}
+		// sync missing campaignmember from campaign
+		if objectName == model.SalesforceDocumentTypeNameCampaign {
+			for _, memberID := range allCampaignMemberIDs {
+				docIDs = append(docIDs, memberID)
+			}
+			objectName = model.SalesforceDocumentTypeNameCampaignMember
 		}
 
-		batchedcampaignIDs := U.GetStringListAsBatch(campaignIDs, 50)
-		for i := range batchedcampaignIDs {
-			paginatedObjectByID, err := salesforceDataClient.GetObjectRecordsByIDs(model.SalesforceDocumentTypeNameCampaign, batchedcampaignIDs[i])
+		batchedDocIDs := U.GetStringListAsBatch(docIDs, 50)
+		for i := range batchedDocIDs {
+			paginatedObjectByID, err := salesforceDataClient.GetObjectRecordsByIDs(objectName, batchedDocIDs[i])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to re-initialize salesforce data client.")
 				return salesforceObjectStatus, err
@@ -818,9 +830,9 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 				}
 
 				for i := range campaignRecords {
-					err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, model.SalesforceDocumentTypeNameCampaign, campaignRecords[i])
+					err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, objectName, campaignRecords[i])
 					if err != nil {
-						logCtx.WithError(err).Error("Failed to insert campaign for campaign members on BuildAndUpsertDocument.")
+						logCtx.WithError(err).Error("Failed to insert unsynced campaing related document on BuildAndUpsertDocument.")
 					}
 				}
 			}
@@ -1014,7 +1026,7 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, accessToken, instanceU
 					typAlias,
 					U.GetPropertyValueAsString(fieldName),
 				), typAlias, U.GetPropertyValueAsString(label), model.SmartCRMEventSourceSalesforce)
-				if err != http.StatusCreated {
+				if err != http.StatusCreated && err != http.StatusConflict {
 					logCtx.Error("Failed to create or update display name")
 				}
 			}

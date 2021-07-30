@@ -7,6 +7,8 @@ import (
 	U "factors/util"
 	"net/http"
 
+	C "factors/config"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -32,6 +34,12 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 		c.AbortWithStatus(http.StatusBadRequest)
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
+	var result Result
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentUUID) {
+		return result, http.StatusOK, "", "", false
+	}
+
 	logCtx := log.WithFields(log.Fields{
 		"projectId": projectId,
 	})
@@ -54,7 +62,7 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 	}
 
 	for _, unit := range dashboardUnits {
-		_, enabled := delta.IsDashboardUnitWIEnabled(unit)
+		_, _, enabled, _, _ := delta.IsDashboardUnitWIEnabled(unit)
 		weeklyInsightsByDashboard[unit.ID] = WeeklyInsights{
 			Enabled:       enabled,
 			InsightsRange: make(map[int64][]int64),
@@ -84,7 +92,7 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 			weeklyInsightsByDashboard[dashboardId] = mapMetadata
 		}
 	}
-	result := Result{
+	result = Result{
 		QueryWiseResult:         weeklyInsightsByQuery,
 		DashboardUnitWiseResult: weeklyInsightsByDashboard,
 	}

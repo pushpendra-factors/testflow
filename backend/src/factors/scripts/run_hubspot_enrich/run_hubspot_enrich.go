@@ -31,10 +31,10 @@ func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) 
 	}
 }
 
-func syncWorker(projectID uint64, wg *sync.WaitGroup, syncStatus *SyncStatus) {
+func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus) {
 	defer wg.Done()
 
-	status, hasFailure := IntHubspot.Sync(projectID)
+	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines)
 	syncStatus.AddSyncStatus(status, hasFailure)
 }
 
@@ -73,7 +73,9 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 
 	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
+	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
+	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -127,7 +129,7 @@ func main() {
 	C.InitConf(config)
 	C.InitSortedSetCache(config.CacheSortedSet)
 
-	err := C.InitDB(*config)
+	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 200, 100)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"env": *env,
 			"host": *dbHost, "port": *dbPort}).Panic("Failed to initialize DB.")
@@ -151,13 +153,22 @@ func main() {
 	var propertyDetailSyncStatus []IntHubspot.Status
 	anyFailure := false
 
-	allProjects, allowedProjects, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIDList, "")
+	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
+		*projectIDList, *disabledProjectIDList)
 	if !allProjects {
 		log.WithField("projects", allowedProjects).Info("Running only for the given list of projects.")
 	}
 
+	if len(disabledProjects) > 0 {
+		log.WithField("excluded_projects", disabledProjectIDList).Info("Running with exclusion of projects.")
+	}
+
 	projectIDs := make([]uint64, 0, 0)
 	for _, settings := range hubspotEnabledProjectSettings {
+		if exists := disabledProjects[settings.ProjectId]; exists {
+			continue
+		}
+
 		if !allProjects {
 			if _, exists := allowedProjects[settings.ProjectId]; !exists {
 				continue
@@ -188,7 +199,7 @@ func main() {
 		var wg sync.WaitGroup
 		for pi := range batch {
 			wg.Add(1)
-			go syncWorker(batch[pi], &wg, &syncStatus)
+			go syncWorker(batch[pi], &wg, *numDocRoutines, &syncStatus)
 		}
 		wg.Wait()
 	}

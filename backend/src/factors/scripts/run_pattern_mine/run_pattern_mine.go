@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	C "factors/config"
 	"factors/filestore"
 	"factors/model/store"
+	"factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
@@ -12,13 +14,30 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
 	taskWrapper "factors/task/task_wrapper"
 
+	"github.com/apache/beam/sdks/go/pkg/beam"
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
+
+func registerStructs() {
+	log.Info("Registering structs for beam")
+	beam.RegisterType(reflect.TypeOf((*pattern.UserAndEventsInfo)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*pattern.Pattern)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*pattern.PropertiesInfo)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*pattern.CounterEventFormat)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*pattern.PropertiesCount)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*C.Configuration)(nil)).Elem())
+
+	beam.RegisterType(reflect.TypeOf((*T.CpThreadDoFn)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*T.RunBeamConfig)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*T.CPatternsBeam)(nil)).Elem())
+
+}
 
 func main() {
 
@@ -40,6 +59,7 @@ func main() {
 	numActiveFactorsTrackedEventsLimit := flag.Int("max_tracked_events", 50, "Max number of Tracked Events")
 	numActiveFactorsTrackedUserPropertiesLimit := flag.Int("max_user_properties", 50, "Max numbr of Tracked user properties")
 	numCampaignsLimit := flag.Int("max_campaigns_limit", -1, "Max number of campaigns")
+	runBeam := flag.Int("run_beam", 1, "run build seq on beam ")
 
 	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
 	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
@@ -70,6 +90,27 @@ func main() {
 		*envFlag != "production" {
 		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
 		panic(err)
+	}
+
+	//init beam
+	var beamConfig T.RunBeamConfig
+	if *runBeam == 1 {
+		log.Info("Initializing all beam constructs")
+		registerStructs()
+		beam.Init()
+		beamConfig.RunOnBeam = true
+		beamConfig.Env = *envFlag
+		beamConfig.Ctx = context.Background()
+		beamConfig.Pipe = beam.NewPipeline()
+		beamConfig.Scp = beamConfig.Pipe.Root()
+		if beam.Initialized() == true {
+			log.Info("Initalized all Beam Inits")
+		} else {
+			log.Fatal("unable to initialize runners")
+
+		}
+	} else {
+		beamConfig.RunOnBeam = false
 	}
 
 	// init DB, etcd
@@ -103,6 +144,7 @@ func main() {
 	}
 
 	C.InitConf(config)
+	beamConfig.DriverConfig = config
 
 	// db is used by M.GetEventNames to build eventInfo.
 	err := C.InitDB(*config)
@@ -184,6 +226,7 @@ func main() {
 	configs["maxModelSize"] = *maxModelSizeFlag
 	configs["countOccurence"] = *shouldCountOccurence
 	configs["numCampaignsLimit"] = *numCampaignsLimit
+	configs["beamConfig"] = &beamConfig
 
 	// This job has dependency on pull_events
 	if *isWeeklyEnabled {

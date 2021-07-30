@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   labels:
-    nodePool: persistent-pool-highmem
+    nodePool: shared-persistent-pool
   name: etcd
 spec:
   selector:
@@ -16,10 +16,10 @@ spec:
         app: etcd
         env: production
         project: factors-production
-        nodePool: persistent-pool-highmem
+        nodePool: shared-persistent-pool
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-pool-highmem
+        cloud.google.com/gke-nodepool: shared-persistent-pool
       terminationGracePeriodSeconds: 10
       volumes:
         - name: etcd-storage

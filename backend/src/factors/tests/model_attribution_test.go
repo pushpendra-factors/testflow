@@ -1028,9 +1028,9 @@ func TestAttributionMethodologies(t *testing.T) {
 
 	conversionEvent := "$Form_Submitted"
 	user1 := "user1"
-	camp1 := "campaign1"
-	camp2 := "campaign2"
-	camp3 := "campaign3"
+	camp1 := "adwords:-:campaign1"
+	camp2 := "adwords:-:campaign2"
+	camp3 := "adwords:-:campaign3"
 
 	queryFrom := 0
 	queryTo := 1000
@@ -1042,6 +1042,10 @@ func TestAttributionMethodologies(t *testing.T) {
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
+
+	userSession2 := make(map[string]map[string]model.UserSessionData)
+	userSession2[user1] = make(map[string]model.UserSessionData)
+	userSession2[user1][camp1] = model.UserSessionData{MinTimestamp: 110, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
 	type args struct {
 		method                        string
 		conversionEvent               string
@@ -1050,6 +1054,7 @@ func TestAttributionMethodologies(t *testing.T) {
 		coalUserIdConversionTimestamp map[string]int64
 		lookbackDays                  int
 		queryType                     string
+		attributionKey                string
 	}
 	tests := []struct {
 		name                        string
@@ -1063,11 +1068,12 @@ func TestAttributionMethodologies(t *testing.T) {
 		{"linear_touch",
 			args{model.AttributionMethodLinear,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp,
 				lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp1, camp2, camp3, camp3}},
 			map[string]map[string][]string{},
@@ -1077,11 +1083,12 @@ func TestAttributionMethodologies(t *testing.T) {
 		{"first_touch",
 			args{model.AttributionMethodFirstTouch,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp,
 				lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -1091,21 +1098,51 @@ func TestAttributionMethodologies(t *testing.T) {
 		{"last_touch",
 			args{model.AttributionMethodLastTouch,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp,
 				lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp2}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test1 for U_SHAPED
+		{"u_shaped",
+			args{model.AttributionMethodUShaped,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp,
+				lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
+			},
+			map[string][]string{user1: {camp3, camp2}},
+			map[string]map[string][]string{},
+			false},
+		// Test2 for U_SHAPED
+		{"u_shaped",
+			args{model.AttributionMethodUShaped,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession2,
+				coalUserIdConversionTimestamp,
+				lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
+			},
+			map[string][]string{user1: {camp1, camp1}},
 			map[string]map[string][]string{},
 			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
-				tt.args.usersToBeAttributed, tt.args.userInitialSession,
-				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays, int64(queryFrom), int64(queryTo))
+				tt.args.usersToBeAttributed, tt.args.userInitialSession, tt.args.coalUserIdConversionTimestamp,
+				tt.args.lookbackDays, int64(queryFrom), int64(queryTo), tt.args.attributionKey)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1130,10 +1167,10 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 
 	conversionEvent := "$Form_Submitted"
 	user1 := "user1"
-	camp0 := "$none"
-	camp1 := "campaign1"
-	camp2 := "campaign2"
-	camp3 := "campaign3"
+	camp0 := "$none:-:$none"
+	camp1 := "adwords:-:campaign1"
+	camp2 := "adwords:-:campaign2"
+	camp3 := "adwords:-:campaign3"
 	queryFrom := 0
 	queryTo := 1000
 	userSession := make(map[string]map[string]model.UserSessionData)
@@ -1153,6 +1190,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		coalUserIdConversionTimestamp map[string]int64
 		lookbackDays                  int
 		queryType                     string
+		attributionKey                string
 	}
 	tests := []struct {
 		name                        string
@@ -1165,10 +1203,11 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		{"linear_touch",
 			args{model.AttributionMethodLinear,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp0, camp0, camp1, camp2, camp3, camp3}},
 			map[string]map[string][]string{},
@@ -1178,10 +1217,11 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		{"first_touch",
 			args{model.AttributionMethodFirstTouch,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp0}},
 			map[string]map[string][]string{},
@@ -1191,10 +1231,11 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		{"last_touch",
 			args{model.AttributionMethodLastTouch,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
@@ -1204,10 +1245,11 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		{"first_touch_nd",
 			args{model.AttributionMethodFirstTouchNonDirect,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -1217,10 +1259,11 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		{"last_touch_nd",
 			args{model.AttributionMethodLastTouchNonDirect,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
@@ -1231,7 +1274,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
 				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays,
-				int64(queryFrom), int64(queryTo))
+				int64(queryFrom), int64(queryTo), tt.args.attributionKey)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1256,10 +1299,10 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 
 	conversionEvent := "$Form_Submitted"
 	user1 := "user1"
-	camp1 := "campaign1"
-	camp2 := "campaign2"
-	camp3 := "campaign3"
-	camp4 := "$none"
+	camp1 := "adwords:-:campaign1"
+	camp2 := "adwords:-:campaign2"
+	camp3 := "adwords:-:campaign3"
+	camp4 := "$none:-:$none"
 	queryFrom := 0
 	queryTo := 1000
 	userSession := make(map[string]map[string]model.UserSessionData)
@@ -1279,6 +1322,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		coalUserIdConversionTimestamp map[string]int64
 		lookbackDays                  int
 		queryType                     string
+		attributionKey                string
 	}
 	tests := []struct {
 		name                        string
@@ -1291,10 +1335,11 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		{"linear_touch",
 			args{model.AttributionMethodLinear,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp1, camp2, camp3, camp3, camp4}},
 			map[string]map[string][]string{},
@@ -1304,10 +1349,11 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		{"first_touch",
 			args{model.AttributionMethodFirstTouch,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp4}},
 			map[string]map[string][]string{},
@@ -1317,10 +1363,11 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		{"last_touch",
 			args{model.AttributionMethodLastTouch,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
@@ -1330,10 +1377,11 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		{"first_touch_nd",
 			args{model.AttributionMethodFirstTouchNonDirect,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -1343,10 +1391,11 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		{"last_touch_nd",
 			args{model.AttributionMethodLastTouchNonDirect,
 				conversionEvent,
-				[]model.UserEventInfo{{user1, conversionEvent}},
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
 			},
 			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
@@ -1356,7 +1405,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
-				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays, int64(queryFrom), int64(queryTo))
+				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays, int64(queryFrom), int64(queryTo), tt.args.attributionKey)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1377,33 +1426,197 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 	}
 }
 
+func TestAttributionMethodologiesNonDirectAdgroup(t *testing.T) {
+	conversionEvent := "$Form_Submitted"
+	user1 := "user1"
+	camp0 := "$none:-:$none:-:$none"
+	camp1 := "adwords:-:campaign1:-:adgroup1"
+	camp2 := "adwords:-:campaign2:-:adgroup2"
+	camp3 := "adwords:-:campaign3:-:adgroup3"
+	queryFrom := 0
+	queryTo := 1000
+	userSession := make(map[string]map[string]model.UserSessionData)
+	userSession[user1] = make(map[string]model.UserSessionData)
+	userSession[user1][camp0] = model.UserSessionData{MinTimestamp: 10, MaxTimestamp: 40, TimeStamps: []int64{10, 40}}
+	userSession[user1][camp1] = model.UserSessionData{MinTimestamp: 100, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
+	userSession[user1][camp2] = model.UserSessionData{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}}
+	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}}
+	coalUserIdConversionTimestamp := make(map[string]int64)
+	coalUserIdConversionTimestamp[user1] = 150
+	lookbackDays := 1
+	type args struct {
+		method                        string
+		conversionEvent               string
+		usersToBeAttributed           []model.UserEventInfo
+		userInitialSession            map[string]map[string]model.UserSessionData
+		coalUserIdConversionTimestamp map[string]int64
+		lookbackDays                  int
+		queryType                     string
+		attributionKey                string
+	}
+	tests := []struct {
+		name                        string
+		args                        args
+		wantUsersAttribution        map[string][]string
+		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantErr                     bool
+	}{
+		// Test for FIRST_TOUCH_ND
+		{"first_touch_nd",
+			args{model.AttributionMethodFirstTouchNonDirect,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyAdgroup,
+			},
+			map[string][]string{user1: {camp3}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for LAST_TOUCH_ND
+		{"last_touch_nd",
+			args{model.AttributionMethodLastTouchNonDirect,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyAdgroup,
+			},
+			map[string][]string{user1: {camp2}},
+			map[string]map[string][]string{},
+			false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
+				tt.args.usersToBeAttributed, tt.args.userInitialSession, tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays,
+				int64(queryFrom), int64(queryTo), tt.args.attributionKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.wantUsersAttribution) {
+				t.Errorf("applyAttribution() got = %v, want %v", got, tt.wantUsersAttribution)
+			}
+			if !reflect.DeepEqual(got1, tt.wantLinkedEventUserCampaign) {
+				t.Errorf("applyAttribution() got1 = %v, want %v", got1, tt.wantLinkedEventUserCampaign)
+			}
+		})
+	}
+}
+
+func TestAttributionMethodologiesNonDirectKeyword(t *testing.T) {
+	conversionEvent := "$Form_Submitted"
+	user1 := "user1"
+	camp0 := "$none:-:$none:-:$none:-:$none:-:$none"
+	camp1 := "adwords:-:campaign1:-:adgroup1:-:match_type1:-:key_word_name1"
+	camp2 := "adwords:-:campaign2:-:adgroup2:-:match_type2:-:key_word_name2"
+	camp3 := "adwords:-:campaign3:-:adgroup3:-:match_type3:-:key_word_name3"
+	queryFrom := 0
+	queryTo := 1000
+	userSession := make(map[string]map[string]model.UserSessionData)
+	userSession[user1] = make(map[string]model.UserSessionData)
+	userSession[user1][camp0] = model.UserSessionData{MinTimestamp: 10, MaxTimestamp: 40, TimeStamps: []int64{10, 40}}
+	userSession[user1][camp1] = model.UserSessionData{MinTimestamp: 100, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
+	userSession[user1][camp2] = model.UserSessionData{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}}
+	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}}
+	coalUserIdConversionTimestamp := make(map[string]int64)
+	coalUserIdConversionTimestamp[user1] = 150
+	lookbackDays := 1
+	type args struct {
+		method                        string
+		conversionEvent               string
+		usersToBeAttributed           []model.UserEventInfo
+		userInitialSession            map[string]map[string]model.UserSessionData
+		coalUserIdConversionTimestamp map[string]int64
+		lookbackDays                  int
+		queryType                     string
+		attributionKey                string
+	}
+	tests := []struct {
+		name                        string
+		args                        args
+		wantUsersAttribution        map[string][]string
+		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantErr                     bool
+	}{
+		// Test for FIRST_TOUCH_ND
+		{"first_touch_nd",
+			args{model.AttributionMethodFirstTouchNonDirect,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyKeyword,
+			},
+			map[string][]string{user1: {camp3}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for LAST_TOUCH_ND
+		{"last_touch_nd",
+			args{model.AttributionMethodLastTouchNonDirect,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyKeyword,
+			},
+			map[string][]string{user1: {camp2}},
+			map[string]map[string][]string{},
+			false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
+				tt.args.usersToBeAttributed, tt.args.userInitialSession, tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays,
+				int64(queryFrom), int64(queryTo), tt.args.attributionKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.wantUsersAttribution) {
+				t.Errorf("applyAttribution() got = %v, want %v", got, tt.wantUsersAttribution)
+			}
+			if !reflect.DeepEqual(got1, tt.wantLinkedEventUserCampaign) {
+				t.Errorf("applyAttribution() got1 = %v, want %v", got1, tt.wantLinkedEventUserCampaign)
+			}
+		})
+	}
+}
+
 func TestMergeDataRowsHavingSameKey(t *testing.T) {
 
 	rows := make([][]interface{}, 0)
 	row1 := []interface{}{"Campaign1", int64(2), int64(2), float64(2),
-		// (CTR, AvgCPC, CPM, ConversionRate)
+		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(2), float64(2), float64(2), float64(2),
 		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
 		int64(2), int64(2), float64(2), int64(2),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(2), float64(2), float64(2), float64(2)}
+		float64(2), float64(2), float64(2), float64(2), float64(2), float64(2)}
 	row2 := []interface{}{"Campaign1", int64(3), int64(3), float64(3),
-		// (CTR, AvgCPC, CPM, ConversionRate)
+		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(3), float64(3), float64(3), float64(3),
 		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
 		int64(3), int64(3), float64(3), int64(3),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(3), float64(3), float64(3), float64(3)}
+		float64(3), float64(3), float64(3), float64(3), float64(3), float64(3)}
 	rows = append(rows, row1, row2)
 
 	mergedRows := make([][]interface{}, 0)
 	row3 := []interface{}{"Campaign1", int64(5), int64(5), float64(5),
-		// (CTR, AvgCPC, CPM, ConversionRate)
+		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(100), float64(1), float64(1000), float64(100),
 		// Sessions, (users), (AvgSessionTime), (pageViews),
 		int64(5), int64(5), float64(5), int64(5),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(5), float64(1), float64(5), float64(1)}
+		float64(5), float64(1), float64(100), float64(5), float64(1), float64(100)}
 
 	mergedRows = append(mergedRows, row3)
 	type args struct {
@@ -1425,6 +1638,111 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 						t.Errorf("MergeDataRowsHavingSameKey()col No: %v=,  = %v, want %v", colNo, got[rowNo][colNo], tt.want[rowNo][colNo])
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestSortInteractionTime(t *testing.T) {
+	type args struct {
+		interactions []model.Interaction
+		sortingType  string
+	}
+	sortedAsc1 := []model.Interaction{
+		{"key1", int64(111)},
+		{"key2", int64(112)},
+		{"key3", int64(113)},
+		{"key4", int64(114)},
+	}
+	sortedDesc1 := []model.Interaction{
+		{"key4", int64(114)},
+		{"key3", int64(113)},
+		{"key2", int64(112)},
+		{"key1", int64(111)},
+	}
+
+	sortedEqual1 := []model.Interaction{
+		{"key1", int64(112)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key4", int64(112)},
+	}
+
+	sortedSomeEqual1 := []model.Interaction{
+		{"key1", int64(111)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key4", int64(114)},
+	}
+	sortedDescSomeEqual1 := []model.Interaction{
+		{"key4", int64(114)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key1", int64(111)},
+	}
+	/*sortedEqual1 := []model.Interaction{
+		{"key1", int64(112)},
+		{"key2", int64(112)},
+		{"key3", int64(112)},
+		{"key4", int64(112)},
+	}*/
+
+	tests := []struct {
+		name string
+		args args
+		want []model.Interaction
+	}{
+		{"Test1", args{interactions: sortedAsc1, sortingType: model.SortASC}, sortedAsc1},
+		{"Test2", args{interactions: sortedAsc1, sortingType: model.SortDESC}, sortedDesc1},
+		{"Test2", args{interactions: sortedEqual1, sortingType: model.SortASC}, sortedEqual1},
+		{"Test2", args{interactions: sortedEqual1, sortingType: model.SortDESC}, sortedEqual1},
+		{"Test2", args{interactions: sortedSomeEqual1, sortingType: model.SortASC}, sortedSomeEqual1},
+		{"Test2", args{interactions: sortedSomeEqual1, sortingType: model.SortDESC}, sortedDescSomeEqual1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := model.SortInteractionTime(tt.args.interactions, tt.args.sortingType); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("sortInteractionTime() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFilterRows(t *testing.T) {
+	type args struct {
+		rows           [][]interface{}
+		attributionKey string
+		keyIndex       int
+	}
+	rowIn1 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword2", 1, 2, 3, 4, 5, 65}}
+	rowOut1 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword2", 1, 2, 3, 4, 5, 65}}
+
+	rowIn2 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", "matchType1", "$none", 1, 2, 3, 4, 5, 65}}
+	rowOut2 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}}
+
+	rowIn3 := [][]interface{}{[]interface{}{"adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adgroup1", "matchType1", "keyword2", 1, 2, 3, 4, 5, 65}}
+	rowOut3 := [][]interface{}{[]interface{}{"adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adgroup1", "matchType1", "keyword2", 1, 2, 3, 4, 5, 65}}
+	rowIn4 := [][]interface{}{[]interface{}{"adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}, []interface{}{"adgroup1", "matchType1", "$none", 1, 2, 3, 4, 5, 65}}
+	rowOut4 := [][]interface{}{[]interface{}{"adgroup1", "matchType1", "keyword1", 1, 2, 3, 4, 5, 65}}
+
+	rowIn5 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", 1, 2, 3, 4, 5, 65}}
+	rowOut5 := [][]interface{}{[]interface{}{"adwords", "camp1", "adgroup1", 1, 2, 3, 4, 5, 65}, []interface{}{"adwords", "camp1", "adgroup1", 1, 2, 3, 4, 5, 65}}
+
+	tests := []struct {
+		name string
+		args args
+		want [][]interface{}
+	}{
+		{"Test1", args{rows: rowIn1, attributionKey: model.AttributionKeyKeyword, keyIndex: 4}, rowOut1},
+		{"Test2", args{rows: rowIn2, attributionKey: model.AttributionKeyKeyword, keyIndex: 4}, rowOut2},
+		{"Test3", args{rows: rowIn3, attributionKey: model.AttributionKeyKeyword, keyIndex: 2}, rowOut3},
+		{"Test4", args{rows: rowIn4, attributionKey: model.AttributionKeyKeyword, keyIndex: 2}, rowOut4},
+		{"Test5", args{rows: rowIn5, attributionKey: model.AttributionKeyAdgroup, keyIndex: 2}, rowOut5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := model.FilterRows(tt.args.rows, tt.args.attributionKey, tt.args.keyIndex); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FilterRows() = %v, want %v", got, tt.want)
 			}
 		})
 	}

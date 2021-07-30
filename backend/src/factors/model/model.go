@@ -57,7 +57,7 @@ type Model interface {
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error)
 	GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
-		userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error
+		userIDInfo map[string]model.UserInfo) (error, []model.UserEventInfo)
 	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error)
 	GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
 		goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
@@ -109,6 +109,7 @@ type Model interface {
 	CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup)
 	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string)
+	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string)
 	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int)
 
@@ -223,12 +224,15 @@ type Model interface {
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
 	GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int)
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
+	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64) (int64, int)
 	GetHubspotFormDocuments(projectID uint64) ([]model.HubspotDocument, int)
 	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int) ([]model.HubspotDocument, int)
+	GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, docID string) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
-	UpdateHubspotDocumentAsSynced(projectID uint64, id string, syncId string, timestamp int64, action int, userID string) int
-	GetLastSyncedHubspotDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.HubspotDocument, int)
+	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID string) int
+	GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
 	GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{}
 
 	// plan
@@ -308,8 +312,9 @@ type Model interface {
 	CreateSalesforceDocumentByAction(projectID uint64, document *model.SalesforceDocument, action model.SalesforceAction) int
 	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int) ([]model.SalesforceDocument, int)
 	GetSalesforceObjectValuesByPropertyName(ProjectID uint64, objectType string, propertyName string) []interface{}
-	GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int) ([]model.SalesforceDocument, int)
-	GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int) ([]model.SalesforceDocument, int)
+	GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int, from, to int64) ([]model.SalesforceDocument, int)
+	GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int)
+	GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64) (map[int]int64, int64, int)
 
 	// scheduled_task
 	CreateScheduledTask(task *model.ScheduledTask) int

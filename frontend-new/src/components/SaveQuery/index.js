@@ -12,7 +12,7 @@ import {
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
 import { saveQuery } from '../../reducers/coreQuery/services';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector, useDispatch, connect } from 'react-redux';
 import { QUERY_CREATED } from '../../reducers/types';
 import { saveQueryToDashboard } from '../../reducers/dashboard/services';
 import {
@@ -26,6 +26,7 @@ import {
 } from '../../utils/constants';
 import { getSaveChartOptions } from '../../Views/CoreQuery/utils';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
+import { fetchWeeklyIngishtsMetaData } from '../../reducers/insights';
 
 function SaveQuery({
   requestQuery,
@@ -33,6 +34,7 @@ function SaveQuery({
   setVisible,
   queryType,
   setQuerySaved,
+  fetchWeeklyIngishtsMetaData,
 }) {
   const [title, setTitle] = useState('');
   const [addToDashboard, setAddToDashboard] = useState(false);
@@ -177,6 +179,7 @@ function SaveQuery({
       dispatch({ type: QUERY_CREATED, payload: res.data });
       setQuerySaved(title);
       setApisCalled(false);
+      fetchWeeklyIngishtsMetaData(active_project.id);
       resetModalState();
     } catch (err) {
       setApisCalled(false);
@@ -199,7 +202,8 @@ function SaveQuery({
     selectedDashboards,
     queryType,
     setQuerySaved,
-    attributionMetrics
+    attributionMetrics,
+    fetchWeeklyIngishtsMetaData
   ]);
 
   let dashboardHelpText = 'Create a dashboard widget for regular monitoring';
@@ -310,4 +314,4 @@ function SaveQuery({
   );
 }
 
-export default SaveQuery;
+export default connect(null, { fetchWeeklyIngishtsMetaData })(SaveQuery);

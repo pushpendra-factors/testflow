@@ -818,6 +818,12 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		for unitID, queryMap := range dashboardUnitQueriesMap {
 			queryClass := queryMap["class"].(string)
 			query := queryMap["query"].(model.BaseQuery)
+			if queryClass == model.QueryClassAttribution {
+				f, _ := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(from, to)
+				if f == 0 {
+					continue
+				}
+			}
 			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
 
 			query.SetQueryDateRange(from, to)
@@ -1172,4 +1178,103 @@ func getAnalyticsQueryUrlAandPayload(queryClass string, baseQuery model.BaseQuer
 		}
 	}
 	return queryURL, queryPayload
+}
+
+func TestShouldCacheUnitForTimeRange(t *testing.T) {
+	type args struct {
+		queryClass      string
+		preset          string
+		from            int64
+		to              int64
+		onlyAttribution int
+		skipAttribution int
+	}
+	july1Start := int64(1625077800)
+	july1End := int64(1625164199)
+	july2End := int64(1625250599)
+	july3End := int64(1625336999)
+
+	sundayStart := int64(1625337000)
+	sundayEnd := int64(1625423399)
+	mondayEnd := int64(1625509799)
+	tuesdayEnd := int64(1625596199)
+
+	tests := []struct {
+		name  string
+		args  args
+		want  bool
+		want1 int64
+		want2 int64
+	}{
+		{"TestDateRangePresetToday", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetToday, from: july1Start, to: july1End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetYesterday", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetYesterday, from: july1Start, to: july1End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+
+		{"TestDateRangePresetCurrentMonth1", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july1End, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetCurrentMonth2", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july2End, onlyAttribution: 0, skipAttribution: 0}, true, july1Start, july1End},
+		{"TestDateRangePresetCurrentMonth3", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentMonth, from: july1Start, to: july3End, onlyAttribution: 0, skipAttribution: 0}, true, july1Start, july3End - U.SECONDS_IN_A_DAY},
+
+		{"TestDateRangePresetCurrentWeek1", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: sundayEnd, onlyAttribution: 0, skipAttribution: 0}, false, 0, 0},
+		{"TestDateRangePresetCurrentWeek2", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: mondayEnd, onlyAttribution: 0, skipAttribution: 0}, true, sundayStart, sundayEnd},
+		{"TestDateRangePresetCurrentWeek3", args{queryClass: model.QueryClassAttribution, preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: tuesdayEnd, onlyAttribution: 0, skipAttribution: 0}, true, sundayStart, tuesdayEnd - U.SECONDS_IN_A_DAY},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1, got2 := model.ShouldCacheUnitForTimeRange(tt.args.queryClass, tt.args.preset, tt.args.from, tt.args.to, tt.args.onlyAttribution, tt.args.skipAttribution)
+			if got != tt.want {
+				t.Errorf("ShouldCacheUnitForTimeRange() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("ShouldCacheUnitForTimeRange() got1 = %v, want %v", got1, tt.want1)
+			}
+			if got2 != tt.want2 {
+				t.Errorf("ShouldCacheUnitForTimeRange() got2 = %v, want %v", got2, tt.want2)
+			}
+		})
+	}
+}
+
+func TestGetEffectiveTimeRangeForDashboardUnitAttributionQuery(t *testing.T) {
+	type args struct {
+		from int64
+		to   int64
+	}
+	// Past
+	july1Start := int64(1625077800)
+	july1End := int64(1625164199)
+	july2End := int64(1625250599)
+	july3End := int64(1625336999)
+
+	// Today
+	toValid1 := U.GetBeginningOfDayTimestampZ(U.TimeNow().Unix(), U.TimeZoneStringIST) - 1
+	fromValid1 := toValid1 - 7*U.SECONDS_IN_A_DAY + 1
+	toValid2 := U.GetBeginningOfDayTimestampZ(U.TimeNow().Unix(), U.TimeZoneStringIST) - 1
+	fromValid2 := toValid2 - 1*U.SECONDS_IN_A_DAY + 1
+
+	tests := []struct {
+		name  string
+		args  args
+		want  int64
+		want1 int64
+	}{
+		// Past
+		{"Test1", args{from: july1Start, to: july1End}, july1Start, july1End},
+		{"Test2", args{from: july1Start, to: july2End}, july1Start, july2End},
+		{"Test3", args{from: july1Start, to: july3End}, july1Start, july3End},
+		{"Test3", args{from: july1Start, to: july3End + 10*U.SECONDS_IN_A_DAY}, july1Start, july3End + 10*U.SECONDS_IN_A_DAY},
+
+		// Current
+		{"Test4", args{from: fromValid1, to: toValid1}, fromValid1, toValid1 - U.SECONDS_IN_A_DAY},
+		{"Test4", args{from: fromValid2, to: toValid2}, 0, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(tt.args.from, tt.args.to)
+			if got != tt.want {
+				t.Errorf("GetEffectiveTimeRangeForDashboardUnitAttributionQuery() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("GetEffectiveTimeRangeForDashboardUnitAttributionQuery() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
 }

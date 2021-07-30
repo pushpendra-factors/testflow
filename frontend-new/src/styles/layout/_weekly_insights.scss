@@ -1,0 +1,73 @@
+.fa-insights--panel{
+    border: none;
+    
+    .fa-insights--panel-item{
+        background-color: $fa-color--white !important;
+        border-color: $fa-color--mono-2; 
+        .ant-collapse-header{
+            background-color: $fa-color--white !important; 
+        }
+        .ant-collapse-content{
+            border: none !important;
+        }
+        .ant-collapse-content > .ant-collapse-content-box{
+            padding: 4px 0 16px 24px
+
+        }
+        .ant-collapse-content-active{
+            .ant-collapse-content-box{
+                &:empty{
+                    padding: 0px !important;
+                }
+            }
+        }
+    }
+}   
+
+
+.fa-insights--panel .ant-collapse-item-disabled > .ant-collapse-header, .fa-insights--panel .ant-collapse-item-disabled > .ant-collapse-header > .arrow
+{
+cursor: auto;
+}
+
+.fa-tag--green
+{
+    background-color: rgba(#4DB976,0.2) !important;
+}
+.fa-tag--red{ 
+background-color: rgba(#EA6262,0.2) !important;
+
+}
+
+.fa-tag--grey{
+    background-color: $fa-color--mono-1 !important;
+}
+
+.fa-tag--regular{
+    background-color: transparent !important;
+}
+
+.fa-tag--green,
+.fa-tag--red,
+.fa-tag--grey{
+    border: none;
+} 
+
+.fa-tag--green,
+.fa-tag--red,
+.fa-tag--grey,
+.fa-tag--regular{
+    border-radius: 4px;
+    color: $fa-color--mono-color;
+    margin: initial;
+    margin-right: 4px;
+    display: inline-flex !important;
+    align-items: center;
+    svg{
+        margin-right: 4px;
+    }
+}
+
+.fa-tag--highlight{
+    color: $fa-color--brand-color;
+}

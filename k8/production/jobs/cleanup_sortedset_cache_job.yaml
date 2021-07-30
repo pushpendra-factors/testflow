@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-highmem
+    nodePool: shared-persistent-pool
   name: cleanup-sortedset-cache-job
 spec:
   schedule: "0 */1 * * *" #On Trigger
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-highmem
+            nodePool: shared-persistent-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem
+            cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: cleanup-sortedset-cache-job
             image: us.gcr.io/factors-production/cleanup-sortedset-cache-job:v0.010-18d3217

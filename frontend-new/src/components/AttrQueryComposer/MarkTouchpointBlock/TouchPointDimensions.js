@@ -36,7 +36,7 @@ function TouchPointDimensions({
         color='grey'
         lineHeight='medium'
       >
-        show as
+        Include
       </Text>
       <div className='ml-4'>
         <Text

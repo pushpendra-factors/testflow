@@ -1,12 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import moment from 'moment';
-import {
-  getCompareTableColumns,
-  getCompareTableData,
-  getTableColumns,
-  getTableData,
-  calcChangePerc,
-} from './utils';
+import { getTableColumns, getTableData, calcChangePerc } from './utils';
 import DataTable from '../../../components/DataTable';
 import { useSelector } from 'react-redux';
 import OptionsPopover from './OptionsPopover';
@@ -14,7 +8,7 @@ import { DASHBOARD_WIDGET_SECTION } from '../../../utils/constants';
 
 function AttributionTable({
   data,
-  data2,
+  comparison_data,
   isWidgetModal,
   event,
   setVisibleIndices,
@@ -62,130 +56,115 @@ function AttributionTable({
     [setAttributionMetrics]
   );
 
-  const metricsOptionsPopover = (
-    <OptionsPopover
-      options={attributionMetrics}
-      onChange={handleMetricsVisibilityChange}
-    />
-  );
+  const metricsOptionsPopover = useMemo(() => {
+    return (
+      <OptionsPopover
+        options={attributionMetrics}
+        onChange={handleMetricsVisibilityChange}
+      />
+    );
+  }, [attributionMetrics, handleMetricsVisibilityChange]);
 
-  const columns = data2
-    ? getCompareTableColumns(
-        sorter,
-        handleSorting,
-        attribution_method,
-        attribution_method_compare,
-        touchpoint,
-        linkedEvents,
-        event,
-        eventNames,
-        attributionMetrics,
-        metricsOptionsPopover
-      )
-    : getTableColumns(
-        sorter,
-        handleSorting,
-        attribution_method,
-        attribution_method_compare,
-        touchpoint,
-        linkedEvents,
-        event,
-        eventNames,
-        attributionMetrics,
-        metricsOptionsPopover,
-        attr_dimensions
-      );
+  const columns = useMemo(() => {
+    return getTableColumns(
+      sorter,
+      handleSorting,
+      attribution_method,
+      attribution_method_compare,
+      touchpoint,
+      linkedEvents,
+      event,
+      eventNames,
+      attributionMetrics,
+      metricsOptionsPopover,
+      attr_dimensions,
+      durationObj,
+      comparison_data,
+      cmprDuration
+    );
+  }, [
+    attr_dimensions,
+    attributionMetrics,
+    attribution_method,
+    attribution_method_compare,
+    event,
+    eventNames,
+    handleSorting,
+    linkedEvents,
+    metricsOptionsPopover,
+    sorter,
+    touchpoint,
+    durationObj,
+    comparison_data,
+    cmprDuration,
+  ]);
 
-  const tableData = data2
-    ? getCompareTableData(
-        data,
-        data2,
-        event,
-        searchText,
-        sorter,
-        attribution_method_compare,
-        touchpoint,
-        linkedEvents,
-        attributionMetrics
-      )
-    : getTableData(
-        data,
-        event,
-        searchText,
-        sorter,
-        attribution_method_compare,
-        touchpoint,
-        linkedEvents,
-        attributionMetrics,
-        attr_dimensions
-      );
-
-  const calcTotal = (rowTtl, tblItem) => {
-    if (rowTtl && !isNaN(tblItem)) {
-      return rowTtl + tblItem;
-    } else if (!rowTtl && isNaN(tblItem)) {
-      return rowTtl;
-    } else if (!rowTtl && !tblItem) {
-      return 0;
-    } else {
-      return tblItem;
-    }
-  };
-
-  const constructCompareCSV = (rst, totalRow) => {
-    const keys = Object.keys(rst);
-    const tbl = {};
-
-    keys.forEach((k, ind) => {
-      if (ind) {
-        const firstDateString = {
-          from: moment(durationObj.from).toDate().toLocaleDateString(),
-          to: moment(durationObj.to).toDate().toLocaleDateString(),
-        };
-        const secondDateString = {
-          from: moment(cmprDuration.from).toDate().toLocaleDateString(),
-          to: moment(cmprDuration.to).toDate().toLocaleDateString(),
-        };
-        const firstLabel = `${k} (${firstDateString.from} to ${firstDateString.to})`;
-        const secondLabel = `${k} (${secondDateString.from} to ${secondDateString.to})`;
-        const changeLabel = `${k} % Change`;
-        tbl[firstLabel] = rst[k].first;
-        tbl[secondLabel] = rst[k].second;
-        tbl[changeLabel] = rst[k].change;
-        totalRow[firstLabel] = calcTotal(
-          totalRow[firstLabel],
-          Number(rst[k].first)
-        );
-        totalRow[secondLabel] = calcTotal(
-          totalRow[secondLabel],
-          Number(rst[k].second)
-        );
-        totalRow[changeLabel] = calcChangePerc(
-          totalRow[firstLabel],
-          totalRow[secondLabel]
-        );
-      } else {
-        tbl[k] = rst[k];
-      }
-    });
-    return [tbl, totalRow];
-  };
+  const tableData = useMemo(() => {
+    return getTableData(
+      data,
+      event,
+      searchText,
+      sorter,
+      attribution_method_compare,
+      touchpoint,
+      linkedEvents,
+      attributionMetrics,
+      attr_dimensions,
+      comparison_data
+    );
+  }, [
+    attr_dimensions,
+    attributionMetrics,
+    attribution_method_compare,
+    data,
+    event,
+    linkedEvents,
+    searchText,
+    sorter,
+    touchpoint,
+    comparison_data,
+  ]);
 
   const getCSVData = () => {
     const dt = tableData;
-    let dataTotal = {};
+    const enabledAttributionMetricKeys = attributionMetrics
+      .filter((d) => d.enabled)
+      .map((d) => d.title);
     const mappedData = dt.map(({ index, ...rest }) => {
-      let results;
-      if (data2) {
-        [results, dataTotal] = constructCompareCSV(rest, dataTotal);
-      } else {
-        results = rest;
+      if (!comparison_data) {
+        return rest;
       }
-      return results;
+      const fromDate = moment(durationObj.from).format('MMM DD');
+      const toDate = moment(durationObj.to).format('MMM DD');
+      const compareFromDate = moment(cmprDuration.from).format('MMM DD');
+      const compareToDate = moment(cmprDuration.to).format('MMM DD');
+      const result = {};
+      Object.keys(rest).forEach((key) => {
+        if (
+          !enabledAttributionMetricKeys.includes(key) &&
+          key !== 'Conversion' &&
+          key !== 'Cost per Conversion' &&
+          key !== 'Conversion Rate' &&
+          !key.includes('Linked Event')
+        ) {
+          result[key] = rest[key];
+        } else {
+          const changePercent = calcChangePerc(
+            rest[key].value,
+            rest[key].compare_value
+          );
+          result[`${key} (${fromDate} - ${toDate})`] = rest[key].value;
+          result[`${key} (${compareFromDate} - ${compareToDate})`] =
+            rest[key].compare_value;
+          result[`${key} change`] = isNaN(changePercent)
+            ? '0%'
+            : changePercent === 'Infinity' || changePercent === '-Infinity'
+            ? 'Infinity'
+            : changePercent + '%';
+        }
+      });
+      return result;
     });
-
-    dataTotal[touchpoint] = 'Total';
-    mappedData.push(dataTotal);
 
     return {
       fileName: `${reportTitle}.csv`,

@@ -120,6 +120,7 @@ export const charts_legend_length = {
 };
 
 export const high_charts_default_spacing = [20, 10, 15, 10];
+export const high_charts_barLine_default_spacing = [20, 0, 15, 0];
 
 export const presentationObj = {
   pb: CHART_TYPE_BARCHART,
@@ -177,7 +178,7 @@ export const ATTRIBUTION_METRICS = [
   },
   {
     title: 'Sessions',
-    header: 'Sessions',
+    header: 'Sessions OR Website Visitors',
     enabled: true,
   },
   {
@@ -196,8 +197,8 @@ export const ATTRIBUTION_METRICS = [
     enabled: false,
   },
   {
-    title: 'Conversion Rate (%)',
-    header: 'ConversionRate(%)',
+    title: 'Click Conversion Rate (%)',
+    header: 'ConversionRate(%) OR ClickConversionRate(%)',
     enabled: false,
   },
   {
@@ -206,7 +207,7 @@ export const ATTRIBUTION_METRICS = [
     enabled: false,
   },
   {
-    title: 'Average Session Time',
+    title: 'Avg Session Time (in sec)',
     header: 'Average Session Time',
     enabled: false,
   },
@@ -214,6 +215,18 @@ export const ATTRIBUTION_METRICS = [
     title: 'Page Views',
     header: 'PageViews',
     enabled: false,
+  },
+  {
+    title: 'All Cost/Conv',
+    header: 'ALL CPC',
+    enabled: true,
+    isEventMetric: true,
+  },
+  {
+    title: 'All Conv Rate (%)',
+    header: 'ALL CR',
+    enabled: false,
+    isEventMetric: true,
   },
 ];
 
@@ -323,7 +336,7 @@ export const FUNNEL_CHART_MARGIN = {
 };
 
 export const LOCAL_STORAGE_ITEMS = {
-  DASHBOARD_DURATION: 'dashboard_duration',
+  DASHBOARD_DURATION: 'dashboard_duration_v1',
 };
 
 export const DateBreakdowns = [
@@ -370,4 +383,17 @@ export const QUERY_TYPE_TEXT = {
   [QUERY_TYPE_FUNNEL]: 'Funnels',
   [QUERY_TYPE_CAMPAIGN]: 'Campaigns',
   [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
+};
+
+export const FIRST_METRIC_IN_ATTR_RESPOSE = 'Impressions';
+
+export const ARR_JOINER = ';;;';
+
+export const PREDEFINED_DATES = {
+  THIS_WEEK: 'this_week',
+  LAST_WEEK: 'last_week',
+  THIS_MONTH: 'this_month',
+  LAST_MONTH: 'last_month',
+  TODAY: 'today',
+  YESTERDAY: 'yesterday',
 };

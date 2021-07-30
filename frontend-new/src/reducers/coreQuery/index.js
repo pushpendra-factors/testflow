@@ -208,6 +208,13 @@ export default function (state = defaultState, action) {
       };
     }
     case SET_ATTRIBUTION_MODEL: {
+      if (action.payload.length > 1) {
+        return {
+          ...state,
+          models: action.payload,
+          linkedEvents: [], // clear linked events if comparison model is added
+        };
+      }
       return {
         ...state,
         models: action.payload,

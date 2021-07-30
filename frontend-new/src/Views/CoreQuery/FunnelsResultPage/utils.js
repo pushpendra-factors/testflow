@@ -11,6 +11,7 @@ import {
   Text,
 } from '../../../components/factorsComponents';
 import styles from './index.module.scss';
+import { parseForDateTimeLabel } from '../EventsAnalytics/SingleEventSingleBreakdown/utils';
 
 const windowSize = {
   w: window.outerWidth,
@@ -69,61 +70,81 @@ const NoBreakdownUsersColumn = (d, breakdown, isComparisonApplied) => {
   }
 };
 
-export const generateGroupedChartsData = (
-  response,
-  queries,
-  groups,
-  arrayMapper
-) => {
-  if (!response) {
-    return [];
-  }
-  const result = groups
-    .filter((g) => g.is_visible)
-    .map((g) => {
-      return { name: g.name };
-    });
-  const firstEventIdx = response.headers.findIndex((elem) => elem === 'step_0');
-  response.rows.forEach((row) => {
-    const breakdownName = row.slice(0, firstEventIdx).join(',');
-    const obj = result.find((r) => r.name === breakdownName);
-    if (obj) {
-      const netCounts = row.filter((val) => typeof val === 'number');
-      queries.forEach((_, idx) => {
-        const eventIdx = response.headers.findIndex(
-          (elem) => elem === `step_${idx}`
-        );
-        obj[arrayMapper[idx].mapper] = calculatePercentage(
-          row[eventIdx],
-          netCounts[0]
-        );
-      });
-    }
+export const grnByIndex = (headersSlice, breakdowns) => {
+  let grns = [];
+  const clonnedBreakdown = [...breakdowns];
+  headersSlice.forEach((h) => {
+    const brkIndex = clonnedBreakdown.findIndex((x) => h === x.pr);
+    grns.push(clonnedBreakdown[brkIndex]?.grn);
+    clonnedBreakdown.splice(brkIndex, 1);
   });
-  return result;
+  return grns;
 };
 
-export const generateGroups = (response, maxAllowedVisibleProperties) => {
-  if (!response) {
-    return [];
+export const formatData = (response, arrayMapper) => {
+  if (
+    !response ||
+    !response.headers ||
+    !Array.isArray(response.headers) ||
+    !response.headers.length ||
+    !response.rows ||
+    !Array.isArray(response.rows) ||
+    !response.rows.length ||
+    !response.meta ||
+    !response.meta.metrics ||
+    !Array.isArray(response.meta.metrics) ||
+    !response.meta.metrics.length
+  ) {
+    return { groups: [], events: [] };
   }
-  const firstEventIdx = response.headers.findIndex((elem) => elem === 'step_0');
-  const result = response.rows.map((elem, index) => {
-    const row = elem.map((item) => {
-      return item;
+  const { rows, headers, meta } = response;
+  let breakdowns = [...meta.query.gbp];
+  const firstEventIdx = headers.findIndex((header) => header === 'step_0');
+  const netConversionIndex = headers.findIndex(
+    (header) => header === 'conversion_overall'
+  );
+  const grns = grnByIndex(headers.slice(0, firstEventIdx), breakdowns);
+  const eventsData = arrayMapper.map((am, index) => {
+    return {
+      index: index + 1,
+      name: am.mapper,
+      data: {},
+    };
+  });
+  const result = rows.map((row, index) => {
+    const name = row
+      .slice(0, firstEventIdx)
+      ?.map((label, ind) => {
+        return parseForDateTimeLabel(grns[ind], label);
+      })
+      ?.join(',');
+    const nonConvertedName = row.slice(0, firstEventIdx).join(',');
+    const value = row[netConversionIndex];
+    const groupEventData = {};
+    arrayMapper.forEach((am, idx) => {
+      const eventIdx = headers.findIndex(
+        (headers) => headers === `step_${idx}`
+      );
+      groupEventData[am.mapper] = calculatePercentage(
+        row[eventIdx],
+        row[firstEventIdx]
+      );
+      eventsData[idx].data[name] = row[eventIdx];
     });
-    const netCounts = row.filter((row) => typeof row === 'number');
-    const name = row.slice(0, firstEventIdx).join(',');
     return {
       index,
       name,
-      value:
-        calculatePercentage(netCounts[netCounts.length - 1], netCounts[0]) +
-        '%',
-      is_visible: index < maxAllowedVisibleProperties ? true : false,
+      value: `${value}%`,
+      nonConvertedName,
+      // is_visible: index < maxAllowedVisibleProperties ? true : false,
+      ...groupEventData,
     };
   });
-  return result;
+
+  return {
+    groups: result,
+    events: eventsData,
+  };
 };
 
 const compareSkeleton = (val1, val2) => {
@@ -283,17 +304,16 @@ export const generateTableData = (
   comparisonChartDurations,
   comparisonChartData,
   durationObj,
-  comparison_duration
+  comparison_duration,
+  resultData
 ) => {
   if (!breakdown.length) {
     const queryData = {};
-
     const overallDuration = getOverAllDuration(durations);
     const comparisonOverallDuration = getOverAllDuration(
       comparisonChartDurations
     );
-
-    queries.forEach((q, index) => {
+    queries.forEach((_, index) => {
       queryData[arrayMapper[index].mapper] = {
         percentage: data[index].value,
         count: data[index].netCount,
@@ -304,11 +324,9 @@ export const generateTableData = (
       };
       if (index < queries.length - 1) {
         const time = getStepDuration(durations, index, index + 1);
-
         const compare_time =
           comparisonChartData &&
           getStepDuration(comparisonChartDurations, index, index + 1);
-
         queryData[`time[${index}-${index + 1}]`] = comparisonChartData
           ? {
               time,
@@ -318,11 +336,9 @@ export const generateTableData = (
       }
     });
     const conversion = data[data.length - 1].value + '%';
-
     const comparsion_conversion =
       comparisonChartData &&
       comparisonChartData[comparisonChartData.length - 1].value + '%';
-
     return [
       {
         index: 0,
@@ -350,10 +366,21 @@ export const generateTableData = (
     const firstEventIdx = durationMetric.headers.findIndex(
       (elem) => elem === 'step_0_1_time'
     );
+
+    let breakdowns = [...resultData?.meta?.query?.gbp];
+    let grns = grnByIndex(
+      resultData?.headers?.slice(0, firstEventIdx),
+      breakdowns
+    );
+
     const result = appliedGroups.map((grp, index) => {
       const group = grp;
       const durationGrp = durationMetric.rows.find(
-        (elem) => elem.slice(0, firstEventIdx).join(',') === grp
+        (elem) =>
+          elem
+            .slice(0, firstEventIdx)
+            .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
+            .join(',') === grp
       );
       const eventsData = {};
       let totalDuration = 0;
@@ -362,7 +389,6 @@ export const generateTableData = (
           percentage: calculatePercentage(d.data[group], data[0].data[group]),
           count: d.data[group],
         };
-
         if (idx < data.length - 1) {
           const durationIdx = durationMetric.headers.findIndex(
             (elem) => elem === `step_${idx}_${idx + 1}_time`
@@ -373,9 +399,10 @@ export const generateTableData = (
           totalDuration += durationGrp ? Number(durationGrp[durationIdx]) : 0;
         }
       });
+      // const groupLabel = group.split(',')?.map((lbl) => );
       return {
         index,
-        Grouping: grp,
+        Grouping: group,
         'Converstion Time': formatDuration(totalDuration),
         Conversion:
           calculatePercentage(
@@ -385,7 +412,6 @@ export const generateTableData = (
         ...eventsData,
       };
     });
-
     if (currentSorter.key) {
       const sortKey = currentSorter.key;
       const { order } = currentSorter;
@@ -459,27 +485,6 @@ export const checkForWindowSizeChange = (callback) => {
     }, 0);
     callback();
   }
-};
-
-export const generateEventsData = (response, queries, arrayMapper) => {
-  if (!response) {
-    return [];
-  }
-  const firstEventIdx = response.headers.findIndex((elem) => elem === 'step_0');
-  const result = queries.map((q, idx) => {
-    const data = {};
-    response.rows.forEach((r) => {
-      const name = r.slice(0, firstEventIdx).join(',');
-      const netCounts = r.filter((elem) => typeof elem === 'number');
-      data[name] = netCounts[idx];
-    });
-    return {
-      index: idx + 1,
-      data,
-      name: arrayMapper[idx].mapper,
-    };
-  });
-  return result;
 };
 
 export const getOverAllDuration = (durationsObj) => {

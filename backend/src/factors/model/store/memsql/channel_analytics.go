@@ -2,6 +2,7 @@ package memsql
 
 import (
 	C "factors/config"
+	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -54,7 +55,7 @@ const (
 	CAFilterCreactive                      = "creative"
 	CAFilterOrganicProperty                = "organic_property"
 	dateTruncateString                     = "date_trunc('%s', CONVERT_TZ(TO_DATE(%s, 'YYYYMMDD'), 'UTC', '%s'))"
-	dateTruncateWeekString                 = "date_trunc('WEEK', CONVERT_TZ(timestampadd(DAY, 1, TO_DATE(%s, 'YYYYMMDD')), 'UTC', '%s')) - INTERVAL '1 day'"
+	dateTruncateWeekString                 = "date_trunc('WEEK', CONVERT_TZ(timestampadd(DAY, 1, TO_DATE(%s, 'YYYYMMDD')), 'UTC', '%s')) - INTERVAL 1 day"
 	CAUnionFilterQuery                     = "SELECT filter_value from ( %s ) all_ads LIMIT 2500"
 	CAUnionQuery1                          = "SELECT %s FROM ( %s ) all_ads ORDER BY %s %s"
 	CAUnionQuery2                          = "SELECT %s FROM ( %s ) all_ads GROUP BY %s ORDER BY %s %s"
@@ -117,7 +118,7 @@ func (store *MemSQL) GetChannelConfig(projectID uint64, channel string, reqID st
 	var result *model.ChannelConfigResult
 	switch channel {
 	case CAAllChannelAds:
-		result = buildAllChannelConfig()
+		result = store.buildAllChannelConfig(projectID)
 	case CAChannelFacebookAds:
 		result = store.buildFbChannelConfig(projectID)
 	case CAChannelGoogleAds:
@@ -153,14 +154,24 @@ func isValidChannel(channel string) bool {
 }
 
 // @TODO Kark v1
-func buildAllChannelConfig() *model.ChannelConfigResult {
-	properties := buildProperties(allChannelsPropertyToRelated)
-	objectsAndProperties := buildObjectsAndProperties(properties, objectsForAllChannels)
+func (store *MemSQL) buildAllChannelConfig(projectID uint64) *model.ChannelConfigResult {
+	objectsAndProperties := store.buildObjectAndPropertiesForAllChannel(projectID, objectsForAllChannels)
 
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectableMetricsForAllChannels,
 		ObjectsAndProperties: objectsAndProperties,
 	}
+}
+func (store *MemSQL) buildObjectAndPropertiesForAllChannel(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
+	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
+	for _, currentObject := range objects {
+		currentProperties := buildProperties(allChannelsPropertyToRelated)
+		smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "all")
+		currentPropertiesSmart := buildProperties(smartProperty)
+		currentProperties = append(currentProperties, currentPropertiesSmart...)
+		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
+	}
+	return objectsAndProperties
 }
 
 // @TODO Kark v1
@@ -227,6 +238,14 @@ func (store *MemSQL) GetChannelFilterValuesV1(projectID uint64, channel, filterO
 // GetAllChannelFilterValues - @Kark TODO v1
 func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty string, reqID string) ([]interface{}, int) {
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	_, isPresent := Const.SmartPropertyReservedNames[filterProperty]
+	if !isPresent {
+		filterValues, errCode := store.getSmartPropertyFilterValues(projectID, filterObject, filterProperty, "all", reqID)
+		if errCode != http.StatusFound {
+			return []interface{}{}, http.StatusInternalServerError
+		}
+		return filterValues, http.StatusFound
+	}
 	adwordsSQL, adwordsParams, adwordsErr := store.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	facebookSQL, facebookParams, facebookErr := store.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	linkedinSQL, linkedinParams, linkedinErr := store.GetLinkedinSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)

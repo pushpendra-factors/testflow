@@ -730,7 +730,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 		var stepGroupSelect, stepGroupKeys string
 		var stepGroupParams []interface{}
 		stepGroupSelect, stepGroupParams, stepGroupKeys, _ = buildGroupKeyForStep(
-			projectID, &q.EventsWithProperties[i], q.GroupByProperties, i+1)
+			projectID, &q.EventsWithProperties[i], q.GroupByProperties, i+1, q.Timezone)
 
 		eventSelect := commonSelect
 		if q.EventsCondition == model.EventCondEachGivenEvent {
@@ -783,7 +783,7 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 	var egKeys string
 	var unionStepName string
 
-	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys)
+	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys, query.Timezone)
 	if query.EventsCondition == model.EventCondAllGivenEvent {
 		unionStepName = "all_users_intersect"
 	} else if query.EventsCondition == model.EventCondEachGivenEvent {
@@ -794,7 +794,7 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 
 	// select
 	userGroupProps := filterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
-	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps)
+	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, query.Timezone)
 	*qParams = append(*qParams, ugSelectParams...)
 	// order of group keys changes here if users and event
 	// group by used together, but translated correctly.
@@ -817,7 +817,7 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
 	}
 
-	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties)
+	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone)
 
 	termStmnt = as(unionStepName, termStmnt)
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
@@ -914,7 +914,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (str
 	var qParams []interface{}
 
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityEvent)
-	egSelect, egSelectParams, egKeys := buildGroupKeys(projectId, eventGroupProps)
+	egSelect, egSelectParams, egKeys := buildGroupKeys(projectId, eventGroupProps, q.Timezone)
 	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
 	var qSelect string
@@ -1486,7 +1486,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 	qParams := make([]interface{}, 0)
 
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityEvent)
-	egSelect, egParams, egKeys := buildGroupKeys(projectID, eventGroupProps)
+	egSelect, egParams, egKeys := buildGroupKeys(projectID, eventGroupProps, q.Timezone)
 	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
 	filterSelect := joinWithComma(model.SelectDefaultEventFilter, egSelect)
@@ -1528,8 +1528,8 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 
 	// count.
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
-	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps)
-	_, _, groupKeys := buildGroupKeys(projectID, q.GroupByProperties)
+	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, q.Timezone)
+	_, _, groupKeys := buildGroupKeys(projectID, q.GroupByProperties, q.Timezone)
 	qParams = append(qParams, ugSelectParams...)
 
 	eventNameSelect := "event_name"
@@ -1785,7 +1785,7 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 		var stepGroupSelect, stepGroupKeys string
 		var stepGroupParams []interface{}
 		stepGroupSelect, stepGroupParams, stepGroupKeys, _ = buildGroupKeyForStep(projectID,
-			&q.EventsWithProperties[i], q.GroupByProperties, i+1)
+			&q.EventsWithProperties[i], q.GroupByProperties, i+1, q.Timezone)
 
 		eventSelect := commonSelect
 		eventNameSelect := "'" + strconv.Itoa(i) + "_" + ewp.Name + "'" + " AS event_name "
@@ -1858,12 +1858,12 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 	var egKeys string
 	var unionStepName string
 
-	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys)
+	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys, query.Timezone)
 	unionStepName = "each_users_union"
 
 	// select
 	userGroupProps := filterGroupPropsByType(otherGroupBys, model.PropertyEntityUser)
-	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps)
+	ugSelect, ugSelectParams, _ := buildGroupKeys(projectID, userGroupProps, query.Timezone)
 	*qParams = append(*qParams, ugSelectParams...)
 	termSelect := ""
 	termSelect = fmt.Sprintf(" %s.event_name, ", refStep)
@@ -1878,7 +1878,7 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
 	}
 
-	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties)
+	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone)
 
 	termStmnt = as(unionStepName, termStmnt)
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string

@@ -209,6 +209,11 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		for property, displayName := range displayNames {
 			displayNamesOp[property] = displayName
 		}
+
+		_, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(projectId)
+		for property, displayName := range displayNames {
+			displayNamesOp[property] = displayName
+		}
 		c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp})
 		return
 	}

@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-highmem
+    nodePool: default-pool
   name: add-session-job-dup
 spec:
   schedule: "*/30 * * * *" # every 30 minutes
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-highmem
+            nodePool: default-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem
+            cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: add-session-job-dup
             image: us.gcr.io/factors-production/add-session-job:6e22fbf74-nopr
@@ -62,8 +62,6 @@ spec:
             - "memsql"
             - --app_name
             - "add-session-job-dup"
-            - --disabled_project_ids
-            - "576"
             - --cache_with_sorted_set
             envFrom:
             - configMapRef:

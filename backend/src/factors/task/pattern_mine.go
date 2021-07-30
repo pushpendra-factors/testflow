@@ -49,7 +49,7 @@ const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
 // standard events, campaigns, source, referrer, medium, adgroup
 const countURL = 25
 const countUDE = 20
-const countSME = 10
+const countSME = 5
 const countStdEvents = -1 // all events
 const countCampaigns = 25
 const countSource = 10
@@ -64,6 +64,16 @@ type patternProperties struct {
 	pattern     *P.Pattern
 	count       uint
 	patternType string
+}
+
+func (pp patternProperties) Get_patternEventNames() []string {
+	return pp.pattern.EventNames
+}
+func (pp patternProperties) Get_count() uint {
+	return pp.count
+}
+func (pp patternProperties) Get_patternType() string {
+	return pp.patternType
 }
 
 type CampaignEventLists struct {
@@ -457,12 +467,17 @@ func InitCampaignAnalyticsPatterns(smartEvents CampaignEventLists) ([]*P.Pattern
 
 // mineAndWriteLenOnePatterns : All the len one events in the events file is counted which includes
 // standard events, URLs , campaignType events
-func mineAndWriteLenOnePatterns(projectID uint64,
-	eventNames []string, filepath string,
+func mineAndWriteLenOnePatterns(projectID uint64, modelId uint64, cloudManager *filestore.FileManager,
+	eventNames []string, filepathString string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool, campaignTypeEvents CampaignEventLists) (
+	chunkDir string, maxModelSize int64, cumulativePatternsSize int64,
+	countOccurence bool, campaignTypeEvents CampaignEventLists, efTmpPath string, beamConfig *RunBeamConfig) (
 	[]*P.Pattern, int64, error) {
 	var lenOnePatterns []*P.Pattern
+	var filteredLenOnePatterns []*P.Pattern
+	var patternSize int64
+	var err error
+
 	for _, eventName := range eventNames {
 		p, err := P.NewPattern([]string{eventName}, userAndEventsInfo)
 		if err != nil {
@@ -472,9 +487,30 @@ func mineAndWriteLenOnePatterns(projectID uint64,
 	}
 	lenOnePatternsCampigns, _ := InitCampaignAnalyticsPatterns(campaignTypeEvents)
 	lenOnePatterns = append(lenOnePatterns, lenOnePatternsCampigns...)
-	countPatterns(projectID, filepath, lenOnePatterns, numRoutines, countOccurence)
+	// countPatterns(projectID, filepath, lenOnePatterns, numRoutines, countOccurence)
+
+	if beamConfig.RunOnBeam == false {
+		countPatterns(projectID, filepathString, lenOnePatterns, numRoutines, countOccurence)
+	} else {
+		//call beam
+		scopeName := "Count_len_one"
+		patternsFpath, err := countPatternController(beamConfig, projectID, modelId,
+			cloudManager, filepathString,
+			lenOnePatterns, numRoutines, userAndEventsInfo, countOccurence,
+			efTmpPath, scopeName)
+		if err != nil {
+			return nil, 0, err
+		}
+		mineLog.Info("Reading from file")
+		lenOnePatterns, _ = readPatternFromFile(patternsFpath, cloudManager,
+			projectID, modelId)
+		mineLog.Infof("Beam number of len one patterns : %d , ", len(lenOnePatterns))
+	}
+
 	filteredLenOnePatterns, patternsSize, err := filterAndCompressPatterns(
 		lenOnePatterns, maxModelSize, cumulativePatternsSize, 1, max_PATTERN_LENGTH)
+	mineLog.Infof("patternSize : %d , ", patternSize)
+
 	if err != nil {
 		return []*P.Pattern{}, 0, err
 	}
@@ -513,15 +549,42 @@ func FilterCombinationPatterns(combinationGoalPatterns, goalPatterns []*P.Patter
 	return allPatterns
 }
 
-func mineAndWriteLenTwoPatterns(projectId uint64,
-	lenOnePatterns []*P.Pattern, filepath string,
+func mineAndWriteLenTwoPatterns(projectId uint64, modelId uint64,
+	lenOnePatterns []*P.Pattern, filepathString string, cloudManager *filestore.FileManager,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool,
-	goalPatterns []*P.Pattern, repeatedEventsList []string, eventNamesWithType map[string]string) (
+	goalPatterns []*P.Pattern, repeatedEventsList []string, eventNamesWithType map[string]string,
+	beamConfig *RunBeamConfig, efTmpPath string) (
 	[]*P.Pattern, int64, error) {
 
+	var filteredLenTwoPatterns []*P.Pattern
+	var err error
+	var patternsFpath string
 	combinationGoalPatterns, _, err := P.GenCombinationPatternsEndingWithGoal(lenOnePatterns, goalPatterns, userAndEventsInfo)
-	countPatterns(projectId, filepath, combinationGoalPatterns, numRoutines, countOccurence)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if !beamConfig.RunOnBeam {
+		countPatterns(projectId, filepathString, combinationGoalPatterns, numRoutines, countOccurence)
+	} else {
+
+		//call beam
+		scopeName := "Count_len_two"
+		patternsFpath, err = countPatternController(beamConfig, projectId, modelId, cloudManager, filepathString,
+			combinationGoalPatterns, numRoutines, userAndEventsInfo, countOccurence,
+			efTmpPath, scopeName)
+		if err != nil {
+			return nil, 0, fmt.Errorf("error in counting len two patterns in beam :%v", err)
+		}
+		mineLog.Info("Reading from file")
+		combinationGoalPatterns, err = readPatternFromFile(patternsFpath, cloudManager, projectId, modelId)
+		if err != nil {
+			return nil, 0, err
+		}
+		mineLog.Infof("number len Two patterns from beam: %d , ", len(combinationGoalPatterns))
+
+	}
 
 	// filter all combinationGoalPatterns based on start event.
 	// for each goal event based on quota logic filter patterns.
@@ -648,21 +711,23 @@ func GenMissingJourneyPatterns(goal, journey []*P.Pattern, userAndEventsInfo *P.
 	return allMissingPatt, nil
 }
 
-func mineAndWritePatterns(projectId uint64, filepath string,
-	userAndEventsInfo *P.UserAndEventsInfo, eventNames []string,
+func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
+	userAndEventsInfo *P.UserAndEventsInfo, cloudManager *filestore.FileManager, eventNames []string,
 	numRoutines int, chunkDir string,
-	maxModelSize int64, countOccurence bool, eventNamesWithType map[string]string, repeatedEvents []string, campTypeEvents CampaignEventLists) error {
+	maxModelSize int64, countOccurence bool,
+	eventNamesWithType map[string]string, repeatedEvents []string,
+	campTypeEvents CampaignEventLists, efTmpPath string, beamConfig *RunBeamConfig) error {
 	var filteredPatterns []*P.Pattern
 	var cumulativePatternsSize int64 = 0
 
 	patternLen := 1
 	limitRoundOffFraction := 0.99
 
-	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(projectId,
+	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(projectId, modelId, cloudManager,
 		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir,
-		maxModelSize, cumulativePatternsSize, countOccurence, campTypeEvents)
+		maxModelSize, cumulativePatternsSize, countOccurence, campTypeEvents, efTmpPath, beamConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to mine len one patterns :%v", err)
 	}
 	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
@@ -670,6 +735,9 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 
 	// Get all Goal Patterns => DB Patterns + CampaignAnalytics (Campaign,source,medium,referr)
 	goalPatterns, err := GetGoalPatterns(projectId, filteredPatterns, eventNamesWithType, campTypeEvents, userAndEventsInfo)
+	if err != nil {
+		return fmt.Errorf("unable to get goal patterns :%v", err)
+	}
 	mineLog.Info("Number of Goal Patterns to use in factors: ", len(goalPatterns))
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
@@ -682,9 +750,11 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	if patternLen > max_PATTERN_LENGTH {
 		return nil
 	}
-	filteredTwoPatterns, patternsSize, err := mineAndWriteLenTwoPatterns(projectId,
-		filteredPatterns, filepath, userAndEventsInfo,
-		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize, countOccurence, goalPatterns, repeatedEvents, eventNamesWithType)
+	filteredTwoPatterns, patternsSize, err := mineAndWriteLenTwoPatterns(projectId, modelId,
+		filteredPatterns, filepath, cloudManager, userAndEventsInfo,
+		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize,
+		countOccurence, goalPatterns, repeatedEvents, eventNamesWithType,
+		beamConfig, efTmpPath)
 	if err != nil {
 		return err
 	}
@@ -718,6 +788,9 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		}
 
 		lenThreeCampaign, err := GenCampaignThreeLenCombinations(filteredTwoPatterns, goalPatterns, userAndEventsInfo, topK_campaigns)
+		if err != nil {
+			return fmt.Errorf("unable to gen three len combinations :%v", err)
+		}
 		lenThreePatterns := []*P.Pattern{}
 		for _, patterns := range lenThreeSegmentedPatterns {
 			lenThreePatterns = append(lenThreePatterns, patterns...)
@@ -727,7 +800,27 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		lenThreePatterns = MergePatterns(lenThreePatterns, generatedThreeRepeatedPatterns)
 		lenThreePatterns = MergePatterns(lenThreePatterns, lenThreeCampaign)
 
-		countPatterns(projectId, filepath, lenThreePatterns, numRoutines, countOccurence)
+		if !beamConfig.RunOnBeam {
+			countPatterns(projectId, filepath, lenThreePatterns, numRoutines, countOccurence)
+		} else {
+			//call beam
+			var patternsFpath string
+			scopeName := "Count_len_three"
+			patternsFpath, err = countPatternController(beamConfig, projectId, modelId, cloudManager, filepath,
+				lenThreePatterns, numRoutines, userAndEventsInfo, countOccurence,
+				efTmpPath, scopeName)
+			if err != nil {
+				return fmt.Errorf("unable to count three len patterns :%v", err)
+			}
+			mineLog.Info("Reading from file")
+			lenThreePatterns, err = readPatternFromFile(patternsFpath, cloudManager, projectId, modelId)
+			if err != nil {
+				return err
+			}
+			mineLog.Infof("number len Two patterns from beam: %d , ", len(lenThreePatterns))
+
+		}
+
 		filteredThreePatterns, patternsSize, err := filterAndCompressPatterns(
 			lenThreePatterns, maxModelSize, cumulativePatternsSize,
 			patternLen, max_PATTERN_LENGTH)
@@ -746,7 +839,29 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		if err != nil {
 			mineLog.Error("Unable to create missing two len pattern")
 		}
-		countPatterns(projectId, filepath, missingPatternsTwo, numRoutines, countOccurence)
+
+		// count  - two len missing
+		if !beamConfig.RunOnBeam {
+			countPatterns(projectId, filepath, missingPatternsTwo, numRoutines, countOccurence)
+		} else {
+			//call beam
+			var patternsFpath string
+			scopeName := "CountTwoMissing"
+			patternsFpath, err = countPatternController(beamConfig, projectId,
+				modelId, cloudManager, filepath,
+				missingPatternsTwo, numRoutines, userAndEventsInfo,
+				countOccurence, efTmpPath, scopeName)
+			if err != nil {
+				return fmt.Errorf("unable to count len two missing :%v", err)
+			}
+			mineLog.Infof("Reading from part Directory : %s", scopeName)
+			missingPatternsTwo, err = readPatternFromFile(patternsFpath, cloudManager, projectId, modelId)
+			if err != nil {
+				return err
+			}
+			mineLog.Infof("number len Two patterns from beam: %d , ", len(lenThreePatterns))
+		}
+
 		filteredMissingPatterns, patternsSize, err := filterAndCompressPatterns(
 			missingPatternsTwo, maxModelSize, cumulativePatternsSize,
 			patternLen, max_PATTERN_LENGTH)
@@ -968,6 +1083,9 @@ func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string) error {
 			currentFilePath = fmt.Sprintf("%s/%s.txt", chunksDir, nextFileName)
 			currentFileSize = 0
 			currentFile, err = os.Create(currentFilePath)
+			if err != nil {
+				return err
+			}
 			defer currentFile.Close()
 		}
 
@@ -990,7 +1108,7 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 		return nil, err
 	}
 
-	uploadedChunkIds := make([]string, 0, 0)
+	uploadedChunkIds := make([]string, 0)
 	for _, cf := range cfiles {
 		cfName := cf.Name()
 		if chunkIdStr := getChunkIdFromName(cfName); chunkIdStr != "" {
@@ -1040,13 +1158,18 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
 	if err != nil {
 		log.Error("Unable to open events File")
+		return CampaignEventLists{}, err
 	}
 
 	mineLog.WithField("path", tmpPath).Info("Create a temp file to save and read events")
 	file, err := os.Create(tmpPath)
+	if err != nil {
+		return CampaignEventLists{}, fmt.Errorf("unable to create a tmp file :%v", err)
+	}
 	defer file.Close()
 
 	if err != nil {
+		log.Error("Unable to create temp File")
 		return CampaignEventLists{}, err
 	}
 	campEventsMap := make(map[string]int)
@@ -1092,136 +1215,20 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 			return CampaignEventLists{}, err
 		}
 
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.EP_CAMPAIGN] != nil {
-			var campEvent P.CounterEventFormat
-			campEventId, ok := eventDetails.EventProperties[U.EP_CAMPAIGN].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " CAMPAIGN ", eventDetails.EventProperties[U.EP_CAMPAIGN])
-			}
-			if len(campEventId) > 0 {
-				cmpEvent := eventDetails.EventName + "[campaign:" + campEventId + "]"
-				campEvent.EventName = cmpEvent
-				campEventsMap[cmpEvent] = campEventsMap[cmpEvent] + 1
-				campEvent.EventProperties = nil
-				campEvent.UserProperties = nil
-				campEvent.UserId = eventDetails.UserId
-				campEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-				campEvent.EventTimestamp = eventDetails.EventTimestamp
-				campEvent.EventCardinality = eventDetails.EventCardinality
-				eventDetailsBytes, _ := json.Marshal(campEvent)
-				lineWrite := string(eventDetailsBytes)
-
-				if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-					peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-					return CampaignEventLists{}, err
-				}
-
-			}
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_CAMPAIGN, "campaign", campEventsMap, eventDetails, file, line); err != nil {
+			return CampaignEventLists{}, err
 		}
-
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.EP_MEDIUM] != nil {
-			var mediumEvent P.CounterEventFormat
-			mediumEventId, ok := eventDetails.EventProperties[U.EP_MEDIUM].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " MEDIUM ", eventDetails.EventProperties[U.EP_MEDIUM])
-			}
-			if len(mediumEventId) > 0 {
-				medEvent := eventDetails.EventName + "[medium:" + mediumEventId + "]"
-				mediumEvent.EventName = medEvent
-				mediumEventsMap[medEvent] = mediumEventsMap[medEvent] + 1
-				mediumEvent.EventProperties = nil
-				mediumEvent.UserProperties = nil
-				mediumEvent.UserId = eventDetails.UserId
-				mediumEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-				mediumEvent.EventTimestamp = eventDetails.EventTimestamp
-				mediumEvent.EventCardinality = eventDetails.EventCardinality
-				eventDetailsBytes, _ := json.Marshal(mediumEvent)
-				lineWrite := string(eventDetailsBytes)
-
-				if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-					peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-					return CampaignEventLists{}, err
-				}
-			}
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_MEDIUM, "medium", mediumEventsMap, eventDetails, file, line); err != nil {
+			return CampaignEventLists{}, err
 		}
-
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.EP_SOURCE] != nil {
-			var sourceEvent P.CounterEventFormat
-			sourceEventId, ok := eventDetails.EventProperties[U.EP_SOURCE].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " SOURCE ", eventDetails.EventProperties[U.EP_SOURCE])
-			}
-			medEvent := eventDetails.EventName + "[source:" + sourceEventId + "]"
-			sourceEvent.EventName = medEvent
-			sourceEventsMap[medEvent] = sourceEventsMap[medEvent] + 1
-			sourceEvent.EventProperties = nil
-			sourceEvent.UserProperties = nil
-			sourceEvent.UserId = eventDetails.UserId
-			sourceEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-			sourceEvent.EventTimestamp = eventDetails.EventTimestamp
-			sourceEvent.EventCardinality = eventDetails.EventCardinality
-			eventDetailsBytes, _ := json.Marshal(sourceEvent)
-			lineWrite := string(eventDetailsBytes)
-
-			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-				peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-				return CampaignEventLists{}, err
-			}
-
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_SOURCE, "source", sourceEventsMap, eventDetails, file, line); err != nil {
+			return CampaignEventLists{}, err
 		}
-
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.SP_INITIAL_REFERRER] != nil {
-			var referrerEvent P.CounterEventFormat
-			sourceEventId, ok := eventDetails.EventProperties[U.SP_INITIAL_REFERRER].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " INITIAL_REFERRER ", eventDetails.EventProperties[U.SP_INITIAL_REFERRER])
-			}
-			if len(sourceEventId) > 0 {
-				medEvent := eventDetails.EventName + "[initial_referrer:" + sourceEventId + "]"
-				referrerEvent.EventName = medEvent
-				referrerEventsMap[medEvent] = referrerEventsMap[medEvent] + 1
-				referrerEvent.EventProperties = nil
-				referrerEvent.UserProperties = nil
-				referrerEvent.UserId = eventDetails.UserId
-				referrerEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-				referrerEvent.EventTimestamp = eventDetails.EventTimestamp
-				referrerEvent.EventCardinality = eventDetails.EventCardinality
-				eventDetailsBytes, _ := json.Marshal(referrerEvent)
-				lineWrite := string(eventDetailsBytes)
-
-				if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-					peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-					return CampaignEventLists{}, err
-				}
-			}
-
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.SP_INITIAL_REFERRER, "initial_referrer", referrerEventsMap, eventDetails, file, line); err != nil {
+			return CampaignEventLists{}, err
 		}
-
-		if strings.Compare(eventDetails.EventName, U.EVENT_NAME_SESSION) == 0 && eventDetails.EventProperties[U.EP_ADGROUP] != nil {
-			var AdgroupEvent P.CounterEventFormat
-			sourceEventId, ok := eventDetails.EventProperties[U.EP_ADGROUP].(string)
-			if ok == false {
-				mineLog.Info("Error in converting string : ", " EP_ADGROUP ", eventDetails.EventProperties[U.EP_ADGROUP])
-			}
-			if len(sourceEventId) > 0 {
-				medEvent := eventDetails.EventName + "[adgroup:" + sourceEventId + "]"
-				AdgroupEvent.EventName = medEvent
-				AdgroupEventsMap[medEvent] = AdgroupEventsMap[medEvent] + 1
-				AdgroupEvent.EventProperties = nil
-				AdgroupEvent.UserProperties = nil
-				AdgroupEvent.UserId = eventDetails.UserId
-				AdgroupEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-				AdgroupEvent.EventTimestamp = eventDetails.EventTimestamp
-				AdgroupEvent.EventCardinality = eventDetails.EventCardinality
-				eventDetailsBytes, _ := json.Marshal(AdgroupEvent)
-				lineWrite := string(eventDetailsBytes)
-
-				if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-					peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-					return CampaignEventLists{}, err
-				}
-			}
-
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_ADGROUP, "adgroup", AdgroupEventsMap, eventDetails, file, line); err != nil {
+			return CampaignEventLists{}, err
 		}
 
 	}
@@ -1242,8 +1249,46 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 	return smartEvents, nil
 }
 
+func writeEncodedEvent(eventName string, property string, propertyName string, propEventsMap map[string]int, eventDetails P.CounterEventFormat, file *os.File, line string) error {
+	//check if eventName and eventDetails.EventName match and property exists in eventDetails.EventProperties
+	//if exists with non-empty value, write encoded event to file
+
+	if strings.Compare(eventDetails.EventName, eventName) == 0 && eventDetails.EventProperties[property] != nil {
+
+		var tmpEvent P.CounterEventFormat
+		tmpEventId, ok := eventDetails.EventProperties[property].(string)
+
+		if ok == false {
+			mineLog.Info("Error in converting string : ", " ", strings.ToUpper(propertyName), " ", eventDetails.EventProperties[property])
+		}
+
+		if len(tmpEventId) > 0 {
+			tmpEventName := eventDetails.EventName + "[" + propertyName + ":" + tmpEventId + "]"
+			tmpEvent.EventName = tmpEventName
+			propEventsMap[tmpEventName] = propEventsMap[tmpEventName] + 1
+			tmpEvent.EventProperties = nil
+			tmpEvent.UserProperties = nil
+			tmpEvent.UserId = eventDetails.UserId
+			tmpEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
+			tmpEvent.EventTimestamp = eventDetails.EventTimestamp
+			tmpEvent.EventCardinality = eventDetails.EventCardinality
+			eventDetailsBytes, _ := json.Marshal(tmpEvent)
+			lineWrite := string(eventDetailsBytes)
+
+			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
+				peLog.WithFields(log.Fields{"line": line, "property": property, "err": err}).Error("Unable to write to file.")
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string, map[string]string, error) {
 	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
+	if err != nil {
+		return nil, nil, err
+	}
 	eventNames, err := model.GetEventNamesFromFile(scanner, projectId)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": tmpEventsFilePath}).Error("Failed to read event names from file")
@@ -1405,7 +1450,8 @@ func buildEventsInfoForEncodedEvents(smartEvents CampaignEventLists, userAndEven
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
-	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64, countOccurence bool, campaignLimitCount int) (int, error) {
+	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64,
+	countOccurence bool, campaignLimitCount int, beamConfig *RunBeamConfig) (int, error) {
 
 	var err error
 
@@ -1435,7 +1481,6 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 
 	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
-
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return 0, err
@@ -1507,11 +1552,20 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 	mineLog.Info("Successfully built all user properties histogram.")
 
+	//write events file to GCP
+	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
+	err = writeFileToGCP(projectId, modelId, modEventsFile, tmpEventsFilepath, cloudManager)
+	if err != nil {
+		return 0, fmt.Errorf("unable to write modified events file to GCP")
+	}
+
 	// mine and write patterns as chunks
 	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
-	err = mineAndWritePatterns(projectId, tmpEventsFilepath,
-		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize, countOccurence, eventNamesWithType, repeatedEvents, campaignAnalyticsSorted)
+	err = mineAndWritePatterns(projectId, modelId, tmpEventsFilepath,
+		userAndEventsInfo, cloudManager, eventNames, numRoutines, tmpChunksDir, maxModelSize,
+		countOccurence, eventNamesWithType, repeatedEvents, campaignAnalyticsSorted,
+		efTmpPath, beamConfig)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		return 0, err
@@ -1610,16 +1664,46 @@ func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType m
 
 	}
 
-	ucTopk := takeTopKUC(allPatterns, k)
-	feAT_Topk := takeTopKpageView(allPatterns, k)
-	ieTopk := takeTopKIE(allPatterns, k)
-	specialTopK := takeTopKspecialEvents(allPatterns, keventsSpecial)
-	URLTopK := takeTopKAllURL(allPatterns, keventsURL)
+	//convert struct array allPatterns([]patternProperties) to interface array allPattern([]U.PatternProperties) to pass in takeTopK functions
+	allPattern := make([]U.PatternProperties, len(allPatterns))
+	for i, pat := range allPatterns {
+		var upat U.PatternProperties = pat
+		allPattern[i] = upat
+	}
+
+	//take top K for each property type
+	ucTopk := U.TakeTopKUC(allPattern, k, model.TYPE_USER_CREATED_EVENT_NAME)
+	feAT_Topk := U.TakeTopKpageView(allPattern, k, model.TYPE_FILTER_EVENT_NAME, model.TYPE_AUTO_TRACKED_EVENT_NAME)
+	ieTopk := U.TakeTopKIE(allPattern, k, model.TYPE_INTERNAL_EVENT_NAME)
+	specialTopk := U.TakeTopKspecialEvents(allPattern, keventsSpecial)
+	URLTopk := U.TakeTopKAllURL(allPattern, keventsURL)
+
+	//convert each interface array([]U.PatternProperties) back to struct array([]patternProperties)
+	ucTopK := make([]patternProperties, len(ucTopk))
+	for i, pat := range ucTopk {
+		ucTopK[i] = pat.(patternProperties)
+	}
+	feAT_TopK := make([]patternProperties, len(feAT_Topk))
+	for i, pat := range feAT_Topk {
+		feAT_TopK[i] = pat.(patternProperties)
+	}
+	ieTopK := make([]patternProperties, len(ieTopk))
+	for i, pat := range ieTopk {
+		ieTopK[i] = pat.(patternProperties)
+	}
+	specialTopK := make([]patternProperties, len(specialTopk))
+	for i, pat := range specialTopk {
+		specialTopK[i] = pat.(patternProperties)
+	}
+	URLTopK := make([]patternProperties, len(URLTopk))
+	for i, pat := range URLTopk {
+		URLTopK[i] = pat.(patternProperties)
+	}
 
 	allPatternsFiltered := make([]patternProperties, 0)
-	allPatternsFiltered = append(allPatternsFiltered, ucTopk...)
-	allPatternsFiltered = append(allPatternsFiltered, feAT_Topk...)
-	allPatternsFiltered = append(allPatternsFiltered, ieTopk...)
+	allPatternsFiltered = append(allPatternsFiltered, ucTopK...)
+	allPatternsFiltered = append(allPatternsFiltered, feAT_TopK...)
+	allPatternsFiltered = append(allPatternsFiltered, ieTopK...)
 	allPatternsFiltered = append(allPatternsFiltered, specialTopK...)
 	allPatternsFiltered = append(allPatternsFiltered, URLTopK...)
 
@@ -1634,71 +1718,6 @@ func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType m
 	}
 
 	return allPatternsTopk
-
-}
-
-func takeTopKUC(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pattern := range allPatterns {
-
-		if pattern.patternType == model.TYPE_USER_CREATED_EVENT_NAME {
-			allPatternsType = append(allPatternsType, pattern)
-		}
-	}
-
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
-
-}
-
-func takeTopKpageView(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pattern := range allPatterns {
-
-		if pattern.patternType == model.TYPE_FILTER_EVENT_NAME || pattern.patternType == model.TYPE_AUTO_TRACKED_EVENT_NAME {
-			allPatternsType = append(allPatternsType, pattern)
-		}
-	}
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
-
-}
-
-func takeTopKIE(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pattern := range allPatterns {
-
-		if pattern.patternType == model.TYPE_INTERNAL_EVENT_NAME {
-			allPatternsType = append(allPatternsType, pattern)
-		}
-	}
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
-
-}
-
-func takeTopKspecialEvents(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pt := range allPatterns {
-		ename := pt.pattern.EventNames[0]
-		if U.IsStandardEvent(ename) == true && U.IsCampaignAnalytics(ename) == false {
-			allPatternsType = append(allPatternsType, pt)
-		}
-	}
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
 
 }
 
@@ -1729,35 +1748,6 @@ func takeCampaignEvents(allPatterns []patternProperties, campaignEventsType Camp
 	}
 	return allPatternsType
 
-}
-
-func takeTopKAllURL(allPatterns []patternProperties, topK int) []patternProperties {
-
-	allPatternsType := make([]patternProperties, 0)
-	for _, pt := range allPatterns {
-
-		if U.IsValidUrl(pt.pattern.EventNames[0]) == true {
-			allPatternsType = append(allPatternsType, pt)
-		}
-	}
-	if len(allPatternsType) > 0 {
-		return takeTopK(allPatternsType, topK)
-	}
-	return allPatternsType
-
-}
-
-func takeTopK(patterns []patternProperties, topKPatterns int) []patternProperties {
-	// rewrite with heap. can hog the memory
-	if len(patterns) > 0 {
-		sort.Slice(patterns, func(i, j int) bool { return patterns[i].count > patterns[j].count })
-		if len(patterns) > topKPatterns {
-			return patterns[0:topKPatterns]
-		}
-		return patterns
-
-	}
-	return patterns
 }
 
 // GetAllCyclicEvents Filter all special events
@@ -1851,6 +1841,10 @@ func MergePatterns(patternA, patternB []*P.Pattern) []*P.Pattern {
 
 func getTopPatterns(patterns []*P.Pattern, topKPatterns int) []*P.Pattern {
 
+	if topKPatterns == 0 {
+		return []*P.Pattern{}
+	}
+
 	if len(patterns) > 0 && topKPatterns > 1 {
 		sort.Slice(patterns, func(i, j int) bool { return patterns[i].PerUserCount > patterns[j].PerUserCount })
 		if len(patterns) > topKPatterns {
@@ -1895,9 +1889,7 @@ func FilterEventsInfo(userAndEventsInfo *P.UserAndEventsInfo, userProp, eventPro
 
 		if userProp[propertyName] == false {
 			delete(userPropertiesInfo.NumericPropertyKeys, propertyName)
-		} else {
 		}
-
 	}
 
 	//delete both categorical and numerical properties for events
@@ -2064,24 +2056,24 @@ func GetTopCampaignAnalyticsPatterns(allPatterns []*P.Pattern, cNum, refNum, med
 func FilterAllCausualEvents(allPatterns []*P.Pattern, eventNamesWithType map[string]string) ([]*P.Pattern, error) {
 
 	causalURLs := GetTopURLs(allPatterns, countURL)
-	for _, v := range causalURLs {
-		mineLog.Info("Top Url ->", v.EventNames, v.PerUserCount)
-	}
+	// for _, v := range causalURLs {
+	// 	mineLog.Info("Top Url ->", v.EventNames, v.PerUserCount)
+	// }
 
 	causalUDE := GetTopUDE(allPatterns, eventNamesWithType, countUDE)
-	for _, v := range causalUDE {
-		mineLog.Info("Top UDE ->", v.EventNames, v.PerUserCount)
-	}
+	// for _, v := range causalUDE {
+	// 	mineLog.Info("Top UDE ->", v.EventNames, v.PerUserCount)
+	// }
 
 	causalSME := GetTopSmartEvents(allPatterns, eventNamesWithType, countSME)
-	for _, v := range causalSME {
-		mineLog.Info("Top SME ->", v.EventNames, v.PerUserCount)
-	}
+	// for _, v := range causalSME {
+	// 	mineLog.Info("Top SME ->", v.EventNames, v.PerUserCount)
+	// }
 
 	causalStandardEvents := GetTopStandardPatterns(allPatterns, countStdEvents)
-	for _, v := range causalStandardEvents {
-		mineLog.Info("Top standard Events ->", v.EventNames, v.PerUserCount)
-	}
+	// for _, v := range causalStandardEvents {
+	// 	mineLog.Info("Top standard Events ->", v.EventNames, v.PerUserCount)
+	// }
 
 	campaignAnalyticsEvents := GetTopCampaignAnalyticsPatterns(allPatterns, countCampaigns, countReferrer, countMedium, countSource, countAdgroup)
 	filteredPatterns := MergePatterns(causalURLs, causalUDE)

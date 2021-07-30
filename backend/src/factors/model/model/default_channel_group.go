@@ -559,6 +559,13 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 	},
 }
 
+// condition : (medium=paid OR medium=cpc ) AND (referral domain contains either of ("facebook.","linkedin.")
+// in code : rules = [{ property: medium, L_OP: AND, OP: contains, value: paid}, {property: medium, L_OP: OR, OP: contains, value: cpc}, {property: ref_domain, L_OP: AND, OP: contains, value: 'facebook.'}, {property: ref_domain, L_OP: OR, OP: contains, value: 'linkedin.'}]
+
+// solution for now:
+// We keep a variable checkCondition to check the condition while looping through the filters. Initally, checkCondition = isApplicable(rules[0])
+// When looping through the conditions: if we encounter AND logical op, we check if the previous checkCondition is true or false.
+// If false, we return not applicable as false AND T/F is false. Else if true, we continue to check the other filters
 func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessionPropertiesMap U.PropertiesMap) string {
 	for _, rule := range channelGroupRules {
 		var checkCondition bool
@@ -569,7 +576,11 @@ func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessi
 				if filter.LogicalOp == LOGICAL_OP_OR {
 					checkCondition = checkCondition || checkFilter(sessionPropertiesMap, filter)
 				} else {
-					checkCondition = checkCondition && checkFilter(sessionPropertiesMap, filter)
+					if checkCondition {
+						checkCondition = checkCondition && checkFilter(sessionPropertiesMap, filter)
+					} else {
+						break
+					}
 				}
 			}
 		}

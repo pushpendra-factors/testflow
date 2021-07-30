@@ -2,10 +2,11 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-highmem
+    nodePool: shared-persistent-pool
   name: hubspot-enrich-job
 spec:
   schedule: "0 21 * * *" # In UTC
+  concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
   jobTemplate:
@@ -14,13 +15,13 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-highmem
+            nodePool: shared-persistent-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem
+            cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
           - name: hubspot-enrich-job
-            image: us.gcr.io/factors-production/hubspot-enrich-job:v0.82-2375b12d-1167
+            image: us.gcr.io/factors-production/hubspot-enrich-job:4e644a2a-2445
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -49,6 +50,16 @@ spec:
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
+            - --enable_property_type_from_db
+            - --property_details_cache_size
+            - "1000"
+            - --num_project_routines
+            - "1"
+            - --whitelisted_project_ids_property_type_check_from_db
+            - '*'
+            - --cache_with_sorted_set
+            - --num_unique_doc_routines
+            - "100"
             envFrom:
             - configMapRef:
                 name: config-env

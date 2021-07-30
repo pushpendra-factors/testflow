@@ -291,6 +291,7 @@ func mergeUserPropertiesByCustomerUserID(projectID uint64, users []model.User) (
 		}
 
 		for property := range *userProperties {
+
 			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
 			isAlreadySet, isInitialProperty := initialPropertiesVisitedMap[property]
 			if isInitialProperty {
@@ -434,6 +435,15 @@ func (pg *Postgres) UpdateUserPropertiesV2(projectID uint64, id string,
 		}
 	}
 
+	usersLength := len(users)
+	if usersLength > 50 {
+		logCtx.WithField("project_id", projectID).WithField("id", id).WithField("user_count", usersLength).Info("More than 50 users on user_properties merge.")
+	}
+
+	if usersLength > 100 {
+		metrics.Increment(metrics.IncrUserPropertiesMergeMoreThan100)
+	}
+
 	mergedByCustomerUserIDMap, errCode := mergeUserPropertiesByCustomerUserID(projectID, users)
 	if errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
@@ -444,15 +454,15 @@ func (pg *Postgres) UpdateUserPropertiesV2(projectID uint64, id string,
 	var hasFailure bool
 	var mergedPropertiesOfUserJSON *postgres.Jsonb
 	for _, user := range users {
-		// Overwrite the merged user_properites with original values.
-		mergedPropertiesAfterSkipMap := *mergedByCustomerUserIDMap
-		if _, userExists := userPropertiesOriginalValues[user.ID]; userExists {
-			for _, property := range model.UserPropertiesToSkipOnMergeByCustomerUserID {
-				mergedPropertiesAfterSkipMap[property] = userPropertiesOriginalValues[user.ID][property]
+		mergedPropertiesAfterSkipMap := U.GetFilteredMapBySkipList(mergedByCustomerUserIDMap, model.UserPropertiesToSkipOnMergeByCustomerUserID)
+		if _, userExist := userPropertiesOriginalValues[user.ID]; userExist {
+
+			for property := range userPropertiesOriginalValues[user.ID] {
+				(*mergedPropertiesAfterSkipMap)[property] = userPropertiesOriginalValues[user.ID][property]
 			}
 		}
 
-		mergedPropertiesAfterSkipJSON, err := U.EncodeToPostgresJsonb(&mergedPropertiesAfterSkipMap)
+		mergedPropertiesAfterSkipJSON, err := U.EncodeToPostgresJsonb(mergedPropertiesAfterSkipMap)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to marshal user properties merged by customer_user_id")
 			return nil, http.StatusInternalServerError

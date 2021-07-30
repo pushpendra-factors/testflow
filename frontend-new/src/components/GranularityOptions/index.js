@@ -1,7 +1,7 @@
 import React, { useMemo, memo } from 'react';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
 import { Dropdown, Menu, Button } from 'antd';
-import { DateBreakdowns, QUERY_TYPE_CAMPAIGN } from '../../utils/constants';
+import { DateBreakdowns } from '../../utils/constants';
 import styles from './index.module.scss';
 import { SVG } from '../factorsComponents';
 
@@ -16,7 +16,7 @@ function GranularityOptions({ durationObj, onClick, queryType }) {
         disabled: enabledOptions.indexOf(db.key) === -1,
       };
     });
-  }, [durationObj, queryType]);
+  }, [durationObj, queryType, validDateBreakdowns]);
 
   const currentValue = useMemo(() => {
     if (!durationObj) {
@@ -24,7 +24,7 @@ function GranularityOptions({ durationObj, onClick, queryType }) {
     }
     const { frequency } = durationObj;
     return validDateBreakdowns.find((elem) => elem.key === frequency);
-  }, [durationObj]);
+  }, [durationObj, validDateBreakdowns]);
 
   const menu = (
     <Menu className={styles.dropdownMenu}>

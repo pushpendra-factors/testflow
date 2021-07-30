@@ -7,7 +7,7 @@ import BarChart from '../../../components/BarChart';
 import SingleEventSingleBreakdownTable from '../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/SingleEventSingleBreakdownTable';
 import LineChart from '../../../components/HCLineChart';
 import StackedAreaChart from '../../../components/StackedAreaChart';
-import { generateColors } from '../../../utils/dataFormatter';
+import { generateColors, isSeriesChart } from '../../../utils/dataFormatter';
 import {
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
@@ -39,7 +39,7 @@ function SingleEventSingleBreakdown({
   }, [resultState.data]);
 
   const { categories, data } = useMemo(() => {
-    if (chartType === CHART_TYPE_BARCHART) {
+    if (!isSeriesChart(chartType)) {
       return {
         categories: [],
         data: [],
@@ -71,7 +71,11 @@ function SingleEventSingleBreakdown({
   }, [aggregateData]);
 
   if (!visibleProperties.length) {
-    return <NoDataChart />;
+    return (
+      <div className='flex justify-center items-center w-full h-full'>
+        <NoDataChart />
+      </div>
+    );
   }
 
   let chartContent = null;

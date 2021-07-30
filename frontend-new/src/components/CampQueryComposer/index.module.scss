@@ -45,3 +45,19 @@
     left: 0;
     
 }
+
+.group_block {
+    &__event_selector { 
+        position: absolute;
+        top: 44px;
+        left: 0;
+
+        &__btn {
+            position: relative;
+        }
+
+        .ant-select-selector {
+            border-radius: 12px;
+        }
+    }
+}

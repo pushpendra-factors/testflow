@@ -75,6 +75,8 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
 		false, "Enables SDK and Integration request queue duplication.")
+	segmentExcludedCustomerUserIDByProject := flag.String("segment_excluded_customer_user_ids", "",
+		"Map of project_id and customer_user_id to exclude identification on segment.")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -120,6 +122,8 @@ func main() {
 		},
 		CacheSortedSet:   *cacheSortedSet,
 		PrimaryDatastore: *primaryDatastore,
+		SegmentExcludedCustomerIDByProject: C.ParseProjectIDToStringMapFromConfig(
+			*segmentExcludedCustomerUserIDByProject, "SegmentExcludedCustomerIDByProject"),
 	}
 	C.InitConf(config)
 

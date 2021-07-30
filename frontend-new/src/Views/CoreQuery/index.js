@@ -54,7 +54,7 @@ import {
   EACH_USER_TYPE,
   REPORT_SECTION,
   INITIAL_SESSION_ANALYTICS_SEQ,
-  ATTRIBUTION_METRICS
+  ATTRIBUTION_METRICS,
 } from '../../utils/constants';
 import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
@@ -73,9 +73,12 @@ import {
   SET_COMPARISON_SUPPORTED,
   SET_COMPARE_DURATION,
   SET_NAVIGATED_FROM_DASHBOARD,
-  UPDATE_CHART_TYPES
+  UPDATE_CHART_TYPES,
 } from './constants';
-import { getValidGranularityOptions } from '../../utils/dataFormatter';
+import {
+  getValidGranularityOptions,
+  shouldDataFetch,
+} from '../../utils/dataFormatter';
 
 function CoreQuery({
   activeProject,
@@ -184,9 +187,12 @@ function CoreQuery({
     localDispatch({ type, payload });
   }, []);
 
-  const updateChartTypes = useCallback((payload) => {
-    updateLocalReducer(UPDATE_CHART_TYPES, payload)
-  }, [updateLocalReducer]);
+  const updateChartTypes = useCallback(
+    (payload) => {
+      updateLocalReducer(UPDATE_CHART_TYPES, payload);
+    },
+    [updateLocalReducer]
+  );
 
   const resetComparisonData = useCallback(() => {
     updateLocalReducer(RESET_COMPARISON_DATA);
@@ -214,7 +220,7 @@ function CoreQuery({
       }
       localDispatch({
         type: SET_COMPARISON_SUPPORTED,
-        payload: isComparisonEnabled(queryType, queries, groupBy),
+        payload: isComparisonEnabled(queryType, queries, groupBy, models),
       });
       if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
         setAppliedQueries(queries.map((elem) => elem.label));
@@ -226,6 +232,7 @@ function CoreQuery({
       groupBy,
       queries,
       queryType,
+      models,
       updateAppliedBreakdown,
       setNavigatedFromDashboard,
     ]
@@ -247,7 +254,12 @@ function CoreQuery({
   );
 
   const runQuery = useCallback(
-    async (isQuerySaved, durationObj, isCompareQuery) => {
+    async (
+      isQuerySaved,
+      durationObj,
+      isGranularityChange = false,
+      isCompareQuery = false
+    ) => {
       try {
         if (!durationObj) {
           durationObj = dateRange;
@@ -271,7 +283,7 @@ function CoreQuery({
         const res = await getEventsData(
           activeProject.id,
           query,
-          getDashboardConfigs(isQuerySaved)
+          getDashboardConfigs(isGranularityChange ? false : isQuerySaved) //we need to call fresh query when granularity is changed
         );
         const data = res.data.result || res.data;
         if (result_criteria === TOTAL_EVENTS_CRITERIA) {
@@ -396,25 +408,11 @@ function CoreQuery({
   );
 
   const runAttributionQuery = useCallback(
-    async (isQuerySaved, durationObj) => {
+    async (isQuerySaved, durationObj, isCompareQuery) => {
       try {
-        closeDrawer();
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        setShowResult(true);
-        setQuerySaved(isQuerySaved);
-        if (!isQuerySaved) {
-          setNavigatedFromDashboard(false);
-        }
-        localDispatch({
-          type: SET_COMPARISON_SUPPORTED,
-          payload: isComparisonEnabled(QUERY_TYPE_ATTRIBUTION),
-        });
-        updateResultState({
-          ...initialState,
-          loading: true,
-        });
         if (!durationObj) {
           durationObj = attr_dateRange;
+          resetComparisonData();
         }
         const query = getAttributionQuery(
           eventGoal,
@@ -427,24 +425,53 @@ function CoreQuery({
           linkedEvents,
           durationObj
         );
-        updateRequestQuery(query);
-        setAttributionsState({
-          eventGoal,
-          touchpoint,
-          models,
-          linkedEvents,
-          attr_dimensions,
-          date_range: { ...durationObj },
-        });
-        const res = await getAttributionsData(
-          activeProject.id,
-          query,
-          getDashboardConfigs(isQuerySaved)
-        );
-        updateResultState({
-          ...initialState,
-          data: res.data.result || res.data,
-        });
+        if (!isCompareQuery) {
+          configActionsOnRunningQuery(isQuerySaved);
+          updateResultState({ ...initialState, loading: true });
+          updateRequestQuery(query);
+          setAttributionsState({
+            eventGoal,
+            touchpoint,
+            models,
+            linkedEvents,
+            attr_dimensions,
+            date_range: { ...durationObj },
+          });
+        } else {
+          updateLocalReducer(COMPARISON_DATA_LOADING);
+        }
+        let apiCallStatus = { required: true, message: null };
+        if (
+          isQuerySaved &&
+          coreQueryState.navigatedFromDashboard &&
+          !isCompareQuery
+        ) {
+          apiCallStatus = shouldDataFetch(durationObj);
+        }
+        if (apiCallStatus.required) {
+          const res = await getAttributionsData(
+            activeProject.id,
+            query,
+            getDashboardConfigs(isQuerySaved)
+          );
+          if (isCompareQuery) {
+            updateLocalReducer(
+              COMPARISON_DATA_FETCHED,
+              res.data.result || res.data
+            );
+          } else {
+            updateResultState({
+              ...initialState,
+              data: res.data.result || res.data,
+              apiCallStatus,
+            });
+          }
+        } else {
+          updateResultState({
+            ...initialState,
+            apiCallStatus,
+          });
+        }
       } catch (err) {
         console.log(err);
         updateResultState({
@@ -454,7 +481,6 @@ function CoreQuery({
       }
     },
     [
-      dispatch,
       activeProject.id,
       eventGoal,
       linkedEvents,
@@ -466,13 +492,16 @@ function CoreQuery({
       attr_dateRange,
       updateResultState,
       attr_dimensions,
-      setNavigatedFromDashboard,
       getDashboardConfigs,
+      configActionsOnRunningQuery,
+      resetComparisonData,
+      updateLocalReducer,
+      coreQueryState.navigatedFromDashboard,
     ]
   );
 
   const runCampaignsQuery = useCallback(
-    async (isQuerySaved, durationObj = null) => {
+    async (isQuerySaved, durationObj = null, isGranularityChange = false) => {
       try {
         closeDrawer();
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
@@ -506,7 +535,7 @@ function CoreQuery({
         const res = await getCampaignsData(
           activeProject.id,
           query,
-          getDashboardConfigs(isQuerySaved)
+          getDashboardConfigs(isGranularityChange ? false : isQuerySaved) //we need to call fresh query when granularity is changed
         );
         updateResultState({
           ...initialState,
@@ -547,7 +576,7 @@ function CoreQuery({
             date_range: appliedDateRange,
           };
         });
-        runQuery(querySaved, appliedDateRange);
+        runQuery(querySaved, appliedDateRange, true);
       }
       if (queryType === QUERY_TYPE_CAMPAIGN) {
         const payload = {
@@ -555,7 +584,7 @@ function CoreQuery({
           frequency,
         };
         dispatch({ type: SET_CAMP_DATE_RANGE, payload });
-        runCampaignsQuery(querySaved, payload);
+        runCampaignsQuery(querySaved, payload, true);
       }
     },
     [
@@ -573,7 +602,9 @@ function CoreQuery({
     (dates, isCompareDate) => {
       let from,
         to,
-        frequency = 'date';
+        frequency = 'date',
+        { dateType } = dates;
+
       if (Array.isArray(dates.startDate)) {
         from = dates.startDate[0];
         to = dates.startDate[1];
@@ -581,18 +612,25 @@ function CoreQuery({
         from = dates.startDate;
         to = dates.endDate;
       }
+
       if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) {
         frequency = getValidGranularityOptions({ from, to }, queryType)[0];
       }
+
+      const payload = {
+        from: moment(from).startOf('day'),
+        to: moment(to).endOf('day'),
+        frequency,
+        dateType,
+      };
+
       if (!isCompareDate) {
         setQueryOptions((currState) => {
           return {
             ...currState,
             date_range: {
               ...currState.date_range,
-              from,
-              to,
-              frequency,
+              ...payload,
             },
           };
         });
@@ -601,15 +639,13 @@ function CoreQuery({
       if (isCompareDate) {
         localDispatch({
           type: SET_COMPARE_DURATION,
-          payload: { from, to, frequency },
+          payload: { from, to, frequency, dateType },
         });
       }
 
       const appliedDateRange = {
         ...queryOptions.date_range,
-        from,
-        to,
-        frequency,
+        ...payload,
       };
 
       if (queryType === QUERY_TYPE_FUNNEL) {
@@ -620,23 +656,16 @@ function CoreQuery({
       }
 
       if (queryType === QUERY_TYPE_CAMPAIGN) {
-        const payload = {
-          from: moment(from).startOf('day'),
-          to: moment(to).endOf('day'),
-          frequency,
-        };
         dispatch({ type: SET_CAMP_DATE_RANGE, payload });
         runCampaignsQuery(querySaved, payload);
       }
 
       if (queryType === QUERY_TYPE_ATTRIBUTION) {
-        const payload = {
-          from: moment(from).startOf('day'),
-          to: moment(to).endOf('day'),
-          frequency,
-        };
-        dispatch({ type: SET_ATTR_DATE_RANGE, payload });
-        runAttributionQuery(querySaved, payload);
+        if (!isCompareDate) {
+          // set range in reducer only when original date is changed and not the comparisom date
+          dispatch({ type: SET_ATTR_DATE_RANGE, payload });
+        }
+        runAttributionQuery(querySaved, payload, isCompareDate);
       }
     },
     [
@@ -755,9 +784,6 @@ function CoreQuery({
           </Text>
         </div>
         <div className={'flex justify-end items-center'}>
-          {/* <Button size={"large"} type="text">
-            <SVG name="play"></SVG>Help
-          </Button> */}
           <Button size={'large'} type='text' onClick={() => closeDrawer()}>
             <SVG name='times'></SVG>
           </Button>
@@ -765,10 +791,6 @@ function CoreQuery({
       </div>
     );
   };
-
-  let eventsMapper = {};
-  let reverseEventsMapper = {};
-  let arrayMapper = [];
 
   const campaignsArrayMapper = useMemo(() => {
     return campaignState.select_metrics.map((metric, index) => {
@@ -780,16 +802,16 @@ function CoreQuery({
     });
   }, [campaignState.select_metrics]);
 
-  appliedQueries.forEach((q, index) => {
-    eventsMapper[`${q}`] = `event${index + 1}`;
-    reverseEventsMapper[`event${index + 1}`] = q;
-    arrayMapper.push({
-      eventName: q,
-      index,
-      mapper: `event${index + 1}`,
-      displayName: eventNames[q] || q,
+  const arrayMapper = useMemo(() => {
+    return appliedQueries.map((q, index) => {
+      return {
+        eventName: q,
+        index,
+        mapper: `event${index + 1}`,
+        displayName: eventNames[q] || q,
+      };
     });
-  });
+  }, [appliedQueries, eventNames]);
 
   const renderQueryComposer = () => {
     if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
@@ -876,7 +898,6 @@ function CoreQuery({
               querySaved={querySaved}
               setQuerySaved={setQuerySaved}
               durationObj={queryOptions.date_range}
-              cmprDuration={null}
               handleDurationChange={handleDurationChange}
               arrayMapper={arrayMapper}
               queryOptions={queryOptions}

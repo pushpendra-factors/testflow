@@ -53,8 +53,14 @@ func (pg *Postgres) GetPropertyTypeFromDB(projectID uint64, eventName, propertyK
 	}
 
 	if len(propertyDetails) > 1 {
-		logCtx.Error("More than one match found on getPropertyTypeFromDB.")
-		return http.StatusMultipleChoices, nil
+		pType := ""
+		for i := range propertyDetails {
+			if pType != "" && propertyDetails[i].Type != pType {
+				logCtx.Error("More than one match found on getPropertyTypeFromDB.")
+				return http.StatusMultipleChoices, &propertyDetails[0]
+			}
+			pType = propertyDetails[i].Type
+		}
 	}
 
 	if len(propertyDetails) < 1 {
@@ -92,10 +98,18 @@ func (pg *Postgres) CreatePropertyDetails(projectID uint64, eventName, propertyK
 			return http.StatusConflict
 		}
 
-		status = pg.updatePropertyDetails(projectID, *propertyDetail.EventNameID, propertyDetail.Key, propertyDetail.Type, propertyDetail.Entity, propertyType)
-		if status != http.StatusAccepted {
-			logCtx.Error("Failed to update property details.")
-			return http.StatusInternalServerError
+		if isUserProperty {
+			status = pg.updatePropertyDetails(projectID, "", propertyDetail.Key, propertyDetail.Type, propertyDetail.Entity, propertyType)
+			if status != http.StatusAccepted {
+				logCtx.Error("Failed to update property details.")
+				return http.StatusInternalServerError
+			}
+		} else {
+			status = pg.updatePropertyDetails(projectID, *propertyDetail.EventNameID, propertyDetail.Key, propertyDetail.Type, propertyDetail.Entity, propertyType)
+			if status != http.StatusAccepted {
+				logCtx.Error("Failed to update property details.")
+				return http.StatusInternalServerError
+			}
 		}
 
 		return http.StatusAccepted
@@ -266,9 +280,18 @@ func (pg *Postgres) deletePropertyDetailsIfExist(projectID uint64, eventName, ke
 		return http.StatusNotFound
 	}
 
+	entity := model.GetEntity(isUserProperty)
+	whereStmnt := "project_id = ? AND key = ? AND entity = ?"
+	whereParams := []interface{}{projectID, key, entity}
+
+	if !isUserProperty {
+		whereStmnt = whereStmnt + " AND " + " event_name_id = ?"
+		whereParams = append(whereParams, *propertyDetail.EventNameID)
+	}
+
 	db := C.GetServices().Db
 
-	if err := db.Delete(propertyDetail).Error; err != nil {
+	if err := db.Where(whereStmnt, whereParams...).Delete(&model.PropertyDetail{}).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to delete property details")
 		return http.StatusInternalServerError
 	}
@@ -282,10 +305,12 @@ func (pg *Postgres) updatePropertyDetails(projectID uint64, eventNameID string, 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_key": key, "property_type": propertyType, "event_name_id": eventNameID})
 
 	if projectID == 0 || key == "" || propertyType == "" || newPropertyType == "" {
+		logCtx.Error("Invalid params.")
 		return http.StatusBadRequest
 	}
 
 	if entity != model.EntityUser && eventNameID == "" {
+		logCtx.Error("Invalid entity.")
 		return http.StatusBadRequest
 	}
 
@@ -293,9 +318,15 @@ func (pg *Postgres) updatePropertyDetails(projectID uint64, eventNameID string, 
 		"type": newPropertyType,
 	}
 
+	whereStmtn := "project_id = ? AND key = ? AND type = ? AND entity = ?"
+	whereParams := []interface{}{projectID, key, propertyType, entity}
+	if eventNameID != "" {
+		whereStmtn = whereStmtn + " AND " + "event_name_id = ?"
+		whereParams = append(whereParams, eventNameID)
+	}
+
 	db := C.GetServices().Db
-	query := db.Model(&model.PropertyDetail{}).Where("project_id = ? AND key = ? AND type = ? ",
-		projectID, key, propertyType).Updates(updateFields)
+	query := db.Model(&model.PropertyDetail{}).Where(whereStmtn, whereParams...).Updates(updateFields)
 
 	if err := query.Error; err != nil {
 		logCtx.WithError(err).Error("Failed updating property details.")

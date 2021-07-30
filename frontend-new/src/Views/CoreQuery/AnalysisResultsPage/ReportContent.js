@@ -24,6 +24,7 @@ import CampaignMetricsDropdown from './CampaignMetricsDropdown';
 import EventsAnalytics from '../EventsAnalytics';
 import WebsiteAnalyticsTable from '../../Dashboard/WebsiteAnalytics/WebsiteAnalyticsTable';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
+import { Text, SVG } from '../../../components/factorsComponents';
 
 function ReportContent({
   resultState,
@@ -41,9 +42,7 @@ function ReportContent({
   eventPage,
   section,
   onReportClose,
-  cmprDuration,
   runAttrCmprQuery,
-  cmprResultState,
   campaignsArrayMapper,
   handleGranularityChange,
   updateChartTypes,
@@ -125,6 +124,17 @@ function ReportContent({
     );
   }
 
+  if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {
+    content = (
+      <div className='h-64 flex flex-col items-center justify-center w-full'>
+        <SVG name='nodata' />
+        <Text type='title' color='grey' extraClass='mb-0'>
+          {resultState.apiCallStatus.message}
+        </Text>
+      </div>
+    );
+  }
+
   if (queryType === QUERY_TYPE_WEB) {
     durationObj = queryOptions.date_range;
     queryDetail = 'Website Analytics';
@@ -198,9 +208,7 @@ function ReportContent({
       content = (
         <AttributionsResult
           resultState={resultState}
-          compareResult={cmprResultState}
           durationObj={durationObj}
-          cmprDuration={cmprDuration}
           attributionsState={attributionsState}
           section={section}
           currMetricsValue={currMetricsValue}
@@ -247,6 +255,7 @@ function ReportContent({
         section={section}
         onReportClose={onReportClose}
         queryType={queryType}
+        apiCallStatus={resultState.apiCallStatus}
       />
       <div className='mt-6'>
         <CalendarRow
@@ -258,7 +267,6 @@ function ReportContent({
           chartType={chartType}
           metricsDropdown={metricsDropdown}
           triggerAttrComparision={runAttrCmprQuery}
-          cmprResultState={cmprResultState}
           handleGranularityChange={handleGranularityChange}
           section={section}
         />

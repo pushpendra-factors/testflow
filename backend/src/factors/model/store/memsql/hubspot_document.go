@@ -150,6 +150,35 @@ func getHubspotDocumentByIdAndType(projectId uint64, id string, docType int) ([]
 	return documents, http.StatusFound
 }
 
+func (store *MemSQL) GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, docID string) ([]model.HubspotDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_id": docID})
+	if projectID == 0 || docID == "" {
+		logCtx.Error("Invalid parameters on GetHubspotContactCreatedSyncIDAndUserID.")
+		return nil, http.StatusBadRequest
+	}
+
+	documents := []model.HubspotDocument{}
+
+	db := C.GetServices().Db
+	err := db.Select("sync_id, user_id, timestamp").Where("project_id = ? AND id = ? AND type = ? AND action = ? AND synced=true",
+		projectID, docID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated).Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot contact created document.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) < 1 {
+		return nil, http.StatusNotFound
+	}
+
+	if len(documents) > 1 {
+
+		return documents, http.StatusMultipleChoices
+	}
+
+	return documents, http.StatusFound
+}
+
 func (store *MemSQL) GetHubspotDocumentByTypeAndActions(projectId uint64, ids []string,
 	docType int, actions []int) ([]model.HubspotDocument, int) {
 
@@ -590,6 +619,59 @@ func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId uint64, typ int)
 	return documents, http.StatusFound
 }
 
+// GetHubspotDocumentBeginingTimestampByDocumentTypeForSync returns the minimum timestamp for unsynced document
+func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64) (int64, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	if projectID == 0 {
+		logCtx.Error("Invalid project_id.")
+		return 0, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	rows, err := db.Raw("SELECT MIN(timestamp) FROM hubspot_documents WHERE project_id=? AND synced=false", projectID).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot minimum timestamp.")
+		return 0, http.StatusInternalServerError
+	}
+
+	var minTimestamp *int64
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(&minTimestamp); err != nil {
+			log.WithError(err).Error("Failed scanning rows on get hubspot minimum timestamp for sync.")
+		}
+	}
+
+	if minTimestamp == nil {
+		return 0, http.StatusNotFound
+	}
+
+	return *minTimestamp, http.StatusFound
+}
+
+// GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
+func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "type": docType, "from": from, "to": to})
+
+	if projectID == 0 || docType == 0 || from < 0 || to < 0 {
+		logCtx.Error("Invalid project_id or type on get hubspot documents by type.")
+		return nil, http.StatusBadRequest
+	}
+
+	var documents []model.HubspotDocument
+
+	db := C.GetServices().Db
+	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ?",
+		projectID, docType, from, to).Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return documents, http.StatusFound
+}
+
 func (store *MemSQL) GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string,
 	stage string) (*model.HubspotDocument, int) {
 
@@ -784,7 +866,7 @@ func (store *MemSQL) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, o
 	return getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments, propertyName, 100)
 }
 
-func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, syncId string, timestamp int64, action int, userID string) int {
+func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int, syncId string, timestamp int64, action int, userID string) int {
 	logCtx := log.WithField("project_id", projectId).WithField("id", id)
 
 	updates := make(map[string]interface{}, 0)
@@ -798,8 +880,8 @@ func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, 
 	}
 
 	db := C.GetServices().Db
-	err := db.Model(&model.HubspotDocument{}).Where("project_id = ? AND id = ? AND timestamp= ? AND action = ?",
-		projectId, id, timestamp, action).Updates(updates).Error
+	err := db.Model(&model.HubspotDocument{}).Where("project_id = ? AND id = ? AND timestamp= ? AND action = ? AND type= ?",
+		projectId, id, timestamp, action, docType).Updates(updates).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update hubspot document as synced.")
 		return http.StatusInternalServerError
@@ -808,41 +890,21 @@ func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, 
 	return http.StatusAccepted
 }
 
-// GetLastSyncedHubspotDocumentByCustomerUserIDORUserID returns latest synced record by customer_user_id or user_id.
-func (store *MemSQL) GetLastSyncedHubspotDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.HubspotDocument, int) {
-	if projectID == 0 {
+// GetLastSyncedHubspotDocumentByID returns latest synced record by document id.
+func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_id": docID, "doc_type": docType})
+
+	if projectID == 0 || docType == 0 || docID == "" {
+		logCtx.Error("Missing required field")
 		return nil, http.StatusBadRequest
 	}
-
-	if userID == "" || docType == 0 {
-		return nil, http.StatusBadRequest
-	}
-
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "customer_user_id": customerUserID, "doc_type": docType})
 
 	db := C.GetServices().Db
 
-	var whereStmn string
-	var whereParams []interface{}
-
-	if customerUserID != "" {
-		userIDs, status := store.GetAllUserIDByCustomerUserID(projectID, customerUserID)
-		if status == http.StatusFound {
-			whereStmn = "type = ? AND project_id=? AND user_id IN(?) AND synced = true"
-			whereParams = []interface{}{docType, projectID, userIDs}
-		} else {
-			logCtx.Error("Failed to GetAllUserIDByCustomerUserID.")
-		}
-	}
-
-	if customerUserID == "" || whereStmn == "" {
-		whereStmn = "type = ? AND synced = true AND project_id=? AND user_id = ? "
-		whereParams = []interface{}{docType, projectID, userID}
-	}
-
 	var document []model.HubspotDocument
 
-	if err := db.Where(whereStmn, whereParams...).Order("timestamp DESC").First(&document).Error; err != nil {
+	if err := db.Where("project_id = ? AND type = ? AND id = ? and synced=true",
+		projectID, docType, docID).Order("timestamp DESC").First(&document).Error; err != nil {
 		if !gorm.IsRecordNotFoundError(err) {
 			logCtx.WithError(err).Error("Failed to get latest hubspot document by userID.")
 			return nil, http.StatusInternalServerError

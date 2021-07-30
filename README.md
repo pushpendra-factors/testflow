@@ -15,6 +15,11 @@ brew services restart postgresql@9.6
 
 Check and add the path to $PATH `/usr/local/Cellar/postgresql@9.6/9.6.20/bin` for postgres binaries.
 
+## MemSQL/Singlestore Setup:
+
+Please follow the instructions on the below doc for local setup.</br>
+https://adjoining-bubbler-644.notion.site/MemSQL-Documentation-cb28eefa9bd340ed9f97725010e9fc5a
+
 ## Redis Setup (Homebrew):
 
 * Install
@@ -129,10 +134,22 @@ export GOPATH=$PATH_TO_FACTORS/factors/backend
 ```
 
 * Create tables
+
+**Postgres**
 ```
 cd $PATH_TO_FACTORS/factors/backend/src/factors/scripts/run_db_create
 go run run_db_create.go
 ```
+
+**MemSQL/Singlestore**
+
+* Visit http://localhost:8040   
+* Login with the local username and password.   
+* Select SQL Editor on the left pan.    
+* Paste the contents of the file on `<PATH_TO_REPO>/backend/src/factors/migrations/db/memsql/1_create_schema.sql` on the editor.    
+* Select all and Click Run.   
+
+Refer: https://adjoining-bubbler-644.notion.site/MemSQL-Documentation-cb28eefa9bd340ed9f97725010e9fc5a   
 
 * Build
 ```
@@ -184,7 +201,7 @@ cd $GOPATH/bin
     ```
 
 ## Frontend.
-* Download and install Nodejs. https://nodejs.org/en/download/
+* Download and install Nodejs. https://nodejs.org/en/download/ (Node version 12 or 14.)
 ```
 export PATH_TO_FACTORS=~/repos
 cd $PATH_TO_FACTORS/factors/frontend-new

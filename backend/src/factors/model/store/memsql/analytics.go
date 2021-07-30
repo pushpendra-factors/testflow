@@ -262,7 +262,7 @@ ELSE date_trunc('day', to_timestamp((events.properties->>'check_Timestamp')::num
 WHERE events.project_id='1' AND timestamp>='1602527400' AND timestamp<='1602576868' AND events.event_name_id IN
 (SELECT id FROM event_names WHERE project_id='1' AND name='factors-dev.com:3000/#/settings') GROUP BY _group_key_0 ORDER BY count DESC LIMIT 100
 */
-func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string) (string, []interface{}) {
+func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timeZone string) (string, []interface{}) {
 	entityField := getPropertyEntityField(projectID, groupProp)
 	var groupSelect string
 	groupSelectParams := make([]interface{}, 0)
@@ -271,8 +271,10 @@ func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByP
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
 	} else {
-		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s, ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '' THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '0' THEN '%s' ELSE  date_trunc('%s', FROM_UNIXTIME(CONVERT(JSON_EXTRACT_STRING(%s, ?),DECIMAL(10)))) END AS %s",
-			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, groupProp.Granularity, entityField, groupKey)
+		propertyName := "JSON_EXTRACT_STRING(" + entityField + ", ?)"
+		timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, propertyName, timeZone)
+		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s, ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '' THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '0' THEN '%s' ELSE %s END AS %s",
+			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, timestampStr, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
 	}
 	return groupSelect, groupSelectParams
@@ -283,7 +285,7 @@ func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByP
 // How to use?
 // select user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2 from events
 // group by gk_1, gk_2
-func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty) (groupSelect string,
+func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty, timeZone string) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
 
 	groupSelectParams = make([]interface{}, 0)
@@ -291,7 +293,7 @@ func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty) (
 	for i, v := range groupProps {
 		// Order of group is preserved as received.
 		gKey := groupKeyByIndex(v.Index)
-		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelect(projectID, v, gKey)
+		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelect(projectID, v, gKey, timeZone)
 		groupSelect = groupSelect + noneHandledSelect
 		groupKeys = groupKeys + gKey
 		if i < len(groupProps)-1 {
@@ -557,9 +559,9 @@ func hasGroupEntity(props []model.QueryGroupByProperty, entity string) bool {
 }
 
 func addJoinLatestUserPropsQuery(projectID uint64, groupProps []model.QueryGroupByProperty,
-	refStepName string, stepName string, qStmnt *string, qParams *[]interface{}, addSelect string) string {
+	refStepName string, stepName string, qStmnt *string, qParams *[]interface{}, addSelect string, timeZone string) string {
 
-	groupSelect, gSelectParams, gKeys := buildGroupKeys(projectID, groupProps)
+	groupSelect, gSelectParams, gKeys := buildGroupKeys(projectID, groupProps, timeZone)
 
 	rStmnt := "SELECT " + joinWithComma(groupSelect, addSelect) + " from " + refStepName +
 		" " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
@@ -600,8 +602,8 @@ func appendOrderByAggr(qStmnt string) string {
 	return fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, model.AliasAggr)
 }
 
-func appendOrderByAggrAndGroupKeys(projectID uint64, qStmnt string, groupBys []model.QueryGroupByProperty) string {
-	_, _, groupKeys := buildGroupKeys(projectID, groupBys)
+func appendOrderByAggrAndGroupKeys(projectID uint64, qStmnt string, groupBys []model.QueryGroupByProperty, timeZone string) string {
+	_, _, groupKeys := buildGroupKeys(projectID, groupBys, timeZone)
 	return joinWithComma(fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, model.AliasAggr), groupKeys)
 }
 
@@ -631,7 +633,7 @@ func getSelectTimestampByType(timestampType, timezone string) string {
 		selectStr = fmt.Sprintf("date_trunc('hour', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', '%s'))", selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
 		// default week is Monday to Sunday for memsql, updating it to Sunday to Saturday
-		selectStr = fmt.Sprintf("date_trunc('week', CONVERT_TZ(FROM_UNIXTIME(timestamp + (24*60*60)), 'UTC', '%s')) - INTERVAL '1 day'", selectTz)
+		selectStr = fmt.Sprintf("date_trunc('week', CONVERT_TZ(FROM_UNIXTIME(timestamp + (24*60*60)), 'UTC', '%s')) - INTERVAL 1 day", selectTz)
 	} else if timestampType == model.GroupByTimestampMonth {
 		selectStr = fmt.Sprintf("date_trunc('month', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', '%s'))", selectTz)
 	} else if timestampType == model.GroupByTimestampQuarter {
@@ -639,6 +641,33 @@ func getSelectTimestampByType(timestampType, timezone string) string {
 	} else {
 		// defaults to GroupByTimestampDate.
 		selectStr = fmt.Sprintf("date_trunc('day', CONVERT_TZ(FROM_UNIXTIME(timestamp), 'UTC', '%s'))", selectTz)
+	}
+
+	return selectStr
+}
+
+func getSelectTimestampByTypeAndPropertyName(timestampType, propertyName, timezone string) string {
+	var selectTz string
+
+	if timezone == "" {
+		selectTz = model.DefaultTimezone
+	} else {
+		selectTz = timezone
+	}
+	propertyToNum := "CONVERT(" + propertyName + ", DECIMAL(10))"
+	var selectStr string
+	if timestampType == model.GroupByTimestampHour {
+		selectStr = fmt.Sprintf("date_trunc('hour', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
+	} else if timestampType == model.GroupByTimestampWeek {
+		// default week is Monday to Sunday for memsql, updating it to Sunday to Saturday
+		selectStr = fmt.Sprintf("date_trunc('week', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+" + (24*60*60)), 'UTC', '%s')) - INTERVAL 1 day", selectTz)
+	} else if timestampType == model.GroupByTimestampMonth {
+		selectStr = fmt.Sprintf("date_trunc('month', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
+	} else if timestampType == model.GroupByTimestampQuarter {
+		selectStr = fmt.Sprintf("date_trunc('quarter', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
+	} else {
+		// defaults to GroupByTimestampDate.
+		selectStr = fmt.Sprintf("date_trunc('day', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
 	}
 
 	return selectStr

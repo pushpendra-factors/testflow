@@ -148,8 +148,15 @@ func ReportOverallJobSummary(commonKey uint64, values func(*CacheResponse) bool)
 	return message
 }
 
+// CachingJobProps Job level properties to store custom flags for the run.
+type CachingJobProps struct {
+	OnlyAttribution int
+	SkipAttribution int
+}
+
 type GetDashboardUnitCachePayloadsFn struct {
-	Config *C.Configuration
+	Config   *C.Configuration
+	JobProps *CachingJobProps
 }
 
 func (f *GetDashboardUnitCachePayloadsFn) StartBundle(ctx context.Context, emit func(model.BeamDashboardUnitCachePayload)) {
@@ -180,8 +187,13 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 		for _, dashboardUnit := range dashboardUnits {
 			queryClass, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 			if errMsg == "" && queryClass != model.QueryClassWeb {
-				for _, rangeFunction := range U.QueryDateRangePresets {
-					from, to := rangeFunction()
+				for preset, rangeFunction := range U.QueryDateRangePresets {
+					fr, t := rangeFunction()
+					// Filtering queries on type and range for attribution query
+					shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t, f.JobProps.OnlyAttribution, f.JobProps.SkipAttribution)
+					if !shouldCache {
+						continue
+					}
 					cachePayload := model.BeamDashboardUnitCachePayload{
 						DashboardUnit: dashboardUnit,
 						QueryClass:    queryClass,

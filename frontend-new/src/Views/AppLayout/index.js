@@ -19,6 +19,7 @@ import PageSuspenseLoader from "../../components/SuspenseLoaders/PageSuspenseLoa
 import retryDynamicImport from 'Utils/dynamicImport';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
+import {fetchWeeklyIngishtsMetaData} from 'Reducers/insights';
 
 // const CoreQuery = lazy(()=>retryDynamicImport(() => import("../CoreQuery")));
 // const Dashboard = lazy(()=>retryDynamicImport(() => import("../Dashboard")));
@@ -31,7 +32,8 @@ import Factors from "../Factors";
 function AppLayout({ fetchProjects, 
   fetchEventNames,
   getEventProperties,
-  getUserProperties 
+  getUserProperties,
+  fetchWeeklyIngishtsMetaData
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const { Content } = Layout;
@@ -63,6 +65,7 @@ function AppLayout({ fetchProjects,
       getUserProperties(active_project.id);
       getEventProperties(active_project.id);
       fetchSmartPropertyRules(dispatch, active_project.id);
+      fetchWeeklyIngishtsMetaData(active_project.id);
     }
   }, [dispatch, active_project.id]);
 
@@ -120,7 +123,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchDashboards,
       fetchEventNames,
       getEventProperties,
-      getUserProperties
+      getUserProperties,
+      fetchWeeklyIngishtsMetaData
     },
     dispatch
   );

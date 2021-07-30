@@ -1046,6 +1046,260 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 	})
 }
 
+func TestCustomerUserIdOfSegmentUser(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/integrations/segment"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	enable := true
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	eventTimestamp := time.Unix(timestamp, 0).Format(time.RFC3339)
+
+	t.Run("TestCustomerUserIDForEventWithUserID", func(t *testing.T) {
+		customerUserID := U.RandomLowerAphaNumString(5)
+		samplePagePayload := fmt.Sprintf(`
+		{
+			"_metadata": {
+			  "bundled": [
+				"Segment.io"
+			  ],
+			  "unbundled": [
+				
+			  ]
+			},
+			"anonymousId": "80444c7e-1580-4d3c-a77a-2f3427ed7d991",
+			"channel": "client",
+			"context": {
+				"active": true,
+				"app": {
+				  "name": "InitechGlobal",
+				  "version": "545",
+				  "build": "3.0.1.545",
+				  "namespace": "com.production.segment"
+				},
+				"campaign": {
+				  "name": "TPS Innovation Newsletter",
+				  "source": "Newsletter",
+				  "medium": "email",
+				  "term": "tps reports",
+				  "content": "image link"
+				},
+				"device": {
+				  "id": "B5372DB0-C21E-11E4-8DFC-AA07A5B093DB",
+				  "advertisingId": "7A3CBEA0-BDF5-11E4-8DFC-AA07A5B093DB",
+				  "adTrackingEnabled": true,
+				  "manufacturer": "Apple",
+				  "model": "iPhone7,2",
+				  "name": "maguro",
+				  "type": "ios",
+				  "token": "ff15bc0c20c4aa6cd50854ff165fd265c838e5405bfeb9571066395b8c9da449"
+				},
+				"ip": "8.8.8.8",
+				"library": {
+				  "name": "analytics.js",
+				  "version": "2.11.1"
+				},
+				"locale": "nl-NL",
+				"location": {
+				  "city": "San Francisco",
+				  "country": "United States",
+				  "latitude": 40.2964197,
+				  "longitude": -76.9411617,
+				  "speed": 0
+				},
+				"network": {
+				  "bluetooth": false,
+				  "carrier": "T-Mobile NL",
+				  "cellular": true,
+				  "wifi": false
+				},
+				"os": {
+				  "name": "iPhone OS",
+				  "version": "8.1.3"
+				},
+				"page": {
+				  "path": "/academy/",
+				  "referrer": "https://google.com",
+				  "search": "",
+				  "title": "Analytics Academy",
+				  "url": "https://segment.com/academy/"
+				},
+				"referrer": {
+				  "id": "ABCD582CDEFFFF01919",
+				  "type": "dataxu"
+				},
+				"screen": {
+				  "width": 320,
+				  "height": 568,
+				  "density": 2
+				},
+				"groupId": "12345",
+				"timezone": "Europe/Amsterdam",
+				"userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
+			},
+			"integrations": {},
+			"messageId": "ajs-19c084e2f80e70cf62bb62509e79b37e",
+			"originalTimestamp": "2019-01-08T16:22:06.053Z",
+			"projectId": "Zzft38QJhB",
+			"properties": {
+			  "path": "/segment.test.html",
+			  "referrer": "",
+			  "search": "?a=10",
+			  "title": "Segment Test",
+			  "url": "http://localhost:8090/segment.test.html?a=10"
+			},
+			"receivedAt": "2019-01-08T16:21:54.106Z",
+			"sentAt": "2019-01-08T16:22:06.058Z",
+			"timestamp": "%s",
+			"type": "page",
+			"userId": "%s",
+			"version": "1.1"
+		  }
+		`, eventTimestamp, customerUserID)
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(samplePagePayload),
+			map[string]string{"Authorization": project.PrivateToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse2, _ := ioutil.ReadAll(w.Body)
+		var jsonResponseMap2 map[string]interface{}
+		json.Unmarshal(jsonResponse2, &jsonResponseMap2)
+		assert.Nil(t, jsonResponseMap2["error"])
+		assert.NotEmpty(t, jsonResponseMap2["event_id"])
+		assert.NotEmpty(t, jsonResponseMap2["user_id"])
+		user, errCode := store.GetStore().GetUser(project.ID, jsonResponseMap2["user_id"].(string))
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, user.CustomerUserId, customerUserID)
+	})
+
+	t.Run("TestCustomerUserIDForExcludedCustomerUserID", func(t *testing.T) {
+		customerUserID := U.RandomLowerAphaNumString(5)
+
+		// Exclude for project and customer_user_id
+		C.GetConfig().SegmentExcludedCustomerIDByProject = map[uint64]string{
+			project.ID: customerUserID,
+		}
+
+		samplePagePayload := fmt.Sprintf(`
+		{
+			"_metadata": {
+			  "bundled": [
+				"Segment.io"
+			  ],
+			  "unbundled": [
+				
+			  ]
+			},
+			"anonymousId": "80444c7e-1580-4d3c-a77a-2f3427ed7d995",
+			"channel": "client",
+			"context": {
+				"active": true,
+				"app": {
+				  "name": "InitechGlobal",
+				  "version": "545",
+				  "build": "3.0.1.545",
+				  "namespace": "com.production.segment"
+				},
+				"campaign": {
+				  "name": "TPS Innovation Newsletter",
+				  "source": "Newsletter",
+				  "medium": "email",
+				  "term": "tps reports",
+				  "content": "image link"
+				},
+				"device": {
+				  "id": "B5372DB0-C21E-11E4-8DFC-AA07A5B093DB",
+				  "advertisingId": "7A3CBEA0-BDF5-11E4-8DFC-AA07A5B093DB",
+				  "adTrackingEnabled": true,
+				  "manufacturer": "Apple",
+				  "model": "iPhone7,2",
+				  "name": "maguro",
+				  "type": "ios",
+				  "token": "ff15bc0c20c4aa6cd50854ff165fd265c838e5405bfeb9571066395b8c9da449"
+				},
+				"ip": "8.8.8.8",
+				"library": {
+				  "name": "analytics.js",
+				  "version": "2.11.1"
+				},
+				"locale": "nl-NL",
+				"location": {
+				  "city": "San Francisco",
+				  "country": "United States",
+				  "latitude": 40.2964197,
+				  "longitude": -76.9411617,
+				  "speed": 0
+				},
+				"network": {
+				  "bluetooth": false,
+				  "carrier": "T-Mobile NL",
+				  "cellular": true,
+				  "wifi": false
+				},
+				"os": {
+				  "name": "iPhone OS",
+				  "version": "8.1.3"
+				},
+				"page": {
+				  "path": "/academy/",
+				  "referrer": "https://google.com",
+				  "search": "",
+				  "title": "Analytics Academy",
+				  "url": "https://segment.com/academy/"
+				},
+				"referrer": {
+				  "id": "ABCD582CDEFFFF01919",
+				  "type": "dataxu"
+				},
+				"screen": {
+				  "width": 320,
+				  "height": 568,
+				  "density": 2
+				},
+				"groupId": "12345",
+				"timezone": "Europe/Amsterdam",
+				"userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
+			},
+			"integrations": {},
+			"messageId": "ajs-19c084e2f80e70cf62bb62509e79bxxx",
+			"originalTimestamp": "2019-01-08T16:22:06.053Z",
+			"projectId": "Zzft38QJhB",
+			"properties": {
+			  "path": "/segment.test.html",
+			  "referrer": "",
+			  "search": "?a=10",
+			  "title": "Segment Test",
+			  "url": "http://localhost:8090/segment.test.html?a=10"
+			},
+			"receivedAt": "2019-01-08T16:21:54.106Z",
+			"sentAt": "2019-01-08T16:22:06.058Z",
+			"timestamp": "%s",
+			"type": "page",
+			"userId": "%s",
+			"version": "1.1"
+		  }
+		`, eventTimestamp, customerUserID)
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(samplePagePayload),
+			map[string]string{"Authorization": project.PrivateToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse2, _ := ioutil.ReadAll(w.Body)
+		var jsonResponseMap2 map[string]interface{}
+		json.Unmarshal(jsonResponse2, &jsonResponseMap2)
+		assert.Nil(t, jsonResponseMap2["error"])
+		assert.NotEmpty(t, jsonResponseMap2["event_id"])
+		assert.NotEmpty(t, jsonResponseMap2["user_id"])
+		user, errCode := store.GetStore().GetUser(project.ID, jsonResponseMap2["user_id"].(string))
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotEqual(t, user.CustomerUserId, customerUserID)
+		assert.Empty(t, user.CustomerUserId)
+	})
+}
+
 func TestSegmentTrackEventForBlockedToken(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()

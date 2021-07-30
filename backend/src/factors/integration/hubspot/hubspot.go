@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -198,22 +199,21 @@ func getEventTimestamp(timestamp int64) int64 {
 /*
 GetHubspotSmartEventPayload return smart event payload if the rule successfully gets passed.
 WITHOUT PREVIOUS PROPERTY :- A query will be made for previous synced record which
-will require userID or customerUserID and doctType
-WITH PREVIOUS PROPERTY := userID, customerUserID and doctType won't be used
+will require docID and doctType
+WITH PREVIOUS PROPERTY := docID and doctType won't be used
 */
-func GetHubspotSmartEventPayload(projectID uint64, eventName, customerUserID, userID string,
+func GetHubspotSmartEventPayload(projectID uint64, eventName, docID string,
 	docType int, currentProperties, prevProperties *map[string]interface{},
 	filter *model.SmartCRMEventFilter) (*model.CRMSmartEvent, *map[string]interface{}, bool) {
 
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_id": docID, "doc_type": docType, "filter": filter})
 	var crmSmartEvent model.CRMSmartEvent
 	var validProperty bool
 	var newProperties map[string]interface{}
 
-	if projectID == 0 || eventName == "" || filter == nil || currentProperties == nil {
-		return nil, prevProperties, false
-	}
-
-	if prevProperties == nil && (docType == 0 || userID == "") {
+	if projectID == 0 || eventName == "" || filter == nil || currentProperties == nil ||
+		(prevProperties == nil && (docType == 0 || docID == "")) {
+		logCtx.Error("Missing required fields")
 		return nil, prevProperties, false
 	}
 
@@ -223,14 +223,12 @@ func GetHubspotSmartEventPayload(projectID uint64, eventName, customerUserID, us
 		validProperty = model.CRMFilterEvaluator(projectID, currentProperties, nil, filter, model.CompareStateCurr)
 	}
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
-
 	if !validProperty {
 		return nil, prevProperties, false
 	}
 
 	if prevProperties == nil {
-		prevDoc, status := store.GetStore().GetLastSyncedHubspotDocumentByCustomerUserIDORUserID(projectID, customerUserID, userID, docType)
+		prevDoc, status := store.GetStore().GetLastSyncedHubspotDocumentByID(projectID, docID, docType)
 		if status != http.StatusFound && status != http.StatusNotFound {
 			return nil, prevProperties, false
 		}
@@ -293,7 +291,7 @@ func getTimestampFromField(projectID uint64, propertyName string, properties *ma
 }
 
 // TrackHubspotSmartEvent validates hubspot current properties with CRM smart filter and creates a event
-func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, customerUserID, userID string, docType int,
+func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, docID, userID string, docType int,
 	currentProperties, prevProperties *map[string]interface{}, defaultTimestamp int64, usingFallbackUserID bool) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
@@ -310,8 +308,8 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 		return prevProperties
 	}
 
-	smartEventPayload, prevProperties, valid = GetHubspotSmartEventPayload(projectID, hubspotSmartEventName.EventName, customerUserID,
-		userID, docType, currentProperties, prevProperties, hubspotSmartEventName.Filter)
+	smartEventPayload, prevProperties, valid = GetHubspotSmartEventPayload(projectID, hubspotSmartEventName.EventName, docID,
+		docType, currentProperties, prevProperties, hubspotSmartEventName.Filter)
 	if !valid {
 		return prevProperties
 	}
@@ -529,7 +527,7 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, 
 					docType,
 					fieldName,
 				), docType, label, model.SmartCRMEventSourceHubspot)
-				if err != http.StatusCreated {
+				if err != http.StatusCreated && err != http.StatusConflict {
 					logCtx.Error("Failed to create or update display name")
 				}
 			}
@@ -567,7 +565,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 	if !exists {
 		logCtx.Error("Missing lead_guid on hubspot contact properties. Sync failed.")
 		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
-			projectID, document.ID, "", document.Timestamp, document.Action, "")
+			projectID, document.ID, model.HubspotDocumentTypeContact, "", document.Timestamp, document.Action, "")
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update hubspot contact document as synced.")
 			return http.StatusInternalServerError
@@ -588,7 +586,6 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 
 	customerUserID := getCustomerUserIDFromProperties(projectID, *enProperties)
 	var eventID, userID string
-	var usingFallbackUserID, usingUserByLeadGUUID bool
 	if document.Action == model.HubspotDocumentActionCreated {
 
 		createdUserID, status := store.GetStore().CreateUser(&model.User{
@@ -605,7 +602,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			logCtx.WithField("status", status).Error("Failed to track hubspot contact created event.")
+			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot contact created event.")
 			return http.StatusInternalServerError
 		}
 
@@ -613,55 +610,42 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		eventID = response.EventId
 	} else if document.Action == model.HubspotDocumentActionUpdated {
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
-		user, errCode := store.GetStore().GetUserByPropertyKey(
-			projectID, model.UserPropertyHubspotContactLeadGUID, leadGUID)
-		if errCode != http.StatusFound {
-			if errCode == http.StatusNotFound {
-				// Added below fallback for getting user_id by contact create synced for same document.
-				// This is not the ideal scenario. Ideally the user_id should be availble one-one on users table.
-				lastSyncedDocument, errCode := store.GetStore().GetSyncedHubspotDocumentByFilter(projectID,
-					document.ID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated)
-				if errCode == http.StatusFound && lastSyncedDocument.UserId != "" {
-					logCtx.Info("Failed to get user with given lead_guid on contact updated event. " +
-						"Using user_id on contact created document.")
-					userID = lastSyncedDocument.UserId
-				} else {
-					logCtx.Info("Failed to get user with given lead_guid on contact updated event. " +
-						"Not able to get user by last contact create document. Trying user by sync id event.")
-					if lastSyncedDocument != nil && lastSyncedDocument.SyncId != "" {
-						event, status := store.GetStore().GetEventById(projectID, lastSyncedDocument.SyncId, "")
-						if status == http.StatusFound {
-							logCtx.Info("Failed to get user with given lead_guid on contact updated event. " +
-								"Not able to get user by customer user id. Using contact create event user id.")
-							userID = event.UserId
-						}
-					}
-
-					if userID == "" {
-						logCtx.Info("Failed to get user with given lead_guid on contact updated event. " +
-							"Not able to get user by last contact create document. Trying user by customer_user_id")
-						usingFallbackUserID = true
-						userByCustomerUserID, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectID, customerUserID)
-						if errCode == http.StatusFound && userByCustomerUserID != nil {
-							userID = userByCustomerUserID.ID
-						}
-					}
-
-					if userID == "" {
-						logCtx.WithField("customer_user_id", customerUserID).Error("Failed to get user_id on all fallbacks.")
-						return http.StatusInternalServerError
-					}
-
-				}
-
-			} else {
-				logCtx.WithField("err_code", errCode).Error("Failed to get user with given lead_guid. " +
-					"Failed to track hubspot contact updated event.")
+		createdDocuments, status := store.GetStore().GetHubspotContactCreatedSyncIDAndUserID(projectID, document.ID)
+		if status != http.StatusFound {
+			if status != http.StatusMultipleChoices {
+				logCtx.WithField("error_code", status).Error("Failed to get user from contact created document.")
 				return http.StatusInternalServerError
 			}
+
+			previousUserID := ""
+			for i := range createdDocuments {
+
+				if previousUserID != "" && createdDocuments[i].UserId != "" &&
+					createdDocuments[i].UserId != previousUserID {
+					logCtx.Error("Multiple user id for contact created document found.")
+					return http.StatusInternalServerError
+				}
+				previousUserID = createdDocuments[i].UserId
+			}
+		}
+
+		if createdDocuments[0].UserId != "" {
+			userID = createdDocuments[0].UserId
 		} else {
-			userID = user.ID
-			usingUserByLeadGUUID = true
+			event, errCode := store.GetStore().GetEventById(projectID, createdDocuments[0].SyncId, "")
+			if errCode != http.StatusFound {
+				logCtx.WithField("event_id", createdDocuments[0].SyncId).Error(
+					"Failed to get contact created event for getting user id.")
+				return http.StatusInternalServerError
+			}
+
+			errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
+				projectID, document.ID, model.HubspotDocumentTypeContact, event.ID, createdDocuments[0].Timestamp, model.HubspotDocumentActionCreated, event.UserId)
+			if errCode != http.StatusAccepted {
+				logCtx.Error("Failed to update hubspot contact created document user id.")
+			}
+
+			userID = event.UserId
 		}
 
 		if customerUserID != "" {
@@ -679,7 +663,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		trackPayload.UserId = userID
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			logCtx.WithField("status", status).Error("Failed to track hubspot contact updated event.")
+			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot contact updated event.")
 			return http.StatusInternalServerError
 		}
 		eventID = response.EventId
@@ -711,35 +695,12 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 
 	var prevProperties *map[string]interface{}
 	for i := range hubspotSmartEventNames {
-		/*
-			use existing customer user id for identifying previous user property.
-			Possible cases to handle
-			contact(U1,property_email - EMAIL1, identity - EMAIL1) -> contact(U2, property_email - EMAIL1, identity - EMAIL1)
-			contact(U1,property_email - EMAIL1, identity - EMAIL1) -> contact(U2, property_email - EMAIL2, identity - EMAIL1)
-			contact(U1,property_email - EMAIL1, identity - EMAIL1) -> contact(U2, property_email - EMAIL2, identity - EMAIL2) - will be fixed after marking it as synced
-		*/
-		// if usingUserByLeadGUUID then previous property would be previous property by same user
-		if usingUserByLeadGUUID {
-			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, "", userID, document.Type,
-				properties, prevProperties, defaultSmartEventTimestamp, false)
-		} else {
-			/*
-			 Case 1 - Using contact created, events user_id. This would be accurate - But user id could have changed. Use customer_user_id to find previous property.
-			 Case 2 - Using lastest user by customer_user_id(usingFallbackUserID), can be inaccurate. Avoid creating smart event.
-			*/
-			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, existingCustomerUserID, userID, document.Type,
-				properties, prevProperties, defaultSmartEventTimestamp, usingFallbackUserID)
-		}
-
+		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, document.ID, userID, document.Type,
+			properties, prevProperties, defaultSmartEventTimestamp, false)
 	}
 
-	// Mark as synced, if customer_user_id not present or present and identified.
-	/*
-		Fix - duplicate smart event. Use the user id from contact created or by lead guuid to restore smart event flow, as sync_id was used from beginning.
-		Possible impact - There can be one invalid smart event per user before restoring original flow.
-	*/
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
-		projectID, document.ID, eventID, document.Timestamp, document.Action, userID)
+		projectID, document.ID, model.HubspotDocumentTypeContact, eventID, document.Timestamp, document.Action, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot contact document as synced.")
 		return http.StatusInternalServerError
@@ -964,7 +925,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 	}
 
 	// No sync_id as no event or user or one user property created.
-	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, "", document.Timestamp, document.Action, "")
+	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeCompany, "", document.Timestamp, document.Action, "")
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot deal document as synced.")
 		return http.StatusInternalServerError
@@ -1125,13 +1086,13 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 		eventID = response.EventId
 		var prevProperties *map[string]interface{}
 		for i := range hubspotSmartEventNames {
-			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, "", userID, document.Type,
+			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, document.ID, userID, document.Type,
 				properties, prevProperties, defaultSmartEventTimestamp, false)
 		}
 	}
 
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID,
-		document.ID, eventID, document.Timestamp, document.Action, userID)
+		document.ID, model.HubspotDocumentTypeDeal, eventID, document.Timestamp, document.Action, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot deal document as synced.")
 		return http.StatusInternalServerError
@@ -1140,15 +1101,50 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 	return http.StatusOK
 }
 
+// GetBatchedOrderedDocumentsByID return list of document in batches. Order is maintained on document id.
+func GetBatchedOrderedDocumentsByID(documents []model.HubspotDocument, batchSize int) []map[string][]model.HubspotDocument {
+
+	if len(documents) < 0 {
+		return nil
+	}
+
+	documentsMap := make(map[string][]model.HubspotDocument)
+	for i := range documents {
+		if _, exist := documentsMap[documents[i].ID]; !exist {
+			documentsMap[documents[i].ID] = make([]model.HubspotDocument, 0)
+		}
+		documentsMap[documents[i].ID] = append(documentsMap[documents[i].ID], documents[i])
+	}
+
+	batchedDocumentsByID := make([]map[string][]model.HubspotDocument, 1)
+	isBatched := make(map[string]bool)
+	batchLen := 0
+	batchedDocumentsByID[batchLen] = make(map[string][]model.HubspotDocument)
+	for i := range documents {
+		if isBatched[documents[i].ID] {
+			continue
+		}
+
+		if len(batchedDocumentsByID[batchLen]) >= batchSize {
+			batchedDocumentsByID = append(batchedDocumentsByID, make(map[string][]model.HubspotDocument))
+			batchLen++
+		}
+
+		batchedDocumentsByID[batchLen][documents[i].ID] = documentsMap[documents[i].ID]
+		isBatched[documents[i].ID] = true
+	}
+
+	return batchedDocumentsByID
+}
+
 func syncAll(projectID uint64, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	logCtx := log.WithField("project_id", projectID)
-
 	var seenFailures bool
 	for i := range documents {
 		logCtx = logCtx.WithField("document", documents[i])
 		startTime := time.Now().Unix()
-
 		switch documents[i].Type {
+
 		case model.HubspotDocumentTypeContact:
 			errCode := syncContact(projectID, &documents[i], hubspotSmartEventNames)
 			if errCode != http.StatusOK {
@@ -1184,34 +1180,120 @@ type Status struct {
 	Status    string `json:"status"`
 }
 
+type syncWorkerStatus struct {
+	HasFailure bool
+	Lock       sync.Mutex
+}
+
+// syncAllWorker is a wrapper over syncAll function for providing concurrency
+func syncAllWorker(projectID uint64, wg *sync.WaitGroup, syncStatus *syncWorkerStatus, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) {
+	defer wg.Done()
+
+	errCode := syncAll(projectID, documents, hubspotSmartEventNames)
+
+	syncStatus.Lock.Lock()
+	defer syncStatus.Lock.Unlock()
+	if errCode != http.StatusOK {
+		syncStatus.HasFailure = true
+	}
+}
+
 // Sync - Syncs hubspot documents in an order of type.
-func Sync(projectID uint64) ([]Status, bool) {
+func Sync(projectID uint64, workersPerProject int) ([]Status, bool) {
 	logCtx := log.WithField("project_id", projectID)
 
 	statusByProjectAndType := make([]Status, 0, 0)
 	hubspotSmartEventNames := GetHubspotSmartEventNames(projectID)
+	status := CreateOrGetHubspotEventName(projectID)
+	if status != http.StatusOK {
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
+			Status: "Failed to create event names"})
+		return statusByProjectAndType, true
+	}
 
-	anyFailure := false
-	for i := range syncOrderByType {
-		logCtx = logCtx.WithField("type", syncOrderByType[i])
-
-		documents, errCode := store.GetStore().
-			GetHubspotDocumentsByTypeForSync(projectID, syncOrderByType[i])
-		if errCode != http.StatusFound {
-			logCtx.Error("Failed to get hubspot document by type for sync.")
-			continue
+	var orderedTimeSeries [][]int64
+	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID)
+	if errCode != http.StatusFound {
+		if errCode == http.StatusNotFound {
+			statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
+				Status: U.CRM_SYNC_STATUS_SUCCESS})
+			return statusByProjectAndType, false
 		}
 
-		docTypeAlias := model.GetHubspotTypeAliasByType(syncOrderByType[i])
+		logCtx.WithField("err_code", errCode).Error("Failed to get time series.")
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,
+			Status: "Failed to get time series."})
+		return statusByProjectAndType, true
+	}
+
+	if workersPerProject > 1 {
+		orderedTimeSeries = model.GetCRMTimeSeriesByStartTimestamp(projectID, minTimestamp, model.SmartCRMEventSourceHubspot)
+	} else {
+		// generate single time series
+		orderedTimeSeries = append(orderedTimeSeries, []int64{minTimestamp, time.Now().Unix() * 1000})
+	}
+
+	anyFailure := false
+	overAllSyncStatus := make(map[string]bool)
+	for _, timeRange := range orderedTimeSeries {
+
+		for i := range syncOrderByType {
+
+			logCtx = logCtx.WithFields(log.Fields{"type": syncOrderByType[i], "time_range": timeRange})
+
+			logCtx.Info("Processing started for given time range")
+			var documents []model.HubspotDocument
+			var errCode int
+			if workersPerProject > 1 {
+				documents, errCode = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(projectID, syncOrderByType[i], timeRange[0], timeRange[1])
+			} else {
+				documents, errCode = store.GetStore().
+					GetHubspotDocumentsByTypeForSync(projectID, syncOrderByType[i])
+			}
+
+			if errCode != http.StatusFound {
+				logCtx.WithFields(log.Fields{"time_range": timeRange, "doc_type": syncOrderByType[i]}).Error("Failed to get hubspot document by type for sync.")
+				continue
+			}
+
+			docTypeAlias := model.GetHubspotTypeAliasByType(syncOrderByType[i])
+
+			batches := GetBatchedOrderedDocumentsByID(documents, workersPerProject)
+
+			var syncStatus syncWorkerStatus
+			var workerIndex int
+			for bi := range batches {
+				batch := batches[bi]
+				var wg sync.WaitGroup
+				for docID := range batch {
+					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": syncOrderByType[i]}).Info("Processing Batch by doc_id")
+					workerIndex++
+					wg.Add(1)
+					go syncAllWorker(projectID, &wg, &syncStatus, batch[docID], (*hubspotSmartEventNames)[docTypeAlias])
+				}
+				wg.Wait()
+			}
+
+			if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
+				overAllSyncStatus[docTypeAlias] = false
+			}
+
+			if syncStatus.HasFailure {
+				overAllSyncStatus[docTypeAlias] = true
+			}
+
+			logCtx.Info("Processing completed for given time range")
+		}
+	}
+
+	for docTypeAlias, failure := range overAllSyncStatus {
 		status := Status{ProjectId: projectID,
 			Type: docTypeAlias}
-
-		errCode = syncAll(projectID, documents, (*hubspotSmartEventNames)[docTypeAlias])
-		if errCode == http.StatusOK {
-			status.Status = U.CRM_SYNC_STATUS_SUCCESS
-		} else {
+		if failure {
 			status.Status = U.CRM_SYNC_STATUS_FAILURES
 			anyFailure = true
+		} else {
+			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		}
 		statusByProjectAndType = append(statusByProjectAndType, status)
 	}

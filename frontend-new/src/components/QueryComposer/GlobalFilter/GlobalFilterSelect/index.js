@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
 import { Button, InputNumber, Tooltip } from 'antd';
-import GroupSelect from 'Components/QueryComposer/GroupSelect';
+import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
 import moment from 'moment';
@@ -205,15 +205,20 @@ const GlobalFilterSelect = ({
                     onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderDisplayName(propState)}
                 </Button>
             </Tooltip>
-            {propSelectOpen &&
-                <GroupSelect
-                    groupedProperties={propOpts}
-                    placeholder="Select Property"
-                    optionClick={(group, val) => propSelect([...val, group])}
-                    onClickOutside={() => setPropSelectOpen(false)}
 
-                ></GroupSelect>
-            }
+            <div className={styles.filter__event_selector}>
+                {propSelectOpen && (
+                    <div className={styles.filter__event_selector__btn}>
+                        <GroupSelect2
+                            groupedProperties={propOpts}
+                            placeholder="Select Property"
+                            optionClick={(group, val) => propSelect([...val, group])}
+                            onClickOutside={() => setPropSelectOpen(false)}
+                        ></GroupSelect2>
+                    </div>
+                )
+                }
+            </div>
 
         </div>)
     }
@@ -232,10 +237,8 @@ const GlobalFilterSelect = ({
                     options={operatorOpts[propState.type].map(op => [op])}
                     optionClick={(val) => operatorSelect(val)}
                     onClickOutside={() => setOperSelectOpen(false)}
-                >
-                </FaSelect>
+                ></FaSelect>
             }
-
         </div>)
     }
 

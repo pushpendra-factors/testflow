@@ -39,6 +39,7 @@ func mainRunDeltaInsights() {
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	kValue := flag.Int("k", -1, "--k=10")
+	whitelistedDashboardIds := flag.String("whitelisted_dashboard_ids", "*", "")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -129,6 +130,17 @@ func mainRunDeltaInsights() {
 	configs := make(map[string]interface{})
 	configs["diskManager"] = diskManager
 	configs["cloudManager"] = &cloudManager
+
+	allDashboard, allDashboards, _ := C.GetProjectsFromListWithAllProjectSupport(*whitelistedDashboardIds, "")
+	whitelistedIds := make(map[string]bool)
+	if allDashboard == true {
+		whitelistedIds["*"] = true
+	} else {
+		for id, _ := range allDashboards {
+			whitelistedIds[fmt.Sprintf("%v", id)] = true
+		}
+	}
+	configs["whitelistedDashboardUnits"] = whitelistedIds
 	var k int = *kValue // Selecting all top features if k = -1.
 	configs["k"] = k
 

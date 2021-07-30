@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Spin } from 'antd';
 import {
   getStateQueryFromRequestQuery,
@@ -20,6 +20,7 @@ import Attributions from './Attributions';
 import CampaignAnalytics from './CampaignAnalytics';
 import NoDataChart from '../../components/NoDataChart';
 import { useSelector } from 'react-redux';
+import { SVG, Text } from '../../components/factorsComponents';
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
@@ -27,78 +28,70 @@ function CardContent({ unit, resultState, durationObj }) {
     (state) => state.coreQuery
   );
 
-  if (resultState.loading) {
-    content = (
-      <div className='flex justify-center items-center w-full h-64'>
-        <Spin size='small' />
-      </div>
-    );
-  }
-
-  if (resultState.error) {
-    content = (
-      <div className='flex justify-center items-center w-full h-64'>
-        <NoDataChart />
-      </div>
-    );
-  }
-
-  if (resultState.data) {
-    let equivalentQuery;
+  const equivalentQuery = useMemo(() => {
     if (unit.query.query.query_group) {
       const isCampaignQuery =
         unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN;
       if (isCampaignQuery) {
-        equivalentQuery = getCampaignStateFromRequestQuery(
+        return getCampaignStateFromRequestQuery(
           unit.query.query.query_group[0]
         );
       } else {
-        equivalentQuery = getStateQueryFromRequestQuery(
-          unit.query.query.query_group[0]
-        );
+        return getStateQueryFromRequestQuery(unit.query.query.query_group[0]);
       }
     } else if (
       unit.query.query.cl &&
       unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
     ) {
-      equivalentQuery = getAttributionStateFromRequestQuery(
+      return getAttributionStateFromRequestQuery(
         unit.query.query.query,
         attr_dimensions
       );
     } else {
-      equivalentQuery = getStateQueryFromRequestQuery(unit.query.query);
+      return getStateQueryFromRequestQuery(unit.query.query);
     }
+  }, [unit.query.query, attr_dimensions]);
 
-    let breakdown,
-      events,
-      arrayMapper = [],
-      attributionsState,
-      campaignState,
-      breakdownType;
+  const { queryType } = equivalentQuery;
+  const breakdownType = useMemo(() => {
+    if (queryType === QUERY_TYPE_EVENT) {
+      return reverse_user_types[unit.query.query.query_group[0].ec];
+    }
+  }, [queryType, unit.query.query]);
 
-    const { queryType } = equivalentQuery;
+  const events = useMemo(() => {
     if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
-      breakdown = [
+      return equivalentQuery.events.map((elem) => elem.label);
+    }
+  }, [equivalentQuery.events, queryType]);
+
+  const breakdown = useMemo(() => {
+    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+      return [
         ...equivalentQuery.breakdown.event,
         ...equivalentQuery.breakdown.global,
       ];
-      events = [...equivalentQuery.events];
-      events.forEach((q, index) => {
-        arrayMapper.push({
+    }
+  }, [queryType, equivalentQuery.breakdown]);
+
+  const arrayMapper = useMemo(() => {
+    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+      const am = [];
+      equivalentQuery.events.forEach((q, index) => {
+        am.push({
           eventName: q.label,
           index,
           mapper: `event${index + 1}`,
           displayName: eventNames[q.label] || q.label,
         });
       });
+      return am;
     }
+  }, [equivalentQuery.events, eventNames, queryType]);
 
-    if (queryType === QUERY_TYPE_EVENT) {
-      breakdownType = reverse_user_types[unit.query.query.query_group[0].ec];
-    }
-
+  const attributionsState = useMemo(() => {
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      attributionsState = {
+      return {
         eventGoal: equivalentQuery.eventGoal,
         touchpoint: equivalentQuery.touchpoint,
         models: equivalentQuery.models,
@@ -106,15 +99,22 @@ function CardContent({ unit, resultState, durationObj }) {
         attr_dimensions: equivalentQuery.attr_dimensions,
       };
     }
+  }, [equivalentQuery, queryType]);
 
+  const campaignState = useMemo(() => {
     if (queryType === QUERY_TYPE_CAMPAIGN) {
-      campaignState = {
+      return {
         channel: unit.query.query.query_group[0].channel,
         filters: unit.query.query.query_group[0].filters,
         select_metrics: unit.query.query.query_group[0].select_metrics,
         group_by: unit.query.query.query_group[0].group_by,
       };
-      arrayMapper = campaignState.select_metrics.map((metric, index) => {
+    }
+  }, [queryType, unit.query.query]);
+
+  const campaignsArrayMapper = useMemo(() => {
+    if (queryType === QUERY_TYPE_CAMPAIGN) {
+      return campaignState.select_metrics.map((metric, index) => {
         return {
           eventName: metric,
           index,
@@ -122,20 +122,44 @@ function CardContent({ unit, resultState, durationObj }) {
         };
       });
     }
+  }, [queryType, campaignState]);
 
-    let dashboardPresentation = 'pl';
+  if (resultState.loading) {
+    content = (
+      <div className='flex justify-center items-center w-full h-full'>
+        <Spin size='small' />
+      </div>
+    );
+  }
 
-    try {
-      dashboardPresentation = unit.settings.chart;
-    } catch (err) {
-      console.log(err);
-    }
+  if (resultState.error) {
+    content = (
+      <div className='flex justify-center items-center w-full h-full'>
+        <NoDataChart />
+      </div>
+    );
+  }
+
+  if (resultState.apiCallStatus && !resultState.apiCallStatus.required) {
+    content = (
+      <div className='flex justify-center flex-col items-center w-full h-full px-2 text-center'>
+        <SVG name='nodata' />
+        <Text type='title' color='grey' extraClass='mb-0'>
+          {resultState.apiCallStatus.message}
+        </Text>
+      </div>
+    );
+  }
+
+  if (resultState.data) {
+    const dashboardPresentation =
+      unit.settings && unit.settings.chart ? unit.settings.chart : 'pl';
 
     if (queryType === QUERY_TYPE_FUNNEL) {
       content = (
         <Funnels
           breakdown={breakdown}
-          events={events.map((elem) => elem.label)}
+          events={events}
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           unit={unit}
@@ -150,7 +174,7 @@ function CardContent({ unit, resultState, durationObj }) {
         <EventsAnalytics
           durationObj={durationObj}
           breakdown={breakdown}
-          events={events.map((elem) => elem.label)}
+          events={events}
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           unit={unit}
@@ -164,6 +188,7 @@ function CardContent({ unit, resultState, durationObj }) {
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       content = (
         <Attributions
+          durationObj={durationObj}
           unit={unit}
           resultState={resultState}
           attributionsState={attributionsState}
@@ -180,7 +205,7 @@ function CardContent({ unit, resultState, durationObj }) {
           resultState={resultState}
           campaignState={campaignState}
           chartType={presentationObj[dashboardPresentation]}
-          arrayMapper={arrayMapper}
+          arrayMapper={campaignsArrayMapper}
           section={DASHBOARD_WIDGET_SECTION}
         />
       );

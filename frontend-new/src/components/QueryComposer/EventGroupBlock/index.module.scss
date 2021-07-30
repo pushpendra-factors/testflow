@@ -12,6 +12,20 @@
         display: flex;
     }
 
+    &__event_selector { 
+        position: absolute;
+        top: 30px;
+        left: 0;
+
+        &__btn {
+            position: relative;
+        }
+
+        .ant-select-selector {
+            border-radius: 12px;
+        }
+    }
+
     &__remove {
         position: absolute;
         left: -12px;

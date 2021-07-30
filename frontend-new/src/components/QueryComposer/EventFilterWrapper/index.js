@@ -73,13 +73,13 @@ export default function EventFilterWrapper({
   const [filterDropDownOptions, setFiltDD] = useState({
       props: [
         {
+          label: 'Event Properties',
+          icon: 'mouseclick',
+        },
+        {
           label: 'User Properties',
           icon: 'user',
           
-        },
-        {
-          label: 'Event Properties',
-          icon: 'mouseclick',
         }
       ],
       operator: operatorProps,
@@ -105,12 +105,6 @@ export default function EventFilterWrapper({
       setFiltDD(filterDD);
 
   }, [filterProps])
-
-  // const getGroupLabel = (grp) => {
-  //   if(grp === 'event') return 'Event Properties';
-  //   if(grp === 'user') return 'User Properties';
-  //   return grp;
-  // }
 
   const parseDateRangeFilter = (fr, to) => {
     return (moment(fr).format('MMM DD, YYYY') + ' - ' +

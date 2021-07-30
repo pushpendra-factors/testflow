@@ -521,9 +521,9 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 				eventToPatternsMap[event] = []*Pattern{}
 			}
 			eventToPatternsMap[event] = append(eventToPatternsMap[event], p)
+
 		}
 	}
-
 	prEventTimeStamp = 0
 	eventDetailsList := make([]CounterEventFormat, 0)
 	for scanner.Scan() {
@@ -596,11 +596,21 @@ func CountPatternsWithTS(projectID uint64, eventsList []CounterEventFormat, numE
 	for _, v := range eventsList {
 		eventNames = append(eventNames, v.EventName)
 		eventsMap[v.EventName] = v
-		eventPatterns = eventToPatternsMap[v.EventName]
+		eventPatterns = append(eventPatterns, eventToPatternsMap[v.EventName]...)
 		*numEventsProcessed += 1
 		if math.Mod(float64(*numEventsProcessed), 100000.0) == 0.0 {
 			log.Info(fmt.Sprintf("Processed %d events", numEventsProcessed))
 		}
+	}
+
+	// get all unique patterns
+	eventPatternsMap := make(map[*Pattern]bool)
+	var uniqueEventPatterns []*Pattern
+	for _, ep := range eventPatterns {
+		eventPatternsMap[ep] = true
+	}
+	for k, _ := range eventPatternsMap {
+		uniqueEventPatterns = append(uniqueEventPatterns, k)
 	}
 
 	ets := EvSameTs{EventsNames: eventNames, EventsMap: eventsMap, EventTimestamp: eventTimeStamp}
@@ -615,7 +625,7 @@ func CountPatternsWithTS(projectID uint64, eventsList []CounterEventFormat, numE
 		}
 	}
 
-	for _, p := range eventPatterns {
+	for _, p := range uniqueEventPatterns {
 		if err := p.CountForEvent(projectID, userId, userJoinTimestamp, shouldCountOccurence, ets); err != nil {
 			log.Error("Error when counting event")
 		}

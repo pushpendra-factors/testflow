@@ -67,7 +67,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
 
-	authRouteGroup.GET("/:project_id/insights", responseWrapper(V1.GetWeeklyInsightsHandler))
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
 	authRouteGroup.GET("/:project_id/dashboards", GetDashboardsHandler)
 	authRouteGroup.POST("/:project_id/dashboards", CreateDashboardHandler)
@@ -85,7 +84,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/queries/search", SearchQueriesHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
-	authRouteGroup.GET("/:project_id/weekly_insights_metadata", responseWrapper(V1.GetWeeklyInsightsMetadata))
 	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
 	authRouteGroup.POST("/:project_id/filters", CreateFilterHandler)
 	authRouteGroup.PUT("/:project_id/filters/:filter_id", UpdateFilterHandler)
@@ -167,6 +165,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/factor/compare", V1.PostFactorsCompareHandler)
 	authRouteGroup.POST("/:project_id/v1/events/displayname", responseWrapper(V1.CreateDisplayNamesHandler))
 	authRouteGroup.GET("/:project_id/v1/factor", V1.GetFactorsHandler)
+
+	authRouteGroup.GET("/:project_id/insights", responseWrapper(V1.GetWeeklyInsightsHandler))
+	authRouteGroup.GET("/:project_id/weekly_insights_metadata", responseWrapper(V1.GetWeeklyInsightsMetadata))
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

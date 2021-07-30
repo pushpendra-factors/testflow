@@ -6,8 +6,9 @@ import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type AttributionQuery struct {
@@ -93,6 +94,7 @@ const (
 	AttributionMethodLastTouch           = "Last_Touch"
 	AttributionMethodLastTouchNonDirect  = "Last_Touch_ND"
 	AttributionMethodLinear              = "Linear"
+	AttributionMethodUShaped             = "U_Shaped"
 	AttributionKeyCampaign               = "Campaign"
 	AttributionKeySource                 = "Source"
 	AttributionKeyAdgroup                = "AdGroup"
@@ -144,13 +146,16 @@ const (
 	FieldKeywordMatchType = "keyword_match_type"
 	FieldKeyword          = "keyword"
 	FieldSource           = "source"
+
+	EventTypeGoalEvent         = 0
+	EventTypeLinkedFunnelEvent = 1
 )
 
 var AddedKeysForCampaign = []string{"ChannelName"}
 var AddedKeysForAdgroup = []string{"ChannelName", "Campaign"}
 var AddedKeysForKeyword = []string{"ChannelName", "Campaign", "AdGroup", "MatchType"}
-var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR(%)", "Average CPC", "CPM", "ConversionRate(%)", "Sessions", "Users", "Average Session Time", "PageViews"}
-var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "Compare - Users", "Compare Cost Per Conversion"}
+var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR(%)", "Average CPC", "CPM", "ClickConversionRate(%)", "Sessions", "Users", "Average Session Time", "PageViews"}
+var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "UserConversionRate(%)", "Compare - Users", "Compare Cost Per Conversion", "Compare UserConversionRate(%)"}
 var KeyDimensionToHeaderMap = map[string]string{
 	FieldChannelName:      "ChannelName",
 	FieldCampaignName:     "Campaign",
@@ -198,6 +203,7 @@ type MarketingReports struct {
 	// id = campaignID + KeyDelimiter + campaignName  + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
 	LinkedinAdgroupDimensions map[string]MarketingData
 }
+
 type MarketingData struct {
 	// Key is CampaignName + AdgroupName + KeywordName + MatchType (i.e. ExtraValue)
 	Key string
@@ -245,7 +251,7 @@ type AttributionData struct {
 	CTR                           float64
 	AvgCPC                        float64
 	CPM                           float64
-	ConversionRate                float64
+	ClickConversionRate           float64
 	Sessions                      int64
 	Users                         int64
 	AvgSessionTime                float64
@@ -271,6 +277,8 @@ type UserIDPropID struct {
 type UserEventInfo struct {
 	CoalUserID string
 	EventName  string
+	Timestamp  int64
+	EventType  int
 }
 
 const (
@@ -279,6 +287,69 @@ const (
 	LookbackCapInDays      = 180
 	UserBatchSize          = 3000
 )
+
+// LookbackAdjustedFrom Returns the effective From timestamp considering lookback days
+func LookbackAdjustedFrom(from int64, lookbackDays int) int64 {
+	lookbackDaysTimestamp := int64(lookbackDays) * SecsInADay
+	if LookbackCapInDays < lookbackDays {
+		lookbackDaysTimestamp = int64(LookbackCapInDays) * SecsInADay
+	}
+	validFrom := from - lookbackDaysTimestamp
+	return validFrom
+}
+
+// LookbackAdjustedTo Returns the effective To timestamp considering lookback days
+func LookbackAdjustedTo(to int64, lookbackDays int) int64 {
+	lookbackDaysTimestamp := int64(lookbackDays) * SecsInADay
+	if LookbackCapInDays < lookbackDays {
+		lookbackDaysTimestamp = int64(LookbackCapInDays) * SecsInADay
+	}
+	validTo := to + lookbackDaysTimestamp
+	return validTo
+}
+
+// BuildEventNamesPlaceholder Returns the concatenated list of conversion event + funnel events names
+func BuildEventNamesPlaceholder(query *AttributionQuery) []string {
+	enames := make([]string, 0)
+	enames = append(enames, query.ConversionEvent.Name)
+	// add name of compare event if given
+	if query.ConversionEventCompare.Name != "" {
+		enames = append(enames, query.ConversionEventCompare.Name)
+	}
+	for _, linkedEvent := range query.LinkedEvents {
+		enames = append(enames, linkedEvent.Name)
+	}
+	return enames
+}
+
+// UpdateSessionsMapWithCoalesceID Clones a new map replacing userId by coalUserId.
+func UpdateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[string]UserSessionData,
+	usersInfo map[string]UserInfo) map[string]map[string]UserSessionData {
+
+	newSessionsMap := make(map[string]map[string]UserSessionData)
+	for userID, attributionIdMap := range attributedSessionsByUserID {
+		userInfo := usersInfo[userID]
+		for attributionID, newUserSession := range attributionIdMap {
+			if _, ok := newSessionsMap[userInfo.CoalUserID]; ok {
+				if existingUserSession, ok := newSessionsMap[userInfo.CoalUserID][attributionID]; ok {
+					// Update the existing attribution first and last touch.
+					existingUserSession.MinTimestamp = U.Min(existingUserSession.MinTimestamp, newUserSession.MinTimestamp)
+					existingUserSession.MaxTimestamp = U.Max(existingUserSession.MaxTimestamp, newUserSession.MaxTimestamp)
+					// Merging timestamp of same customer having 2 userIds.
+					existingUserSession.TimeStamps = append(existingUserSession.TimeStamps, newUserSession.TimeStamps...)
+					existingUserSession.WithinQueryPeriod = existingUserSession.WithinQueryPeriod || newUserSession.WithinQueryPeriod
+					newSessionsMap[userInfo.CoalUserID][attributionID] = existingUserSession
+					continue
+				}
+				newSessionsMap[userInfo.CoalUserID][attributionID] = newUserSession
+				continue
+			}
+			newSessionsMap[userInfo.CoalUserID] = make(map[string]UserSessionData)
+			newSessionsMap[userInfo.CoalUserID][attributionID] = newUserSession
+		}
+	}
+	return newSessionsMap
+}
 
 // AddDefaultKeyDimensionsToAttributionQuery adds default custom Dimensions for supporting existing old/saved queries
 func AddDefaultKeyDimensionsToAttributionQuery(query *AttributionQuery) {
@@ -494,12 +565,13 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 		for _, event := range query.LinkedEvents {
 			result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
 			result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
+			result.Headers = append(result.Headers, fmt.Sprintf("%s - UserConversionRate(", event.Name)+"%)")
 		}
 	}
 }
 
 // getLinkedEventColumnAsInterfaceList return interface list having linked event count and CPC
-func getLinkedEventColumnAsInterfaceList(spend float64, data []float64, linkedEventCount int) []interface{} {
+func getLinkedEventColumnAsInterfaceList(users int64, spend float64, data []float64, linkedEventCount int) []interface{} {
 
 	var list []interface{}
 	// If empty linked events, add 0s
@@ -510,14 +582,18 @@ func getLinkedEventColumnAsInterfaceList(spend float64, data []float64, linkedEv
 	} else {
 		for _, val := range data {
 			cpc := 0.0
+			userConvRate := 0.0
 			if val != 0.0 {
 				cpc, _ = U.FloatRoundOffWithPrecision(spend/val, U.DefaultPrecision)
 			}
-			list = append(list, val, cpc)
+			if users != 0 {
+				userConvRate, _ = U.FloatRoundOffWithPrecision(val/float64(users)*100, U.DefaultPrecision)
+			}
+			list = append(list, val, cpc, userConvRate)
 		}
 	}
-	// Each LE should have 2 values, one for conversion, 2nd for conversion cost.
-	for len(list) < 2*linkedEventCount {
+	// Each LE should have 3 values, one for conversion, 2nd for conversion cost, 3rd user conv rate.
+	for len(list) < 3*linkedEventCount {
 		list = append(list, 0.0)
 	}
 	return list
@@ -537,6 +613,17 @@ func GetKeyIndexOrAddedKeySize(attributionKey string) int {
 	default:
 	}
 	return addedKeysSize
+}
+
+func GetNoneKeyForAttributionType(attributionKey string) string {
+
+	key := ""
+	for i := 0; i < GetKeyIndexOrAddedKeySize(attributionKey); i++ {
+		key = key + PropertyValueNone + KeyDelimiter
+	}
+	key = key + PropertyValueNone
+	return key
+
 }
 
 func GetConversionIndex(headers []string) int {
@@ -590,12 +677,12 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 
 	// Name, impression, clicks, spend
 	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0),
-		// (CTR, AvgCPC, CPM, ConversionRate)
+		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(0), float64(0), float64(0), float64(0),
 		// Sessions, (users), (AvgSessionTime), (pageViews),
 		int64(0), int64(0), float64(0), int64(0),
-		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(0), float64(0), float64(0), float64(0)}
+		// ConversionEventCount, CostPerConversion, ConvUserRate, ConversionEventCompareCount, CostPerConversionCompareCount, compareConvUserRate
+		float64(0), float64(0), float64(0), float64(0), float64(0), float64(0)}
 
 	var customDims []interface{}
 	for i := 0; i < len(dimensions); i++ {
@@ -669,21 +756,29 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 			}
 
 			// Append fixed Metrics
-			row = append(row, data.Impressions, data.Clicks, data.Spend, data.CTR, data.AvgCPC, data.CPM, data.ConversionRate, data.Sessions, data.Users, data.AvgSessionTime, data.PageViews, data.ConversionEventCount)
+			row = append(row, data.Impressions, data.Clicks, data.Spend, data.CTR, data.AvgCPC, data.CPM, data.ClickConversionRate, data.Sessions, data.Users, data.AvgSessionTime, data.PageViews, data.ConversionEventCount)
 			cpc := 0.0
 			if data.ConversionEventCount != 0.0 {
 				cpc, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCount, U.DefaultPrecision)
+			}
+			userConvRate := 0.0
+			if data.Users != 0 {
+				userConvRate, _ = U.FloatRoundOffWithPrecision(data.ConversionEventCount/float64(data.Users)*100, U.DefaultPrecision)
 			}
 			if isCompare {
 				cpcCompare := 0.0
 				if data.ConversionEventCompareCount != 0.0 {
 					cpcCompare, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCompareCount, U.DefaultPrecision)
 				}
-				row = append(row, cpc, data.ConversionEventCompareCount, cpcCompare)
+				compareUserConvRate := 0.0
+				if data.Users != 0 {
+					compareUserConvRate, _ = U.FloatRoundOffWithPrecision(data.ConversionEventCompareCount/float64(data.Users)*100, U.DefaultPrecision)
+				}
+				row = append(row, cpc, userConvRate, data.ConversionEventCompareCount, cpcCompare, compareUserConvRate)
 			} else {
-				row = append(row, cpc, float64(0), float64(0))
+				row = append(row, cpc, userConvRate, float64(0), float64(0), float64(0))
 			}
-			row = append(row, getLinkedEventColumnAsInterfaceList(data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
+			row = append(row, getLinkedEventColumnAsInterfaceList(data.Users, data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
 			rows = append(rows, row)
 		}
 	}
@@ -769,44 +864,66 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 
 			seenRow[keyIndex+10] = seenRow[keyIndex+10].(float64) + row[keyIndex+10].(float64) // AvgSessionTime.
 			seenRow[keyIndex+11] = seenRow[keyIndex+11].(int64) + row[keyIndex+11].(int64)     // PageViews.
-
 			seenRow[keyIndex+12] = seenRow[keyIndex+12].(float64) + row[keyIndex+12].(float64) // Conversion.
-			seenRow[keyIndex+14] = seenRow[keyIndex+14].(float64) + row[keyIndex+14].(float64) // Compare Conversion.
+			seenRow[keyIndex+15] = seenRow[keyIndex+15].(float64) + row[keyIndex+15].(float64) // Compare Conversion.
 
 			impressions := (seenRow[keyIndex+1]).(int64)
 			clicks := (seenRow[keyIndex+2]).(int64)
 			spend := seenRow[keyIndex+3].(float64)
 			if impressions > 0 {
-				seenRow[keyIndex+4] = 100 * float64(clicks) / float64(impressions) // CTR.
-				seenRow[keyIndex+6] = 1000 * float64(spend) / float64(impressions) // CPM.
+				seenRow[keyIndex+4], _ = U.FloatRoundOffWithPrecision(100*float64(clicks)/float64(impressions), U.DefaultPrecision) // CTR.
+				seenRow[keyIndex+6], _ = U.FloatRoundOffWithPrecision(1000*float64(spend)/float64(impressions), U.DefaultPrecision) // CPM.
 			} else {
 				seenRow[keyIndex+4] = float64(0) // CTR.
 				seenRow[keyIndex+6] = float64(0) // CPM.
 			}
 			if clicks > 0 {
-				seenRow[keyIndex+5] = float64(spend) / float64(clicks)                                // AvgCPC.
-				seenRow[keyIndex+7] = 100 * float64(seenRow[keyIndex+12].(float64)) / float64(clicks) // ConversionRate.
+				seenRow[keyIndex+5], _ = U.FloatRoundOffWithPrecision(float64(spend)/float64(clicks), U.DefaultPrecision)                              // AvgCPC.
+				seenRow[keyIndex+7], _ = U.FloatRoundOffWithPrecision(100*float64(seenRow[keyIndex+12].(float64))/float64(clicks), U.DefaultPrecision) // ClickConversionRate.
 			} else {
 				seenRow[keyIndex+5] = float64(0) // AvgCPC.
-				seenRow[keyIndex+7] = float64(0) // ConversionRate.
+				seenRow[keyIndex+7] = float64(0) // ClickConversionRate.
 			}
+
+			// Normal conversion [12, 13, 14] = [Conversion, CPC, Rate]
 			if seenRow[keyIndex+12].(float64) > 0 {
 				seenRow[keyIndex+13] = spend / seenRow[keyIndex+12].(float64) // Conversion - CPC.
 			} else {
 				seenRow[keyIndex+13] = float64(0) // Conversion - CPC.
 			}
-			if seenRow[keyIndex+14].(float64) > 0 {
-				seenRow[keyIndex+15] = spend / seenRow[keyIndex+14].(float64) // Compare Conversion - CPC.
+
+			if seenRow[keyIndex+9] != 0 {
+				seenRow[keyIndex+14], _ = U.FloatRoundOffWithPrecision(seenRow[keyIndex+12].(float64)/float64(seenRow[keyIndex+9].(int64))*100, U.DefaultPrecision)
 			} else {
-				seenRow[keyIndex+15] = float64(0) // Compare Conversion - CPC.
+				seenRow[keyIndex+14] = 0
 			}
+
+			// Compare conversion [15, 16, 17] = [Conversion, CPC, Rate]
+			if seenRow[keyIndex+15].(float64) > 0 {
+				seenRow[keyIndex+16], _ = U.FloatRoundOffWithPrecision(spend/seenRow[keyIndex+15].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
+			} else {
+				seenRow[keyIndex+16] = float64(0) // Compare Conversion - CPC.
+			}
+
+			if seenRow[keyIndex+9] != 0 {
+				seenRow[keyIndex+17], _ = U.FloatRoundOffWithPrecision(seenRow[keyIndex+15].(float64)/float64(seenRow[keyIndex+9].(int64))*100, U.DefaultPrecision)
+			} else {
+				seenRow[keyIndex+17] = 0
+			}
+
 			// Remaining linked funnel events & CPCs
-			for i := keyIndex + 16; i < len(seenRow); i += 2 {
+			for i := keyIndex + 18; i < len(seenRow); i += 3 {
 				seenRow[i] = seenRow[i].(float64) + row[i].(float64)
 				if seenRow[i].(float64) > 0 && i < len(seenRow) {
 					seenRow[i+1] = spend / seenRow[i].(float64) // Funnel - Conversion - CPC.
 				} else {
 					seenRow[i+1] = float64(0) // Funnel - Conversion - CPC.
+				}
+
+				if seenRow[keyIndex+9].(int64) > 0 {
+					seenRow[i+2] = seenRow[i].(float64) / float64(seenRow[keyIndex+9].(int64)) // Funnel - User Conversion - CPC Rate
+				} else {
+					seenRow[i+2] = float64(0) // Funnel - User Conversion Rate (%)
 				}
 			}
 			rowKeyMap[key] = seenRow
@@ -819,6 +936,24 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 		resultRows = append(resultRows, mapRow)
 	}
 	return resultRows
+}
+
+// FilterRows filters rows based on attribution key. ex. $none exclusion for 'Keyword' type report.
+func FilterRows(rows [][]interface{}, attributionKey string, keyIndex int) [][]interface{} {
+
+	// Select the best value for attributionKey
+	switch attributionKey {
+	case AttributionKeyKeyword:
+		filteredRows := make([][]interface{}, 0)
+		for _, mapRow := range rows {
+			if mapRow[keyIndex].(string) != PropertyValueNone {
+				filteredRows = append(filteredRows, mapRow)
+			}
+		}
+		return filteredRows
+	default:
+	}
+	return rows
 }
 
 // AddUpConversionEventCount Groups all unique users by attributionId and adds it to attributionData
@@ -1181,14 +1316,14 @@ func ComputeAdditionalMetrics(attributionData *map[string]*AttributionData) {
 		(*attributionData)[k].CTR = 0
 		(*attributionData)[k].CPM = 0
 		(*attributionData)[k].AvgCPC = 0
-		(*attributionData)[k].ConversionRate = 0
+		(*attributionData)[k].ClickConversionRate = 0
 		if v.Impressions > 0 {
 			(*attributionData)[k].CTR = 100 * float64(v.Clicks) / float64(v.Impressions)
 			(*attributionData)[k].CPM = 1000 * float64(v.Spend) / float64(v.Impressions)
 		}
 		if v.Clicks > 0 {
 			(*attributionData)[k].AvgCPC = float64(v.Spend) / float64(v.Clicks)
-			(*attributionData)[k].ConversionRate = 100 * float64(v.ConversionEventCount) / float64(v.Clicks)
+			(*attributionData)[k].ClickConversionRate = 100 * float64(v.ConversionEventCount) / float64(v.Clicks)
 		}
 	}
 }
@@ -1279,8 +1414,8 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			} else {
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, GCLID: gclID})
 			}
-		} else if (query.AttributionKey == AttributionKeyCampaign || query.AttributionKey == AttributionKeyAdgroup) &&
-			(U.IsNonEmptyKey(campaignID) || U.IsNonEmptyKey(adgroupID)) {
+		} else if (query.AttributionKey == AttributionKeyCampaign && U.IsNonEmptyKey(campaignID)) ||
+			(query.AttributionKey == AttributionKeyAdgroup && U.IsNonEmptyKey(adgroupID)) {
 			// enrich for campaign/adgroup based session having campaign_id/adgroup_id
 			var attributionIdBasedOnEnrichment string
 			attributionIdBasedOnEnrichment, marketingValues = EnrichUsingMarketingID(query.AttributionKey, marketingValues, reports)
@@ -1529,4 +1664,20 @@ func IfValidGetValElseNone(value sql.NullString) string {
 		return value.String
 	}
 	return PropertyValueNone
+}
+
+// MergeUsersToBeAttributed merges users to be attributed for goal and linked event
+func MergeUsersToBeAttributed(goalEventUsers *[]UserEventInfo, funnelEventUsers []UserEventInfo) {
+
+	goalHitTime := make(map[string]int64)
+
+	for _, userInfo := range *goalEventUsers {
+		goalHitTime[userInfo.CoalUserID] = userInfo.Timestamp
+	}
+
+	for _, userInfo := range funnelEventUsers {
+		if _, exists := goalHitTime[userInfo.CoalUserID]; exists && userInfo.Timestamp >= goalHitTime[userInfo.CoalUserID] {
+			*goalEventUsers = append(*goalEventUsers, userInfo)
+		}
+	}
 }

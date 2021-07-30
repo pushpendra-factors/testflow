@@ -1,4 +1,3 @@
-
 .query_block { 
 
     &__event {
@@ -30,6 +29,9 @@
     }
 
     &__event_selector { 
+        position: absolute;
+        top: 36px;
+        left: 0;
 
         &__btn {
             position: relative;

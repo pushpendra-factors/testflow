@@ -6,9 +6,8 @@ import (
 
 // ApplyAttribution This method maps the user to the attribution key based on given attribution methodology.
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
-	sessions map[string]map[string]UserSessionData,
-	coalUserIdConversionTimestamp map[string]int64,
-	lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error) {
+	sessions map[string]map[string]UserSessionData, coalUserIdConversionTimestamp map[string]int64,
+	lookbackDays int, campaignFrom, campaignTo int64, attributionKey string) (map[string][]string, map[string]map[string][]string, error) {
 
 	usersAttribution := make(map[string][]string)
 	linkedEventUserCampaign := make(map[string]map[string][]string)
@@ -18,29 +17,35 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 		eventName := val.EventName
 		conversionTime := coalUserIdConversionTimestamp[val.CoalUserID]
 		attributionKeys := []string{PropertyValueNone}
+		userSessions := sessions[userId]
+
 		switch method {
 		case AttributionMethodFirstTouch:
-			attributionKeys = getFirstTouchId(attributionType, sessions[userId], conversionTime,
+			attributionKeys = getFirstTouchId(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLastTouch:
-			attributionKeys = getLastTouchId(attributionType, sessions[userId], conversionTime,
+			attributionKeys = getLastTouchId(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
+		case AttributionMethodUShaped:
+			attributionKeys = getUShaped(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodFirstTouchNonDirect:
-			attributionKeys = getFirstTouchNDId(attributionType, sessions[userId], conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo)
+			attributionKeys = getFirstTouchNDId(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo, attributionKey)
 			break
 
 		case AttributionMethodLastTouchNonDirect:
-			attributionKeys = getLastTouchNDId(attributionType, sessions[userId], conversionTime,
-				lookbackPeriod, campaignFrom, campaignTo)
+			attributionKeys = getLastTouchNDId(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo, attributionKey)
 			break
 
 		case AttributionMethodLinear:
-			attributionKeys = getLinearTouch(attributionType, sessions[userId], conversionTime,
+			attributionKeys = getLinearTouch(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
@@ -50,8 +55,9 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 		// In case a successful attribution could not happen, remove converted user.
 		if len(attributionKeys) == 0 {
 			delete(usersAttribution, userId)
+			continue
 		}
-		if eventName == conversionEvent {
+		if eventName == conversionEvent && val.EventType == EventTypeGoalEvent {
 			usersAttribution[userId] = attributionKeys
 		} else {
 			if _, exist := linkedEventUserCampaign[eventName]; !exist {
@@ -79,23 +85,24 @@ func getMergedInteractions(attributionTimerange map[string]UserSessionData) []In
 	return interactions
 }
 
-func sortInteractionTime(interactions []Interaction, sortingType string) []Interaction {
+func SortInteractionTime(interactions []Interaction, sortingType string) []Interaction {
 
 	// sort the interactions by interaction time ascending order
 	if sortingType == SortASC {
 		sort.Slice(interactions, func(i, j int) bool {
-			return interactions[i].InteractionTime < interactions[j].InteractionTime
+			return interactions[i].InteractionTime <= interactions[j].InteractionTime
 		})
 	} else if sortingType == SortDESC {
 		sort.Slice(interactions, func(i, j int) bool {
-			return interactions[i].InteractionTime > interactions[j].InteractionTime
+			return interactions[i].InteractionTime >= interactions[j].InteractionTime
 		})
 	}
 	return interactions
 }
 
 // returns list of attribution keys from given attributionKeyTime map
-func getLinearTouch(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
+func getLinearTouch(attributionType string, attributionTimerange map[string]UserSessionData,
+	conversionTime, lookbackPeriod, from, to int64) []string {
 
 	var keys []string
 	interactions := getMergedInteractions(attributionTimerange)
@@ -120,10 +127,11 @@ func getLinearTouch(attributionType string, attributionTimerange map[string]User
 }
 
 // returns the first attributionId
-func getFirstTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
+func getFirstTouchId(attributionType string, attributionTimerange map[string]UserSessionData,
+	conversionTime, lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
-	interactions = sortInteractionTime(interactions, SortASC)
+	interactions = SortInteractionTime(interactions, SortASC)
 
 	if len(interactions) > 0 {
 
@@ -148,25 +156,25 @@ func getFirstTouchId(attributionType string, attributionTimerange map[string]Use
 }
 
 // returns the last attributionId
-func getLastTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
+func getLastTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
+	lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
-	interactions = sortInteractionTime(interactions, SortDESC)
+	interactions = SortInteractionTime(interactions, SortDESC)
 
 	if len(interactions) > 0 {
 
 		switch attributionType {
 		case AttributionQueryTypeConversionBased:
 			for i := 0; i < len(interactions); i++ {
-				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime,
-					lookbackPeriod) {
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
 					return []string{interactions[i].AttributionKey}
 				}
 			}
 		case AttributionQueryTypeEngagementBased:
 			for i := 0; i < len(interactions); i++ {
-				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime,
-					lookbackPeriod) && isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
+					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
 					return []string{interactions[i].AttributionKey}
 				}
 			}
@@ -174,64 +182,97 @@ func getLastTouchId(attributionType string, attributionTimerange map[string]User
 
 	}
 	return []string{}
+}
+
+// returns the first and the last attributionId
+func getUShaped(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
+	lookbackPeriod, from, to int64) []string {
+	firstTouch := getFirstTouchId(attributionType, attributionTimerange, conversionTime, lookbackPeriod, from, to)
+	lastTouch := getLastTouchId(attributionType, attributionTimerange, conversionTime, lookbackPeriod, from, to)
+	keys := append(firstTouch, lastTouch...)
+	return keys
 }
 
 // returns the first non $none attributionId
-func getFirstTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
+func getFirstTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
+	lookbackPeriod, from, to int64, attributionKey string) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
-	interactions = sortInteractionTime(interactions, SortASC)
+	interactions = SortInteractionTime(interactions, SortASC)
+	directSessionExists := false
+	noneKey := GetNoneKeyForAttributionType(attributionKey)
 
 	if len(interactions) > 0 {
 
 		switch attributionType {
 		case AttributionQueryTypeConversionBased:
 			for i := 0; i < len(interactions); i++ {
-				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime,
-					lookbackPeriod) && interactions[i].AttributionKey != PropertyValueNone {
-					return []string{interactions[i].AttributionKey}
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
+					if interactions[i].AttributionKey != noneKey {
+						return []string{interactions[i].AttributionKey}
+					}
+					directSessionExists = true
 				}
 			}
 		case AttributionQueryTypeEngagementBased:
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
-					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) && interactions[i].AttributionKey != PropertyValueNone {
-					return []string{interactions[i].AttributionKey}
+					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
+					if interactions[i].AttributionKey != noneKey {
+						return []string{interactions[i].AttributionKey}
+					}
+					directSessionExists = true
 				}
 			}
 		}
 
 	}
-	return []string{}
+	// return $none key only if Direct session was seen
+	if directSessionExists {
+		return []string{noneKey}
+	} else {
+		return []string{}
+	}
 }
 
 // returns the last non $none attributionId
-func getLastTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
+func getLastTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
+	lookbackPeriod, from, to int64, attributionKey string) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
-	interactions = sortInteractionTime(interactions, SortDESC)
-
+	interactions = SortInteractionTime(interactions, SortDESC)
+	directSessionExists := false
+	noneKey := GetNoneKeyForAttributionType(attributionKey)
 	if len(interactions) > 0 {
 
 		switch attributionType {
 		case AttributionQueryTypeConversionBased:
 			for i := 0; i < len(interactions); i++ {
-				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime,
-					lookbackPeriod) && interactions[i].AttributionKey != PropertyValueNone {
-					return []string{interactions[i].AttributionKey}
+				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
+					if interactions[i].AttributionKey != noneKey {
+						return []string{interactions[i].AttributionKey}
+					}
+					directSessionExists = true
 				}
 			}
 		case AttributionQueryTypeEngagementBased:
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
-					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) && interactions[i].AttributionKey != PropertyValueNone {
-					return []string{interactions[i].AttributionKey}
+					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
+					if interactions[i].AttributionKey != noneKey {
+						return []string{interactions[i].AttributionKey}
+					}
+					directSessionExists = true
 				}
 			}
 		}
-
 	}
-	return []string{}
+	// return $none key only if Direct session was seen
+	if directSessionExists {
+		return []string{noneKey}
+	} else {
+		return []string{}
+	}
 }
 
 // isAdTouchWithinCampaignOrQueryPeriod checks if attribution time is within query (campaign) period.
