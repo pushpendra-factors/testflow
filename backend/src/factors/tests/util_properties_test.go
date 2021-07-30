@@ -212,4 +212,61 @@ func TestOverwritePropertyDetails(t *testing.T) {
 	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty1, false)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, U.PropertyTypeNumerical, propertyDetails.Type)
+
+	/*
+		Test conflict
+	*/
+	// event property conflict without overwrite
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusConflict, status)
+	// event property conflict witt overwrite
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeNumerical, false, true)
+	assert.Equal(t, http.StatusConflict, status)
+	// user property conflict witt overwrite
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dateTimeProperty1, U.PropertyTypeDateTime, true, true)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dateTimeProperty1, U.PropertyTypeDateTime, true, true)
+	assert.Equal(t, http.StatusConflict, status)
+
+	/*
+		Test delete property details
+	*/
+	dateTimeProperty2 := "dt_property2"
+	err = store.GetStore().CreateOrDeletePropertyDetails(project.ID, eventName, dateTimeProperty2, U.PropertyTypeDateTime, false, true)
+	assert.Nil(t, err)
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty2, false)
+	assert.Equal(t, http.StatusFound, status)
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty2, true)
+	assert.Equal(t, http.StatusNotFound, status)
+
+	err = store.GetStore().CreateOrDeletePropertyDetails(project.ID, eventName, dateTimeProperty2, U.PropertyTypeDateTime, true, true)
+	assert.Nil(t, err)
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty2, false)
+	assert.Equal(t, http.StatusFound, status)
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty2, true)
+	assert.Equal(t, http.StatusFound, status)
+
+	// delete event property details for dt_property2
+	err = store.GetStore().CreateOrDeletePropertyDetails(project.ID, eventName, dateTimeProperty2, U.PropertyTypeUnknown, false, true)
+	assert.Nil(t, err)
+	// event property deleted
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty2, false)
+	assert.Equal(t, http.StatusNotFound, status)
+	// user property should exist
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty2, true)
+	assert.Equal(t, http.StatusFound, status)
+	// event property for dt_property1 shouldn't be deleted
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty1, false)
+	assert.Equal(t, http.StatusFound, status)
+
+	// delete user property details for dt_property2
+	err = store.GetStore().CreateOrDeletePropertyDetails(project.ID, eventName, dateTimeProperty2, U.PropertyTypeUnknown, false, true)
+	assert.Nil(t, err)
+	// event property deleted
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty2, false)
+	assert.Equal(t, http.StatusNotFound, status)
+	// event property for dt_property1
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty1, false)
+	assert.Equal(t, http.StatusFound, status)
+
 }
