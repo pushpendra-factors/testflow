@@ -53,15 +53,8 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
     const UpIcon = 'growthUp';
     const DownIcon = 'growthDown';
 
-    // console.log("query related data",requestQuery, queryType, queryTitle );
 
-    // function callback(key) {
-    //     console.log(key);
-    // }
-
-
-  const matchEventName = (item) => {
-    //   console.log('matchEventName', item)
+  const matchEventName = (item) => { 
     let findItem = eventPropNames?.[item]
     return findItem ? findItem : item
   }
@@ -100,31 +93,8 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
         </div>)
     }
 
-    const genHeader = (item, goal, type) => { 
-        const data = item.actual_values;
-        const value1 = (data?.w1/goal?.w1) * 100;
-        const value2 = (data?.w2/goal?.w2) * 100;
-        // if(type == 'DistOnly'){
-        //     return(
-        //         <div className={'flex justify-between items-center py-2'}>
-        //             <div className={'flex items-center py-2'}> 
-        //                 <Text type={"title"} level={7} extraClass={"m-0 mr-2"}> {`Share of`}</Text> 
-        //                 <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight'}>{`${matchEventName(item.key)}`}</Tag>
-        //                 <Text type={"title"} level={7} extraClass={"m-0 ml-1"}> {`is`}</Text> 
-        //                 <Text type={"title"} level={7} weight={'bold'} extraClass={"m-0 ml-1"}>{item.value}</Text>
-        //                 <Text type={"title"} level={7} extraClass={"m-0 mx-1"}>{`${data.isIncrease ? 'increased' : 'decreased'} by`}</Text>  
-        //                 <Tag color={data.isIncrease ? 'green' : "red"} className={`m-0 mx-1 ${data.isIncrease ? 'fa-tag--green' : "fa-tag--red"}`}>
-        //                     {data.isIncrease ? <SVG name={UpIcon} size={TagIconSize} color={'green'} /> : <SVG name={DownIcon} size={TagIconSize} color={'red'} />}
-        //                     <Number suffix={'%'} number={(value2-value1)} />
-        //                 </Tag>
-        //                 <Text type={"title"} level={7} extraClass={"m-0 ml-1"}> {` from `} <Number number={value1} suffix={'%'}  />{` to `}<Number number={value2} suffix={'%'}  /> </Text> 
-        //             </div>
-        //             <div className={'flex  items-center'}>
-        //             <Tag className={'fa-tag--grey uppercase'}>{item.type}</Tag>
-        //         </div>
-        //     </div>
-        //     )
-        // }
+    const genHeader = (item) => { 
+        const data = item.actual_values; 
         return (
             <div className={'flex justify-between items-center py-2'}>
                 <div className={'flex  items-center'}>
@@ -146,15 +116,14 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
         )
     }
 
-    const genBody = (item, goal, type)=> {
+    const genBody = (item)=> {
         const prevalance = item.change_in_prevalance;
-        const conversion = item.change_in_conversion; 
-
-        const data = item.actual_values;
-        const value1 = (data?.w1/goal?.w1) * 100;
-        const value2 = (data?.w2/goal?.w2) * 100;
-
+        const conversion = item.change_in_conversion;   
+        console.log("item data", item); 
         if(item?.type== 'distribution' ){
+            const data = item?.change_in_distribution;
+            const value1 = item?.change_in_distribution?.w1;
+            const value2 = item?.change_in_distribution?.w2;
             return( 
                     <div className={'flex  items-center pl-10'}> 
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-2"}> {`Share of`}</Text> 
@@ -164,7 +133,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mx-1"}>{`${data.isIncrease ? 'increased' : 'decreased'} by`}</Text>  
                         <Tag color={data.isIncrease ? 'green' : "red"} className={`m-0 mx-1 ${data.isIncrease ? 'fa-tag--green' : "fa-tag--red"}`}>
                             {data.isIncrease ? <SVG name={UpIcon} size={TagIconSize} color={'green'} /> : <SVG name={DownIcon} size={TagIconSize} color={'red'} />}
-                            <Number suffix={'%'} number={(value2-value1)} />
+                            <Number suffix={'%'} number={data?.percentage} />
                         </Tag>
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 ml-1"}> {` from `} <Number number={value1} suffix={'%'}  />{` to `}<Number number={value2} suffix={'%'}  /> </Text> 
                     </div>  
@@ -203,12 +172,10 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
     //     return  <Option value={dateData[Object.keys(dateData)[index]]}>{displayString}</Option> 
     // })
 
-  
-
     const WeekData = `${moment.unix(1624147200).format("MMM DD, YYYY")} - ${moment.unix(1624147200).endOf('week').format("MMM DD, YYYY")}`; 
     const baseName = requestQuery?.cl == "funnel" ? requestQuery?.ewp[0].na : "Sessions";
 
-    // console.log('defaultActive',defaultActive);
+    
     
     return (
         <div className=''>
@@ -260,7 +227,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
                             {highlightCard(data?.goal, 'Overall    ', false)}
                             {highlightCard(data?.base, baseName, true )}
                             {highlightCard(data?.conv, 'Conv. Rate', false, true)}
-                            </> : <> {highlightCard(data?.goal, 'Conversions')} </>}
+                            </> : <> {highlightCard(data?.goal, 'Overall')} </>}
 
 
                         </div>
@@ -280,12 +247,9 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
                                 return (
                                     <Panel 
                                      className={'fa-insights--panel-item'}
-                                     header={genHeader(item, data?.goal , data?.insights_type)} key={index}
-                                    //  disabled={item.type== 'distribution'}  
-                                    //  showArrow={item.type!= 'distribution'} 
-                                     >
-                                        {/* {item.type== 'distribution' ? null : genBody(item, data?.goal , data?.insights_type)} */}
-                                        {genBody(item, data?.goal , data?.insights_type)}
+                                     header={genHeader(item)} key={index} 
+                                     > 
+                                        {genBody(item)}
                                     </Panel>
                                 )
                             })}
