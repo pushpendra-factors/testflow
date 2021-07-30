@@ -844,8 +844,8 @@ func getCampaignMemberIDsFromCampaign(document *model.SalesforceDocument) ([]str
 	return campaignMemberIDs, nil
 }
 
-func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.SalesforceDocument) int {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID})
+func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.SalesforceDocument, endTimestamp int64) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID, "end_timestamp": endTimestamp})
 	if document.Type != model.SalesforceDocumentTypeCampaign {
 		return http.StatusBadRequest
 	}
@@ -872,10 +872,26 @@ func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.Salesf
 		return http.StatusOK
 	}
 
-	memberDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(projectID, campaignMemberIDs, model.SalesforceDocumentTypeCampaignMember)
+	var memberDocuments []model.SalesforceDocument
+	var status int
+
+	/*
+		NOTE: IF member document is not available for this time range, mark it as synced.
+		This can only happend on the first time of this campaign pull where campaign is created on day 1 and member on day 2
+
+		When CAMPAIGN MEMBER is picked up for processing then, it will refer this document as for last campaign update.
+		Refer enrichCampaignMember function for opposite case
+	*/
+	memberDocuments, status = store.GetStore().GetLatestSalesforceDocumentByID(projectID, campaignMemberIDs, model.SalesforceDocumentTypeCampaignMember, endTimestamp)
 	if status != http.StatusFound {
-		logCtx.WithError(err).Error("Failed to get campaign members.")
-		return http.StatusInternalServerError
+		logCtx.Warn("Failed to get campaign members.")
+		status = store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, "", "")
+		if status != http.StatusAccepted {
+			logCtx.Error("Failed to mark campaign as synced.")
+			return http.StatusInternalServerError
+		}
+
+		return http.StatusOK
 	}
 
 	for i := range memberDocuments {
@@ -965,7 +981,7 @@ func getExistingCampaignMemberUserIDFromProperties(projectID uint64, properties 
 	return existingUserID
 }
 
-func enrichCampaignMember(projectID uint64, document *model.SalesforceDocument) int {
+func enrichCampaignMember(projectID uint64, document *model.SalesforceDocument, endTimestamp int64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID})
 	if document.Type != model.SalesforceDocumentTypeCampaignMember {
 		return http.StatusBadRequest
@@ -983,10 +999,16 @@ func enrichCampaignMember(projectID uint64, document *model.SalesforceDocument) 
 		return http.StatusInternalServerError
 	}
 
-	campaignDocuments, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(campaignID)}, model.SalesforceDocumentTypeCampaign)
-	if status != http.StatusFound {
-		logCtx.Error("Failed to get campaign document for campaign member.")
-		return http.StatusInternalServerError
+	/*
+		NOTE: IF campaing document is not available for this time range don't mark it as synced and continue.
+
+		When CAMPAIGN is picked up for processing then, it will refer this document as for last campaign member.
+		Refer enrichCampaignToAllCampaignMembers function for opposite case
+	*/
+	campaignDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(projectID, []string{util.GetPropertyValueAsString(campaignID)}, model.SalesforceDocumentTypeCampaign, endTimestamp)
+	if status != http.StatusFound { // log warning and don't mark it as synced. It will be processed when campaign is found
+		logCtx.Warn("Failed to get campaign document for campaign member.")
+		return http.StatusOK
 	}
 
 	enCampaignProperties, _, err := GetSalesforceDocumentProperties(projectID, &campaignDocuments[len(campaignDocuments)-1])
@@ -1050,23 +1072,23 @@ func enrichCampaignMember(projectID uint64, document *model.SalesforceDocument) 
 		ContactID:
 	}
 */
-func enrichCampaign(projectID uint64, document *model.SalesforceDocument) int {
+func enrichCampaign(projectID uint64, document *model.SalesforceDocument, endTimestamp int64) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaign {
-		return enrichCampaignToAllCampaignMembers(projectID, document)
+		return enrichCampaignToAllCampaignMembers(projectID, document, endTimestamp)
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaignMember {
-		return enrichCampaignMember(projectID, document)
+		return enrichCampaignMember(projectID, document, endTimestamp)
 	}
 
 	return http.StatusBadRequest
 }
 
-func enrichAll(projectID uint64, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichAll(projectID uint64, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, endTimestamp int64) int {
 	if projectID == 0 {
 		return http.StatusBadRequest
 	}
@@ -1087,7 +1109,7 @@ func enrichAll(projectID uint64, documents []model.SalesforceDocument, salesforc
 		case model.SalesforceDocumentTypeOpportunity:
 			errCode = enrichOpportunities(projectID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeCampaign, model.SalesforceDocumentTypeCampaignMember:
-			errCode = enrichCampaign(projectID, &documents[i])
+			errCode = enrichCampaign(projectID, &documents[i], endTimestamp)
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue
@@ -1160,41 +1182,79 @@ func Enrich(projectID uint64) ([]Status, bool) {
 		return statusByProjectAndType, true
 	}
 
+	status := CreateOrGetSalesforceEventName(projectID)
+	if status != http.StatusOK {
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
+			Status: "Failed to create event names"})
+		return statusByProjectAndType, true
+	}
+
 	allowedDocTypes := model.GetSalesforceDocumentTypeAlias(projectID)
 
 	salesforceSmartEventNames := GetSalesforceSmartEventNames(projectID)
 
+	docMinTimestamp, minTimestamp, errCode := store.GetStore().GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID)
+	if errCode != http.StatusFound {
+		if errCode == http.StatusNotFound {
+			statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
+				Status: U.CRM_SYNC_STATUS_SUCCESS})
+			return statusByProjectAndType, false
+		}
+
+		logCtx.WithField("err_code", errCode).Error("Failed to get time series.")
+		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
+			Status: "Failed to get time series."})
+		return statusByProjectAndType, true
+	}
+
+	orderedTimeSeries := model.GetCRMTimeSeriesByStartTimestamp(projectID, minTimestamp, model.SmartCRMEventSourceSalesforce)
+
 	anyFailure := false
-	for _, docType := range salesforceSyncOrderByType {
-		docTypeAlias := model.GetSalesforceAliasByDocType(docType)
-		if _, exist := allowedDocTypes[docTypeAlias]; !exist {
-			continue
+	overAllSyncStatus := make(map[string]bool)
+	for _, timeRange := range orderedTimeSeries {
+
+		for _, docType := range salesforceSyncOrderByType {
+			if docMinTimestamp[docType] <= 0 || timeRange[1] < docMinTimestamp[docType] {
+				continue
+			}
+
+			docTypeAlias := model.GetSalesforceAliasByDocType(docType)
+			if _, exist := allowedDocTypes[docTypeAlias]; !exist {
+				continue
+			}
+
+			logCtx = logCtx.WithFields(log.Fields{"type": docTypeAlias, "time_range": timeRange, "project_id": projectID})
+			logCtx.Info("Processing started for given time range")
+
+			var documents []model.SalesforceDocument
+			documents, errCode = store.GetStore().GetSalesforceDocumentsByTypeForSync(projectID, docType, timeRange[0], timeRange[1])
+
+			if errCode != http.StatusFound {
+				logCtx.Error("Failed to get salesforce document by type for sync.")
+				continue
+			}
+
+			errCode = enrichAll(projectID, documents, (*salesforceSmartEventNames)[docTypeAlias], timeRange[1])
+			if errCode == http.StatusOK {
+				if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
+					overAllSyncStatus[docTypeAlias] = false
+				}
+			} else {
+				overAllSyncStatus[docTypeAlias] = true
+			}
+
 		}
+	}
 
-		logCtx = logCtx.WithFields(log.Fields{
-			"doc_type":   docType,
-			"project_id": projectID,
-		})
-
-		documents, errCode := store.GetStore().GetSalesforceDocumentsByTypeForSync(projectID, docType)
-		if errCode != http.StatusFound {
-			logCtx.Error("Failed to get salesforce document by type for sync.")
-			continue
-		}
-
-		status := Status{
-			ProjectID: projectID,
-			Type:      docTypeAlias,
-		}
-
-		errCode = enrichAll(projectID, documents, (*salesforceSmartEventNames)[docTypeAlias])
-		if errCode == http.StatusOK {
-			status.Status = U.CRM_SYNC_STATUS_SUCCESS
-		} else {
+	for docTypeAlias, failure := range overAllSyncStatus {
+		status := Status{ProjectID: projectID,
+			Type: docTypeAlias}
+		if failure {
 			status.Status = U.CRM_SYNC_STATUS_FAILURES
 			anyFailure = true
+		} else {
+			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		}
-
 		statusByProjectAndType = append(statusByProjectAndType, status)
 	}
 

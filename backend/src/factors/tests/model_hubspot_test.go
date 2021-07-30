@@ -2104,7 +2104,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 		expectedTimeSeries = append(expectedTimeSeries, []int64{startDate.AddDate(0, 0, i).Unix() * 1000, startDate.AddDate(0, 0, i+1).Unix() * 1000})
 	}
 
-	resultTimeSeries := IntHubspot.GetHubspotTimeSeriesByStartTimestamp(1, startTimestamp.Unix()*1000)
+	resultTimeSeries := model.GetCRMTimeSeriesByStartTimestamp(1, startTimestamp.Unix()*1000, model.SmartCRMEventSourceHubspot)
 	assert.Equal(t, 11, len(resultTimeSeries)) // expected length 11
 
 	for i := 0; i < 11; i++ {
@@ -2188,7 +2188,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 		}
 	}
 
-	resultTimeSeries = IntHubspot.GetHubspotTimeSeriesByStartTimestamp(1, createdAt.Unix()*1000)
+	resultTimeSeries = model.GetCRMTimeSeriesByStartTimestamp(1, createdAt.Unix()*1000, model.SmartCRMEventSourceHubspot)
 	assert.Equal(t, 12, len(resultTimeSeries))
 
 	for i := 0; i < 10; i++ {
