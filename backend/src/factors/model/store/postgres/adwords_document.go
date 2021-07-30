@@ -635,6 +635,7 @@ func (pg *Postgres) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsL
 
 		adwordsLastSyncInfos[i].DocumentTypeAlias = typeAlias // map the type to type alias name.
 		adwordsLastSyncInfos[i].RefreshToken = settings.RefreshToken
+		adwordsLastSyncInfos[i].Timezone = settings.IntGoogleIngestionTimezone
 
 		selectedLastSyncInfos = append(selectedLastSyncInfos, adwordsLastSyncInfos[i])
 
