@@ -85,9 +85,8 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[1].Status)
-	assert.Equal(t, "success", enrichStatus[2].Status)
 
 	eventNameCreated := fmt.Sprintf("$sf_%s_created", salesforceDocument.TypeAlias)
 	eventNameUpdate := fmt.Sprintf("$sf_%s_updated", salesforceDocument.TypeAlias)
@@ -181,9 +180,8 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[1].Status)
-	assert.Equal(t, "success", enrichStatus[2].Status)
 
 	// query count of unique users
 	query = model.Query{
@@ -894,10 +892,8 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[1].Status)
-	assert.Equal(t, "success", enrichStatus[2].Status)
-
 	query := model.Query{
 		From: createdDate.Unix() - 500,
 		To:   createdDate.Unix() + 500,
@@ -1533,9 +1529,8 @@ func TestSmartEventPropertyDetails(t *testing.T) {
 
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
-	assert.Equal(t, "success", enrichStatus[1].Status)
-	assert.Equal(t, "success", enrichStatus[2].Status)
 
 	configs := make(map[string]interface{})
 	configs["rollupLookback"] = 1
@@ -1771,12 +1766,11 @@ func TestSalesforceCampaignTest(t *testing.T) {
 
 	enrichStatus, anyFailure := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, false, anyFailure)
+	assert.Len(t, enrichStatus, 4)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[2].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[3].Status)
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[4].Status)
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[5].Status)
 
 	query := model.Query{
 		From: campaign1CreatedTimestamp.Unix() - 500,
@@ -1968,7 +1962,7 @@ func TestGetLatestSalesforeDocument(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, contactUpdated, model.SalesforceDocumentTypeNameContact)
 	assert.Nil(t, err)
 
-	document, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{contactID1}, model.GetSalesforceDocTypeByAlias(model.SalesforceDocumentTypeNameContact))
+	document, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{contactID1}, model.GetSalesforceDocTypeByAlias(model.SalesforceDocumentTypeNameContact), 0)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, 1, len(document))
 	var contactMap map[string]interface{}
@@ -1999,7 +1993,7 @@ func TestGetLatestSalesforeDocument(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, contact2Updated, model.SalesforceDocumentTypeNameContact)
 	assert.Nil(t, err)
 
-	document, status = store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{contactID1, contactID2}, model.GetSalesforceDocTypeByAlias(model.SalesforceDocumentTypeNameContact))
+	document, status = store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{contactID1, contactID2}, model.GetSalesforceDocTypeByAlias(model.SalesforceDocumentTypeNameContact), 0)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, 2, len(document))
 	err = json.Unmarshal(document[0].Value.RawMessage, &contactMap)
@@ -2054,7 +2048,7 @@ func TestGetLatestSalesforeDocument(t *testing.T) {
 	err = createDummySalesforceDocument(project.ID, leadUpdated, model.SalesforceDocumentTypeNameLead)
 	assert.Nil(t, err)
 
-	document, status = store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{leadID1}, model.GetSalesforceDocTypeByAlias(model.SalesforceDocumentTypeNameLead))
+	document, status = store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{leadID1}, model.GetSalesforceDocTypeByAlias(model.SalesforceDocumentTypeNameLead), 0)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, 1, len(document))
 	err = json.Unmarshal(document[0].Value.RawMessage, &contactMap)
@@ -2146,9 +2140,9 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
-	assert.Equal(t, "success", enrichStatus[2].Status)
 
 	query := model.Query{
 		From: contact1CreatedDate.Unix() - 500,
@@ -2241,9 +2235,9 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
-	assert.Equal(t, "success", enrichStatus[2].Status)
 
 	query = model.Query{
 		From: contact1CreatedDate.Unix() - 500,
@@ -2268,4 +2262,355 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, float64(1), result.Rows[0][0])
 	assert.Equal(t, float64(1), result.Rows[0][1])
+}
+
+func TestSalesforcePerDayBatching(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	/*
+		generate per day time series -> {Day1,Day2}, {Day2,Day3},{Day3,Day4} upto current day
+	*/
+	startTimestamp := time.Now().AddDate(0, 0, -10) // 10 days excluding today
+	startDate := time.Date(startTimestamp.Year(), startTimestamp.Month(), startTimestamp.Day(), 0, 0, 0, 0, time.UTC)
+	expectedTimeSeries := [][]int64{}
+	for i := 0; i < 11; i++ {
+		expectedTimeSeries = append(expectedTimeSeries, []int64{startDate.AddDate(0, 0, i).Unix(), startDate.AddDate(0, 0, i+1).Unix()})
+	}
+
+	resultTimeSeries := model.GetCRMTimeSeriesByStartTimestamp(1, startTimestamp.Unix(), model.SmartCRMEventSourceSalesforce)
+	assert.Equal(t, 11, len(resultTimeSeries)) // expected length 11
+
+	for i := 0; i < 11; i++ {
+		if i == 0 {
+			assert.Equal(t, startTimestamp.Unix(), resultTimeSeries[i][0])
+		} else {
+			assert.Equal(t, expectedTimeSeries[i][0], resultTimeSeries[i][0])
+		}
+
+		assert.Equal(t, expectedTimeSeries[i][1], resultTimeSeries[i][1])
+	}
+
+	lead1CreatedDate := time.Now().AddDate(0, 0, -5)
+	lead1LastModifiedDate := lead1CreatedDate.Add(10 * time.Second)
+	leadID1 := U.RandomLowerAphaNumString(5)
+	email := getRandomEmail()
+	lead1Created := map[string]interface{}{
+		"Id":               leadID1,
+		"Name":             "lead1",
+		"City":             "City1",
+		"Email":            email,
+		"CreatedDate":      lead1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lead1LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, lead1Created, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+
+	contactID1 := U.RandomString(5)
+	contact1CreatedDate := lead1CreatedDate.Add(500 * time.Minute)
+	contact1LastModifiedDate := contact1CreatedDate.Add(10 * time.Second)
+	contactCreated := map[string]interface{}{
+		"Id":               contactID1,
+		"Name":             "contact1",
+		"City":             "City2",
+		"Email":            email,
+		"CreatedDate":      contact1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": contact1LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, contactCreated, model.SalesforceDocumentTypeNameContact)
+	assert.Nil(t, err)
+
+	lead1UpdatedDate := lead1CreatedDate.AddDate(0, 0, 1)
+	lead1Updated := map[string]interface{}{
+		"Id":               leadID1,
+		"Name":             "lead1",
+		"City":             "City3",
+		"CreatedDate":      lead1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lead1UpdatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, lead1Updated, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+
+	contact1UpdatedDate := lead1UpdatedDate.Add(500 * time.Minute)
+	contactUpdated := map[string]interface{}{
+		"Id":               contactID1,
+		"Name":             "contact1",
+		"City":             "City4",
+		"CreatedDate":      contact1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": contact1UpdatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, contactUpdated, model.SalesforceDocumentTypeNameContact)
+	assert.Nil(t, err)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 2)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+
+	query := model.Query{
+		From: lead1CreatedDate.AddDate(0, 0, -1).Unix(),
+		To:   contact1UpdatedDate.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+	analyzeResult, status, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, analyzeResult.Rows, 2)
+	assert.Equal(t, float64(3), analyzeResult.Rows[0][1])
+	assert.Equal(t, float64(3), analyzeResult.Rows[1][1])
+	assert.Subset(t, []interface{}{analyzeResult.Rows[0][0], analyzeResult.Rows[1][0]},
+		[]interface{}{U.EVENT_NAME_SALESFORCE_LEAD_UPDATED, U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED})
+
+	query = model.Query{
+		From: lead1CreatedDate.AddDate(0, 0, -1).Unix(),
+		To:   contact1UpdatedDate.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondEachGivenEvent,
+		Class:           model.QueryClassEvents,
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				Property:       "$salesforce_lead_city",
+				EventName:      U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
+				EventNameIndex: 1,
+			},
+			{
+				Entity:         model.PropertyEntityUser,
+				Property:       "$salesforce_contact_city",
+				EventName:      U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
+				EventNameIndex: 1,
+			},
+		},
+	}
+
+	result, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	rows := result.Results[0].Rows
+	assert.Equal(t, 2, len(rows))
+	assert.Subset(t, []interface{}{rows[0][2], rows[1][2]}, []interface{}{"City1", "City3"})
+	assert.Subset(t, []interface{}{rows[0][3], rows[1][3]}, []interface{}{"$none", "City2"})
+
+	query = model.Query{
+		From: lead1CreatedDate.AddDate(0, 0, -1).Unix(),
+		To:   contact1UpdatedDate.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondEachGivenEvent,
+		Class:           model.QueryClassEvents,
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:         model.PropertyEntityUser,
+				Property:       "$salesforce_lead_city",
+				EventName:      U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
+				EventNameIndex: 1,
+			},
+		},
+	}
+
+	result, status = store.GetStore().RunEventsGroupQuery([]model.Query{query}, project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	rows = result.Results[0].Rows
+	assert.Equal(t, 2, len(rows))
+	assert.Subset(t, []interface{}{rows[0][2], rows[1][2]}, []interface{}{"City1", "City3"})
+
+	// TestCampaignMember update on daily baisis
+	campaign1CreatedTimestamp := time.Now().AddDate(0, 0, -5)
+	campaign1ID := U.RandomString(5)
+	campaign1Name := U.RandomString(3)
+	campaignMember1ID := U.RandomString(5)
+	campaignMember1LeadID := U.RandomString(5)
+	Campaign1 := map[string]interface{}{
+		"Id":   campaign1ID,
+		"Name": campaign1Name,
+		"CampaignMembers": IntSalesforce.RelationshipCampaignMember{
+			Records: []IntSalesforce.RelationshipCampaignMemberRecord{
+				{
+					ID: campaignMember1ID,
+				},
+			},
+		},
+		"Members":          1,
+		"CreatedDate":      campaign1CreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaign1CreatedTimestamp.Add(2 * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, Campaign1, model.SalesforceDocumentTypeNameCampaign)
+	assert.Nil(t, err)
+
+	campaignMember1CreatedTimestamp := campaign1CreatedTimestamp.Add(10 * time.Minute)
+	campaignMember1 := map[string]interface{}{
+		"Id":               campaignMember1ID,
+		"CampaignId":       campaign1ID,
+		"LeadId":           campaignMember1LeadID,
+		"City":             "Mumbai",
+		"CreatedDate":      campaignMember1CreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaignMember1CreatedTimestamp.Add(2 * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, campaignMember1, model.SalesforceDocumentTypeNameCampaignMember)
+	assert.Nil(t, err)
+
+	Campaign1lead := map[string]interface{}{
+		"Id":               campaignMember1LeadID,
+		"Name":             "Campaign1lead",
+		"CreatedDate":      campaignMember1CreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaignMember1CreatedTimestamp.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, Campaign1lead, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+
+	Campaign1 = map[string]interface{}{
+		"Id":   campaign1ID,
+		"Name": campaign1Name,
+		"CampaignMembers": IntSalesforce.RelationshipCampaignMember{
+			Records: []IntSalesforce.RelationshipCampaignMemberRecord{
+				{
+					ID: campaignMember1ID,
+				},
+			},
+		},
+		"Members":          3,
+		"CreatedDate":      campaign1CreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaign1CreatedTimestamp.AddDate(0, 0, 1).Add(2 * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, Campaign1, model.SalesforceDocumentTypeNameCampaign)
+	assert.Nil(t, err)
+
+	campaignMember1 = map[string]interface{}{
+		"Id":               campaignMember1ID,
+		"CampaignId":       campaign1ID,
+		"LeadId":           campaignMember1LeadID,
+		"City":             "Delhi",
+		"CreatedDate":      campaignMember1CreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaignMember1CreatedTimestamp.AddDate(0, 0, 1).Add(2 * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, campaignMember1, model.SalesforceDocumentTypeNameCampaignMember)
+	assert.Nil(t, err)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+	assert.Equal(t, "success", enrichStatus[2].Status)
+
+	query = model.Query{
+		From: lead1CreatedDate.AddDate(0, 0, -1).Unix(),
+		To:   contact1UpdatedDate.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+	analyzeResult, status, _ = store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, analyzeResult.Rows, 1)
+	assert.Equal(t, float64(3), analyzeResult.Rows[0][0])
+
+	query = model.Query{
+		From: lead1CreatedDate.AddDate(0, 0, -1).Unix(),
+		To:   contact1UpdatedDate.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Property: "$salesforce_campaign_members",
+				Entity:   "event",
+				Type:     "categorical",
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+	analyzeResult, status, _ = store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Subset(t, []interface{}{[]interface{}{"1", float64(2)}, []interface{}{"3", float64(1)}}, analyzeResult.Rows)
+}
+
+func TestSalesforceGetDocumentsByTypeForSyncWithTimeRange(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createdDate := time.Now().AddDate(0, 0, -3)
+	leadDocument := map[string]interface{}{
+		"Id":               1,
+		"Name":             "lead1",
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, leadDocument, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+
+	lastModifiedDate := createdDate.AddDate(0, 0, 1)
+	leadDocument = map[string]interface{}{
+		"Id":               1,
+		"Name":             "lead1",
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lastModifiedDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, leadDocument, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+
+	lastModifiedDate = lastModifiedDate.AddDate(0, 0, 1)
+	leadDocument = map[string]interface{}{
+		"Id":               1,
+		"Name":             "lead1",
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lastModifiedDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, leadDocument, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+
+	documents, status := store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeLead, 0, 0)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 3)
+
+	resultTimeSeries := model.GetCRMTimeSeriesByStartTimestamp(1, createdDate.Unix(), model.SmartCRMEventSourceSalesforce)
+	assert.Equal(t, 4, len(resultTimeSeries))
+
+	documents, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeLead, resultTimeSeries[0][0], resultTimeSeries[0][1])
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+	documents, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeLead, resultTimeSeries[1][0], resultTimeSeries[1][1])
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+	documents, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeLead, resultTimeSeries[2][0], resultTimeSeries[2][1])
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+
+	// for 2 dates
+	documents, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeLead, resultTimeSeries[1][0], resultTimeSeries[2][1])
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 2)
 }

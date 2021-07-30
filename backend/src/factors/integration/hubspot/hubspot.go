@@ -1180,26 +1180,6 @@ type Status struct {
 	Status    string `json:"status"`
 }
 
-// GetHubspotTimeSeriesByStartTimestamp returns time series for batch processing -> {Day1,Day2}, {Day2,Day3},{Day3,Day4} upto current day
-func GetHubspotTimeSeriesByStartTimestamp(projectID uint64, from int64) [][]int64 {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "from": from})
-	if from < 1 {
-		logCtx.Error("Invalid timestamp from batch processing by day.")
-		return nil
-	}
-
-	timeSeries := [][]int64{}
-	startTime := time.Unix(from/1000, 0)
-	startDate := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
-	currentTime := time.Now()
-	for ; startDate.Unix() < currentTime.Unix(); startDate = startDate.AddDate(0, 0, 1) {
-		timeSeries = append(timeSeries, []int64{startTime.Unix() * 1000, startDate.AddDate(0, 0, 1).Unix() * 1000})
-		startTime = startDate.AddDate(0, 0, 1)
-	}
-
-	return timeSeries
-}
-
 type syncWorkerStatus struct {
 	HasFailure bool
 	Lock       sync.Mutex
@@ -1247,7 +1227,7 @@ func Sync(projectID uint64, workersPerProject int) ([]Status, bool) {
 	}
 
 	if workersPerProject > 1 {
-		orderedTimeSeries = GetHubspotTimeSeriesByStartTimestamp(projectID, minTimestamp)
+		orderedTimeSeries = model.GetCRMTimeSeriesByStartTimestamp(projectID, minTimestamp, model.SmartCRMEventSourceHubspot)
 	} else {
 		// generate single time series
 		orderedTimeSeries = append(orderedTimeSeries, []int64{minTimestamp, time.Now().Unix() * 1000})

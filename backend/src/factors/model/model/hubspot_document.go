@@ -173,6 +173,36 @@ func GetHubspotTypeAliasByType(typ int) string {
 	return ""
 }
 
+// GetCRMTimeSeriesByStartTimestamp returns time series for batch processing -> {Day1,Day2}, {Day2,Day3},{Day3,Day4} upto current day
+func GetCRMTimeSeriesByStartTimestamp(projectID uint64, from int64, CRMEventSource string) [][]int64 {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "from": from, "crm_source": CRMEventSource})
+	if from < 1 {
+		logCtx.Error("Invalid timestamp from batch processing by day.")
+		return nil
+	}
+
+	if CRMEventSource != SmartCRMEventSourceSalesforce && CRMEventSource != SmartCRMEventSourceHubspot {
+		logCtx.Error("Invalid source.")
+		return nil
+	}
+
+	multiplier := int64(1)
+	if CRMEventSource == SmartCRMEventSourceHubspot {
+		multiplier = 1000
+	}
+
+	timeSeries := [][]int64{}
+	startTime := time.Unix(from/multiplier, 0)
+	startDate := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
+	currentTime := time.Now()
+	for ; startDate.Unix() < currentTime.Unix(); startDate = startDate.AddDate(0, 0, 1) {
+		timeSeries = append(timeSeries, []int64{startTime.Unix() * multiplier, startDate.AddDate(0, 0, 1).Unix() * multiplier})
+		startTime = startDate.AddDate(0, 0, 1)
+	}
+
+	return timeSeries
+}
+
 // GetHubspotAllowedObjects returns hubspot objects for api
 func GetHubspotAllowedObjects(projectID uint64) *map[string]string {
 	if projectID == 0 {

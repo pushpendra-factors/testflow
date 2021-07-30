@@ -572,7 +572,7 @@ func (store *MemSQL) BuildAndUpsertDocument(projectID uint64, objectName string,
 }
 
 // GetSalesforceDocumentsByTypeForSync - Pulls salesforce documents which are not synced
-func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int) ([]model.SalesforceDocument, int) {
+func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int, from, to int64) ([]model.SalesforceDocument, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "type": typ})
 
 	if projectID == 0 || typ == 0 {
@@ -582,9 +582,15 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ i
 
 	var documents []model.SalesforceDocument
 
+	whereStmnt := "project_id=? AND type=? AND synced=false"
+	whereParams := []interface{}{projectID, typ}
+	if from > 0 && to > 0 {
+		whereStmnt = whereStmnt + " AND " + "timestamp BETWEEN ? AND ?"
+		whereParams = append(whereParams, from, to)
+	}
+
 	db := C.GetServices().Db
-	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false",
-		projectID, typ).Find(&documents).Error
+	err := db.Order("timestamp, created_at ASC").Where(whereStmnt, whereParams...).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get salesforce documents by type.")
 		return nil, http.StatusInternalServerError
@@ -594,7 +600,7 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ i
 }
 
 //GetLatestSalesforceDocumentByID return latest synced or unsynced document
-func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int) ([]model.SalesforceDocument, int) {
+func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "ids": documentIDs, "type": docType})
 
 	if projectID == 0 || len(documentIDs) < 1 || docType == 0 {
@@ -602,13 +608,23 @@ func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID uint64, documentI
 		return nil, http.StatusBadRequest
 	}
 
-	selectStmnt := "WITH latest_timestamp as (SELECT id,max(timestamp) as timestamp FROM salesforce_documents " +
-		"WHERE project_id = ? AND type=? AND id IN(?) GROUP BY id ) " +
+	selectMaxTimestamp := "SELECT id,max(timestamp) as timestamp FROM salesforce_documents " +
+		"WHERE project_id = ? AND type=? AND id IN(?)"
+	params := []interface{}{projectID, docType, documentIDs}
+	if maxTimestamp > 0 {
+		selectMaxTimestamp = selectMaxTimestamp + " AND timestamp <= ? "
+		params = append(params, maxTimestamp)
+	}
+	selectMaxTimestampByID := selectMaxTimestamp + " GROUP BY id "
+
+	selectStmnt := " WITH latest_timestamp as " + "(" + selectMaxTimestampByID + ") " +
 		"SELECT * FROM salesforce_documents left join latest_timestamp ON salesforce_documents.id=latest_timestamp.id " +
 		"WHERE salesforce_documents.project_id = ? AND salesforce_documents.type=? AND salesforce_documents.id IN(?) AND " +
 		"salesforce_documents.timestamp = latest_timestamp.timestamp"
+	params = append(params, projectID, docType, documentIDs)
+
 	db := C.GetServices().Db
-	rows, err := db.Raw(selectStmnt, projectID, docType, documentIDs, projectID, docType, documentIDs).Rows()
+	rows, err := db.Raw(selectStmnt, params...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to execute query on GetLatestSalesforceDocumentByID.")
@@ -630,4 +646,50 @@ func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID uint64, documentI
 	}
 
 	return documents, http.StatusFound
+}
+
+// GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync returns the minimum timestamp for unsynced document
+func (store *MemSQL) GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64) (map[int]int64, int64, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	if projectID == 0 {
+		logCtx.Error("Invalid project_id.")
+		return nil, 0, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	rows, err := db.Raw("SELECT type,MIN(timestamp) FROM salesforce_documents WHERE project_id=? AND synced=false GROUP BY type", projectID).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get salesforce minimum timestamp.")
+		return nil, 0, http.StatusInternalServerError
+	}
+
+	var docMinTimestamp map[int]int64
+	var overallMinTimestamp int64
+
+	defer rows.Close()
+	for rows.Next() {
+		var minTimestamp *int64
+		var docType *int
+		if err := rows.Scan(&docType, &minTimestamp); err != nil {
+			log.WithError(err).Error("Failed scanning rows on get salesforce minimum timestamp for sync.")
+			continue
+		}
+
+		if docMinTimestamp == nil {
+			docMinTimestamp = make(map[int]int64)
+		}
+
+		if overallMinTimestamp == 0 || *minTimestamp < overallMinTimestamp {
+			overallMinTimestamp = *minTimestamp
+		}
+
+		docMinTimestamp[*docType] = *minTimestamp
+	}
+
+	if docMinTimestamp == nil {
+		return nil, 0, http.StatusNotFound
+	}
+
+	return docMinTimestamp, overallMinTimestamp, http.StatusFound
 }

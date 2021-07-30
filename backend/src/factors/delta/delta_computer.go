@@ -553,6 +553,9 @@ func QueryUserMultiStepFunnel(preSessionEvents []P.CounterEventFormat, sessions 
 					maxIndex = index[it][iteratorI]
 					isLevelFunnelFound = true
 				}
+				if isLevelFunnelFound == true {
+					break
+				}
 			}
 			if isLevelFunnelFound == false {
 				break

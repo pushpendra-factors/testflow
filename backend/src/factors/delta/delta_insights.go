@@ -31,6 +31,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	}
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
 	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	whitelistedDashboardUnits := configs["whitelistedDashboardUnits"].(map[string]bool)
 	log.Info((*cloudManager).GetBucketName())
 	k := configs["k"].(int)
 	// Cross Period Insights
@@ -49,6 +50,9 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	computedQueries := make(map[uint64]bool)
 	dashboardUnits, _ := store.GetStore().GetDashboardUnitsForProjectID(projectId)
 	for _, dashboardUnit := range dashboardUnits {
+		if !(whitelistedDashboardUnits["*"] == true || whitelistedDashboardUnits[fmt.Sprintf("%v", dashboardUnit.ID)] == true) {
+			continue
+		}
 		queryIdString := fmt.Sprintf("%v", dashboardUnit.QueryId)
 		deltaQuery, multiStepQuery, isEnabled, isEventOccurence, isMultiStep := IsDashboardUnitWIEnabled(dashboardUnit)
 		// Check if this is a valid query with valid filters
