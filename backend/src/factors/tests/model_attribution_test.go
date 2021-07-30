@@ -1104,6 +1104,21 @@ func TestAttributionMethodologies(t *testing.T) {
 			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
 			false},
+
+		// Test for U_SHAPED
+		{"u_shaped",
+			args{model.AttributionMethodUShaped,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp,
+				lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
+			},
+			map[string][]string{user1: {camp3, camp2}},
+			map[string]map[string][]string{},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
