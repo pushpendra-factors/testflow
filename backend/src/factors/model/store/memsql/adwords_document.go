@@ -693,6 +693,7 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 
 		adwordsLastSyncInfos[i].DocumentTypeAlias = typeAlias // map the type to type alias name.
 		adwordsLastSyncInfos[i].RefreshToken = settings.RefreshToken
+		adwordsLastSyncInfos[i].Timezone = settings.IntGoogleIngestionTimezone
 
 		selectedLastSyncInfos = append(selectedLastSyncInfos, adwordsLastSyncInfos[i])
 
