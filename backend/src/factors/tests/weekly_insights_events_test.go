@@ -776,3 +776,138 @@ func TestQueryUser(t *testing.T) {
 	assert.Equal(t, baseIndex, int64(2))
 	assert.Equal(t, targetIndex, int64(2))
 }
+
+func TestQueryUserMultiStepFunnel(t *testing.T) {
+	event1 := P.CounterEventFormat{
+		UserId:            "1",
+		UserJoinTimestamp: 1,
+		EventName:         "E1",
+		EventTimestamp:    1,
+		EventCardinality:  0,
+	}
+	event2 := P.CounterEventFormat{
+		UserId:            "1",
+		UserJoinTimestamp: 1,
+		EventName:         "E1",
+		EventTimestamp:    2,
+		EventCardinality:  0,
+	}
+	event3 := P.CounterEventFormat{
+		UserId:            "1",
+		UserJoinTimestamp: 1,
+		EventName:         "E1",
+		EventTimestamp:    3,
+		EventCardinality:  0,
+	}
+	event4 := P.CounterEventFormat{
+		UserId:            "1",
+		UserJoinTimestamp: 1,
+		EventName:         "E1",
+		EventTimestamp:    4,
+		EventCardinality:  0,
+	}
+	event5 := P.CounterEventFormat{
+		UserId:            "1",
+		UserJoinTimestamp: 1,
+		EventName:         "E3",
+		EventTimestamp:    4,
+		EventCardinality:  0,
+	}
+	event6 := P.CounterEventFormat{
+		UserId:            "1",
+		UserJoinTimestamp: 1,
+		EventName:         "E4",
+		EventTimestamp:    4,
+		EventCardinality:  0,
+	}
+	event7 := P.CounterEventFormat{
+		UserId:            "1",
+		UserJoinTimestamp: 1,
+		EventName:         "E5",
+		EventTimestamp:    5,
+		EventCardinality:  0,
+	}
+	event8 := P.CounterEventFormat{
+		UserId:            "1",
+		UserJoinTimestamp: 1,
+		EventName:         "E6",
+		EventTimestamp:    6,
+		EventCardinality:  0,
+	}
+	session1 := delta.Session{
+		Events: []P.CounterEventFormat{
+			event1,
+			event5,
+		},
+	}
+	session2 := delta.Session{
+		Events: []P.CounterEventFormat{
+			event2,
+			event6,
+		},
+	}
+	session3 := delta.Session{
+		Events: []P.CounterEventFormat{
+			event3,
+			event7,
+		},
+	}
+	session4 := delta.Session{
+		Events: []P.CounterEventFormat{
+			event4,
+			event8,
+		},
+	}
+	sessionList := []delta.Session{
+		session1,
+		session2,
+		session3,
+		session4,
+	}
+	// E1 -> E2
+	query :=
+		delta.MultiFunnelQuery{
+			Base: delta.EventsCriteria{
+				Operator: "And",
+				EventCriterionList: []delta.EventCriterion{
+					delta.EventCriterion{
+						Name:         "E1",
+						EqualityFlag: true,
+					},
+				},
+			},
+			Intermediate: []delta.EventsCriteria{
+				delta.EventsCriteria{
+					Operator: "And",
+					EventCriterionList: []delta.EventCriterion{
+						delta.EventCriterion{
+							Name:         "E1",
+							EqualityFlag: true,
+						},
+					},
+				},
+				delta.EventsCriteria{
+					Operator: "And",
+					EventCriterionList: []delta.EventCriterion{
+						delta.EventCriterion{
+							Name:         "E1",
+							EqualityFlag: true,
+						},
+					},
+				},
+			},
+			Target: delta.EventsCriteria{
+				Operator: "And",
+				EventCriterionList: []delta.EventCriterion{
+					delta.EventCriterion{
+						Name:         "E3",
+						EqualityFlag: true,
+					},
+				},
+			},
+		}
+	result, _ := delta.QueryUserMultiStepFunnel(make([]P.CounterEventFormat, 0), sessionList, query)
+	assert.Equal(t, true, result.BaseAndTargetFlag)
+	assert.Equal(t, true, result.BaseFlag)
+	assert.Equal(t, true, result.TargetFlag)
+}
