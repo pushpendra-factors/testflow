@@ -29,6 +29,10 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 			attributionKeys = getLastTouchId(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
+		case AttributionMethodUShaped:
+			attributionKeys = getUShaped(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
 
 		case AttributionMethodFirstTouchNonDirect:
 			attributionKeys = getFirstTouchNDId(attributionType, userSessions, conversionTime,
@@ -178,6 +182,15 @@ func getLastTouchId(attributionType string, attributionTimerange map[string]User
 
 	}
 	return []string{}
+}
+
+// returns the first and the last attributionId
+func getUShaped(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
+	lookbackPeriod, from, to int64) []string {
+	firstTouch := getFirstTouchId(attributionType, attributionTimerange, conversionTime, lookbackPeriod, from, to)
+	lastTouch := getLastTouchId(attributionType, attributionTimerange, conversionTime, lookbackPeriod, from, to)
+	keys := append(firstTouch, lastTouch...)
+	return keys
 }
 
 // returns the first non $none attributionId
