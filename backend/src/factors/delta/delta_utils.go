@@ -157,6 +157,13 @@ type Query struct {
 	Target EventsCriteria `json:"target"`
 }
 
+type MultiFunnelQuery struct {
+	Id           int              `json:"id"`
+	Base         EventsCriteria   `json:"base"`
+	Intermediate []EventsCriteria `json:"intermediate"`
+	Target       EventsCriteria   `json:"target"`
+}
+
 // ValCountTable is a map where feature-values are keys and their frequency counts are values.
 type ValCountTable map[string]uint64
 

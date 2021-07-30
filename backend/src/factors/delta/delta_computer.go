@@ -380,6 +380,51 @@ func QueryEventEventOccurence(event P.CounterEventFormat, deltaQuery Query, perU
 	return target
 }
 
+func QuerySessionMultiStepFunnel(session Session, multiStageFunnel MultiFunnelQuery, timestamp *map[int][]int64, index *map[int][]int, i int) {
+	it := i
+	intermediateLength := len(multiStageFunnel.Intermediate)
+	for _, event := range session.Events {
+		criteriaResult := makeCriteriaResult(multiStageFunnel.Base)
+		base := updateCriteriaResult(event, multiStageFunnel.Base, &criteriaResult, true)
+		if (*timestamp)[0] == nil {
+			(*timestamp)[0] = make([]int64, 0)
+		}
+		if (*index)[0] == nil {
+			(*index)[0] = make([]int, 0)
+		}
+		if base == true {
+			(*timestamp)[0] = append((*timestamp)[0], event.EventTimestamp)
+			(*index)[0] = append((*index)[0], it)
+		}
+		for iteratorIndex, intermediate := range multiStageFunnel.Intermediate {
+			criteriaResult = makeCriteriaResult(intermediate)
+			intermediate := updateCriteriaResult(event, intermediate, &criteriaResult, false)
+			if (*timestamp)[iteratorIndex+1] == nil {
+				(*timestamp)[iteratorIndex+1] = make([]int64, 0)
+			}
+			if (*index)[iteratorIndex+1] == nil {
+				(*index)[iteratorIndex+1] = make([]int, 0)
+			}
+			if intermediate == true {
+				(*timestamp)[iteratorIndex+1] = append((*timestamp)[iteratorIndex+1], event.EventTimestamp)
+				(*index)[iteratorIndex+1] = append((*index)[iteratorIndex+1], it)
+			}
+		}
+		criteriaResult = makeCriteriaResult(multiStageFunnel.Target)
+		target := updateCriteriaResult(event, multiStageFunnel.Target, &criteriaResult, false)
+		if (*timestamp)[intermediateLength+1] == nil {
+			(*timestamp)[intermediateLength+1] = make([]int64, 0)
+		}
+		if (*index)[intermediateLength+1] == nil {
+			(*index)[intermediateLength+1] = make([]int, 0)
+		}
+		if target == true {
+			(*timestamp)[intermediateLength+1] = append((*timestamp)[intermediateLength+1], event.EventTimestamp)
+			(*index)[intermediateLength+1] = append((*index)[intermediateLength+1], it)
+		}
+		it++
+	}
+}
 func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUserQueryResult, baseTimestamp *int64, targetTimestamp *int64, baseIndex *int, targetIndex *int, i int) {
 	index := i
 	for _, event := range session.Events {
@@ -451,14 +496,14 @@ func QueryUser(preSessionEvents []P.CounterEventFormat, sessions []Session, delt
 	extendedSessions = append(extendedSessions, sessions...)
 	for _, session := range extendedSessions {
 		QuerySession(session, deltaQuery, &userResult, &baseTimestamp, &targetTimestamp, &baseIndex, &targetIndex, i)
-		if userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseTimestamp <= targetTimestamp && baseIndex <= targetIndex {
+		if userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseTimestamp <= targetTimestamp && baseIndex != targetIndex {
 			break
 		}
 		i = i + len(session.Events)
 	}
 	summary := PerEventProperties{BaseFlag: userResult.baseResult.criteriaMatchFlag,
 		TargetFlag: userResult.targetResult.criteriaMatchFlag}
-	summary.BaseAndTargetFlag = userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseTimestamp <= targetTimestamp && baseIndex <= targetIndex
+	summary.BaseAndTargetFlag = userResult.baseResult.criteriaMatchFlag && userResult.targetResult.criteriaMatchFlag && baseTimestamp <= targetTimestamp && baseIndex != targetIndex
 	summary.EventProperties = make(map[string]interface{})
 	summary.UserProperties = make(map[string]interface{})
 	if summary.BaseAndTargetFlag {
@@ -474,6 +519,75 @@ func QueryUser(preSessionEvents []P.CounterEventFormat, sessions []Session, delt
 	return summary, err
 }
 
+func QueryUserMultiStepFunnel(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery MultiFunnelQuery) (PerEventProperties, error) {
+	isSessionTarget := false
+	for _, target := range deltaQuery.Target.EventCriterionList {
+		if target.Name == "$session" {
+			isSessionTarget = true
+		}
+	}
+	totalFunnelEvents := 2 + len(deltaQuery.Intermediate)
+	timestamp := make(map[int][]int64)
+	index := make(map[int][]int)
+	i := int(0)
+	var err error = nil
+	var extendedSessions []Session // Extended sessions are preSessionEvents + sessions.
+	extendedSessions = append(extendedSessions, Session{Events: preSessionEvents})
+	extendedSessions = append(extendedSessions, sessions...)
+	isEntireFunnelFound := false
+	for _, session := range extendedSessions {
+		QuerySessionMultiStepFunnel(session, deltaQuery, &timestamp, &index, i)
+		if timestamp[0] == nil || len(timestamp[0]) <= 0 {
+			continue
+		}
+		maxTimestamp := timestamp[0][0]
+		maxIndex := index[0][0]
+		for it := 1; it < totalFunnelEvents; it++ {
+			isLevelFunnelFound := false
+			if timestamp[it] == nil || len(timestamp[it]) <= 0 {
+				break
+			}
+			for iteratorI, _ := range timestamp[it] {
+				if timestamp[it][iteratorI] >= maxTimestamp && index[it][iteratorI] != maxIndex {
+					maxTimestamp = timestamp[it][iteratorI]
+					maxIndex = index[it][iteratorI]
+					isLevelFunnelFound = true
+				}
+			}
+			if isLevelFunnelFound == false {
+				break
+			}
+			if it == totalFunnelEvents-1 {
+				isEntireFunnelFound = true
+			}
+		}
+		if isEntireFunnelFound == true {
+			break
+		}
+		i = i + len(session.Events)
+	}
+	events := make([]P.CounterEventFormat, 0)
+	for _, session := range extendedSessions {
+		events = append(events, session.Events...)
+	}
+	summary := PerEventProperties{}
+	summary.EventProperties = make(map[string]interface{})
+	summary.UserProperties = make(map[string]interface{})
+	if isEntireFunnelFound {
+		// both source and target properties
+		summary.BaseAndTargetFlag = true
+		combineSourceAndTargetProperties(events[index[0][0]], events[index[totalFunnelEvents-1][len(index[totalFunnelEvents-1])-1]], &summary.EventProperties, &summary.UserProperties, isSessionTarget)
+	}
+	if timestamp[0] != nil && len(timestamp[0]) > 0 {
+		summary.BaseFlag = true
+		combineSourceAndTargetProperties(events[index[0][0]], P.CounterEventFormat{}, &summary.EventProperties, &summary.UserProperties, isSessionTarget)
+	}
+	if timestamp[totalFunnelEvents-1] != nil && len(timestamp[totalFunnelEvents-1]) > 0 {
+		summary.TargetFlag = true
+		combineSourceAndTargetProperties(P.CounterEventFormat{}, events[index[totalFunnelEvents-1][len(index[totalFunnelEvents-1])-1]], &summary.EventProperties, &summary.UserProperties, isSessionTarget)
+	}
+	return summary, err
+}
 func QueryUserEventOccurence(preSessionEvents []P.CounterEventFormat, sessions []Session, deltaQuery Query) ([]PerEventProperties, error) {
 	isSessionTarget := false
 	for _, target := range deltaQuery.Target.EventCriterionList {
@@ -557,7 +671,7 @@ func getCustomBlacklist() map[string]bool {
 	return customBlacklistMap
 }
 
-func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int, featSoftWhitelist map[string]map[string]bool, passId int, isEventOccurence bool) (WithinPeriodInsights, error) {
+func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, featSoftWhitelist map[string]map[string]bool, passId int, isEventOccurence bool, isMultistepFunnel bool) (WithinPeriodInsights, error) {
 	var err error
 	var wpInsights WithinPeriodInsights
 	var prevUserId string = ""
@@ -587,7 +701,21 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, k int
 				continue
 			}
 		} else { // If a new user's events have started coming...
-			if !isEventOccurence {
+			if isMultistepFunnel {
+				matchSummary, err = QueryUserMultiStepFunnel(preSessionEvents, sessions, multiStepQuery)
+				if err != nil {
+					return wpInsights, err
+				}
+				if matchSummary.BaseFlag {
+					matchedBaseEvents = append(matchedBaseEvents, matchOnlyPrefixedPropertiesWithPrefix(matchSummary, "s#"))
+				}
+				if matchSummary.TargetFlag {
+					matchedTargetEvents = append(matchedTargetEvents, matchOnlyPrefixedPropertiesWithPrefix(matchSummary, "t#"))
+				}
+				if matchSummary.BaseAndTargetFlag {
+					matchedBaseAndTargetEvents = append(matchedBaseAndTargetEvents, matchSummary)
+				}
+			} else if !isEventOccurence {
 				matchSummary, err = QueryUser(preSessionEvents, sessions, deltaQuery)
 				if err != nil {
 					return wpInsights, err
