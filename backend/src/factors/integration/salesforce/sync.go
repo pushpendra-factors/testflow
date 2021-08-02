@@ -617,7 +617,7 @@ func getOpportunityPrimaryContactIDs(projectID uint64, oppRecords []model.Salesf
 		}
 
 		if len(opportunityContactRoleRecords) > 0 && !primaryContact {
-			log.WithFields(log.Fields{"project_id": projectID, "doc_id": oppRecords[i]}).Error("Missing primary contact. Skipping contact association.")
+			log.WithFields(log.Fields{"project_id": projectID, "doc_id": oppRecords[i]}).Warn("Missing primary contact. Skipping contact association.")
 		}
 	}
 
@@ -664,7 +664,7 @@ func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceUR
 				oppID := util.GetPropertyValueAsString(objectRecords[i]["Id"])
 				leadID := (oppToLeadIDs)[oppID]
 				if leadID == "" {
-					logCtx.WithFields(log.Fields{"opportunity_id": oppID}).Error("Missing lead id for opportunity. Skipping adding lead id to opportunity.")
+					logCtx.WithFields(log.Fields{"opportunity_id": oppID}).Warn("Missing lead id for opportunity. Skipping adding lead id to opportunity.")
 				} else {
 					objectRecords[i][OpportunityLeadID] = leadID
 				}
@@ -1018,7 +1018,7 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, accessToken, instanceU
 
 			label, exist := describe.Fields[i]["label"]
 			if !exist {
-				logCtx.Error("Failed to get property label.")
+				logCtx.Warn("Failed to get property label.")
 			} else {
 				logCtx.Info("Inserting display names")
 				err := store.GetStore().CreateOrUpdateDisplayNameByObjectType(projectID, model.GetCRMEnrichPropertyKeyByType(

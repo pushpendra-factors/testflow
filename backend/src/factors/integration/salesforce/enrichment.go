@@ -433,7 +433,7 @@ func enrichContact(projectID uint64, document *model.SalesforceDocument, salesfo
 
 	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	if customerUserID == "" {
-		logCtx.Error("Skipping user identification on salesforce contact sync. No customer_user_id on properties.")
+		logCtx.Warn("Skipping user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
 
 	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
@@ -799,7 +799,7 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 
 	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	if customerUserID == "" {
-		logCtx.Error("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
+		logCtx.Warn("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
 	}
 
 	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
@@ -1154,7 +1154,11 @@ func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmar
 		var salesforceSmartEventName SalesforceSmartEventName
 		decFilterExp, err := model.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to decode smart event filter expression")
+			if err == model.ErrorSmartEventFiterEmptyString {
+				logCtx.WithError(err).Warn("Empty string on smart event filter.")
+			} else {
+				logCtx.WithError(err).Error("Failed to decode smart event filter expression")
+			}
 			continue
 		}
 

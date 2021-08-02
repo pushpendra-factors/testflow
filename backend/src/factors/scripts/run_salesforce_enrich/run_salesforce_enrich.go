@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -25,6 +26,37 @@ type salesforceJobStatus struct {
 	SyncStatus           salesforceSyncStatus   `json:"sync_status"`
 	EnrichStatus         []IntSalesforce.Status `json:"enrich_status"`
 	PropertyDetailStatus []IntSalesforce.Status `json:"property_detail_status"`
+}
+
+type EnrichStatus struct {
+	Status     []IntSalesforce.Status
+	HasFailure bool
+	Lock       sync.Mutex
+}
+
+func (es *EnrichStatus) AddEnrichStatus(status []IntSalesforce.Status, hasFailure bool) {
+	es.Lock.Lock()
+	defer es.Lock.Unlock()
+
+	es.Status = append(es.Status, status...)
+	if hasFailure {
+		es.HasFailure = hasFailure
+	}
+}
+
+func syncWorker(projectID uint64, wg *sync.WaitGroup, workerIndex int, enrichStatus *EnrichStatus) {
+	defer wg.Done()
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "worder_index": workerIndex})
+	logCtx.Info("Enrichment started for given project.")
+
+	status, hasFailure := IntSalesforce.Enrich(projectID)
+	enrichStatus.AddEnrichStatus(status, hasFailure)
+	logCtx.Info("Processing completed for given project.")
+}
+
+func allowProjectByProjectIDList(projectID uint64, allProjects bool, allowedProjects, disabledProjects map[uint64]bool) bool {
+	return !disabledProjects[projectID] && (allProjects || allowedProjects[projectID])
 }
 
 func main() {
@@ -62,9 +94,12 @@ func main() {
 	blacklistEnrichmentByProjectID := flag.String("blacklist_enrichment_by_project_id", "", "Blacklist enrichment by project_id.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	syncOnly := flag.Bool("sync_only", false, "Run only sync.")
+	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
+	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	enrichOnly := flag.Bool("enrich_only", false, "Run only enrichment.")
 	allowedCampaignEnrichmentByProjectID := flag.String("allowed_campaign_enrichment_by_project_id", "", "Campaign enrichment by project_id.")
 	useOpportunityAssociationByProjectID := flag.String("use_opportunity_association_by_project_id", "", "Use salesforce associations for opportunity stitching")
+	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -149,12 +184,22 @@ func main() {
 		log.Panicf("Failed to get salesforce syncinfo: %d", status)
 	}
 
+	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
+		*projectIDList, *disabledProjectIDList)
+	if !allProjects {
+		log.WithField("projects", allowedProjects).Info("Running only for the given list of projects.")
+	}
+
 	var syncStatus salesforceSyncStatus
 	var propertyDetailSyncStatus []IntSalesforce.Status
 	anyFailure := false
 
 	if !*enrichOnly {
 		for pid, projectSettings := range syncInfo.ProjectSettings {
+			if !allowProjectByProjectIDList(pid, allProjects, allowedProjects, disabledProjects) {
+				continue
+			}
+
 			accessToken, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
 			if err != nil {
 				log.WithField("project_id", pid).Errorf("Failed to get salesforce access token: %s", err)
@@ -194,21 +239,39 @@ func main() {
 			log.Panic("No projects enabled salesforce integration.")
 		}
 
-		statusList := make([]IntSalesforce.Status, 0, 0)
-
-		for _, settings := range salesforceEnabledProjects {
-			if _, exist := blackListedProjectIDs[fmt.Sprintf("%d", settings.ProjectID)]; exist {
+		allowedProjectIDs := make([]uint64, 0)
+		for i := range salesforceEnabledProjects {
+			if !allowProjectByProjectIDList(salesforceEnabledProjects[i].ProjectID, allProjects, allowedProjects, disabledProjects) {
 				continue
 			}
 
-			status, failure := IntSalesforce.Enrich(settings.ProjectID)
-			if failure {
-				anyFailure = true
+			if _, exist := blackListedProjectIDs[fmt.Sprintf("%d", salesforceEnabledProjects[i].ProjectID)]; exist {
+				continue
 			}
 
-			statusList = append(statusList, status...)
+			allowedProjectIDs = append(allowedProjectIDs, salesforceEnabledProjects[i].ProjectID)
 		}
-		jobStatus.EnrichStatus = statusList
+
+		// Runs enrichment for list of project_ids as batch using go routines.
+		batches := U.GetUint64ListAsBatch(allowedProjectIDs, *numProjectRoutines)
+		enrichStatus := EnrichStatus{}
+		workerIndex := 0
+		for bi := range batches {
+			batch := batches[bi]
+
+			var wg sync.WaitGroup
+			for pi := range batch {
+				wg.Add(1)
+				go syncWorker(batch[pi], &wg, workerIndex, &enrichStatus)
+				workerIndex++
+			}
+			wg.Wait()
+		}
+
+		jobStatus.EnrichStatus = enrichStatus.Status
+		if enrichStatus.HasFailure {
+			anyFailure = true
+		}
 	}
 
 	jobStatus.SyncStatus = syncStatus
