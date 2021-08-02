@@ -77,7 +77,9 @@ func RegisterTaskDependencyHandler(c *gin.Context) (interface{}, int, string, st
 	response["status"] = "success"
 	return response, http.StatusCreated, "", "", false
 }
-func GetAllProcessedIntervalsParams(c *gin.Context) (*AllProcessedIntervalsParams, error) {
+
+// returns task id , project id, lookback
+func GetAllParamsWithTaskIdProjectIdLookback(c *gin.Context) (*AllProcessedIntervalsParams, error) {
 	params := AllProcessedIntervalsParams{}
 	TaskId, err := strconv.ParseUint(c.Query("task_id"), 10, 64)
 	if err != nil {
@@ -99,7 +101,7 @@ func GetAllProcessedIntervalsParams(c *gin.Context) (*AllProcessedIntervalsParam
 }
 
 func GetAllProcessedIntervalsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	params, err := GetAllProcessedIntervalsParams(c)
+	params, err := GetAllParamsWithTaskIdProjectIdLookback(c)
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
 	}
@@ -113,7 +115,9 @@ func GetAllProcessedIntervalsHandler(c *gin.Context) (interface{}, int, string, 
 	response["status"] = "success"
 	return response, http.StatusCreated, "", "", false
 }
-func GetDeleteTaskEndRecordParams(c *gin.Context) (*DeleteTaskEndRecord, error) {
+
+// returns task id , project id , delta
+func GetAllParamsWithTaskIdProjectIdDelta(c *gin.Context) (*DeleteTaskEndRecord, error) {
 	params := DeleteTaskEndRecord{}
 	TaskId, err := strconv.ParseUint(c.Query("task_id"), 10, 64)
 	if err != nil {
@@ -134,7 +138,7 @@ func GetDeleteTaskEndRecordParams(c *gin.Context) (*DeleteTaskEndRecord, error) 
 	return &params, nil
 }
 func DeleteTaskEndRecordHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	params, err := GetDeleteTaskEndRecordParams(c)
+	params, err := GetAllParamsWithTaskIdProjectIdDelta(c)
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
 	}
@@ -145,4 +149,69 @@ func DeleteTaskEndRecordHandler(c *gin.Context) (interface{}, int, string, strin
 	response := make(map[string]interface{})
 	response["status"] = "success"
 	return response, http.StatusAccepted, "", "", false
+}
+func GetTaskDetailsByNameHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	taskName := c.Query("task_name")
+	taskDetails, status, errMsg := store.GetStore().GetTaskDetailsByName(taskName)
+	if status != http.StatusOK {
+		return nil, status, errMsg, "", true
+	}
+	c.JSON(200, taskDetails)
+	response := make(map[string]interface{})
+	response["status"] = "success"
+	return response, http.StatusAccepted, "", "", false
+}
+func GetAllToBeExecutedDeltasHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	params, err := GetAllParamsWithTaskIdProjectIdLookback(c)
+	if err != nil {
+		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
+	}
+	endTime := time.Now()
+	deltas, status, errMsg := store.GetStore().GetAllToBeExecutedDeltas(params.TaskId, params.ProjectId, params.Lookback, &endTime)
+	if status != http.StatusOK {
+		return nil, status, errMsg, err.Error() + "2", true
+	}
+	c.JSON(200, deltas)
+	response := make(map[string]interface{})
+	response["status"] = "success"
+	return response, http.StatusCreated, "", "", false
+}
+func IsDependentTaskDoneHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	params, err := GetAllParamsWithTaskIdProjectIdDelta(c)
+	if err != nil {
+		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
+	}
+	isDone := store.GetStore().IsDependentTaskDone(params.TaskId, params.ProjectId, params.Delta)
+	c.JSON(200, isDone)
+	response := make(map[string]interface{})
+	response["status"] = "success"
+	return response, http.StatusCreated, "", "", false
+
+}
+func InsertTaskBeginRecordHandler(c *gin.Context)(interface{}, int, string, string, bool){
+	params, err := GetAllParamsWithTaskIdProjectIdDelta(c)
+	if err != nil {
+		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
+	}
+	status,errMsg:= store.GetStore().InsertTaskBeginRecord(params.TaskId, params.ProjectId, params.Delta)
+	if status!=http.StatusCreated{
+		return nil, status, errMsg, "", true
+	}
+	response := make(map[string]interface{})
+	response["status"] = "success"
+	return response, http.StatusCreated, "", "", false
+
+}
+func InsertTaskEndRecordHandler(c *gin.Context)(interface{}, int, string, string, bool){
+	params, err := GetAllParamsWithTaskIdProjectIdDelta(c)
+	if err != nil {
+		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
+	}
+	status,errMsg:= store.GetStore().InsertTaskEndRecord(params.TaskId, params.ProjectId, params.Delta)
+	if status!=http.StatusCreated{
+		return nil, status, errMsg, "", true
+	}
+	response := make(map[string]interface{})
+	response["status"] = "success"
+	return response, http.StatusCreated, "", "", false
 }

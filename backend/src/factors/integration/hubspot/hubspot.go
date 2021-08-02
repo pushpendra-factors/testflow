@@ -822,7 +822,11 @@ func GetHubspotSmartEventNames(projectID uint64) *map[string][]HubspotSmartEvent
 		var hubspotSmartEventName HubspotSmartEventName
 		decFilterExp, err := model.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to decode smart event filter expression")
+			if err == model.ErrorSmartEventFiterEmptyString{
+				logCtx.WithError(err).Warn("Empty string on smart event filter.")
+			} else {
+				logCtx.WithError(err).Error("Failed to decode smart event filter expression")
+			}
 			continue
 		}
 
