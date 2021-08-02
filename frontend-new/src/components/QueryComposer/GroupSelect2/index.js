@@ -11,6 +11,7 @@ function GroupSelect2({
 }) {
     const [groupCollapseState, setGroupCollapseState] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
+    const [showFull, setShowFull] = useState([]);
 
 
     useEffect(() => {
@@ -22,19 +23,6 @@ function GroupSelect2({
     const onInputSearch = (userInput) => {
         setSearchTerm(userInput.currentTarget.value);
     };
-
-    const searchTermExists = (opts) => {
-        let termExists = false;
-
-        opts.forEach((grp) => {
-            grp.values.forEach((val) => {
-                if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
-                    termExists = true;
-                }
-            })
-        })
-        return termExists;
-    }
 
     const renderEmptyOpt = () => {
         if (!searchTerm.length) return null;
@@ -57,17 +45,21 @@ function GroupSelect2({
         return grp;
       }
 
+    const setShowMoreIndex = (ind, flag) => {
+        const showMoreState = [...showFull];
+        showMoreState[ind] = flag;
+        setShowFull(showMoreState);
+    }
+
     const renderOptions = (options) => {
         const renderGroupedOptions = [];
-        console.log("rebuilding");
         options.forEach((group, grpIndex) => {
             const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
-            const [showFull, setShowFull] = useState(false);
+            
             let hasSearchTerm = false;
             const valuesOptions = [];
 
             const icon = group?.icon? group.icon.toLowerCase().split(' ').join('_') : group.icon
-            console.log(group.icon)
             const groupItem = (
                 <div key={group.label} className={`fa-select-group-select--content`}>
                     {<div className={'fa-select-group-select--option-group'}>
@@ -92,24 +84,24 @@ function GroupSelect2({
                                         );
                                     }
                                 });
-                                return showFull ? valuesOptions : valuesOptions.slice(0, 5);
+                                return showFull[grpIndex] ? valuesOptions : valuesOptions.slice(0, 5);
                             })()
                             : null
                         }
                     </div>
 
                     {(valuesOptions.length > 5 && collState) ?
-                        !showFull ?
+                        !showFull[grpIndex] ?
                             <Button
                                 className={styles.dropdown__filter_select__showhide}
                                 type='text'
-                                onClick={() => { setShowFull(true) }} icon={<CaretDownOutlined />}>
+                                onClick={() => { setShowMoreIndex(grpIndex, true) }} icon={<CaretDownOutlined />}>
                                 Show More ({valuesOptions.length - 5})
                             </Button> :
                             <Button
                                 className={styles.dropdown__filter_select__showhide}
                                 type='text'
-                                onClick={() => { setShowFull(false) }} icon={<CaretUpOutlined />}>
+                                onClick={() => { setShowMoreIndex(grpIndex, false) }} icon={<CaretUpOutlined />}>
                                 Show Less
                             </Button> : null
                     }
