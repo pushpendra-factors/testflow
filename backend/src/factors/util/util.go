@@ -95,7 +95,7 @@ const (
 
 // Group Names
 var MostRecent string = "MOST RECENT"
-var FrequentlySeen string = "FREQUENTLY SEEN"
+var FrequentlySeen string = "OTHERS"
 var SmartEvent string = "CUSTOM EVENTS"
 
 func RandomString(n int) string {
