@@ -130,10 +130,12 @@ const (
 	SmartCRMEventHubspotCurrPropertyPrefix    = SmartCRMEventCurrentPropertyPrefix + SmartCRMEventSourceHubspot + "_"
 )
 
+var ErrorSmartEventFiterEmptyString = errors.New("empty string")
+
 // GetDecodedSmartEventFilterExp unmarhsal encoded CRM smart event filter exp to SmartCRMEventFilter struct
 func GetDecodedSmartEventFilterExp(enFilterExp string) (*SmartCRMEventFilter, error) {
 	if enFilterExp == "" {
-		return nil, errors.New("empty string")
+		return nil, ErrorSmartEventFiterEmptyString
 	}
 
 	var smartCRMEventFilter SmartCRMEventFilter

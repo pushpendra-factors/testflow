@@ -138,16 +138,16 @@ func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventP
 			continue
 		}
 		if value.Operator == model.EqualsOpStr {
-			results[i] = (propertyValue == value.Value)
+			results[i] = (strings.ToLower(propertyValue) == strings.ToLower(value.Value))
 		}
 		if value.Operator == model.NotEqualOpStr {
-			results[i] = (propertyValue != value.Value)
+			results[i] = (strings.ToLower(propertyValue) != strings.ToLower(value.Value))
 		}
 		if value.Operator == model.ContainsOpStr {
-			results[i] = strings.Contains(propertyValue, value.Value)
+			results[i] = strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value))
 		}
 		if value.Operator == model.NotContainsOpStr {
-			results[i] = !(strings.Contains(propertyValue, value.Value))
+			results[i] = !(strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value)))
 		}
 	}
 	var soFar bool
