@@ -126,7 +126,7 @@ func TestEventMatchCriteriaEventPropertiesCategorical(t *testing.T) {
 				Type: "categorical",
 				Values: []delta.OperatorValueTuple{delta.OperatorValueTuple{
 					Operator:  "contains",
-					Value:     "v",
+					Value:     "V",
 					LogicalOp: "AND",
 				}},
 				PropertiesMode: "event",
