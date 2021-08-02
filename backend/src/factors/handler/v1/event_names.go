@@ -59,23 +59,34 @@ func GetEventNamesHandler(c *gin.Context) {
 	if fNames, pExists := FORCED_EVENT_NAMES[projectId]; pExists {
 		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], fNames...)
 	}
-	if(isDisplayNameEnabled == "true"){
+	if isDisplayNameEnabled == "true" {
 		eventsWithGroups := make(map[string][]string)
+		// Initializing EventGroups to retain order
+		eventsWithGroups["Hubspot"] = make([]string, 0)
+		eventsWithGroups["Salesforce"] = make([]string, 0)
+		eventsWithGroups[U.SmartEvent] = make([]string, 0)
+		eventsWithGroups[U.MostRecent] = make([]string, 0)
+		eventsWithGroups[U.FrequentlySeen] = make([]string, 0)
 		standardGroups := U.STANDARD_EVENTS_GROUP_NAMES
 		for groupName, events := range eventNames {
 			for _, event := range events {
 				group := groupName
-				if(standardGroups[event] != ""){
+				if standardGroups[event] != "" {
 					group = standardGroups[event]
 				}
-				if(eventsWithGroups[group] == nil){
+				if eventsWithGroups[group] == nil {
 					eventsWithGroups[group] = make([]string, 0)
 				}
 				eventsWithGroups[group] = append(eventsWithGroups[group], event)
 			}
 		}
-
-		_, displayNames :=  store.GetStore().GetDisplayNamesForAllEvents(projectId)
+		eventsWithGroupsAfterOrdering := make(map[string][]string)
+		for groupName, values := range eventsWithGroups {
+			if len(values) > 0 {
+				eventsWithGroupsAfterOrdering[groupName] = values
+			}
+		}
+		_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
 		displayNameEvents := make(map[string]string)
 		standardEvents := U.STANDARD_EVENTS_DISPLAY_NAMES
 		for event, displayName := range standardEvents {
@@ -86,7 +97,7 @@ func GetEventNamesHandler(c *gin.Context) {
 		}
 		// TODO: Janani Removing the IsExact property from output since its anyway backward compat with UI
 		// Will remove exact/approx logic in UI as well
-		c.JSON(http.StatusOK, gin.H{"event_names": eventsWithGroups, "display_names": displayNameEvents})
+		c.JSON(http.StatusOK, gin.H{"event_names": eventsWithGroupsAfterOrdering, "display_names": displayNameEvents})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"event_names": eventNames})
 	}
