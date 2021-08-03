@@ -1017,6 +1017,8 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	// Prefix application name for in comment for debugging.
 	stmnt = fmt.Sprintf("/*!%s*/ ", C.GetConfig().AppName) + stmnt
 
+	// Set resource pool before query.
+	C.SetMemSQLResourcePoolQueryCallback(db)
 	rows, err := db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)
 	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST || err != nil {
 		log.WithFields(log.Fields{"Query": U.DBDebugPreparedStatement(stmnt, params)}).Info("Exec query with context")

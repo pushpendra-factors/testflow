@@ -898,7 +898,12 @@ func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId u
 				"newJoinTimestamp":  newJoinTimestamp,
 			}).Error("Need to update.")
 			if !isDryRun {
-				db.Exec("UPDATE users SET join_timestamp=? WHERE project_id=? AND id=?", newJoinTimestamp, projectId, userId)
+				rows, err := db.Raw("UPDATE users SET join_timestamp=? WHERE project_id=? AND id=?", newJoinTimestamp, projectId, userId).Rows()
+				if err != nil {
+					log.WithError(err).Error("Error on update of FixAllUsersJoinTimestampForProject.")
+					continue
+				}
+				defer rows.Close()
 				log.Info(fmt.Sprintf("Updated %s", userId))
 			}
 		}

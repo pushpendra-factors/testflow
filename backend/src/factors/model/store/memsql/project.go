@@ -451,11 +451,12 @@ func (store *MemSQL) UpdateNextSessionStartTimestampForProject(projectID uint64,
 	query := fmt.Sprintf(`UPDATE projects SET jobs_metadata = JSON_SET_DOUBLE(jobs_metadata, '%s', %d) WHERE id = %d`,
 		model.JobsMetadataKeyNextSessionStartTimestamp, timestamp, projectID)
 	db := C.GetServices().Db
-	err := db.Exec(query).Error
+	rows, err := db.Raw(query).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update next session start timestamp for project.")
 		return http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	return http.StatusAccepted
 }
@@ -497,11 +498,12 @@ func (store *MemSQL) FillNextSessionStartTimestampForProject(projectID uint64, t
 	query := fmt.Sprintf(`UPDATE projects SET jobs_metadata = '{"%s": %d}' WHERE id = %d`,
 		model.JobsMetadataKeyNextSessionStartTimestamp, timestamp, projectID)
 	db := C.GetServices().Db
-	err := db.Exec(query).Error
+	rows, err := db.Raw(query).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update next session start timestamp for project.")
 		return http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	return http.StatusAccepted
 }
