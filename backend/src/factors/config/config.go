@@ -89,14 +89,15 @@ var PostgresDefaultDBParams = DBConf{
 }
 
 type DBConf struct {
-	Host        string
-	Port        int
-	User        string
-	Name        string
-	Password    string
-	AppName     string
-	UseSSL      bool
-	Certificate string
+	Host         string
+	Port         int
+	User         string
+	Name         string
+	Password     string
+	AppName      string
+	UseSSL       bool
+	Certificate  string
+	ResourcePool string
 }
 
 type Configuration struct {
@@ -606,6 +607,84 @@ func GetMemSQLDSNString(dbConf *DBConf) string {
 	return memsqlDBConfig.FormatDSN()
 }
 
+func SetMemSQLResourcePoolQueryCallback(db *gorm.DB) {
+	logCtx := log.WithField("memsql_user", configuration.MemSQLInfo.User)
+	if configuration.PrimaryDatastore != DatastoreTypeMemSQL {
+		return
+	}
+
+	pool := configuration.MemSQLInfo.ResourcePool
+	if pool == "" {
+		return
+	}
+
+	err := db.Exec("SET resource_pool = ?", pool).Error
+	if err != nil {
+		logCtx.WithError(err).
+			Error("Failed to set resource pool before query.")
+		return
+	}
+}
+
+func gormSetMemSQLResourcePoolCallback(scope *gorm.Scope) {
+	SetMemSQLResourcePoolQueryCallback(scope.DB())
+}
+
+func isValidMemSQLResourcePool(resourcePool string) bool {
+	if resourcePool == "" {
+		return true
+	}
+
+	// Keeping it flexible for develpment.
+	if IsDevelopment() {
+		return true
+	}
+
+	var availablePools []string
+	if IsProduction() {
+		availablePools = []string{
+			"soft_cpu_50",
+			"timeout_5m",
+		}
+
+	} else if IsStaging() {
+		availablePools = []string{
+			"soft_cpu_50",
+			"soft_cpu_30",
+			"soft_cpu_15",
+
+			"timeout_1m",
+			"timeout_5m",
+			"timeout_10m",
+		}
+	}
+
+	exists, _, _ := U.StringIn(availablePools, resourcePool)
+	return exists
+}
+
+func setMemSQLResourcePool(memSQLDB *gorm.DB, resourcePool string) error {
+	if resourcePool != "" {
+		log.Infof("Using memsql resource pool %s", resourcePool)
+	}
+
+	if valid := isValidMemSQLResourcePool(resourcePool); !valid {
+		return errors.New("invalid resource pool")
+	}
+
+	// Before any transactional events like .Create() .Update() and .Delete()
+	memSQLDB.Callback().Create().After("gorm:begin_transaction").
+		Register("set_memsql_resource_pool", gormSetMemSQLResourcePoolCallback)
+	// Before .Find()
+	memSQLDB.Callback().Create().Before("gorm:query").
+		Register("set_memsql_resource_pool", gormSetMemSQLResourcePoolCallback)
+	// Before .Rows()
+	memSQLDB.Callback().Create().Before("gorm:row_query").
+		Register("set_memsql_resource_pool", gormSetMemSQLResourcePoolCallback)
+
+	return nil
+}
+
 func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int) error {
 	if services == nil {
 		services = &Services{}
@@ -613,10 +692,14 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 
 	// SSL Mandatory for staging and production.
 	dbConf.UseSSL = IsStaging() || IsProduction()
-
 	memSQLDB, err := gorm.Open("mysql", GetMemSQLDSNString(&dbConf))
 	if err != nil {
 		log.WithError(err).Fatal("Failed connecting to memsql.")
+	}
+
+	err = setMemSQLResourcePool(memSQLDB, configuration.MemSQLInfo.ResourcePool)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to set resource pool.")
 	}
 
 	// Removes emoji and cleans up string and postgres.Jsonb columns.
