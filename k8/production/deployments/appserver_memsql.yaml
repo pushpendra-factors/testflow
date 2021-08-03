@@ -30,7 +30,7 @@ spec:
         cloud.google.com/gke-nodepool: default-pool
       containers:
       - name: appserver-memsql
-        image: us.gcr.io/factors-production/app-server:1e01b9c90-2278
+        image: us.gcr.io/factors-production/app-server:d565985f1-2626
         ports:
         - containerPort: 8080
         volumeMounts:
@@ -82,6 +82,8 @@ spec:
           - $(MEMSQL_PASSWORD)
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)
+          - --memsql_resource_pool
+          - $(MEMSQL_RPOOL_TIMEOUT_5M)
           - --primary_datastore
           - "memsql"
           - --redis_host

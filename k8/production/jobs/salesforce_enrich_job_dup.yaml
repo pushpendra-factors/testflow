@@ -20,7 +20,7 @@ spec:
             cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: salesforce-enrich-job-dup
-            image: us.gcr.io/factors-production/salesforce-enrich-job:05ed5c5-1816
+            image: us.gcr.io/factors-production/salesforce-enrich-job:d565985f1-2626
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -39,6 +39,10 @@ spec:
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
+            - --memsql_resource_pool
+            - $(MEMSQL_RPOOL_SOFT_CPU_50)
+            - --primary_datastore
+            - "memsql"
             - --redis_host
             - $(REDIS_HOST_2)
             - --redis_port
@@ -57,8 +61,6 @@ spec:
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
-            - --primary_datastore
-            - "memsql"
             - --enable_property_type_from_db
             - --property_details_cache_size
             - "1000"

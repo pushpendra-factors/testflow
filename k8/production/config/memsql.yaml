@@ -9,3 +9,5 @@ data:
   MEMSQL_HOST: "localhost"
   MEMSQL_PORT: "3306"
   MEMSQL_DB: "autometa"
+  MEMSQL_RPOOL_SOFT_CPU_50: "soft_cpu_50"
+  MEMSQL_RPOOL_TIMEOUT_5M: "timeout_5m"
