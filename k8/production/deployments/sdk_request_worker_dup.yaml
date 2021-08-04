@@ -30,7 +30,7 @@ spec:
         cloud.google.com/gke-nodepool: workers-pool
       containers:
       - name: sdk-request-worker-dup
-        image: us.gcr.io/factors-production/sdk-request-worker:ca0606c-1814
+        image: us.gcr.io/factors-production/sdk-request-worker:d565985f1-2626
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors/config
@@ -53,6 +53,10 @@ spec:
           - $(MEMSQL_PASSWORD)
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)
+          - --memsql_resource_pool
+          - $(MEMSQL_RPOOL_SOFT_CPU_50)
+          - --primary_datastore
+          - "memsql"
           - --redis_host
           - $(REDIS_HOST_2)
           - --redis_port

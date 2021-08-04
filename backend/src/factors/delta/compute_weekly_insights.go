@@ -63,6 +63,10 @@ type BaseTargetMetrics struct {
 	JSDivergence float64 `json:"jsd"`
 }
 
+var BlackListedKeys = map[string]bool{
+	"$day_of_week":  true,
+	"$page_raw_url": true,
+}
 var numberOfRecordsFromGbp int = 5 // number of records to be fetched from gbp
 var increasedRecords int
 var decreasedRecords int
@@ -165,6 +169,9 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					value.Key = keys[5:]
 					value.Value = keys2
 					value.Entity = keys[2:4]
+					if BlackListedKeys[value.Key]{
+						continue
+					}
 					if file.BaseAndTarget.FeatureMetrics[keys][keys2].First != nil {
 						temp.W1 = file.BaseAndTarget.FeatureMetrics[keys][keys2].First.(float64)
 					} else {
@@ -286,6 +293,9 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					val2.Key = keys[5:]
 					val2.Value = keys2
 					val2.Entity = keys[2:4]
+					if BlackListedKeys[val2.Key]{
+						continue
+					}
 					if file.Target.FeatureMetrics[keys][keys2].First != nil {
 						temp.W1 = file.Target.FeatureMetrics[keys][keys2].First.(float64)
 					} else {
@@ -334,6 +344,9 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					val2.Key = keys[5:]
 					val2.Value = keys2
 					val2.Entity = keys[2:4]
+					if BlackListedKeys[val2.Key]{
+						continue
+					}
 					if file.BaseAndTarget.FeatureMetrics[keys][keys2].First != nil {
 						temp.W1 = file.BaseAndTarget.FeatureMetrics[keys][keys2].First.(float64)
 					} else {
@@ -367,7 +380,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		}
 	}
 	sort.Slice(valWithDetailsArr2, func(i, j int) bool {
-		return valWithDetailsArr2[j].ActualValues.JSDivergence < valWithDetailsArr2[i].ActualValues.JSDivergence
+		return valWithDetailsArr2[j].ActualValues.JSDivergence > valWithDetailsArr2[i].ActualValues.JSDivergence
 	})
 	var ActualValuearr2 []ActualMetrics
 
@@ -466,7 +479,7 @@ func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Tim
 		isEventOccurence = (query.Type == model.QueryTypeEventsOccurrence)
 	}
 	EventType := getEventType(&query, class, projectId)
-	if isEventOccurence{
+	if isEventOccurence {
 		EventType = CRM
 	}
 	insightsObj := GetInsights(insights, numberOfRecords, class, EventType)
@@ -499,7 +512,9 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						newData.Key = gbp.Property
 						newData.Value = values
 						newData.Entity = gbp.Entity
-
+						if BlackListedKeys[newData.Key]{
+							continue
+						}
 						if file.BaseAndTarget.FeatureMetrics[property][values].First != nil {
 							temp.W1 = file.BaseAndTarget.FeatureMetrics[property][values].First.(float64)
 						}
@@ -577,6 +592,9 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						newData.Key = gbp.Property
 						newData.Value = values
 						newData.Entity = gbp.Entity
+						if BlackListedKeys[newData.Key]{
+							continue
+						}
 						if file.Target.FeatureMetrics[property][values].First != nil {
 							temp.W1 = file.Target.FeatureMetrics[property][values].First.(float64)
 						}
@@ -612,6 +630,9 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						newData.Key = gbp.Property
 						newData.Value = values
 						newData.Entity = gbp.Entity
+						if BlackListedKeys[newData.Key]{
+							continue
+						}
 						if file.BaseAndTarget.FeatureMetrics[property][values].First != nil {
 							temp.W1 = file.BaseAndTarget.FeatureMetrics[property][values].First.(float64)
 						}

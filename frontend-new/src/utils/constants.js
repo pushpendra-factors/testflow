@@ -27,6 +27,10 @@ export const ATTRIBUTION_METHODOLOGY = [
     text: 'Linear Touch',
     value: 'Linear',
   },
+  {
+    text: 'U Shaped',
+    value: 'U_Shaped',
+  },
 ];
 
 export const CHART_TYPE_STACKED_AREA = 'stackedareachart';
