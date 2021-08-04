@@ -1253,13 +1253,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	}
 	// Group By
 	dimensions := fields{}
-	if fetchSource {
-		internalValue := model.AdwordsStringColumn
-		externalValue := source
-		expression := fmt.Sprintf("'%s' as %s", internalValue, externalValue)
-		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, externalValue)
-	}
+
 	for _, groupBy := range adwordsGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
 		internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
@@ -1394,13 +1388,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 
 	// Group By
 	dimensions := fields{}
-	if fetchSource {
-		internalValue := model.AdwordsStringColumn
-		externalValue := source
-		expression := fmt.Sprintf("'%s' as %s", internalValue, externalValue)
-		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, externalValue)
-	}
+
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
 		internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
