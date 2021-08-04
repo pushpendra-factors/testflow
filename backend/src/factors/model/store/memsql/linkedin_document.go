@@ -708,10 +708,6 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 	}
 
 	// SelectKeys
-	if fetchSource {
-		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("'%s' as %s", model.LinkedinStringColumn, source))
-		responseSelectKeys = append(responseSelectKeys, source)
-	}
 
 	for _, groupBy := range linkedinGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
@@ -799,10 +795,6 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 	}
 
 	// SelectKeys
-	if fetchSource {
-		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("'%s' as %s", model.LinkedinStringColumn, source))
-		responseSelectKeys = append(responseSelectKeys, source)
-	}
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property

@@ -59,7 +59,7 @@ const (
 	CAUnionFilterQuery                     = "SELECT filter_value from ( %s ) all_ads LIMIT 2500"
 	CAUnionQuery1                          = "SELECT %s FROM ( %s ) all_ads ORDER BY %s %s"
 	CAUnionQuery2                          = "SELECT %s FROM ( %s ) all_ads GROUP BY %s ORDER BY %s %s"
-	CAUnionQuery3                          = "SELECT * FROM ( %s ) all_ads ORDER BY %s %s"
+	CAUnionQuery3                          = "SELECT %s FROM ( %s ) all_ads GROUP BY %s ORDER BY %s %s"
 	integrationNotAvailable                = "Document integration not available for this project."
 	channelTimestamp                       = "timestamp"
 )
@@ -352,6 +352,8 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.Channe
 // Case 1: When there is no breakdown, there is just metrics being recalculated.
 // Case 2: When there is breakdown by date, there is regrouping by date.
 // Case 3: When there is breakdown by source and group.property, there is no requirement of regrouping in all channel.
+
+// removed source as we want aggregated results for all channels
 func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.ChannelQueryV1,
 	reqID string) ([]string, [][]interface{}, int) {
 
@@ -411,8 +413,13 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
 		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
+		selectMetrics = append(selectMetrics, commonKeys...)
+		for _, metric := range commonMetrics {
+			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
+			selectMetrics = append(selectMetrics, value)
+		}
 
-		finalQuery = fmt.Sprintf(CAUnionQuery3, joinWithWordInBetween("UNION", finalSQLs...), getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
+		finalQuery = fmt.Sprintf(CAUnionQuery3, joinWithComma(selectMetrics...), joinWithWordInBetween("UNION", finalSQLs...), joinWithComma(commonKeys...), getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
 		columns = append(commonKeys, commonMetrics...)
 	}
 	_, resultMetrics, err := store.ExecuteSQL(finalQuery, finalParams, logCtx)

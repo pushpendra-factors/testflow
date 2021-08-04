@@ -658,10 +658,6 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	}
 
 	// SelectKeys
-	if fetchSource {
-		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("'%s' as %s", facebookStringColumn, source))
-		responseSelectKeys = append(responseSelectKeys, source)
-	}
 
 	for _, groupBy := range facebookGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
@@ -748,10 +744,6 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 	}
 
 	// SelectKeys
-	if fetchSource {
-		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("'%s' as %s", facebookStringColumn, source))
-		responseSelectKeys = append(responseSelectKeys, source)
-	}
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
