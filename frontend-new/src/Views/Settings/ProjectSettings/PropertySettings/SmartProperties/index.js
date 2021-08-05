@@ -12,7 +12,7 @@ import PropetyValueModal from '../PropetyValueModal';
 
 import { operatorMap, reverseOperatorMap } from '../utils';
 import ConfirmationModal from "../../../../../components/ConfirmationModal";
-import NoData from "/Users/vikas/repos/factors/frontend-new/src/assets/images/NoData.png";
+import NoData from "../../../../../assets/images/NoData.png"
 const { Option, OptGroup } = Select;
 
 function SmartProperties({ activeProject,
