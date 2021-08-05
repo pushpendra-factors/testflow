@@ -117,8 +117,12 @@ func main() {
 		mqlStore.GetStore().MonitorMemSQLDiskUsage()
 	}
 
-	delayedTaskCount, sdkQueueLength, integrationQueueLength := MonitorSDKHealth(
+	delayedTaskCount, sdkQueueLength, integrationQueueLength, isFailure := MonitorSDKHealth(
 		*delayedTaskThreshold, *sdkQueueThreshold, *integrationQueueThreshold)
+	// Should not proceed with success ping, incase of failure.
+	if isFailure {
+		return
+	}
 
 	tableSizes := store.GetStore().CollectTableSizes()
 
@@ -135,7 +139,7 @@ func main() {
 	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
 }
 
-func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueThreshold int) (int, int, int) {
+func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueThreshold int) (int, int, int, bool) {
 
 	queueClient := C.GetServices().QueueClient
 	delayedTaskCount, err := queueClient.GetBroker().GetDelayedTasksCount()
@@ -167,8 +171,15 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 
 	res, err := http.Get(C.SDKAssetsURL)
 	if err != nil || res.StatusCode != http.StatusOK {
-		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-			fmt.Sprintf("Error '%s', Code '%d' on getting SDK from %s", err.Error(), res.StatusCode, C.SDKAssetsURL))
+		var message string
+		if res == nil {
+			message = fmt.Sprintf("Error '%s' and no response on getting SDK from %s", err.Error(), C.SDKAssetsURL)
+		} else {
+			message = fmt.Sprintf("Error '%s', Code '%d' on getting SDK from %s", err.Error(), res.StatusCode, C.SDKAssetsURL)
+		}
+
+		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID, message)
+		return delayedTaskCount, sdkQueueLength, integrationQueueLength, true
 	}
 
 	sdkBody, err := ioutil.ReadAll(res.Body)
@@ -176,7 +187,8 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 		// Approx file size of 20k. Error out if less than that.
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("Size '%d' of SDK file lesser than expected 20k chars. Content: '%s'", len(sdkBody), string(sdkBody)))
+		return delayedTaskCount, sdkQueueLength, integrationQueueLength, true
 	}
 
-	return delayedTaskCount, sdkQueueLength, integrationQueueLength
+	return delayedTaskCount, sdkQueueLength, integrationQueueLength, false
 }
