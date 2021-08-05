@@ -272,7 +272,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &eventNamesWithDisplayNames)
 	// should contain all event names along with $session.
-	assert.Len(t, eventNamesWithDisplayNames.EventNames["MOST RECENT"], 3)
+	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
 	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 15)
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Website Session")
@@ -299,7 +299,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &eventNamesWithDisplayNames)
 	// should contain all event names along with $session.
-	assert.Len(t, eventNamesWithDisplayNames.EventNames["MOST RECENT"], 3)
+	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
 	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 15)
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Test1")

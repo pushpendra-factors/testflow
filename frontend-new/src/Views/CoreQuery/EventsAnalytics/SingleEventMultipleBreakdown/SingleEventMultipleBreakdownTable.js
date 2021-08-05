@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import {
   getTableColumns,
@@ -27,32 +27,32 @@ function SingleEventMultipleBreakdownTable({
   categories,
   reportTitle = 'Events Analytics',
   section,
+  sorter,
+  handleSorting,
+  dateSorter,
+  handleDateSorting,
 }) {
-  const [sorter, setSorter] = useState({});
-  const [dateSorter, setDateSorter] = useState({});
   const [searchText, setSearchText] = useState('');
   const { eventNames, userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
+  const [columns, setColumns] = useState([]);
+  const [dateBasedColumns, setDateBasedColumns] = useState([]);
+  const [tableData, setTableData] = useState([]);
+  const [dateBasedTableData, setDateBasedTableData] = useState([]);
 
-  const handleSorting = useCallback((sorter) => {
-    setSorter(sorter);
-  }, []);
-
-  const handleDateSorting = useCallback((sorter) => {
-    setDateSorter(sorter);
-  }, []);
-
-  const columns = useMemo(() => {
-    return getTableColumns(
-      events,
-      breakdown,
-      sorter,
-      handleSorting,
-      page,
-      eventNames,
-      userPropNames,
-      eventPropNames
+  useEffect(() => {
+    setColumns(
+      getTableColumns(
+        events,
+        breakdown,
+        sorter,
+        handleSorting,
+        page,
+        eventNames,
+        userPropNames,
+        eventPropNames
+      )
     );
   }, [
     events,
@@ -65,19 +65,21 @@ function SingleEventMultipleBreakdownTable({
     eventPropNames,
   ]);
 
-  const tableData = useMemo(() => {
-    return getDataInTableFormat(data, events, breakdown, searchText, sorter);
-  }, [data, events, breakdown, searchText, sorter]);
+  useEffect(() => {
+    setTableData(getDataInTableFormat(data, breakdown, searchText, sorter));
+  }, [data, breakdown, searchText, sorter]);
 
-  const dateBasedColumns = useMemo(() => {
-    return getDateBasedColumns(
-      categories,
-      breakdown,
-      dateSorter,
-      handleDateSorting,
-      durationObj.frequency,
-      userPropNames,
-      eventPropNames
+  useEffect(() => {
+    setDateBasedColumns(
+      getDateBasedColumns(
+        categories,
+        breakdown,
+        dateSorter,
+        handleDateSorting,
+        durationObj.frequency,
+        userPropNames,
+        eventPropNames
+      )
     );
   }, [
     categories,
@@ -89,14 +91,16 @@ function SingleEventMultipleBreakdownTable({
     eventPropNames,
   ]);
 
-  const dateBasedTableData = useMemo(() => {
-    return getDateBasedTableData(
-      seriesData,
-      categories,
-      breakdown,
-      searchText,
-      dateSorter,
-      durationObj.frequency
+  useEffect(() => {
+    setDateBasedTableData(
+      getDateBasedTableData(
+        seriesData,
+        categories,
+        breakdown,
+        searchText,
+        dateSorter,
+        durationObj.frequency
+      )
     );
   }, [
     seriesData,

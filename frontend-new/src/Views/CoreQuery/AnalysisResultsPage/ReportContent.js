@@ -73,7 +73,6 @@ function ReportContent({
 
   const handleChartTypeChange = useCallback(
     ({ key }) => {
-      console.log(key);
       let changedKey;
       if (queryType === QUERY_TYPE_EVENT) {
         changedKey = breakdown.length ? 'breakdown' : 'no_breakdown';
@@ -225,6 +224,7 @@ function ReportContent({
           chartType={chartType}
           currMetricsValue={currMetricsValue}
           section={section}
+          durationObj={durationObj}
         />
       );
     }

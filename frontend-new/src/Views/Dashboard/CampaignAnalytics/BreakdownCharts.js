@@ -19,7 +19,11 @@ import {
 import NoDataChart from '../../../components/NoDataChart';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
-import { generateColors, SortData } from '../../../utils/dataFormatter';
+import {
+  generateColors,
+  SortData,
+  isSeriesChart,
+} from '../../../utils/dataFormatter';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 
 function BreakdownCharts({
@@ -32,12 +36,21 @@ function BreakdownCharts({
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const [aggregateData, setAggregateData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [highchartsData, setHighchartsData] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
   const currentEventIndex = 0;
 
-  const aggregateData = useMemo(() => {
-    return formatData(data, arrayMapper, breakdown);
-  }, [data, breakdown, arrayMapper]);
+  useEffect(() => {
+    const aggData = formatData(data, arrayMapper, breakdown);
+    const { categories: cat, highchartsData: hcd } = isSeriesChart(chartType)
+      ? formatDataInHighChartsFormat(data.result_group[0], arrayMapper, aggData)
+      : { categories: [], highchartsData: [] };
+    setAggregateData(aggData);
+    setCategories(cat);
+    setHighchartsData(hcd);
+  }, [data, breakdown, arrayMapper, chartType]);
 
   const chartData = useMemo(() => {
     const colors = generateColors(1);
@@ -53,20 +66,6 @@ function BreakdownCharts({
     });
     return SortData(result, currEventName, 'descend');
   }, [currentEventIndex, arrayMapper, aggregateData]);
-
-  const { categories, highchartsData } = useMemo(() => {
-    if (chartType === CHART_TYPE_BARCHART || chartType === CHART_TYPE_TABLE) {
-      return {
-        categories: [],
-        highchartsData: [],
-      };
-    }
-    return formatDataInHighChartsFormat(
-      data.result_group[0],
-      arrayMapper,
-      aggregateData
-    );
-  }, [data.result_group, arrayMapper, aggregateData, chartType]);
 
   const visibleSeriesData = useMemo(() => {
     const colors = generateColors(visibleProperties.length);

@@ -27,17 +27,15 @@ function SingleEventSingleBreakdownTable({
   categories,
   reportTitle = 'Events Analytics',
   section,
+  sorter,
+  handleSorting,
+  dateSorter,
+  handleDateSorting,
 }) {
   const { eventNames, userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
 
-  const appliedBreakdown = useMemo(() => {
-    return [breakdown[0].property];
-  }, [breakdown]);
-
-  const [sorter, setSorter] = useState({});
-  const [dateSorter, setDateSorter] = useState({});
   const [searchText, setSearchText] = useState('');
 
   const getCSVData = () => {
@@ -51,18 +49,10 @@ function SingleEventSingleBreakdownTable({
     };
   };
 
-  const handleSorting = useCallback((sorter) => {
-    setSorter(sorter);
-  }, []);
-
-  const handleDateSorting = useCallback((sorter) => {
-    setDateSorter(sorter);
-  }, []);
-
   const columns = useMemo(() => {
     return getTableColumns(
       events,
-      appliedBreakdown,
+      breakdown,
       sorter,
       handleSorting,
       page,
@@ -72,7 +62,7 @@ function SingleEventSingleBreakdownTable({
     );
   }, [
     events,
-    appliedBreakdown,
+    breakdown,
     sorter,
     page,
     handleSorting,
@@ -82,36 +72,34 @@ function SingleEventSingleBreakdownTable({
   ]);
 
   const tableData = useMemo(() => {
-    return getDataInTableFormat(
-      data,
-      events,
-      appliedBreakdown,
-      searchText,
-      sorter
-    );
-  }, [data, events, appliedBreakdown, searchText, sorter]);
+    return getDataInTableFormat(data, breakdown, searchText, sorter);
+  }, [data, breakdown, searchText, sorter]);
 
   const dateBasedColumns = useMemo(() => {
     return getDateBasedColumns(
       categories,
-      appliedBreakdown,
+      breakdown,
       dateSorter,
       handleDateSorting,
-      durationObj.frequency
+      durationObj.frequency,
+      userPropNames,
+      eventPropNames
     );
   }, [
     categories,
-    appliedBreakdown,
+    breakdown,
     dateSorter,
     durationObj.frequency,
     handleDateSorting,
+    userPropNames,
+    eventPropNames,
   ]);
 
   const dateBasedTableData = useMemo(() => {
     return getDateBasedTableData(
       seriesData,
       categories,
-      appliedBreakdown,
+      breakdown,
       searchText,
       dateSorter,
       durationObj.frequency
@@ -119,7 +107,7 @@ function SingleEventSingleBreakdownTable({
   }, [
     seriesData,
     categories,
-    appliedBreakdown,
+    breakdown,
     searchText,
     dateSorter,
     durationObj.frequency,

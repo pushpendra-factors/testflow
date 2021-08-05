@@ -1,4 +1,10 @@
-import React, { useState, useContext, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useContext,
+  useMemo,
+  useCallback,
+  useEffect,
+} from 'react';
 import moment from 'moment';
 import ReactDOMServer from 'react-dom/server';
 import { formatData } from '../../CoreQuery/AttributionsResult/utils';
@@ -33,8 +39,12 @@ function SingleTouchPoint({
   attr_dimensions,
   durationObj,
 }) {
-  const aggregateData = useMemo(() => {
-    return formatData(data, touchpoint, event, attr_dimensions);
+  const [aggregateData, setAggregateData] = useState({
+    categories: [],
+    series: [],
+  });
+  useEffect(() => {
+    setAggregateData(formatData(data, touchpoint, event, attr_dimensions));
   }, [data, touchpoint, event, attr_dimensions]);
 
   const [visibleIndices, setVisibleIndices] = useState(

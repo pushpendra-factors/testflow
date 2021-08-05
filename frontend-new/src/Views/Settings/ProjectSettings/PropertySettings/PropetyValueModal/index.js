@@ -94,7 +94,6 @@ function PropertyValueModal ({config, type = 'campaign', sources, rule, handleCa
     }
 
     const renderCombinationOperator = () => {
-        if(!filters.length) return null
         return (
             <Row className={'mt-8'}>
                 <Col span={24} >

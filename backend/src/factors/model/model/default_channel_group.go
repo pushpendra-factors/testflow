@@ -35,43 +35,43 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_GCLID,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_FBCLID,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_CAMPAIGN,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
@@ -82,7 +82,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_GCLID,
-				Condition: COMPARE_NOT_EQUAL,
+				Condition: NotEqualOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
@@ -93,61 +93,61 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "google",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "bing",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "adwords",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "youtube",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "paid",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "cpc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "ppc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "adwords",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "display",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
@@ -158,43 +158,43 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "google.",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "bing.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "duckduckgo.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "yahoo.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "yandex.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "baidu.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_CAMPAIGN,
-				Condition: COMPARE_NOT_EQUAL,
+				Condition: NotEqualOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
@@ -205,7 +205,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_FBCLID,
-				Condition: COMPARE_NOT_EQUAL,
+				Condition: NotEqualOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
@@ -216,67 +216,67 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "facebook",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "fb",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "linkedin",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "twitter",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "quora",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "pinterest",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "snapchat",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "paid",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "cpc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "ppc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
@@ -287,15 +287,9 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "paidsocial",
 				LogicalOp: LOGICAL_OP_AND,
-			},
-			{
-				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
-				Value:     "paidsocial",
-				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
 	},
@@ -304,61 +298,72 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
+				Value:     "paidsocial",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+		},
+	},
+	{
+		Channel: paidSocial,
+		Conditions: []ChannelPropertyFilter{
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: EqualsOpStr,
 				Value:     "paid",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "cpc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "ppc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "facebook.",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "linkedin.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "quora.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "pinterest.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "twitter.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "snapchat.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
@@ -369,73 +374,73 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_FBCLID,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_NOT_EQUAL,
+				Condition: NotEqualOpStr,
 				Value:     "paid",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_NOT_EQUAL,
+				Condition: NotEqualOpStr,
 				Value:     "cpc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_NOT_EQUAL,
+				Condition: NotEqualOpStr,
 				Value:     "ppc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_NOT_EQUAL,
+				Condition: NotEqualOpStr,
 				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "facebook.",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "linkedin.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "quora.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "pinterest.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "twitter.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "snapchat.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "youtube.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
@@ -446,67 +451,67 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_GCLID,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_FBCLID,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.EP_CAMPAIGN,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "google.",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "bing.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "duckduckgo.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "yahoo.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "yandex.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_CONTAINS,
+				Condition: ContainsOpStr,
 				Value:     "baidu.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
@@ -517,15 +522,20 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "email",
 				LogicalOp: LOGICAL_OP_AND,
 			},
+		},
+	},
+	{
+		Channel: email,
+		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "email",
-				LogicalOp: LOGICAL_OP_OR,
+				LogicalOp: LOGICAL_OP_AND,
 			},
 		},
 	},
@@ -534,15 +544,20 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_SOURCE,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "affiliate",
 				LogicalOp: LOGICAL_OP_AND,
 			},
+		},
+	},
+	{
+		Channel: affiliate,
+		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.EP_MEDIUM,
-				Condition: COMPARE_EQUAL,
+				Condition: EqualsOpStr,
 				Value:     "affiliate",
-				LogicalOp: LOGICAL_OP_OR,
+				LogicalOp: LOGICAL_OP_AND,
 			},
 		},
 	},
@@ -551,7 +566,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 		Conditions: []ChannelPropertyFilter{
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
-				Condition: COMPARE_NOT_EQUAL,
+				Condition: NotEqualOpStr,
 				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
@@ -563,26 +578,36 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 // in code : rules = [{ property: medium, L_OP: AND, OP: contains, value: paid}, {property: medium, L_OP: OR, OP: contains, value: cpc}, {property: ref_domain, L_OP: AND, OP: contains, value: 'facebook.'}, {property: ref_domain, L_OP: OR, OP: contains, value: 'linkedin.'}]
 
 // solution for now:
-// We keep a variable checkCondition to check the condition while looping through the filters. Initally, checkCondition = isApplicable(rules[0])
-// When looping through the conditions: if we encounter AND logical op, we check if the previous checkCondition is true or false.
-// If false, we return not applicable as false AND T/F is false. Else if true, we continue to check the other filters
+// group rule based off of property and then run filter checks on top of them
+
+func groupConditionsBasedOnProperty(conditions []ChannelPropertyFilter) map[string][]ChannelPropertyFilter {
+	groupedConditions := make(map[string][]ChannelPropertyFilter, 0)
+	for _, filter := range conditions {
+		if groupedConditions[filter.Property] == nil {
+			groupedConditions[filter.Property] = make([]ChannelPropertyFilter, 0)
+		}
+		groupedConditions[filter.Property] = append(groupedConditions[filter.Property], filter)
+	}
+	return groupedConditions
+}
 func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessionPropertiesMap U.PropertiesMap) string {
 	for _, rule := range channelGroupRules {
-		var checkCondition bool
-		for index, filter := range rule.Conditions {
-			if index == 0 {
-				checkCondition = checkFilter(sessionPropertiesMap, filter)
-			} else {
-				if filter.LogicalOp == LOGICAL_OP_OR {
-					checkCondition = checkCondition || checkFilter(sessionPropertiesMap, filter)
+		groupedConditions := groupConditionsBasedOnProperty(rule.Conditions)
+		checkCondition := true
+		for _, conditions := range groupedConditions {
+			var checkConditionForProperty bool
+			for index, filter := range conditions {
+				if index == 0 {
+					checkConditionForProperty = checkFilter(sessionPropertiesMap, filter)
 				} else {
-					if checkCondition {
-						checkCondition = checkCondition && checkFilter(sessionPropertiesMap, filter)
+					if filter.LogicalOp == LOGICAL_OP_OR {
+						checkConditionForProperty = checkConditionForProperty || checkFilter(sessionPropertiesMap, filter)
 					} else {
-						break
+						checkConditionForProperty = checkConditionForProperty && checkFilter(sessionPropertiesMap, filter)
 					}
 				}
 			}
+			checkCondition = checkCondition && checkConditionForProperty
 		}
 		if checkCondition {
 			return rule.Channel
@@ -599,13 +624,13 @@ func checkFilter(sessionPropertesMap U.PropertiesMap, filter ChannelPropertyFilt
 	lowerCasePropertyValue := strings.ToLower(propertyValue)
 
 	switch filter.Condition {
-	case COMPARE_EQUAL:
+	case EqualsOpStr:
 		return compareEqual(isExists, lowerCasePropertyValue, lowerCaseFilterValue)
-	case COMPARE_NOT_EQUAL:
+	case NotEqualOpStr:
 		return !compareEqual(isExists, lowerCasePropertyValue, lowerCaseFilterValue)
-	case COMPARE_CONTAINS:
+	case ContainsOpStr:
 		return strings.Contains(lowerCasePropertyValue, lowerCaseFilterValue)
-	case COMPARE_NOT_CONTAINS:
+	case NotContainsOpStr:
 		return !strings.Contains(lowerCasePropertyValue, lowerCaseFilterValue)
 	}
 	return false

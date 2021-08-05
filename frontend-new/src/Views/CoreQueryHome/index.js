@@ -336,7 +336,7 @@ function CoreQuery({
       <Menu>
         <Menu.Item key='0'>
           <a onClick={handleViewResult.bind(this, row)} href='#!'>
-            View Results
+            View Report
           </a>
         </Menu.Item>
         <Menu.Item key='1'>
@@ -346,7 +346,7 @@ function CoreQuery({
         </Menu.Item>
         <Menu.Item key='2'>
           <a onClick={handleDelete.bind(this, row)} href='#!'>
-            Delete Query
+            Delete Report
           </a>
         </Menu.Item>
       </Menu>
@@ -433,10 +433,10 @@ function CoreQuery({
       >
         <ConfirmationModal
           visible={deleteModal}
-          confirmationText='Are you sure you want to delete this query?'
+          confirmationText='Are you sure you want to delete this report?'
           onOk={confirmDelete}
           onCancel={showDeleteModal.bind(this, false)}
-          title='Delete Query'
+          title='Delete Report'
           okText='Confirm'
           cancelText='Cancel'
         />

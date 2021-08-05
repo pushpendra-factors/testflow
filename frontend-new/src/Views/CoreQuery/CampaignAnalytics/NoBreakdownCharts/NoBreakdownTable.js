@@ -1,36 +1,83 @@
-import React, { useState, useCallback } from "react";
-import moment from "moment";
-import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
+import React, { useState, useCallback, useEffect } from 'react';
+import moment from 'moment';
+import {
+  CHART_TYPE_SPARKLINES,
+  CHART_TYPE_LINECHART,
+} from '../../../../utils/constants';
 import {
   getTableColumns,
   getTableData,
   getDateBaseTableColumns,
   getDateBasedTableData,
-} from "./utils";
-import DataTable from "../../../../components/DataTable";
+} from './utils';
+import DataTable from '../../../../components/DataTable';
+import { getNewSorterState } from '../../../../utils/dataFormatter';
 
 function NoBreakdownTable({
   chartsData,
   chartType,
   isWidgetModal,
   frequency,
-  reportTitle = "CampaignAnalytics",
+  reportTitle = 'CampaignAnalytics',
 }) {
-  let columns = [],
-    data = [];
-  const [sorter, setSorter] = useState({});
-  const [searchText, setSearchText] = useState("");
+  const [columns, setColumns] = useState([]);
+  const [tableData, setTableData] = useState([]);
+  const [dateBasedColumns, setDateBasedColumns] = useState([]);
+  const [dateBasedTableData, setDateBasedTableData] = useState([]);
+  const [searchText, setSearchText] = useState('');
+  const [sorter, setSorter] = useState({
+    key: chartsData[0].name,
+    type: 'numerical',
+    subtype: null,
+    order: 'descend',
+  });
+  const [dateSorter, setDateSorter] = useState({});
 
-  const handleSorting = useCallback((sorter) => {
-    setSorter(sorter);
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
   }, []);
 
+  const handleDateSorting = useCallback((prop) => {
+    setDateSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
+
+  useEffect(() => {
+    setColumns(getTableColumns(chartsData, frequency, sorter, handleSorting));
+  }, [chartsData, frequency, sorter, handleSorting]);
+
+  useEffect(() => {
+    setTableData(getTableData(chartsData, sorter));
+  }, [chartsData, sorter]);
+
+  useEffect(() => {
+    setDateBasedColumns(
+      getDateBaseTableColumns(
+        chartsData,
+        frequency,
+        dateSorter,
+        handleDateSorting
+      )
+    );
+  }, [chartsData, frequency, dateSorter, handleDateSorting]);
+
+  useEffect(() => {
+    setDateBasedTableData(
+      getDateBasedTableData(chartsData, frequency, dateSorter)
+    );
+  }, [chartsData, frequency, dateSorter]);
+
   const getCSVData = () => {
+    const result =
+      chartType === CHART_TYPE_LINECHART ? dateBasedTableData : tableData;
     return {
       fileName: `${reportTitle}.csv`,
-      data: data.map(({ index, date, ...rest }) => {
+      data: result.map(({ index, date, ...rest }) => {
         if (chartType === CHART_TYPE_SPARKLINES) {
-          let format = "MMM D, YYYY";
+          let format = 'MMM D, YYYY';
           return {
             date: moment(date).format(format),
             ...rest,
@@ -41,26 +88,15 @@ function NoBreakdownTable({
     };
   };
 
-  if (chartType === CHART_TYPE_SPARKLINES) {
-    columns = getTableColumns(chartsData, frequency, sorter, handleSorting);
-    data = getTableData(chartsData, sorter);
-  } else {
-    columns = getDateBaseTableColumns(
-      chartsData,
-      frequency,
-      sorter,
-      handleSorting
-    );
-    data = getDateBasedTableData(chartsData, frequency, sorter);
-  }
-
   return (
     <DataTable
       isWidgetModal={isWidgetModal}
-      tableData={data}
+      tableData={
+        chartType === CHART_TYPE_LINECHART ? dateBasedTableData : tableData
+      }
       searchText={searchText}
       setSearchText={setSearchText}
-      columns={columns}
+      columns={chartType === CHART_TYPE_LINECHART ? dateBasedColumns : columns}
       scroll={{ x: 250 }}
       getCSVData={getCSVData}
       // rowSelection={rowSelection}

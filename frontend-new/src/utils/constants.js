@@ -401,3 +401,10 @@ export const PREDEFINED_DATES = {
   TODAY: 'today',
   YESTERDAY: 'yesterday',
 };
+
+export const DATE_FORMATS = {
+  month: 'MMM-YYYY',
+  date: 'D-MMM-YYYY',
+  day: 'D-MMM-YYYY',
+  hour: 'D-MMM-YYYY H [h]',
+};

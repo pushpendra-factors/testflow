@@ -108,11 +108,13 @@ const NONE_PROPERTY_VALUES_LABEL = "None"
 
 var log2Value float64 = math.Log(2)
 
+// events in "*" are blacklisted for any goal
 var BLACKLISTED_JOURNEYS = map[string][]string{
-	"$hubspot_contact_created": []string{"$hubspot_contact_updated", "ANY_CRM"},
-	"$sf_opportunity_created":  []string{"$sf_opportunity_updated", "ANY_CRM"},
-	"$sf_lead_created":         []string{"$sf_lead_updated", "ANY_CRM"},
+	// "$hubspot_contact_created": []string{"$hubspot_contact_updated","ANY_CRM"},
+	// "$sf_opportunity_created":  []string{"$sf_opportunity_updated","ANY_CRM"},
+	// "$sf_lead_created":         []string{"$sf_lead_updated","ANY_CRM"},
 	"Deal Won":                 []string{"Deal Created"},
+	"*":                        []string{"$hubspot_contact_updated","$sf_lead_updated","$sf_opportunity_updated","$sf_account_updated","$sf_contact_updated","ANY_CRM"},
 }
 
 var BLACKLISTED_PROPERTIES = map[string][]string{
@@ -594,6 +596,14 @@ func isChildSequenceBlacklisted(crmEvents map[string]bool, ToBeAdded string, pre
 		preSequenceMap[eventName] = true
 	}
 
+	for _, blacklisted := range BLACKLISTED_JOURNEYS["*"] {
+		if ToBeAdded == blacklisted {
+			return true
+		}
+		if blacklisted == "ANY_CRM" && crmEvents[ToBeAdded] == true {
+			return true
+		}
+	}
 	for _, blacklisted := range BLACKLISTED_JOURNEYS[goalEvent] {
 		if ToBeAdded == blacklisted {
 			return true
@@ -602,6 +612,7 @@ func isChildSequenceBlacklisted(crmEvents map[string]bool, ToBeAdded string, pre
 			return true
 		}
 	}
+
 	for _, blacklisted := range BLACKLISTED_JOURNEYS[ToBeAdded] {
 		if preSequenceMap[blacklisted] == true {
 			return true
@@ -609,6 +620,7 @@ func isChildSequenceBlacklisted(crmEvents map[string]bool, ToBeAdded string, pre
 	}
 	return false
 }
+
 func isChildSequence(parent []string, child []string, crmEvents map[string]bool) bool {
 	// ABY and ABCY is true.
 	// ABY and ACBY is false.

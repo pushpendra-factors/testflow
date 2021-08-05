@@ -1,8 +1,10 @@
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import moment from 'moment';
 import { generateTableColumns, generateTableData } from '../utils';
 import DataTable from '../../../../components/DataTable';
 import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
+import { getNewSorterState } from '../../../../utils/dataFormatter';
+import { useSelector } from 'react-redux';
 
 function FunnelsResultTable({
   breakdown,
@@ -22,50 +24,63 @@ function FunnelsResultTable({
   resultData,
 }) {
   const [sorter, setSorter] = useState({});
+  const [columns, setColumns] = useState([]);
+  const [tableData, setTableData] = useState([]);
   const [searchText, setSearchText] = useState('');
+  const { userPropNames, eventPropNames } = useSelector(
+    (state) => state.coreQuery
+  );
 
-  const handleSorting = useCallback((sorter) => {
-    setSorter(sorter);
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
   }, []);
 
-  const columns = useMemo(() => {
-    return generateTableColumns(
-      breakdown,
-      queries,
-      sorter,
-      handleSorting,
-      arrayMapper,
-      comparisonChartData
+  useEffect(() => {
+    setColumns(
+      generateTableColumns(
+        queries,
+        sorter,
+        handleSorting,
+        arrayMapper,
+        comparisonChartData,
+        resultData,
+        userPropNames,
+        eventPropNames
+      )
     );
   }, [
-    breakdown,
     queries,
     sorter,
     handleSorting,
     arrayMapper,
     comparisonChartData,
+    resultData,
+    userPropNames,
+    eventPropNames,
   ]);
 
   // const columns = ;
-  const tableData = useMemo(() => {
-    return generateTableData(
-      chartData,
-      breakdown,
-      queries,
-      groups,
-      arrayMapper,
-      sorter,
-      searchText,
-      durations,
-      comparisonChartDurations,
-      comparisonChartData,
-      durationObj,
-      comparison_duration,
-      resultData
+  useEffect(() => {
+    setTableData(
+      generateTableData(
+        chartData,
+        queries,
+        groups,
+        arrayMapper,
+        sorter,
+        searchText,
+        durations,
+        comparisonChartDurations,
+        comparisonChartData,
+        durationObj,
+        comparison_duration,
+        resultData
+      )
     );
   }, [
     chartData,
-    breakdown,
     queries,
     groups,
     arrayMapper,
@@ -85,7 +100,7 @@ function FunnelsResultTable({
         fileName: `${reportTitle}.csv`,
         data: tableData.map(({ index, ...rest }) => {
           arrayMapper.forEach((elem, index) => {
-            rest[`${elem.displayName}-${index}`] = rest[`${elem.mapper}`].count;
+            rest[`${elem.displayName}-${index}`] = rest[`${elem.mapper}`].value;
             delete rest[`${elem.mapper}`];
           });
           return { ...rest };
@@ -122,7 +137,7 @@ function FunnelsResultTable({
         arrayMapper.forEach((elem, index) => {
           rest[
             `${elem.displayName}-${index} (${duration_from} - ${duration_to})`
-          ] = rest[`${elem.mapper}`].count;
+          ] = rest[`${elem.mapper}`].value;
           rest[
             `${elem.displayName}-${index} (${compare_duration_from} - ${compare_duration_to})`
           ] = rest[`${elem.mapper}`].compare_count;

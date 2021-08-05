@@ -1007,17 +1007,15 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			if sessionPageSpentTime > 0 {
 				sessionPropertiesMap[U.SP_SPENT_TIME] = sessionPageSpentTime
 			}
-			if C.IsChannelGroupingAllowed(projectId) {
-				sessionEventProps, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
-				if err != nil {
-					logCtx.Error("Failed to decode session event properties for adding channel property on add session")
+			sessionEventProps, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
+			if err != nil {
+				logCtx.Error("Failed to decode session event properties for adding channel property on add session")
+			} else {
+				channel, errString := model.GetChannelGroup(*project, *sessionEventProps)
+				if errString != "" {
+					logCtx.Error(errString)
 				} else {
-					channel, errString := model.GetChannelGroup(*project, *sessionEventProps)
-					if errString != "" {
-						logCtx.Error(errString)
-					} else {
-						sessionPropertiesMap[U.EP_CHANNEL] = channel
-					}
+					sessionPropertiesMap[U.EP_CHANNEL] = channel
 				}
 			}
 

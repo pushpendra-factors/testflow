@@ -9,6 +9,7 @@ import {
 } from './utils';
 import { CHART_TYPE_SPARKLINES } from '../../../../utils/constants';
 import { useSelector } from 'react-redux';
+import { getNewSorterState } from '../../../../utils/dataFormatter';
 
 function NoBreakdownTable({
   data,
@@ -21,12 +22,19 @@ function NoBreakdownTable({
   arrayMapper,
   reportTitle = 'Events Analytics',
 }) {
-  const [sorter, setSorter] = useState({});
+  const [sorter, setSorter] = useState({
+    key: arrayMapper[0]?.mapper,
+    type: 'numerical',
+    subtype: null,
+    order: 'descend',
+  });
   const [searchText, setSearchText] = useState('');
   const { eventNames } = useSelector((state) => state.coreQuery);
 
-  const handleSorting = useCallback((sorter) => {
-    setSorter(sorter);
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
   }, []);
 
   let columns;

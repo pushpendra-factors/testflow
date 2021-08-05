@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   formatData,
   formatVisibleProperties,
   formatDataInStackedAreaFormat,
+  defaultSortProp
 } from './utils';
 import BarChart from '../../../../components/BarChart';
 import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
 import LineChart from '../../../../components/HCLineChart';
-import { generateColors } from '../../../../utils/dataFormatter';
+import {
+  generateColors,
+  getNewSorterState,
+} from '../../../../utils/dataFormatter';
 import {
   DASHBOARD_MODAL,
   CHART_TYPE_BARCHART,
@@ -32,14 +36,41 @@ function MultipleEventsWithBreakdown({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const { eventNames } = useSelector((state) => state.coreQuery);
 
-  const aggregateData = useMemo(() => {
+  const [sorter, setSorter] = useState(defaultSortProp());
+  const [dateSorter, setDateSorter] = useState({});
+  const [aggregateData, setAggregateData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [data, setData] = useState([]);
+
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
+
+  const handleDateSorting = useCallback((prop) => {
+    setDateSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
+
+  useEffect(() => {
     const appliedColors = generateColors(queries.length);
-    return formatData(resultState.data, queries, appliedColors, eventNames);
+    const aggData = formatData(
+      resultState.data,
+      queries,
+      appliedColors,
+      eventNames
+    );
+    const { categories: cats, data: d } = formatDataInStackedAreaFormat(
+      resultState.data,
+      aggData,
+      eventNames
+    );
+    setAggregateData(aggData);
+    setCategories(cats);
+    setData(d);
   }, [resultState.data, queries, eventNames]);
-  
-  const { categories, data } = useMemo(() => {
-    return formatDataInStackedAreaFormat(resultState.data, aggregateData, eventNames);
-  }, [resultState.data, aggregateData, eventNames]);
 
   const visibleSeriesData = useMemo(() => {
     const colors = generateColors(visibleProperties.length);
@@ -84,6 +115,10 @@ function MultipleEventsWithBreakdown({
         page={page}
         durationObj={durationObj}
         categories={categories}
+        sorter={sorter}
+        handleSorting={handleSorting}
+        dateSorter={dateSorter}
+        handleDateSorting={handleDateSorting}
       />
     </div>
   );

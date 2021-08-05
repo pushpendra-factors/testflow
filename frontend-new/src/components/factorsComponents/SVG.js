@@ -16,7 +16,7 @@ class SVG extends React.Component {
     const properName = this.handleTitleConversion(name) + 'SVG';
     const IconComponent = icons[properName];
     if (!IconComponent) {
-      console.error('Invalid SVG ICON Name --->', name);
+      // console.error('Invalid SVG ICON Name --->', name);
       return null;
     }
     const strokeColor =

@@ -28,7 +28,7 @@ func TestDeleteTaskEndRecord(t *testing.T) {
 
 }
 func TestGetAllProcessedIntervals(t *testing.T){
-	taskName:= fmt.Sprintf("%v_%v_1", "task_event", U.TimeNow().Unix())
+	taskName:= fmt.Sprintf("%v_%v_1", "task_event0", U.TimeNow().Unix())
 	task_id, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -50,7 +50,7 @@ func TestGetAllProcessedIntervals(t *testing.T){
 
 }
 func TestGetTaskDetailsByName(t *testing.T){
-	taskName:= fmt.Sprintf("%v_%v_1", "task_event", U.TimeNow().Unix())
+	taskName:= fmt.Sprintf("%v_%v_1", "task_event1", U.TimeNow().Unix())
 	_, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -60,7 +60,7 @@ func TestGetTaskDetailsByName(t *testing.T){
 	assert.Equal(t, "", errMsg)
 }
 func TestGetAllToBeExecutedDeltas(t *testing.T){
-	taskName:= fmt.Sprintf("%v_%v_1", "task_event", U.TimeNow().Unix())
+	taskName:= fmt.Sprintf("%v_%v_1", "task_event2", U.TimeNow().Unix())
 	task_id, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -74,7 +74,7 @@ func TestGetAllToBeExecutedDeltas(t *testing.T){
 	assert.NotNil(t, deltas)
 }
 func TestIsIndependentTaskDone(t *testing.T){
-	taskName:= fmt.Sprintf("%v_%v_1", "task_event", U.TimeNow().Unix())
+	taskName:= fmt.Sprintf("%v_%v_1", "task_event3", U.TimeNow().Unix())
 	task_id, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -91,7 +91,7 @@ func TestIsIndependentTaskDone(t *testing.T){
 
 }
 func TestInsertTaskBeginRecord(t *testing.T){
-	taskName:= fmt.Sprintf("%v_%v_1", "task_event", U.TimeNow().Unix())
+	taskName:= fmt.Sprintf("%v_%v_1", "task_event4", U.TimeNow().Unix())
 	task_id, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -101,7 +101,7 @@ func TestInsertTaskBeginRecord(t *testing.T){
 	assert.Equal(t, "", message)
 }
 func TestInsertTaskEndRecord(t *testing.T){
-	taskName:= fmt.Sprintf("%v_%v_1", "task_event", U.TimeNow().Unix())
+	taskName:= fmt.Sprintf("%v_%v_1", "task_event5", U.TimeNow().Unix())
 	task_id, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)

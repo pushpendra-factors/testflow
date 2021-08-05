@@ -224,7 +224,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
                         <div className={'flex items-stretch'}>
                             
                         {data?.insights_type == 'ConvAndDist' ? <>
-                            {highlightCard(data?.goal, 'Overall    ', false)}
+                            {highlightCard(data?.goal, 'Overall', false)}
                             {highlightCard(data?.base, baseName, true )}
                             {highlightCard(data?.conv, 'Conv. Rate', false, true)}
                             </> : <> {highlightCard(data?.goal, 'Overall')} </>}

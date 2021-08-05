@@ -1,4 +1,10 @@
-import React, { useState, useContext, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useContext,
+  useMemo,
+  useCallback,
+  useEffect,
+} from 'react';
 import { formatData } from './utils';
 import chartStyles from '../../../components/HCBarLineChart/styles.module.scss';
 import moment from 'moment';
@@ -26,17 +32,18 @@ function AttributionsChart({
   durationObj,
   attr_dimensions,
 }) {
+  const [aggregateData, setAggregateData] = useState({
+    categories: [],
+    series: [],
+  });
+
   const {
     coreQueryState: { comparison_data, comparison_duration },
   } = useContext(CoreQueryContext);
 
-  const aggregateData = useMemo(() => {
-    return formatData(
-      data,
-      touchpoint,
-      event,
-      attr_dimensions,
-      comparison_data.data
+  useEffect(() => {
+    setAggregateData(
+      formatData(data, touchpoint, event, attr_dimensions, comparison_data.data)
     );
   }, [data, touchpoint, event, attr_dimensions, comparison_data.data]);
 
