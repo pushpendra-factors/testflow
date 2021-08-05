@@ -1,11 +1,11 @@
-import React, { useMemo, useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
   formatData,
   formatDataInHighChartsSeriesFormat,
 } from '../../CoreQuery/CampaignAnalytics/NoBreakdownCharts/utils';
 import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../components/SparkLineChart/Chart';
-import { generateColors } from '../../../utils/dataFormatter';
+import { generateColors, isSeriesChart } from '../../../utils/dataFormatter';
 import LineChart from '../../../components/HCLineChart';
 import NoBreakdownTable from '../../CoreQuery/CampaignAnalytics/NoBreakdownCharts/NoBreakdownTable';
 import {
@@ -28,21 +28,22 @@ function NoBreakdownCharts({
   arrayMapper,
   isWidgetModal,
   unit,
+  durationObj,
 }) {
   const { handleEditQuery } = useContext(DashboardContext);
-  const chartsData = useMemo(() => {
-    return formatData(data, arrayMapper);
-  }, [data, arrayMapper]);
+  const [chartsData, setChartsData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [seriesData, setSeriesData] = useState([]);
 
-  const { categories, seriesData } = useMemo(() => {
-    if (chartType === CHART_TYPE_LINECHART) {
-      return formatDataInHighChartsSeriesFormat(data, arrayMapper);
-    }
-    return {
-      categories: [],
-      seriesData: [],
-    };
-  }, [data, arrayMapper, chartType]);
+  useEffect(() => {
+    setChartsData(formatData(data, arrayMapper));
+
+    const { categories: cat, seriesData: sd } = isSeriesChart(chartType)
+      ? formatDataInHighChartsSeriesFormat(data, arrayMapper)
+      : { categories: [], seriesData: [] };
+    setCategories(cat);
+    setSeriesData(sd);
+  }, [data, arrayMapper]);
 
   if (!chartsData.length) {
     return (
@@ -210,6 +211,7 @@ function NoBreakdownCharts({
         chartType={chartType}
         chartsData={chartsData}
         isWidgetModal={isWidgetModal}
+        frequency={durationObj.frequency}
       />
     );
   }

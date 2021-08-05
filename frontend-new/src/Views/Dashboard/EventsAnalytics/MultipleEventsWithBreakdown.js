@@ -1,13 +1,24 @@
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useContext,
+  useCallback,
+} from 'react';
 import {
   formatData,
   formatVisibleProperties,
   formatDataInStackedAreaFormat,
+  defaultSortProp,
 } from '../../CoreQuery/EventsAnalytics/MultipleEventsWIthBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import MultipleEventsWithBreakdownTable from '../../CoreQuery/EventsAnalytics/MultipleEventsWIthBreakdown/MultipleEventsWithBreakdownTable';
 import LineChart from '../../../components/HCLineChart';
-import { generateColors } from '../../../utils/dataFormatter';
+import {
+  generateColors,
+  isSeriesChart,
+  getNewSorterState,
+} from '../../../utils/dataFormatter';
 import {
   CHART_TYPE_TABLE,
   CHART_TYPE_BARCHART,
@@ -35,36 +46,45 @@ function MultipleEventsWithBreakdown({
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const [sorter, setSorter] = useState(defaultSortProp());
+  const [dateSorter, setDateSorter] = useState({});
+  const [aggregateData, setAggregateData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [data, setData] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
   const { eventNames } = useSelector((state) => state.coreQuery);
+
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
+
+  const handleDateSorting = useCallback((prop) => {
+    setDateSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
 
   const appliedQueries = useMemo(() => {
     return queries.join(';');
   }, [queries]); // its a hack to prevent unwanted rerenders due to queries variable, needs to be optimized
 
-  const aggregateData = useMemo(() => {
+  useEffect(() => {
     const appliedColors = generateColors(appliedQueries.split(';').length);
-    return formatData(
+    const aggData = formatData(
       resultState.data,
       appliedQueries.split(';'),
       appliedColors,
       eventNames
     );
-  }, [resultState.data, appliedQueries, eventNames]);
-
-  const { categories, data } = useMemo(() => {
-    if (chartType === CHART_TYPE_BARCHART) {
-      return {
-        categories: [],
-        data: [],
-      };
-    }
-    return formatDataInStackedAreaFormat(
-      resultState.data,
-      aggregateData,
-      eventNames
-    );
-  }, [resultState.data, aggregateData, chartType, eventNames]);
+    const { categories: cats, data: d } = isSeriesChart(chartType)
+      ? formatDataInStackedAreaFormat(resultState.data, aggData, eventNames)
+      : { categories: [], data: [] };
+    setAggregateData(aggData);
+    setCategories(cats);
+    setData(d);
+  }, [resultState.data, appliedQueries, eventNames, chartType]);
 
   const visibleSeriesData = useMemo(() => {
     const colors = generateColors(visibleProperties.length);
@@ -162,6 +182,10 @@ function MultipleEventsWithBreakdown({
         durationObj={durationObj}
         categories={categories}
         section={section}
+        sorter={sorter}
+        handleSorting={handleSorting}
+        dateSorter={dateSorter}
+        handleDateSorting={handleDateSorting}
       />
     );
   } else {

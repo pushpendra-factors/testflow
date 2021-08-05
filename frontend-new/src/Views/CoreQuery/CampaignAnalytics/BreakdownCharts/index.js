@@ -26,9 +26,23 @@ function BreakdownCharts({
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const [aggregateData, setAggregateData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [highchartsData, setHighchartsData] = useState([]);
 
-  const aggregateData = useMemo(() => {
-    return formatData(data, arrayMapper, breakdown);
+  useEffect(() => {
+    const aggData = formatData(data, arrayMapper, breakdown);
+    const {
+      categories: cat,
+      highchartsData: hcd,
+    } = formatDataInHighChartsFormat(
+      data.result_group[0],
+      arrayMapper,
+      aggData
+    );
+    setAggregateData(aggData);
+    setCategories(cat);
+    setHighchartsData(hcd);
   }, [data, breakdown, arrayMapper]);
 
   const chartData = useMemo(() => {
@@ -45,14 +59,6 @@ function BreakdownCharts({
     });
     return SortData(result, currEventName, 'descend');
   }, [currentEventIndex, arrayMapper, aggregateData]);
-
-  const { categories, highchartsData } = useMemo(() => {
-    return formatDataInHighChartsFormat(
-      data.result_group[0],
-      arrayMapper,
-      aggregateData
-    );
-  }, [data.result_group, arrayMapper, aggregateData]);
 
   const visibleSeriesData = useMemo(() => {
     const colors = generateColors(visibleProperties.length);

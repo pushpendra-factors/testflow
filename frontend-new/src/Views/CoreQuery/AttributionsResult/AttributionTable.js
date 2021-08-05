@@ -1,10 +1,16 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import moment from 'moment';
-import { getTableColumns, getTableData, calcChangePerc } from './utils';
+import {
+  getTableColumns,
+  getTableData,
+  calcChangePerc,
+  defaultSortProp,
+} from './utils';
 import DataTable from '../../../components/DataTable';
 import { useSelector } from 'react-redux';
 import OptionsPopover from './OptionsPopover';
 import { DASHBOARD_WIDGET_SECTION } from '../../../utils/constants';
+import { getNewSorterState } from '../../../utils/dataFormatter';
 
 function AttributionTable({
   data,
@@ -27,10 +33,15 @@ function AttributionTable({
   attr_dimensions,
 }) {
   const [searchText, setSearchText] = useState('');
-  const [sorter, setSorter] = useState({});
+  const [sorter, setSorter] = useState(defaultSortProp());
+  const [columns, setColumns] = useState([]);
+  const [tableData, setTableData] = useState([]);
   const { eventNames } = useSelector((state) => state.coreQuery);
-  const handleSorting = useCallback((sorter) => {
-    setSorter(sorter);
+
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
   }, []);
 
   const handleMetricsVisibilityChange = useCallback(
@@ -65,22 +76,24 @@ function AttributionTable({
     );
   }, [attributionMetrics, handleMetricsVisibilityChange]);
 
-  const columns = useMemo(() => {
-    return getTableColumns(
-      sorter,
-      handleSorting,
-      attribution_method,
-      attribution_method_compare,
-      touchpoint,
-      linkedEvents,
-      event,
-      eventNames,
-      attributionMetrics,
-      metricsOptionsPopover,
-      attr_dimensions,
-      durationObj,
-      comparison_data,
-      cmprDuration
+  useEffect(() => {
+    setColumns(
+      getTableColumns(
+        sorter,
+        handleSorting,
+        attribution_method,
+        attribution_method_compare,
+        touchpoint,
+        linkedEvents,
+        event,
+        eventNames,
+        attributionMetrics,
+        metricsOptionsPopover,
+        attr_dimensions,
+        durationObj,
+        comparison_data,
+        cmprDuration
+      )
     );
   }, [
     attr_dimensions,
@@ -99,18 +112,20 @@ function AttributionTable({
     cmprDuration,
   ]);
 
-  const tableData = useMemo(() => {
-    return getTableData(
-      data,
-      event,
-      searchText,
-      sorter,
-      attribution_method_compare,
-      touchpoint,
-      linkedEvents,
-      attributionMetrics,
-      attr_dimensions,
-      comparison_data
+  useEffect(() => {
+    setTableData(
+      getTableData(
+        data,
+        event,
+        searchText,
+        sorter,
+        attribution_method_compare,
+        touchpoint,
+        linkedEvents,
+        attributionMetrics,
+        attr_dimensions,
+        comparison_data
+      )
     );
   }, [
     attr_dimensions,

@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   formatData,
   formatDataInStackedAreaFormat,
+  defaultSortProp,
 } from './utils';
 import BarChart from '../../../../components/BarChart';
 import LineChart from '../../../../components/HCLineChart';
 import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTable';
-import { generateColors } from '../../../../utils/dataFormatter';
+import {
+  generateColors,
+  getNewSorterState,
+} from '../../../../utils/dataFormatter';
 import {
   DASHBOARD_MODAL,
   CHART_TYPE_STACKED_AREA,
@@ -28,14 +32,34 @@ function SingleEventMultipleBreakdown({
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
-  
-  const aggregateData = useMemo(() => {
-    return formatData(resultState.data);
-  }, [resultState.data]);
+  const [sorter, setSorter] = useState(defaultSortProp());
+  const [dateSorter, setDateSorter] = useState({});
+  const [aggregateData, setAggregateData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [data, setData] = useState([]);
 
-  const { categories, data } = useMemo(() => {
-    return formatDataInStackedAreaFormat(resultState.data, aggregateData);
-  }, [resultState.data, aggregateData]);
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
+
+  const handleDateSorting = useCallback((prop) => {
+    setDateSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
+
+  useEffect(() => {
+    const aggData = formatData(resultState.data);
+    const { categories: cats, data: d } = formatDataInStackedAreaFormat(
+      resultState.data,
+      aggData
+    );
+    setAggregateData(aggData);
+    setCategories(cats);
+    setData(d);
+  }, [resultState.data]);
 
   const visibleSeriesData = useMemo(() => {
     const colors = generateColors(visibleProperties.length);
@@ -78,6 +102,10 @@ function SingleEventMultipleBreakdown({
         visibleProperties={visibleProperties}
         durationObj={durationObj}
         categories={categories}
+        sorter={sorter}
+        handleSorting={handleSorting}
+        dateSorter={dateSorter}
+        handleDateSorting={handleDateSorting}
       />
     </div>
   );

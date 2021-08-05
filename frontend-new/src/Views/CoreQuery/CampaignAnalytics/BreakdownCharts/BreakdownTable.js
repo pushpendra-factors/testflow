@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   getTableColumns,
   getTableData,
   getDateBasedColumns,
   getDateBasedTableData,
+  getDefaultSorterState,
 } from './utils';
 import DataTable from '../../../../components/DataTable';
 import {
@@ -11,6 +12,7 @@ import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DASHBOARD_WIDGET_SECTION,
 } from '../../../../utils/constants';
+import { getNewSorterState } from '../../../../utils/dataFormatter';
 
 function BreakdownTable({
   chartsData,
@@ -26,17 +28,77 @@ function BreakdownTable({
   section,
   reportTitle = 'CampaignAnalytics',
 }) {
-  const [sorter, setSorter] = useState({});
+  const [sorter, setSorter] = useState(
+    getDefaultSorterState(arrayMapper, currentEventIndex)
+  );
+  const [columns, setColumns] = useState([]);
+  const [tableData, setTableData] = useState([]);
+  const [dateBasedColumns, setDateBasedColumns] = useState([]);
+  const [dateBasedTableData, setDateBasedTableData] = useState([]);
   const [dateSorter, setDateSorter] = useState({});
   const [searchText, setSearchText] = useState('');
 
-  const handleSorting = useCallback((sorter) => {
-    setSorter(sorter);
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
   }, []);
 
-  const handleDateSorting = useCallback((sorter) => {
-    setDateSorter(sorter);
+  const handleDateSorting = useCallback((prop) => {
+    setDateSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
   }, []);
+
+  useEffect(() => {
+    setColumns(getTableColumns(arrayMapper, breakdown, sorter, handleSorting));
+  }, [arrayMapper, breakdown, sorter, handleSorting]);
+
+  useEffect(() => {
+    setTableData(
+      getTableData(
+        chartsData,
+        breakdown,
+        searchText,
+        sorter
+      )
+    );
+  }, [
+    chartsData,
+    breakdown,
+    arrayMapper,
+    currentEventIndex,
+    searchText,
+    sorter,
+  ]);
+
+  useEffect(() => {
+    setDateBasedColumns(
+      getDateBasedColumns(categories, breakdown, dateSorter, handleDateSorting)
+    );
+  }, [categories, breakdown, dateSorter, handleDateSorting]);
+
+  useEffect(() => {
+    setDateBasedTableData(
+      getDateBasedTableData(
+        seriesData,
+        categories,
+        breakdown,
+        searchText,
+        dateSorter,
+        arrayMapper,
+        currentEventIndex
+      )
+    );
+  }, [
+    seriesData,
+    categories,
+    breakdown,
+    searchText,
+    dateSorter,
+    arrayMapper,
+    currentEventIndex,
+  ]);
 
   const getCSVData = () => {
     const activeTableData =
@@ -48,57 +110,6 @@ function BreakdownTable({
       }),
     };
   };
-
-  const columns = useMemo(() => {
-    return getTableColumns(arrayMapper, breakdown, sorter, handleSorting);
-  }, [arrayMapper, breakdown, sorter, handleSorting]);
-
-  const tableData = useMemo(() => {
-    return getTableData(
-      chartsData,
-      breakdown,
-      arrayMapper,
-      currentEventIndex,
-      searchText,
-      sorter
-    );
-  }, [
-    chartsData,
-    breakdown,
-    arrayMapper,
-    currentEventIndex,
-    searchText,
-    sorter,
-  ]);
-
-  const dateBasedColumns = useMemo(() => {
-    return getDateBasedColumns(
-      categories,
-      breakdown,
-      dateSorter,
-      handleDateSorting
-    );
-  }, [categories, breakdown, dateSorter, handleDateSorting]);
-
-  const dateBasedTableData = useMemo(() => {
-    return getDateBasedTableData(
-      seriesData,
-      categories,
-      breakdown,
-      searchText,
-      dateSorter,
-      arrayMapper,
-      currentEventIndex
-    );
-  }, [
-    seriesData,
-    categories,
-    breakdown,
-    searchText,
-    dateSorter,
-    arrayMapper,
-    currentEventIndex,
-  ]);
 
   const selectedRowKeys = useMemo(() => {
     return visibleProperties.map((vp) => vp.index);

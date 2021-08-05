@@ -1,11 +1,12 @@
 import React from 'react';
 import moment from 'moment';
 import {
-  getTitleWithSorter,
-  SortData,
   generateColors,
+  SortResults,
+  getClickableTitleSorter,
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
+import { DATE_FORMATS } from '../../../../utils/constants';
 
 export const formatData = (data, arrayMapper) => {
   if (
@@ -18,6 +19,7 @@ export const formatData = (data, arrayMapper) => {
   ) {
     return [];
   }
+  console.log('no breakdown campaign format data');
   const result = [];
   arrayMapper.forEach((elem) => {
     const dateTimeIndex = data.result_group[0].headers.indexOf('datetime');
@@ -54,15 +56,14 @@ export const getTableColumns = (
   currentSorter,
   handleSorting
 ) => {
-  let format = 'MMM D, YYYY';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D';
-  }
+  console.log('no breakdown campaign getTableColumns');
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+
   const result = chartsData.map((elem) => {
     return {
-      title: getTitleWithSorter(
+      title: getClickableTitleSorter(
         elem.name,
-        elem.name,
+        { key: elem.name, type: 'numerical', subtype: null },
         currentSorter,
         handleSorting
       ),
@@ -74,7 +75,12 @@ export const getTableColumns = (
   });
   return [
     {
-      title: getTitleWithSorter('Date', 'date', currentSorter, handleSorting),
+      title: getClickableTitleSorter(
+        'Date',
+        { key: 'date', type: 'datetime', subtype: frequency },
+        currentSorter,
+        handleSorting
+      ),
       dataIndex: 'date',
       render: (d) => {
         return moment(d).format(format);
@@ -85,6 +91,7 @@ export const getTableColumns = (
 };
 
 export const getTableData = (chartsData, currentSorter) => {
+  console.log('no breakdown campaign getTableData');
   const dates = chartsData[0].dataOverTime.map((d) => d.date);
   const columns = chartsData.map((elem) => elem.name);
   const result = dates.map((date, dateIndex) => {
@@ -99,7 +106,7 @@ export const getTableData = (chartsData, currentSorter) => {
       ...colVals,
     };
   });
-  return SortData(result, currentSorter.key, currentSorter.order);
+  return SortResults(result, currentSorter);
 };
 
 export const getDateBaseTableColumns = (
@@ -108,16 +115,15 @@ export const getDateBaseTableColumns = (
   currentSorter,
   handleSorting
 ) => {
-  let format = 'MMM D';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D';
-  }
+  console.log('no breakdown campaign getDateBaseTableColumns');
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+
   const dates = chartsData[0].dataOverTime.map((d) => d.date);
   const dateColumns = dates.map((date) => {
     return {
-      title: getTitleWithSorter(
+      title: getClickableTitleSorter(
         moment(date).format(format),
-        moment(date).format(format),
+        { key: moment(date).format(format), type: 'numerical', subtype: null },
         currentSorter,
         handleSorting
       ),
@@ -130,7 +136,16 @@ export const getDateBaseTableColumns = (
   });
   return [
     {
-      title: 'Measures',
+      title: getClickableTitleSorter(
+        'Measures',
+        {
+          key: 'measures',
+          type: 'categorical',
+          subtype: null,
+        },
+        currentSorter,
+        handleSorting
+      ),
       dataIndex: 'measures',
       fixed: 'left',
       width: 150,
@@ -140,10 +155,8 @@ export const getDateBaseTableColumns = (
 };
 
 export const getDateBasedTableData = (chartsData, frequency, currentSorter) => {
-  let format = 'MMM D';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D';
-  }
+  console.log('no breakdown campaign getDateBasedTableData');
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
   const result = chartsData.map((elem) => {
     const dateVals = {};
     elem.dataOverTime.forEach((d) => {
@@ -155,7 +168,7 @@ export const getDateBasedTableData = (chartsData, frequency, currentSorter) => {
       ...dateVals,
     };
   });
-  return SortData(result, currentSorter.key, currentSorter.order);
+  return SortResults(result, currentSorter);
 };
 
 export const formatDataInHighChartsSeriesFormat = (data, arrayMapper) => {
@@ -172,6 +185,7 @@ export const formatDataInHighChartsSeriesFormat = (data, arrayMapper) => {
       seriesData: [],
     };
   }
+  console.log('no breakdown campaign formatDataInHighChartsSeriesFormat');
   const { headers, rows } = data.result_group[0];
   const dateIndex = headers.findIndex((h) => h === 'datetime');
   let differentDates = new Set();

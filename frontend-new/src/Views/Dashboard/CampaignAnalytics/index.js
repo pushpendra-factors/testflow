@@ -8,7 +8,8 @@ function CampaignAnalytics({
   arrayMapper,
   resultState,
   unit,
-  section
+  section,
+  durationObj
 }) {
   const { group_by: breakdown } = campaignState;
   if (breakdown.length) {
@@ -32,6 +33,7 @@ function CampaignAnalytics({
         isWidgetModal={false}
         unit={unit}
         section={section}
+        durationObj={durationObj}
       />
     );
   }

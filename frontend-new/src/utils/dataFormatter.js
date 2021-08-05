@@ -8,7 +8,9 @@ import {
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_SPARKLINES,
   PREDEFINED_DATES,
+  DATE_FORMATS,
 } from './constants';
+import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
 
 const visualizationColors = [
   '#4D7DB4',
@@ -35,18 +37,65 @@ export const calculatePercentage = (numerator, denominator, precision = 1) => {
   return result % 1 !== 0 ? result.toFixed(precision) : result;
 };
 
-const SortDataByDate = (arr, key, order) => {
+export const getDurationInSeconds = (duration) => {
+  if (duration.indexOf(' ') === -1) {
+    return duration.split('s')[0];
+  } else {
+    if (duration.indexOf('d') > -1) {
+      const dayStr = duration.split(' ')[0];
+      const hourStr = duration.split(' ')[1];
+      const days = Number(dayStr.split('m')[0]);
+      const hours = Number(hourStr.split('s')[0]);
+      return days * 86400 + hours * 3600;
+    }
+    if (duration.indexOf('h') > -1) {
+      const hourStr = duration.split(' ')[0];
+      const minsStr = duration.split(' ')[1];
+      const hours = Number(hourStr.split('m')[0]);
+      const minutes = Number(minsStr.split('s')[0]);
+      return hours * 3600 + minutes * 60;
+    }
+    if (duration.indexOf('m') > -1) {
+      const minsStr = duration.split(' ')[0];
+      const secondStr = duration.split(' ')[1];
+      const mins = Number(minsStr.split('m')[0]);
+      const seconds = Number(secondStr.split('s')[0]);
+      return mins * 60 + seconds;
+    }
+  }
+  return 0;
+};
+
+export const SortDataByDuration = (arr, key, order) => {
   const result = [...arr];
   result.sort((a, b) => {
+    const val1 = getDurationInSeconds(a[key]);
+    const val2 = getDurationInSeconds(b[key]);
     if (order === 'ascend') {
-      return moment(a[key]).utc().unix() >= moment(b[key]).utc().unix()
-        ? 1
-        : -1;
+      return val1 >= val2 ? 1 : -1;
     }
     if (order === 'descend') {
-      return moment(a[key]).utc().unix() <= moment(b[key]).utc().unix()
-        ? 1
-        : -1;
+      return val1 <= val2 ? 1 : -1;
+    }
+    return 0;
+  });
+  return result;
+};
+
+export const SortDataByDate = (arr, key, order, format = null) => {
+  const result = [...arr];
+  result.sort((a, b) => {
+    const val1 = format
+      ? moment(a[key], format).utc().unix()
+      : moment(a[key]).utc().unix();
+    const val2 = format
+      ? moment(b[key], format).utc().unix()
+      : moment(b[key]).utc().unix();
+    if (order === 'ascend') {
+      return val1 >= val2 ? 1 : -1;
+    }
+    if (order === 'descend') {
+      return val1 <= val2 ? 1 : -1;
     }
     return 0;
   });
@@ -59,11 +108,14 @@ export const SortData = (arr, key, order) => {
   }
   const result = [...arr];
   result.sort((a, b) => {
+    // type of a[key] can be an object when the comparison is applied
+    const val1 = typeof a[key] === 'object' ? a[key].value : a[key];
+    const val2 = typeof b[key] === 'object' ? b[key].value : b[key];
     if (order === 'ascend') {
-      return parseFloat(a[key]) >= parseFloat(b[key]) ? 1 : -1;
+      return parseFloat(val1) >= parseFloat(val2) ? 1 : -1;
     }
     if (order === 'descend') {
-      return parseFloat(a[key]) <= parseFloat(b[key]) ? 1 : -1;
+      return parseFloat(val1) <= parseFloat(val2) ? 1 : -1;
     }
     return 0;
   });
@@ -84,90 +136,60 @@ export const SortDataByObject = (arr, key, subkey, order) => {
   return result;
 };
 
-export const getTitleWithSorter = (
+export const SortDataByAlphabets = (arr, key, order) => {
+  const result = [...arr];
+  result.sort((a, b) => {
+    if (order === 'ascend') {
+      return a[key] >= b[key] ? 1 : -1;
+    }
+    if (order === 'descend') {
+      return a[key] <= b[key] ? 1 : -1;
+    }
+    return 0;
+  });
+  return result;
+};
+
+export const SortWeekFormattedData = (arr, key, order) => {
+  const result = [...arr];
+  result.sort((a, b) => {
+    const val1 = moment(a[key].split(' to ')[0], DATE_FORMATS['day'])
+      .utc()
+      .unix();
+    const val2 = moment(b[key].split(' to ')[0], DATE_FORMATS['day'])
+      .utc()
+      .unix();
+    if (order === 'ascend') {
+      return val1 >= val2 ? 1 : -1;
+    }
+    if (order === 'descend') {
+      return val1 <= val2 ? 1 : -1;
+    }
+    return 0;
+  });
+  return result;
+};
+
+export const getClickableTitleSorter = (
   title,
-  key,
+  sorterProp,
   currentSorter,
   handleSorting
 ) => {
   return (
-    <div className='flex items-center justify-between'>
+    <div
+      onClick={() => handleSorting(sorterProp)}
+      className='flex items-end justify-between cursor-pointer h-full'
+    >
       <div className='mr-2 break-all'>{title}</div>
-      <div className='flex flex-col items-center'>
-        {currentSorter.key === key && currentSorter.order === 'ascend' ? (
-          <div
-            onClick={() => handleSorting({})}
-            style={{ marginBottom: '1px' }}
-          >
-            <svg
-              width='10'
-              height='6'
-              viewBox='0 0 10 6'
-              fill='none'
-              xmlns='http://www.w3.org/2000/svg'
-            >
-              <path
-                d='M5.35117 1.3516L8.39362 4.36853C8.61554 4.58859 8.45971 4.96706 8.14718 4.96706H5.00002H1.83533C1.52237 4.96706 1.36673 4.58769 1.58953 4.36789L4.64797 1.3507C4.84302 1.15827 5.15661 1.15867 5.35117 1.3516Z'
-                fill='#0E2647'
-                stroke='#0E2647'
-              />
-            </svg>
-          </div>
-        ) : (
-          <div
-            onClick={() => handleSorting({ key, order: 'ascend' })}
-            style={{ marginBottom: '1px' }}
-          >
-            <svg
-              width='9'
-              height='6'
-              viewBox='0 0 9 6'
-              fill='none'
-              xmlns='http://www.w3.org/2000/svg'
-            >
-              <path
-                d='M5.35117 1.3516L8.39362 4.36853C8.61554 4.58859 8.45971 4.96706 8.14718 4.96706H5.00002H1.83533C1.52237 4.96706 1.36673 4.58769 1.58953 4.36789L4.64797 1.3507C4.84302 1.15827 5.15661 1.15867 5.35117 1.3516Z'
-                stroke='#0E2647'
-              />
-            </svg>
-          </div>
-        )}
-        {currentSorter.key === key && currentSorter.order === 'descend' ? (
-          <div onClick={() => handleSorting({})} style={{ marginTop: '1px' }}>
-            <svg
-              width='11'
-              height='7'
-              viewBox='0 0 11 7'
-              fill='none'
-              xmlns='http://www.w3.org/2000/svg'
-            >
-              <path
-                d='M6.35165 5.65415L10.3949 1.63808C10.6165 1.41794 10.4606 1.03976 10.1482 1.03976H6.00002H1.83368C1.52095 1.03976 1.36521 1.41866 1.58754 1.63859L5.64766 5.65488C5.84276 5.84787 6.15695 5.84755 6.35165 5.65415Z'
-                fill='#0E2647'
-                stroke='#0E2647'
-              />
-            </svg>
-          </div>
-        ) : (
-          <div
-            onClick={() => handleSorting({ key, order: 'descend' })}
-            style={{ marginTop: '1px' }}
-          >
-            <svg
-              width='9'
-              height='6'
-              viewBox='0 0 9 6'
-              fill='none'
-              xmlns='http://www.w3.org/2000/svg'
-            >
-              <path
-                d='M4.64721 4.65009L1.60105 1.59899C1.38084 1.37842 1.53706 1.0017 1.84874 1.0017L4.99996 1.0017L8.1721 1.00172C8.4843 1.00172 8.64028 1.3795 8.41903 1.59976L5.3538 4.65118C5.1583 4.8458 4.84211 4.84532 4.64721 4.65009Z'
-                stroke='#0E2647'
-              />
-            </svg>
-          </div>
-        )}
-      </div>
+      {currentSorter.key === sorterProp.key &&
+      currentSorter.order === 'descend' ? (
+        <ArrowDownOutlined />
+      ) : null}
+      {currentSorter.key === sorterProp.key &&
+      currentSorter.order === 'ascend' ? (
+        <ArrowUpOutlined />
+      ) : null}
     </div>
   );
 };
@@ -396,4 +418,55 @@ export const shouldDataFetch = (durationObj) => {
     required: true,
     message: null,
   };
+};
+
+export const getNewSorterState = (currentSorter, newSortProp) => {
+  if (currentSorter.key === newSortProp.key) {
+    return {
+      ...currentSorter,
+      order: currentSorter.order === 'ascend' ? 'descend' : 'ascend',
+    };
+  }
+  return {
+    ...newSortProp,
+    order: 'ascend',
+  };
+};
+
+export const SortResults = (result, currentSorter) => {
+  if (currentSorter.key) {
+    if (currentSorter.type === 'datetime') {
+      if (
+        currentSorter.subtype === 'day' ||
+        currentSorter.subtype === 'date' ||
+        currentSorter.subtype === 'month' ||
+        currentSorter.subtype === 'hour'
+      ) {
+        return SortDataByDate(
+          result,
+          currentSorter.key,
+          currentSorter.order,
+          DATE_FORMATS[currentSorter.subtype]
+        );
+      }
+      if (currentSorter.subtype === 'week') {
+        return SortWeekFormattedData(
+          result,
+          currentSorter.key,
+          currentSorter.order
+        );
+      }
+    } else if (currentSorter.type === 'categorical') {
+      return SortDataByAlphabets(
+        result,
+        currentSorter.key,
+        currentSorter.order
+      );
+    } else if (currentSorter.type === 'duration') {
+      return SortDataByDuration(result, currentSorter.key, currentSorter.order);
+    } else {
+      return SortData(result, currentSorter.key, currentSorter.order);
+    }
+  }
+  return result;
 };

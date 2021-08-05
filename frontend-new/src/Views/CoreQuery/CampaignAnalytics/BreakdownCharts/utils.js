@@ -1,7 +1,19 @@
 import React from 'react';
 import moment from 'moment';
-import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
+import {
+  getClickableTitleSorter,
+  SortResults,
+} from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
+
+export const getDefaultSorterState = (arrayMapper, currentEventIndex) => {
+  return {
+    key: arrayMapper[currentEventIndex].eventName,
+    type: 'numerical',
+    subtype: null,
+    order: 'descend',
+  };
+};
 
 export const getBreakdownIndices = (data, breakdown) => {
   const result = breakdown.map((elem) => {
@@ -31,6 +43,7 @@ export const formatData = (data, arrayMapper, breakdown) => {
   ) {
     return [];
   }
+  console.log('campaigns format data');
   try {
     const { headers, rows } = data.result_group[1];
     const breakdownIndices = getBreakdownIndices(data, breakdown);
@@ -68,9 +81,19 @@ export const getTableColumns = (
   currentSorter,
   handleSorting
 ) => {
+  console.log('campaigns getTableColumns');
   const breakdownCols = breakdown.map((b, index) => {
     return {
-      title: `${b.name}_${b.property}`,
+      title: getClickableTitleSorter(
+        `${b.name}_${b.property}`,
+        {
+          key: `${b.name}_${b.property}-${index}`,
+          type: 'categorical',
+          subtype: null,
+        },
+        currentSorter,
+        handleSorting
+      ),
       dataIndex: `${b.name}_${b.property}-${index}`,
       fixed: !index ? 'left' : '',
       width: 150,
@@ -79,9 +102,9 @@ export const getTableColumns = (
 
   const eventCols = arrayMapper.map((elem) => {
     return {
-      title: getTitleWithSorter(
+      title: getClickableTitleSorter(
         elem.eventName,
-        elem.eventName,
+        { key: elem.eventName, type: 'numerical', subtype: null },
         currentSorter,
         handleSorting
       ),
@@ -99,11 +122,10 @@ export const getTableColumns = (
 export const getTableData = (
   data,
   breakdown,
-  arrayMapper,
-  currentEventIndex,
   searchText,
   currentSorter
 ) => {
+  console.log('campaigns getTableData');
   const filteredData = data.filter(
     (d) => d.label.toLowerCase().indexOf(searchText.toLowerCase()) > -1
   );
@@ -118,10 +140,7 @@ export const getTableData = (
       ...breakdownVals,
     };
   });
-  if (currentSorter.key) {
-    return SortData(result, currentSorter.key, currentSorter.order);
-  }
-  return SortData(result, arrayMapper[currentEventIndex].eventName, 'descend');
+  return SortResults(result, currentSorter);
 };
 
 export const formatDataInHighChartsFormat = (
@@ -134,13 +153,15 @@ export const formatDataInHighChartsFormat = (
     !Array.isArray(data.headers) ||
     !data.headers.length ||
     !Array.isArray(data.rows) ||
-    !data.rows.length
+    !data.rows.length ||
+    !aggregateData.length
   ) {
     return {
       categories: [],
       highchartsData: [],
     };
   }
+  console.log('campaigns formatDataInHighChartsFormat');
   const dateIndex = data.headers.findIndex((h) => h === 'datetime');
   let differentDates = new Set();
   data.rows.forEach((row) => {
@@ -189,9 +210,19 @@ export const getDateBasedColumns = (
   currentSorter,
   handleSorting
 ) => {
+  console.log('campaigns getDateBasedColumns');
   const breakdownCols = breakdown.map((b, index) => {
     return {
-      title: `${b.name}_${b.property}`,
+      title: getClickableTitleSorter(
+        `${b.name}_${b.property}`,
+        {
+          key: `${b.name}_${b.property}-${index}`,
+          type: 'categorical',
+          subtype: null,
+        },
+        currentSorter,
+        handleSorting
+      ),
       dataIndex: `${b.name}_${b.property}-${index}`,
       fixed: !index ? 'left' : '',
       width: 150,
@@ -200,9 +231,9 @@ export const getDateBasedColumns = (
   const format = 'MMM D';
   const dateColumns = categories.map((cat) => {
     return {
-      title: getTitleWithSorter(
+      title: getClickableTitleSorter(
         moment(cat).format(format),
-        moment(cat).format(format),
+        { key: moment(cat).format(format), type: 'numerical', subtype: null },
         currentSorter,
         handleSorting
       ),
@@ -225,6 +256,7 @@ export const getDateBasedTableData = (
   arrayMapper,
   currentEventIndex
 ) => {
+  console.log('campaigns getDateBasedTableData');
   const format = 'MMM D';
   const currentEventName = arrayMapper[currentEventIndex].eventName;
   const result = seriesData
@@ -246,8 +278,5 @@ export const getDateBasedTableData = (
         ...dateWiseData,
       };
     });
-  if (currentSorter.key) {
-    return SortData(result, currentSorter.key, currentSorter.order);
-  }
-  return result;
+  return SortResults(result, currentSorter);
 };

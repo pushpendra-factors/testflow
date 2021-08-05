@@ -8,7 +8,8 @@ function CampaignAnalytics({
   campaignState,
   chartType,
   currMetricsValue,
-  section
+  section,
+  durationObj
 }) {
   const { group_by: breakdown } = campaignState;
   
@@ -32,6 +33,7 @@ function CampaignAnalytics({
         chartType={chartType}
         data={resultState.data}
         section={section}
+        durationObj={durationObj}
       />
     );
   }

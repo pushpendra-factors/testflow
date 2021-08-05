@@ -2,8 +2,10 @@ import React from 'react';
 import moment from 'moment';
 import {
   calculatePercentage,
-  getTitleWithSorter,
   formatDuration,
+  getClickableTitleSorter,
+  SortResults,
+  SortData,
 } from '../../../utils/dataFormatter';
 import {
   SVG,
@@ -97,6 +99,7 @@ export const formatData = (response, arrayMapper) => {
   ) {
     return { groups: [], events: [] };
   }
+  console.log('funnels format data');
   const { rows, headers, meta } = response;
   let breakdowns = [...meta.query.gbp];
   const firstEventIdx = headers.findIndex((header) => header === 'step_0');
@@ -185,13 +188,13 @@ const RenderEventData = (d, breakdown, isComparisonApplied) => {
   if (breakdown.length || !isComparisonApplied) {
     return (
       <>
-        <NumFormat number={d.count} /> ({d.percentage}%)
+        <NumFormat number={d.value} /> ({d.percentage}%)
       </>
     );
   } else {
     const val1 = (
       <>
-        <NumFormat number={d.count} /> ({d.percentage}%)
+        <NumFormat number={d.value} /> ({d.percentage}%)
       </>
     );
     const val2 = (
@@ -211,43 +214,168 @@ const RenderDurations = (d, breakdown, isComparisonApplied) => {
   }
 };
 
+export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
+  const charArr = ['1', '2', '3', '4', '5', '6'];
+  const displayTitle =
+    breakdown.en === 'user'
+      ? userPropNames[breakdown.pr] || breakdown.pr
+      : breakdown.en === 'event'
+      ? eventPropNames[breakdown.pr] || breakdown.pr
+      : breakdown.pr;
+
+  if (!breakdown.eni) {
+    return displayTitle;
+  }
+  return (
+    <div className='flex items-center'>
+      <div className='mr-1'>{displayTitle} of </div>
+      <div
+        style={{ backgroundColor: '#3E516C' }}
+        className='text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs'
+      >
+        {charArr[breakdown.eni - 1]}
+      </div>
+    </div>
+  );
+};
+
 export const generateTableColumns = (
-  breakdown,
   queries,
   currentSorter,
   handleSorting,
   arrayMapper,
-  isComparisonApplied
+  isComparisonApplied,
+  resultData,
+  userPropNames,
+  eventPropNames
 ) => {
+  console.log('funnels generateTableColumns');
+  let breakdown = resultData?.meta?.query?.gbp;
+
+  const isBreakdownApplied =
+    !!breakdown && Array.isArray(breakdown) && breakdown.length > 0;
+
+  if (isBreakdownApplied) {
+    breakdown = SortData(breakdown, 'eni', 'ascend');
+  }
+  const eventBreakdownColumns = isBreakdownApplied
+    ? breakdown
+        .filter((e) => e.eni)
+        .map((e, index) => {
+          return {
+            title: getClickableTitleSorter(
+              getBreakdownTitle(e, userPropNames, eventPropNames),
+              {
+                key: `${e.pr} - ${e.eni}`,
+                type: e.pty,
+                subtype: e.grn,
+              },
+              currentSorter,
+              handleSorting
+            ),
+            dataIndex: `${e.pr} - ${e.eni}`,
+            fixed: !index ? 'left' : '',
+            width: 200,
+          };
+        })
+    : [];
+
+  const globalBreakdownColumns = isBreakdownApplied
+    ? breakdown
+        .filter((e) => !e.eni)
+        .map((e, index) => {
+          return {
+            title: getClickableTitleSorter(
+              getBreakdownTitle(e, userPropNames, eventPropNames),
+              {
+                key: `${e.pr} - ${e.eni}`,
+                type: e.pty,
+                subtype: e.grn,
+              },
+              currentSorter,
+              handleSorting
+            ),
+            dataIndex: `${e.pr} - ${e.eni}`,
+            fixed: !index && !eventBreakdownColumns.length ? 'left' : '',
+            width: 200,
+          };
+        })
+    : [];
+
+  const UserCol = !isBreakdownApplied
+    ? [
+        {
+          title: 'Users',
+          dataIndex: 'Grouping',
+          fixed: 'left',
+          width: isComparisonApplied ? 300 : 100,
+          className: isComparisonApplied ? styles.usersColumn : '',
+          render: (d) =>
+            NoBreakdownUsersColumn(d, breakdown, isComparisonApplied),
+        },
+      ]
+    : [];
   const result = [
+    ...eventBreakdownColumns,
+    ...globalBreakdownColumns,
+    ...UserCol,
     {
-      title: breakdown.length ? 'Grouping' : 'Users',
-      dataIndex: 'Grouping',
-      fixed: 'left',
-      width: isComparisonApplied ? 300 : 100,
-      className: isComparisonApplied ? styles.usersColumn : '',
-      render: (d) => NoBreakdownUsersColumn(d, breakdown, isComparisonApplied),
-    },
-    {
-      title: 'Total Conversion',
+      title: isBreakdownApplied
+        ? getClickableTitleSorter(
+            'Total Conversion',
+            {
+              key: `Conversion`,
+              type: 'numerical',
+              subtype: null,
+            },
+            currentSorter,
+            handleSorting
+          )
+        : 'Total Conversion',
       dataIndex: 'Conversion',
-      width: 100,
+      width: 150,
       render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied),
     },
     {
-      title: 'Conversion Time',
+      title: isBreakdownApplied
+        ? getClickableTitleSorter(
+            'Conversion Time',
+            {
+              key: `Converstion Time`,
+              type: 'duration',
+              subtype: null,
+            },
+            currentSorter,
+            handleSorting
+          )
+        : 'Conversion Time',
       dataIndex: 'Converstion Time',
-      width: 100,
+      width: 150,
       render: (d) => RenderConversionTime(d, breakdown, isComparisonApplied),
     },
   ];
   const eventColumns = [];
-  queries.forEach((elem, index) => {
+  const clockCol = (
+    <div className='flex items-center justify-between'>
+      <div className='text-base' style={{ color: '#8692A3' }}>
+        &mdash;
+      </div>
+      <SVG name='clock' />
+      <div className='text-base' style={{ color: '#8692A3', marginTop: '2px' }}>
+        &rarr;
+      </div>
+    </div>
+  );
+  queries.forEach((_, index) => {
     eventColumns.push({
-      title: breakdown.length
-        ? getTitleWithSorter(
+      title: isBreakdownApplied
+        ? getClickableTitleSorter(
             arrayMapper[index].displayName,
-            arrayMapper[index].mapper,
+            {
+              key: arrayMapper[index].mapper,
+              type: 'numerical',
+              subtype: null,
+            },
             currentSorter,
             handleSorting
           )
@@ -258,22 +386,20 @@ export const generateTableColumns = (
     });
     if (index < queries.length - 1) {
       eventColumns.push({
-        title: (
-          <div className='flex items-center justify-between'>
-            <div className='text-base' style={{ color: '#8692A3' }}>
-              &mdash;
-            </div>
-            <SVG name='clock' />
-            <div
-              className='text-base'
-              style={{ color: '#8692A3', marginTop: '2px' }}
-            >
-              &rarr;
-            </div>
-          </div>
-        ),
+        title: isBreakdownApplied
+          ? getClickableTitleSorter(
+              clockCol,
+              {
+                key: `time[${index}-${index + 1}]`,
+                type: 'duration',
+                subtype: null,
+              },
+              currentSorter,
+              handleSorting
+            )
+          : clockCol,
         dataIndex: `time[${index}-${index + 1}]`,
-        width: 75,
+        width: isBreakdownApplied ? 90 : 75,
         render: (d) => RenderDurations(d, breakdown, isComparisonApplied),
       });
     }
@@ -285,7 +411,7 @@ export const generateTableColumns = (
     width: 37,
     fixed: 'left',
   };
-  if (breakdown.length) {
+  if (isBreakdownApplied) {
     return [...result, ...eventColumns];
   } else {
     return [blankCol, ...result, ...eventColumns];
@@ -294,7 +420,6 @@ export const generateTableColumns = (
 
 export const generateTableData = (
   data,
-  breakdown,
   queries,
   groups,
   arrayMapper,
@@ -307,7 +432,11 @@ export const generateTableData = (
   comparison_duration,
   resultData
 ) => {
-  if (!breakdown.length) {
+  console.log('funnels generateTableData');
+  const breakdown = resultData?.meta?.query?.gbp;
+  const isBreakdownApplied =
+    !!breakdown && Array.isArray(breakdown) && breakdown.length > 0;
+  if (!isBreakdownApplied) {
     const queryData = {};
     const overallDuration = getOverAllDuration(durations);
     const comparisonOverallDuration = getOverAllDuration(
@@ -316,7 +445,7 @@ export const generateTableData = (
     queries.forEach((_, index) => {
       queryData[arrayMapper[index].mapper] = {
         percentage: data[index].value,
-        count: data[index].netCount,
+        value: data[index].netCount,
         compare_percent:
           comparisonChartData && comparisonChartData[index].value,
         compare_count:
@@ -367,14 +496,18 @@ export const generateTableData = (
       (elem) => elem === 'step_0_1_time'
     );
 
-    let breakdowns = [...resultData?.meta?.query?.gbp];
-    let grns = grnByIndex(
+    const grns = grnByIndex(
       resultData?.headers?.slice(0, firstEventIdx),
-      breakdowns
+      breakdown
     );
-
     const result = appliedGroups.map((grp, index) => {
       const group = grp;
+      const breakdownData = {};
+      breakdown.forEach((b, index) => {
+        let val = group.split(',')[index];
+        val = val === '$no_group' ? 'Overall' : val;
+        breakdownData[`${b.pr} - ${b.eni}`] = val;
+      });
       const durationGrp = durationMetric.rows.find(
         (elem) =>
           elem
@@ -387,7 +520,7 @@ export const generateTableData = (
       data.forEach((d, idx) => {
         eventsData[`${d.name}`] = {
           percentage: calculatePercentage(d.data[group], data[0].data[group]),
-          count: d.data[group],
+          value: d.data[group],
         };
         if (idx < data.length - 1) {
           const durationIdx = durationMetric.headers.findIndex(
@@ -399,7 +532,6 @@ export const generateTableData = (
           totalDuration += durationGrp ? Number(durationGrp[durationIdx]) : 0;
         }
       });
-      // const groupLabel = group.split(',')?.map((lbl) => );
       return {
         index,
         Grouping: group,
@@ -409,27 +541,11 @@ export const generateTableData = (
             data[data.length - 1].data[group],
             data[0].data[group]
           ) + '%',
+        ...breakdownData,
         ...eventsData,
       };
     });
-    if (currentSorter.key) {
-      const sortKey = currentSorter.key;
-      const { order } = currentSorter;
-      result.sort((a, b) => {
-        if (order === 'ascend') {
-          return parseFloat(a[sortKey].count) >= parseFloat(b[sortKey].count)
-            ? 1
-            : -1;
-        }
-        if (order === 'descend') {
-          return parseFloat(a[sortKey].count) <= parseFloat(b[sortKey].count)
-            ? 1
-            : -1;
-        }
-        return 0;
-      });
-    }
-    return result;
+    return SortResults(result, currentSorter);
   }
 };
 
@@ -437,6 +553,8 @@ export const generateUngroupedChartsData = (response, arrayMapper) => {
   if (!response) {
     return [];
   }
+
+  console.log('funnels generateUngroupedChartsData');
 
   const netCounts = response.rows[0].filter((elem) => typeof elem === 'number');
   const result = [];

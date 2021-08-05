@@ -1,6 +1,8 @@
-import React, { useState, useCallback } from "react";
-import { getTableColumns, getTableData } from "./utils";
-import DataTable from "../../../../components/DataTable";
+import React, { useState, useCallback } from 'react';
+import { getTableColumns, getTableData } from './utils';
+import DataTable from '../../../../components/DataTable';
+import { useSelector } from 'react-redux';
+import { getNewSorterState } from '../../../../utils/dataFormatter';
 
 function EventBreakdownTable({
   breakdown,
@@ -8,16 +10,32 @@ function EventBreakdownTable({
   visibleProperties,
   setVisibleProperties,
   maxAllowedVisibleProperties,
-  reportTitle = "Events Analytics",
+  reportTitle = 'Events Analytics',
 }) {
-  const [sorter, setSorter] = useState({});
-  const [searchText, setSearchText] = useState("");
+  const { userPropNames, eventPropNames } = useSelector(
+    (state) => state.coreQuery
+  );
+  const [sorter, setSorter] = useState({
+    key: 'User Count',
+    type: 'numerical',
+    subtype: null,
+    order: 'descend',
+  });
+  const [searchText, setSearchText] = useState('');
 
-  const handleSorting = useCallback((sorter) => {
-    setSorter(sorter);
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
   }, []);
 
-  const columns = getTableColumns(breakdown, sorter, handleSorting);
+  const columns = getTableColumns(
+    breakdown,
+    sorter,
+    handleSorting,
+    userPropNames,
+    eventPropNames
+  );
   const tableData = getTableData(data, breakdown, searchText, sorter);
 
   const getCSVData = () => {

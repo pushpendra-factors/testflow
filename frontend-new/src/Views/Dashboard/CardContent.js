@@ -207,6 +207,7 @@ function CardContent({ unit, resultState, durationObj }) {
           chartType={presentationObj[dashboardPresentation]}
           arrayMapper={campaignsArrayMapper}
           section={DASHBOARD_WIDGET_SECTION}
+          durationObj={durationObj}
         />
       );
     }

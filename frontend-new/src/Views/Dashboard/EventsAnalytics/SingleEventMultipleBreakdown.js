@@ -1,12 +1,23 @@
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useContext,
+  useCallback,
+} from 'react';
 import {
   formatData,
   formatDataInStackedAreaFormat,
+  defaultSortProp,
 } from '../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import LineChart from '../../../components/HCLineChart';
 import SingleEventMultipleBreakdownTable from '../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/SingleEventMultipleBreakdownTable';
-import { generateColors } from '../../../utils/dataFormatter';
+import {
+  generateColors,
+  getNewSorterState,
+  isSeriesChart,
+} from '../../../utils/dataFormatter';
 import {
   CHART_TYPE_TABLE,
   CHART_TYPE_BARCHART,
@@ -32,21 +43,34 @@ function SingleEventMultipleBreakdown({
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const [sorter, setSorter] = useState(defaultSortProp());
+  const [dateSorter, setDateSorter] = useState({});
+  const [aggregateData, setAggregateData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [data, setData] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
 
-  const aggregateData = useMemo(() => {
-    return formatData(resultState.data);
-  }, [resultState.data]);
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
 
-  const { categories, data } = useMemo(() => {
-    if (chartType === CHART_TYPE_BARCHART) {
-      return {
-        categories: [],
-        data: [],
-      };
-    }
-    return formatDataInStackedAreaFormat(resultState.data, aggregateData);
-  }, [resultState.data, aggregateData, chartType]);
+  const handleDateSorting = useCallback((prop) => {
+    setDateSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
+
+  useEffect(() => {
+    const aggData = formatData(resultState.data);
+    const { categories: cats, data: d } = isSeriesChart(chartType)
+      ? formatDataInStackedAreaFormat(resultState.data, aggData)
+      : { categories: [], data: [] };
+    setAggregateData(aggData);
+    setCategories(cats);
+    setData(d);
+  }, [resultState.data, chartType]);
 
   const visibleSeriesData = useMemo(() => {
     const colors = generateColors(visibleProperties.length);
@@ -121,6 +145,10 @@ function SingleEventMultipleBreakdown({
         durationObj={durationObj}
         categories={categories}
         section={section}
+        sorter={sorter}
+        handleSorting={handleSorting}
+        dateSorter={dateSorter}
+        handleDateSorting={handleDateSorting}
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_AREA) {

@@ -1,7 +1,11 @@
 import React from 'react';
 import moment from 'moment';
-import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
+import {
+  getClickableTitleSorter,
+  SortResults,
+} from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
+import { DATE_FORMATS } from '../../../../utils/constants';
 
 export const getNoGroupingTableData = (data, arrayMapper, currentSorter) => {
   const clonedData = data.map((elem) => {
@@ -16,15 +20,8 @@ export const getNoGroupingTableData = (data, arrayMapper, currentSorter) => {
       date: elem.date,
     };
   });
-  if (currentSorter.key) {
-    const sortMapper = arrayMapper.find(
-      (elem) => elem.eventName === currentSorter.key
-    );
-    if (sortMapper) {
-      return SortData(result, sortMapper.mapper, currentSorter.order);
-    }
-  }
-  return SortData(result, currentSorter.key, currentSorter.order);
+
+  return SortResults(result, currentSorter);
 };
 
 export const getColumns = (
@@ -35,10 +32,8 @@ export const getColumns = (
   handleSorting,
   eventNames
 ) => {
-  let format = 'MMM D, YYYY';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D';
-  }
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
+
   const result = [
     {
       title: '',
@@ -46,7 +41,12 @@ export const getColumns = (
       width: 37,
     },
     {
-      title: getTitleWithSorter('Date', 'date', currentSorter, handleSorting),
+      title: getClickableTitleSorter(
+        'Date',
+        { key: 'date', type: 'datetime', subtype: frequency },
+        currentSorter,
+        handleSorting
+      ),
       dataIndex: 'date',
       render: (d) => {
         return moment(d).format(format);
@@ -56,9 +56,13 @@ export const getColumns = (
 
   const eventColumns = events.map((e, idx) => {
     return {
-      title: getTitleWithSorter(
+      title: getClickableTitleSorter(
         eventNames[e] || e,
-        e,
+        {
+          key: arrayMapper.find((elem) => elem.index === idx).mapper,
+          type: 'numerical',
+          subtype: null,
+        },
         currentSorter,
         handleSorting
       ),
@@ -174,7 +178,16 @@ export const getDateBasedColumns = (
 ) => {
   const result = [
     {
-      title: 'Events',
+      title: getClickableTitleSorter(
+        'Event',
+        {
+          key: 'event',
+          type: 'categorical',
+          subtype: null,
+        },
+        currentSorter,
+        handleSorting
+      ),
       dataIndex: 'event',
       fixed: 'left',
       width: 200,
@@ -183,16 +196,17 @@ export const getDateBasedColumns = (
       },
     },
   ];
-  let format = 'MMM D';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D';
-  }
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
 
   const dateColumns = data.map((elem) => {
     return {
-      title: getTitleWithSorter(
+      title: getClickableTitleSorter(
         moment(elem.date).format(format),
-        moment(elem.date).format(format),
+        {
+          key: moment(elem.date).format(format),
+          type: 'numerical',
+          subtype: frequency,
+        },
         currentSorter,
         handleSorting
       ),
@@ -218,10 +232,7 @@ export const getNoGroupingTablularDatesBasedData = (
       elem.eventName.toLowerCase().includes(searchText.toLowerCase())
     )
     .map((elem) => elem.mapper);
-  let format = 'MMM D';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D';
-  }
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
   const dates = data.map((elem) => moment(elem.date).format(format));
   const result = filteredEvents.map((elem, index) => {
     const eventsData = {};
@@ -237,5 +248,5 @@ export const getNoGroupingTablularDatesBasedData = (
     };
   });
 
-  return SortData(result, currentSorter.key, currentSorter.order);
+  return SortResults(result, currentSorter, currentSorter.order);
 };

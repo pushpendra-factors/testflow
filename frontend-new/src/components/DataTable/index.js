@@ -49,7 +49,7 @@ function DataTable({
         if (
           !searchBar &&
           downloadBtnRef &&
-          downloadBtnRef.current.contains(e.target)
+          downloadBtnRef.current?.contains(e.target)
         ) {
           document.getElementById('csvLink').click();
         }

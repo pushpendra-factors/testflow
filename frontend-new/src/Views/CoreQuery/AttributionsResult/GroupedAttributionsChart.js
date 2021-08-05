@@ -2,7 +2,10 @@ import React, { useState, useEffect, useContext, useMemo } from 'react';
 import AttributionTable from './AttributionTable';
 import { formatGroupedData } from './utils';
 import GroupedBarChart from '../../../components/GroupedBarChart';
-import { DASHBOARD_MODAL, ATTRIBUTION_METHODOLOGY } from '../../../utils/constants';
+import {
+  DASHBOARD_MODAL,
+  ATTRIBUTION_METHODOLOGY,
+} from '../../../utils/constants';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 
 function GroupedAttributionsChart({

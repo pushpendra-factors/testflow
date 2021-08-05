@@ -1,8 +1,5 @@
-import React, { useMemo } from 'react';
-import {
-  formatData,
-  formatDataInHighChartsSeriesFormat,
-} from './utils';
+import React, { useState, useEffect } from 'react';
+import { formatData, formatDataInHighChartsSeriesFormat } from './utils';
 import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../../components/SparkLineChart/Chart';
 import { generateColors } from '../../../../utils/dataFormatter';
@@ -15,13 +12,26 @@ import {
 } from '../../../../utils/constants';
 import NoDataChart from '../../../../components/NoDataChart';
 
-function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
-  const chartsData = useMemo(() => {
-    return formatData(data, arrayMapper);
-  }, [data, arrayMapper]);
+function NoBreakdownCharts({
+  chartType,
+  data,
+  arrayMapper,
+  section,
+  durationObj,
+}) {
+  const [chartsData, setChartsData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [seriesData, setSeriesData] = useState([]);
 
-  const { categories, seriesData } = useMemo(() => {
-    return formatDataInHighChartsSeriesFormat(data, arrayMapper);
+  useEffect(() => {
+    setChartsData(formatData(data, arrayMapper));
+
+    const {
+      categories: cat,
+      seriesData: sd,
+    } = formatDataInHighChartsSeriesFormat(data, arrayMapper);
+    setCategories(cat);
+    setSeriesData(sd);
   }, [data, arrayMapper]);
 
   if (!chartsData.length) {
@@ -38,6 +48,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
         chartType={chartType}
         chartsData={chartsData}
         isWidgetModal={section === DASHBOARD_MODAL}
+        frequency={durationObj.frequency}
       />
     </div>
   );
@@ -104,11 +115,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
   } else if (chartType === CHART_TYPE_LINECHART) {
     chart = (
       <div className='w-full'>
-        <LineChart
-          frequency="date"
-          categories={categories}
-          data={seriesData}
-        />
+        <LineChart frequency='date' categories={categories} data={seriesData} />
       </div>
     );
   }

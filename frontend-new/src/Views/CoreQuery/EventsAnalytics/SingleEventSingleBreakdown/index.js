@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { formatData, formatDataInStackedAreaFormat } from './utils';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  formatData,
+  formatDataInStackedAreaFormat,
+  defaultSortProp,
+} from './utils';
 import BarChart from '../../../../components/BarChart';
 import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
 import LineChart from '../../../../components/HCLineChart';
@@ -12,7 +16,10 @@ import {
 } from '../../../../utils/constants';
 import StackedAreaChart from '../../../../components/StackedAreaChart';
 import StackedBarChart from '../../../../components/StackedBarChart';
-import { generateColors } from '../../../../utils/dataFormatter';
+import {
+  generateColors,
+  getNewSorterState,
+} from '../../../../utils/dataFormatter';
 
 function SingleEventSingleBreakdown({
   queries,
@@ -25,6 +32,20 @@ function SingleEventSingleBreakdown({
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const [sorter, setSorter] = useState(defaultSortProp());
+  const [dateSorter, setDateSorter] = useState({});
+
+  const handleSorting = useCallback((prop) => {
+    setSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
+
+  const handleDateSorting = useCallback((prop) => {
+    setDateSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, []);
 
   const aggregateData = useMemo(() => {
     return formatData(resultState.data);
@@ -76,6 +97,10 @@ function SingleEventSingleBreakdown({
         visibleProperties={visibleProperties}
         durationObj={durationObj}
         categories={categories}
+        sorter={sorter}
+        handleSorting={handleSorting}
+        dateSorter={dateSorter}
+        handleDateSorting={handleDateSorting}
       />
     </div>
   );
