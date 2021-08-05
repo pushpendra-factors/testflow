@@ -77,7 +77,7 @@ export const getTableColumns = (
     {
       title: getClickableTitleSorter(
         'Date',
-        { key: 'date', type: 'datetime', subtype: frequency },
+        { key: 'date', type: 'datetime', subtype: 'date' },
         currentSorter,
         handleSorting
       ),

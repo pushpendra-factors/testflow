@@ -43,7 +43,7 @@ export const getColumns = (
     {
       title: getClickableTitleSorter(
         'Date',
-        { key: 'date', type: 'datetime', subtype: frequency },
+        { key: 'date', type: 'datetime', subtype: 'date' },
         currentSorter,
         handleSorting
       ),
@@ -205,7 +205,7 @@ export const getDateBasedColumns = (
         {
           key: moment(elem.date).format(format),
           type: 'numerical',
-          subtype: frequency,
+          subtype: null,
         },
         currentSorter,
         handleSorting
