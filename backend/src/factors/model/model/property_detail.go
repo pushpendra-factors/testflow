@@ -236,6 +236,11 @@ func ValidateDateTimeProperty(key string, value interface{}) error {
 		return nil
 	}
 
+	_, err = time.Parse(HubspotDateTimeLayout, U.GetPropertyValueAsString(value))
+	if err == nil {
+		return nil
+	}
+
 	if strings.HasPrefix(key, U.SALESFORCE_PROPERTY_PREFIX) {
 		_, err := GetSalesforceDocumentTimestamp(value) // make sure timezone info is loaded to the container
 		if err != nil {

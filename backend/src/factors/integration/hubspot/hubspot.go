@@ -822,7 +822,7 @@ func GetHubspotSmartEventNames(projectID uint64) *map[string][]HubspotSmartEvent
 		var hubspotSmartEventName HubspotSmartEventName
 		decFilterExp, err := model.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
 		if err != nil {
-			if err == model.ErrorSmartEventFiterEmptyString{
+			if err == model.ErrorSmartEventFiterEmptyString {
 				logCtx.WithError(err).Warn("Empty string on smart event filter.")
 			} else {
 				logCtx.WithError(err).Error("Failed to decode smart event filter expression")
@@ -952,6 +952,12 @@ func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, va
 	if ptype == U.PropertyTypeDateTime {
 		datetime, err := U.GetPropertyValueAsFloat64(value)
 		if err != nil {
+			formatedTime, err := time.Parse(model.HubspotDateTimeLayout, U.GetPropertyValueAsString(value))
+			if err == nil {
+				return formatedTime.Unix(), nil
+			}
+
+			log.WithError(err).Error("Failed convert datetime property.")
 			return nil, errors.New("failed to get datetime property")
 		}
 
