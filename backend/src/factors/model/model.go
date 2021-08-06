@@ -167,7 +167,7 @@ type Model interface {
 	GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId string, startTimestamp int64, endTimestamp int64) (*model.Event, int)
 	GetRecentEventPropertyKeysWithLimits(projectID uint64, eventName string, starttime int64, endtime int64, eventsLimit int) ([]U.Property, error)
 	GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string, property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, string, error)
-	UpdateEventProperties(projectId uint64, id, userID string, properties *U.PropertiesMap, updateTimestamp int64) int
+	UpdateEventProperties(projectId uint64, id, userID string, properties *U.PropertiesMap, updateTimestamp int64, optionalEventUserProperties *postgres.Jsonb) int
 	GetUserEventsByEventNameId(projectID uint64, userId string, eventNameId string) ([]model.Event, int)
 	OverwriteEventProperties(projectId uint64, userId string, eventId string, newEventProperties *postgres.Jsonb) int
 	OverwriteEventPropertiesByID(projectId uint64, id string, newEventProperties *postgres.Jsonb) int

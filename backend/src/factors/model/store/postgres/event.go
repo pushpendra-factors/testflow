@@ -428,7 +428,8 @@ func (pg *Postgres) GetRecentEventPropertyValuesWithLimits(projectID uint64, eve
 }
 
 func (pg *Postgres) UpdateEventProperties(projectId uint64, id, userID string,
-	properties *U.PropertiesMap, updateTimestamp int64) int {
+	properties *U.PropertiesMap, updateTimestamp int64,
+	optionalEventUserProperties *postgres.Jsonb) int {
 
 	if projectId == 0 || id == "" {
 		return http.StatusBadRequest
@@ -461,6 +462,13 @@ func (pg *Postgres) UpdateEventProperties(projectId uint64, id, userID string,
 		"properties":                   updatedPostgresJsonb,
 		"properties_updated_timestamp": propertiesLastUpdatedAt,
 	}
+
+	// Optional event user_properties update with
+	// event properties update.
+	if optionalEventUserProperties != nil {
+		updatedFields["user_properties"] = optionalEventUserProperties
+	}
+
 	// NOTE: NOT USING user_id intentionally to use primary_key index for faster lookup on pg.
 	// user_id is added to function signature to optimise performance on MemSQL.
 	err = db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id).Update(updatedFields).Error
@@ -1019,9 +1027,23 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 				}
 			}
 
+			sessionEventUserProperties := map[string]interface{}{
+				U.UP_PAGE_COUNT:       sessionPageCount,
+				U.UP_TOTAL_SPENT_TIME: sessionPageSpentTime,
+				U.UP_SESSION_COUNT:    sessionEvent.Count,
+			}
+			newSessionEventUserPropertiesJsonb, err := U.AddToPostgresJsonb(
+				sessionEvent.UserProperties, sessionEventUserProperties, true)
+			if err != nil {
+				// Log and continue with event properties update skipping event_user_properties.
+				logCtx.WithError(err).
+					Error("Failed to add session event user properties to existing user properties.")
+				newSessionEventUserPropertiesJsonb = nil
+			}
+
 			// Update session event properties.
-			errCode = pg.UpdateEventProperties(projectId, sessionEvent.ID,
-				sessionEvent.UserId, &sessionPropertiesMap, sessionEvent.Timestamp+1)
+			errCode = pg.UpdateEventProperties(projectId, sessionEvent.ID, sessionEvent.UserId,
+				&sessionPropertiesMap, sessionEvent.Timestamp+1, newSessionEventUserPropertiesJsonb)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed updating session event properties on add session.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,

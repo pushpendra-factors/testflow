@@ -265,7 +265,7 @@ func TestUpdateEventProperties(t *testing.T) {
 
 	// should add properties if not exist.
 	errCode := store.GetStore().UpdateEventProperties(project.ID, event.ID, event.UserId, &U.PropertiesMap{
-		"$page_spent_time": 1.346, "$page_load_time": 1.594}, time.Now().Unix())
+		"$page_spent_time": 1.346, "$page_load_time": 1.594}, time.Now().Unix(), nil)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, event.ID, event.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -281,7 +281,7 @@ func TestUpdateEventProperties(t *testing.T) {
 
 	// should update properties if exist.
 	errCode = store.GetStore().UpdateEventProperties(project.ID, event.ID, event.UserId, &U.PropertiesMap{
-		"$page_spent_time": 3}, time.Now().Unix())
+		"$page_spent_time": 3}, time.Now().Unix(), nil)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	updatedEvent, errCode = store.GetStore().GetEventById(project.ID, event.ID, event.UserId)
 	assert.Equal(t, http.StatusFound, errCode)

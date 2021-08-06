@@ -550,7 +550,9 @@ func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, ev
 }
 
 func (store *MemSQL) UpdateEventProperties(projectId uint64, id, userID string,
-	properties *U.PropertiesMap, updateTimestamp int64) int {
+	properties *U.PropertiesMap, updateTimestamp int64,
+	optionalEventUserProperties *postgres.Jsonb) int {
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if projectId == 0 || id == "" {
@@ -582,6 +584,12 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id, userID string,
 	updatedFields := map[string]interface{}{
 		"properties":                   updatedPostgresJsonb,
 		"properties_updated_timestamp": propertiesLastUpdatedAt,
+	}
+
+	// Optional event user_properties update with
+	// event properties update.
+	if optionalEventUserProperties != nil {
+		updatedFields["user_properties"] = optionalEventUserProperties
 	}
 
 	db := C.GetServices().Db
@@ -1153,9 +1161,24 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 				}
 			}
 
+			sessionEventUserProperties := map[string]interface{}{
+				U.UP_PAGE_COUNT:       sessionPageCount,
+				U.UP_TOTAL_SPENT_TIME: sessionPageSpentTime,
+				U.UP_SESSION_COUNT:    sessionEvent.Count,
+			}
+			newSessionEventUserPropertiesJsonb, err := U.AddToPostgresJsonb(
+				sessionEvent.UserProperties, sessionEventUserProperties, true)
+			if err != nil {
+				// Log and continue with event properties update skipping event_user_properties.
+				logCtx.WithError(err).
+					Error("Failed to add session event user properties to existing user properties.")
+				newSessionEventUserPropertiesJsonb = nil
+			}
+
 			// Update session event properties.
-			errCode = store.UpdateEventProperties(projectId, sessionEvent.ID, sessionEvent.UserId,
-				&sessionPropertiesMap, sessionEvent.Timestamp+1)
+			errCode = store.UpdateEventProperties(projectId, sessionEvent.ID,
+				sessionEvent.UserId, &sessionPropertiesMap, sessionEvent.Timestamp+1,
+				newSessionEventUserPropertiesJsonb)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed updating session event properties on add session.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
