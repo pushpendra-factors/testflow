@@ -168,6 +168,13 @@ upload-backfill-salesforce-datetime-job: export IMAGE_NAME=backfill-salesforce-d
 upload-backfill-salesforce-datetime-job: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG)
 
+pack-hubspot-smart-event-validator-job:
+	docker build -t us.gcr.io/factors-$(ENV)/hubspot-smart-event-validator-job:$(TAG) -f Dockerfile.hubspot_smart_event_validator_job .
+
+upload-hubspot-smart-event-validator-job: export IMAGE_NAME=hubspot-smart-event-validator-job
+upload-hubspot-smart-event-validator-job: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/hubspot-smart-event-validator-job:$(TAG)
+
 pack-sdk-request-worker:
 	docker build -t us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG) -f Dockerfile.sdk_request_worker .
 

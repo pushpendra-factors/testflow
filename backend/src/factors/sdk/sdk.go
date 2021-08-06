@@ -1545,7 +1545,7 @@ func UpdateEventProperties(projectId uint64,
 	}
 
 	errCode = store.GetStore().UpdateEventProperties(projectId, request.EventId,
-		request.UserId, properitesToBeUpdated, request.Timestamp)
+		request.UserId, properitesToBeUpdated, request.Timestamp, nil)
 	if errCode != http.StatusAccepted {
 		return errCode,
 			&UpdateEventPropertiesResponse{
@@ -1651,7 +1651,8 @@ func AMPUpdateEventPropertiesByToken(token string,
 		updateEventProperties[U.EP_PAGE_SCROLL_PERCENT] = reqPayload.PageScrollPercent
 	}
 
-	errCode = store.GetStore().UpdateEventProperties(projectID, eventID, userID, &updateEventProperties, time.Now().Unix())
+	errCode = store.GetStore().UpdateEventProperties(projectID, eventID, userID,
+		&updateEventProperties, time.Now().Unix(), nil)
 	if errCode != http.StatusAccepted {
 		logCtx.WithFields(log.Fields{"project_id": projectID, "event_id": eventID}).
 			Error("Failed to update event properties")

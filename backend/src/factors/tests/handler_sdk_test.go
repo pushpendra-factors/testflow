@@ -1026,6 +1026,14 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	json.Unmarshal(sessionPropertiesBytes.([]byte), &sessionProperties)
 	assert.NotEmpty(t, sessionProperties[U.SP_IS_FIRST_SESSION])
 	assert.True(t, sessionProperties[U.SP_IS_FIRST_SESSION].(bool))
+
+	sessionUserPropertiesBytes, err := userSessionEvents[0].UserProperties.Value()
+	var sessionUserProperties map[string]interface{}
+	json.Unmarshal(sessionUserPropertiesBytes.([]byte), &sessionUserProperties)
+	assert.NotEmpty(t, sessionUserProperties[U.UP_SESSION_COUNT])
+	assert.NotEmpty(t, sessionUserProperties[U.UP_PAGE_COUNT])
+	assert.NotEmpty(t, sessionUserProperties[U.UP_TOTAL_SPENT_TIME])
+
 	// session properties from user properties.
 	assert.NotEmpty(t, sessionProperties[U.UP_BROWSER])
 	assert.NotEmpty(t, sessionProperties[U.UP_BROWSER_VERSION])
