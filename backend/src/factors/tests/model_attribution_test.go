@@ -1025,7 +1025,7 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	})
 }
 
-func equalGotAndWantAttribution(gotAttribution []model.AttributionKeyWeight, wantAttribution []model.AttributionKeyWeight) bool {
+func isEqualGotAndWantAttribution(gotAttribution []model.AttributionKeyWeight, wantAttribution []model.AttributionKeyWeight) bool {
 	wantCopy := make([]model.AttributionKeyWeight, len(wantAttribution))
 	copy(wantCopy, wantAttribution)
 	if len(gotAttribution) != len(wantCopy) {
@@ -1205,7 +1205,7 @@ func TestAttributionMethodologies(t *testing.T) {
 			}
 
 			for key, _ := range tt.wantUsersAttribution {
-				if equalGotAndWantAttribution(got[key], tt.wantUsersAttribution[key]) == false {
+				if isEqualGotAndWantAttribution(got[key], tt.wantUsersAttribution[key]) == false {
 					t.Errorf("applyAttribution() got = %v, want %v", got, tt.wantUsersAttribution)
 				}
 			}
@@ -1245,6 +1245,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		queryType                     string
 		attributionKey                string
 	}
+	const weightOneBySix = float64(1.0 / 6.0)
 	tests := []struct {
 		name                        string
 		args                        args
@@ -1262,7 +1263,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]model.AttributionKeyWeight{user1: {{Key: camp0, Weight: 0.16666666666666666}, {Key: camp0, Weight: 0.16666666666666666}, {Key: camp1, Weight: 0.16666666666666666}, {Key: camp2, Weight: 0.16666666666666666}, {Key: camp3, Weight: 0.16666666666666666}, {Key: camp3, Weight: 0.16666666666666666}}},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp0, Weight: weightOneBySix}, {Key: camp0, Weight: weightOneBySix}, {Key: camp1, Weight: weightOneBySix}, {Key: camp2, Weight: weightOneBySix}, {Key: camp3, Weight: weightOneBySix}, {Key: camp3, Weight: weightOneBySix}}},
 
 			map[string]map[string][]model.AttributionKeyWeight{},
 			false},

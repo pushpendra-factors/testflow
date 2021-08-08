@@ -111,7 +111,7 @@ func SortInteractionTime(interactions []Interaction, sortingType string) []Inter
 	return interactions
 }
 
-// returns list of attribution keys and corresponding credits from given attributionKeyTime map
+// returns list of attribution keys and corresponding weights from given attributionKeyTime map
 func getLinearTouch(attributionType string, attributionTimerange map[string]UserSessionData,
 	conversionTime, lookbackPeriod, from, to int64) []AttributionKeyWeight {
 
@@ -142,22 +142,22 @@ func getLinearTouch(attributionType string, attributionTimerange map[string]User
 	return keys
 }
 
-// returns list of attribution keys and corresponding credits from given attributionKeyTime map using time decay attribution model.
+// returns list of attribution keys and corresponding weights from given attributionKeyTime map using time decay attribution model.
 func getTimeDecay(attributionType string, attributionTimerange map[string]UserSessionData,
 	conversionTime, lookbackPeriod, from, to int64) []AttributionKeyWeight {
 
 	var keys []AttributionKeyWeight
-	var credit float64
+	var weight float64
 	interactions := getMergedInteractions(attributionTimerange)
-	totalCredit := 0.0
+	totalWeight := 0.0
 
 	switch attributionType {
 	case AttributionQueryTypeConversionBased:
 		for _, interaction := range interactions {
 			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime, lookbackPeriod) {
-				credit = calculateCreditForTimeDecay(conversionTime, interaction.InteractionTime)
-				totalCredit += credit
-				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: credit})
+				weight = calculateWeightForTimeDecay(conversionTime, interaction.InteractionTime)
+				totalWeight += weight
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: weight})
 
 			}
 		}
@@ -166,20 +166,20 @@ func getTimeDecay(attributionType string, attributionTimerange map[string]UserSe
 		for _, interaction := range interactions {
 			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime,
 				lookbackPeriod) && isAdTouchWithinCampaignOrQueryPeriod(interaction.InteractionTime, from, to) {
-				credit = calculateCreditForTimeDecay(conversionTime, interaction.InteractionTime)
-				totalCredit += credit
-				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: credit})
+				weight = calculateWeightForTimeDecay(conversionTime, interaction.InteractionTime)
+				totalWeight += weight
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: weight})
 			}
 		}
 	}
 	for i := range keys {
-		keys[i].Weight = keys[i].Weight / totalCredit
+		keys[i].Weight = keys[i].Weight / totalWeight
 	}
 
 	return keys
 }
 
-// returns the first attributionId and corresponding credit
+// returns the first attributionId and corresponding weight
 func getFirstTouchId(attributionType string, attributionTimerange map[string]UserSessionData,
 	conversionTime, lookbackPeriod, from, to int64) []AttributionKeyWeight {
 
@@ -208,7 +208,7 @@ func getFirstTouchId(attributionType string, attributionTimerange map[string]Use
 	return []AttributionKeyWeight{}
 }
 
-// returns the last attributionId and corresponding credit
+// returns the last attributionId and corresponding weight
 func getLastTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
 	lookbackPeriod, from, to int64) []AttributionKeyWeight {
 
@@ -237,7 +237,7 @@ func getLastTouchId(attributionType string, attributionTimerange map[string]User
 	return []AttributionKeyWeight{}
 }
 
-// returns the first and the last attributionId and corresponding credits
+// returns the first and the last attributionId and corresponding weights
 func getUShaped(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
 	lookbackPeriod, from, to int64) []AttributionKeyWeight {
 	firstTouch := getFirstTouchId(attributionType, attributionTimerange, conversionTime, lookbackPeriod, from, to)
@@ -251,7 +251,7 @@ func getUShaped(attributionType string, attributionTimerange map[string]UserSess
 	return keys
 }
 
-// returns the first non $none attributionId and corresponding credit
+// returns the first non $none attributionId and corresponding weight
 func getFirstTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
 	lookbackPeriod, from, to int64, attributionKey string) []AttributionKeyWeight {
 
@@ -293,7 +293,7 @@ func getFirstTouchNDId(attributionType string, attributionTimerange map[string]U
 	}
 }
 
-// returns the last non $none attributionId and corresponding credit
+// returns the last non $none attributionId and corresponding weight
 func getLastTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
 	lookbackPeriod, from, to int64, attributionKey string) []AttributionKeyWeight {
 
@@ -351,10 +351,13 @@ func isAdTouchWithinLookback(campaignTouchPoint int64,
 	return false
 }
 
-// calculateCreditForTimeDecay returns credit based on conversion time and interaction time using following formula:
+// calculateWeightForTimeDecay returns weight based on conversion time and interaction time using following formula:
 // y = pow(2,-x/7), where x is number of days interaction happened prior to the conversion.
-func calculateCreditForTimeDecay(conversionTime int64, interactionTime int64) float64 {
+// In the formula,'7' is half-life. If touchpoint 'x1' is 7 days before a different touchpoint 'x2' and 'x2' receives credit 'y',
+// then 'x1' will receive credit 'y/2'. It is ensured by the formula.
+func calculateWeightForTimeDecay(conversionTime int64, interactionTime int64) float64 {
+	halfLife := 7.0
 	days := (conversionTime - interactionTime) / SecsInADay
-	credit := math.Pow(2, float64(-days)/7.0)
-	return credit
+	weight := math.Pow(2, float64(-days)/halfLife)
+	return weight
 }
