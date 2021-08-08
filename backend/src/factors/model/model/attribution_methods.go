@@ -1,22 +1,29 @@
 package model
 
 import (
+	"math"
 	"sort"
 )
 
 // ApplyAttribution This method maps the user to the attribution key based on given attribution methodology.
+type AttributionKeyWeight struct {
+	Key    string
+	Weight float64
+}
+
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
 	sessions map[string]map[string]UserSessionData, coalUserIdConversionTimestamp map[string]int64,
-	lookbackDays int, campaignFrom, campaignTo int64, attributionKey string) (map[string][]string, map[string]map[string][]string, error) {
+	lookbackDays int, campaignFrom, campaignTo int64, attributionKey string) (map[string][]AttributionKeyWeight, map[string]map[string][]AttributionKeyWeight, error) {
 
-	usersAttribution := make(map[string][]string)
-	linkedEventUserCampaign := make(map[string]map[string][]string)
+	usersAttribution := make(map[string][]AttributionKeyWeight)
+	linkedEventUserCampaign := make(map[string]map[string][]AttributionKeyWeight)
 	lookbackPeriod := int64(lookbackDays) * SecsInADay
+
 	for _, val := range usersToBeAttributed {
 		userId := val.CoalUserID
 		eventName := val.EventName
 		conversionTime := coalUserIdConversionTimestamp[val.CoalUserID]
-		attributionKeys := []string{PropertyValueNone}
+		var attributionKeys []AttributionKeyWeight
 		userSessions := sessions[userId]
 
 		switch method {
@@ -48,6 +55,10 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 			attributionKeys = getLinearTouch(attributionType, userSessions, conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
+		case AttributionMethodTimeDecay:
+			attributionKeys = getTimeDecay(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
 
 		default:
 			break
@@ -61,7 +72,7 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 			usersAttribution[userId] = attributionKeys
 		} else {
 			if _, exist := linkedEventUserCampaign[eventName]; !exist {
-				linkedEventUserCampaign[eventName] = make(map[string][]string)
+				linkedEventUserCampaign[eventName] = make(map[string][]AttributionKeyWeight)
 			}
 			linkedEventUserCampaign[eventName][userId] = attributionKeys
 		}
@@ -100,35 +111,77 @@ func SortInteractionTime(interactions []Interaction, sortingType string) []Inter
 	return interactions
 }
 
-// returns list of attribution keys from given attributionKeyTime map
+// returns list of attribution keys and corresponding credits from given attributionKeyTime map
 func getLinearTouch(attributionType string, attributionTimerange map[string]UserSessionData,
-	conversionTime, lookbackPeriod, from, to int64) []string {
+	conversionTime, lookbackPeriod, from, to int64) []AttributionKeyWeight {
 
-	var keys []string
+	var keys []AttributionKeyWeight
 	interactions := getMergedInteractions(attributionTimerange)
 
 	switch attributionType {
 	case AttributionQueryTypeConversionBased:
 		for _, interaction := range interactions {
 			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime, lookbackPeriod) {
-				keys = append(keys, interaction.AttributionKey)
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: 0})
 			}
 		}
+
 	case AttributionQueryTypeEngagementBased:
 		for _, interaction := range interactions {
 			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime,
 				lookbackPeriod) && isAdTouchWithinCampaignOrQueryPeriod(interaction.InteractionTime, from, to) {
-				keys = append(keys, interaction.AttributionKey)
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: 0})
 			}
 		}
+
+	}
+	for i := range keys {
+		keys[i].Weight = 1 / float64(len(keys))
 	}
 
 	return keys
 }
 
-// returns the first attributionId
+// returns list of attribution keys and corresponding credits from given attributionKeyTime map using time decay attribution model.
+func getTimeDecay(attributionType string, attributionTimerange map[string]UserSessionData,
+	conversionTime, lookbackPeriod, from, to int64) []AttributionKeyWeight {
+
+	var keys []AttributionKeyWeight
+	var credit float64
+	interactions := getMergedInteractions(attributionTimerange)
+	totalCredit := 0.0
+
+	switch attributionType {
+	case AttributionQueryTypeConversionBased:
+		for _, interaction := range interactions {
+			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime, lookbackPeriod) {
+				credit = calculateCreditForTimeDecay(conversionTime, interaction.InteractionTime)
+				totalCredit += credit
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: credit})
+
+			}
+		}
+
+	case AttributionQueryTypeEngagementBased:
+		for _, interaction := range interactions {
+			if isAdTouchWithinLookback(interaction.InteractionTime, conversionTime,
+				lookbackPeriod) && isAdTouchWithinCampaignOrQueryPeriod(interaction.InteractionTime, from, to) {
+				credit = calculateCreditForTimeDecay(conversionTime, interaction.InteractionTime)
+				totalCredit += credit
+				keys = append(keys, AttributionKeyWeight{Key: interaction.AttributionKey, Weight: credit})
+			}
+		}
+	}
+	for i := range keys {
+		keys[i].Weight = keys[i].Weight / totalCredit
+	}
+
+	return keys
+}
+
+// returns the first attributionId and corresponding credit
 func getFirstTouchId(attributionType string, attributionTimerange map[string]UserSessionData,
-	conversionTime, lookbackPeriod, from, to int64) []string {
+	conversionTime, lookbackPeriod, from, to int64) []AttributionKeyWeight {
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = SortInteractionTime(interactions, SortASC)
@@ -139,25 +192,25 @@ func getFirstTouchId(attributionType string, attributionTimerange map[string]Use
 		case AttributionQueryTypeConversionBased:
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
-					return []string{interactions[i].AttributionKey}
+					return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 				}
 			}
 		case AttributionQueryTypeEngagementBased:
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
 					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
-					return []string{interactions[i].AttributionKey}
+					return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 				}
 			}
 		}
 
 	}
-	return []string{}
+	return []AttributionKeyWeight{}
 }
 
-// returns the last attributionId
+// returns the last attributionId and corresponding credit
 func getLastTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
-	lookbackPeriod, from, to int64) []string {
+	lookbackPeriod, from, to int64) []AttributionKeyWeight {
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = SortInteractionTime(interactions, SortDESC)
@@ -168,34 +221,39 @@ func getLastTouchId(attributionType string, attributionTimerange map[string]User
 		case AttributionQueryTypeConversionBased:
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
-					return []string{interactions[i].AttributionKey}
+					return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 				}
 			}
 		case AttributionQueryTypeEngagementBased:
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
 					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
-					return []string{interactions[i].AttributionKey}
+					return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 				}
 			}
 		}
 
 	}
-	return []string{}
+	return []AttributionKeyWeight{}
 }
 
-// returns the first and the last attributionId
+// returns the first and the last attributionId and corresponding credits
 func getUShaped(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
-	lookbackPeriod, from, to int64) []string {
+	lookbackPeriod, from, to int64) []AttributionKeyWeight {
 	firstTouch := getFirstTouchId(attributionType, attributionTimerange, conversionTime, lookbackPeriod, from, to)
 	lastTouch := getLastTouchId(attributionType, attributionTimerange, conversionTime, lookbackPeriod, from, to)
 	keys := append(firstTouch, lastTouch...)
+	if len(keys) > 0 {
+		keys[0].Weight = 0.5
+		keys[1].Weight = 0.5
+	}
+
 	return keys
 }
 
-// returns the first non $none attributionId
+// returns the first non $none attributionId and corresponding credit
 func getFirstTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
-	lookbackPeriod, from, to int64, attributionKey string) []string {
+	lookbackPeriod, from, to int64, attributionKey string) []AttributionKeyWeight {
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = SortInteractionTime(interactions, SortASC)
@@ -209,7 +267,7 @@ func getFirstTouchNDId(attributionType string, attributionTimerange map[string]U
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
 					if interactions[i].AttributionKey != noneKey {
-						return []string{interactions[i].AttributionKey}
+						return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 					}
 					directSessionExists = true
 				}
@@ -219,7 +277,7 @@ func getFirstTouchNDId(attributionType string, attributionTimerange map[string]U
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
 					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
 					if interactions[i].AttributionKey != noneKey {
-						return []string{interactions[i].AttributionKey}
+						return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 					}
 					directSessionExists = true
 				}
@@ -229,15 +287,15 @@ func getFirstTouchNDId(attributionType string, attributionTimerange map[string]U
 	}
 	// return $none key only if Direct session was seen
 	if directSessionExists {
-		return []string{noneKey}
+		return []AttributionKeyWeight{{Key: noneKey, Weight: 1}}
 	} else {
-		return []string{}
+		return []AttributionKeyWeight{}
 	}
 }
 
-// returns the last non $none attributionId
+// returns the last non $none attributionId and corresponding credit
 func getLastTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime,
-	lookbackPeriod, from, to int64, attributionKey string) []string {
+	lookbackPeriod, from, to int64, attributionKey string) []AttributionKeyWeight {
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = SortInteractionTime(interactions, SortDESC)
@@ -250,7 +308,7 @@ func getLastTouchNDId(attributionType string, attributionTimerange map[string]Us
 			for i := 0; i < len(interactions); i++ {
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) {
 					if interactions[i].AttributionKey != noneKey {
-						return []string{interactions[i].AttributionKey}
+						return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 					}
 					directSessionExists = true
 				}
@@ -260,7 +318,7 @@ func getLastTouchNDId(attributionType string, attributionTimerange map[string]Us
 				if isAdTouchWithinLookback(interactions[i].InteractionTime, conversionTime, lookbackPeriod) &&
 					isAdTouchWithinCampaignOrQueryPeriod(interactions[i].InteractionTime, from, to) {
 					if interactions[i].AttributionKey != noneKey {
-						return []string{interactions[i].AttributionKey}
+						return []AttributionKeyWeight{{Key: interactions[i].AttributionKey, Weight: 1}}
 					}
 					directSessionExists = true
 				}
@@ -269,9 +327,9 @@ func getLastTouchNDId(attributionType string, attributionTimerange map[string]Us
 	}
 	// return $none key only if Direct session was seen
 	if directSessionExists {
-		return []string{noneKey}
+		return []AttributionKeyWeight{{Key: noneKey, Weight: 1}}
 	} else {
-		return []string{}
+		return []AttributionKeyWeight{}
 	}
 }
 
@@ -291,4 +349,12 @@ func isAdTouchWithinLookback(campaignTouchPoint int64,
 		}
 	}
 	return false
+}
+
+// calculateCreditForTimeDecay returns credit based on conversion time and interaction time using following formula:
+// y = pow(2,-x/7), where x is number of days interaction happened prior to the conversion.
+func calculateCreditForTimeDecay(conversionTime int64, interactionTime int64) float64 {
+	days := (conversionTime - interactionTime) / SecsInADay
+	credit := math.Pow(2, float64(-days)/7.0)
+	return credit
 }

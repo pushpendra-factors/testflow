@@ -24,6 +24,7 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 	randomEventName := RandomURL()
 
 	properties := U.PropertiesMap{}
+
 	if campaignName != "" {
 		properties["$qp_utm_campaign"] = campaignName
 	}
@@ -1024,6 +1025,28 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	})
 }
 
+func equalGotAndWantAttribution(gotAttribution []model.AttributionKeyWeight, wantAttribution []model.AttributionKeyWeight) bool {
+	wantCopy := make([]model.AttributionKeyWeight, len(wantAttribution))
+	copy(wantCopy, wantAttribution)
+	if len(gotAttribution) != len(wantCopy) {
+		return false
+	}
+	for _, item1 := range gotAttribution {
+		foundSameItem := false
+		for i := 0; i < len(wantCopy); i++ {
+			if item1 == wantCopy[i] {
+				wantCopy = append(wantCopy[:i], wantCopy[i+1:]...)
+				foundSameItem = true
+				break
+			}
+		}
+		if !foundSameItem {
+			return false
+		}
+	}
+	return true
+}
+
 func TestAttributionMethodologies(t *testing.T) {
 
 	conversionEvent := "$Form_Submitted"
@@ -1033,15 +1056,16 @@ func TestAttributionMethodologies(t *testing.T) {
 	camp3 := "adwords:-:campaign3"
 
 	queryFrom := 0
-	queryTo := 1000
+	queryTo := 10000000
 	userSession := make(map[string]map[string]model.UserSessionData)
 	userSession[user1] = make(map[string]model.UserSessionData)
 	userSession[user1][camp1] = model.UserSessionData{MinTimestamp: 105, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
 	userSession[user1][camp2] = model.UserSessionData{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}}
-	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}}
+	userSession[user1][camp3] = model.UserSessionData{MinTimestamp: 50, MaxTimestamp: 604950, TimeStamps: []int64{50, 604950}}
 	coalUserIdConversionTimestamp := make(map[string]int64)
-	coalUserIdConversionTimestamp[user1] = 150
-	lookbackDays := 1
+	coalUserIdConversionTimestamp[user1] = 604900
+	//seconds in 7 days=604800
+	lookbackDays := 20
 
 	userSession2 := make(map[string]map[string]model.UserSessionData)
 	userSession2[user1] = make(map[string]model.UserSessionData)
@@ -1059,8 +1083,8 @@ func TestAttributionMethodologies(t *testing.T) {
 	tests := []struct {
 		name                        string
 		args                        args
-		wantUsersAttribution        map[string][]string
-		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantUsersAttribution        map[string][]model.AttributionKeyWeight
+		wantLinkedEventUserCampaign map[string]map[string][]model.AttributionKeyWeight
 		wantErr                     bool
 	}{
 
@@ -1075,8 +1099,8 @@ func TestAttributionMethodologies(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp1, camp2, camp3, camp3}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp1, Weight: 0.2}, {Key: camp1, Weight: 0.2}, {Key: camp2, Weight: 0.2}, {Key: camp2, Weight: 0.2}, {Key: camp3, Weight: 0.2}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for FIRST_TOUCH
@@ -1090,8 +1114,8 @@ func TestAttributionMethodologies(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp3}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp3, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for LAST_TOUCH
@@ -1105,8 +1129,8 @@ func TestAttributionMethodologies(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp2}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test1 for U_SHAPED
@@ -1120,9 +1144,10 @@ func TestAttributionMethodologies(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp3, camp2}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp3, Weight: 0.5}, {Key: camp2, Weight: 0.5}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
+
 		// Test2 for U_SHAPED
 		{"u_shaped",
 			args{model.AttributionMethodUShaped,
@@ -1134,10 +1159,41 @@ func TestAttributionMethodologies(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp1, camp1}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp1, Weight: 0.5}, {Key: camp1, Weight: 0.5}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
+			false},
+
+		// Test1 for Time_Decay
+		{"time_decay",
+			args{model.AttributionMethodTimeDecay,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession,
+				coalUserIdConversionTimestamp,
+				lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
+			},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp1, Weight: 0.20783766956583852}, {Key: camp2, Weight: 0.20783766956583852}, {Key: camp1, Weight: 0.18824349565124227}, {Key: camp2, Weight: 0.20783766956583852}, {Key: camp3, Weight: 0.18824349565124227}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
+			false},
+
+		// Test2 for Time_Decay
+		{"time_decay",
+			args{model.AttributionMethodTimeDecay,
+				conversionEvent,
+				[]model.UserEventInfo{{user1, conversionEvent, coalUserIdConversionTimestamp[user1], model.EventTypeGoalEvent}},
+				userSession2,
+				coalUserIdConversionTimestamp,
+				lookbackDays,
+				model.AttributionQueryTypeConversionBased,
+				model.AttributionKeyCampaign,
+			},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp1, Weight: 0.4752649511825976}, {Key: camp1, Weight: 0.5247350488174024}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
@@ -1147,14 +1203,11 @@ func TestAttributionMethodologies(t *testing.T) {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if tt.args.method == model.AttributionMethodLinear {
-				for key, _ := range tt.wantUsersAttribution {
-					if len(got[key]) != len(tt.wantUsersAttribution[key]) {
-						t.Errorf("applyAttribution() Failed LINEAR TOUCH got = %v, want %v", len(got[key]), len(tt.wantUsersAttribution[key]))
-					}
+
+			for key, _ := range tt.wantUsersAttribution {
+				if equalGotAndWantAttribution(got[key], tt.wantUsersAttribution[key]) == false {
+					t.Errorf("applyAttribution() got = %v, want %v", got, tt.wantUsersAttribution)
 				}
-			} else if !reflect.DeepEqual(got, tt.wantUsersAttribution) {
-				t.Errorf("applyAttribution() got = %v, want %v", got, tt.wantUsersAttribution)
 			}
 			if !reflect.DeepEqual(got1, tt.wantLinkedEventUserCampaign) {
 				t.Errorf("applyAttribution() got1 = %v, want %v", got1, tt.wantLinkedEventUserCampaign)
@@ -1195,8 +1248,8 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 	tests := []struct {
 		name                        string
 		args                        args
-		wantUsersAttribution        map[string][]string
-		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantUsersAttribution        map[string][]model.AttributionKeyWeight
+		wantLinkedEventUserCampaign map[string]map[string][]model.AttributionKeyWeight
 		wantErr                     bool
 	}{
 		// Test for LINEAR_TOUCH
@@ -1209,8 +1262,9 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp0, camp0, camp1, camp2, camp3, camp3}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp0, Weight: 0.16666666666666666}, {Key: camp0, Weight: 0.16666666666666666}, {Key: camp1, Weight: 0.16666666666666666}, {Key: camp2, Weight: 0.16666666666666666}, {Key: camp3, Weight: 0.16666666666666666}, {Key: camp3, Weight: 0.16666666666666666}}},
+
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for FIRST_TOUCH
@@ -1223,8 +1277,8 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp0}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp0, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for LAST_TOUCH
@@ -1237,8 +1291,8 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp2}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for FIRST_TOUCH_ND
@@ -1251,8 +1305,8 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp3}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp3, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for LAST_TOUCH_ND
@@ -1265,8 +1319,8 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp2}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 	}
 	for _, tt := range tests {
@@ -1327,8 +1381,8 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 	tests := []struct {
 		name                        string
 		args                        args
-		wantUsersAttribution        map[string][]string
-		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantUsersAttribution        map[string][]model.AttributionKeyWeight
+		wantLinkedEventUserCampaign map[string]map[string][]model.AttributionKeyWeight
 		wantErr                     bool
 	}{
 		// Test for LINEAR_TOUCH
@@ -1341,8 +1395,8 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp1, camp2, camp3, camp3, camp4}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp1, Weight: 0.2}, {Key: camp2, Weight: 0.2}, {Key: camp3, Weight: 0.2}, {Key: camp3, Weight: 0.2}, {Key: camp4, Weight: 0.2}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for FIRST_TOUCH
@@ -1355,8 +1409,8 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp4}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp4, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for LAST_TOUCH
@@ -1369,8 +1423,8 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp2}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for FIRST_TOUCH_ND
@@ -1383,8 +1437,8 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp3}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp3, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for LAST_TOUCH_ND
@@ -1397,8 +1451,8 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyCampaign,
 			},
-			map[string][]string{user1: {camp2}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 	}
 	for _, tt := range tests {
@@ -1457,8 +1511,8 @@ func TestAttributionMethodologiesNonDirectAdgroup(t *testing.T) {
 	tests := []struct {
 		name                        string
 		args                        args
-		wantUsersAttribution        map[string][]string
-		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantUsersAttribution        map[string][]model.AttributionKeyWeight
+		wantLinkedEventUserCampaign map[string]map[string][]model.AttributionKeyWeight
 		wantErr                     bool
 	}{
 		// Test for FIRST_TOUCH_ND
@@ -1471,8 +1525,8 @@ func TestAttributionMethodologiesNonDirectAdgroup(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyAdgroup,
 			},
-			map[string][]string{user1: {camp3}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp3, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for LAST_TOUCH_ND
@@ -1485,8 +1539,8 @@ func TestAttributionMethodologiesNonDirectAdgroup(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyAdgroup,
 			},
-			map[string][]string{user1: {camp2}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 	}
 	for _, tt := range tests {
@@ -1539,8 +1593,8 @@ func TestAttributionMethodologiesNonDirectKeyword(t *testing.T) {
 	tests := []struct {
 		name                        string
 		args                        args
-		wantUsersAttribution        map[string][]string
-		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantUsersAttribution        map[string][]model.AttributionKeyWeight
+		wantLinkedEventUserCampaign map[string]map[string][]model.AttributionKeyWeight
 		wantErr                     bool
 	}{
 		// Test for FIRST_TOUCH_ND
@@ -1553,8 +1607,8 @@ func TestAttributionMethodologiesNonDirectKeyword(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyKeyword,
 			},
-			map[string][]string{user1: {camp3}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp3, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 
 		// Test for LAST_TOUCH_ND
@@ -1567,8 +1621,8 @@ func TestAttributionMethodologiesNonDirectKeyword(t *testing.T) {
 				model.AttributionQueryTypeConversionBased,
 				model.AttributionKeyKeyword,
 			},
-			map[string][]string{user1: {camp2}},
-			map[string]map[string][]string{},
+			map[string][]model.AttributionKeyWeight{user1: {{Key: camp2, Weight: 1}}},
+			map[string]map[string][]model.AttributionKeyWeight{},
 			false},
 	}
 	for _, tt := range tests {
