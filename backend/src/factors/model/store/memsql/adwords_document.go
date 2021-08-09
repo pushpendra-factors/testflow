@@ -771,7 +771,7 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		campaignIDCase + ", " + adIDCase + ", " + keywordNameCase + ", " + keywordIDCase + ", " + slotCase +
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
-	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
+	rows, tx, err := store.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
@@ -782,7 +782,7 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 	gclidBasedMarketData := make(map[string]model.MarketingData)
 	for rows.Next() {
 		var gclIDTmp sql.NullString
@@ -1666,7 +1666,7 @@ func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccou
 
 	logCtx := log.WithField("project_id", projectID)
 
-	rows, err := store.ExecQueryWithContext(stmnt, []interface{}{projectID, customerAccountIDArray,
+	rows, tx, err := store.ExecQueryWithContext(stmnt, []interface{}{projectID, customerAccountIDArray,
 		model.AdwordsDocumentTypeAlias["customer_account_properties"],
 		GetAdwordsDateOnlyTimestamp(query.From),
 		GetAdwordsDateOnlyTimestamp(query.To)})
@@ -1674,7 +1674,7 @@ func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccou
 		logCtx.WithError(err).Error("Failed to build meta for channel query result.")
 		return nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 
 	var currency string
 	for rows.Next() {
@@ -1936,12 +1936,12 @@ func (store *MemSQL) getAdwordsMetrics(projectID uint64, customerAccountID strin
 		return nil, err
 	}
 
-	rows, err := store.ExecQueryWithContext(stmnt, params)
+	rows, tx, err := store.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 
 	if err != nil {
 		return nil, err
@@ -1975,12 +1975,12 @@ func (store *MemSQL) getAdwordsMetricsBreakdown(projectID uint64, customerAccoun
 		return nil, err
 	}
 
-	rows, err := store.ExecQueryWithContext(stmnt, params)
+	rows, tx, err := store.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -2177,7 +2177,7 @@ func (store *MemSQL) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, 
 		return model.TemplateResponse{}, err
 	}
 
-	resultHeadersLastWeek, resultRowsLastWeek, err := U.DBReadRows(rows)
+	resultHeadersLastWeek, resultRowsLastWeek, err := U.DBReadRows(rows, nil)
 	if err != nil {
 		return model.TemplateResponse{}, err
 	}
@@ -2188,7 +2188,7 @@ func (store *MemSQL) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, 
 		return model.TemplateResponse{}, err
 	}
 
-	_, resultRowsPreviousWeek, err := U.DBReadRows(rows)
+	_, resultRowsPreviousWeek, err := U.DBReadRows(rows, nil)
 
 	if err != nil {
 		return model.TemplateResponse{}, err

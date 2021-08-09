@@ -991,7 +991,7 @@ func (store *MemSQL) GetFacebookMetricBreakdown(projectID uint64, customerAccoun
 
 	sqlQuery, documentType := getFacebookMetricsQuery(query, true)
 
-	rows, err := store.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
+	rows, tx, err := store.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
 		query.From,
 		query.To,
 		documentType})
@@ -1000,7 +1000,7 @@ func (store *MemSQL) GetFacebookMetricBreakdown(projectID uint64, customerAccoun
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -1083,7 +1083,7 @@ func (store *MemSQL) GetFacebookChannelResult(projectID uint64, customerAccountI
 	sqlQuery, documentType := getFacebookMetricsQuery(query, false)
 
 	queryResult := &model.ChannelQueryResult{}
-	rows, err := store.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
+	rows, tx, err := store.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
 		query.From,
 		query.To,
 		documentType})
@@ -1091,7 +1091,7 @@ func (store *MemSQL) GetFacebookChannelResult(projectID uint64, customerAccountI
 		logCtx.WithError(err).Error("Failed to build channel query result.")
 		return queryResult, err
 	}
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 	if err != nil {
 		return nil, err
 	}

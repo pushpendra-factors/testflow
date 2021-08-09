@@ -721,12 +721,12 @@ func (pg *Postgres) PullGCLIDReport(projectID uint64, from, to int64, adwordsAcc
 		model.PropertyValueNone, model.PropertyValueNone,
 		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
 		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
-	rows, err := pg.ExecQueryWithContext(performanceQuery, params)
+	rows, tx, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 	gclidBasedMarketData := make(map[string]model.MarketingData)
 	for rows.Next() {
 		var gclIDTmp sql.NullString
@@ -1608,7 +1608,7 @@ func (pg *Postgres) GetAdwordsChannelResultMeta(projectID uint64, customerAccoun
 
 	logCtx := log.WithField("project_id", projectID)
 
-	rows, err := pg.ExecQueryWithContext(stmnt, []interface{}{projectID, customerAccountIDArray,
+	rows, tx, err := pg.ExecQueryWithContext(stmnt, []interface{}{projectID, customerAccountIDArray,
 		model.AdwordsDocumentTypeAlias["customer_account_properties"],
 		GetAdwordsDateOnlyTimestamp(query.From),
 		GetAdwordsDateOnlyTimestamp(query.To)})
@@ -1616,7 +1616,7 @@ func (pg *Postgres) GetAdwordsChannelResultMeta(projectID uint64, customerAccoun
 		logCtx.WithError(err).Error("Failed to build meta for channel query result.")
 		return nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 
 	var currency string
 	for rows.Next() {
@@ -1878,12 +1878,12 @@ func (pg *Postgres) getAdwordsMetrics(projectID uint64, customerAccountID string
 		return nil, err
 	}
 
-	rows, err := pg.ExecQueryWithContext(stmnt, params)
+	rows, tx, err := pg.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 
 	if err != nil {
 		return nil, err
@@ -1917,12 +1917,12 @@ func (pg *Postgres) getAdwordsMetricsBreakdown(projectID uint64, customerAccount
 		return nil, err
 	}
 
-	rows, err := pg.ExecQueryWithContext(stmnt, params)
+	rows, tx, err := pg.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -2119,7 +2119,7 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 		return model.TemplateResponse{}, err
 	}
 
-	resultHeadersLastWeek, resultRowsLastWeek, err := U.DBReadRows(rows)
+	resultHeadersLastWeek, resultRowsLastWeek, err := U.DBReadRows(rows, nil)
 	if err != nil {
 		return model.TemplateResponse{}, err
 	}
@@ -2130,7 +2130,7 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 		return model.TemplateResponse{}, err
 	}
 
-	_, resultRowsPreviousWeek, err := U.DBReadRows(rows)
+	_, resultRowsPreviousWeek, err := U.DBReadRows(rows, nil)
 
 	if err != nil {
 		return model.TemplateResponse{}, err

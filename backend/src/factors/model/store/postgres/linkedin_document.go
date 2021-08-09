@@ -272,7 +272,7 @@ func getLinkedinChannelResult(projectID uint64, customerAccountID string, query 
 		logCtx.WithError(err).Error("Failed to build channel query result.")
 		return queryResult, err
 	}
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +308,7 @@ func (pg *Postgres) getLinkedinMetricBreakdown(projectID uint64, customerAccount
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, nil)
 	if err != nil {
 		return nil, err
 	}

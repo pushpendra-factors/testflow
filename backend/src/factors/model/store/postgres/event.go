@@ -1463,7 +1463,7 @@ func (pg *Postgres) OverwriteEventUserPropertiesByID(projectID uint64, userID,
 }
 
 // PullEventRowsForBuildSequenceJob - Function to pull events for factors model building sequentially.
-func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
+func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 		" events.properties, users.join_timestamp, events.user_properties FROM events "+
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
@@ -1476,7 +1476,7 @@ func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime
 }
 
 // PullEventRowsForArchivalJob - Function to pull events for archival.
-func (pg *Postgres) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
+func (pg *Postgres) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 
 	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
 		"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, events.user_properties FROM events "+

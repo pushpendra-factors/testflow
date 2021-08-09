@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -607,7 +608,7 @@ func GetMemSQLDSNString(dbConf *DBConf) string {
 	return memsqlDBConfig.FormatDSN()
 }
 
-func SetMemSQLResourcePoolQueryCallback(db *gorm.DB) {
+func setMemSQLResourcePoolQueryCallback(db *gorm.DB) {
 	logCtx := log.WithField("memsql_user", configuration.MemSQLInfo.User)
 	if configuration.PrimaryDatastore != DatastoreTypeMemSQL {
 		return
@@ -626,8 +627,27 @@ func SetMemSQLResourcePoolQueryCallback(db *gorm.DB) {
 	}
 }
 
+func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx) {
+	logCtx := log.WithField("memsql_user", configuration.MemSQLInfo.User)
+	if configuration.PrimaryDatastore != DatastoreTypeMemSQL {
+		return
+	}
+
+	pool := configuration.MemSQLInfo.ResourcePool
+	if pool == "" {
+		return
+	}
+
+	_, err := db.Exec("SET resource_pool = ?", pool)
+	if err != nil {
+		logCtx.WithError(err).
+			Error("Failed to set resource pool before query.")
+		return
+	}
+}
+
 func gormSetMemSQLResourcePoolCallback(scope *gorm.Scope) {
-	SetMemSQLResourcePoolQueryCallback(scope.DB())
+	setMemSQLResourcePoolQueryCallback(scope.DB())
 }
 
 func isValidMemSQLResourcePool(resourcePool string) bool {

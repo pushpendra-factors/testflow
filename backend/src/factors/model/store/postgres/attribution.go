@@ -331,12 +331,12 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 		value := U.GetInterfaceList(users)
 		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id" + " " +
 			"FROM users WHERE id = ANY (VALUES " + placeHolder + " )"
-		rows, err := pg.ExecQueryWithContext(queryUserIDCoalID, value)
+		rows, tx, err := pg.ExecQueryWithContext(queryUserIDCoalID, value)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
 			return nil, err
 		}
-		defer rows.Close()
+		defer U.CloseReadQuery(rows, tx)
 		for rows.Next() {
 			var userID string
 			var coalesceID string
@@ -402,12 +402,12 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
 		projectId, sessionEventNameId, effectiveFrom, effectiveTo)
-	rows, err := pg.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
+	rows, tx, err := pg.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 
 	return model.ProcessEventRows(rows, query, logCtx, reports)
 }
@@ -514,12 +514,12 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 			}
 
 			// fetch query results
-			rows, err := pg.ExecQueryWithContext(queryEventHits, qParams)
+			rows, tx, err := pg.ExecQueryWithContext(queryEventHits, qParams)
 			if err != nil {
 				logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 				return err, nil
 			}
-			defer rows.Close()
+			defer U.CloseReadQuery(rows, tx)
 			for rows.Next() {
 				var userID string
 				var timestamp int64
@@ -589,12 +589,12 @@ func (pg *Postgres) GetConvertedUsersWithFilter(projectID uint64, goalEventName 
 	}
 
 	// fetch query results
-	rows, err := pg.ExecQueryWithContext(queryEventHits, qParams)
+	rows, tx, err := pg.ExecQueryWithContext(queryEventHits, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 		return nil, nil, nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 	var userIDList []string
 	userIdHitGoalEventTimestamp := make(map[string]int64)
 	for rows.Next() {
@@ -663,13 +663,13 @@ func (pg *Postgres) GetAdwordsCurrency(projectID uint64, customerAccountID strin
 		" ORDER BY timestamp DESC LIMIT 1"
 	logCtx := log.WithField("ProjectId", projectID)
 	// Checking just for customerAccountIDs[0], we are assuming that all accounts have same currency.
-	rows, err := pg.ExecQueryWithContext(queryCurrency, []interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestamp(from),
+	rows, tx, err := pg.ExecQueryWithContext(queryCurrency, []interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("failed to build meta for attribution query result")
 		return "", err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 	var currency string
 	for rows.Next() {
 		if err = rows.Scan(&currency); err != nil {

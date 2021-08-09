@@ -1725,7 +1725,7 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64, userID,
 }
 
 // PullEventRowsForBuildSequenceJob - Function to pull events for factors model building sequentially.
-func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
+func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
@@ -1740,7 +1740,7 @@ func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTim
 }
 
 // PullEventsForArchivalJob - Function to pull events for archival.
-func (store *MemSQL) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
+func (store *MemSQL) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+

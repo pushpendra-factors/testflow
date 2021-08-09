@@ -1218,13 +1218,13 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 		U.EP_IS_PAGE_VIEW, "true", sessionEventName.ID)
 
 	queryStartTimestamp := U.TimeNowUnix()
-	rows, err := store.ExecQueryWithContext(queryStmnt, queryParams)
+	rows, tx, err := store.ExecQueryWithContext(queryStmnt, queryParams)
 	if err != nil {
 		logCtx.WithError(err).
 			Error("Failed to execute raw query to download events on execute_web_analytics_query.")
 		return queryResult, http.StatusInternalServerError
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 	logCtx = logCtx.WithField("query_exec_time_in_secs", U.TimeNowUnix()-queryStartTimestamp)
 
 	var rowCount int
