@@ -44,12 +44,12 @@ class JobTaskStats:
                    json.dumps(that.STATS[RECORDS_COUNT])
         return False
 
-    def publish(self):
-        SnsNotifier.notify(self.task_stats)
+    def publish(self, name):
+        SnsNotifier.notify(self.task_stats, name)
         task_stats = json.dumps(self.task_stats)
-        log.warning("Metrics for the job Tasks: %s", task_stats)
+        log.warning("Metrics for the %s job Tasks: %s", name, task_stats)
     
-    def publish_gsc(self):
-        SnsNotifier.notify_gsc(self.task_stats)
+    def publish_gsc(self, name):
+        SnsNotifier.notify_gsc(self.task_stats, name)
         task_stats = json.dumps(self.task_stats)
         log.warning("Metrics for the job Tasks: %s", task_stats)

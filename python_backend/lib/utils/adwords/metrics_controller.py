@@ -110,22 +110,22 @@ class MetricsController:
     @classmethod
     def publish_task_stats(cls):
         if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
-            cls.extract_stats.publish()
-            cls.load_stats.publish()
+            cls.extract_stats.publish("extract")
+            cls.load_stats.publish("load")
         elif cls.type_of_run == scripts.adwords.EXTRACT:
-            cls.extract_stats.publish()
+            cls.extract_stats.publish("extract")
         else:
-            cls.load_stats.publish()
+            cls.load_stats.publish("load")
 
     @classmethod
     def publish_gsc_task_stats(cls):
         if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
-            cls.extract_stats.publish_gsc()
-            cls.load_stats.publish_gsc()
+            cls.extract_stats.publish_gsc("extract")
+            cls.load_stats.publish_gsc("load")
         elif cls.type_of_run == scripts.adwords.EXTRACT:
-            cls.extract_stats.publish_gsc()
+            cls.extract_stats.publish_gsc("extract")
         else:
-            cls.load_stats.publish_gsc()
+            cls.load_stats.publish_gsc("load")
     
     @classmethod
     def publish_job_stats(cls):

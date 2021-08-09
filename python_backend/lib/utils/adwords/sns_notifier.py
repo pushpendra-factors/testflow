@@ -9,7 +9,7 @@ class SnsNotifier:
     GSC_APP_NAME = "search_console_sync"
 
     @staticmethod
-    def notify(message):
+    def notify(message, name):
         env = scripts.adwords.CONFIG.ADWORDS_APP.env
         source = SnsNotifier.APP_NAME
         if env != "production":
@@ -17,7 +17,7 @@ class SnsNotifier:
             return
 
         sns_url = "https://fjnvg9a8wi.execute-api.us-east-1.amazonaws.com/v1/notify"
-        payload = {"env": env, "message": message, "source": source}
+        payload = {"env": env, "message": message, "source": source, "name": name}
         response = requests.post(sns_url, json=payload)
         if not response.ok:
             log.error("Failed to notify through sns.")

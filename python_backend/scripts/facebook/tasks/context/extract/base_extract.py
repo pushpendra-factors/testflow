@@ -25,6 +25,7 @@ class BaseExtract:
 
     source = None
     destination = None
+    total_number_of_records = 0
 
     # Setters start here.
     def add_last_sync_info(self, last_sync_info):
@@ -71,3 +72,6 @@ class BaseExtract:
     def add_log(self, running_status):
         log.warning("%s extract of job for Project Id: %s, Timestamp: %d, Doc Type: %s", running_status,
                     self.project_id, self.curr_timestamp, self.type_alias)
+
+    def reset_total_number_of_records(self):
+        self.total_number_of_records = 0
