@@ -454,8 +454,10 @@ CREATE TABLE IF NOT EXISTS salesforce_documents (
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id, type, action),
-    KEY (project_id, type, timestamp) USING CLUSTERED COLUMNSTORE,
-    KEY (user_id) USING HASH
+    KEY (project_id, type, action, id, timestamp) USING CLUSTERED COLUMNSTORE,
+    KEY (user_id) USING HASH,
+    KEY (type) USING HASH,
+    KEY (synced) USING HASH
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
