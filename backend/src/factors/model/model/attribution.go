@@ -95,6 +95,7 @@ const (
 	AttributionMethodLastTouchNonDirect  = "Last_Touch_ND"
 	AttributionMethodLinear              = "Linear"
 	AttributionMethodUShaped             = "U_Shaped"
+	AttributionMethodTimeDecay           = "Time_Decay"
 	AttributionKeyCampaign               = "Campaign"
 	AttributionKeySource                 = "Source"
 	AttributionKeyAdgroup                = "AdGroup"
@@ -957,15 +958,14 @@ func FilterRows(rows [][]interface{}, attributionKey string, keyIndex int) [][]i
 }
 
 // AddUpConversionEventCount Groups all unique users by attributionId and adds it to attributionData
-func AddUpConversionEventCount(usersIdAttributionIdMap map[string][]string) map[string]*AttributionData {
+func AddUpConversionEventCount(usersIdAttributionIdMap map[string][]AttributionKeyWeight) map[string]*AttributionData {
 	attributionData := make(map[string]*AttributionData)
 	for _, attributionKeys := range usersIdAttributionIdMap {
-		weight := 1 / float64(len(attributionKeys))
-		for _, key := range attributionKeys {
-			if _, exists := attributionData[key]; !exists {
-				attributionData[key] = &AttributionData{}
+		for _, keyWeight := range attributionKeys {
+			if _, exists := attributionData[keyWeight.Key]; !exists {
+				attributionData[keyWeight.Key] = &AttributionData{}
 			}
-			attributionData[key].ConversionEventCount += weight
+			attributionData[keyWeight.Key].ConversionEventCount += keyWeight.Weight
 		}
 	}
 	return attributionData
@@ -973,7 +973,7 @@ func AddUpConversionEventCount(usersIdAttributionIdMap map[string][]string) map[
 
 // AddUpLinkedFunnelEventCount Attribute each user to the conversion event and linked event by attribution Id.
 func AddUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
-	attributionData map[string]*AttributionData, linkedUserAttributionData map[string]map[string][]string) {
+	attributionData map[string]*AttributionData, linkedUserAttributionData map[string]map[string][]AttributionKeyWeight) {
 
 	linkedEventToPositionMap := make(map[string]int)
 	for position, linkedEvent := range linkedEvents {
@@ -990,10 +990,9 @@ func AddUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
 	// Update linked up events with event hit count.
 	for linkedEventName, userIdAttributionIdMap := range linkedUserAttributionData {
 		for _, attributionKeys := range userIdAttributionIdMap {
-			weight := 1 / float64(len(attributionKeys))
-			for _, key := range attributionKeys {
-				if attributionData[key] != nil {
-					attributionData[key].LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += weight
+			for _, keyWeight := range attributionKeys {
+				if attributionData[keyWeight.Key] != nil {
+					attributionData[keyWeight.Key].LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += keyWeight.Weight
 				}
 			}
 		}

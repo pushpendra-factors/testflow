@@ -354,11 +354,11 @@ func main() {
 	invalidSmartEventsID := map[string]bool{}
 	for eventID := range smartEventMetaData {
 		currentProperties := map[string]interface{}{
-			"propertyName": smartEventMetaData[eventID]["curr_value"],
+			propertyName: smartEventMetaData[eventID]["curr_value"],
 		}
 
 		prevProperties := map[string]interface{}{
-			"propertyName": smartEventMetaData[eventID]["prev_value"],
+			propertyName: smartEventMetaData[eventID]["prev_value"],
 		}
 		valid := model.CRMFilterEvaluator(*projectID, &currentProperties, &prevProperties, filterExp, model.CompareStateBoth)
 		if valid {
