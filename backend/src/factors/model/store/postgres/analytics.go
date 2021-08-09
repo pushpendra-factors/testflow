@@ -1002,7 +1002,7 @@ func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query
 }
 
 // ExecQueryWithContext Executes raw query with context. Useful to kill queries on program exit or crash.
-func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, error) {
+func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error) {
 	db := C.GetServices().Db
 	debugQuery := U.DBDebugPreparedStatement(stmnt, params)
 
@@ -1016,16 +1016,16 @@ func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*s
 	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST || err != nil {
 		log.WithField("Query", debugQuery).Info("Exec query with context")
 	}
-	return rows, err
+	return rows, nil, err
 }
 
 func (pg *Postgres) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
-	rows, err := pg.ExecQueryWithContext(stmnt, params)
+	rows, tx, err := pg.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 	if err != nil {
 		return nil, err
 	}

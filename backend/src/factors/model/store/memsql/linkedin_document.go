@@ -329,7 +329,7 @@ func getLinkedinChannelResult(projectID uint64, customerAccountID string, query 
 		logCtx.WithError(err).Error("Failed to build channel query result.")
 		return queryResult, err
 	}
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -365,7 +365,7 @@ func (store *MemSQL) getLinkedinMetricBreakdown(projectID uint64, customerAccoun
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, nil)
 	if err != nil {
 		return nil, err
 	}

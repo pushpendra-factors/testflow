@@ -1008,8 +1008,13 @@ func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query
 }
 
 // ExecQueryWithContext Executes raw query with context. Useful to kill queries on program exit or crash.
-func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, error) {
+func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error) {
 	db := C.GetServices().Db
+	tx, err := db.DB().Begin()
+	if err != nil {
+		log.WithError(err).Error("Failed to beging transaction.")
+		return nil, nil, err
+	}
 
 	// For query: ...where id in ($1) where $1 is passed as a slice, convert to pq.Array()
 	stmnt, params = model.ExpandArrayWithIndividualValues(stmnt, params)
@@ -1018,22 +1023,22 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	stmnt = fmt.Sprintf("/*!%s*/ ", C.GetConfig().AppName) + stmnt
 
 	// Set resource pool before query.
-	C.SetMemSQLResourcePoolQueryCallback(db)
-	rows, err := db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)
+	C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx)
+	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
 	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST || err != nil {
 		log.WithFields(log.Fields{"Query": U.DBDebugPreparedStatement(stmnt, params)}).Info("Exec query with context")
 	}
 
-	return rows, err
+	return rows, tx, err
 }
 
 func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
-	rows, err := store.ExecQueryWithContext(stmnt, params)
+	rows, tx, err := store.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 	if err != nil {
 		return nil, err
 	}

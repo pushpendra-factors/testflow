@@ -935,7 +935,7 @@ func (pg *Postgres) GetFacebookMetricBreakdown(projectID uint64, customerAccount
 
 	sqlQuery, documentType := getFacebookMetricsQuery(query, true)
 
-	rows, err := pg.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
+	rows, tx, err := pg.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
 		query.From,
 		query.To,
 		documentType})
@@ -944,7 +944,7 @@ func (pg *Postgres) GetFacebookMetricBreakdown(projectID uint64, customerAccount
 		return nil, err
 	}
 
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -1027,7 +1027,7 @@ func (pg *Postgres) GetFacebookChannelResult(projectID uint64, customerAccountID
 	sqlQuery, documentType := getFacebookMetricsQuery(query, false)
 
 	queryResult := &model.ChannelQueryResult{}
-	rows, err := pg.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
+	rows, tx, err := pg.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
 		query.From,
 		query.To,
 		documentType})
@@ -1035,7 +1035,7 @@ func (pg *Postgres) GetFacebookChannelResult(projectID uint64, customerAccountID
 		logCtx.WithError(err).Error("Failed to build channel query result.")
 		return queryResult, err
 	}
-	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
 	if err != nil {
 		return nil, err
 	}

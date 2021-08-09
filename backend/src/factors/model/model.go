@@ -46,7 +46,7 @@ type Model interface {
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
-	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, error)
+	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, *sql.Tx, error)
 	Analyze(projectID uint64, query model.Query) (*model.QueryResult, int, string)
 
 	// archival
@@ -176,8 +176,8 @@ type Model interface {
 	GetAllEventsForSessionCreationAsUserEventsMap(projectId uint64, sessionEventNameId string, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
 	OverwriteEventUserPropertiesByID(projectID uint64, userID, id string, properties *postgres.Jsonb) int
-	PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error)
-	PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error)
+	PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
+	PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error)
 	GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int)
 	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int

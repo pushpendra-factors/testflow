@@ -604,15 +604,13 @@ func getOrderByClause(isGroupByTimestamp bool, selectMetrics []string) string {
 
 // ExecuteSQL - @Kark TODO v1
 func (store *MemSQL) ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error) {
-	rows, err := store.ExecQueryWithContext(sqlStatement, params)
+	rows, tx, err := store.ExecQueryWithContext(sqlStatement, params)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", sqlStatement).WithField("params", params).Error("SQL Query failed.")
 		return nil, nil, err
 	}
 
-	defer rows.Close()
-	columns, resultRows, err := U.DBReadRows(rows)
-
+	columns, resultRows, err := U.DBReadRows(rows, tx)
 	if err != nil {
 		return nil, nil, err
 	}

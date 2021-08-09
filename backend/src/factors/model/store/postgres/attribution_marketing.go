@@ -5,9 +5,10 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"strings"
+
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	"strings"
 )
 
 func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQuery, projectSetting model.ProjectSetting) (*model.MarketingReports, error) {
@@ -234,12 +235,12 @@ func (pg *Postgres) PullAdwordsMarketingData(projectID uint64, from, to int64, c
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
-	rows, err := pg.ExecQueryWithContext(performanceQuery, params)
+	rows, tx, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 
 	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelAdwords)
 	return marketingDataIDMap, allRows, nil
@@ -260,12 +261,12 @@ func (pg *Postgres) PullFacebookMarketingData(projectID uint64, from, to int64, 
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
-	rows, err := pg.ExecQueryWithContext(performanceQuery, params)
+	rows, tx, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 
 	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelFacebook)
 	return marketingDataIDMap, allRows, nil
@@ -286,12 +287,12 @@ func (pg *Postgres) PullLinkedinMarketingData(projectID uint64, from, to int64, 
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
-	rows, err := pg.ExecQueryWithContext(performanceQuery, params)
+	rows, tx, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 
 	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelLinkedin)
 	return marketingDataIDMap, allRows, nil
@@ -348,12 +349,12 @@ func (pg *Postgres) PullSmartProperties(projectID uint64, campaignIDPlaceHolder 
 		"where project_id = ? AND source = ? AND object_type = ?"
 
 	params := []interface{}{campaignIDPlaceHolder, campaignNamePlaceHolder, adgroupIDPlaceHolder, adgroupNamePlaceHolder, projectID, sourceChannelPlaceHolder, objectType}
-	rows, err := pg.ExecQueryWithContext(stmt, params)
+	rows, tx, err := pg.ExecQueryWithContext(stmt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 	dataKeyDimensions := make(map[string]model.MarketingData)
 	for rows.Next() {
 		var campaignIDNull sql.NullString

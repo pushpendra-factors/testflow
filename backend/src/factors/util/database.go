@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"strings"
 	"unicode/utf8"
 
@@ -13,10 +14,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func CloseReadQuery(rows *sql.Rows, tx *sql.Tx) {
+	if rows != nil {
+		rows.Close()
+	}
+
+	if tx == nil {
+		return
+	}
+
+	err := tx.Commit()
+	if err != nil {
+		log.WithError(err).WithField("stack", string(debug.Stack())).Error("Failed to commit on transaction.")
+	}
+}
+
 // DBReadRows Creates [][]interface{} from sql result rows.
 // Ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
-func DBReadRows(rows *sql.Rows) ([]string, [][]interface{}, error) {
-	defer rows.Close()
+func DBReadRows(rows *sql.Rows, tx *sql.Tx) ([]string, [][]interface{}, error) {
+	defer CloseReadQuery(rows, tx)
 
 	cols, err := rows.Columns()
 	if err != nil {

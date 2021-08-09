@@ -320,12 +320,13 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 		value := U.GetInterfaceList(users)
 		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id" + " " +
 			"FROM users WHERE id IN (" + placeHolder + ")"
-		rows, err := store.ExecQueryWithContext(queryUserIDCoalID, value)
+		rows, tx, err := store.ExecQueryWithContext(queryUserIDCoalID, value)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
 			return nil, err
 		}
-		defer rows.Close()
+		defer U.CloseReadQuery(rows, tx)
+
 		for rows.Next() {
 			var userID string
 			var coalesceID string
@@ -390,12 +391,12 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
 		projectId, sessionEventNameId, effectiveFrom, effectiveTo)
-	rows, err := store.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
+	rows, tx, err := store.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 
 	return model.ProcessEventRows(rows, query, logCtx, reports)
 }
@@ -502,12 +503,13 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			}
 
 			// fetch query results
-			rows, err := store.ExecQueryWithContext(queryEventHits, qParams)
+			rows, tx, err := store.ExecQueryWithContext(queryEventHits, qParams)
 			if err != nil {
 				logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 				return err, nil
 			}
-			defer rows.Close()
+			defer U.CloseReadQuery(rows, tx)
+
 			for rows.Next() {
 				var userID string
 				var timestamp int64
@@ -577,12 +579,12 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 	}
 
 	// fetch query results
-	rows, err := store.ExecQueryWithContext(queryEventHits, qParams)
+	rows, tx, err := store.ExecQueryWithContext(queryEventHits, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 		return nil, nil, nil, err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
 	var userIDList []string
 	userIdHitGoalEventTimestamp := make(map[string]int64)
 	for rows.Next() {
@@ -651,13 +653,15 @@ func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID stri
 		" ORDER BY timestamp DESC LIMIT 1"
 	logCtx := log.WithField("ProjectId", projectID)
 	// Checking just for customerAccountIDs[0], we are assuming that all accounts have same currency.
-	rows, err := store.ExecQueryWithContext(queryCurrency, []interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestamp(from),
-		U.GetDateOnlyFromTimestamp(to)})
+	rows, tx, err := store.ExecQueryWithContext(queryCurrency,
+		[]interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestamp(from),
+			U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("failed to build meta for attribution query result")
 		return "", err
 	}
-	defer rows.Close()
+	defer U.CloseReadQuery(rows, tx)
+
 	var currency string
 	for rows.Next() {
 		if err = rows.Scan(&currency); err != nil {

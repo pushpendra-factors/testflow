@@ -22,8 +22,8 @@ import (
 var peLog = taskLog.WithField("prefix", "Task#PullEvents")
 
 func pullEventsForBuildSeq(projectID uint64, startTime, endTime int64, eventsFilePath string) (int, string, error) {
-	rows, err := store.GetStore().PullEventRowsForBuildSequenceJob(projectID, startTime, endTime)
-	defer rows.Close()
+	rows, tx, err := store.GetStore().PullEventRowsForBuildSequenceJob(projectID, startTime, endTime)
+	defer U.CloseReadQuery(rows, tx)
 	if err != nil {
 		peLog.WithError(err).Error("SQL Query failed.")
 		return 0, "", err
@@ -134,8 +134,8 @@ func pullEventsForBuildSeq(projectID uint64, startTime, endTime int64, eventsFil
 func PullEventsForArchive(projectID uint64, eventsFilePath, usersFilePath string,
 	startTime, endTime int64) (int, string, string, error) {
 
-	rows, err := store.GetStore().PullEventRowsForArchivalJob(projectID, startTime, endTime)
-	defer rows.Close()
+	rows, tx, err := store.GetStore().PullEventRowsForArchivalJob(projectID, startTime, endTime)
+	defer U.CloseReadQuery(rows, tx)
 	if err != nil {
 		peLog.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
 		return 0, "", "", err
