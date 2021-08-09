@@ -14,8 +14,10 @@ from ...utils.json import JsonUtil
 class ExternalSystem(BaseSystem):
 
     def read(self):
+        total_requests = 0
         result_records = []
         records, next_page_metadata, result_response = self.get_paginated_from_source(self.system_attributes["url"])
+        total_requests += 1
         if not result_response.ok:
             return "", result_response
         result_records.extend(records)
@@ -23,8 +25,9 @@ class ExternalSystem(BaseSystem):
         while next_page_metadata["exists"]:
             next_page_link = next_page_metadata["link"]
             records, next_page_metadata, result_response = self.get_paginated_from_source(next_page_link)
+            total_requests += 1
             result_records.extend(records)
-        return JsonUtil.create(records), result_response
+        return JsonUtil.create(records), result_response, total_requests
 
     def write(self, input_string):
         input_records = JsonUtil.read(input_string)

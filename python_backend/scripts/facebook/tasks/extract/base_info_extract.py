@@ -22,6 +22,7 @@ class BaseInfoExtract(BaseExtract):
 
         curr_timestamp = task_context.get_next_timestamp()
         task_context.add_curr_timestamp(curr_timestamp)
+        task_context.reset_total_number_of_records()
         task_context.add_log("started")
         start_time = datetime.now()
 
@@ -37,7 +38,7 @@ class BaseInfoExtract(BaseExtract):
                                             task_context.project_id, task_context.type_alias, latency_metric)
         MetricsAggregator.update_task_stats(BaseExtractContext.TASK_TYPE, TaskStats.TO_IN_MEMORY,
                                             TaskStats.REQUEST_COUNT,
-                                            task_context.project_id, task_context.type_alias, 1)
+                                            task_context.project_id, task_context.type_alias, task_context.total_number_of_records)
 
         start_time = datetime.now()
 

@@ -82,9 +82,11 @@ class BaseReportExtract(BaseExtract):
                     {"base_path": "/usr/local/var/factors/cloud_storage/", "file_path": file_path, "file_override": True})
         return
 
+    # kark.
     # Read records gives response of status of message
     def read_records(self):
-        records_string, result_response = self.source.read()
+        records_string, result_response, current_no_of_requests = self.source.read()
+        self.total_number_of_records += current_no_of_requests
         if not result_response.ok:
             log.warning(ERROR_MESSAGE.format(self.get_name(), result_response.status_code, result_response.text,
                                  self.project_id))
