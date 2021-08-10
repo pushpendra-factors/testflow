@@ -335,7 +335,10 @@ func (pg *Postgres) getUsersForMergingPropertiesByCustomerUserID(projectID uint6
 
 	// Users are returned in increasing order of created_at. For user_properties created at same unix time,
 	// older user order will help in ensuring the order while merging properties.
-	users, errCode := pg.GetUsersByCustomerUserID(projectID, customerUserID)
+	//	users, errCode := pg.GetUsersByCustomerUserID(projectID, customerUserID)
+	var limit uint64 = 10000
+	var numUsers uint64 = 100
+	users, errCode := pg.GetSelectedUsersByCustomerUserID(projectID, customerUserID, limit, numUsers)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
 		return users, errCode
 	}
@@ -624,6 +627,53 @@ func (pg *Postgres) GetUsersByCustomerUserID(projectID uint64, customerUserID st
 	}
 	if len(users) == 0 {
 		return nil, http.StatusNotFound
+	}
+
+	return users, http.StatusFound
+}
+
+// GetSelectedUsersByCustomerUserID gets selected (top 50 & bottom 50) users identified by given customer_user_id in increasing order of updated_at.
+func (pg *Postgres) GetSelectedUsersByCustomerUserID(projectID uint64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int) {
+	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{
+		"ProjectID":      projectID,
+		"CustomerUserID": customerUserID,
+	})
+
+	var ids []model.User
+	if err := db.Limit(limit).Order("created_at ASC").
+		Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
+		Select("id").Find(&ids).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to get selected users for customer_user_id")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(ids) > 2500 {
+		log.WithField("project_id", projectID).WithField("customer_user_id", customerUserID).Info("No.of users with same customer user_id is greater than 2500.")
+		metrics.Increment(metrics.IncrUserPropertiesMergeDataPullGt2500)
+	}
+
+	var userIDs []string
+	if len(ids) >= int(numUsers) {
+		for i := 0; i < int(numUsers/2); i++ {
+			userIDs = append(userIDs, ids[i].ID)
+		}
+
+		for i := len(ids) - 1; i >= len(ids)-int(numUsers/2); i-- {
+			userIDs = append(userIDs, ids[i].ID)
+		}
+	} else {
+		for i := 0; i < len(ids); i++ {
+			userIDs = append(userIDs, ids[i].ID)
+		}
+	}
+
+	var users []model.User
+	if err := db.Order("created_at ASC").
+		Where("project_id = ? AND id IN ( ? )", projectID, userIDs).
+		Find(&users).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to get selected users for id")
+		return nil, http.StatusInternalServerError
 	}
 
 	return users, http.StatusFound

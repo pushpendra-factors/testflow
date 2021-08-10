@@ -276,6 +276,53 @@ func (store *MemSQL) GetUsersByCustomerUserID(projectID uint64, customerUserID s
 	return users, http.StatusFound
 }
 
+// GetSelectedUsersByCustomerUserID gets selected (top 50 & bottom 50) users identified by given customer_user_id in increasing order of updated_at.
+func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID uint64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int) {
+	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{
+		"ProjectID":      projectID,
+		"CustomerUserID": customerUserID,
+	})
+
+	var ids []model.User
+	if err := db.Limit(limit).Order("created_at ASC").
+		Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
+		Select("id").Find(&ids).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to get selected users for customer_user_id")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(ids) > 2500 {
+		log.WithField("project_id", projectID).WithField("customer_user_id", customerUserID).Info("No.of users with same customer user_id is greater than 2500.")
+		metrics.Increment(metrics.IncrUserPropertiesMergeDataPullGt2500)
+	}
+
+	var userIDs []string
+	if len(ids) >= int(numUsers) {
+		for i := 0; i < int(numUsers/2); i++ {
+			userIDs = append(userIDs, ids[i].ID)
+		}
+
+		for i := len(ids) - 1; i >= len(ids)-int(numUsers/2); i-- {
+			userIDs = append(userIDs, ids[i].ID)
+		}
+	} else {
+		for i := 0; i < len(ids); i++ {
+			userIDs = append(userIDs, ids[i].ID)
+		}
+	}
+
+	var users []model.User
+	if err := db.Order("created_at ASC").
+		Where("project_id = ? AND id IN ( ? )", projectID, userIDs).
+		Find(&users).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to get selected users for id")
+		return nil, http.StatusInternalServerError
+	}
+
+	return users, http.StatusFound
+}
+
 func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*model.User, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
@@ -1049,7 +1096,10 @@ func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint
 
 	// For user_properties created at same unix time, older user order will help in
 	// ensuring the order while merging properties.
-	users, errCode := store.GetUsersByCustomerUserID(projectID, customerUserID)
+	// users, errCode := store.GetUsersByCustomerUserID(projectID, customerUserID)
+	var limit uint64 = 10000
+	var numUsers uint64 = 100
+	users, errCode := store.GetSelectedUsersByCustomerUserID(projectID, customerUserID, limit, numUsers)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
 		return users, errCode
 	}
@@ -1219,6 +1269,15 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 				userPropertiesOriginalValues[users[i].ID][property] = (*userPropertiesMap)[property]
 			}
 		}
+	}
+
+	usersLength := len(users)
+	if usersLength > 50 {
+		logCtx.WithField("project_id", projectID).WithField("id", id).WithField("user_count", usersLength).Info("More than 50 users on user_properties merge.")
+	}
+
+	if usersLength > 100 {
+		metrics.Increment(metrics.IncrUserPropertiesMergeMoreThan100)
 	}
 
 	mergedByCustomerUserIDMap, errCode := mergeUserPropertiesByCustomerUserID(projectID, users)

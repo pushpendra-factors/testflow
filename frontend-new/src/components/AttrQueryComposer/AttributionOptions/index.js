@@ -27,6 +27,7 @@ const AttributionOptions = ({
     ['Last Touch Non-Direct', 'Last_Touch_ND'],
     ['Linear', 'Linear'],
     ['U Shaped', 'U_Shaped'],
+    ['Time Decay', 'Time_Decay'],
   ];
 
   useEffect(() => {

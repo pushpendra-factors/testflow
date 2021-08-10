@@ -1045,3 +1045,38 @@ func TestIdentifiersSkipOnMerge(t *testing.T) {
 	assert.Contains(t, *user2MetaObject, cuid2)
 
 }
+
+func TestGetSelectedUsersByCustomerUserID(t *testing.T) {
+	// Initialize a project for the user.
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	assert.NotNil(t, project)
+	projectId := project.ID
+
+	// Create 10 users
+	// Set the limit to fetch top and bottom users
+	var limit uint64 = 10
+	var numUsers uint64 = 4
+
+	var users []model.User
+	customer_id := "Taashish"
+	for i := 0; i < int(limit); i++ {
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: customer_id})
+		assert.Equal(t, http.StatusCreated, errCode)
+		lastUser, lastUserErrorCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, customer_id)
+		assert.Equal(t, http.StatusFound, lastUserErrorCode)
+		assert.Equal(t, createdUserID, lastUser.ID)
+		users = append(users, *lastUser)
+	}
+
+	retUsers, errCode := store.GetStore().GetSelectedUsersByCustomerUserID(projectId, customer_id, limit, numUsers)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, numUsers, uint64(len(retUsers)))
+
+	for i := 0; i < int(numUsers/2); i++ {
+		assert.Equal(t, users[i].ID, retUsers[i].ID)
+		assert.Equal(t, users[int(limit)-i-1].ID, retUsers[int(numUsers)-i-1].ID)
+	}
+
+}
