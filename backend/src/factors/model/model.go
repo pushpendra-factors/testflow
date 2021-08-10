@@ -375,6 +375,7 @@ type Model interface {
 	UpdateUserPropertiesForSession(projectID uint64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int
 	GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID uint64, userID string, formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int)
 	UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
+	GetSelectedUsersByCustomerUserID(projectID uint64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int)
 
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *model.WebAnalyticsQueries, int)
