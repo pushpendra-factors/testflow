@@ -169,7 +169,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					value.Key = keys[5:]
 					value.Value = keys2
 					value.Entity = keys[2:4]
-					if BlackListedKeys[value.Key]{
+					if BlackListedKeys[value.Key] {
 						continue
 					}
 					if file.BaseAndTarget.FeatureMetrics[keys][keys2].First != nil {
@@ -293,7 +293,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					val2.Key = keys[5:]
 					val2.Value = keys2
 					val2.Entity = keys[2:4]
-					if BlackListedKeys[val2.Key]{
+					if BlackListedKeys[val2.Key] {
 						continue
 					}
 					if file.Target.FeatureMetrics[keys][keys2].First != nil {
@@ -344,7 +344,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					val2.Key = keys[5:]
 					val2.Value = keys2
 					val2.Entity = keys[2:4]
-					if BlackListedKeys[val2.Key]{
+					if BlackListedKeys[val2.Key] {
 						continue
 					}
 					if file.BaseAndTarget.FeatureMetrics[keys][keys2].First != nil {
@@ -429,7 +429,13 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 	return insights
 }
 func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
-	path, file := C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestamp(baseStartTime.Unix()), queryId, 10)
+	k := make(map[uint64]int)
+	k[399] = 100
+	kValue, ok := k[projectId]
+	if !ok {
+		kValue = 10
+	}
+	path, file := C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestamp(baseStartTime.Unix()), queryId, kValue)
 	fmt.Println(path, file)
 	reader, err := C.GetCloudManager().Get(path, file)
 	if err != nil {
@@ -512,7 +518,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						newData.Key = gbp.Property
 						newData.Value = values
 						newData.Entity = gbp.Entity
-						if BlackListedKeys[newData.Key]{
+						if BlackListedKeys[newData.Key] {
 							continue
 						}
 						if file.BaseAndTarget.FeatureMetrics[property][values].First != nil {
@@ -592,7 +598,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						newData.Key = gbp.Property
 						newData.Value = values
 						newData.Entity = gbp.Entity
-						if BlackListedKeys[newData.Key]{
+						if BlackListedKeys[newData.Key] {
 							continue
 						}
 						if file.Target.FeatureMetrics[property][values].First != nil {
@@ -630,7 +636,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						newData.Key = gbp.Property
 						newData.Value = values
 						newData.Entity = gbp.Entity
-						if BlackListedKeys[newData.Key]{
+						if BlackListedKeys[newData.Key] {
 							continue
 						}
 						if file.BaseAndTarget.FeatureMetrics[property][values].First != nil {
