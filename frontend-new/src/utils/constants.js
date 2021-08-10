@@ -31,6 +31,10 @@ export const ATTRIBUTION_METHODOLOGY = [
     text: 'U Shaped',
     value: 'U_Shaped',
   },
+  {
+    text: 'Time Decay',
+    value: 'Time_Decay',
+  },
 ];
 
 export const CHART_TYPE_STACKED_AREA = 'stackedareachart';
