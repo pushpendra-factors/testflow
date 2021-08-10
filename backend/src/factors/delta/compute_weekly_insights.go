@@ -64,8 +64,10 @@ type BaseTargetMetrics struct {
 }
 
 var BlackListedKeys = map[string]bool{
-	"$day_of_week":  true,
-	"$page_raw_url": true,
+	"$day_of_week":         true,
+	"$page_raw_url":        true,
+	"$initial_page_domain": true,
+	"$latest_page_domain":  true,
 }
 var numberOfRecordsFromGbp int = 5 // number of records to be fetched from gbp
 var increasedRecords int
@@ -428,6 +430,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 	insights.Insights = append(insights.Insights, ActualValuearr2...)
 	return insights
 }
+
 func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
 	k := make(map[uint64]int)
 	k[399] = 100

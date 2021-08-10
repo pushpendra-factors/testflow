@@ -36,7 +36,7 @@ func GetWeeklyInsightsMetadata(c *gin.Context) (interface{}, int, string, string
 	}
 	var result Result
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentUUID) {
+	if !C.IsWeeklyInsightsWhitelisted(agentUUID, projectId) {
 		return result, http.StatusOK, "", "", false
 	}
 
