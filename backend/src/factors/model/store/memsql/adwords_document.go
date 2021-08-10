@@ -1327,12 +1327,12 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 		dimensions.values = append(dimensions.values, externalValue)
 	}
 	for _, groupBy := range smartPropertyCampaignGroupBys {
-		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("campaign.JSON_EXTRACT_STRING(properties, '%s')", groupBy.Property), "campaign_"+groupBy.Property)
+		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s')", groupBy.Property), "campaign_"+groupBy.Property)
 		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 		dimensions.values = append(dimensions.values, "campaign_"+groupBy.Property)
 	}
 	for _, groupBy := range smartPropertyAdGroupGroupBys {
-		expression := fmt.Sprintf(`%s as "%s"`, fmt.Sprintf("ad_group.JSON_EXTRACT_STRING(properties, '%s')", groupBy.Property), "ad_group_"+groupBy.Property)
+		expression := fmt.Sprintf(`%s as "%s"`, fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties, '%s')", groupBy.Property), "ad_group_"+groupBy.Property)
 		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 		dimensions.values = append(dimensions.values, "ad_group_"+groupBy.Property)
 	}
@@ -1611,7 +1611,7 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperty(filters []model.Channe
 				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
 			}
 		} else {
-			currentFilterStatement = fmt.Sprintf("%s.JSON_EXTRACT_STRING(properties, '%s') %s '%s'", filter.Object, filter.Property, filterOperator, filterValue)
+			currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s '%s'", filter.Object, filter.Property, filterOperator, filterValue)
 			if index == 0 {
 				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
 			} else {
@@ -1637,16 +1637,16 @@ func getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys []m
 	resultStatement := ""
 	for _, smartPropertyGroupBy := range smartPropertyCampaignGroupBys {
 		if resultStatement == "" {
-			resultStatement += fmt.Sprintf("( campaign.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
+			resultStatement += fmt.Sprintf("( JSON_EXTRACT_STRING(campaign.properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
 		} else {
-			resultStatement += fmt.Sprintf("AND campaign.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
+			resultStatement += fmt.Sprintf("AND JSON_EXTRACT_STRING(campaign.properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
 		}
 	}
 	for _, smartPropertyGroupBy := range smartPropertyAdGroupGroupBys {
 		if resultStatement == "" {
-			resultStatement += fmt.Sprintf("( ad_group.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
+			resultStatement += fmt.Sprintf("( JSON_EXTRACT_STRING(ad_group.properties,'%s') IS NOT NULL ", smartPropertyGroupBy.Property)
 		} else {
-			resultStatement += fmt.Sprintf("AND ad_group.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
+			resultStatement += fmt.Sprintf("AND JSON_EXTRACT_STRING(ad_group.properties,'%s') IS NOT NULL ", smartPropertyGroupBy.Property)
 		}
 	}
 	if resultStatement == "" {

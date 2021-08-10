@@ -666,12 +666,12 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 		responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
 	}
 	for _, groupBy := range smartPropertyCampaignGroupBys {
-		value := fmt.Sprintf("campaign.JSON_EXTRACT_STRING(properties, '%s') as campaign_%s", groupBy.Property, groupBy.Property)
+		value := fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s') as campaign_%s", groupBy.Property, groupBy.Property)
 		selectKeys = append(selectKeys, value)
 		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
 	}
 	for _, groupBy := range smartPropertyAdGroupGroupBys {
-		value := fmt.Sprintf("ad_group.JSON_EXTRACT_STRING(properties, '%s') as ad_group_%s", groupBy.Property, groupBy.Property)
+		value := fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties,'%s') as ad_group_%s", groupBy.Property, groupBy.Property)
 		selectKeys = append(selectKeys, value)
 		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
 	}
@@ -828,7 +828,7 @@ func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFi
 				resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
 			}
 		} else {
-			currentFilterStatement = fmt.Sprintf("%s.JSON_EXTRACT_STRING(properties, '%s') %s '%s'", model.FacebookObjectMapForSmartProperty[filter.Object], filter.Property, filterOperator, filterValue)
+			currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(%s.properties, '%s') %s '%s'", model.FacebookObjectMapForSmartProperty[filter.Object], filter.Property, filterOperator, filterValue)
 			if index == 0 {
 				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
 			} else {
