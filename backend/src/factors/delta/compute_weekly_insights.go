@@ -68,6 +68,7 @@ var BlackListedKeys = map[string]bool{
 	"$page_raw_url":        true,
 	"$initial_page_domain": true,
 	"$latest_page_domain":  true,
+	"$timestamp":           true,
 }
 var numberOfRecordsFromGbp int = 5 // number of records to be fetched from gbp
 var increasedRecords int
