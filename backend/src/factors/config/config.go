@@ -162,6 +162,7 @@ type Configuration struct {
 	blacklistedProjectIDPropertyTypeFromDB string
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
+	CustomerEnabledProjectsWeeklyInsights  []uint64
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
@@ -1665,6 +1666,20 @@ func GetUUIdsFromStringListAsString(stringList string) []string {
 	}
 
 	return stringTokens
+}
+
+func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId uint64) bool {
+	for _, id := range configuration.CustomerEnabledProjectsWeeklyInsights {
+		if id == projectId {
+			return true
+		}
+	}
+	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
+		if uuid == loggedInUUID {
+			return true
+		}
+	}
+	return false
 }
 
 func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {

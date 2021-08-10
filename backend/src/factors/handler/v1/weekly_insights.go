@@ -86,7 +86,7 @@ func GetWeeklyInsightsHandler(c *gin.Context) (interface{}, int, string, string,
 
 	}
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentUUID) {
+	if !C.IsWeeklyInsightsWhitelisted(agentUUID, params.ProjectID) {
 		return nil, http.StatusOK, "", "", false
 	}
 	if params.InsightsType != "w" && params.InsightsType != "m" {
