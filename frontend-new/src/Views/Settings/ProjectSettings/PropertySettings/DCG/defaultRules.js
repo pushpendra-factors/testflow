@@ -6,43 +6,43 @@ const defaultRules =
                 {
                     "value": "$none",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$initial_referrer",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$initial_referrer_domain",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$gclid",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$fbclid",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$campaign",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 }
             ]
@@ -53,7 +53,7 @@ const defaultRules =
                 {
                     "value": "$none",
                     "property": "$gclid",
-                    "condition": "NOT EQUAL",
+                    "condition": "notEqual",
                     "logical_operator": "AND"
                 }
             ]
@@ -64,61 +64,61 @@ const defaultRules =
                 {
                     "value": "google",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "bing",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "adwords",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "youtube",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "paid",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "cpc",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "ppc",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "adwords",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "display",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "cpm",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 }
             ]
@@ -129,43 +129,43 @@ const defaultRules =
                 {
                     "value": "google.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "bing.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "duckduckgo.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "yahoo.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "yandex.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "baidu.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "$none",
                     "property": "$campaign",
-                    "condition": "NOT EQUAL",
+                    "condition": "notEqual",
                     "logical_operator": "AND"
                 }
             ]
@@ -176,7 +176,7 @@ const defaultRules =
                 {
                     "value": "$none",
                     "property": "$fbclid",
-                    "condition": "NOT EQUAL",
+                    "condition": "notEqual",
                     "logical_operator": "AND"
                 }
             ]
@@ -187,67 +187,67 @@ const defaultRules =
                 {
                     "value": "facebook",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "fb",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "linkedin",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "twitter",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "quora",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "pinterest",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "snapchat",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "paid",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "cpc",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "ppc",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "cpm",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 }
             ]
@@ -258,7 +258,7 @@ const defaultRules =
                 {
                     "value": "paidsocial",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 }
             ]
@@ -269,7 +269,7 @@ const defaultRules =
                 {
                     "value": "paidsocial",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 }
             ]
@@ -280,61 +280,61 @@ const defaultRules =
                 {
                     "value": "paid",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "cpc",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "ppc",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "cpm",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "facebook.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "linkedin.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "quora.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "pinterest.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "twitter.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "snapchat.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 }
             ]
@@ -345,73 +345,73 @@ const defaultRules =
                 {
                     "value": "$none",
                     "property": "$fbclid",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "paid",
                     "property": "$medium",
-                    "condition": "NOT EQUAL",
+                    "condition": "notEqual",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "cpc",
                     "property": "$medium",
-                    "condition": "NOT EQUAL",
+                    "condition": "notEqual",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "ppc",
                     "property": "$medium",
-                    "condition": "NOT EQUAL",
+                    "condition": "notEqual",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "cpm",
                     "property": "$medium",
-                    "condition": "NOT EQUAL",
+                    "condition": "notEqual",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "facebook.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "linkedin.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "quora.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "pinterest.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "twitter.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "snapchat.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "youtube.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 }
             ]
@@ -422,67 +422,67 @@ const defaultRules =
                 {
                     "value": "$none",
                     "property": "$gclid",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$fbclid",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$source",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$medium",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "$none",
                     "property": "$campaign",
-                    "condition": "EQUALS",
+                    "condition": "equals",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "google.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "AND"
                 },
                 {
                     "value": "bing.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "duckduckgo.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "yahoo.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "yandex.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 },
                 {
                     "value": "baidu.",
                     "property": "$initial_referrer_domain",
-                    "condition": "CONTAINS",
+                    "condition": "contains",
                     "logical_operator": "OR"
                 }
             ]
@@ -493,7 +493,7 @@ const defaultRules =
                     {
                         "value": "email",
                         "property": "$source",
-                        "condition": "EQUALS",
+                        "condition": "equals",
                         "logical_operator": "AND"
                     }
                 ]
@@ -504,7 +504,7 @@ const defaultRules =
                     {
                         "value": "email",
                         "property": "$medium",
-                        "condition": "EQUALS",
+                        "condition": "equals",
                         "logical_operator": "AND"
                     }
                 ]
@@ -515,7 +515,7 @@ const defaultRules =
                     {
                         "value": "affiliate",
                         "property": "$source",
-                        "condition": "EQUALS",
+                        "condition": "equals",
                         "logical_operator": "AND"
                     }
                 ]
@@ -526,7 +526,7 @@ const defaultRules =
                     {
                         "value": "affiliate",
                         "property": "$medium",
-                        "condition": "EQUALS",
+                        "condition": "equals",
                         "logical_operator": "AND"
                     }
                 ]
@@ -537,7 +537,7 @@ const defaultRules =
                 {
                     "value": "$none",
                     "property": "$initial_referrer_domain",
-                    "condition": "NOT EQUAL",
+                    "condition": "notEqual",
                     "logical_operator": "AND"
                 }
             ]
