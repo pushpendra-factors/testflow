@@ -435,6 +435,9 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
 	k := make(map[uint64]int)
 	k[399] = 100
+	k[594] = 100
+	k[559] = 100
+	k[628] = 100
 	kValue, ok := k[projectId]
 	if !ok {
 		kValue = 10
