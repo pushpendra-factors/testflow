@@ -383,7 +383,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		}
 	}
 	sort.Slice(valWithDetailsArr2, func(i, j int) bool {
-		return valWithDetailsArr2[j].ActualValues.JSDivergence > valWithDetailsArr2[i].ActualValues.JSDivergence
+		return valWithDetailsArr2[j].ActualValues.JSDivergence < valWithDetailsArr2[i].ActualValues.JSDivergence
 	})
 	var ActualValuearr2 []ActualMetrics
 
