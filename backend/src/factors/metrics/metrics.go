@@ -57,12 +57,9 @@ const (
 	BytesTableSizeUserProperties   = "table_user_properties_size"
 	BytesTableSizeUsers            = "table_users_size"
 
+	IncrUserPropertiesMergeCount = "user_properties_merge_count"
 	// Metrics related to user properties merge. TODO(prateek): Can be removed later since not actively tracked.
-	IncrUserPropertiesMergeMoreThan10     = "user_properties_merge_more_than_10"
-	IncrUserPropertiesMergeCount          = "user_properties_merge_count"
-	IncrUserPropertiesMergeSanitizeCount  = "user_properties_merge_sanitize_count"
-	IncrUserPropertiesMergeMoreThan100    = "user_properties_merge_more_than_100"
-	IncrUserPropertiesMergeDataPullGt2500 = "user_properties_with_customer_id_gt_2500"
+	IncrUserPropertiesMergeSanitizeCount = "user_properties_merge_sanitize_count"
 )
 
 // Metrics types defined to be used in external calls like from data server.

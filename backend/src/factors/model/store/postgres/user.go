@@ -256,8 +256,11 @@ func (pg *Postgres) mergeNewPropertiesWithCurrentUserProperties(projectID uint64
 	return mergedPropertiesJSON, http.StatusOK
 }
 
-func mergeUserPropertiesByCustomerUserID(projectID uint64, users []model.User) (*map[string]interface{}, int) {
-	logCtx := log.WithField("project_id", projectID).WithField("users", users)
+func mergeUserPropertiesByCustomerUserID(projectID uint64, users []model.User, customerUserID string) (*map[string]interface{}, int) {
+	logCtx := log.WithField("project_id", projectID).
+		WithField("users", users).
+		WithField("customer_user_id", customerUserID)
+
 	usersLength := len(users)
 	if usersLength == 0 {
 		logCtx.Error("No users for merging the user_properties.")
@@ -344,10 +347,6 @@ func (pg *Postgres) getUsersForMergingPropertiesByCustomerUserID(projectID uint6
 	}
 
 	usersLength := len(users)
-	if usersLength > 10 {
-		metrics.Increment(metrics.IncrUserPropertiesMergeMoreThan10)
-	}
-
 	if usersLength > model.MaxUsersForPropertiesMerge {
 		// If number of users to merge are more than max allowed, merge for oldest max/2 and latest max/2.
 		users = append(users[0:model.MaxUsersForPropertiesMerge/2],
@@ -438,16 +437,7 @@ func (pg *Postgres) UpdateUserPropertiesV2(projectID uint64, id string,
 		}
 	}
 
-	usersLength := len(users)
-	if usersLength > 50 {
-		logCtx.WithField("project_id", projectID).WithField("id", id).WithField("user_count", usersLength).Info("More than 50 users on user_properties merge.")
-	}
-
-	if usersLength > 100 {
-		metrics.Increment(metrics.IncrUserPropertiesMergeMoreThan100)
-	}
-
-	mergedByCustomerUserIDMap, errCode := mergeUserPropertiesByCustomerUserID(projectID, users)
+	mergedByCustomerUserIDMap, errCode := mergeUserPropertiesByCustomerUserID(projectID, users, user.CustomerUserId)
 	if errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}
@@ -648,9 +638,11 @@ func (pg *Postgres) GetSelectedUsersByCustomerUserID(projectID uint64, customerU
 		return nil, http.StatusInternalServerError
 	}
 
-	if len(ids) > 2500 {
-		log.WithField("project_id", projectID).WithField("customer_user_id", customerUserID).Info("No.of users with same customer user_id is greater than 2500.")
-		metrics.Increment(metrics.IncrUserPropertiesMergeDataPullGt2500)
+	pulledUsersCount := len(ids)
+	if pulledUsersCount > 10 {
+		// Log based metric has been created using this log entry.
+		logCtx.WithField("UsersCount", pulledUsersCount).
+			Info("No.of users with same customer_user_id has exceeded 10.")
 	}
 
 	var userIDs []string

@@ -481,6 +481,7 @@ func InitConf(c *Configuration) {
 		return
 	}
 
+	log.SetFormatter(&log.JSONFormatter{})
 	if c == nil {
 		log.Fatal("Invalid configuration.")
 	}
@@ -490,6 +491,7 @@ func InitConf(c *Configuration) {
 			Fatal("Environment not provided on config intialization.")
 	}
 
+	log.WithField("config", c).Info("Configuration Initialized.")
 	configuration = c
 }
 
