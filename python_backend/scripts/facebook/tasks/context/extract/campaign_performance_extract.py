@@ -7,27 +7,29 @@ from scripts.facebook.tasks.context.extract.base_report_extract import BaseRepor
 
 class CampaignPerformanceReportExtract(BaseExtractContext):
     NAME = CAMPAIGN_INSIGHTS
-    FIELDS = ["account_name", "account_id", "account_currency", "ad_id", "ad_name", "adset_name", "campaign_name",
-              "adset_id", "campaign_id", "actions", "action_values", "date_start", "date_stop"]
-    SEGMENTS = ["publisher_platform"]
-    METRICS = ["clicks", "cost_per_conversion", "cost_per_ad_click", "cpc", "cpm", "cpp", "ctr",
+    KEY_FIELDS = ["campaign_id"] 
+    FIELDS = ["account_name", "account_id", "account_currency", "campaign_name",
+              "date_start", "date_stop"]
+    METRICS_1 = ["clicks", "cost_per_conversion", "cost_per_ad_click", "cpc", "cpm", "cpp", "ctr",
                "frequency", "impressions", "inline_post_engagement", "social_spend", "spend",
-               "inline_link_clicks", "unique_clicks", "reach",
-               "video_p50_watched_actions", "video_p25_watched_actions", "video_30_sec_watched_actions",
+               "inline_link_clicks", "unique_clicks", "reach"]
+    METRICS_2 = ["video_p50_watched_actions", "video_p25_watched_actions", "video_30_sec_watched_actions",
                "video_p100_watched_actions", "video_p75_watched_actions"]
     LEVEL_BREAKDOWN = "campaign"
     UNFORMATTED_URL = 'https://graph.facebook.com/v9.0/{}/insights?' \
-                    'action_breakdowns=action_type&&time_range={}&&fields={}&&access_token={}&&level={' \
+                    'time_range={}&&fields={}&&access_token={}&&level={' \
                     '}&&filtering=[{{\'field\':\'impressions\',\'operator\':\'GREATER_THAN\',\'value\':0}}]&&limit=1000'
 
-    # fields + metrics.
-    def get_fields(self):
-        return list(itertools.chain(self.FIELDS, self.METRICS))
+    # In place merge of record.
+    def merge_records_of_metrics1_and_2(self, records_with_metrics1, records_with_metrics2):
+        id_to_records2 = self.get_map_of_id_to_record(records_with_metrics2)
+        for record in records_with_metrics1:
+            if record["campaign_id"] in id_to_records2:
+                record.update(id_to_records2[record["campaign_id"]])
+        return records_with_metrics1
 
-    def get_url(self):
-        curr_timestamp_in_string = TimeUtil.get_string_of_specific_format_from_timestamp(self.curr_timestamp,
-                                                                                         '%Y-%m-%d')
-        time_range = {'since': curr_timestamp_in_string, 'until': curr_timestamp_in_string}
-        url_ = self.UNFORMATTED_URL.format(self.customer_account_id, time_range, self.get_fields(),
-                                           self.int_facebook_access_token, self.LEVEL_BREAKDOWN)
-        return url_
+    def get_map_of_id_to_record(self, records):
+        result_records = {}
+        for record in records:
+            result_records[record["campaign_id"]] = record
+        return result_records

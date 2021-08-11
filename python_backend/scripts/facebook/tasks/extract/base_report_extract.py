@@ -31,7 +31,6 @@ class BaseReportExtract(BaseExtract):
                 task_context.reset_total_number_of_records()
                 start_time = datetime.now()
 
-                task_context.add_source_attributes()
                 read_records_status = task_context.read_records()
                 if read_records_status != "success":
                     return
