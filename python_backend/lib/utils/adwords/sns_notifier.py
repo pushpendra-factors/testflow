@@ -17,7 +17,7 @@ class SnsNotifier:
             return
 
         sns_url = "https://fjnvg9a8wi.execute-api.us-east-1.amazonaws.com/v1/notify"
-        payload = {"env": env, "message": message, "source": source, "name": name}
+        payload = {"env": env, "source": source, "name": name, "message": message}
         response = requests.post(sns_url, json=payload)
         if not response.ok:
             log.error("Failed to notify through sns.")

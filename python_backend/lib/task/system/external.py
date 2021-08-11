@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 import requests
+import time
 
 from .base import BaseSystem
 from ...utils.json import JsonUtil
@@ -19,7 +20,7 @@ class ExternalSystem(BaseSystem):
         records, next_page_metadata, result_response = self.get_paginated_from_source(self.system_attributes["url"])
         total_requests += 1
         if not result_response.ok:
-            return "", result_response
+            return "", result_response, 1
         result_records.extend(records)
 
         while next_page_metadata["exists"]:
@@ -50,7 +51,7 @@ class ExternalSystem(BaseSystem):
         return
 
     def get_paginated_from_source(self, url):
-        result_response = requests.get(url)
+        result_response = self.handle_request_with_retries(url)
         if not result_response.ok:
             return [], {"exists": False, "link": ""}, result_response
         if "paging" in result_response.json() and "next" in result_response.json()["paging"]:
@@ -70,3 +71,13 @@ class ExternalSystem(BaseSystem):
             'platform': 'facebook'
         }
         return payload
+
+    def handle_request_with_retries(self, url):
+        for retry in range(3):
+            r = requests.get(url)
+            if r.status_code == 500:
+                err_json = r.json()['error']
+                if err_json['code'] == 1 and 'error_subcode' in err_json and err_json['error_subcode'] == 99:
+                    time.sleep(2)
+                    continue
+            return r

@@ -82,12 +82,12 @@ class MetricsAggregator:
     @classmethod
     def publish_task_stats(cls):
         if cls.type_of_run == "extract_and_load_workflow":
-            cls.extract_stats.publish()
-            cls.load_stats.publish()
+            cls.extract_stats.publish("extract")
+            cls.load_stats.publish("load")
         elif cls.type_of_run == "extract_workflow":
-            cls.extract_stats.publish()
+            cls.extract_stats.publish("extract")
         else:
-            cls.load_stats.publish()
+            cls.load_stats.publish("load")
 
     @classmethod
     def publish_job_stats(cls):

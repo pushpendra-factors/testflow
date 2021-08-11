@@ -10,12 +10,12 @@ class SnsNotifier:
         self.env = env
         self.source = source
 
-    def notify(self, message):
+    def notify(self, message, name):
         if self.env != "production":
             log.warning("Skipped notification for env %s payload %s", self.env, str(message))
             return
 
-        payload = {"env": self.env, "message": message, "source": self.source}
+        payload = {"env": self.env, "source": self.source, "name": name, "message": message}
         response = requests.post(self.SNS_URL, json=payload)
         if not response.ok:
             log.error("Failed to notify through sns.")
