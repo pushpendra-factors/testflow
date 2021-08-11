@@ -9,20 +9,21 @@ import {
 import PageSuspenseLoader from "./components/SuspenseLoaders/PageSuspenseLoader";
 import * as Sentry from "@sentry/react";
 import LogRocket from "logrocket";
-import retryDynamicImport from 'Utils/dynamicImport';
+import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
-import {ErrorBoundary} from 'react-error-boundary';
+import {ErrorBoundary} from 'react-error-boundary'; 
 
-const Login = lazy(()=>retryDynamicImport(() => import("./Views/Pages/Login")));
-const ForgotPassword = lazy(()=>retryDynamicImport(() => import("./Views/Pages/ForgotPassword")));
-const ResetPassword = lazy(()=>retryDynamicImport(() => import("./Views/Pages/ResetPassword")));
-const SignUp = lazy(()=>retryDynamicImport(() => import("./Views/Pages/SignUp")));
-const Activate = lazy(()=>retryDynamicImport(() => import("./Views/Pages/Activate"))); 
-const Templates = lazy(()=>retryDynamicImport(() => import("./Views/CoreQuery/Templates/ResultsPage")));
-// const AppLayout = lazy(()=>retryDynamicImport(() => import("./Views/AppLayout")));
-// const FactorsInsights = lazy(()=>retryDynamicImport(() => import("./Views/Factors/FactorsInsights")));
-import AppLayout from "./Views/AppLayout"; 
-import FactorsInsights from "./Views/Factors/FactorsInsights";
+const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
+const ForgotPassword = lazyWithRetry(() => import("./Views/Pages/ForgotPassword"));
+const ResetPassword = lazyWithRetry(() => import("./Views/Pages/ResetPassword"));
+const SignUp = lazyWithRetry(() => import("./Views/Pages/SignUp"));
+const Activate = lazyWithRetry(() => import("./Views/Pages/Activate")); 
+const Templates = lazyWithRetry(() => import("./Views/CoreQuery/Templates/ResultsPage"));
+const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
+const FactorsInsights = lazyWithRetry(() => import("./Views/Factors/FactorsInsights"));
+
+// import AppLayout from "./Views/AppLayout"; 
+// import FactorsInsights from "./Views/Factors/FactorsInsights";
 
 
 

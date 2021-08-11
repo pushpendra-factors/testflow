@@ -16,18 +16,18 @@ import { fetchQueries, fetchSmartPropertyRules } from "../../reducers/coreQuery/
 import { getUserProperties, getEventProperties, fetchEventNames } from "../../reducers/coreQuery/middleware";
 import { fetchDashboards } from "../../reducers/dashboard/services";
 import PageSuspenseLoader from "../../components/SuspenseLoaders/PageSuspenseLoader";
-import retryDynamicImport from 'Utils/dynamicImport';
+import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
 import {fetchWeeklyIngishtsMetaData} from 'Reducers/insights';
 
-// const CoreQuery = lazy(()=>retryDynamicImport(() => import("../CoreQuery")));
-// const Dashboard = lazy(()=>retryDynamicImport(() => import("../Dashboard")));
-// const Factors = lazy(()=>retryDynamicImport(() => import("../Factors")));
+const CoreQuery = lazyWithRetry(() => import("../CoreQuery"));
+const Dashboard = lazyWithRetry(() => import("../Dashboard"));
+const Factors = lazyWithRetry(() => import("../Factors"));
 
-import CoreQuery from "../CoreQuery";
-import Dashboard from "../Dashboard";
-import Factors from "../Factors";
+// import CoreQuery from "../CoreQuery";
+// import Dashboard from "../Dashboard";
+// import Factors from "../Factors";
 
 function AppLayout({ fetchProjects, 
   fetchEventNames,
