@@ -282,7 +282,10 @@ func getSmartEventMetaData(queryStmnt string, queryParams []interface{}) (map[st
 			smartEventMetaData[smartEventID]["prev_timestamp"] = *prevTimestamp
 		}
 
-		smartEventMetaData[smartEventID]["curr_value"] = *currValue
+		if currValue != nil {
+			smartEventMetaData[smartEventID]["curr_value"] = *currValue
+		}
+
 		if prevValue != nil {
 			smartEventMetaData[smartEventID]["prev_value"] = *prevValue
 		}
@@ -347,6 +350,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	logCtx := log.WithFields(log.Fields{"from": *from, "to": *to, "event_name": eventName.Name, "event_name_id": eventName.ID})
 	totalCount := 0
 	validSmartEvents := 0
 	invalidSmartEvents := 0
@@ -364,13 +368,15 @@ func main() {
 		if valid {
 			validSmartEvents++
 			validSmartEventsID[eventID] = true
+			logCtx.WithFields(log.Fields{"event_id": eventID}).Info("Valid smart event.")
 		} else {
 			invalidSmartEvents++
 			invalidSmartEventsID[eventID] = true
+			logCtx.WithFields(log.Fields{"event_id": eventID}).Info("Invalid smart event.")
 		}
 		totalCount++
 	}
 
-	log.WithFields(log.Fields{"total_count": totalCount, "valid_smart_events_count": validSmartEvents, "invalid_smart_events_count": invalidSmartEvents,
+	logCtx.WithFields(log.Fields{"total_count": totalCount, "valid_smart_events_count": validSmartEvents, "invalid_smart_events_count": invalidSmartEvents,
 		"valid_smart_events_id": validSmartEventsID, "invalid_smart_events_id": invalidSmartEventsID}).Info("Completed validations.")
 }
