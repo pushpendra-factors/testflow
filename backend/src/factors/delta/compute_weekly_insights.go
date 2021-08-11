@@ -64,11 +64,14 @@ type BaseTargetMetrics struct {
 }
 
 var BlackListedKeys = map[string]bool{
-	"$day_of_week":         true,
-	"$page_raw_url":        true,
-	"$initial_page_domain": true,
-	"$latest_page_domain":  true,
-	"$timestamp":           true,
+	"$day_of_week":          true,
+	"$page_raw_url":         true,
+	"$initial_page_domain":  true,
+	"$latest_page_domain":   true,
+	"$timestamp":            true,
+	"$initial_page_raw_url": true,
+	"$gclid":                true,
+	"$hubspot_contact_hs_calculated_form_submissions": true,
 }
 var numberOfRecordsFromGbp int = 5 // number of records to be fetched from gbp
 var increasedRecords int
