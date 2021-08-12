@@ -305,6 +305,9 @@ func main() {
 	from := flag.Int64("from", 0, "Project id.")
 	to := flag.Int64("to", 0, "Project id.")
 	eventNameID := flag.String("event_name_id", "", "Event name id.")
+	wetRun := flag.Bool("wet_run", false, "Wet run")
+	batchSize := flag.Uint("batch_size", 1000, "Batch size for deleting smart events.")
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
 
@@ -319,6 +322,7 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		SentryDSN: *sentryDSN,
 	}
 
 	C.InitConf(config)
@@ -329,11 +333,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	if *from < 1 || *to < 1 {
+		log.Panic("Invalid start and end timestamp")
+	}
+
+	if *wetRun {
+		log.Info("Wet run enabled.")
+	}
+
 	eventName, status := store.GetStore().GetSmartEventFilterEventNameByID(*projectID, *eventNameID, false)
 	if status != http.StatusFound {
 		log.Error("Failed to get smart event")
 		os.Exit(1)
 	}
+
 	filterExp, err := model.GetDecodedSmartEventFilterExp(eventName.FilterExpr)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode smart event filter")
@@ -354,8 +367,8 @@ func main() {
 	totalCount := 0
 	validSmartEvents := 0
 	invalidSmartEvents := 0
-	validSmartEventsID := map[string]bool{}
-	invalidSmartEventsID := map[string]bool{}
+	validSmartEventIDs := map[string]bool{}
+	invalidSmartEventIDs := map[string]bool{}
 	for eventID := range smartEventMetaData {
 		currentProperties := map[string]interface{}{
 			propertyName: smartEventMetaData[eventID]["curr_value"],
@@ -367,16 +380,47 @@ func main() {
 		valid := model.CRMFilterEvaluator(*projectID, &currentProperties, &prevProperties, filterExp, model.CompareStateBoth)
 		if valid {
 			validSmartEvents++
-			validSmartEventsID[eventID] = true
+			validSmartEventIDs[eventID] = true
 			logCtx.WithFields(log.Fields{"event_id": eventID}).Info("Valid smart event.")
 		} else {
 			invalidSmartEvents++
-			invalidSmartEventsID[eventID] = true
+			invalidSmartEventIDs[eventID] = true
 			logCtx.WithFields(log.Fields{"event_id": eventID}).Info("Invalid smart event.")
 		}
 		totalCount++
 	}
 
 	logCtx.WithFields(log.Fields{"total_count": totalCount, "valid_smart_events_count": validSmartEvents, "invalid_smart_events_count": invalidSmartEvents,
-		"valid_smart_events_id": validSmartEventsID, "invalid_smart_events_id": invalidSmartEventsID}).Info("Completed validations.")
+		"valid_smart_events_id": validSmartEventIDs, "invalid_smart_events_id": invalidSmartEventIDs}).Info("Completed validations.")
+	if *wetRun {
+		logCtx.Info("Starting wet run.")
+		eventIDs := []string{}
+		for eventID := range invalidSmartEventIDs {
+			eventIDs = append(eventIDs, eventID)
+		}
+
+		status := deleteSmartEventsByIDs(*projectID, *eventNameID, eventIDs, int(*batchSize))
+		if status != http.StatusAccepted {
+			logCtx.Error("Failed to deleteSmartEventsByIDs.")
+		} else {
+			logCtx.Info("Successfully deleted smart events.")
+		}
+
+		logCtx.Info("Completed wet run.")
+	}
+
+}
+
+func deleteSmartEventsByIDs(projectID uint64, eventNameID string, IDs []string, batchSize int) int {
+	if eventNameID == "" || len(IDs) < 1 || projectID == 0 {
+		log.WithFields(log.Fields{"project_id": projectID, "event_name_id": eventNameID}).Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	status := store.GetStore().DeleteEventsByIDsInBatchForJob(projectID, eventNameID, IDs, batchSize)
+	if status != http.StatusAccepted {
+		log.WithFields(log.Fields{"project_id": projectID, "event_name_id": eventNameID}).Error("Failed to delete smart events.")
+	}
+
+	return status
 }
