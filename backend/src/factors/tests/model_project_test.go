@@ -35,15 +35,36 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	interactionSettings := model.InteractionSettings{}
 	interactionSettings.UTMMappings = make(map[string][]string)
 	interactionSettings.UTMMappings["Hello"] = []string{"World"}
-	val, _ := U.EncodeStructTypeToPostgresJsonb(interactionSettings)
+	val1, _ := U.EncodeStructTypeToPostgresJsonb(interactionSettings)
+
+	salesforceTouchPoint := model.SalesforceTouchPoints{}
+	salesforceTouchPoint.TouchPointRules = make(map[string][]string)
+	salesforceTouchPoint.TouchPointRules["Sales"] = []string{"Force"}
+	val2, _ := U.EncodeStructTypeToPostgresJsonb(salesforceTouchPoint)
+
+	hubspotTouchPoint := model.HubspotTouchPoints{}
+	hubspotTouchPoint.TouchPointRules = make(map[string][]string)
+	hubspotTouchPoint.TouchPointRules["Hub"] = []string{"Spot"}
+	val3, _ := U.EncodeStructTypeToPostgresJsonb(hubspotTouchPoint)
+
 	errCode = store.GetStore().UpdateProject(project.ID,
-		&model.Project{InteractionSettings: *val})
+		&model.Project{InteractionSettings: *val1, SalesforceTouchPoints: *val2, HubspotTouchPoints: *val3})
+
 	assert.Equal(t, errCode, 0)
 	getProject, errCode := store.GetStore().GetProject(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
-	valUpdated := model.InteractionSettings{}
-	_ = U.DecodePostgresJsonbToStructType(&getProject.InteractionSettings, &valUpdated)
-	assert.Equal(t, valUpdated.UTMMappings["Hello"], []string{"World"})
+
+	valUpdated1 := model.InteractionSettings{}
+	_ = U.DecodePostgresJsonbToStructType(&getProject.InteractionSettings, &valUpdated1)
+	assert.Equal(t, valUpdated1.UTMMappings["Hello"], []string{"World"})
+
+	valUpdated2 := model.SalesforceTouchPoints{}
+	_ = U.DecodePostgresJsonbToStructType(&getProject.SalesforceTouchPoints, &valUpdated2)
+	assert.Equal(t, valUpdated2.TouchPointRules["Sales"], []string{"Force"})
+
+	valUpdated3 := model.HubspotTouchPoints{}
+	_ = U.DecodePostgresJsonbToStructType(&getProject.HubspotTouchPoints, &valUpdated3)
+	assert.Equal(t, valUpdated3.TouchPointRules["Hub"], []string{"Spot"})
 
 	// Test token is overwritten and cannot be provided.
 	previousProjectId := project.ID

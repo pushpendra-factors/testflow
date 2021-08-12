@@ -410,6 +410,8 @@ CREATE TABLE IF NOT EXISTS projects (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     interaction_settings json,
+    salesforce_touch_points json,
+    hubspot_touch_points json,
     jobs_metadata json,
     channel_group_rules json,
     PRIMARY KEY (id),
