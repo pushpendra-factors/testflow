@@ -3112,7 +3112,7 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 	customerIDUser3 := "customerIDUser3"
 	commonUserProperty := make(map[string]interface{})
 	commonUserProperty[U.UP_BROWSER] = "Chrome"
-	commonUserProperty[U.UP_JOIN_TIME] = "1622636726"
+	commonUserProperty[U.UP_JOIN_TIME] = "1622636726" // Wednesday, 2 June 2021 17:55:26 GMT+05:30
 	commonUserPropertyBytes, _ := json.Marshal(commonUserProperty)
 
 	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
@@ -3141,7 +3141,7 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID6_3)
 
-	startTimestamp := int64(1622636726)
+	startTimestamp := int64(1622636726) // Wednesday, 2 June 2021 17:55:26 GMT+05:30
 	stepTimestamp := startTimestamp
 
 	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 

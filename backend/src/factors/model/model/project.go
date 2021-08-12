@@ -19,16 +19,18 @@ type Project struct {
 	// An index created on token.
 	Token string `gorm:"size:32" json:"token"`
 	// An index created on private_token.
-	PrivateToken        string          `gorm:"size:32" json:"private_token"`
-	CreatedAt           time.Time       `json:"created_at"`
-	UpdatedAt           time.Time       `json:"updated_at"`
-	ProjectURI          string          `json:"project_uri"`
-	TimeFormat          string          `json:"time_format"`
-	DateFormat          string          `json:"date_format"`
-	TimeZone            string          `json:"time_zone"`
-	InteractionSettings postgres.Jsonb  `json:"interaction_settings"`
-	JobsMetadata        *postgres.Jsonb `json:"jobs_metadata"`
-	ChannelGroupRules   postgres.Jsonb  `json:"channel_group_rules"`
+	PrivateToken          string          `gorm:"size:32" json:"private_token"`
+	CreatedAt             time.Time       `json:"created_at"`
+	UpdatedAt             time.Time       `json:"updated_at"`
+	ProjectURI            string          `json:"project_uri"`
+	TimeFormat            string          `json:"time_format"`
+	DateFormat            string          `json:"date_format"`
+	TimeZone              string          `json:"time_zone"`
+	InteractionSettings   postgres.Jsonb  `json:"interaction_settings"`
+	SalesforceTouchPoints postgres.Jsonb  `json:"salesforce_touch_points"`
+	HubspotTouchPoints    postgres.Jsonb  `json:"hubspot_touch_points"`
+	JobsMetadata          *postgres.Jsonb `json:"jobs_metadata"`
+	ChannelGroupRules     postgres.Jsonb  `json:"channel_group_rules"`
 }
 
 const (
@@ -40,6 +42,32 @@ const DefaultProjectName = "My Project"
 
 type InteractionSettings struct {
 	UTMMappings map[string][]string `json:"utm_mapping"`
+}
+
+type SalesforceTouchPoints struct {
+	TouchPointRules map[string][]string `json:"touch_point_rules"`
+}
+
+type HubspotTouchPoints struct {
+	TouchPointRules map[string][]string `json:"touch_point_rules"`
+}
+
+// DefaultHubspotTouchPointsRules returns default query params and order (utm then qp) for various event properties.
+func DefaultHubspotTouchPointsRules() HubspotTouchPoints {
+
+	rules := HubspotTouchPoints{}
+	// Todo (Anil): Add default rules
+	rules.TouchPointRules = make(map[string][]string)
+	return rules
+}
+
+// DefaultSalesforceTouchPointsRules returns default query params and order (utm then qp) for various event properties.
+func DefaultSalesforceTouchPointsRules() SalesforceTouchPoints {
+
+	rules := SalesforceTouchPoints{}
+	// Todo (Anil): Add default rules
+	rules.TouchPointRules = make(map[string][]string)
+	return rules
 }
 
 // DefaultMarketingPropertiesMap returns default query params and order (utm then qp) for various event properties.
