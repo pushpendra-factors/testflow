@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	H "factors/handler/helpers"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -40,16 +41,40 @@ func ExecuteTemplateQueryHandler(c *gin.Context) (interface{}, int, string, stri
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
 	}
 	query.Type = int(templateType)
+	emptyThresholds := model.RequestThresholds{}
+	if query.Thresholds == emptyThresholds {
+		query.Thresholds = model.DefaultThresholds
+	}
+	query.From, query.To, query.PrevFrom, query.PrevTo, err = model.GetInputOrDefaultTimestampsForTemplateQueryWithDays(query, 7)
+	if err != nil {
+		logCtx.WithError(err).Error("Query failed. Getting date ranges failed.")
+		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching date ranges from timestamps", true
+	}
 
+	var cacheResult model.TemplateResponse
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &query, cacheResult, false, reqID)
+	if shouldReturn {
+		if resCode == http.StatusOK {
+			return gin.H{"result": resMsg}, resCode, "", "", false
+		}
+		logCtx.Error("Query failed. Error Processing/Fetching data from Query cache")
+		return nil, resCode, PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
+	}
+
+	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
+	model.SetQueryCachePlaceholder(projectId, &query)
+	H.SleepIfHeaderSet(c)
 	// Run Channel Query
 	queryResult, errCode := store.GetStore().RunTemplateQuery(projectId, query, reqID)
 	if errCode != http.StatusOK {
+		model.DeleteQueryCacheKey(projectId, &query)
 		logCtx.Error("Failed to process query from DB")
 		if errCode == http.StatusPartialContent {
 			return queryResult, errCode, PROCESSING_FAILED, "Failed to process query from DB", true
 		}
 		return nil, errCode, PROCESSING_FAILED, "Failed to process query from DB", true
 	}
+	model.SetQueryCacheResult(projectId, &query, queryResult)
 	return gin.H{"result": queryResult}, http.StatusOK, "", "", false
 }
 func GetTemplateConfigHandler(c *gin.Context) (interface{}, int, string, string, bool) {
