@@ -46,9 +46,11 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 		},
 	}
 	insightGranularity := configs["insightGranularity"].(string)
+	skipWpi := configs["skipWpi"].(bool)
 	log.Info("Reading delta query.")
 	computedQueries := make(map[uint64]bool)
 	dashboardUnits, _ := store.GetStore().GetDashboardUnitsForProjectID(projectId)
+	isDownloaded = false
 	for _, dashboardUnit := range dashboardUnits {
 		if !(whitelistedDashboardUnits["*"] == true || whitelistedDashboardUnits[fmt.Sprintf("%v", dashboardUnit.ID)] == true) {
 			continue
@@ -64,7 +66,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 		// TODO: This was changed from set to map
 		unionOfFeatures := make(map[string]map[string]bool)
 		log.Info("1st pass: Scanning events file to get top-k base features for each period.")
-		err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep)
+		err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep, skipWpi)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 1"))
 			status["error-wpi-pass1-"+queryIdString] = err.Error()
@@ -72,7 +74,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 		}
 		isDownloaded = true
 		log.Info("2nd pass: Scanning events file again to compute counts for union of features.")
-		err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep)
+		err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep, skipWpi)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 2"))
 			status["error-wpi-pass2-"+queryIdString] = err.Error()
@@ -156,11 +158,32 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 	return nil
 }
 
-func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool) error {
+func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, skipWpi bool) error {
 	for _, periodCode := range periodCodes {
-		err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
-		if err != nil {
-			return err
+		if skipWpi == false {
+			err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
+			if err != nil {
+				return err
+			}
+		} else {
+			dateString := U.GetDateOnlyFromTimestamp(periodCode.From)
+			if deltaQuery.Id == 0 {
+				deltaQuery.Id = multiStepQuery.Id
+			}
+			path, name := (*cloudManager).GetInsightsWpiFilePathAndName(projectId, dateString, uint64(deltaQuery.Id), k)
+			reader, err := (*cloudManager).Get(path, name)
+			if err != nil {
+				log.WithFields(log.Fields{"err": err, "filePath": path,
+					"eventFileName": name}).Error("Failed to write to fetch from cloud path")
+				return err
+			}
+			efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, uint64(deltaQuery.Id), k)
+			err = diskManager.Create(efTmpPath, efTmpName, reader)
+			if err != nil {
+				log.WithFields(log.Fields{"err": err, "filePath": efTmpPath,
+					"eventFileName": efTmpName}).Error("Failed to write to temp path")
+				return err
+			}
 		}
 	}
 	return nil
