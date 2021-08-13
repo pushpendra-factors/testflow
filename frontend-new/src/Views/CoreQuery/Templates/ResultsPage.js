@@ -5,6 +5,7 @@ import { useHistory } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
 import { fetchTemplateConfig, fetchTemplateInsights } from 'Reducers/templates';
 import { connect } from 'react-redux';
+import FaDatepicker from 'Components/FaDatepicker';
 import moment from 'moment';
 
 const { TabPane } = Tabs;
@@ -21,6 +22,16 @@ function TemplateResults({
   const [subInsightData, setSubInsightData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [suffixSymbol, setSuffixSymbol] = useState('%');
+  const [selectedTab, setSelectedTab] = useState(null);
+
+  const [dateRange1, setDateRange1] = useState({
+    t1: moment().subtract(2, 'weeks').startOf('week'),
+    t2: moment().subtract(2, 'weeks').endOf('week'),
+  });
+  const [dateRange2, setDateRange2] = useState({
+    t1: moment().subtract(1, 'weeks').startOf('week'),
+    t2: moment().subtract(1, 'weeks').endOf('week'),
+  });
 
   const addShadowToHeader = useCallback(() => {
     const scrollTop =
@@ -106,42 +117,42 @@ function TemplateResults({
         subInsightData?.map((item, j) => {
           let isIncreased = item?.percentage_change >= 0;
           return (
-            <div className={`py-3 px-6  flex items-center justify-between`}> 
-                <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3 capitalize'}>{item?.name}</Text>
-                <div className={'flex items-center'}>
+            <div className={`py-3 px-6  flex items-center justify-between`}>
+              <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3 capitalize'}>{item?.name}</Text>
+              <div className={'flex items-center'}>
 
-                  {item.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> : <>
-                    <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={18} />
-                    <Text type={'title'} level={7} weight={'bold'} color={isIncreased ? 'green' : 'red'} extraClass={'m-0 ml-1'}><Number number={item?.percentage_change} suffix={'%'} /></Text>
-                  </>}
+                {item.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> : <>
+                  <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={18} />
+                  <Text type={'title'} level={7} weight={'bold'} color={isIncreased ? 'green' : 'red'} extraClass={'m-0 ml-1'}><Number number={item?.percentage_change} suffix={'%'} /></Text>
+                </>}
 
-                  <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>{`(`}<Number suffix={suffixSymbol} number={roundNumb(item?.previous_value)} shortHand={true} />{` -> `}<Number suffix={suffixSymbol} number={roundNumb(item?.last_value)} shortHand={true} />{`)`}</Text>
+                <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>{`(`}<Number suffix={suffixSymbol} number={roundNumb(item?.previous_value)} shortHand={true} />{` -> `}<Number suffix={suffixSymbol} number={roundNumb(item?.last_value)} shortHand={true} />{`)`}</Text>
 
-                  {item?.root_cause_metrics && <div className={'flex items-center '}>
-                    {/* <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>Due to</Text> */}
-                    <Popover placement="top" content={
-                      item?.root_cause_metrics?.map((subitem) => {
-                        let isIncreased = subitem?.percentage_change >= 0;
-                        return (
-                          <div className={'flex items-center'}>
-                            <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}>
-                              {metricDisplayName(subitem?.metric)}
-                            </Text>
-                            <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 mx-1'}>
-                              {`${isIncreased ? 'increased' : 'decreased'}`}
-                            </Text>
-                            {subitem.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> :
-                              <Number number={subitem?.percentage_change} suffix={'%'} />}
-                          </div>
-                        )
-                      })
-                    } trigger="hover">
-                      <Button type={'text'} icon={<SVG name={'infoCircle'} size={16} />} className={'ml-1'} />
-                    </Popover>
-                  </div>
-                  }
+                {item?.root_cause_metrics && <div className={'flex items-center '}>
+                  {/* <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>Due to</Text> */}
+                  <Popover placement="top" content={
+                    item?.root_cause_metrics?.map((subitem) => {
+                      let isIncreased = subitem?.percentage_change >= 0;
+                      return (
+                        <div className={'flex items-center'}>
+                          <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}>
+                            {metricDisplayName(subitem?.metric)}
+                          </Text>
+                          <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 mx-1'}>
+                            {`${isIncreased ? 'increased' : 'decreased'}`}
+                          </Text>
+                          {subitem.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> :
+                            <Number number={subitem?.percentage_change} suffix={'%'} />}
+                        </div>
+                      )
+                    })
+                  } trigger="hover">
+                    <Button type={'text'} icon={<SVG name={'infoCircle'} size={16} />} className={'ml-1'} />
+                  </Popover>
                 </div>
-            </div> 
+                }
+              </div>
+            </div>
           )
         })
       )
@@ -192,23 +203,28 @@ function TemplateResults({
   const fetchInsights = (key) => {
     setLoading(true);
     const queryData = {
-      "metric": key,
-      "from": moment().subtract(1, 'weeks').startOf('week').unix(),
-      "to": moment().subtract(1, 'weeks').endOf('week').unix(),
-      // "from": 1621708200,
-      // "to": 1622312999
+      "metric": key, 
+      'prev_from': dateRange1 ? moment(dateRange1.t1).unix() : moment().subtract(2, 'weeks').startOf('week').unix(),
+      'prev_to': dateRange1 ? moment(dateRange1.t2).unix() : moment().subtract(2, 'weeks').endOf('week').unix(),
+      "from": dateRange2 ? moment(dateRange2.t1).unix() : moment().subtract(1, 'weeks').startOf('week').unix(),
+      "to": dateRange2 ? moment(dateRange2.t2).unix() : moment().subtract(1, 'weeks').endOf('week').unix(),
+      thresholds: {
+        percentage_change: 10,
+        absolute_change: 0,
+      },
+      time_zone: 'Asia/Kolkata' 
     }
     fetchTemplateInsights(activeProject.id, queryData).then(() => {
       setLoading(false);
     }).catch((e) => {
+      setLoading(false);
       console.log('fetchTemplateInsights error', e)
       message.error(`Sorry! couldn’t fetch insights for ${key}`)
     });
   }
   useEffect(() => {
-    if (templateConfig && configMatrix) {
-      // console.log('configMatrix',configMatrix);
-      fetchInsights(configMatrix[0].metric);
+    if (templateConfig && configMatrix) { 
+      setSelectedTab(configMatrix[0].metric); 
     }
     else {
       routeChange('/analyse')
@@ -218,7 +234,8 @@ function TemplateResults({
   const onTabChange = (key) => {
     setSubInsightData(null)
     setSelectedInsight(null);
-    fetchInsights(key);
+    setSelectedTab(key);
+    // fetchInsights(key);
     if (key == 'search_impression_share' || key == 'click_through_rate' || key == 'conversion_rate') {
       setSuffixSymbol("%")
     }
@@ -227,10 +244,30 @@ function TemplateResults({
     }
   }
 
-  const PrevWeekDateString = `${moment().subtract(2, 'weeks').startOf('week').format('DD MMM YYYY')} - ${moment().subtract(2, 'weeks').endOf('week').format('DD MMM YYYY')}`;
-  const LastWeekDateString = `${moment().subtract(1, 'weeks').startOf('week').format('DD MMM YYYY')} - ${moment().subtract(1, 'weeks').endOf('week').format('DD MMM YYYY')}`;
 
+  const dateChange1 = (ranges) => {
+    let timestamps = {
+      t1: moment(ranges.startDate),
+      t2: moment(ranges.endDate),
+    }
+    setDateRange1(timestamps);
+  }
 
+  const dateChange2 = (ranges) => {
+    let timestamps = {
+      t1: moment(ranges.startDate),
+      t2: moment(ranges.endDate),
+    }
+    setDateRange2(timestamps);
+  }
+
+  useEffect(() => { 
+    if (selectedTab) {
+      fetchInsights(selectedTab);
+    }
+  }, [dateRange1, dateRange2, selectedTab]);
+
+ 
   return (<>
     <div
       id='app-header'
@@ -279,13 +316,45 @@ function TemplateResults({
         >
 
           <div className={'flex items-center'}>
-            <Tooltip placement="top" title={PrevWeekDateString}> 
+            {/* <Tooltip placement="top" title={PrevWeekDateString}>
               <Button><SVG name={'calendar'} size={16} extraClass={'mr-1'} />Prev. Week</Button>
             </Tooltip>
             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mx-2'}>vs</Text>
             <Tooltip placement="top" title={LastWeekDateString}>
-              <Button><SVG name={'calendar'} size={16} extraClass={'mr-1'} />Last Week</Button> 
+              <Button><SVG name={'calendar'} size={16} extraClass={'mr-1'} />Last Week</Button>
+            </Tooltip> */}
+
+
+            <Tooltip placement="top" title={"Base Timeframe"}>  
+            <div>
+              <FaDatepicker
+                customPicker
+                presetRange
+                monthPicker
+                range={{
+                  startDate: dateRange1 ? dateRange1.t1 : null,
+                  endDate: dateRange1 ? dateRange1.t2 : null,
+                }}
+                onSelect={dateChange1}
+              />
+            </div>
+            </Tooltip> 
+            <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mx-2'}>vs</Text>
+            <Tooltip placement="top" title={"Comparison Timeframe"}>  
+            <div> 
+              <FaDatepicker
+                customPicker
+                presetRange
+                monthPicker
+                range={{
+                  startDate: dateRange2 ? dateRange2.t1 : null,
+                  endDate: dateRange2 ? dateRange2.t2 : null,
+                }}
+                onSelect={dateChange2}
+              />
+            </div>
             </Tooltip>
+
           </div>
 
           {configMatrix ? <div className='mt-8'>
@@ -299,9 +368,9 @@ function TemplateResults({
 
 
 
-          {(queryResult && !loading) ?
-            <>
-              {queryResult?.breakdown_analysis?.primary_level_data ? <>
+          {(!loading) ?
+            <> 
+              {queryResult && queryResult?.breakdown_analysis?.primary_level_data ? <>
                 <div className={'my-6 w-full'}>
                   <CardInsights queryResult={queryResult} />
                 </div>
@@ -333,10 +402,8 @@ function TemplateResults({
                       </div>
                     </Col>
                   </Row>
-                </div>
-              </>
-                : <NoData />
-              }
+                </div> </>  : <NoData />
+              }  
             </>
             : <div className='mt-6 flex justify-center items-center py-10'>
               <Spin />
