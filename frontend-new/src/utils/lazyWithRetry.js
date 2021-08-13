@@ -2,7 +2,7 @@ import { lazy } from 'react';
 
 const lazyWithRetry = (componentImport) =>
   lazy(async () => {
-    console.log("lazyWithRetry", componentImport)
+    // console.log("lazyWithRetry", componentImport)
     const pageHasAlreadyBeenForceRefreshed = JSON.parse(
       window.localStorage.getItem(
         'page-has-been-force-refreshed'
