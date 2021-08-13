@@ -129,7 +129,7 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 			facebookCampaignAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(facebookCampaignAllRows[i].CampaignName), facebookCampaignAllRows[i].CampaignName, facebookCampaignAllRows[i].Name).(string)
 		}
 
-		reportType = facebookDocumentTypeAlias["ad_set_insights"] // 5
+		reportType = facebookDocumentTypeAlias["ad_set_insights"] // 6
 		facebookAdgroupIDData, facebookAdgroupAllRows, err = pg.PullFacebookMarketingData(projectID, effectiveFrom,
 			effectiveTo, facebookCustomerID, model.FacebookAdgroupID, model.FacebookAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
 		if err != nil {
@@ -147,7 +147,7 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 			facebookAdgroupAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(facebookAdgroupAllRows[i].AdgroupName), facebookAdgroupAllRows[i].AdgroupName, facebookAdgroupAllRows[i].Name).(string)
 			campID := facebookAdgroupAllRows[i].CampaignID
 			if U.IsNonEmptyKey(campID) {
-				facebookAdgroupAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(facebookAdgroupAllRows[i].CampaignName), facebookAdgroupAllRows[i].CampaignName, adwordsCampaignIDData[campID].Name).(string)
+				facebookAdgroupAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(facebookAdgroupAllRows[i].CampaignName), facebookAdgroupAllRows[i].CampaignName, facebookCampaignIDData[campID].Name).(string)
 			}
 		}
 	}
@@ -190,7 +190,7 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 			linkedinAdgroupAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(linkedinAdgroupAllRows[i].AdgroupName), linkedinAdgroupAllRows[i].AdgroupName, linkedinAdgroupAllRows[i].Name).(string)
 			campID := linkedinAdgroupAllRows[i].CampaignID
 			if U.IsNonEmptyKey(campID) {
-				linkedinAdgroupAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(linkedinAdgroupAllRows[i].CampaignName), linkedinAdgroupAllRows[i].CampaignName, adwordsCampaignIDData[campID].Name).(string)
+				linkedinAdgroupAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(linkedinAdgroupAllRows[i].CampaignName), linkedinAdgroupAllRows[i].CampaignName, linkedinCampaignIDData[campID].Name).(string)
 			}
 		}
 	}
