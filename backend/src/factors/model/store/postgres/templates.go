@@ -11,7 +11,7 @@ import (
 )
 
 func (pg *Postgres) RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int) {
-	if query.Type == model.TemplateAliasToType["sem_checklist"] {
+	if query.Type == model.TemplateAliasToType[model.SEMChecklist] {
 		templateResponse, errCode := pg.ExecuteAdwordsSEMChecklistQuery(projectID, query, reqID)
 		if errCode != http.StatusOK {
 			return model.TemplateResponse{}, errCode

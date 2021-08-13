@@ -75,7 +75,7 @@ var BlackListedKeys = map[string]bool{
 	"$gclid":                       true,
 	"$hubspot_contact_hs_calculated_form_submissions": true,
 }
-var numberOfRecordsFromGbp int = 5 // number of records to be fetched from gbp
+var numberOfRecordsFromGbp int = 2 // number of records to be fetched from gbp
 var increasedRecords int
 var decreasedRecords int
 var propertyMap map[string]bool
@@ -194,7 +194,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.Per = file.BaseAndTarget.FeatureMetrics[keys][keys2].PercentChange
 					}
 					if _, exists := file.DeltaRatio[keys][keys2]; exists {
-						temp.DeltaRatio = file.DeltaRatio[keys][keys2]
+						temp.DeltaRatio = file.DeltaRatio[keys][keys2] * temp.W1
 					}
 
 					value.ActualValues = temp
@@ -317,8 +317,8 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					if _, exists := file.Target.FeatureMetrics[keys][keys2]; exists {
 						temp.Per = file.Target.FeatureMetrics[keys][keys2].PercentChange
 					}
-					if _, exists := file.JSDivergence.Base[keys][keys2]; exists {
-						temp.JSDivergence = file.JSDivergence.Base[keys][keys2]
+					if _, exists := file.JSDivergence.Target[keys][keys2]; exists {
+						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
 					}
 					val2.ActualValues = temp
 					if insights.Goal.W1 != float64(0) {
@@ -368,8 +368,8 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					if _, exists := file.BaseAndTarget.FeatureMetrics[keys][keys2]; exists {
 						temp.Per = file.BaseAndTarget.FeatureMetrics[keys][keys2].PercentChange
 					}
-					if _, exists := file.JSDivergence.Base[keys][keys2]; exists {
-						temp.JSDivergence = file.JSDivergence.Base[keys][keys2]
+					if _, exists := file.JSDivergence.Target[keys][keys2]; exists {
+						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
 					}
 					val2.ActualValues = temp
 					if insights.Goal.W1 != float64(0) {
@@ -543,7 +543,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.Per = file.BaseAndTarget.FeatureMetrics[property][values].PercentChange
 						}
 						if _, exists := file.DeltaRatio[property][values]; exists {
-							temp.DeltaRatio = file.DeltaRatio[property][values]
+							temp.DeltaRatio = file.DeltaRatio[property][values] * temp.W1
 						}
 
 						if file.Base.FeatureMetrics[property][values].First != nil {
@@ -622,8 +622,8 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						if _, exists := file.Target.FeatureMetrics[property][values]; exists {
 							temp.Per = file.Target.FeatureMetrics[property][values].PercentChange
 						}
-						if _, exists := file.JSDivergence.Base[property][values]; exists {
-							temp.JSDivergence = file.JSDivergence.Base[property][values]
+						if _, exists := file.JSDivergence.Target[property][values]; exists {
+							temp.JSDivergence = file.JSDivergence.Target[property][values] * temp.W1
 
 						}
 						newData.ActualValues = temp
