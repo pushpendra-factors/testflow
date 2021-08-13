@@ -511,14 +511,7 @@ func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Tim
 
 func addGroupByProperties(query model.Query, EventType string, file CrossPeriodInsights, insights WeeklyInsights) []ActualMetrics {
 	ActualMetricsArr := make([]ActualMetrics, 0)
-	groupByProperties := query.GroupByProperties
-	groupByProperties = append(groupByProperties, model.QueryGroupByProperty{Entity: model.PropertyEntityUser, Property: "$campaign"})
-	groupByProperties = append(groupByProperties, model.QueryGroupByProperty{Entity: model.PropertyEntityUser, Property: "$medium"})
-	groupByProperties = append(groupByProperties, model.QueryGroupByProperty{Entity: model.PropertyEntityUser, Property: "$source"})
-	groupByProperties = append(groupByProperties, model.QueryGroupByProperty{Entity: model.PropertyEntityEvent, Property: "$campaign"})
-	groupByProperties = append(groupByProperties, model.QueryGroupByProperty{Entity: model.PropertyEntityEvent, Property: "$medium"})
-	groupByProperties = append(groupByProperties, model.QueryGroupByProperty{Entity: model.PropertyEntityEvent, Property: "$source"})
-	for _, gbp := range groupByProperties {
+	for _, gbp := range query.GroupByProperties {
 		var properties []string
 		if gbp.Entity == model.PropertyEntityUser {
 			properties = append(properties, "t#up#"+gbp.Property)
