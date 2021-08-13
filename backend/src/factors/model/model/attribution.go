@@ -410,6 +410,8 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 			sessionUTMMarketingValue.AdgroupName = v.AdgroupName
 			sessionUTMMarketingValue.Name = v.AdgroupName
 			sessionUTMMarketingValue.Channel = ChannelAdwords
+			sessionUTMMarketingValue.CampaignID = v.CampaignID
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
 			return v.AdgroupName, sessionUTMMarketingValue
 		}
 
@@ -418,6 +420,8 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 			sessionUTMMarketingValue.AdgroupName = v.AdgroupName
 			sessionUTMMarketingValue.Name = v.AdgroupName
 			sessionUTMMarketingValue.Channel = ChannelFacebook
+			sessionUTMMarketingValue.CampaignID = v.CampaignID
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
 			return v.AdgroupName, sessionUTMMarketingValue
 		}
 
@@ -426,6 +430,8 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 			sessionUTMMarketingValue.AdgroupName = v.AdgroupName
 			sessionUTMMarketingValue.Name = v.AdgroupName
 			sessionUTMMarketingValue.Channel = ChannelLinkedin
+			sessionUTMMarketingValue.CampaignID = v.CampaignID
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
 			return v.AdgroupName, sessionUTMMarketingValue
 		}
 	default:
