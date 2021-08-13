@@ -235,7 +235,7 @@ function TemplateResults({
     setSubInsightData(null)
     setSelectedInsight(null);
     setSelectedTab(key);
-    fetchInsights(key);
+    // fetchInsights(key);
     if (key == 'search_impression_share' || key == 'click_through_rate' || key == 'conversion_rate') {
       setSuffixSymbol("%")
     }
@@ -243,9 +243,6 @@ function TemplateResults({
       setSuffixSymbol("")
     }
   }
-
-  // const PrevWeekDateString = `${moment().subtract(2, 'weeks').startOf('week').format('DD MMM YYYY')} - ${moment().subtract(2, 'weeks').endOf('week').format('DD MMM YYYY')}`;
-  // const LastWeekDateString = `${moment().subtract(1, 'weeks').startOf('week').format('DD MMM YYYY')} - ${moment().subtract(1, 'weeks').endOf('week').format('DD MMM YYYY')}`;
 
 
   const dateChange1 = (ranges) => {
@@ -327,27 +324,37 @@ function TemplateResults({
               <Button><SVG name={'calendar'} size={16} extraClass={'mr-1'} />Last Week</Button>
             </Tooltip> */}
 
-            <FaDatepicker
-              customPicker
-              presetRange
-              monthPicker
-              range={{
-                startDate: dateRange1 ? dateRange1.t1 : null,
-                endDate: dateRange1 ? dateRange1.t2 : null,
-              }}
-              onSelect={dateChange1}
-            />
+
+            <Tooltip placement="top" title={"Base Timeframe"}>  
+            <div>
+              <FaDatepicker
+                customPicker
+                presetRange
+                monthPicker
+                range={{
+                  startDate: dateRange1 ? dateRange1.t1 : null,
+                  endDate: dateRange1 ? dateRange1.t2 : null,
+                }}
+                onSelect={dateChange1}
+              />
+            </div>
+            </Tooltip> 
             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mx-2'}>vs</Text>
-            <FaDatepicker
-              customPicker
-              presetRange
-              monthPicker
-              range={{
-                startDate: dateRange2 ? dateRange2.t1 : null,
-                endDate: dateRange2 ? dateRange2.t2 : null,
-              }}
-              onSelect={dateChange2}
-            />
+            <Tooltip placement="top" title={"Comparison Timeframe"}>  
+            <div> 
+              <FaDatepicker
+                customPicker
+                presetRange
+                monthPicker
+                range={{
+                  startDate: dateRange2 ? dateRange2.t1 : null,
+                  endDate: dateRange2 ? dateRange2.t2 : null,
+                }}
+                onSelect={dateChange2}
+              />
+            </div>
+            </Tooltip>
+
           </div>
 
           {configMatrix ? <div className='mt-8'>
