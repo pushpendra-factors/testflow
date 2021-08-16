@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState, useContext } from 'react';
 import { SVG, Text, FaErrorComp, FaErrorLog, Number } from 'Components/factorsComponents';
-import { Button, Tabs, Row, Col, Skeleton, Spin, message, Form, Tooltip, Popover } from 'antd';
+import { Input, Button, Tabs, Row, Col, Skeleton, Spin, message, Form, Tooltip, Popover } from 'antd';
 import { useHistory } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
 import { fetchTemplateConfig, fetchTemplateInsights } from 'Reducers/templates';
 import { connect } from 'react-redux';
 import FaDatepicker from 'Components/FaDatepicker';
 import moment from 'moment';
+import styles from './index.module.scss';
 
 const { TabPane } = Tabs;
 
@@ -23,6 +24,19 @@ function TemplateResults({
   const [loading, setLoading] = useState(false);
   const [suffixSymbol, setSuffixSymbol] = useState('%');
   const [selectedTab, setSelectedTab] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [subSearchTerm, setSubSearchTerm] = useState('');
+  const [showSearchSub, setShowSearchSub] = useState(false);
+  const [sortInsight, setSortInsight] = useState(false);
+  const [sortSubInsight, setSortSubInsight] = useState(false);
+
+  const onInputSearch = (userInput) => {
+    setSearchTerm(userInput.currentTarget.value);
+  };
+  const onSubInputSearch = (userInput) => {
+    setSubSearchTerm(userInput.currentTarget.value);
+  };
 
   const [dateRange1, setDateRange1] = useState({
     t1: moment().subtract(2, 'weeks').startOf('week'),
@@ -79,26 +93,30 @@ function TemplateResults({
 
   const InsightItem = (data) => {
     const insights = data?.queryResult?.breakdown_analysis?.primary_level_data;
-
     if (insights) {
+      insights.sort(function (a, b) {
+        return sortInsight ? (a.last_value - a.previous_value) - (b.last_value - b.previous_value) : (b.last_value - b.previous_value) - (a.last_value - a.previous_value);
+      });
       return (
         insights?.map((item, j) => {
-          let isIncreased = item?.percentage_change >= 0;
-          return (
-            <div className={`my-1 py-2 px-4 mx-2 flex items-center justify-between cursor-pointer  border-radius--sm border--thin-2--transparent ${selectedInsight == j ? 'border--thin-2--brand' : ''}`} onClick={() => showSubInsight(item.sub_level_data, j)}>
-              <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3 capitalize'}>{item?.name}</Text>
-              <div className={'flex items-end flex-col'}>
-                <div className={'flex items-center'}>
-                  {item.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> : <>
-                    <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={18} />
-                    <Text type={'title'} level={7} weight={'bold'} color={isIncreased ? 'green' : 'red'} extraClass={'m-0 ml-1'}><Number number={item?.percentage_change} suffix={'%'} /></Text>
-                  </>
-                  }
+          if (item?.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+            let isIncreased = item?.percentage_change >= 0;
+            return (
+              <div className={`my-1 py-2 px-4 mx-2 flex items-center justify-between cursor-pointer  border-radius--sm border--thin-2--transparent ${selectedInsight == j ? 'border--thin-2--brand' : ''}`} onClick={() => showSubInsight(item.sub_level_data, j)}>
+                <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3 capitalize'}>{item?.name}</Text>
+                <div className={'flex items-end flex-col'}>
+                  <div className={'flex items-center'}>
+                    {item.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> : <>
+                      <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={18} />
+                      <Text type={'title'} level={7} weight={'bold'} color={isIncreased ? 'green' : 'red'} extraClass={'m-0 ml-1'}><Number number={item?.percentage_change} suffix={'%'} /></Text>
+                    </>
+                    }
+                  </div>
+                  <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>{`(`}<Number suffix={suffixSymbol} number={roundNumb(item?.previous_value)} shortHand={true} />{` -> `}<Number suffix={suffixSymbol} number={roundNumb(item?.last_value)} shortHand={true} />{`)`}</Text>
                 </div>
-                <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>{`(`}<Number suffix={suffixSymbol} number={roundNumb(item?.previous_value)} shortHand={true} />{` -> `}<Number suffix={suffixSymbol} number={roundNumb(item?.last_value)} shortHand={true} />{`)`}</Text>
               </div>
-            </div>
-          )
+            )
+          }
         })
       )
     }
@@ -113,47 +131,52 @@ function TemplateResults({
 
   const SubInsightItem = () => {
     if (subInsightData) {
+      subInsightData.sort(function (a, b) {
+        return sortSubInsight ? roundNumb(a.last_value - a.previous_value) - roundNumb(b.last_value - b.previous_value) : roundNumb(b.last_value - b.previous_value) - roundNumb(a.last_value - a.previous_value);
+      });
       return (
         subInsightData?.map((item, j) => {
-          let isIncreased = item?.percentage_change >= 0;
-          return (
-            <div className={`py-3 px-6  flex items-center justify-between`}>
-              <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3 capitalize'}>{item?.name}</Text>
-              <div className={'flex items-center'}>
+          if (item?.name.toLowerCase().includes(subSearchTerm.toLowerCase())) {
+            let isIncreased = item?.percentage_change >= 0;
+            return (
+              <div className={`py-3 px-6  flex items-center justify-between`}>
+                <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3 capitalize'}>{item?.name}</Text>
+                <div className={'flex items-center'}>
 
-                {item.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> : <>
-                  <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={18} />
-                  <Text type={'title'} level={7} weight={'bold'} color={isIncreased ? 'green' : 'red'} extraClass={'m-0 ml-1'}><Number number={item?.percentage_change} suffix={'%'} /></Text>
-                </>}
+                  {item.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> : <>
+                    <SVG name={isIncreased ? 'spikeup' : 'spikedown'} color={isIncreased ? 'green' : 'red'} size={18} />
+                    <Text type={'title'} level={7} weight={'bold'} color={isIncreased ? 'green' : 'red'} extraClass={'m-0 ml-1'}><Number number={item?.percentage_change} suffix={'%'} /></Text>
+                  </>}
 
-                <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>{`(`}<Number suffix={suffixSymbol} number={roundNumb(item?.previous_value)} shortHand={true} />{` -> `}<Number suffix={suffixSymbol} number={roundNumb(item?.last_value)} shortHand={true} />{`)`}</Text>
+                  <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>{`(`}<Number suffix={suffixSymbol} number={roundNumb(item?.previous_value)} shortHand={true} />{` -> `}<Number suffix={suffixSymbol} number={roundNumb(item?.last_value)} shortHand={true} />{`)`}</Text>
 
-                {item?.root_cause_metrics && <div className={'flex items-center '}>
-                  {/* <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>Due to</Text> */}
-                  <Popover placement="top" content={
-                    item?.root_cause_metrics?.map((subitem) => {
-                      let isIncreased = subitem?.percentage_change >= 0;
-                      return (
-                        <div className={'flex items-center'}>
-                          <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}>
-                            {metricDisplayName(subitem?.metric)}
-                          </Text>
-                          <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 mx-1'}>
-                            {`${isIncreased ? 'increased' : 'decreased'}`}
-                          </Text>
-                          {subitem.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> :
-                            <Number number={subitem?.percentage_change} suffix={'%'} />}
-                        </div>
-                      )
-                    })
-                  } trigger="hover">
-                    <Button type={'text'} icon={<SVG name={'infoCircle'} size={16} />} className={'ml-1'} />
-                  </Popover>
+                  {item?.root_cause_metrics && <div className={'flex items-center '}>
+                    {/* <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 ml-2'}>Due to</Text> */}
+                    <Popover placement="top" content={
+                      item?.root_cause_metrics?.map((subitem) => {
+                        let isIncreased = subitem?.percentage_change >= 0;
+                        return (
+                          <div className={'flex items-center'}>
+                            <Text type={'title'} level={8} color={'grey'} extraClass={'m-0'}>
+                              {metricDisplayName(subitem?.metric)}
+                            </Text>
+                            <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 mx-1'}>
+                              {`${isIncreased ? 'increased' : 'decreased'}`}
+                            </Text>
+                            {subitem.is_infinity ? <Text type={'title'} level={6} extraClass={'m-0'}>∞</Text> :
+                              <Number number={subitem?.percentage_change} suffix={'%'} />}
+                          </div>
+                        )
+                      })
+                    } trigger="hover">
+                      <Button type={'text'} icon={<SVG name={'infoCircle'} size={16} />} className={'ml-1'} />
+                    </Popover>
+                  </div>
+                  }
                 </div>
-                }
               </div>
-            </div>
-          )
+            )
+          }
         })
       )
     }
@@ -203,16 +226,11 @@ function TemplateResults({
   const fetchInsights = (key) => {
     setLoading(true);
     const queryData = {
-      "metric": key, 
-      'prev_from': dateRange1 ? moment(dateRange1.t1).unix() : moment().subtract(2, 'weeks').startOf('week').unix(),
-      'prev_to': dateRange1 ? moment(dateRange1.t2).unix() : moment().subtract(2, 'weeks').endOf('week').unix(),
-      "from": dateRange2 ? moment(dateRange2.t1).unix() : moment().subtract(1, 'weeks').startOf('week').unix(),
-      "to": dateRange2 ? moment(dateRange2.t2).unix() : moment().subtract(1, 'weeks').endOf('week').unix(),
-      thresholds: {
-        percentage_change: 10,
-        absolute_change: 0,
-      },
-      time_zone: 'Asia/Kolkata' 
+      "metric": key,
+      // "from": moment().subtract(1, 'weeks').startOf('week').unix(),
+      // "to": moment().subtract(1, 'weeks').endOf('week').unix(),
+      "from": 1619893800,
+      "to": 1621103399
     }
     fetchTemplateInsights(activeProject.id, queryData).then(() => {
       setLoading(false);
@@ -381,6 +399,28 @@ function TemplateResults({
                         <div className={'border--thin-2  border-radius--sm '}>
                           <div className={'py-4 px-6 background-color--brand-color-1 border-radius--sm flex justify-between'}>
                             <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 capitalize'}>{column1}</Text>
+                            <div className={'flex justify-between'}>
+                              {showSearch ? <Input
+                                className={styles.input}
+                                placeholder={searchTerm}
+                                onKeyUp={onInputSearch}
+                                prefix={(<SVG name="search" size={16} color={'grey'} />)}
+                              /> : null}
+                              <Button
+                                type='text'
+                                className={styles.btn}
+                                onClick={() => { setShowSearch(!showSearch) }}
+                              >
+                                <SVG name={!showSearch ? 'search' : 'close'} size={20} color={'grey'} />
+                              </Button>
+                              <Button
+                                type='text'
+                                className={styles.btn}
+                                onClick={() => { setSortInsight(!sortInsight) }}
+                              >
+                                <SVG name={!sortInsight ? 'sortdown' : 'sortup'} size={20} color={'grey'} />
+                              </Button>
+                            </div>
                           </div>
                           <div className={'fa-vertical-scrolling-card px-4'}>
                             <InsightItem queryResult={queryResult} />
@@ -394,6 +434,28 @@ function TemplateResults({
                         <div className={'border--thin-2  border-radius--sm '}>
                           <div className={'py-4 px-6 background-color--brand-color-1 border-radius--sm flex justify-between'}>
                             <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 capitalize'}>{metaTitle?.sub_level?.column_name}</Text>
+                            <div className={'flex justify-between'}>
+                              {showSearchSub ? <Input
+                                className={styles.input}
+                                placeholder={subSearchTerm}
+                                onKeyUp={onSubInputSearch}
+                                prefix={(<SVG name="search" size={16} color={'grey'} />)}
+                              /> : null}
+                              <Button
+                                type='text'
+                                className={styles.btn}
+                                onClick={() => { setShowSearchSub(!showSearchSub) }}
+                              >
+                                <SVG name={!showSearchSub ? 'search' : 'close'} size={20} color={'grey'} />
+                              </Button>
+                              <Button
+                                type='text'
+                                className={styles.btn}
+                                onClick={() => { setSortSubInsight(!sortSubInsight) }}
+                              >
+                                <SVG name={!sortSubInsight ? 'sortdown' : 'sortup'} size={20} color={'grey'} />
+                              </Button>
+                            </div>
                           </div>
                           <div className={'fa-vertical-scrolling-card px-4'}>
                             {subInsightData ? <SubInsightItem queryResult={queryResult} /> : <NoSubInsightsData />}
