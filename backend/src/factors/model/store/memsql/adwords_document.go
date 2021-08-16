@@ -2285,6 +2285,10 @@ func (store *MemSQL) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, 
 	for key := range campaignIDToSubLevelDataMap {
 		campaignArray = append(campaignArray, key)
 	}
+	// to avoid error in campaign analysis, if the keyword analysis doesn't return any campaigns we return empty response
+	if len(campaignArray) == 0 {
+		return model.TemplateResponse{}, nil
+	}
 	campaignAnalysisResult, err := store.getCampaignLevelDataForTemplates(projectID, customerAccountID, campaignArray, query)
 	if err != nil {
 		return model.TemplateResponse{}, err

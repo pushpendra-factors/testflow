@@ -235,6 +235,8 @@ func GetInputOrDefaultTimestampsForTemplateQueryWithDays(query TemplateQuery, da
 	var timeZoneString U.TimeZoneString
 	if len(query.Timezone) < 1 {
 		timeZoneString = U.TimeZoneStringIST
+	} else {
+		timeZoneString = U.TimeZoneString(query.Timezone)
 	}
 	location, err := time.LoadLocation(string(timeZoneString))
 	if err != nil {

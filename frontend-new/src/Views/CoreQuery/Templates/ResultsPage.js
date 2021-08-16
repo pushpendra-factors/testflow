@@ -128,7 +128,7 @@ function TemplateResults({
     let findItem = configMatrix.find((element) => { if (element.metric == item) return element.display_name })
     return findItem ? findItem.display_name : item
   }
-
+  
   const SubInsightItem = () => {
     if (subInsightData) {
       subInsightData.sort(function (a, b) {
@@ -226,11 +226,16 @@ function TemplateResults({
   const fetchInsights = (key) => {
     setLoading(true);
     const queryData = {
-      "metric": key,
-      // "from": moment().subtract(1, 'weeks').startOf('week').unix(),
-      // "to": moment().subtract(1, 'weeks').endOf('week').unix(),
-      "from": 1619893800,
-      "to": 1621103399
+      "metric": key, 
+      'prev_from': dateRange1 ? moment(dateRange1.t1).unix() : moment().subtract(2, 'weeks').startOf('week').unix(),
+      'prev_to': dateRange1 ? moment(dateRange1.t2).unix() : moment().subtract(2, 'weeks').endOf('week').unix(),
+      "from": dateRange2 ? moment(dateRange2.t1).unix() : moment().subtract(1, 'weeks').startOf('week').unix(),
+      "to": dateRange2 ? moment(dateRange2.t2).unix() : moment().subtract(1, 'weeks').endOf('week').unix(),
+      thresholds: {
+        percentage_change: 10,
+        absolute_change: 0,
+      },
+      time_zone: 'Asia/Kolkata' 
     }
     fetchTemplateInsights(activeProject.id, queryData).then(() => {
       setLoading(false);
