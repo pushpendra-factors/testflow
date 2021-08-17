@@ -710,4 +710,22 @@ func main() {
 	} else {
 		log.Info("Created template table.")
 	}
+
+	if err := db.Exec("	ALTER TABLE event_names ALTER COLUMN id TYPE bigint USING id::bigint;").Error; err != nil {
+		log.WithError(err).Error("Failed to alter type of id on event_names.")
+	} else {
+		log.Info("Altered type of id of event_names table.")
+	}
+
+	if err := db.Exec("ALTER TABLE events ALTER COLUMN event_name_id TYPE bigint USING event_name_id::bigint;").Error; err != nil {
+		log.WithError(err).Error("Failed to alter type of event_name_id on events.")
+	} else {
+		log.Info("Altered type of event_name_id of events table.")
+	}
+
+	if err := db.Exec("ALTER TABLE property_details ALTER COLUMN event_name_id TYPE bigint USING event_name_id::bigint;").Error; err != nil {
+		log.WithError(err).Error("Failed to alter type of event_name_id on property_details.")
+	} else {
+		log.Info("Altered type of event_name_id of property_details table.")
+	}
 }

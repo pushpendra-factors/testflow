@@ -45,27 +45,38 @@ type InteractionSettings struct {
 }
 
 type SalesforceTouchPoints struct {
-	TouchPointRules map[string][]string `json:"touch_point_rules"`
+	TouchPointRules map[string][]SFTouchPointRule `json:"sf_touch_point_rules"`
 }
 
-type HubspotTouchPoints struct {
-	TouchPointRules map[string][]string `json:"touch_point_rules"`
+type SFTouchPointRule struct {
+	Filters           []SFTouchPointFilter `json:"filters"`
+	TouchPointTimeRef string               `json:"touch_point_time_ref"`
+	PropertiesMap     map[string]string    `json:"properties_map"`
 }
 
-// DefaultHubspotTouchPointsRules returns default query params and order (utm then qp) for various event properties.
-func DefaultHubspotTouchPointsRules() HubspotTouchPoints {
-
-	rules := HubspotTouchPoints{}
-	// Todo (Anil): Add default rules
-	rules.TouchPointRules = make(map[string][]string)
-	return rules
+type SFTouchPointFilter struct {
+	Property  string `json:"pr"`
+	Operator  string `json:"op"`
+	Value     string `json:"va"`
+	LogicalOp string `json:"lop"`
 }
 
 // DefaultSalesforceTouchPointsRules returns default query params and order (utm then qp) for various event properties.
 func DefaultSalesforceTouchPointsRules() SalesforceTouchPoints {
 
 	rules := SalesforceTouchPoints{}
-	// Todo (Anil): Add default rules
+	rules.TouchPointRules = make(map[string][]SFTouchPointRule)
+	return rules
+}
+
+type HubspotTouchPoints struct {
+	TouchPointRules map[string][]string `json:"hs_touch_point_rules"`
+}
+
+// DefaultHubspotTouchPointsRules returns default query params and order (utm then qp) for various event properties.
+func DefaultHubspotTouchPointsRules() HubspotTouchPoints {
+
+	rules := HubspotTouchPoints{}
 	rules.TouchPointRules = make(map[string][]string)
 	return rules
 }

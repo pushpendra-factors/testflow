@@ -830,6 +830,8 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
+		// Using string format for project_id condition, as the value is from internal system.
+		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
 
 	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone)
@@ -1555,6 +1557,8 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 	// join with users for latest user_properties.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
+		// Using string format for project_id condition, as the value is from internal system.
+		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
 
 	withUsersStepName := "users_any_event"
@@ -1888,6 +1892,8 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
+		// Using string format for project_id condition, as the value is from internal system.
+		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
 
 	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone)

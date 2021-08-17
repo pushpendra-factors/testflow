@@ -564,7 +564,8 @@ func addJoinLatestUserPropsQuery(projectID uint64, groupProps []model.QueryGroup
 
 	rStmnt := "SELECT " + joinWithComma(groupSelect, addSelect) + " from " + refStepName +
 		" " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
-
+	// Using string format for project_id condition, as the value is from internal system.
+	rStmnt = rStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	if stepName != "" {
 		rStmnt = as(stepName, rStmnt)
 	}
