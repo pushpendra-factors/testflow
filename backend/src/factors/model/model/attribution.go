@@ -1407,6 +1407,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			userIdMap[userID] = true
 		}
 		marketingValues := MarketingData{Channel: PropertyValueNone, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID, AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName}
+		gclIDEnrichSuccess := 0
 		// Override GCLID based campaign info if presents
 		if gclID != PropertyValueNone && !(query.AttributionKey == AttributionKeyKeyword && !IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
 			var attributionIdBasedOnGclID string
@@ -1416,11 +1417,13 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			// fallback is attributionId
 			if U.IsNonEmptyKey(attributionIdBasedOnGclID) {
 				attributionId = attributionIdBasedOnGclID
+				gclIDEnrichSuccess = 1
 			} else {
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, GCLID: gclID})
 			}
-		} else if (query.AttributionKey == AttributionKeyCampaign && U.IsNonEmptyKey(campaignID)) ||
-			(query.AttributionKey == AttributionKeyAdgroup && U.IsNonEmptyKey(adgroupID)) {
+		}
+		if ((query.AttributionKey == AttributionKeyCampaign && U.IsNonEmptyKey(campaignID)) ||
+			(query.AttributionKey == AttributionKeyAdgroup && U.IsNonEmptyKey(adgroupID))) && gclIDEnrichSuccess == 0 {
 			// enrich for campaign/adgroup based session having campaign_id/adgroup_id
 			var attributionIdBasedOnEnrichment string
 			attributionIdBasedOnEnrichment, marketingValues = EnrichUsingMarketingID(query.AttributionKey, marketingValues, reports)
@@ -1429,10 +1432,8 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			} else {
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, CampaignID: campaignID, AdgroupID: adgroupID})
 			}
-		} else {
-			// can't enrich the values in any other way, why?
-			// Because, an adgroup can belong to multiple campaign, keyword also has match type, adgroup, campaign as keys
 		}
+
 		// Name
 		marketingValues.Name = attributionId
 		// Add the unique attributionKey key
