@@ -44,7 +44,6 @@ func IntSegmentHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
-	metrics.Increment(metrics.IncrIntegrationRequestOverallCount)
 
 	var bodyBuffer bytes.Buffer
 	body := io.TeeReader(r.Body, &bodyBuffer)
@@ -82,6 +81,7 @@ func IntSegmentHandler(c *gin.Context) {
 		return
 	}
 
+	metrics.Increment(metrics.IncrIntegrationRequestOverallCount)
 	// Always send StatusOK for failure on direct processing.
 	c.JSON(http.StatusOK, response)
 }

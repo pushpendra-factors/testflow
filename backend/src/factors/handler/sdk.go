@@ -47,8 +47,6 @@ func SDKTrackHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
-	metrics.Increment(metrics.IncrSDKRequestOverallCount)
-	metrics.Increment(metrics.IncrSDKRequestTypeTrack)
 
 	if r.Body == nil {
 		logCtx.Error("Invalid request. Request body unavailable.")
@@ -79,7 +77,12 @@ func SDKTrackHandler(c *gin.Context) {
 	request.UserAgent = c.Request.UserAgent()
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
-	c.JSON(SDK.TrackWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
+	status, response := SDK.TrackWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens())
+	if status == http.StatusOK {
+		metrics.Increment(metrics.IncrSDKRequestOverallCount)
+		metrics.Increment(metrics.IncrSDKRequestTypeTrack)
+	}
+	c.JSON(status, response)
 }
 
 // Test command.
@@ -166,8 +169,6 @@ func SDKIdentifyHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
-	metrics.Increment(metrics.IncrSDKRequestOverallCount)
-	metrics.Increment(metrics.IncrSDKRequestTypeIdentifyUser)
 
 	if r.Body == nil {
 		logCtx.Error("Invalid request. Request body unavailable.")
@@ -187,7 +188,12 @@ func SDKIdentifyHandler(c *gin.Context) {
 	}
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
-	c.JSON(SDK.IdentifyWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
+	status, response := SDK.IdentifyWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens())
+	if status == http.StatusOK {
+		metrics.Increment(metrics.IncrSDKRequestOverallCount)
+		metrics.Increment(metrics.IncrSDKRequestTypeIdentifyUser)
+	}
+	c.JSON(status, response)
 }
 
 // Test command.
@@ -207,8 +213,6 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
-	metrics.Increment(metrics.IncrSDKRequestOverallCount)
-	metrics.Increment(metrics.IncrSDKRequestTypeAddUserProperties)
 
 	if r.Body == nil {
 		logCtx.Error("Invalid request. Request body unavailable.")
@@ -229,7 +233,12 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	request.ClientIP = c.ClientIP()
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
-	c.JSON(SDK.AddUserPropertiesWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
+	status, response := SDK.AddUserPropertiesWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens())
+	if status == http.StatusOK {
+		metrics.Increment(metrics.IncrSDKRequestOverallCount)
+		metrics.Increment(metrics.IncrSDKRequestTypeAddUserProperties)
+	}
+	c.JSON(status, response)
 }
 
 type sdkSettingsResponse struct {
@@ -283,8 +292,6 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
-	metrics.Increment(metrics.IncrSDKRequestOverallCount)
-	metrics.Increment(metrics.IncrSDKRequestTypeUpdateEventProperties)
 
 	if r.Body == nil {
 		logCtx.Error("Invalid request. Request body unavailable.")
@@ -305,8 +312,13 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 	request.UserAgent = c.Request.UserAgent()
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
-	c.JSON(SDK.UpdateEventPropertiesWithQueue(projectToken, &request,
-		C.GetSDKRequestQueueAllowedTokens()))
+	status, response := SDK.UpdateEventPropertiesWithQueue(projectToken, &request,
+		C.GetSDKRequestQueueAllowedTokens())
+	if status == http.StatusOK {
+		metrics.Increment(metrics.IncrSDKRequestOverallCount)
+		metrics.Increment(metrics.IncrSDKRequestTypeUpdateEventProperties)
+	}
+	c.JSON(status, response)
 }
 
 /*
@@ -333,8 +345,6 @@ https://app.factors.ai/sdk/amp/event/track?token=${token}&title=${title}&referre
 // @Success 200 {object} sdk.Response
 // @Router /sdk/amp/event/track [post]
 func SDKAMPTrackHandler(c *gin.Context) {
-	metrics.Increment(metrics.IncrSDKRequestOverallCount)
-	metrics.Increment(metrics.IncrSDKRequestTypeAMPTrack)
 
 	// List of known query parameters.
 	TOKEN := "token"
@@ -453,7 +463,12 @@ func SDKAMPTrackHandler(c *gin.Context) {
 		}
 	}
 	payload.CustomProperties = customProperties
-	c.JSON(SDK.AMPTrackWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
+	status, response := SDK.AMPTrackWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens())
+	if status == http.StatusOK {
+		metrics.Increment(metrics.IncrSDKRequestOverallCount)
+		metrics.Increment(metrics.IncrSDKRequestTypeAMPTrack)
+	}
+	c.JSON(status, response)
 }
 
 // SDKAMPUpdateEventPropertiesHandler godoc
@@ -469,8 +484,6 @@ func SDKAMPTrackHandler(c *gin.Context) {
 // @Success 202 {object} sdk.Response
 // @Router /sdk/amp/event/update_properties [post]
 func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
-	metrics.Increment(metrics.IncrSDKRequestOverallCount)
-	metrics.Increment(metrics.IncrSDKRequestTypeAMPUpdateEventProperties)
 	token := c.Query("token")
 	token = strings.TrimSpace(token)
 	if token == "" {
@@ -514,7 +527,12 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 		UserAgent: c.Request.UserAgent(),
 	}
 
-	c.JSON(SDK.AMPUpdateEventPropertiesWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
+	status, response := SDK.AMPUpdateEventPropertiesWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens())
+	if status == http.StatusOK {
+		metrics.Increment(metrics.IncrSDKRequestOverallCount)
+		metrics.Increment(metrics.IncrSDKRequestTypeAMPUpdateEventProperties)
+	}
+	c.JSON(status, response)
 }
 
 // SDKAMPIdentifyHandler Test command.
