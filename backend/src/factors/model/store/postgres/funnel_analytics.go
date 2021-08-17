@@ -606,6 +606,8 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	propertiesJoinStmnt := ""
 	if hasGroupEntity(q.GroupByProperties, model.PropertyEntityUser) {
 		propertiesJoinStmnt = fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id", funnelSteps[0])
+		// Using string format for project_id condition, as the value is from internal system.
+		propertiesJoinStmnt = propertiesJoinStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectId)
 	}
 
 	stepFunnelName := "funnel"
