@@ -3112,7 +3112,7 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 	customerIDUser3 := "customerIDUser3"
 	commonUserProperty := make(map[string]interface{})
 	commonUserProperty[U.UP_BROWSER] = "Chrome"
-	commonUserProperty[U.UP_JOIN_TIME] = "1622636726" // Wednesday, 2 June 2021 17:55:26 GMT+05:30
+	commonUserProperty["$custom_time"] = "1622636726" // Wednesday, 2 June 2021 17:55:26 GMT+05:30
 	commonUserPropertyBytes, _ := json.Marshal(commonUserProperty)
 
 	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
@@ -3264,7 +3264,7 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 			GroupByProperties: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:      model.PropertyEntityUser,
-					Property:    U.UP_JOIN_TIME,
+					Property:    "$custom_time",
 					Type:        U.PropertyTypeDateTime,
 					EventName:   "present",
 					Granularity: "week",
@@ -3278,9 +3278,9 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
 		for i := 0; i < len(result.Headers); i++ {
-			if "$joinTime" == result.Headers[i] {
+			if "$custom_time" == result.Headers[i] {
 				// Grouping starts from sunday
-				assert.Equal(t, "2021-07-11 00:00:00", result.Rows[0][i].(string))
+				assert.Equal(t, "2021-05-30 00:00:00", result.Rows[0][i].(string))
 			}
 		}
 	})
@@ -3312,7 +3312,7 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 			GroupByProperties: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:      model.PropertyEntityUser,
-					Property:    U.UP_JOIN_TIME,
+					Property:    "$custom_time",
 					Type:        U.PropertyTypeDateTime,
 					EventName:   "present",
 					Granularity: "week",
@@ -3325,8 +3325,8 @@ func TestGroupByDateTimePropWeekTimeGroup(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
-		assert.Equal(t, "$joinTime", result.Headers[2])
+		assert.Equal(t, "$custom_time", result.Headers[2])
 		// Grouping starts from sunday
-		assert.Equal(t, "2021-07-11 00:00:00", result.Rows[0][2].(string))
+		assert.Equal(t, "2021-05-30 00:00:00", result.Rows[0][2].(string))
 	})
 }
