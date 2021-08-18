@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { formatData } from '../../CoreQuery/EventsAnalytics/EventBreakdown/utils';
+import {
+  formatData,
+  getDefaultSortProp,
+} from '../../CoreQuery/EventsAnalytics/EventBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import EventBreakdownTable from '../../CoreQuery/EventsAnalytics/EventBreakdown/EventBreakdownTable';
 import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
@@ -8,6 +11,7 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_SPARKLINES,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
 import { DashboardContext } from '../../../contexts/DashboardContext';
@@ -22,13 +26,13 @@ function EventBreakdownCharts({
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
-  const maxAllowedVisibleProperties = 5;
+  const [sorter, setSorter] = useState(getDefaultSortProp());
 
   useEffect(() => {
     const formattedData = formatData(resultState.data);
     setChartsData(formattedData);
     setVisibleProperties([
-      ...formattedData.slice(0, maxAllowedVisibleProperties),
+      ...formattedData.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
     ]);
   }, [resultState.data]);
 
@@ -69,7 +73,8 @@ function EventBreakdownCharts({
         breakdown={breakdown}
         setVisibleProperties={setVisibleProperties}
         visibleProperties={visibleProperties}
-        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        sorter={sorter}
+        setSorter={setSorter}
       />
     );
   }

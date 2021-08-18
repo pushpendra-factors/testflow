@@ -1,6 +1,5 @@
 import React from 'react';
 import AttributionsChart from './AttributionsChart';
-import GroupedAttributionsChart from './GroupedAttributionsChart';
 
 function AttributionsResult({
   resultState,
@@ -8,6 +7,7 @@ function AttributionsResult({
   section,
   durationObj,
   currMetricsValue,
+  renderedCompRef,
 }) {
   let content = null;
 
@@ -19,43 +19,24 @@ function AttributionsResult({
     attr_dimensions,
   } = attributionsState;
 
-  if (models.length === 1) {
-    content = (
-      <AttributionsChart
-        event={eventGoal.label}
-        linkedEvents={linkedEvents}
-        touchpoint={touchpoint}
-        durationObj={durationObj}
-        data={
-          resultState.data.result ? resultState.data.result : resultState.data
-        }
-        isWidgetModal={false}
-        attribution_method={models[0]}
-        section={section}
-        attr_dimensions={attr_dimensions}
-      />
-    );
-  }
-
-  if (models.length === 2) {
-    content = (
-      <GroupedAttributionsChart
-        event={eventGoal.label}
-        linkedEvents={linkedEvents}
-        touchpoint={touchpoint}
-        data={
-          resultState.data.result ? resultState.data.result : resultState.data
-        }
-        isWidgetModal={false}
-        attribution_method={models[0]}
-        attribution_method_compare={models[1]}
-        section={section}
-        currMetricsValue={currMetricsValue}
-        durationObj={durationObj}
-        attr_dimensions={attr_dimensions}
-      />
-    );
-  }
+  content = (
+    <AttributionsChart
+      event={eventGoal.label}
+      linkedEvents={linkedEvents}
+      touchpoint={touchpoint}
+      durationObj={durationObj}
+      data={
+        resultState.data.result ? resultState.data.result : resultState.data
+      }
+      isWidgetModal={false}
+      attribution_method={models[0]}
+      attribution_method_compare={models[1]}
+      section={section}
+      attr_dimensions={attr_dimensions}
+      currMetricsValue={currMetricsValue}
+      ref={renderedCompRef}
+    />
+  );
 
   return <>{content}</>;
 }

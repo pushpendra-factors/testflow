@@ -43,7 +43,7 @@ function NoBreakdownCharts({
       : { categories: [], seriesData: [] };
     setCategories(cat);
     setSeriesData(sd);
-  }, [data, arrayMapper]);
+  }, [data, arrayMapper, chartType]);
 
   if (!chartsData.length) {
     return (

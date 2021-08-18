@@ -75,6 +75,7 @@ const defaultState = {
   camp_groupBy: [],
   camp_dateRange: {
     ...DefaultDateRangeFormat,
+    frequency: 'date',
     dateStr: '',
   },
   eventNames: [],

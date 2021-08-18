@@ -24,6 +24,27 @@ export const getNoGroupingTableData = (data, arrayMapper, currentSorter) => {
   return SortResults(result, currentSorter);
 };
 
+export const getDefaultSortProp = (arrayMapper) => {
+  if (Array.isArray(arrayMapper) && arrayMapper.length) {
+    return {
+      key: arrayMapper[0]?.mapper,
+      type: 'numerical',
+      subtype: null,
+      order: 'descend',
+    };
+  }
+  return {};
+};
+
+export const getDefaultDateSortProp = () => {
+  return {
+    key: 'Overall',
+    type: 'numerical',
+    subtype: null,
+    order: 'descend',
+  };
+};
+
 export const getColumns = (
   events,
   arrayMapper,
@@ -176,6 +197,17 @@ export const getDateBasedColumns = (
   frequency,
   eventNames
 ) => {
+  const OverallColumn = {
+    title: getClickableTitleSorter(
+      'Overall',
+      { key: `Overall`, type: 'numerical', subtype: null },
+      currentSorter,
+      handleSorting
+    ),
+    dataIndex: `Overall`,
+    width: 150,
+  };
+
   const result = [
     {
       title: getClickableTitleSorter(
@@ -210,14 +242,14 @@ export const getDateBasedColumns = (
         currentSorter,
         handleSorting
       ),
-      width: 100,
+      width: frequency === 'hour' ? 150 : 100,
       dataIndex: moment(elem.date).format(format),
       render: (d) => {
         return <NumFormat number={d} />;
       },
     };
   });
-  return [...result, ...dateColumns];
+  return [...result, ...dateColumns, OverallColumn];
 };
 
 export const getNoGroupingTablularDatesBasedData = (
@@ -225,25 +257,44 @@ export const getNoGroupingTablularDatesBasedData = (
   currentSorter,
   searchText,
   arrayMapper,
-  frequency
+  frequency,
+  metrics
 ) => {
-  const filteredEvents = arrayMapper
-    .filter((elem) =>
-      elem.eventName.toLowerCase().includes(searchText.toLowerCase())
-    )
-    .map((elem) => elem.mapper);
+  const filteredMapper = arrayMapper.filter((elem) =>
+    elem.eventName.toLowerCase().includes(searchText.toLowerCase())
+  );
   const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
   const dates = data.map((elem) => moment(elem.date).format(format));
-  const result = filteredEvents.map((elem, index) => {
+  const result = filteredMapper.map((elem, index) => {
+    let total = 0;
+    if (
+      metrics &&
+      metrics.headers &&
+      Array.isArray(metrics.headers) &&
+      metrics.headers.length &&
+      metrics.rows &&
+      Array.isArray(metrics.rows) &&
+      metrics.rows.length
+    ) {
+      const countIdx = metrics.headers.findIndex((h) => h === 'count');
+      const event_indexIdx = metrics.headers.findIndex(
+        (h) => h === 'event_index'
+      );
+      const metricRow = metrics.rows.find(
+        (mr) => mr[event_indexIdx] === elem.index
+      );
+      total = metricRow ? metricRow[countIdx] : 0;
+    }
     const eventsData = {};
     dates.forEach((date) => {
       eventsData[date] = data.find(
-        (elem) => moment(elem.date).format(format) === date
-      )[elem];
+        (d) => moment(d.date).format(format) === date
+      )[elem.mapper];
     });
     return {
       index,
-      event: arrayMapper.find((m) => m.mapper === elem).eventName,
+      event: elem.eventName,
+      Overall: total,
       ...eventsData,
     };
   });

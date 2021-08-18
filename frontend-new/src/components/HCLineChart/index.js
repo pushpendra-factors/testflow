@@ -7,6 +7,7 @@ import Highcharts from 'highcharts';
 import { high_charts_default_spacing } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import TopLegends from '../GroupedBarChart/TopLegends';
+import { generateColors } from '../../utils/dataFormatter';
 
 function LineChart({
   categories,
@@ -17,7 +18,9 @@ function LineChart({
   cardSize = 1,
   spacing = high_charts_default_spacing,
   chartId = 'lineChartContainer',
+  showAllLegends = false,
 }) {
+  const colors = generateColors(data.length);
   const drawChart = useCallback(() => {
     Highcharts.chart(chartId, {
       chart: {
@@ -101,9 +104,11 @@ function LineChart({
           },
         },
       },
-      series: data,
+      series: data.map((d, index) => {
+        return { ...d, color: colors[index] };
+      }),
     });
-  }, [cardSize, categories, data, frequency, height, spacing, chartId]);
+  }, [cardSize, categories, data, frequency, height, spacing, chartId, colors]);
 
   useEffect(() => {
     drawChart();
@@ -115,7 +120,8 @@ function LineChart({
         <TopLegends
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
-          colors={data.map((d) => d.color)}
+          colors={colors}
+          showAllLegends={showAllLegends}
         />
       ) : null}
       <div className={styles.areaChart} id={chartId}></div>
@@ -123,7 +129,8 @@ function LineChart({
         <TopLegends
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
-          colors={data.map((d) => d.color)}
+          colors={colors}
+          showAllLegends={showAllLegends}
         />
       ) : null}
     </>

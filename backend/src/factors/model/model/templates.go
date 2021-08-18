@@ -455,6 +455,7 @@ func SanitiseCampaignAnalysisResult(query TemplateQuery, campaignAnalysisResult 
 	return sanitisedCampaignsAnalysisResult
 }
 func sanitiseNullValues(query TemplateQuery, absoluteChange float64, percentageChange float64, lastWeekValue float64, previousWeekValue float64) (float64, float64, bool) {
+	absoluteChange = math.Abs(absoluteChange)
 	if absoluteChange == 0 {
 		absoluteChange = math.Abs(lastWeekValue - previousWeekValue)
 		percentageChange = calcPercentagesForTemplates(lastWeekValue, previousWeekValue)

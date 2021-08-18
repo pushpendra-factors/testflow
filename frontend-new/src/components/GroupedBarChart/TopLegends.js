@@ -14,9 +14,10 @@ function TopLegends({
   legends,
   parentClassName = 'flex flex-wrap justify-center py-3',
   cardSize,
-  showFullLengthLegends = false
+  showAllLegends = false,
+  showFullLengthLegends = false,
 }) {
-  let itemsCount = legend_counts[cardSize];
+  const itemsCount = showAllLegends ? legends.length : legend_counts[cardSize];
 
   const { eventNames } = useSelector((state) => state.coreQuery);
 
@@ -24,7 +25,8 @@ function TopLegends({
     const sanitisedLegend = eventNames[legend] || legend;
     return (
       <Text mini type='paragraph'>
-        {sanitisedLegend.length > legend_length[cardSize] && !showFullLengthLegends
+        {sanitisedLegend.length > legend_length[cardSize] &&
+        !showFullLengthLegends
           ? sanitisedLegend.substr(0, legend_length[cardSize]) + '...'
           : sanitisedLegend}
       </Text>

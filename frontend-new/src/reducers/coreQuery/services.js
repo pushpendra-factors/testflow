@@ -127,9 +127,9 @@ export const getFunnelData = (projectId, query, dashboard) => {
   return post(null, url, { query });
 };
 
-export const saveQuery = (projectId, title, query, type) => {
+export const saveQuery = (projectId, title, query, type, settings) => {
   const url = host + 'projects/' + projectId + '/queries';
-  return post(null, url, { query, title, type });
+  return post(null, url, { query, title, type, settings });
 };
 
 export const deleteQuery = async (dispatch, query) => {

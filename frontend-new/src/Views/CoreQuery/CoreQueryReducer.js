@@ -8,6 +8,7 @@ import {
   SET_COMPARISON_SUPPORTED,
   SET_COMPARE_DURATION,
   UPDATE_CHART_TYPES,
+  SET_SAVED_QUERY_SETTINGS,
 } from './constants';
 
 export default function (state, action) {
@@ -72,6 +73,12 @@ export default function (state, action) {
         ...state,
         chartTypes: payload,
       };
+    case SET_SAVED_QUERY_SETTINGS: {
+      return {
+        ...state,
+        savedQuerySettings: payload,
+      };
+    }
     default:
       return state;
   }
