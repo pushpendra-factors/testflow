@@ -160,6 +160,7 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 
 func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, skipWpi bool) error {
 	for _, periodCode := range periodCodes {
+		fileDownloaded := false
 		if skipWpi == false {
 			err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
 			if err != nil {
@@ -175,14 +176,21 @@ func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager
 			if err != nil {
 				log.WithFields(log.Fields{"err": err, "filePath": path,
 					"eventFileName": name}).Error("Failed to write to fetch from cloud path")
-				return err
+			} else {
+				efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, uint64(deltaQuery.Id), k)
+				err = diskManager.Create(efTmpPath, efTmpName, reader)
+				if err != nil {
+					log.WithFields(log.Fields{"err": err, "filePath": efTmpPath,
+						"eventFileName": efTmpName}).Error("Failed to write to temp path")
+				} else {
+					fileDownloaded = true
+				}
 			}
-			efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, uint64(deltaQuery.Id), k)
-			err = diskManager.Create(efTmpPath, efTmpName, reader)
-			if err != nil {
-				log.WithFields(log.Fields{"err": err, "filePath": efTmpPath,
-					"eventFileName": efTmpName}).Error("Failed to write to temp path")
-				return err
+			if fileDownloaded == false {
+				err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

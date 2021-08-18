@@ -4,6 +4,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"fmt"
+	"runtime"
 	"sort"
 	"time"
 
@@ -82,6 +83,17 @@ func TaskFuncWithProjectId(JobName string, lookback int, projectIds []uint64, f 
 				store.GetStore().InsertTaskBeginRecord(taskDetails.TaskID, projectId, delta)
 				configs["startTimestamp"] = getDeltaAsTime(delta)
 				configs["endTimestamp"] = getEndTimestamp(delta, taskDetails.Frequency, taskDetails.FrequencyInterval)
+				defer func() {
+					if r := recover(); r != nil {
+						buf := make([]byte, 1024)
+						runtime.Stack(buf, false)
+						msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", r, string(buf))
+						log.Errorf("Recovering from panic: %v", msg)
+						log.WithFields(log.Fields{"delta": delta, "projectId": projectId}).Info("processing failed")
+						// Report Error here
+						store.GetStore().DeleteTaskEndRecord(taskDetails.TaskID, projectId, delta)
+					}
+				}()
 				status, isSuccess := f(projectId, configs)
 				finalStatus[deltaString] = status
 				finalStatus["Status"+deltaString] = isSuccess
