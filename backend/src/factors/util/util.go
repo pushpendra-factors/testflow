@@ -408,6 +408,12 @@ func GetTimeLocationFor(timezone TimeZoneString) *time.Location {
 	return timezoneLocation
 }
 
+func FindOffsetInUTC(timezone TimeZoneString) int {
+	timezoneLocation, _ := time.LoadLocation(string(timezone))
+	_, offset := time.Now().UTC().In(timezoneLocation).Zone()
+	return offset
+}
+
 // TimeNowUnix Returns current epoch time.
 func TimeNowUnix() int64 {
 	return TimeNow().Unix()
