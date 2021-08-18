@@ -7,9 +7,10 @@ import React, {
 } from 'react';
 import {
   formatData,
-  formatVisibleProperties,
   formatDataInStackedAreaFormat,
   defaultSortProp,
+  getVisibleData,
+  getVisibleSeriesData,
 } from '../../CoreQuery/EventsAnalytics/MultipleEventsWIthBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import MultipleEventsWithBreakdownTable from '../../CoreQuery/EventsAnalytics/MultipleEventsWIthBreakdown/MultipleEventsWithBreakdownTable';
@@ -26,7 +27,6 @@ import {
   CHART_TYPE_STACKED_AREA,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
   CHART_TYPE_STACKED_BAR,
-  MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../utils/constants';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
@@ -46,8 +46,9 @@ function MultipleEventsWithBreakdown({
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const [visibleSeriesData, setVisibleSeriesData] = useState([]);
   const [sorter, setSorter] = useState(defaultSortProp());
-  const [dateSorter, setDateSorter] = useState({});
+  const [dateSorter, setDateSorter] = useState(defaultSortProp());
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);
@@ -79,34 +80,31 @@ function MultipleEventsWithBreakdown({
       eventNames
     );
     const { categories: cats, data: d } = isSeriesChart(chartType)
-      ? formatDataInStackedAreaFormat(resultState.data, aggData, eventNames)
+      ? formatDataInStackedAreaFormat(
+          resultState.data,
+          aggData,
+          eventNames,
+          durationObj.frequency
+        )
       : { categories: [], data: [] };
     setAggregateData(aggData);
     setCategories(cats);
     setData(d);
-  }, [resultState.data, appliedQueries, eventNames, chartType]);
-
-  const visibleSeriesData = useMemo(() => {
-    const colors = generateColors(visibleProperties.length);
-    return data
-      .filter(
-        (elem) =>
-          visibleProperties.findIndex((vp) => vp.index === elem.index) > -1
-      )
-      .map((elem, index) => {
-        const color = colors[index];
-        return {
-          ...elem,
-          color,
-        };
-      });
-  }, [data, visibleProperties]);
+  }, [
+    resultState.data,
+    appliedQueries,
+    eventNames,
+    chartType,
+    durationObj.frequency,
+  ]);
 
   useEffect(() => {
-    setVisibleProperties([
-      ...aggregateData.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
-    ]);
-  }, [aggregateData]);
+    setVisibleProperties(getVisibleData(aggregateData, sorter));
+  }, [aggregateData, sorter]);
+
+  useEffect(() => {
+    setVisibleSeriesData(getVisibleSeriesData(data, dateSorter));
+  }, [data, dateSorter]);
 
   if (!visibleProperties.length) {
     return (
@@ -135,7 +133,7 @@ function MultipleEventsWithBreakdown({
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <BarChart
-        chartData={formatVisibleProperties(visibleProperties, queries)}
+        chartData={visibleProperties}
         height={DASHBOARD_WIDGET_MULTICOLORED_BAR_CHART_HEIGHT}
         title={unit.id}
         cardSize={unit.cardSize}
@@ -186,6 +184,8 @@ function MultipleEventsWithBreakdown({
         handleSorting={handleSorting}
         dateSorter={dateSorter}
         handleDateSorting={handleDateSorting}
+        visibleSeriesData={visibleSeriesData}
+        setVisibleSeriesData={setVisibleSeriesData}
       />
     );
   } else {

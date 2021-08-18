@@ -1,24 +1,16 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useContext,
-  useCallback,
-} from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
   formatData,
   formatDataInStackedAreaFormat,
   defaultSortProp,
+  getVisibleData,
+  getVisibleSeriesData,
 } from '../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import SingleEventSingleBreakdownTable from '../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/SingleEventSingleBreakdownTable';
 import LineChart from '../../../components/HCLineChart';
 import StackedAreaChart from '../../../components/StackedAreaChart';
-import {
-  generateColors,
-  getNewSorterState,
-  isSeriesChart
-} from '../../../utils/dataFormatter';
+import { getNewSorterState, isSeriesChart } from '../../../utils/dataFormatter';
 import {
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
@@ -26,7 +18,6 @@ import {
   CHART_TYPE_STACKED_AREA,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
   CHART_TYPE_STACKED_BAR,
-  MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../utils/constants';
 import StackedBarChart from '../../../components/StackedBarChart';
 import { DashboardContext } from '../../../contexts/DashboardContext';
@@ -43,8 +34,12 @@ function SingleEventSingleBreakdown({
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const [visibleSeriesData, setVisibleSeriesData] = useState([]);
   const [sorter, setSorter] = useState(defaultSortProp());
-  const [dateSorter, setDateSorter] = useState({});
+  const [dateSorter, setDateSorter] = useState(defaultSortProp());
+  const [aggregateData, setAggregateData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [data, setData] = useState([]);
 
   const handleSorting = useCallback((prop) => {
     setSorter((currentSorter) => {
@@ -60,41 +55,27 @@ function SingleEventSingleBreakdown({
 
   const { handleEditQuery } = useContext(DashboardContext);
 
-  const aggregateData = useMemo(() => {
-    return formatData(resultState.data);
-  }, [resultState.data]);
-
-  const { categories, data } = useMemo(() => {
-    if (!isSeriesChart(chartType)) {
-      return {
-        categories: [],
-        data: [],
-      };
-    }
-    return formatDataInStackedAreaFormat(resultState.data, aggregateData);
-  }, [resultState.data, aggregateData, chartType]);
-
-  const visibleSeriesData = useMemo(() => {
-    const colors = generateColors(visibleProperties.length);
-    return data
-      .filter(
-        (elem) =>
-          visibleProperties.findIndex((vp) => vp.index === elem.index) > -1
-      )
-      .map((elem, index) => {
-        const color = colors[index];
-        return {
-          ...elem,
-          color,
-        };
-      });
-  }, [data, visibleProperties]);
+  useEffect(() => {
+    const aggData = formatData(resultState.data);
+    const { categories: cats, data: d } = isSeriesChart(chartType)
+      ? formatDataInStackedAreaFormat(
+          resultState.data,
+          aggData,
+          durationObj.frequency
+        )
+      : { categories: [], data: [] };
+    setAggregateData(aggData);
+    setCategories(cats);
+    setData(d);
+  }, [resultState.data, durationObj.frequency, chartType]);
 
   useEffect(() => {
-    setVisibleProperties([
-      ...aggregateData.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
-    ]);
-  }, [aggregateData]);
+    setVisibleSeriesData(getVisibleSeriesData(data, dateSorter));
+  }, [data, dateSorter]);
+
+  useEffect(() => {
+    setVisibleProperties(getVisibleData(aggregateData, sorter));
+  }, [aggregateData, sorter]);
 
   if (!visibleProperties.length) {
     return (
@@ -148,6 +129,8 @@ function SingleEventSingleBreakdown({
         handleSorting={handleSorting}
         dateSorter={dateSorter}
         handleDateSorting={handleDateSorting}
+        visibleSeriesData={visibleSeriesData}
+        setVisibleSeriesData={setVisibleSeriesData}
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_AREA) {

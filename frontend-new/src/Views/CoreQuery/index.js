@@ -74,6 +74,7 @@ import {
   SET_COMPARE_DURATION,
   SET_NAVIGATED_FROM_DASHBOARD,
   UPDATE_CHART_TYPES,
+  SET_SAVED_QUERY_SETTINGS,
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -209,6 +210,13 @@ function CoreQuery({
     [updateLocalReducer]
   );
 
+  const updateSavedQuerySettings = useCallback(
+    (payload) => {
+      updateLocalReducer(SET_SAVED_QUERY_SETTINGS, payload);
+    },
+    [updateLocalReducer]
+  );
+
   const configActionsOnRunningQuery = useCallback(
     (isQuerySaved) => {
       closeDrawer();
@@ -217,6 +225,7 @@ function CoreQuery({
       setQuerySaved(isQuerySaved);
       if (!isQuerySaved) {
         setNavigatedFromDashboard(false);
+        updateSavedQuerySettings({});
       }
       localDispatch({
         type: SET_COMPARISON_SUPPORTED,
@@ -235,6 +244,7 @@ function CoreQuery({
       models,
       updateAppliedBreakdown,
       setNavigatedFromDashboard,
+      updateSavedQuerySettings,
     ]
   );
 
@@ -924,6 +934,7 @@ function CoreQuery({
             setActiveKey={setActiveKey}
             setBreakdownType={setBreakdownType}
             setNavigatedFromDashboard={setNavigatedFromDashboard}
+            updateSavedQuerySettings={updateSavedQuerySettings}
           />
         )}
       </ErrorBoundary>

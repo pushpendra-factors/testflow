@@ -21,13 +21,12 @@ function NoBreakdownTable({
   durationObj,
   arrayMapper,
   reportTitle = 'Events Analytics',
+  sorter,
+  setSorter,
+  dateSorter,
+  setDateSorter,
+  responseData,
 }) {
-  const [sorter, setSorter] = useState({
-    key: arrayMapper[0]?.mapper,
-    type: 'numerical',
-    subtype: null,
-    order: 'descend',
-  });
   const [searchText, setSearchText] = useState('');
   const { eventNames } = useSelector((state) => state.coreQuery);
 
@@ -35,7 +34,13 @@ function NoBreakdownTable({
     setSorter((currentSorter) => {
       return getNewSorterState(currentSorter, prop);
     });
-  }, []);
+  }, [setSorter]);
+
+  const handleDateSorting = useCallback((prop) => {
+    setDateSorter((currentSorter) => {
+      return getNewSorterState(currentSorter, prop);
+    });
+  }, [setDateSorter]);
 
   let columns;
   let tableData;
@@ -56,17 +61,18 @@ function NoBreakdownTable({
   } else {
     columns = getDateBasedColumns(
       data,
-      sorter,
-      handleSorting,
+      dateSorter,
+      handleDateSorting,
       durationObj.frequency,
       eventNames
     );
     tableData = getNoGroupingTablularDatesBasedData(
       data,
-      sorter,
+      dateSorter,
       searchText,
       arrayMapper,
-      durationObj.frequency
+      durationObj.frequency,
+      responseData.metrics
     );
 
     onSelectionChange = (_, selectedRows) => {

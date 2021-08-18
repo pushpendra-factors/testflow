@@ -39,6 +39,117 @@ export const getDifferentCampaingns = (data) => {
   return Array.from(differentCampaigns);
 };
 
+export const getSingleTouchPointChartData = (
+  data,
+  visibleIndices,
+  attr_dimensions,
+  touchpoint,
+  isComparisonApplied
+) => {
+  console.log('attributions getSingleTouchPointChartData');
+  const enabledDimensions = attr_dimensions.filter(
+    (d) => d.touchPoint === touchpoint && d.enabled
+  );
+  const slicedTableData = data.filter(
+    (d) => visibleIndices.indexOf(d.index) > -1
+  );
+
+  const categories = slicedTableData.map((d) => {
+    const cat = enabledDimensions.map((dimension) => {
+      return d[dimension.title];
+    });
+    return cat.join(', ');
+  });
+
+  const series = [
+    {
+      type: 'column',
+      yAxis: 0,
+      data: slicedTableData.map((row) =>
+        isComparisonApplied
+          ? Number(row['Conversion'].value)
+          : Number(row['Conversion'])
+      ),
+      color: '#4d7db4',
+    },
+    {
+      type: 'line',
+      yAxis: 1,
+      data: slicedTableData.map((row) =>
+        isComparisonApplied
+          ? Number(row['Cost per Conversion'].value)
+          : Number(row['Cost per Conversion'])
+      ),
+      color: '#d4787d',
+      marker: {
+        symbol: 'circle',
+      },
+    },
+  ];
+  if (isComparisonApplied) {
+    series.push({
+      type: 'column',
+      yAxis: 0,
+      data: slicedTableData.map((row) =>
+        Number(row['Conversion'].compare_value)
+      ),
+      color: '#4d7db4',
+    });
+    series.push({
+      type: 'line',
+      yAxis: 1,
+      data: slicedTableData.map((row) =>
+        Number(row['Cost per Conversion'].compare_value)
+      ),
+      color: '#d4787d',
+      marker: {
+        symbol: 'circle',
+      },
+      dashStyle: 'dash',
+    });
+    let temp = series[1];
+    series[1] = series[2];
+    series[2] = temp;
+  }
+  return {
+    categories,
+    series,
+  };
+};
+
+export const getDualTouchPointChartData = (
+  data,
+  visibleIndices,
+  attr_dimensions,
+  touchpoint,
+  attribution_method,
+  attribution_method_compare,
+  currMetricsValue
+) => {
+  console.log('attributions getDualTouchPointChartData');
+  const enabledDimensions = attr_dimensions.filter(
+    (d) => d.touchPoint === touchpoint && d.enabled
+  );
+  const slicedTableData = data.filter(
+    (d) => visibleIndices.indexOf(d.index) > -1
+  );
+  const result = slicedTableData.map((d) => {
+    const name = enabledDimensions.map((dimension) => {
+      return d[dimension.title];
+    });
+    return {
+      name: name.join(', '),
+      [attribution_method]: !currMetricsValue
+        ? d['Conversion']
+        : d['Cost per Conversion'],
+      [attribution_method_compare]: !currMetricsValue
+        ? d['conversion_compare']
+        : d['cost_compare'],
+    };
+  });
+  return result;
+};
+
 export const formatData = (
   data,
   touchPoint,

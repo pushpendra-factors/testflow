@@ -1,9 +1,17 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  forwardRef,
+  useContext,
+  useImperativeHandle,
+} from 'react';
 import {
   formatData,
-  formatVisibleProperties,
   formatDataInStackedAreaFormat,
-  defaultSortProp
+  defaultSortProp,
+  getVisibleData,
+  getVisibleSeriesData,
 } from './utils';
 import BarChart from '../../../../components/BarChart';
 import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
@@ -17,159 +25,169 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
-  MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
 import StackedAreaChart from '../../../../components/StackedAreaChart';
 import StackedBarChart from '../../../../components/StackedBarChart';
 import { useSelector } from 'react-redux';
+import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 
-function MultipleEventsWithBreakdown({
-  queries,
-  breakdown,
-  resultState,
-  page,
-  chartType,
-  durationObj,
-  title,
-  section,
-}) {
-  const [visibleProperties, setVisibleProperties] = useState([]);
-  const { eventNames } = useSelector((state) => state.coreQuery);
-
-  const [sorter, setSorter] = useState(defaultSortProp());
-  const [dateSorter, setDateSorter] = useState({});
-  const [aggregateData, setAggregateData] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [data, setData] = useState([]);
-
-  const handleSorting = useCallback((prop) => {
-    setSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
-    });
-  }, []);
-
-  const handleDateSorting = useCallback((prop) => {
-    setDateSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
-    });
-  }, []);
-
-  useEffect(() => {
-    const appliedColors = generateColors(queries.length);
-    const aggData = formatData(
-      resultState.data,
+const MultipleEventsWithBreakdown = forwardRef(
+  (
+    {
       queries,
-      appliedColors,
-      eventNames
+      breakdown,
+      resultState,
+      page,
+      chartType,
+      durationObj,
+      title,
+      section,
+    },
+    ref
+  ) => {
+    const {
+      coreQueryState: { savedQuerySettings },
+    } = useContext(CoreQueryContext);
+    const [visibleProperties, setVisibleProperties] = useState([]);
+    const [visibleSeriesData, setVisibleSeriesData] = useState([]);
+    const { eventNames } = useSelector((state) => state.coreQuery);
+    const [sorter, setSorter] = useState(
+      savedQuerySettings.sorter || defaultSortProp()
     );
-    const { categories: cats, data: d } = formatDataInStackedAreaFormat(
-      resultState.data,
-      aggData,
-      eventNames
+    const [dateSorter, setDateSorter] = useState(
+      savedQuerySettings.dateSorter || defaultSortProp()
     );
-    setAggregateData(aggData);
-    setCategories(cats);
-    setData(d);
-  }, [resultState.data, queries, eventNames]);
+    const [aggregateData, setAggregateData] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [data, setData] = useState([]);
 
-  const visibleSeriesData = useMemo(() => {
-    const colors = generateColors(visibleProperties.length);
-    return data
-      .filter(
-        (elem) =>
-          visibleProperties.findIndex((vp) => vp.index === elem.index) > -1
-      )
-      .map((elem, index) => {
-        const color = colors[index];
-        return {
-          ...elem,
-          color,
-        };
+    const handleSorting = useCallback((prop) => {
+      setSorter((currentSorter) => {
+        return getNewSorterState(currentSorter, prop);
       });
-  }, [data, visibleProperties]);
+    }, []);
 
-  useEffect(() => {
-    setVisibleProperties([
-      ...aggregateData.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
-    ]);
-  }, [aggregateData]);
+    const handleDateSorting = useCallback((prop) => {
+      setDateSorter((currentSorter) => {
+        return getNewSorterState(currentSorter, prop);
+      });
+    }, []);
 
-  if (!visibleProperties.length) {
-    return null;
+    useImperativeHandle(ref, () => {
+      return {
+        currentSorter: { sorter, dateSorter },
+      };
+    });
+
+    useEffect(() => {
+      const appliedColors = generateColors(queries.length);
+      const aggData = formatData(
+        resultState.data,
+        queries,
+        appliedColors,
+        eventNames
+      );
+      const { categories: cats, data: d } = formatDataInStackedAreaFormat(
+        resultState.data,
+        aggData,
+        eventNames,
+        durationObj.frequency
+      );
+      setAggregateData(aggData);
+      setCategories(cats);
+      setData(d);
+    }, [resultState.data, queries, eventNames, durationObj.frequency]);
+
+    useEffect(() => {
+      setVisibleProperties(getVisibleData(aggregateData, sorter));
+    }, [aggregateData, sorter]);
+
+    useEffect(() => {
+      setVisibleSeriesData(getVisibleSeriesData(data, dateSorter));
+    }, [data, dateSorter]);
+
+    if (!visibleProperties.length) {
+      return null;
+    }
+
+    let chart = null;
+
+    const table = (
+      <div className='mt-12 w-full'>
+        <MultipleEventsWithBreakdownTable
+          isWidgetModal={section === DASHBOARD_MODAL}
+          data={aggregateData}
+          seriesData={data}
+          queries={queries}
+          breakdown={breakdown}
+          events={queries}
+          chartType={chartType}
+          setVisibleProperties={setVisibleProperties}
+          visibleProperties={visibleProperties}
+          page={page}
+          durationObj={durationObj}
+          categories={categories}
+          sorter={sorter}
+          handleSorting={handleSorting}
+          dateSorter={dateSorter}
+          handleDateSorting={handleDateSorting}
+          visibleSeriesData={visibleSeriesData}
+          setVisibleSeriesData={setVisibleSeriesData}
+        />
+      </div>
+    );
+
+    if (chartType === CHART_TYPE_BARCHART) {
+      chart = (
+        <BarChart
+          section={section}
+          chartData={visibleProperties}
+          queries={queries}
+          title={title}
+        />
+      );
+    } else if (chartType === CHART_TYPE_STACKED_AREA) {
+      chart = (
+        <div className='w-full'>
+          <StackedAreaChart
+            frequency={durationObj.frequency}
+            categories={categories}
+            data={visibleSeriesData}
+            showAllLegends={true}
+          />
+        </div>
+      );
+    } else if (chartType === CHART_TYPE_STACKED_BAR) {
+      chart = (
+        <div className='w-full'>
+          <StackedBarChart
+            frequency={durationObj.frequency}
+            categories={categories}
+            data={visibleSeriesData}
+            showAllLegends={true}
+          />
+        </div>
+      );
+    } else {
+      chart = (
+        <div className='w-full'>
+          <LineChart
+            frequency={durationObj.frequency}
+            categories={categories}
+            data={visibleSeriesData}
+            showAllLegends={true}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className='flex items-center justify-center flex-col'>
+        {chart}
+        {table}
+      </div>
+    );
   }
-
-  let chart = null;
-
-  const table = (
-    <div className='mt-12 w-full'>
-      <MultipleEventsWithBreakdownTable
-        isWidgetModal={section === DASHBOARD_MODAL}
-        data={aggregateData}
-        seriesData={data}
-        queries={queries}
-        breakdown={breakdown}
-        events={queries}
-        chartType={chartType}
-        setVisibleProperties={setVisibleProperties}
-        visibleProperties={visibleProperties}
-        page={page}
-        durationObj={durationObj}
-        categories={categories}
-        sorter={sorter}
-        handleSorting={handleSorting}
-        dateSorter={dateSorter}
-        handleDateSorting={handleDateSorting}
-      />
-    </div>
-  );
-
-  if (chartType === CHART_TYPE_BARCHART) {
-    chart = (
-      <BarChart
-        section={section}
-        chartData={formatVisibleProperties(visibleProperties, queries)}
-        queries={queries}
-        title={title}
-      />
-    );
-  } else if (chartType === CHART_TYPE_STACKED_AREA) {
-    chart = (
-      <div className='w-full'>
-        <StackedAreaChart
-          frequency={durationObj.frequency}
-          categories={categories}
-          data={visibleSeriesData}
-        />
-      </div>
-    );
-  } else if (chartType === CHART_TYPE_STACKED_BAR) {
-    chart = (
-      <div className='w-full'>
-        <StackedBarChart
-          frequency={durationObj.frequency}
-          categories={categories}
-          data={visibleSeriesData}
-        />
-      </div>
-    );
-  } else {
-    chart = (
-      <div className='w-full'>
-        <LineChart
-          frequency={durationObj.frequency}
-          categories={categories}
-          data={visibleSeriesData}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className='flex items-center justify-center flex-col'>
-      {chart}
-      {table}
-    </div>
-  );
-}
+);
 
 export default MultipleEventsWithBreakdown;

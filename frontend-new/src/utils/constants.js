@@ -92,15 +92,15 @@ export const DASHBOARD_WIDGET_LINE_CHART_HEIGHT = 225;
 export const DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT = 250;
 
 export const BAR_CHART_XAXIS_TICK_LENGTH = {
-  0: 15,
-  1: 25,
+  0: 10,
+  1: 15,
   2: 5,
 };
 
 export const BAR_COUNT = {
-  0: 3,
-  1: 5,
-  2: 2,
+  0: 5,
+  1: 10,
+  2: 3,
 };
 
 export const BARLINE_COUNT = {
@@ -148,7 +148,8 @@ export const apiChartAnnotations = {
   [CHART_TYPE_STACKED_BAR]: 'ps',
 };
 
-export const MAX_ALLOWED_VISIBLE_PROPERTIES = 5;
+export const MAX_ALLOWED_VISIBLE_PROPERTIES = 10;
+export const GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES = 5;
 
 export const DASHBOARD_TYPES = {
   WEB: 'web',

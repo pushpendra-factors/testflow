@@ -1,10 +1,27 @@
 import {
-  SortData,
   SortResults,
   getClickableTitleSorter,
 } from '../../../../utils/dataFormatter';
 import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
 import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
+import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
+
+export const getDefaultSortProp = () => {
+  return {
+    key: 'User Count',
+    type: 'numerical',
+    subtype: null,
+    order: 'descend',
+  };
+};
+
+export const getVisibleData = (aggregateData, sorter) => {
+  const result = SortResults(aggregateData, sorter).slice(
+    0,
+    MAX_ALLOWED_VISIBLE_PROPERTIES
+  );
+  return result;
+};
 
 export const formatData = (data) => {
   const headerSlice = data.headers.slice(0, data.headers.length - 1);
@@ -12,17 +29,25 @@ export const formatData = (data) => {
   const grns = getBreakDownGranularities(headerSlice, breakdowns);
 
   const result = data.rows.map((d, index) => {
-    const str = d
-      .slice(0, d.length - 1)
-      .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
-      .join(',');
+    const breakdownVals = d.slice(0, d.length - 1);
+    const breakdownData = {};
+    for (let i = 0; i < breakdowns.length; i++) {
+      const bkd = breakdowns[i];
+      breakdownData[`${bkd.pr} - ${i}`] = parseForDateTimeLabel(
+        grns[i],
+        breakdownVals[i]
+      );
+    }
+    const grpLabel = Object.values(breakdownData).join(',');
     return {
       index,
-      label: str,
+      label: grpLabel,
       value: d[d.length - 1],
+      'User Count': d[d.length - 1],
+      ...breakdownData,
     };
   });
-  return SortData(result, 'value', 'descend');
+  return result;
 };
 
 export const getTableColumns = (
@@ -69,12 +94,5 @@ export const getTableData = (data, breakdown, searchText, currentSorter) => {
   const filteredData = data.filter((elem) =>
     elem.label.toLowerCase().includes(searchText.toLowerCase())
   );
-  const result = filteredData.map((d) => {
-    const breakdownValues = {};
-    breakdown.forEach((b, index) => {
-      breakdownValues[`${b.property} - ${index}`] = d.label.split(',')[index];
-    });
-    return { ...breakdownValues, 'User Count': d.value, index: d.index };
-  });
-  return SortResults(result, currentSorter);
+  return SortResults(filteredData, currentSorter);
 };

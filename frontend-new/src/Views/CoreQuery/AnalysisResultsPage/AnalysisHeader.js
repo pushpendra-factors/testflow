@@ -22,7 +22,8 @@ function AnalysisHeader({
   setQuerySaved,
   breakdownType,
   changeTab,
-  activeTab
+  activeTab,
+  getCurrentSorter
 }) {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const {
@@ -108,6 +109,7 @@ function AnalysisHeader({
           queryType={queryType}
           setQuerySaved={setQuerySaved}
           breakdownType={breakdownType}
+          getCurrentSorter={getCurrentSorter}
         />
 
         {/* <Button

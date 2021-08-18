@@ -588,7 +588,7 @@ export const DefaultDateRangeFormat = {
     moment().format('dddd') === 'Sunday'
       ? moment().subtract(1, 'day').endOf('week')
       : moment().subtract(1, 'day').endOf('day'),
-  frequency: 'date',
+  frequency: moment().format('dddd') === 'Monday' ? 'hour' : 'date',
   dateType:
     moment().format('dddd') === 'Sunday'
       ? PREDEFINED_DATES.LAST_WEEK
@@ -1039,12 +1039,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
   }
 };
 
-export const isComparisonEnabled = (
-  queryType,
-  events,
-  groupBy,
-  models
-) => {
+export const isComparisonEnabled = (queryType, events, groupBy, models) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
     const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
     return newAppliedBreakdown.length === 0;

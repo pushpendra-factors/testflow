@@ -35,6 +35,7 @@ function SaveQuery({
   queryType,
   setQuerySaved,
   fetchWeeklyIngishtsMetaData,
+  getCurrentSorter,
 }) {
   const [title, setTitle] = useState('');
   const [addToDashboard, setAddToDashboard] = useState(false);
@@ -114,6 +115,7 @@ function SaveQuery({
     try {
       setApisCalled(true);
       let query;
+      const querySettings = getCurrentSorter();
       if (queryType === QUERY_TYPE_FUNNEL) {
         query = {
           ...requestQuery,
@@ -154,7 +156,13 @@ function SaveQuery({
         };
       }
       const type = addToDashboard ? 1 : 2;
-      const res = await saveQuery(active_project.id, title, query, type);
+      const res = await saveQuery(
+        active_project.id,
+        title,
+        query,
+        type,
+        querySettings
+      );
       if (addToDashboard) {
         const settings = {
           chart: dashboardPresentation,
@@ -203,7 +211,8 @@ function SaveQuery({
     queryType,
     setQuerySaved,
     attributionMetrics,
-    fetchWeeklyIngishtsMetaData
+    fetchWeeklyIngishtsMetaData,
+    getCurrentSorter
   ]);
 
   let dashboardHelpText = 'Create a dashboard widget for regular monitoring';
