@@ -101,13 +101,13 @@ function FunnelsResultTable({
     if (!comparisonChartData) {
       return {
         fileName: `${reportTitle}.csv`,
-        data: tableData.map(({ index, ...rest }) => {
+        data: tableData.map(({ index, value, name, nonConvertedName, ...rest }) => {
           arrayMapper.forEach((elem, index) => {
             rest[`${elem.displayName}-${index}`] =
               rest[`${elem.displayName}-${index}`].value;
             delete rest[`${elem.mapper}`];
           });
-          return { ...rest };
+          return { ...rest, Conversion: rest.Conversion + '%' };
         }),
       };
     } else {

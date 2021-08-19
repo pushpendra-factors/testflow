@@ -443,6 +443,7 @@ func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Tim
 	k[594] = 100
 	k[559] = 100
 	k[628] = 100
+	k[616] = 100
 	kValue, ok := k[projectId]
 	if !ok {
 		kValue = 10

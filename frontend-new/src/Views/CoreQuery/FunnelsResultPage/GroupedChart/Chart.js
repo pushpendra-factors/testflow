@@ -36,9 +36,9 @@ function Chart({
   const chartRef = useRef(null);
   const tooltipRef = useRef(null);
   const renderedData = groups.slice(0, FUNNELS_COUNT[cardSize]);
-  const keys = Object.keys(renderedData[0]).filter((elem) =>
-    elem.includes('event')
-  );
+  const keys = arrayMapper
+    .map((elem) => elem.mapper)
+    .filter((elem) => Object.keys(renderedData[0]).indexOf(elem) > -1);
   const colors = generateColors(keys.length);
 
   const durationMetric = durations.metrics.find(

@@ -2574,11 +2574,15 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 }
 
 func UnEscapeQueryParamProperties(properties *PropertiesMap) {
-	for k := range *properties {
+	UnEscapedProperties := make(PropertiesMap)
+	for k, v := range *properties {
 		if strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) {
-			(*properties)[k] = GetUnEscapedPropertyValue((*properties)[k])
+			UnEscapedProperties[GetUnEscapedPropertyValue(k).(string)] = GetUnEscapedPropertyValue(v)
+		} else {
+			UnEscapedProperties[k] = v
 		}
 	}
+	*properties = UnEscapedProperties
 }
 
 func HasDefinedMarketingProperty(properties *PropertiesMap) bool {
