@@ -477,7 +477,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			value := U.GetInterfaceList(users)
 			queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND " +
 				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
-				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
+				" AND user_id IN ( " + usersPlaceHolder + " ) "
 			qParams := []interface{}{projectID, queryFrom, queryTo}
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
