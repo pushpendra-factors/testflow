@@ -104,6 +104,27 @@ func TestSDKTrackHandler(t *testing.T) {
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
+	// Test for URLescape of Property key
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "URL_Escape_Key_test", "event_properties": {"$qp_amp%%3Butm_campaign" : "$qp_amp%%3Butm_campaign", "$qp_amp%%3Butm_medium" : "$qp_amp%%3Butm_medium", "$qp_gclhttps%%3A%%2F%%2Fwww.chargebee.com%%2F%%3Fkeyword" : "$qp_gclhttps%%3A%%2F%%2Fwww.chargebee.com%%2F%%3Fkeyword"}, "user_properties": {}}`, user.ID)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	responseEvent, errCode := store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, responseEvent)
+	responseEventPropertiesBytes, err := responseEvent.Properties.Value()
+	assert.Nil(t, err)
+	var responseEventProperties map[string]interface{}
+	json.Unmarshal(responseEventPropertiesBytes.([]byte), &responseEventProperties)
+	assert.NotNil(t, responseEventProperties["$qp_amp;utm_campaign"])
+	assert.NotNil(t, responseEventProperties["$qp_amp;utm_medium"])
+	assert.NotNil(t, responseEventProperties["$qp_gclhttps://www.chargebee.com/?keyword"])
+	assert.Equal(t, "$qp_amp;utm_campaign", responseEventProperties["$qp_amp;utm_campaign"])
+	assert.Equal(t, "$qp_amp;utm_medium", responseEventProperties["$qp_amp;utm_medium"])
+	assert.Equal(t, "$qp_gclhttps://www.chargebee.com/?keyword", responseEventProperties["$qp_gclhttps://www.chargebee.com/?keyword"])
+
 	// Create with customer_event_id
 	CustEventId := U.RandomString(8)
 	w = ServePostRequestWithHeaders(r, uri,
