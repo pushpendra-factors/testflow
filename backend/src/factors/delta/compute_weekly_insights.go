@@ -74,6 +74,9 @@ var BlackListedKeys = map[string]bool{
 	"$session_latest_page_raw_url": true,
 	"$gclid":                       true,
 	"$hubspot_contact_hs_calculated_form_submissions": true,
+	"$latest_gclid":  true,
+	"$initial_gclid": true,
+	"$joinTime":      true,
 }
 var numberOfRecordsFromGbp int = 2 // number of records to be fetched from gbp
 var increasedRecords int
