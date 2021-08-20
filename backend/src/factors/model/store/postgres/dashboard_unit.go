@@ -460,7 +460,7 @@ func (pg *Postgres) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dashb
 	}
 	return
 }
-func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string){
+func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string) {
 	var temp_query model.Query
 	var queryGroup model.QueryGroup
 	// try decoding for Query
@@ -478,6 +478,7 @@ func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, e
 	}
 	return
 }
+
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
@@ -563,6 +564,7 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 		result, errCode = pg.RunEventsGroupQuery(groupQuery.Queries, projectID)
 	}
 	if errCode != http.StatusOK {
+		logCtx.Info("failed to run the query for dashboard caching")
 		return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg)
 	}
 
