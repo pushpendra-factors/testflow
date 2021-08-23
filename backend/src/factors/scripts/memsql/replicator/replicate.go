@@ -19,6 +19,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/jinzhu/gorm/dialects/postgres"
 
+	"factors/config"
 	C "factors/config"
 	U "factors/util"
 
@@ -187,6 +188,7 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
+	memSQLResourcePool := flag.String("memsql_resource_pool", "", "")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	projectIDStringList := flag.String("project_ids", "", "")
@@ -261,12 +263,13 @@ func main() {
 
 	maxOpenConns := (24 * migrationRoutinesOther) + (4 * migrationRoutinesHeavy) + 10
 	memSQLDBConf := C.DBConf{
-		Host:        *memSQLHost,
-		Port:        *memSQLPort,
-		User:        *memSQLUser,
-		Name:        *memSQLName,
-		Password:    *memSQLPass,
-		Certificate: *memSQLCertificate,
+		Host:         *memSQLHost,
+		Port:         *memSQLPort,
+		User:         *memSQLUser,
+		Name:         *memSQLName,
+		Password:     *memSQLPass,
+		Certificate:  *memSQLCertificate,
+		ResourcePool: *memSQLResourcePool,
 	}
 	initMemSQLDB(*env, &memSQLDBConf, maxOpenConns)
 
@@ -293,6 +296,12 @@ func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
 	if err != nil {
 		log.WithError(err).Fatal("Failed connecting to memsql.")
 	}
+
+	err = config.SetMemSQLResourcePool(memSQLDB, dbConf.ResourcePool)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to set resource pool.")
+	}
+
 	// Disables before callback for create method.
 	memSQLDB.Callback().Create().Remove("gorm:before_create")
 	// Removes unneccesary select after insert triggered by gorm.
