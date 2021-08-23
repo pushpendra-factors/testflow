@@ -687,7 +687,7 @@ func isValidMemSQLResourcePool(resourcePool string) bool {
 	return exists
 }
 
-func setMemSQLResourcePool(memSQLDB *gorm.DB, resourcePool string) error {
+func SetMemSQLResourcePool(memSQLDB *gorm.DB, resourcePool string) error {
 	if resourcePool != "" {
 		log.Infof("Using memsql resource pool %s", resourcePool)
 	}
@@ -721,7 +721,7 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 		log.WithError(err).Fatal("Failed connecting to memsql.")
 	}
 
-	err = setMemSQLResourcePool(memSQLDB, configuration.MemSQLInfo.ResourcePool)
+	err = SetMemSQLResourcePool(memSQLDB, configuration.MemSQLInfo.ResourcePool)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to set resource pool.")
 	}
