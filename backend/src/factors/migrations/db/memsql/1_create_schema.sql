@@ -687,16 +687,16 @@ CREATE TABLE IF NOT EXISTS public.templates (
     SHARD KEY (project_id)
 )
 
-CREATE TABLE IF NOT EXISTS feedback(
+CREATE TABLE IF NOT EXISTS feedbacks(
     id text NOT NULL,
     project_id bigint NOT NULL,
     feature text NOT NULL,
-    property jsonb,
-    vote_type int NOT NULL,
+    property json,
+    vote_type integer NOT NULL,
     created_by text NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    PRIMARY KEY (id),
+    PRIMARY KEY (id,project_id),
     SHARD KEY (project_id)
     
 )

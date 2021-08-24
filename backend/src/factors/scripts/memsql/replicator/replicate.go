@@ -75,7 +75,7 @@ const (
 	tableTaskExecutionDependencyDetails = "task_execution_dependency_details"
 	tableWeekyInsightsMetadata          = "weekly_insights_metadata"
 	tableTemplates                      = "templates"
-	tableFeedback                       = "feedback"
+	tableFeedback                       = "feedbacks"
 	healthcheckPingID                   = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
 
@@ -1238,6 +1238,7 @@ func migrateAllTables(projectIDs []uint64) {
 		tableTaskExecutionDependencyDetails,
 		tableWeekyInsightsMetadata,
 		tableTemplates,
+		tableFeedback,
 	}
 
 	// Runs replication continiously for each table
