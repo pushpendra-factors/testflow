@@ -98,7 +98,7 @@ func GetWeeklyInsightsHandler(c *gin.Context) (interface{}, int, string, string,
 	if params.ProjectID == 0 || params.QueryId == 0 {
 		return nil, http.StatusBadRequest, INVALID_INPUT, "invalid projectId or QueryId", true
 	}
-	response, err := delta.GetWeeklyInsights(params.ProjectID, params.QueryId, &params.BaseStartTime, &params.CompStartTime, params.InsightsType, params.NumberOfRecords)
+	response, err := delta.GetWeeklyInsights(params.ProjectID,agentUUID, params.QueryId, &params.BaseStartTime, &params.CompStartTime, params.InsightsType, params.NumberOfRecords)
 	if err != nil {
 		log.Error(err)
 		return err, http.StatusInternalServerError, "", "", true

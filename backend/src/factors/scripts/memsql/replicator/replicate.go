@@ -75,8 +75,8 @@ const (
 	tableTaskExecutionDependencyDetails = "task_execution_dependency_details"
 	tableWeekyInsightsMetadata          = "weekly_insights_metadata"
 	tableTemplates                      = "templates"
-
-	healthcheckPingID = "e6e3735b-82a3-4534-82be-b621470c4c69"
+	tableFeedback                       = "feedback"
+	healthcheckPingID                   = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
 
 var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
@@ -866,6 +866,9 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 	case tableProjects:
 		record = &model.Project{}
 
+	// feedback table
+	case tableFeedback:
+		record = &model.Feedback{}
 	default:
 		// Critical error. Should not proceed without adding support for table.
 		log.Fatalf("Unsupported table name %s on get_record_interface_by_table_name", tableName)

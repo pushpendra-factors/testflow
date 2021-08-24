@@ -39,7 +39,6 @@ func InitAppRoutes(r *gin.Engine) {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 	r.Use(mid.SkipMemSQLAPIWritesIfDisabled())
-
 	r.POST(routePrefix+"/accounts/signup", SignUp)
 	r.POST(routePrefix+"/agents/signin", Signin)
 	r.GET(routePrefix+"/agents/signout", Signout)
@@ -61,11 +60,11 @@ func InitAppRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		GetProjectsHandler)
-	r.GET(routePrefix+"/GetTaskDetailsByName",mid.SetLoggedInAgentInternalOnly(),responseWrapper(V1.GetTaskDetailsByNameHandler))
-	r.GET(routePrefix+"/GetAllToBeExecutedDeltas",mid.SetLoggedInAgentInternalOnly(),responseWrapper(V1.GetAllToBeExecutedDeltasHandler))
-	r.GET(routePrefix+"/IsDependentTaskDone",mid.SetLoggedInAgentInternalOnly(),responseWrapper(V1.IsDependentTaskDoneHandler))
-	r.POST(routePrefix+"/InsertTaskBeginRecord",mid.SetLoggedInAgentInternalOnly(),responseWrapper(V1.InsertTaskBeginRecordHandler))
-	r.POST(routePrefix+"/InsertTaskEndRecord",mid.SetLoggedInAgentInternalOnly(),responseWrapper(V1.InsertTaskEndRecordHandler))
+	r.GET(routePrefix+"/GetTaskDetailsByName", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetTaskDetailsByNameHandler))
+	r.GET(routePrefix+"/GetAllToBeExecutedDeltas", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.GetAllToBeExecutedDeltasHandler))
+	r.GET(routePrefix+"/IsDependentTaskDone", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.IsDependentTaskDoneHandler))
+	r.POST(routePrefix+"/InsertTaskBeginRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskBeginRecordHandler))
+	r.POST(routePrefix+"/InsertTaskEndRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskEndRecordHandler))
 	// Auth route group with authentication an authorization middleware.
 	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	authRouteGroup.Use(mid.SetLoggedInAgent())
@@ -173,6 +172,7 @@ func InitAppRoutes(r *gin.Engine) {
 
 	authRouteGroup.GET("/:project_id/insights", responseWrapper(V1.GetWeeklyInsightsHandler))
 	authRouteGroup.GET("/:project_id/weekly_insights_metadata", responseWrapper(V1.GetWeeklyInsightsMetadata))
+	authRouteGroup.POST("/:project_id/feedback", V1.PostFeedbackHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

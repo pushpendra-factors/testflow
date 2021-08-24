@@ -474,4 +474,8 @@ type Model interface {
 	// weekly insights
 	CreateWeeklyInsightsMetadata(pmm *model.WeeklyInsightsMetadata) (int, string)
 	GetWeeklyInsightsMetadata(projectId uint64) ([]model.WeeklyInsightsMetadata, int, string)
+
+	// feedback
+	PostFeedback(ProjectID uint64, agentUUID string, Feature string, Property *postgres.Jsonb, VoteType int) (int, string)
+	GetRecordsFromFeedback(projectID uint64, agentUUID string) ([]model.Feedback, error)
 }
