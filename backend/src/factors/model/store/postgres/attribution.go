@@ -383,6 +383,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 		caseSelectStmt + " AS keywordName, " +
 		caseSelectStmt + " AS keywordMatchType, " +
 		caseSelectStmt + " AS source, " +
+		caseSelectStmt + " AS channel, " +
 		caseSelectStmt + " AS attribution_id, " +
 		caseSelectStmt + " AS gcl_id, " +
 		" sessions.timestamp FROM events AS sessions " +
@@ -399,6 +400,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 		U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD,
 		U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE,
 		U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE,
+		U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
 		projectId, sessionEventNameId, effectiveFrom, effectiveTo)
