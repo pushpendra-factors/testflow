@@ -711,6 +711,12 @@ func main() {
 		log.Info("Created template table.")
 	}
 
+	// Create Feedback Table
+	if err := db.CreateTable(&model.Feedback{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("feedback table creation failed.")
+	} else {
+		log.Info("Created feedback table.")
+	}
 	if err := db.Exec("ALTER TABLE events DROP CONSTRAINT events_project_id_event_name_id_event_names_project_id_id_foreign_key;").Error; err != nil {
 		log.WithError(err).Error("Failed to drop constraint on events table")
 	} else {

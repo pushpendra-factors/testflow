@@ -53,7 +53,7 @@ func TestWeeklyInsights(t *testing.T) {
 	data.NumberOfRecords = 2
 	err:=createPathAndAddCpiFile(data.ProjectID,data.BaseStartTime,data.QueryId)
 	assert.Nil(t,err)
-	response, err := delta.GetWeeklyInsights(data.ProjectID, data.QueryId, &data.BaseStartTime, &data.CompStartTime, data.InsightsType, data.NumberOfRecords)
+	response, err := delta.GetWeeklyInsights(data.ProjectID,"", data.QueryId, &data.BaseStartTime, &data.CompStartTime, data.InsightsType, data.NumberOfRecords)
 	err = deletePath("projects")
 	assert.Nil(t,err)
 	deleteQuery(&queryObj)

@@ -63,21 +63,6 @@ type BaseTargetMetrics struct {
 	JSDivergence float64 `json:"jsd"`
 }
 
-var BlackListedKeys = map[string]bool{
-	"$day_of_week":                 true,
-	"$page_raw_url":                true,
-	"$initial_page_domain":         true,
-	"$latest_page_domain":          true,
-	"$timestamp":                   true,
-	"$initial_page_raw_url":        true,
-	"$latest_page_raw_url":         true,
-	"$session_latest_page_raw_url": true,
-	"$gclid":                       true,
-	"$hubspot_contact_hs_calculated_form_submissions": true,
-	"$latest_gclid":  true,
-	"$initial_gclid": true,
-	"$joinTime":      true,
-}
 var numberOfRecordsFromGbp int = 2 // number of records to be fetched from gbp
 var increasedRecords int
 var decreasedRecords int
@@ -86,6 +71,9 @@ var propertyMap map[string]bool
 var WebsiteEvent string = "WebsiteEvent"
 var CRM string = "CRM"
 var Funnel string = "Funnel"
+
+var BlackListedKeys map[string]bool
+var WhiteListedKeys map[string]bool
 
 func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, EventType string) WeeklyInsights {
 	var KeyMapForConversion = make(map[string]bool)
@@ -198,6 +186,9 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if _, exists := file.DeltaRatio[keys][keys2]; exists {
 						temp.DeltaRatio = file.DeltaRatio[keys][keys2] * temp.W1
+						if WhiteListedKeys[value.Key] {
+							temp.DeltaRatio *= 2 // boosting the sorting factor if upvoted
+						}
 					}
 
 					value.ActualValues = temp
@@ -322,6 +313,9 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if _, exists := file.JSDivergence.Target[keys][keys2]; exists {
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
+						if WhiteListedKeys[val2.Key] {
+							temp.JSDivergence *= 2 // boosting 2X
+						}
 					}
 					val2.ActualValues = temp
 					if insights.Goal.W1 != float64(0) {
@@ -373,6 +367,9 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if _, exists := file.JSDivergence.Target[keys][keys2]; exists {
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
+						if WhiteListedKeys[val2.Key] {
+							temp.JSDivergence *= 2
+						}
 					}
 					val2.ActualValues = temp
 					if insights.Goal.W1 != float64(0) {
@@ -440,7 +437,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 	return insights
 }
 
-func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
+func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseStartTime *time.Time, compStartTime *time.Time, insightsType string, numberOfRecords int) (interface{}, error) {
 	k := make(map[uint64]int)
 	k[399] = 100
 	k[594] = 100
@@ -504,6 +501,24 @@ func GetWeeklyInsights(projectId uint64, queryId uint64, baseStartTime *time.Tim
 	if isEventOccurence {
 		EventType = CRM
 	}
+	 	BlackListedKeys = map[string]bool{
+		"$day_of_week":                 true,
+		"$page_raw_url":                true,
+		"$initial_page_domain":         true,
+		"$latest_page_domain":          true,
+		"$timestamp":                   true,
+		"$initial_page_raw_url":        true,
+		"$latest_page_raw_url":         true,
+		"$session_latest_page_raw_url": true,
+		"$gclid":                       true,
+		"$hubspot_contact_hs_calculated_form_submissions": true,
+		"$latest_gclid":  true,
+		"$initial_gclid": true,
+		"$joinTime":      true,
+	}
+	WhiteListedKeys = make(map[string]bool)
+	fmt.Println(WhiteListedKeys,BlackListedKeys)
+	CaptureBlackListedAndWhiteListedKeys(projectId, agentUUID)
 	insightsObj := GetInsights(insights, numberOfRecords, class, EventType)
 	// adding query groups
 	gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj)
@@ -548,6 +563,9 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if _, exists := file.DeltaRatio[property][values]; exists {
 							temp.DeltaRatio = file.DeltaRatio[property][values] * temp.W1
+							if WhiteListedKeys[property] {
+								temp.DeltaRatio *= 2
+							}
 						}
 
 						if file.Base.FeatureMetrics[property][values].First != nil {
@@ -628,6 +646,9 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if _, exists := file.JSDivergence.Target[property][values]; exists {
 							temp.JSDivergence = file.JSDivergence.Target[property][values] * temp.W1
+							if WhiteListedKeys[property] {
+								temp.JSDivergence *= 2
+							}
 
 						}
 						newData.ActualValues = temp
@@ -666,6 +687,9 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if _, exists := file.JSDivergence.Base[property][values]; exists {
 							temp.JSDivergence = file.JSDivergence.Base[property][values]
+							if WhiteListedKeys[property] {
+								temp.JSDivergence *= 2
+							}
 
 						}
 						newData.ActualValues = temp
@@ -754,4 +778,25 @@ func removeNegativePercentageFromInsights(insightsObj *WeeklyInsights) {
 		insightsObj.Insights[index].ChangeInDistribution.Percentage = math.Abs(insightsObj.Insights[index].ChangeInDistribution.Percentage)
 	}
 
+}
+func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string) {
+	records, err := store.GetStore().GetRecordsFromFeedback(projectID, agentUUID)
+	if err != nil {
+		log.Error(err)
+	}
+	for _, record := range records {
+		bytes, err := json.Marshal(record.Property)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		var property model.WeeklyInsightsProperty
+		json.Unmarshal(bytes, &property)
+		if record.VoteType == model.VOTE_TYPE_UPVOTE { // upvote
+			WhiteListedKeys[property.Key] = true
+		} else { // downvote
+			BlackListedKeys[property.Key] = true
+		}
+
+	}
 }
