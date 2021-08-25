@@ -601,6 +601,21 @@ func getOrderByClause(isGroupByTimestamp bool, selectMetrics []string) string {
 	}
 	return joinWithComma(selectMetricsWithDesc...)
 }
+func getOrderByClauseForSearchConsole(isGroupByTimestamp bool, selectMetrics []string) string {
+	selectMetricsWithDesc := make([]string, 0)
+	if isGroupByTimestamp {
+		selectMetricsWithDesc = append(selectMetricsWithDesc, model.AliasDateTime+" ASC")
+	} else {
+		for _, selectMetric := range selectMetrics {
+			if ascendingOrderByMetricsForGoogleOrganic[selectMetric] {
+				selectMetricsWithDesc = append(selectMetricsWithDesc, selectMetric+" ASC")
+			} else {
+				selectMetricsWithDesc = append(selectMetricsWithDesc, selectMetric+" DESC")
+			}
+		}
+	}
+	return joinWithComma(selectMetricsWithDesc...)
+}
 
 // ExecuteSQL - @Kark TODO v1
 func (store *MemSQL) ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error) {
