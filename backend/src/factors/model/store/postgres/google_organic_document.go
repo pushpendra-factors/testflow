@@ -44,6 +44,8 @@ var mapOfObjectsToPropertiesAndRelatedGoogleOrganic = map[string]map[string]Prop
 	},
 }
 var selectableMetricsForGoogleOrganic = []string{"impressions", "clicks", model.ClickThroughRate, "position_avg", "position_impression_weighted_avg"}
+var ascendingOrderByMetricsForGoogleOrganic = map[string]bool{
+	"impressions": false, "clicks": false, model.ClickThroughRate: false, "position_avg": true, "position_impression_weighted_avg": true}
 var objectsForGoogleOrganic = []string{"organic_property"}
 
 func isDuplicateGoogleOrganicDocumentError(err error) bool {
@@ -338,21 +340,83 @@ func addColumnInformationForGoogleOrganicDocument(googleOrganicDocument *model.G
 func (pg *Postgres) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
-	sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID, query, reqID, fetchSource)
-	if errCode != http.StatusOK {
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+	if query.GetGroupByTimestamp() == "" {
+		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
+		columns := append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.GoogleOrganicSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		return columns, resultMetrics, http.StatusOK
+	} else {
+		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
+		columns := append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.GoogleOrganicSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		groupByCombinations := getGroupByCombinations(columns, resultMetrics)
+		sql, params, selectKeys, selectMetrics, errCode = pg.GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err = pg.ExecuteSQL(sql, params, logCtx)
+		columns = append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.GoogleOrganicSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		return columns, resultMetrics, http.StatusOK
 	}
-	_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
-	columns := append(selectKeys, selectMetrics...)
-	if err != nil {
-		logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.GoogleOrganicSpecificError)
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+}
+func getGroupByCombinations(columns []string, resultMetrics [][]interface{}) []map[string]interface{} {
+	groupByCombinations := make([]map[string]interface{}, 0)
+	for _, resultRow := range resultMetrics {
+		groupByCombination := make(map[string]interface{})
+		for index, column := range columns {
+			if strings.HasPrefix(column, "organic_property_") {
+				dimension := strings.TrimPrefix(column, "organic_property_")
+				groupByCombination[dimension] = resultRow[index]
+			}
+		}
+		groupByCombinations = append(groupByCombinations, groupByCombination)
 	}
-	return columns, resultMetrics, http.StatusOK
+	return groupByCombinations
+}
+func buildWhereConditionForGBT(groupByCombinations []map[string]interface{}) (string, []interface{}) {
+	whereConditionForGBT := ""
+	params := make([]interface{}, 0)
+	for _, groupByCombination := range groupByCombinations {
+		whereConditionForEachCombination := ""
+		for dimension, value := range groupByCombination {
+			if whereConditionForEachCombination == "" {
+				whereConditionForEachCombination = fmt.Sprintf("value->>'%s' = ? ", dimension)
+				params = append(params, value)
+			} else {
+				whereConditionForEachCombination += fmt.Sprintf(" AND value->>'%s' = ? ", dimension)
+				params = append(params, value)
+			}
+		}
+		if whereConditionForGBT == "" {
+			whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+		} else {
+			whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+		}
+	}
+
+	return whereConditionForGBT, params
 }
 
 // GetSQLQueryAndParametersForGoogleOrganicQueryV1 ...
-func (pg *Postgres) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, int) {
+func (pg *Postgres) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	var selectMetrics []string
 	var sql string
 	var selectKeys []string
@@ -368,7 +432,7 @@ func (pg *Postgres) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID ui
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 
-	sql, params, selectKeys, selectMetrics = buildGoogleOrganicQueryV1(transformedQuery, projectID, urlPrefix)
+	sql, params, selectKeys, selectMetrics = buildGoogleOrganicQueryV1(transformedQuery, projectID, urlPrefix, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	if err != nil {
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 	}
@@ -404,11 +468,10 @@ func checkIfOnlyPageExistsInFiltersAndGroupBys(filters []model.ChannelFilterV1, 
 }
 
 //todo @ashhhar: rebase to adwords
-func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, urlPrefixes string) (string, []interface{}, []string, []string) {
+func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, urlPrefixes string, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	customerUrlPrefixes := strings.Split(urlPrefixes, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
-	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	groupByStatement := ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
 	selectKeys := make([]string, 0, 0)
@@ -449,7 +512,7 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, ur
 	}
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
-	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
+	orderByQuery := "ORDER BY " + getOrderByClauseForSearchConsole(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getGoogleOrganicFiltersWhereStatement(query.Filters)
 	if isPageLevelDataReq {
 		whereConditionForFilters += " AND type = 2 "
@@ -458,12 +521,23 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, ur
 	}
 
 	resultSQLStatement := selectQuery + fromGoogleOrganicDocuments + staticWhereStatementForGoogleOrganic + whereConditionForFilters
+	whereConditionForGBT, whereParams := "", make([]interface{}, 0)
+	if groupByCombinationsForGBT != nil && len(groupByCombinationsForGBT) != 0 {
+		whereConditionForGBT, whereParams = buildWhereConditionForGBT(groupByCombinationsForGBT)
+		if whereConditionForGBT != "" {
+			resultSQLStatement += (" AND (" + whereConditionForGBT + ") ")
+		}
+	}
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
-	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
+	resultSQLStatement += " " + orderByQuery + limitString + ";"
 	staticWhereParams := []interface{}{projectID, customerUrlPrefixes, query.From, query.To}
-	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
+	finalParams := staticWhereParams
+	if len(whereParams) != 0 {
+		finalParams = append(staticWhereParams, whereParams...)
+	}
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
 func getGoogleOrganicFiltersWhereStatement(filters []model.ChannelFilterV1) string {
