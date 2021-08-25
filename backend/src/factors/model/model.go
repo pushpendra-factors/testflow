@@ -392,10 +392,6 @@ type Model interface {
 		goalEvents []model.QueryEventWithProperties, startTime, endTime, lookbackDays int64, eventFiles,
 		userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager)
 
-	// replication_metadata
-	GetReplicationMetadataByTable(tableName string) (*model.ReplicationMetadata, int)
-	CreateOrUpdateReplicationMetadataByTable(tableName string, lastRunAt *time.Time, count uint64) int
-
 	// smart_properties
 	GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int)
 	CreateSmartPropertyRules(projectID uint64, smartProperty *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int)
