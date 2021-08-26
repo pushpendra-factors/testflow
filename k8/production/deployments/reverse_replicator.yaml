@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    layer: reverse-replicator
+    env: production
+    project: factors-production
+  name: reverse-replicator
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: reverse-replicator
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: reverse-replicator
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: memsql-migration
+      containers:
+      - name: reverse-replicator
+        image: us.gcr.io/factors-production/memsql-replicator:v0.01-xxx
+        volumeMounts:
+        - name: workdir
+          mountPath: /usr/local/var/factors/config
+        imagePullPolicy: IfNotPresent
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext: {}
+        args:
+          - --env
+          - $(ENV)
+          - --source
+          - "memsql"
+          - --db_host
+          - $(DB_HOST)
+          - --db_port
+          - $(DB_PORT)
+          - --db_name
+          - $(POSTGRES_DB)
+          - --db_user
+          - $(POSTGRES_USER)
+          - --db_pass
+          - $(POSTGRES_PASSWORD)
+          - --sentry_dsn
+          - $(SENTRY_DSN)
+          - --memsql_host
+          - $(MEMSQL_HOST)
+          - --memsql_port
+          - $(MEMSQL_PORT)
+          - --memsql_name
+          - $(MEMSQL_DB)
+          - --memsql_user
+          - $(MEMSQL_USER)
+          - --memsql_pass
+          - $(MEMSQL_PASSWORD)
+          - --memsql_cert
+          - $(MEMSQL_CERTIFICATE)
+          - --project_ids
+          - "*"
+          - --include_tables
+          - $(REVERSE_REPLICATOR_INCLUDED_TABLES)
+          - --page_size
+          - "10000"
+        envFrom:
+        - configMapRef:
+            name: config-env
+        - configMapRef:
+            name: config-postgres
+        - configMapRef:
+            name: config-memsql
+        - configMapRef:
+            name: config-replication
+        - secretRef:
+            name: secret-postgres
+        - secretRef:
+            name: secret-sentry
+        - secretRef:
+            name: secret-memsql
+      volumes:
+      - name: workdir
+        emptyDir: {}
