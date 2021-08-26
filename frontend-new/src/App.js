@@ -13,6 +13,7 @@ import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary'; 
 import { enableSearchConsoleIntegration } from "./reducers/global";
+import { setActiveProject } from 'Reducers/global';
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
 const ForgotPassword = lazyWithRetry(() => import("./Views/Pages/ForgotPassword"));
@@ -28,7 +29,7 @@ const FactorsInsights = lazyWithRetry(() => import("./Views/Factors/FactorsInsig
 
 
 
-function App({ isAgentLoggedIn, agent_details, active_project }) {
+function App({ isAgentLoggedIn, agent_details, active_project, projects, setActiveProject }) {
 
   useEffect(() => {
 
@@ -128,13 +129,22 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
     // console.log("active_project",active_project);
     const tz = active_project?.time_zone;
     const isTzEnabled = active_project?.is_multiple_project_timezone_enabled;
-    if(tz && isTzEnabled){
+    if(tz && isTzEnabled){ 
       localStorage.setItem('project_timeZone', tz); 
     }
     else{
       localStorage.setItem('project_timeZone', 'Asia/Kolkata');       
     }
   });
+
+
+  useEffect(() => { 
+
+    let activeItem = projects?.filter((item)=> item.id==localStorage.getItem('activeProject'))
+    let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0]
+    setActiveProject(projectDetails); 
+    
+  }, []);
 
   return (
     <div className="App">
@@ -194,8 +204,9 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
 
 const mapStateToProps = (state) => ({
   isAgentLoggedIn: state.agent.isLoggedIn,
+  projects: state.agent.projects,
   agent_details: state.agent.agent_details,
   active_project: state.global.active_project, 
 });
 
-export default connect(mapStateToProps)(App);
+export default connect(mapStateToProps,  { setActiveProject} )(App);

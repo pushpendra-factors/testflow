@@ -101,15 +101,7 @@ function Sidebar(props) {
       message: 'Project Changed!',
       description: `You are currently viewing data from ${selectedProject.name}`
     });
-  };
-
-  useEffect(() => { 
-
-    let activeItem = props?.projects?.filter((item)=> item.id==localStorage.getItem('activeProject'))
-    let projectDetails = _.isEmpty(activeItem) ? props.projects[0] : activeItem[0]
-    props.setActiveProject(projectDetails); 
-    
-  }, []);
+  }; 
 
   return (
     <>
