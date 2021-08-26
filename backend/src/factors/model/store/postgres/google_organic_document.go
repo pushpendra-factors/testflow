@@ -440,8 +440,8 @@ func (pg *Postgres) GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID ui
 }
 
 func (pg *Postgres) transFormRequestFieldsAndFetchRequiredFieldsForGoogleOrganic(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
-	query.From = U.GetDateAsStringZ(query.From, U.TimeZoneString(query.Timezone))
-	query.To = U.GetDateAsStringZ(query.To, U.TimeZoneString(query.Timezone))
+	query.From = U.GetDateAsStringIn(query.From, U.TimeZoneString(query.Timezone))
+	query.To = U.GetDateAsStringIn(query.To, U.TimeZoneString(query.Timezone))
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return &model.ChannelQueryV1{}, "", errors.New("Project setting not found")

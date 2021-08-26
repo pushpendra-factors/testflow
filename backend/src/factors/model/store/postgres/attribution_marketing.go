@@ -234,7 +234,7 @@ func (pg *Postgres) PullAdwordsMarketingData(projectID uint64, from, to int64, c
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -260,7 +260,7 @@ func (pg *Postgres) PullFacebookMarketingData(projectID uint64, from, to int64, 
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -286,7 +286,7 @@ func (pg *Postgres) PullLinkedinMarketingData(projectID uint64, from, to int64, 
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")

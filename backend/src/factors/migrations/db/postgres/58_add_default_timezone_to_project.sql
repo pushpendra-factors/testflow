@@ -1,0 +1,1 @@
+UPDATE projects SET time_zone = 'Asia/Kolkata' WHERE time_zone = '';

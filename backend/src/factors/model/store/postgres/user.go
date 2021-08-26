@@ -1306,7 +1306,7 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
-	currentTime := U.TimeNow()
+	currentTime := U.TimeNowZ()
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 	// Store Last updated from DB in cache as a key. and check and refresh cache accordingly
 	usersCacheKey, err := model.GetUsersCachedCacheKey(projectID, currentTimeDatePart)
@@ -1314,9 +1314,9 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 		logCtx.WithError(err).Error("Failed to get property cache key - getuserscachedcachekey")
 	}
 
-	begin := U.TimeNow()
+	begin := U.TimeNowZ()
 	isNewUser, err := cacheRedis.PFAddPersistent(usersCacheKey, userId, 24*60*60)
-	end := U.TimeNow()
+	end := U.TimeNowZ()
 	metrics.Increment(metrics.IncrNewUserCounter)
 	metrics.RecordLatency(metrics.LatencyNewUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {
@@ -1378,9 +1378,9 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 	}
 	keysToIncrSortedSet = append(keysToIncrSortedSet, propertiesToIncrSortedSet...)
 	keysToIncrSortedSet = append(keysToIncrSortedSet, valuesToIncrSortedSet...)
-	begin = U.TimeNow()
+	begin = U.TimeNowZ()
 	_, err = cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
-	end = U.TimeNow()
+	end = U.TimeNowZ()
 	metrics.Increment(metrics.IncrUserCacheCounter)
 	metrics.RecordLatency(metrics.LatencyUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {

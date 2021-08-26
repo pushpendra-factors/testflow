@@ -163,6 +163,7 @@ type Configuration struct {
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []uint64
+	MultipleTimezoneEnabledProjects        []uint64
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
@@ -290,7 +291,7 @@ func InitPropertiesTypeCache(enablePropertyTypeFromDB bool, propertiesTypeCacheS
 
 	configuration.enablePropertyTypeFromDB = enablePropertyTypeFromDB
 
-	propertiesTypeCache.LastResetDate = U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
+	propertiesTypeCache.LastResetDate = U.GetDateOnlyFromTimestampZ(U.TimeNowUnix())
 	log.Info("Properties_type cache initialized.")
 }
 
@@ -322,7 +323,7 @@ func GetPropertiesTypeCache() *PropertiesTypeCache {
 
 // ResetPropertyDetailsCacheByDate reset PropertiesTypeCache with date
 func ResetPropertyDetailsCacheByDate(timestamp int64) {
-	date := U.GetDateOnlyFromTimestamp(timestamp)
+	date := U.GetDateOnlyFromTimestampZ(timestamp)
 	propertiesTypeCache.Cache.Purge()
 	propertiesTypeCache.LastResetDate = date
 }
@@ -1679,6 +1680,15 @@ func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId uint64) bool {
 	}
 	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
 		if uuid == loggedInUUID {
+			return true
+		}
+	}
+	return false
+}
+
+func IsMultipleProjectTimezoneEnabled(projectId uint64) bool {
+	for _, id := range configuration.MultipleTimezoneEnabledProjects {
+		if id == projectId {
 			return true
 		}
 	}

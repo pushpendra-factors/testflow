@@ -13,22 +13,22 @@ import (
 )
 
 func TestTaskRegistration(t *testing.T) {
-	taskName1 := fmt.Sprintf("%v_%v_1", "task_event", U.TimeNow().Unix())
+	taskName1 := fmt.Sprintf("%v_%v_1", "task_event", U.TimeNowZ().Unix())
 	_, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName1, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
 	_, code, message = store.GetStore().RegisterTaskWithDefaultConfiguration(taskName1, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusConflict, code)
 	assert.Equal(t, "TaskName already exist", message)
-	taskName2 := fmt.Sprintf("%v_%v_2", "task_event", U.TimeNow().Unix())
+	taskName2 := fmt.Sprintf("%v_%v_2", "task_event", U.TimeNowZ().Unix())
 	_, code, message = store.GetStore().RegisterTaskWithDefaultConfiguration(taskName2, "Source", model.Daily, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
-	taskName3 := fmt.Sprintf("%v_%v_3", "task_event", U.TimeNow().Unix())
+	taskName3 := fmt.Sprintf("%v_%v_3", "task_event", U.TimeNowZ().Unix())
 	_, code, message = store.GetStore().RegisterTaskWithDefaultConfiguration(taskName3, "Source", model.Weekly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
-	taskName4 := fmt.Sprintf("%v_%v_4", "task_event", U.TimeNow().Unix())
+	taskName4 := fmt.Sprintf("%v_%v_4", "task_event", U.TimeNowZ().Unix())
 	id4, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName4, "Source", model.Stateless, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -43,7 +43,7 @@ func TestTaskRegistration(t *testing.T) {
 
 func TestTaskExecutionInsert(t *testing.T) {
 	// Hourly
-	taskName := fmt.Sprintf("%v_%v", "task_event", U.TimeNow().Unix())
+	taskName := fmt.Sprintf("%v_%v", "task_event", U.TimeNowZ().Unix())
 	id, code, message := store.GetStore().RegisterTask(taskName, "Source", model.Hourly, false, 1, 1, 20, true, 15)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -99,7 +99,7 @@ func TestTaskExecutionInsert(t *testing.T) {
 	assert.Equal(t, len(processedIntervals), 2)
 
 	//Daily
-	taskNameDaily := fmt.Sprintf("%v_%v", "task_event_daily", U.TimeNow().Unix())
+	taskNameDaily := fmt.Sprintf("%v_%v", "task_event_daily", U.TimeNowZ().Unix())
 	id, code, message = store.GetStore().RegisterTask(taskNameDaily, "Source", model.Daily, false, 1, 0, 4, true, 150)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -127,7 +127,7 @@ func TestTaskExecutionInsert(t *testing.T) {
 	assert.Equal(t, len(deltas), 8)
 
 	// Weekly
-	taskNameWeekly := fmt.Sprintf("%v_%v", "task_event_week", U.TimeNow().Unix())
+	taskNameWeekly := fmt.Sprintf("%v_%v", "task_event_week", U.TimeNowZ().Unix())
 	id, code, message = store.GetStore().RegisterTask(taskNameWeekly, "Source", model.Weekly, false, 1, 0, -1, true, 0)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -145,11 +145,11 @@ func TestTaskExecutionInsert(t *testing.T) {
 }
 
 func TestCircularDependency(t *testing.T) {
-	taskName1 := fmt.Sprintf("%v_%v", "a", U.TimeNow().Unix())
-	taskName2 := fmt.Sprintf("%v_%v", "b", U.TimeNow().Unix())
-	taskName3 := fmt.Sprintf("%v_%v", "c", U.TimeNow().Unix())
-	taskName4 := fmt.Sprintf("%v_%v", "d", U.TimeNow().Unix())
-	taskName5 := fmt.Sprintf("%v_%v", "e", U.TimeNow().Unix())
+	taskName1 := fmt.Sprintf("%v_%v", "a", U.TimeNowZ().Unix())
+	taskName2 := fmt.Sprintf("%v_%v", "b", U.TimeNowZ().Unix())
+	taskName3 := fmt.Sprintf("%v_%v", "c", U.TimeNowZ().Unix())
+	taskName4 := fmt.Sprintf("%v_%v", "d", U.TimeNowZ().Unix())
+	taskName5 := fmt.Sprintf("%v_%v", "e", U.TimeNowZ().Unix())
 	a, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName1, "Source", model.Hourly, false)
 	b, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName2, "Source", model.Hourly, false)
 	c, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName3, "Source", model.Hourly, false)
@@ -167,8 +167,8 @@ func TestCircularDependency(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, code)
 	assert.Equal(t, "Circular Dependency detected", message)
 
-	taskName6 := fmt.Sprintf("%v_%v", "f", U.TimeNow().Unix())
-	taskName7 := fmt.Sprintf("%v_%v", "g", U.TimeNow().Unix())
+	taskName6 := fmt.Sprintf("%v_%v", "f", U.TimeNowZ().Unix())
+	taskName7 := fmt.Sprintf("%v_%v", "g", U.TimeNowZ().Unix())
 	f, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName6, "Source", model.Hourly, false)
 	g, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName7, "Source", model.Hourly, false)
 	code, message = store.GetStore().RegisterTaskDependency(f, g, 0)
@@ -180,11 +180,11 @@ func TestCircularDependency(t *testing.T) {
 
 func TestTaskDependencyInsertDelete(t *testing.T) {
 	// Test dependency register-deregister
-	taskName1 := fmt.Sprintf("%v_%v", "task_event1", U.TimeNow().Unix())
+	taskName1 := fmt.Sprintf("%v_%v", "task_event1", U.TimeNowZ().Unix())
 	id1, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName1, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
-	taskName2 := fmt.Sprintf("%v_%v", "task_event2", U.TimeNow().Unix())
+	taskName2 := fmt.Sprintf("%v_%v", "task_event2", U.TimeNowZ().Unix())
 	id2, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName2, "Source", model.Daily, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -211,7 +211,7 @@ func TestTaskDependencyInsertDelete(t *testing.T) {
 	assert.Equal(t, "Invalid taskID", message)
 
 	// Test delta calculation
-	taskName3 := fmt.Sprintf("%v_%v", "task_event3", U.TimeNow().Unix())
+	taskName3 := fmt.Sprintf("%v_%v", "task_event3", U.TimeNowZ().Unix())
 	id3, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName3, "Source", model.Weekly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -220,7 +220,7 @@ func TestTaskDependencyInsertDelete(t *testing.T) {
 	deltas, _, _ = store.GetStore().GetAllToBeExecutedDeltas(id2, 0, 2, nil)
 	assert.Equal(t, len(deltas), 2)
 	deltas, _, _ = store.GetStore().GetAllToBeExecutedDeltas(id3, 0, 8, nil)
-	if U.TimeNow().Weekday() == 0 {
+	if U.TimeNowZ().Weekday() == 0 {
 		assert.Equal(t, len(deltas), 2)
 	} else {
 		assert.Equal(t, len(deltas), 1)
@@ -236,9 +236,9 @@ func TestTaskDependencyInsertDelete(t *testing.T) {
 
 func TestIsDependentTaskDone(t *testing.T) {
 	// Hour -> Hour
-	taskName1 := fmt.Sprintf("%v_%v", "task_event1", U.TimeNow().Unix())
+	taskName1 := fmt.Sprintf("%v_%v", "task_event1", U.TimeNowZ().Unix())
 	id1, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName1, "Source", model.Hourly, false)
-	taskName2 := fmt.Sprintf("%v_%v", "task_event2", U.TimeNow().Unix())
+	taskName2 := fmt.Sprintf("%v_%v", "task_event2", U.TimeNowZ().Unix())
 	id2, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName2, "Source", model.Hourly, false)
 	store.GetStore().RegisterTaskDependency(id2, id1, 0)
 	isDone := store.GetStore().IsDependentTaskDone(id2, 0, 2021040100)
@@ -259,9 +259,9 @@ func TestIsDependentTaskDone(t *testing.T) {
 	assert.Equal(t, isDone, true)
 
 	// daily daily
-	taskName3 := fmt.Sprintf("%v_%v", "task_event3", U.TimeNow().Unix())
+	taskName3 := fmt.Sprintf("%v_%v", "task_event3", U.TimeNowZ().Unix())
 	id3, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName3, "Source", model.Daily, false)
-	taskName4 := fmt.Sprintf("%v_%v", "task_event4", U.TimeNow().Unix())
+	taskName4 := fmt.Sprintf("%v_%v", "task_event4", U.TimeNowZ().Unix())
 	id4, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName4, "Source", model.Daily, false)
 	store.GetStore().RegisterTaskDependency(id4, id3, 0)
 	isDone = store.GetStore().IsDependentTaskDone(id4, 0, 2021040100)
@@ -282,9 +282,9 @@ func TestIsDependentTaskDone(t *testing.T) {
 	assert.Equal(t, isDone, true)
 
 	// Weekly Weekly
-	taskName5 := fmt.Sprintf("%v_%v", "task_event5", U.TimeNow().Unix())
+	taskName5 := fmt.Sprintf("%v_%v", "task_event5", U.TimeNowZ().Unix())
 	id5, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName5, "Source", model.Weekly, false)
-	taskName6 := fmt.Sprintf("%v_%v", "task_event6", U.TimeNow().Unix())
+	taskName6 := fmt.Sprintf("%v_%v", "task_event6", U.TimeNowZ().Unix())
 	id6, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName6, "Source", model.Weekly, false)
 	store.GetStore().RegisterTaskDependency(id6, id5, 0)
 	isDone = store.GetStore().IsDependentTaskDone(id6, 0, 2021042500)
@@ -305,9 +305,9 @@ func TestIsDependentTaskDone(t *testing.T) {
 	assert.Equal(t, isDone, true)
 
 	// hour - daily
-	taskName7 := fmt.Sprintf("%v_%v", "task_event7", U.TimeNow().Unix())
+	taskName7 := fmt.Sprintf("%v_%v", "task_event7", U.TimeNowZ().Unix())
 	id7, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName7, "Source", model.Hourly, false)
-	taskName8 := fmt.Sprintf("%v_%v", "task_event8", U.TimeNow().Unix())
+	taskName8 := fmt.Sprintf("%v_%v", "task_event8", U.TimeNowZ().Unix())
 	id8, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName8, "Source", model.Daily, false)
 	store.GetStore().RegisterTaskDependency(id8, id7, 0)
 	isDone = store.GetStore().IsDependentTaskDone(id8, 0, 2021040100)
@@ -346,9 +346,9 @@ func TestIsDependentTaskDone(t *testing.T) {
 	assert.Equal(t, isDone, true)
 
 	// hour - weekly
-	taskName9 := fmt.Sprintf("%v_%v", "task_event9", U.TimeNow().Unix())
+	taskName9 := fmt.Sprintf("%v_%v", "task_event9", U.TimeNowZ().Unix())
 	id9, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName9, "Source", model.Hourly, false)
-	taskName10 := fmt.Sprintf("%v_%v", "task_event10", U.TimeNow().Unix())
+	taskName10 := fmt.Sprintf("%v_%v", "task_event10", U.TimeNowZ().Unix())
 	id10, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName10, "Source", model.Weekly, false)
 	store.GetStore().RegisterTaskDependency(id10, id9, 0)
 	isDone = store.GetStore().IsDependentTaskDone(id10, 0, 2021042500)
@@ -387,9 +387,9 @@ func TestIsDependentTaskDone(t *testing.T) {
 	assert.Equal(t, isDone, true)
 
 	// daily - weekly
-	taskName11 := fmt.Sprintf("%v_%v", "task_event11", U.TimeNow().Unix())
+	taskName11 := fmt.Sprintf("%v_%v", "task_event11", U.TimeNowZ().Unix())
 	id11, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName11, "Source", model.Daily, false)
-	taskName12 := fmt.Sprintf("%v_%v", "task_event12", U.TimeNow().Unix())
+	taskName12 := fmt.Sprintf("%v_%v", "task_event12", U.TimeNowZ().Unix())
 	id12, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName12, "Source", model.Weekly, false)
 	store.GetStore().RegisterTaskDependency(id12, id11, 0)
 	isDone = store.GetStore().IsDependentTaskDone(id12, 0, 2021042500)
@@ -428,15 +428,15 @@ func TestIsDependentTaskDone(t *testing.T) {
 	assert.Equal(t, isDone, true)
 
 	// hourly - stateless
-	taskName13 := fmt.Sprintf("%v_%v", "task_event13", U.TimeNow().Unix())
+	taskName13 := fmt.Sprintf("%v_%v", "task_event13", U.TimeNowZ().Unix())
 	id13, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName13, "Source", model.Stateless, false)
-	taskName14 := fmt.Sprintf("%v_%v", "task_event14", U.TimeNow().Unix())
+	taskName14 := fmt.Sprintf("%v_%v", "task_event14", U.TimeNowZ().Unix())
 	id14, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName14, "Source", model.Hourly, false)
-	taskName15 := fmt.Sprintf("%v_%v", "task_event15", U.TimeNow().Unix())
+	taskName15 := fmt.Sprintf("%v_%v", "task_event15", U.TimeNowZ().Unix())
 	id15, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName15, "Source", model.Daily, false)
-	taskName16 := fmt.Sprintf("%v_%v", "task_event16", U.TimeNow().Unix())
+	taskName16 := fmt.Sprintf("%v_%v", "task_event16", U.TimeNowZ().Unix())
 	id16, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName16, "Source", model.Weekly, false)
-	taskName17 := fmt.Sprintf("%v_%v", "task_event17", U.TimeNow().Unix())
+	taskName17 := fmt.Sprintf("%v_%v", "task_event17", U.TimeNowZ().Unix())
 	id17, _, _ := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName17, "Source", model.Stateless, false)
 	store.GetStore().RegisterTaskDependency(id14, id13, 0)
 	isDone = store.GetStore().IsDependentTaskDone(id14, 0, 2021042500)

@@ -106,7 +106,7 @@ func main() {
 
 	var startOfCurrentDay time.Time
 	if *overrideDateRangeEnd == "" {
-		currentTime := U.TimeNow()
+		currentTime := U.TimeNowZ()
 		startOfCurrentDay = time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, time.UTC)
 	} else {
 		startOfCurrentDay, _ = time.Parse(U.DATETIME_FORMAT_YYYYMMDD, *overrideDateRangeEnd)

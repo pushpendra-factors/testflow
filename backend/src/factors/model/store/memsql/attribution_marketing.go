@@ -235,7 +235,7 @@ func (store *MemSQL) PullAdwordsMarketingData(projectID uint64, from, to int64, 
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -261,7 +261,7 @@ func (store *MemSQL) PullFacebookMarketingData(projectID uint64, from, to int64,
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -287,7 +287,7 @@ func (store *MemSQL) PullLinkedinMarketingData(projectID uint64, from, to int64,
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
 	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err := store.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")

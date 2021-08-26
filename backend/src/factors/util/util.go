@@ -50,30 +50,31 @@ const (
 	DateRangePreset30Minutes    = "30MINS"
 )
 
+// General convention for date Functions - suffix Z if utc based, In if timezone is passed, no suffix if localTime.
+
 // NullcharBytes is null charater bytes, specific for golang json marhsal date
 var NullcharBytes = []byte{0x5c, 0x75, 0x30, 0x30, 0x30, 0x30} // \u0000
 var spaceBytes = []byte{0x20}
 
-// QueryDateRangePresets Presets available for querying in dashboard / core query etc.
-// TODO(prateek): Currently returns in IST. Change once timezone is added in project_settings.
-var QueryDateRangePresets = map[string]func() (int64, int64){
-	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIST,
-	DateRangePresetLastWeek:     GetQueryRangePresetLastWeekIST,
-	DateRangePresetCurrentMonth: GetQueryRangePresetCurrentMonthIST,
-	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIST,
-	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIST,
-	DateRangePresetToday:        GetQueryRangePresetTodayIST,
+// TODO Handle all errors for location on all functions later.
+var QueryDateRangePresets = map[string]func(TimeZoneString) (int64, int64, error){
+	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIn,
+	DateRangePresetLastWeek:     GetQueryRangePresetLastWeekIn,
+	DateRangePresetCurrentMonth: GetQueryRangePresetCurrentMonthIn,
+	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIn,
+	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIn,
+	DateRangePresetToday:        GetQueryRangePresetTodayIn,
 }
 
 // WebAnalyticsQueryDateRangePresets Date range presets for website analytics.
-var WebAnalyticsQueryDateRangePresets = map[string]func() (int64, int64){
-	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIST,
-	DateRangePresetLastWeek:     GetQueryRangePresetLastWeekIST,
-	DateRangePresetCurrentMonth: GetQueryRangePresetCurrentMonthIST,
-	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIST,
-	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIST,
-	DateRangePresetToday:        GetQueryRangePresetTodayIST,
-	DateRangePreset30Minutes:    GetQueryRangePresetLast30MinutesIST,
+var WebAnalyticsQueryDateRangePresets = map[string]func(TimeZoneString) (int64, int64, error){
+	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIn,
+	DateRangePresetLastWeek:     GetQueryRangePresetLastWeekIn,
+	DateRangePresetCurrentMonth: GetQueryRangePresetCurrentMonthIn,
+	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIn,
+	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIn,
+	DateRangePresetToday:        GetQueryRangePresetTodayIn,
+	DateRangePreset30Minutes:    GetQueryRangePresetLast30MinutesIn,
 }
 
 // Caching related constants for core query and dashboards.
@@ -373,7 +374,7 @@ func FloatRoundOffWithPrecision(value float64, precision int) (float64, error) {
 }
 
 // Datetime related utility functions.
-
+// General convention for date Functions - suffix Z if utc based, In if timezone is passed, no suffix if localTime.
 const (
 	DATETIME_FORMAT_YYYYMMDD_HYPHEN string = "2006-01-02"
 	DATETIME_FORMAT_YYYYMMDD        string = "20060102"
@@ -381,12 +382,12 @@ const (
 )
 
 // Returns date in YYYYMMDD format
-func GetDateOnlyFromTimestamp(timestamp int64) string {
+func GetDateOnlyFromTimestampZ(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(DATETIME_FORMAT_YYYYMMDD)
 }
 
-// TimeNow Return current time in UTC. Should be used everywhere to avoid local timezone.
-func TimeNow() time.Time {
+// TimeNowZ Return current time in UTC. Should be used everywhere to avoid local timezone.
+func TimeNowZ() time.Time {
 	return time.Now().UTC()
 }
 
@@ -416,7 +417,7 @@ func FindOffsetInUTC(timezone TimeZoneString) int {
 
 // TimeNowUnix Returns current epoch time.
 func TimeNowUnix() int64 {
-	return TimeNow().Unix()
+	return TimeNowZ().Unix()
 }
 
 func GetCurrentDayTimestamp() int64 {
@@ -433,20 +434,20 @@ func GetBeginningOfDayTimestamp(timestamp int64) int64 {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
 }
 
-func GetBeginningOfDayTimestampUTC(timestamp int64) int64 {
+func GetBeginningOfDayTimestampZ(timestamp int64) int64 {
 	t := time.Unix(timestamp, 0).UTC()
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
 }
 
-// GetBeginningOfDayTimestampZ Get's beginning of the day timestamp in given timezone.
-func GetBeginningOfDayTimestampZ(timestamp int64, timezoneString TimeZoneString) int64 {
+// GetBeginningOfDayTimestamp Get's beginning of the day timestamp in given timezone.
+func GetBeginningOfDayTimestampIn(timestamp int64, timezoneString TimeZoneString) int64 {
 	location, _ := time.LoadLocation(string(timezoneString))
 	t := time.Unix(timestamp, 0).In(location)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
 }
 
-// GetDateAsStringZ gets date in given timezone.
-func GetDateAsStringZ(timestamp int64, timezoneString TimeZoneString) int64 {
+// GetDateAsStringIn gets date in given timezone. Taking
+func GetDateAsStringIn(timestamp int64, timezoneString TimeZoneString) int64 {
 	if len(timezoneString) < 1 {
 		timezoneString = TimeZoneStringIST
 	}
@@ -461,9 +462,9 @@ func DateAsFormattedInt(dateTime time.Time) uint64 {
 	return uint64(datetimeInt)
 }
 
-// IsStartOfTodaysRange Checks if the from value is start of todays range.
-func IsStartOfTodaysRange(from int64, timezoneString TimeZoneString) bool {
-	return from == GetBeginningOfDayTimestampZ(TimeNowUnix(), TimeZoneStringIST)
+// IsStartOfTodaysRangeIn Checks if the from value is start of todays range.
+func IsStartOfTodaysRangeIn(from int64, timezoneString TimeZoneString) bool {
+	return from == GetBeginningOfDayTimestampIn(TimeNowUnix(), timezoneString)
 }
 
 // Is30MinutesTimeRange Whether time range is of last 30 minutes.
@@ -471,75 +472,87 @@ func Is30MinutesTimeRange(from, to int64) bool {
 	return (to - from) == 30*60
 }
 
-// GetEndOfDayTimestampZ Get's end of the day timestamp in given timezone.
-func GetEndOfDayTimestampZ(timestamp int64, timezoneString TimeZoneString) int64 {
+// GetEndOfDayTimestampIn Get's end of the day timestamp in given timezone.
+func GetEndOfDayTimestampIn(timestamp int64, timezoneString TimeZoneString) int64 {
 	location, _ := time.LoadLocation(string(timezoneString))
 	t := time.Unix(timestamp, 0).In(location)
 	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, int(time.Second-time.Nanosecond), t.Location()).Unix()
 }
 
-// GetQueryRangePresetCurrentWeekIST Returns start and end unix timestamp for current week (Sunday to Yesterday)
-func GetQueryRangePresetCurrentWeekIST() (int64, int64) {
-	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
-	if isTodayFirstDayOfWeek(locationIST) {
-		return GetQueryRangePresetTodayIST()
+// GetQueryRangePresetCurrentWeekIn Returns start and end unix timestamp for current week (Sunday to Yesterday)
+func GetQueryRangePresetCurrentWeekIn(timeZoneString TimeZoneString) (int64, int64, error) {
+	location, errCode := time.LoadLocation(string(timeZoneString))
+	if errCode != nil {
+		return 0, 0, errCode
 	}
-	rangeStartTime := GetBeginningOfDayTimestampZ(BeginningOfWeekStartOfDay(locationIST).Unix(), TimeZoneStringIST)
-	timeNow := time.Now().In(locationIST)
-	rangeEndTime := GetBeginningOfDayTimestampZ(timeNow.Unix(), TimeZoneStringIST) - 1
-	return rangeStartTime, rangeEndTime
+	if isTodayFirstDayOfWeekIn(location) {
+		return GetQueryRangePresetTodayIn(timeZoneString)
+	}
+	rangeStartTime := GetBeginningOfDayTimestampIn(BeginningOfWeekStartOfDayIn(location).Unix(), timeZoneString)
+	timeNow := time.Now().In(location)
+	rangeEndTime := GetBeginningOfDayTimestampIn(timeNow.Unix(), timeZoneString) - 1
+	return rangeStartTime, rangeEndTime, errCode
 }
 
-func isTodayFirstDayOfMonth(location *time.Location) bool {
+func isTodayFirstDayOfMonthIn(location *time.Location) bool {
 	t := time.Now().In(location)
 	return t.Day() == 1
 }
 
-func isTodayFirstDayOfWeek(location *time.Location) bool {
+func isTodayFirstDayOfWeekIn(location *time.Location) bool {
 	t := time.Now().In(location)
 	return int(t.Weekday()) == 0
 }
 
-// GetQueryRangePresetCurrentMonthIST Returns start and end unix timestamp for current month (1st of month to Yesterday)
-func GetQueryRangePresetCurrentMonthIST() (int64, int64) {
-	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
-	if isTodayFirstDayOfMonth(locationIST) {
-		return GetQueryRangePresetTodayIST()
+// GetQueryRangePresetCurrentMonthIn Returns start and end unix timestamp for current month (1st of month to Yesterday)
+func GetQueryRangePresetCurrentMonthIn(timezoneString TimeZoneString) (int64, int64, error) {
+	location, errCode := time.LoadLocation(string(timezoneString))
+	if errCode != nil {
+		return 0, 0, errCode
 	}
-	rangeStartTime := GetBeginningOfDayTimestampZ(BeginningOfMonthStartOfDay(locationIST).Unix(), TimeZoneStringIST)
-	timeNow := time.Now().In(locationIST)
-	rangeEndTime := GetBeginningOfDayTimestampZ(timeNow.Unix(), TimeZoneStringIST) - 1
-	return rangeStartTime, rangeEndTime
+	if isTodayFirstDayOfMonthIn(location) {
+		return GetQueryRangePresetTodayIn(timezoneString)
+	}
+	rangeStartTime := GetBeginningOfDayTimestampIn(BeginningOfMonthStartOfDayIn(location).Unix(), timezoneString)
+	timeNow := time.Now().In(location)
+	rangeEndTime := GetBeginningOfDayTimestampIn(timeNow.Unix(), timezoneString) - 1
+	return rangeStartTime, rangeEndTime, errCode
 }
 
-// GetQueryRangePresetLastWeekIST Returns start and end unix timestamp for last week (Last to Last Sunday to Last Sat)
-func GetQueryRangePresetLastWeekIST() (int64, int64) {
-	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
-	rangeStartTime := GetBeginningOfDayTimestampZ(BeginningOfLastWeekStartOfDay(locationIST).Unix(), TimeZoneStringIST)
-	rangeEndTime := GetEndOfDayTimestampZ(EndOfLastWeekStartOfDay(locationIST).Unix(), TimeZoneStringIST)
-	return rangeStartTime, rangeEndTime
+// GetQueryRangePresetLastWeekIn Returns start and end unix timestamp for last week (Last to Last Sunday to Last Sat)
+func GetQueryRangePresetLastWeekIn(timezoneString TimeZoneString) (int64, int64, error) {
+	location, errCode := time.LoadLocation(string(timezoneString))
+	if errCode != nil {
+		return 0, 0, errCode
+	}
+	rangeStartTime := GetBeginningOfDayTimestampIn(BeginningOfLastWeekStartOfDayIn(location).Unix(), timezoneString)
+	rangeEndTime := GetEndOfDayTimestampIn(EndOfLastWeekStartOfDayIn(location).Unix(), timezoneString)
+	return rangeStartTime, rangeEndTime, errCode
 }
 
-// GetQueryRangePresetLastMonthIST Returns start and end unix timestamp for last month (1st of the last month to end of the last month)
-func GetQueryRangePresetLastMonthIST() (int64, int64) {
-	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
-	rangeStartTime := GetBeginningOfDayTimestampZ(BeginningOfLastMonthStartOfDay(locationIST).Unix(), TimeZoneStringIST)
-	rangeEndTime := GetEndOfDayTimestampZ(EndOfLastMonthStartOfDay(locationIST).Unix(), TimeZoneStringIST)
-	return rangeStartTime, rangeEndTime
+// GetQueryRangePresetLastMonthIn Returns start and end unix timestamp for last month (1st of the last month to end of the last month)
+func GetQueryRangePresetLastMonthIn(timezoneString TimeZoneString) (int64, int64, error) {
+	location, errCode := time.LoadLocation(string(timezoneString))
+	if errCode != nil {
+		return 0, 0, errCode
+	}
+	rangeStartTime := GetBeginningOfDayTimestampIn(BeginningOfLastMonthStartOfDayIn(location).Unix(), timezoneString)
+	rangeEndTime := GetEndOfDayTimestampIn(EndOfLastMonthStartOfDayIn(location).Unix(), timezoneString)
+	return rangeStartTime, rangeEndTime, nil
 }
 
-// GetMonthlyQueryRangesTuplesIST Return a tuple of start and end unix timestamp for last `numMonths`.
-func GetMonthlyQueryRangesTuplesIST(numMonths int) []Int64Tuple {
+// GetMonthlyQueryRangesTuplesZ Return a tuple of start and end unix timestamp for last `numMonths`.
+func GetMonthlyQueryRangesTuplesZ(numMonths int, timezoneString TimeZoneString) []Int64Tuple {
 	monthlyRanges := make([]Int64Tuple, 0, 0)
 	if numMonths == 0 {
 		return monthlyRanges
 	}
-	lastMonthStart, lastMonthEnd := GetQueryRangePresetLastMonthIST()
-	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
+	lastMonthStart, lastMonthEnd, _ := GetQueryRangePresetLastMonthIn(timezoneString)
+	location, _ := time.LoadLocation(string(timezoneString))
 	monthlyRanges = append(monthlyRanges, Int64Tuple{lastMonthStart, lastMonthEnd})
 	for i := 1; i < numMonths; i++ {
 		lastMonthEnd = lastMonthStart - 1
-		lastMonthEndTime := time.Unix(lastMonthEnd, 0).In(locationIST)
+		lastMonthEndTime := time.Unix(lastMonthEnd, 0).In(location)
 		lastMonthStart = time.Date(lastMonthEndTime.Year(), lastMonthEndTime.Month(),
 			1, 0, 0, 0, 0, lastMonthEndTime.Location()).Unix()
 		monthlyRanges = append(monthlyRanges, Int64Tuple{lastMonthStart, lastMonthEnd})
@@ -548,75 +561,84 @@ func GetMonthlyQueryRangesTuplesIST(numMonths int) []Int64Tuple {
 	return monthlyRanges
 }
 
-// BeginningOfWeekStartOfDay beginning of current week
-func BeginningOfWeekStartOfDay(location *time.Location) time.Time {
+// BeginningOfWeekStartOfDayIn beginning of current week
+func BeginningOfWeekStartOfDayIn(location *time.Location) time.Time {
 	t := time.Now().In(location)
 	weekday := int(t.Weekday())
 	t = t.AddDate(0, 0, -weekday)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
-// BeginningOfLastWeekStartOfDay beginning of last week
-func BeginningOfLastWeekStartOfDay(location *time.Location) time.Time {
+// BeginningOfLastWeekStartOfDayIn beginning of last week
+func BeginningOfLastWeekStartOfDayIn(location *time.Location) time.Time {
 	t := time.Now().In(location)
 	t = t.AddDate(0, 0, -(int(t.Weekday()) + 7))
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
-// EndOfLastWeekStartOfDay end of last week
-func EndOfLastWeekStartOfDay(location *time.Location) time.Time {
-	t := BeginningOfWeekStartOfDay(location)
+// EndOfLastWeekStartOfDayIn end of last week
+func EndOfLastWeekStartOfDayIn(location *time.Location) time.Time {
+	t := BeginningOfWeekStartOfDayIn(location)
 	t = t.AddDate(0, 0, -1)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
-// BeginningOfMonthStartOfDay beginning of current month
-func BeginningOfMonthStartOfDay(location *time.Location) time.Time {
+// BeginningOfMonthStartOfDayIn beginning of current month
+func BeginningOfMonthStartOfDayIn(location *time.Location) time.Time {
 	t := time.Now().In(location)
 	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
 }
 
-// BeginningOfLastMonthStartOfDay beginning of last month
-func BeginningOfLastMonthStartOfDay(location *time.Location) time.Time {
-	t := BeginningOfMonthStartOfDay(location)
+// BeginningOfLastMonthStartOfDayIn beginning of last month
+func BeginningOfLastMonthStartOfDayIn(location *time.Location) time.Time {
+	t := BeginningOfMonthStartOfDayIn(location)
 	monthEnd := t.AddDate(0, 0, -(1))
 	return time.Date(monthEnd.Year(), monthEnd.Month(), 1, 0, 0, 0, 0, monthEnd.Location())
 }
 
-// EndOfLastMonthStartOfDay end of last month
-func EndOfLastMonthStartOfDay(location *time.Location) time.Time {
-	t := BeginningOfMonthStartOfDay(location)
+// EndOfLastMonthStartOfDayIn end of last month
+func EndOfLastMonthStartOfDayIn(location *time.Location) time.Time {
+	t := BeginningOfMonthStartOfDayIn(location)
 	return t.AddDate(0, 0, -(1))
 }
 
-// GetQueryRangePresetYesterdayIST Returns start and end unix timestamp for yesterday's range.
-func GetQueryRangePresetYesterdayIST() (int64, int64) {
-	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
-	timeNow := time.Now().In(locationIST)
-	rangeEndTime := GetBeginningOfDayTimestampZ(timeNow.Unix(), TimeZoneStringIST) - 1
-	rangeStartTime := GetBeginningOfDayTimestampZ(timeNow.AddDate(0, 0, -1).Unix(), TimeZoneStringIST)
-	return rangeStartTime, rangeEndTime
+// GetQueryRangePresetYesterdayIn Returns start and end unix timestamp for yesterday's range.
+func GetQueryRangePresetYesterdayIn(timezoneString TimeZoneString) (int64, int64, error) {
+	location, errCode := time.LoadLocation(string(timezoneString))
+	if errCode != nil {
+		return 0, 0, errCode
+	}
+	timeNow := time.Now().In(location)
+	rangeEndTime := GetBeginningOfDayTimestampIn(timeNow.Unix(), timezoneString) - 1
+	rangeStartTime := GetBeginningOfDayTimestampIn(timeNow.AddDate(0, 0, -1).Unix(), timezoneString)
+	return rangeStartTime, rangeEndTime, nil
 }
 
-// GetQueryRangePresetTodayIST Returns start and end unix timestamp for today's range.
-func GetQueryRangePresetTodayIST() (int64, int64) {
-	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
-	timeNow := time.Now().In(locationIST)
-	rangeStartTime := GetBeginningOfDayTimestampZ(timeNow.Unix(), TimeZoneStringIST)
-	return rangeStartTime, timeNow.Unix()
+// GetQueryRangePresetTodayIn Returns start and end unix timestamp for today's range.
+func GetQueryRangePresetTodayIn(timezoneString TimeZoneString) (int64, int64, error) {
+	location, errCode := time.LoadLocation(string(timezoneString))
+	if errCode != nil {
+		return 0, 0, errCode
+	}
+	timeNow := time.Now().In(location)
+	rangeStartTime := GetBeginningOfDayTimestampIn(timeNow.Unix(), timezoneString)
+	return rangeStartTime, timeNow.Unix(), nil
 }
 
-// GetQueryRangePresetLast30MinutesIST Returns start and end unix timestamp for last 30mins range.
-func GetQueryRangePresetLast30MinutesIST() (int64, int64) {
-	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
-	timeNow := time.Now().In(locationIST)
+// GetQueryRangePresetLast30MinutesIn Returns start and end unix timestamp for last 30mins range.
+func GetQueryRangePresetLast30MinutesIn(timezoneString TimeZoneString) (int64, int64, error) {
+	location, errCode := time.LoadLocation(string(timezoneString))
+	if errCode != nil {
+		return 0, 0, errCode
+	}
+	timeNow := time.Now().In(location)
 	endTime := timeNow.Unix()
 	startTime := endTime - 30*60
-	return startTime, endTime
+	return startTime, endTime, nil
 }
 
-// UnixToHumanTime Converts epoch to readable String timestamp.
-func UnixToHumanTime(timestamp int64) string {
+// UnixToHumanTimeZ Converts epoch to readable String timestamp.
+func UnixToHumanTimeZ(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(time.RFC3339)
 }
 
@@ -1008,9 +1030,9 @@ func IsItreeCampaignEvent(eventName string) bool {
 }
 
 // GetDashboardCacheResultExpiryInSeconds Returns expiry for cache based on query date range.
-func GetDashboardCacheResultExpiryInSeconds(from, to int64) float64 {
-	toStartOfDay := GetBeginningOfDayTimestampZ(to, TimeZoneStringIST)
-	nowStartOfDay := GetBeginningOfDayTimestampZ(TimeNow().Unix(), TimeZoneStringIST)
+func GetDashboardCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneString) float64 {
+	toStartOfDay := GetBeginningOfDayTimestampIn(to, timezoneString)
+	nowStartOfDay := GetBeginningOfDayTimestampIn(TimeNowZ().Unix(), timezoneString)
 	if Is30MinutesTimeRange(from, to) {
 		return float64(CacheExpiryDashboard30MinutesInSeconds)
 	} else if to >= nowStartOfDay {
@@ -1032,9 +1054,9 @@ func GetDashboardCacheResultExpiryInSeconds(from, to int64) float64 {
 }
 
 // GetQueryCacheResultExpiryInSeconds Returns expiry for cache based on query date range.
-func GetQueryCacheResultExpiryInSeconds(from, to int64) float64 {
-	toStartOfDay := GetBeginningOfDayTimestampZ(to, TimeZoneStringIST)
-	nowStartOfDay := GetBeginningOfDayTimestampZ(TimeNow().Unix(), TimeZoneStringIST)
+func GetQueryCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneString) float64 {
+	toStartOfDay := GetBeginningOfDayTimestampIn(to, timezoneString)
+	nowStartOfDay := GetBeginningOfDayTimestampIn(TimeNowZ().Unix(), timezoneString)
 	if to >= nowStartOfDay {
 		// End date is in today's range. Keep small expiry.
 		return float64(CacheExpiryQueryTodaysDataInSeconds)

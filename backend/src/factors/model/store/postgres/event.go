@@ -83,7 +83,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 	}
 	eventProperties := *propertyMap
 
-	currentTime := U.TimeNow()
+	currentTime := U.TimeNowZ()
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 
 	var eventNamesKeySortedSet *cacheRedis.Key
@@ -142,7 +142,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 			}
 		}
 	}
-	begin := U.TimeNow()
+	begin := U.TimeNowZ()
 	keysToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	if !isUpdateEventProperty {
 		keysToIncrSortedSet = append(keysToIncrSortedSet, eventsToIncrSortedSet...)
@@ -153,7 +153,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		return
 	}
 	counts, err := cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
-	end := U.TimeNow()
+	end := U.TimeNowZ()
 	metrics.Increment(metrics.IncrEventCacheCounter)
 	metrics.RecordLatency(metrics.LatencyEventCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {

@@ -198,7 +198,7 @@ func main() {
 	routinesOther := flag.Int("routines_other", 5, "No.of parallel routines to use for all other tables.")
 	migrate := flag.Bool("migrate", false, "Disable's additional queries like dedupe query for migration.")
 
-	includeTables := flag.String("include_tables", "*", "Comma separated tables to run or *")
+	includeTables := flag.String("include_tables", "", "Comma separated tables to run or *")
 	excludeTables := flag.String("exclude_tables", "", "Comma separated tables to exclude from the run")
 	disableSyncColumnsFlag := flag.Bool("disable_sync_column", false, "To disable sync columns like jobs_metadata, synced etc")
 
@@ -215,6 +215,10 @@ func main() {
 
 	if *projectIDStringList == "" {
 		log.Fatal("Invalid project_id.")
+	}
+
+	if *includeTables == "" {
+		log.Fatal("Invalid include_tables. It should be either * or list of tables.")
 	}
 
 	if *pageSize == 0 {

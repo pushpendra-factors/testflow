@@ -289,6 +289,7 @@ type Model interface {
 	UpdateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int
 	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []uint64
 	GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[uint64]bool) (projectIds []uint64, errCode int)
+	GetTimezoneForProject(projectID uint64) (U.TimeZoneString, int)
 
 	// queries
 	CreateQuery(projectID uint64, query *model.Queries) (*model.Queries, int, string)

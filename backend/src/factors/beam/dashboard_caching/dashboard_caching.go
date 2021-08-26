@@ -166,6 +166,7 @@ func (f *GetDashboardUnitCachePayloadsFn) FinishBundle(ctx context.Context, emit
 	C.SafeFlushAllCollectors()
 }
 
+// TODO: we need a way to figure if something is getting skipped. Here timezoneString could error out.
 func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, projectsToRunString string,
 	emit func(model.BeamDashboardUnitCachePayload)) {
 
@@ -175,6 +176,11 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 
 	projectIDs := store.GetStore().GetProjectsToRunForIncludeExcludeString(stringProjectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDs {
+		timezoneString, statusCode := store.GetStore().GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			log.Errorf("Failed to get project Timezone for %d", projectID)
+			continue
+		}
 		dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(uint64(projectID))
 		if errCode != http.StatusFound {
 			continue
@@ -184,7 +190,12 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 			queryClass, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 			if errMsg == "" && queryClass != model.QueryClassWeb {
 				for preset, rangeFunction := range U.QueryDateRangePresets {
-					fr, t := rangeFunction()
+					fr, t, errCode := rangeFunction(timezoneString)
+					if errCode != nil {
+						log.Errorf("Failed to get proper project Timezone for %d", projectID)
+						continue
+					}
+					// kark
 					// Filtering queries on type and range for attribution query
 					shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t, f.JobProps.OnlyAttribution, f.JobProps.SkipAttribution)
 					if !shouldCache {
@@ -196,6 +207,7 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 						Query:         dashboardUnit.Query,
 						From:          from,
 						To:            to,
+						TimeZone:      timezoneString,
 					}
 					emit(cachePayload)
 				}
@@ -241,7 +253,9 @@ func (f *CacheDashboardUnitDoFn) ProcessElement(ctx context.Context,
 		}).Info("dashboard caching - DecodeQueryForClass failed")
 		return
 	}
+
 	baseQuery.SetQueryDateRange(beamCachePayload.From, beamCachePayload.To)
+	baseQuery.SetTimeZone(beamCachePayload.TimeZone)
 	cachePayload := model.DashboardUnitCachePayload{
 		DashboardUnit: beamCachePayload.DashboardUnit,
 		BaseQuery:     baseQuery,
@@ -318,14 +332,23 @@ func (f *GetWebAnalyticsCachePayloadsNowFn) ProcessElement(ctx context.Context, 
 			log.Errorf("Failed to get web analytics queries for project %d", projectID)
 			continue
 		}
-
+		timezoneString, statusCode := store.GetStore().GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			log.Errorf("Failed to get project Timezone for %d", projectID)
+			continue
+		}
 		// Get only last 30mins preset for caching.
-		from, to := U.WebAnalyticsQueryDateRangePresets[U.DateRangePreset30Minutes]()
+		from, to, err := U.WebAnalyticsQueryDateRangePresets[U.DateRangePreset30Minutes](timezoneString)
+		if err != nil {
+			log.Errorf("Failed to get proper project Timezone for %d", projectID)
+			continue
+		}
 		cachePayload := model.WebAnalyticsCachePayload{
 			ProjectID:   projectID,
 			DashboardID: dashboardID,
 			From:        from,
 			To:          to,
+			Timezone:    timezoneString,
 			Queries:     webAnalyticsQueries,
 		}
 		emit(cachePayload)

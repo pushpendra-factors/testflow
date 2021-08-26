@@ -101,8 +101,8 @@ func (pg *Postgres) RegisterTask(taskName string, source string, frequency int, 
 		OffsetStartMinutes:       offsetStartMinutes,
 		IsProjectEnabled:         isProjectEnabled,
 		DelayAlertThresholdHours: 0,
-		CreatedAt:                U.TimeNow(),
-		UpdatedAt:                U.TimeNow(),
+		CreatedAt:                U.TimeNowZ(),
+		UpdatedAt:                U.TimeNowZ(),
 	}
 
 	if err := db.Create(&taskDetails).Error; err != nil {

@@ -66,9 +66,16 @@ spec:
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)
           - --project_ids
-          - "*"
+          - '*'
           - --page_size
           - "10000"
+          - --routines_other
+          - "5"
+          - --routines_heavy
+          - "5"
+          - --include_tables
+          - $(REVERSE_REPLICATOR_INCLUDED_TABLES)
+          - --disable_sync_column
         envFrom:
         - configMapRef:
             name: config-env
@@ -76,6 +83,8 @@ spec:
             name: config-postgres
         - configMapRef:
             name: config-memsql
+        - configMapRef:
+            name: config-replication
         - secretRef:
             name: secret-postgres
         - secretRef:

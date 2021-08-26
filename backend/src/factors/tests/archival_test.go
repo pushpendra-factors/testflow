@@ -63,21 +63,21 @@ func TestGetNextArchivalBatches(t *testing.T) {
 	assert.Empty(t, batches)
 
 	// Corner case of beginning of the day timestamp. Empty batches must be returned.
-	startTime = U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix())
+	startTime = U.GetBeginningOfDayTimestampZ(U.TimeNowUnix())
 	batches, _ = store.GetStore().GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
 	assert.Empty(t, batches)
 
 	// For a day before, only one entry.
-	startTime = U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix()) - U.SECONDS_IN_A_DAY
+	startTime = U.GetBeginningOfDayTimestampZ(U.TimeNowUnix()) - U.SECONDS_IN_A_DAY
 	batches, _ = store.GetStore().GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
 	assert.Equal(t, 1, len(batches))
 
 	// When startTime is older than maxLookbackDays.
-	startTime = U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix()) - 10*U.SECONDS_IN_A_DAY
+	startTime = U.GetBeginningOfDayTimestampZ(U.TimeNowUnix()) - 10*U.SECONDS_IN_A_DAY
 	maxLookbackDays = 5
 	batches, _ = store.GetStore().GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
 	assert.Equal(t, maxLookbackDays, len(batches))
-	effectiveStartTime := U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix()) - 5*U.SECONDS_IN_A_DAY
+	effectiveStartTime := U.GetBeginningOfDayTimestampZ(U.TimeNowUnix()) - 5*U.SECONDS_IN_A_DAY
 
 	// Batches must be in sorted order of dates.
 	for index, batch := range batches {

@@ -5,6 +5,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -21,7 +22,7 @@ func (pg *Postgres) CreateWeeklyInsightsMetadata(wim *model.WeeklyInsightsMetada
 		if U.IsPostgresUniqueIndexViolationError("weekly_insights_metadata_project_id_stdate_enddate_unique_idx", err) {
 			updateFields := map[string]interface{}{
 				"insight_id": wim.InsightId,
-				"updated_at": U.TimeNow(),
+				"updated_at": time.Now(),
 			}
 			query := db.Model(&model.WeeklyInsightsMetadata{}).Where("project_id = ? AND base_start_time = ? AND base_end_time = ? AND comparison_start_time = ? AND comparison_end_time = ? AND query_id = ?",
 				wim.ProjectId, wim.BaseStartTime, wim.BaseEndTime, wim.ComparisonStartTime, wim.ComparisonEndTime, wim.QueryId).Updates(updateFields)

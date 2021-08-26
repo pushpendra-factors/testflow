@@ -43,7 +43,7 @@ func (pg *Postgres) GetAllProcessedIntervalsFromStartDate(taskID uint64, project
 	var endDelta uint64
 	if startDate == nil {
 		endDelta = 9999999999
-		startDelta = U.DateAsFormattedInt(U.TimeNow())
+		startDelta = U.DateAsFormattedInt(U.TimeNowZ())
 	} else {
 		endDelta = 9999999999
 		startDelta = U.DateAsFormattedInt((*startDate))
@@ -94,7 +94,7 @@ func (pg *Postgres) GetAllProcessedIntervals(taskID uint64, projectId uint64, lo
 	var endDelta uint64
 	if endDate == nil {
 		endDelta = ^uint64(0)
-		startDelta = U.DateAsFormattedInt(U.TimeNow().AddDate(0, 0, -lookbackInDays))
+		startDelta = U.DateAsFormattedInt(U.TimeNowZ().AddDate(0, 0, -lookbackInDays))
 	} else {
 		endDelta = U.DateAsFormattedInt(*endDate)
 		startDelta = U.DateAsFormattedInt((*endDate).AddDate(0, 0, -lookbackInDays))
@@ -146,7 +146,7 @@ func (pg *Postgres) GetAllInProgressIntervals(taskID uint64, projectId uint64, l
 	var endDelta uint64
 	if endDate == nil {
 		endDelta = ^uint64(0)
-		startDelta = U.DateAsFormattedInt(U.TimeNow().AddDate(0, 0, -lookbackInDays))
+		startDelta = U.DateAsFormattedInt(U.TimeNowZ().AddDate(0, 0, -lookbackInDays))
 	} else {
 		endDelta = U.DateAsFormattedInt(*endDate)
 		startDelta = U.DateAsFormattedInt((*endDate).AddDate(0, 0, -lookbackInDays))
@@ -196,8 +196,8 @@ func (pg *Postgres) InsertTaskBeginRecord(taskId uint64, projectId uint64, delta
 		TaskID:      taskId,
 		Delta:       delta,
 		IsCompleted: false,
-		CreatedAt:   U.TimeNow(),
-		UpdatedAt:   U.TimeNow(),
+		CreatedAt:   U.TimeNowZ(),
+		UpdatedAt:   U.TimeNowZ(),
 	}
 
 	if isProjectEnabled == true {
@@ -346,7 +346,7 @@ func (pg *Postgres) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays in
 	var startDateTime time.Time
 	var endDateTime time.Time
 	if endDate == nil {
-		endDateTime = U.TimeNow()
+		endDateTime = U.TimeNowZ()
 	} else {
 		endDateTime = *endDate
 	}
@@ -431,7 +431,7 @@ func (pg *Postgres) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays in
 		}
 	}
 	if taskDetails.Frequency == model.Stateless {
-		deltas = append(deltas, U.DateAsFormattedInt(U.TimeNow()))
+		deltas = append(deltas, U.DateAsFormattedInt(U.TimeNowZ()))
 	}
 	return deltas, http.StatusOK, ""
 }
@@ -643,7 +643,7 @@ func (pg *Postgres) IsDependentTaskDone(taskId uint64, projectId uint64, delta u
 // Get All the date/time range that are yet to be executed
 func (pg *Postgres) GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 	if endDate == nil {
-		currentTime := U.TimeNow()
+		currentTime := U.TimeNowZ()
 		endDate = &currentTime
 	}
 	taskDetails, _, _ := pg.GetTaskDetailsById(taskId)

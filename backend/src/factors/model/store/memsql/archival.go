@@ -15,11 +15,11 @@ import (
 func (store *MemSQL) GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error) {
 	var eventsArchivalBatches []model.EventsArchivalBatch
 	var completedBatches map[int64]int64
-	endTime := time.Unix(U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix())-1, 0)
+	endTime := time.Unix(U.GetBeginningOfDayTimestampZ(U.TimeNowUnix())-1, 0)
 
-	maxLookBackTime := U.GetBeginningOfDayTimestampUTC(U.TimeNow().AddDate(0, 0, -maxLookbackDays).Unix())
+	maxLookBackTime := U.GetBeginningOfDayTimestampZ(U.TimeNowZ().AddDate(0, 0, -maxLookbackDays).Unix())
 	if !hardStartTime.IsZero() {
-		startTime = U.GetBeginningOfDayTimestampUTC(hardStartTime.Unix())
+		startTime = U.GetBeginningOfDayTimestampZ(hardStartTime.Unix())
 		endTime = hardEndTime.Add(time.Second * time.Duration(1))
 		var status int
 		completedBatches, status = store.GetCompletedArchivalBatches(projectID, hardStartTime, hardEndTime)
@@ -40,8 +40,8 @@ func (store *MemSQL) GetNextArchivalBatches(projectID uint64, startTime int64, m
 	batchTime := time.Unix(startTime, 0).UTC()
 	for batchTime.Before(endTime) {
 		nextBatchTime := batchTime.AddDate(0, 0, 1)
-		batchStartTime := U.GetBeginningOfDayTimestampUTC(batchTime.Unix())
-		batchEndTime := U.GetBeginningOfDayTimestampUTC(nextBatchTime.Unix()) - 1
+		batchStartTime := U.GetBeginningOfDayTimestampZ(batchTime.Unix())
+		batchEndTime := U.GetBeginningOfDayTimestampZ(nextBatchTime.Unix()) - 1
 		if !hardStartTime.IsZero() {
 			_, found := completedBatches[batchStartTime]
 			if found {

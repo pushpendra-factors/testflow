@@ -136,6 +136,7 @@ const (
 	QueryCacheRequestSleepHeader            string = "QuerySleepSeconds"
 	QueryCacheResponseFromCacheHeader       string = "Fromcache"
 	QueryCacheResponseCacheRefreshedAt      string = "Refreshedat"
+	QueryCacheResponseCacheTimeZone         string = "TimeZone"
 	QueryCacheRedisKeyPrefix                string = "query:cache"
 )
 
@@ -157,6 +158,8 @@ type BaseQuery interface {
 	GetClass() string
 	GetQueryDateRange() (int64, int64)
 	SetQueryDateRange(from, to int64)
+	SetTimeZone(timezoneString U.TimeZoneString)
+	GetTimeZone() U.TimeZoneString
 
 	// Query cache related helper methods.
 	GetQueryCacheHashString() (string, error)
@@ -193,6 +196,14 @@ func (q *Query) SetQueryDateRange(from, to int64) {
 	q.From, q.To = from, to
 }
 
+func (q *Query) SetTimeZone(timezoneString U.TimeZoneString) {
+	q.Timezone = string(timezoneString)
+}
+
+func (q *Query) GetTimeZone() U.TimeZoneString {
+	return U.TimeZoneString(q.Timezone)
+}
+
 func (q *Query) GetQueryCacheHashString() (string, error) {
 	queryMap, err := U.EncodeStructTypeToMap(q)
 	if err != nil {
@@ -213,12 +224,12 @@ func (q *Query) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error)
 	if err != nil {
 		return nil, err
 	}
-	suffix := getQueryCacheRedisKeySuffix(hashString, q.From, q.To)
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.From, q.To, U.TimeZoneString(q.Timezone))
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *Query) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.From, q.To)
+	return getQueryCacheResultExpiry(q.From, q.To, q.Timezone)
 }
 
 func (query *Query) GetGroupByTimestamp() string {
@@ -296,6 +307,16 @@ func (q *QueryGroup) GetQueryDateRange() (from, to int64) {
 	return 0, 0
 }
 
+func (q *QueryGroup) SetTimeZone(timezoneString U.TimeZoneString) {
+	for i := 0; i < len(q.Queries); i++ {
+		q.Queries[i].Timezone = string(timezoneString)
+	}
+}
+
+func (q *QueryGroup) GetTimeZone() U.TimeZoneString {
+	return U.TimeZoneString(q.Queries[0].Timezone)
+}
+
 func (q *QueryGroup) SetQueryDateRange(from, to int64) {
 	for i := 0; i < len(q.Queries); i++ {
 		q.Queries[i].From, q.Queries[i].To = from, to
@@ -325,12 +346,12 @@ func (q *QueryGroup) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, e
 	if err != nil {
 		return nil, err
 	}
-	suffix := getQueryCacheRedisKeySuffix(hashString, q.Queries[0].From, q.Queries[0].To)
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.Queries[0].From, q.Queries[0].To, U.TimeZoneString(q.Queries[0].Timezone))
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *QueryGroup) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To)
+	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
 }
 
 type DateTimePropertyValue struct {
@@ -361,22 +382,24 @@ type HeaderRows struct {
 	Rows    [][]interface{} `json:"rows"`
 }
 
-func getQueryCacheRedisKeySuffix(hashString string, from, to int64) string {
+func getQueryCacheRedisKeySuffix(hashString string, from, to int64, timezoneString U.TimeZoneString) string {
 	if to-from == DateRangePreset2MinInSeconds {
 		return fmt.Sprintf("%s:%s", hashString, DateRangePreset2MinLabel)
 	} else if to-from == DateRangePreset30MinInSeconds {
 		return fmt.Sprintf("%s:%s", hashString, DateRangePreset30MinLabel)
-	} else if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
+	} else if U.IsStartOfTodaysRangeIn(from, timezoneString) {
 		return fmt.Sprintf("%s:from:%d", hashString, from)
 	}
 	return fmt.Sprintf("%s:from:%d:to:%d", hashString, from, to)
 }
 
-func getQueryCacheResultExpiry(from, to int64) float64 {
+func getQueryCacheResultExpiry(from, to int64, timezone string) float64 {
+	var timezoneString U.TimeZoneString
+	timezoneString = U.TimeZoneString(timezone)
 	if to-from == DateRangePreset2MinInSeconds || to-from == DateRangePreset30MinInSeconds {
 		return QueryCacheMutableResultExpirySeconds
 	}
-	return U.GetQueryCacheResultExpiryInSeconds(from, to)
+	return U.GetQueryCacheResultExpiryInSeconds(from, to, timezoneString)
 }
 
 type QueryResult struct {
@@ -395,6 +418,7 @@ type ResultGroup struct {
 type QueryCacheResult struct {
 	Result      interface{}
 	RefreshedAt int64
+	TimeZone    string
 }
 
 // GenericQueryResult - Common query result
@@ -518,6 +542,7 @@ func SetQueryCacheResult(projectID uint64, query BaseQuery, queryResult interfac
 	queryCache := QueryCacheResult{
 		Result:      queryResult,
 		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+		TimeZone:    string(query.GetTimeZone()),
 	}
 
 	queryResultString, err := json.Marshal(queryCache)

@@ -7,6 +7,7 @@ import (
 	serviceDisk "factors/services/disk"
 	"fmt"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -104,8 +105,8 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 			ComparisonEndTime:   periodCodesWithWeekNMinus1[0].To,
 			InsightType:         "w",
 			InsightId:           insightId,
-			CreatedAt:           U.TimeNow(),
-			UpdatedAt:           U.TimeNow(),
+			CreatedAt:           time.Now(),
+			UpdatedAt:           time.Now(),
 		})
 		if errCode != http.StatusCreated {
 			log.Error(errMsg)
@@ -120,7 +121,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriver, projectId uint64, k int, queryId int, cloudManager *filestore.FileManager) error {
 	for i, periodCode1 := range periodCodes {
 		var wpi1 WithinPeriodInsights
-		dateString1 := U.GetDateOnlyFromTimestamp(periodCode1.From)
+		dateString1 := U.GetDateOnlyFromTimestampZ(periodCode1.From)
 		efTmpPath1, efTmpName1 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString1, uint64(queryId), k)
 		ReadFromJSONFile(efTmpPath1+efTmpName1, &wpi1)
 		for j, periodCode2 := range periodCodes {
@@ -128,7 +129,7 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 				continue
 			}
 			var wpi2 WithinPeriodInsights
-			dateString2 := U.GetDateOnlyFromTimestamp(periodCode2.From)
+			dateString2 := U.GetDateOnlyFromTimestampZ(periodCode2.From)
 			efTmpPath2, efTmpName2 := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString2, uint64(queryId), k)
 
 			err := ReadFromJSONFile(efTmpPath2+efTmpName2, &wpi2)
@@ -167,7 +168,7 @@ func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager
 				return err
 			}
 		} else {
-			dateString := U.GetDateOnlyFromTimestamp(periodCode.From)
+			dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 			if deltaQuery.Id == 0 {
 				deltaQuery.Id = multiStepQuery.Id
 			}
@@ -254,7 +255,7 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 			deltaQuery.Id = multiStepQuery.Id
 		}
 		writeWpiPath(projectId, periodCode, uint64(deltaQuery.Id), k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager)
-		dateString := U.GetDateOnlyFromTimestamp(periodCode.From)
+		dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 		efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, uint64(deltaQuery.Id), k)
 		err = diskManager.Create(efTmpPath, efTmpName, bytes.NewReader(withinPeriodInsightsBytes))
 		if err != nil {
@@ -268,7 +269,7 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 
 func writeWpiPath(projectId uint64, periodCode Period, queryId uint64, k int, events *bytes.Reader,
 	cloudManager filestore.FileManager) error {
-	dateString := U.GetDateOnlyFromTimestamp(periodCode.From)
+	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsWpiFilePathAndName(projectId, dateString, queryId, k)
 	err := cloudManager.Create(path, name, events)
 	if err != nil {
@@ -280,7 +281,7 @@ func writeWpiPath(projectId uint64, periodCode Period, queryId uint64, k int, ev
 
 func writeCpiPath(projectId uint64, periodCode Period, queryId uint64, k int, events *bytes.Reader,
 	cloudManager filestore.FileManager) error {
-	dateString := U.GetDateOnlyFromTimestamp(periodCode.From)
+	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsCpiFilePathAndName(projectId, dateString, queryId, k)
 	err := cloudManager.Create(path, name, events)
 	if err != nil {

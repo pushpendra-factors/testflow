@@ -801,7 +801,7 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 		return
 	}
 
-	resp, err := http.Get("https://graph.facebook.com/v9.0/oauth/access_token?" +
+	resp, err := http.Get("https://graph.facebook.com/v11.0/oauth/access_token?" +
 		"grant_type=fb_exchange_token&client_id=" + C.GetFacebookAppId() + "&client_secret=" + C.GetFacebookAppSecret() +
 		"&fb_exchange_token=" + requestPayload.AccessToken)
 	if err != nil || resp.StatusCode != http.StatusOK {
