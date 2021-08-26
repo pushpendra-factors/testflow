@@ -139,12 +139,14 @@ function App({ isAgentLoggedIn, agent_details, active_project, projects, setActi
 
 
   useEffect(() => { 
-
-    let activeItem = projects?.filter((item)=> item.id==localStorage.getItem('activeProject'))
-    let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0]
-    setActiveProject(projectDetails); 
+ 
+    if(projects){
+      let activeItem = projects?.filter((item)=> item.id==localStorage.getItem('activeProject')) 
+      let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0] 
+      setActiveProject(projectDetails);  
+    }
     
-  }, []);
+  }, [projects]);
 
   return (
     <div className="App">
