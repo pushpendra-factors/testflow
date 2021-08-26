@@ -10,6 +10,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -85,6 +86,8 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
+	var timezoneString U.TimeZoneString
+	var statusCode int
 
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
@@ -104,9 +107,25 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 	}
 
+	if requestPayload.Queries[0].Timezone != "" {
+		_, errCode := time.LoadLocation(string(requestPayload.Queries[0].Timezone))
+		if errCode != nil {
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+		}
+		timezoneString = U.TimeZoneString(requestPayload.Queries[0].Timezone)
+	} else {
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+		if statusCode != http.StatusFound {
+			logCtx.WithError(err).Error("Query failed. Failed to get Timezone.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+		}
+		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+	}
+	requestPayload.SetTimeZone(timezoneString)
+
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, timezoneString, hardRefresh) {
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
 
 		if shouldReturn {
 			if resCode == http.StatusOK {
@@ -142,9 +161,9 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
-		model.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+		model.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
 		return H.DashboardQueryResponsePayload{
-			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
+			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
 	}
 	return resultGroup, http.StatusOK, "", "", false
 }
@@ -184,6 +203,8 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
+	var timezoneString U.TimeZoneString
+	var statusCode int
 
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
@@ -209,6 +230,22 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		logCtx.WithError(err).Error("Query failed. Json decode failed.")
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 	}
+
+	if requestPayload.Query.Timezone != "" {
+		_, errCode := time.LoadLocation(string(requestPayload.Query.Timezone))
+		if errCode != nil {
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+		}
+		timezoneString = U.TimeZoneString(requestPayload.Query.Timezone)
+	} else {
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+		if statusCode != http.StatusFound {
+			logCtx.WithError(err).Error("Query failed. Failed to get Timezone.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+		}
+		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+	}
+	requestPayload.Query.SetTimeZone(timezoneString)
 
 	logCtxDEBUG := log.WithFields(log.Fields{
 		"reqId":       reqId,
@@ -242,9 +279,9 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
-	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, hardRefresh) {
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
-			reqId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+			reqId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
 		if projectId == 399 {
 			logCtxDEBUG.WithFields(log.Fields{"logNo": "Two",
 				"shouldReturn": shouldReturn,
@@ -303,13 +340,13 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 				"result": result,
 			}).Info("Before Response from isDashboardQueryRequest")
 		}
-		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
 		if projectId == 399 {
 			logCtxDEBUG.WithFields(log.Fields{"logNo": "LastButOne",
 				"result": result,
 			}).Info("After Response from isDashboardQueryRequest")
 		}
-		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
+		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
 	}
 	if projectId == 399 {
 		logCtxDEBUG.WithFields(log.Fields{"logNo": "Last",

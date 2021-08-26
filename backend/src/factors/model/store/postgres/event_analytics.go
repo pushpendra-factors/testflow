@@ -935,6 +935,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (str
 	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
 	var qSelect string
+	// This is sorted Kark.
 	qSelect = appendSelectTimestampIfRequired(qSelect, q.GetGroupByTimestamp(), q.Timezone)
 	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", model.AliasAggr))
 
@@ -1696,7 +1697,8 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps, stepsToKeysMap, err := addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams)
+	steps, stepsToKeysMap, err :=
+		addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams)
 	if err != nil {
 		return qStmnt, qParams, err
 	}

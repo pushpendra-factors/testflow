@@ -147,7 +147,7 @@ func GetCachePropertiesType(projectID uint64, eventName, propertyName string, is
 	}
 
 	// Reset cache on start of day
-	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
+	currentDate := U.GetDateOnlyFromTimestampZ(U.TimeNowUnix())
 	if propertiesTypeCache.LastResetDate != currentDate {
 		C.ResetPropertyDetailsCacheByDate(U.TimeNowUnix())
 		return TypeMissingConfiguredProperties

@@ -67,7 +67,7 @@ func (pg *Postgres) CreateProjectModelMetadata(pmm *model.ProjectModelMetadata) 
 			updateFields := map[string]interface{}{
 				"model_id":   pmm.ModelId,
 				"chunks":     pmm.Chunks,
-				"updated_at": U.TimeNow(),
+				"updated_at": U.TimeNowZ(),
 			}
 			query := db.Model(&model.ProjectModelMetadata{}).Where("project_id = ? AND start_time = ? AND end_time = ? AND model_type = ?",
 				pmm.ProjectId, pmm.StartTime, pmm.EndTime, pmm.ModelType).Updates(updateFields)

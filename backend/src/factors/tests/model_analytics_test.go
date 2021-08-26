@@ -2325,8 +2325,9 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		query := model.Query{
-			From: startTimestamp - (24 * 60 * 60),
-			To:   startTimestamp + 40,
+			From:     startTimestamp - (24 * 60 * 60),
+			To:       startTimestamp + 40,
+			Timezone: string(U.TimeZoneStringIST),
 			EventsWithProperties: []model.QueryEventWithProperties{
 				model.QueryEventWithProperties{
 					Name: eventName1,
@@ -2393,7 +2394,8 @@ func TestBaseQueryHashStringConsistency(t *testing.T) {
 		}
 
 		for rangeString, rangeFunction := range U.QueryDateRangePresets {
-			from, to := rangeFunction()
+			from, to, errCode := rangeFunction(U.TimeZoneStringIST)
+			assert.NotNil(t, errCode)
 			baseQuery.SetQueryDateRange(from, to)
 			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
 

@@ -30,6 +30,7 @@ type ChannelQuery struct {
 	Status      string `json:"status"`
 	MatchType   string `json:"match_type"` // optional
 	Breakdown   string `json:"breakdown"`
+	Timezone    string `json:"time_zone"`
 }
 
 // ChannelQueryV1 - @TODO Kark v1
@@ -110,6 +111,14 @@ func (q *ChannelQueryUnit) GetQueryDateRange() (from, to int64) {
 	return q.Query.From, q.Query.To
 }
 
+func (q *ChannelQueryUnit) SetTimeZone(timezoneString U.TimeZoneString) {
+	q.Query.Timezone = string(timezoneString)
+}
+
+func (q *ChannelQueryUnit) GetTimeZone() U.TimeZoneString {
+	return U.TimeZoneString(q.Query.Timezone)
+}
+
 func (q *ChannelQueryUnit) SetQueryDateRange(from, to int64) {
 	q.Query.From, q.Query.To = from, to
 }
@@ -135,12 +144,12 @@ func (q *ChannelQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.
 	if err != nil {
 		return nil, err
 	}
-	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To)
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To, U.TimeZoneString(q.Query.Timezone))
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *ChannelQueryUnit) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Query.From, q.Query.To)
+	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
 }
 
 // ChannelGroupQueryV1 - @TODO Kark v1
@@ -163,6 +172,16 @@ func (q *ChannelGroupQueryV1) GetQueryDateRange() (from, to int64) {
 		return q.Queries[0].From, q.Queries[0].To
 	}
 	return 0, 0
+}
+
+func (q *ChannelGroupQueryV1) SetTimeZone(timezoneString U.TimeZoneString) {
+	for i := 0; i < len(q.Queries); i++ {
+		q.Queries[i].Timezone = string(timezoneString)
+	}
+}
+
+func (q *ChannelGroupQueryV1) GetTimeZone() U.TimeZoneString {
+	return U.TimeZoneString(q.Queries[0].Timezone)
 }
 
 func (q *ChannelGroupQueryV1) SetQueryDateRange(from, to int64) {
@@ -194,12 +213,12 @@ func (q *ChannelGroupQueryV1) GetQueryCacheRedisKey(projectID uint64) (*cacheRed
 	if err != nil {
 		return nil, err
 	}
-	suffix := getQueryCacheRedisKeySuffix(hashString, q.Queries[0].From, q.Queries[0].To)
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.Queries[0].From, q.Queries[0].To, U.TimeZoneString(q.Queries[0].Timezone))
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *ChannelGroupQueryV1) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To)
+	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
 }
 
 func (query *ChannelQueryV1) GetGroupByTimestamp() string {

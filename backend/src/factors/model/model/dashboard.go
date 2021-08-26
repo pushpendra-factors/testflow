@@ -42,6 +42,7 @@ type DashboardCacheResult struct {
 	Result      interface{} `json:"result"`
 	From        int64       `json:"from"`
 	To          int64       `json:"tom"`
+	Timezone    string      `json:"timezone"`
 	RefreshedAt int64       `json:"refreshed_at"`
 }
 
@@ -60,7 +61,7 @@ var DashboardTypes = []string{DashboardTypePrivate, DashboardTypeProjectVisible}
 const AgentProjectPersonalDashboardName = "My Dashboard"
 const AgentProjectPersonalDashboardDescription = "No Description"
 
-func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId, dashboardId, unitId uint64, from, to int64) (*DashboardCacheResult, int, error) {
+func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId, dashboardId, unitId uint64, from, to int64, timezoneString U.TimeZoneString) (*DashboardCacheResult, int, error) {
 	var cacheResult *DashboardCacheResult
 	logCtx := log.WithFields(log.Fields{
 		"reqId":    reqId,
@@ -71,7 +72,7 @@ func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId, dashboardId, 
 		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids")
 	}
 
-	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to)
+	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to, timezoneString)
 	if err != nil {
 		return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to fetch cache key - " + err.Error())
 	}
@@ -96,7 +97,7 @@ func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId, dashboardId, 
 	return cacheResult, http.StatusFound, nil
 }
 
-func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, dashboardId uint64, unitId uint64, from, to int64) {
+func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, dashboardId uint64, unitId uint64, from, to int64, timezoneString U.TimeZoneString) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
 	})
@@ -106,7 +107,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 		return
 	}
 
-	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to)
+	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to, timezoneString)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key")
 		return
@@ -116,6 +117,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 		Result:      result,
 		From:        from,
 		To:          to,
+		Timezone:    string(timezoneString),
 		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 	}
 
@@ -125,7 +127,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 		return
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to))
+	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return
@@ -133,35 +135,36 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 }
 
 // ShouldRefreshDashboardUnit Whether to force refresh dashboard unit irrespective of the cache and expiry.
-func ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID uint64, from, to int64, isWebAnalytics bool) bool {
+func ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID uint64, from, to int64, timezoneString U.TimeZoneString, isWebAnalytics bool) bool {
 	// If today's range or last 30 minutes window, refresh on every trigger.
-	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) || U.Is30MinutesTimeRange(from, to) {
+	if U.IsStartOfTodaysRangeIn(from, timezoneString) || U.Is30MinutesTimeRange(from, to) {
 		return true
 	}
 
 	var refreshedAt int64
 	if isWebAnalytics {
-		result, errCode := GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID, from, to)
+		result, errCode := GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID, from, to, timezoneString)
 		if errCode != http.StatusFound {
 			return true
 		}
 		refreshedAt = result.RefreshedAt
 	} else {
-		result, errCode, _ := GetCacheResultByDashboardIdAndUnitId("", projectID, dashboardID, dashboardUnitID, from, to)
+		result, errCode, _ := GetCacheResultByDashboardIdAndUnitId("", projectID, dashboardID, dashboardUnitID, from, to, timezoneString)
 		if errCode != http.StatusFound || result == nil {
 			return true
 		}
 		refreshedAt = result.RefreshedAt
 	}
 
-	toStartOfDay := U.GetBeginningOfDayTimestampZ(to, U.TimeZoneStringIST)
-	nowStartOfDay := U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST)
+	// Needs change.
+	toStartOfDay := U.GetBeginningOfDayTimestampIn(to, timezoneString)
+	nowStartOfDay := U.GetBeginningOfDayTimestampIn(U.TimeNowUnix(), timezoneString)
 
 	// If in last 2 days (mutable data range), check the RefreshedAt in Cache result.
 	// Skip, if RefreshedAt is for the same day to restrict force cache only once a day.
 	if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay <= U.ImmutableDataEndDateBufferInSeconds {
-		refreshedAtDate := U.GetDateAsStringZ(refreshedAt, U.TimeZoneStringIST)
-		todaysDate := U.GetDateAsStringZ(U.TimeNowUnix(), U.TimeZoneStringIST)
+		refreshedAtDate := U.GetDateAsStringIn(refreshedAt, timezoneString)
+		todaysDate := U.GetDateAsStringIn(U.TimeNowUnix(), timezoneString)
 		if refreshedAtDate < todaysDate {
 			return true
 		}

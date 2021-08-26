@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -73,6 +74,7 @@ func GetProjectsHandler(c *gin.Context) {
 	}
 	resp := make(map[uint64][]interface{})
 	for _, project := range projects {
+		project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(project.ID)
 		resp[projectRoleMap[project.ID]] = append(resp[projectRoleMap[project.ID]], project)
 	}
 	c.JSON(http.StatusOK, resp)

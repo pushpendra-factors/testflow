@@ -19,18 +19,19 @@ type Project struct {
 	// An index created on token.
 	Token string `gorm:"size:32" json:"token"`
 	// An index created on private_token.
-	PrivateToken          string          `gorm:"size:32" json:"private_token"`
-	CreatedAt             time.Time       `json:"created_at"`
-	UpdatedAt             time.Time       `json:"updated_at"`
-	ProjectURI            string          `json:"project_uri"`
-	TimeFormat            string          `json:"time_format"`
-	DateFormat            string          `json:"date_format"`
-	TimeZone              string          `json:"time_zone"`
-	InteractionSettings   postgres.Jsonb  `json:"interaction_settings"`
-	SalesforceTouchPoints postgres.Jsonb  `json:"salesforce_touch_points"`
-	HubspotTouchPoints    postgres.Jsonb  `json:"hubspot_touch_points"`
-	JobsMetadata          *postgres.Jsonb `json:"jobs_metadata"`
-	ChannelGroupRules     postgres.Jsonb  `json:"channel_group_rules"`
+	PrivateToken                     string          `gorm:"size:32" json:"private_token"`
+	CreatedAt                        time.Time       `json:"created_at"`
+	UpdatedAt                        time.Time       `json:"updated_at"`
+	ProjectURI                       string          `json:"project_uri"`
+	TimeFormat                       string          `json:"time_format"`
+	DateFormat                       string          `json:"date_format"`
+	TimeZone                         string          `json:"time_zone"`
+	InteractionSettings              postgres.Jsonb  `json:"interaction_settings"`
+	SalesforceTouchPoints            postgres.Jsonb  `json:"salesforce_touch_points"`
+	HubspotTouchPoints               postgres.Jsonb  `json:"hubspot_touch_points"`
+	JobsMetadata                     *postgres.Jsonb `json:"jobs_metadata"`
+	ChannelGroupRules                postgres.Jsonb  `json:"channel_group_rules"`
+	IsMultipleProjectTimezoneEnabled bool            `gorm:"-" json:"is_multiple_project_timezone_enabled"`
 }
 
 const (

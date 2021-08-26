@@ -713,7 +713,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 
 // builds group keys for event properties for given step (event_with_properties).
 func buildGroupKeyForStep(projectId uint64, eventWithProperties *model.QueryEventWithProperties,
-	groupProps []model.QueryGroupByProperty, ewpIndex int, timeZone string) (string, []interface{}, string, bool) {
+	groupProps []model.QueryGroupByProperty, ewpIndex int, timezoneString string) (string, []interface{}, string, bool) {
 
 	groupPropsByStep := make([]model.QueryGroupByProperty, 0, 0)
 	groupByUserProperties := false
@@ -727,6 +727,6 @@ func buildGroupKeyForStep(projectId uint64, eventWithProperties *model.QueryEven
 		}
 	}
 
-	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectId, groupPropsByStep, timeZone)
+	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectId, groupPropsByStep, timezoneString)
 	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }

@@ -7,12 +7,13 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"net/http/httptest"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
 

@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -45,7 +46,12 @@ func ExecuteTemplateQueryHandler(c *gin.Context) (interface{}, int, string, stri
 	if query.Thresholds == emptyThresholds {
 		query.Thresholds = model.DefaultThresholds
 	}
-	query.From, query.To, query.PrevFrom, query.PrevTo, err = model.GetInputOrDefaultTimestampsForTemplateQueryWithDays(query, 7)
+	statusCode, timezoneString := getTimezoneForTemplates(projectId, reqID, query.Timezone)
+	if statusCode != http.StatusOK {
+		logCtx.Error("Query failed. Failed to get Timezone.")
+		return nil, statusCode, INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+	}
+	query.From, query.To, query.PrevFrom, query.PrevTo, err = model.GetInputOrDefaultTimestampsForTemplateQueryWithDays(query, timezoneString, 7)
 	if err != nil {
 		logCtx.WithError(err).Error("Query failed. Getting date ranges failed.")
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error Processing/Fetching date ranges from timestamps", true
@@ -76,6 +82,28 @@ func ExecuteTemplateQueryHandler(c *gin.Context) (interface{}, int, string, stri
 	}
 	model.SetQueryCacheResult(projectId, &query, queryResult)
 	return gin.H{"result": queryResult}, http.StatusOK, "", "", false
+}
+
+// TODO later. Move all common handler timezone methods to this.
+func getTimezoneForTemplates(projectID uint64, reqID string, inputTimezoneString string) (int, U.TimeZoneString) {
+	var timezoneString U.TimeZoneString
+	var statusCode int
+	logCtx := log.WithField("project_id", projectID).WithField("reqId", reqID).WithField("inputTimezone", inputTimezoneString)
+	if inputTimezoneString != "" {
+		_, errCode := time.LoadLocation(inputTimezoneString)
+		if errCode != nil {
+			logCtx.Error("Query failed to load the location input")
+			return http.StatusBadRequest, ""
+		}
+		timezoneString = U.TimeZoneString(inputTimezoneString)
+	} else {
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			logCtx.Error("Query failed. Failed to get Timezone.")
+			return statusCode, ""
+		}
+	}
+	return http.StatusOK, timezoneString
 }
 func GetTemplateConfigHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)

@@ -665,8 +665,8 @@ func (pg *Postgres) GetAdwordsCurrency(projectID uint64, customerAccountID strin
 		" ORDER BY timestamp DESC LIMIT 1"
 	logCtx := log.WithField("ProjectId", projectID)
 	// Checking just for customerAccountIDs[0], we are assuming that all accounts have same currency.
-	rows, tx, err := pg.ExecQueryWithContext(queryCurrency, []interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestamp(from),
-		U.GetDateOnlyFromTimestamp(to)})
+	rows, tx, err := pg.ExecQueryWithContext(queryCurrency, []interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestampZ(from),
+		U.GetDateOnlyFromTimestampZ(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("failed to build meta for attribution query result")
 		return "", err

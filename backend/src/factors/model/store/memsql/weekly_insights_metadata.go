@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -23,7 +24,7 @@ func (store *MemSQL) CreateWeeklyInsightsMetadata(wim *model.WeeklyInsightsMetad
 		if strings.Contains(err.Error(), "weekly_insights_metadata_project_id_stdate_enddate_unique_idx") {
 			updateFields := map[string]interface{}{
 				"insight_id": wim.InsightId,
-				"updated_at": U.TimeNow(),
+				"updated_at": time.Now(),
 			}
 			query := db.Model(&model.WeeklyInsightsMetadata{}).Where("project_id = ? AND base_start_time = ? AND base_end_time = ? AND comparison_start_time = ? AND comparison_end_time = ? AND query_id = ?",
 				wim.ProjectId, wim.BaseStartTime, wim.BaseEndTime, wim.ComparisonStartTime, wim.ComparisonEndTime, wim.QueryId).Updates(updateFields)

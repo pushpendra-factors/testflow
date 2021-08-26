@@ -197,7 +197,7 @@ func TestUpdateDashboard(t *testing.T) {
 	})
 }
 
-func TestGetDashboardResutlFromCache(t *testing.T) {
+func TestGetDashboardResultFromCache(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -275,6 +275,7 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 		FilterValue: "all",
 		From:        1575158400,
 		To:          1575936000,
+		Timezone:    string(U.TimeZoneStringIST),
 	}
 
 	rTitle = U.RandomString(5)
@@ -308,7 +309,7 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	}{}
 
 	//Cache should be empty
-	result, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
+	result, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to, U.TimeZoneString(project.TimeZone))
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, result)
 
@@ -333,15 +334,15 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	assert.Equal(t, false, decChannelResult.Cache)
 
 	// Cache should be set
-	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
+	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to, U.TimeZoneString(project.TimeZone))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(query1.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
-	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, from+500, to+500)
+	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, from+500, to+500, U.TimeZoneString(project.TimeZone))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(query2.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
-	resultChannel, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3.From, query3.To)
+	resultChannel, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3.From, query3.To, U.TimeZoneString(project.TimeZone))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(989), resultChannel.Result.(map[string]interface{})["metrics"].(map[string]interface{})["clicks"])
@@ -419,31 +420,32 @@ func TestShouldRefreshDashboardUnit(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
 
+	timezoneString := U.TimeZoneString(project.TimeZone)
 	// 30mins range. Should allow.
-	from, to := U.WebAnalyticsQueryDateRangePresets[U.DateRangePreset30Minutes]()
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
+	from, to, _ := U.WebAnalyticsQueryDateRangePresets[U.DateRangePreset30Minutes](timezoneString)
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
 
 	// Todays range. Should allow.
-	from, to = U.QueryDateRangePresets[U.DateRangePresetToday]()
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, false))
+	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetToday](timezoneString)
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 
 	// Yesterday's range. Should allow first time.
-	from, to = U.QueryDateRangePresets[U.DateRangePresetYesterday]()
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, false))
+	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetYesterday](timezoneString)
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 
 	// Yesterday's range. Should not allow again on same day once cache is set.
-	from, to = U.QueryDateRangePresets[U.DateRangePresetYesterday]()
-	model.SetCacheResultForWebAnalyticsDashboard(&model.WebAnalyticsQueryResult{}, project.ID, dashboard.ID, from, to)
-	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
-	model.SetCacheResultByDashboardIdAndUnitId("{}", project.ID, dashboard.ID, dashboardUnit.ID, from, to)
-	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, false))
+	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetYesterday](timezoneString)
+	model.SetCacheResultForWebAnalyticsDashboard(&model.WebAnalyticsQueryResult{}, project.ID, dashboard.ID, from, to, timezoneString)
+	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	model.SetCacheResultByDashboardIdAndUnitId("{}", project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString)
+	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 
 	// More than 2 days old range. Should allow.
-	from, to = U.QueryDateRangePresets[U.DateRangePresetYesterday]()
+	from, to, _ = U.QueryDateRangePresets[U.DateRangePresetYesterday](timezoneString)
 	from = from - 30*U.SECONDS_IN_A_DAY
 	to = to - 2*U.SECONDS_IN_A_DAY
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
-	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, false))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, timezoneString, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, timezoneString, false))
 }

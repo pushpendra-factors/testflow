@@ -262,7 +262,7 @@ ELSE date_trunc('day', to_timestamp((events.properties->>'check_Timestamp')::num
 WHERE events.project_id='1' AND timestamp>='1602527400' AND timestamp<='1602576868' AND events.event_name_id IN
 (SELECT id FROM event_names WHERE project_id='1' AND name='factors-dev.com:3000/#/settings') GROUP BY _group_key_0 ORDER BY count DESC LIMIT 100
 */
-func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timeZone string) (string, []interface{}) {
+func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
 	entityField := getPropertyEntityField(projectID, groupProp)
 	var groupSelect string
 	groupSelectParams := make([]interface{}, 0)
@@ -272,7 +272,7 @@ func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByP
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
 	} else {
 		propertyName := "JSON_EXTRACT_STRING(" + entityField + ", ?)"
-		timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, propertyName, timeZone)
+		timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, propertyName, timezoneString)
 		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s, ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '' THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '0' THEN '%s' ELSE %s END AS %s",
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, timestampStr, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
@@ -285,7 +285,7 @@ func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByP
 // How to use?
 // select user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2 from events
 // group by gk_1, gk_2
-func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty, timeZone string) (groupSelect string,
+func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty, timezoneString string) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
 
 	groupSelectParams = make([]interface{}, 0)
@@ -293,7 +293,7 @@ func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty, t
 	for i, v := range groupProps {
 		// Order of group is preserved as received.
 		gKey := groupKeyByIndex(v.Index)
-		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelect(projectID, v, gKey, timeZone)
+		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelect(projectID, v, gKey, timezoneString)
 		groupSelect = groupSelect + noneHandledSelect
 		groupKeys = groupKeys + gKey
 		if i < len(groupProps)-1 {
@@ -609,9 +609,9 @@ func appendOrderByAggrAndGroupKeys(projectID uint64, qStmnt string, groupBys []m
 	return joinWithComma(fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, model.AliasAggr), groupKeys)
 }
 
-func appendOrderByEventNameAndAggr(qStmnt string) string {
-	return fmt.Sprintf("%s ORDER BY event_name, %s DESC", qStmnt, model.AliasAggr)
-}
+//func appendOrderByEventNameAndAggr(qStmnt string) string {
+//	return fmt.Sprintf("%s ORDER BY event_name, %s DESC", qStmnt, model.AliasAggr)
+//}
 
 func appendSelectTimestampColIfRequired(stmnt string, isRequired bool) string {
 	if !isRequired {
@@ -872,12 +872,12 @@ func IsValidQuery(query *model.Query) (bool, string) {
 	return true, ""
 }
 
-func getQueryCacheRedisKeySuffix(hashString string, from, to int64) string {
+func getQueryCacheRedisKeySuffix(hashString string, from, to int64, timezoneString U.TimeZoneString) string {
 	if to-from == model.DateRangePreset2MinInSeconds {
 		return fmt.Sprintf("%s:%s", hashString, model.DateRangePreset2MinLabel)
 	} else if to-from == model.DateRangePreset30MinInSeconds {
 		return fmt.Sprintf("%s:%s", hashString, model.DateRangePreset30MinLabel)
-	} else if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
+	} else if U.IsStartOfTodaysRangeIn(from, timezoneString) {
 		return fmt.Sprintf("%s:from:%d", hashString, from)
 	}
 	return fmt.Sprintf("%s:from:%d:to:%d", hashString, from, to)

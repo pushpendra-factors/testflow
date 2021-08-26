@@ -25,8 +25,8 @@ func (store *MemSQL) RegisterTaskDependency(taskId uint64, dependentTaskId uint6
 		TaskID:           taskId,
 		DependentTaskID:  dependentTaskId,
 		DependencyOffset: offset,
-		CreatedAt:        U.TimeNow(),
-		UpdatedAt:        U.TimeNow(),
+		CreatedAt:        U.TimeNowZ(),
+		UpdatedAt:        U.TimeNowZ(),
 	}
 
 	baseTask, code1, _ := store.GetTaskDetailsById(taskId)

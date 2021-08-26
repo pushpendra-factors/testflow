@@ -48,12 +48,13 @@ type BeamDashboardUnitCachePayload struct {
 	QueryClass    string
 	Query         postgres.Jsonb
 	From, To      int64
+	TimeZone      U.TimeZoneString
 }
 
-func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, from, to int64) (*cacheRedis.Key, error) {
+func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
 	prefix := "dashboard:query"
 	var suffix string
-	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
+	if U.IsStartOfTodaysRangeIn(from, timezoneString) {
 		// Query for today's dashboard. Use to as 'now'.
 		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:now", dashboardID, unitID, from)
 	} else {
@@ -140,7 +141,7 @@ func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, only
 
 		if preset == U.DateRangePresetLastWeek || preset == U.DateRangePresetLastMonth {
 			// Rule 2': If last week/last month is well before one day in past, compute for entire range
-			now := U.TimeNow().Unix()
+			now := time.Now().Unix()
 			if (to + U.SECONDS_IN_A_DAY) <= (now - epsilonSeconds) {
 				return true, from, to
 			}
@@ -167,7 +168,7 @@ func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, only
 func GetEffectiveTimeRangeForDashboardUnitAttributionQuery(from, to int64) (int64, int64) {
 
 	epsilonSeconds := int64(60)
-	now := U.TimeNow().Unix()
+	now := time.Now().Unix()
 	if (to + U.SECONDS_IN_A_DAY) <= (now - epsilonSeconds) {
 		return from, to
 	}

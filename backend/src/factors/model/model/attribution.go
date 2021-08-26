@@ -55,6 +55,14 @@ func (q *AttributionQueryUnit) GetQueryDateRange() (from, to int64) {
 	return q.Query.From, q.Query.To
 }
 
+func (q *AttributionQueryUnit) SetTimeZone(timezoneString U.TimeZoneString) {
+	q.Query.Timezone = string(timezoneString)
+}
+
+func (q *AttributionQueryUnit) GetTimeZone() U.TimeZoneString {
+	return U.TimeZoneString(q.Query.Timezone)
+}
+
 func (q *AttributionQueryUnit) SetQueryDateRange(from, to int64) {
 	q.Query.From, q.Query.To = from, to
 }
@@ -80,12 +88,12 @@ func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRe
 	if err != nil {
 		return nil, err
 	}
-	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To)
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To, U.TimeZoneString(q.Query.Timezone))
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Query.From, q.Query.To)
+	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
 }
 
 const (

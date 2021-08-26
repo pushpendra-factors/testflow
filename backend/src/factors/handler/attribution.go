@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -49,6 +50,8 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	var requestPayload AttributionRequestPayload
 	var dashboardId uint64
 	var unitId uint64
+	var timezoneString U.TimeZoneString
+	var statusCode int
 
 	hardRefresh := false
 	dashboardIdParam := c.Query("dashboard_id")
@@ -78,14 +81,29 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed." + errMsg, true
 	}
 
+	if requestPayload.Query.Timezone != "" {
+		_, errCode := time.LoadLocation(string(requestPayload.Query.Timezone))
+		if errCode != nil {
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+		}
+		timezoneString = U.TimeZoneString(requestPayload.Query.Timezone)
+	} else {
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+		if statusCode != http.StatusFound {
+			logCtx.WithError(err).Error("Query failed. Failed to get Timezone.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+		}
+		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+	}
+
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
-	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, hardRefresh) {
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 
 		effectiveFrom, effectiveTo := model.GetEffectiveTimeRangeForDashboardUnitAttributionQuery(requestPayload.Query.From, requestPayload.Query.To)
 		if effectiveFrom == 0 || effectiveTo == 0 {
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query time range is not valid for attribution.", true
 		}
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo)
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, effectiveFrom, effectiveTo, timezoneString)
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false
@@ -98,6 +116,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		Class: model.QueryClassAttribution,
 		Query: requestPayload.Query,
 	}
+	attributionQueryUnitPayload.SetTimeZone(timezoneString)
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId)
 	if shouldReturn {
 		if resCode == http.StatusOK {
@@ -121,7 +140,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	if isDashboardQueryRequest {
 		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
-			requestPayload.Query.From, requestPayload.Query.To)
+			requestPayload.Query.From, requestPayload.Query.To, timezoneString)
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
 	}
 	return result, http.StatusOK, "", "", false

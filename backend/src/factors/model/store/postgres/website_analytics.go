@@ -1364,16 +1364,26 @@ func (pg *Postgres) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]
 		errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)
 		return []model.WebAnalyticsCachePayload{}, errCode, errMsg
 	}
+	timezoneString, statusCode := pg.GetTimezoneForProject(projectID)
+	if statusCode != http.StatusFound {
+		errMsg := fmt.Sprintf("Failed to get project Timezone for %d", projectID)
+		return []model.WebAnalyticsCachePayload{}, statusCode, errMsg
+	}
 
 	var cachePayloads []model.WebAnalyticsCachePayload
 	for _, rangeFunction := range U.QueryDateRangePresets {
-		from, to := rangeFunction()
+		from, to, errCode := rangeFunction(timezoneString)
+		if errCode != nil {
+			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", projectID)
+			return []model.WebAnalyticsCachePayload{}, http.StatusNotFound, errMsg
+		}
 
 		cachePayloads = append(cachePayloads, model.WebAnalyticsCachePayload{
 			ProjectID:   projectID,
 			DashboardID: dashboardID,
 			From:        from,
 			To:          to,
+			Timezone:    timezoneString,
 			Queries:     webAnalyticsQueries,
 		})
 	}
@@ -1404,7 +1414,8 @@ func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnal
 	from, to := cachePayload.From, cachePayload.To
 	queries := cachePayload.Queries
 	logCtx := log.WithFields(log.Fields{"did": dashboardID, "pid": projectID, "from": from, "to": to})
-	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, true) {
+	timezoneString := cachePayload.Timezone
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, timezoneString, true) {
 		return http.StatusOK
 	}
 
@@ -1426,7 +1437,7 @@ func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnal
 	timeTakenString := U.SecondsToHMSString(timeTaken)
 	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).Info("Completed website analytics query.")
 
-	model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to)
+	model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to, timezoneString)
 	return http.StatusOK
 }
 
@@ -1486,8 +1497,14 @@ func (pg *Postgres) CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeP
 // CacheWebsiteAnalyticsForMonthlyRange Cache monthly range dashboards for website analytics.
 func (pg *Postgres) CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int) {
 	projectIDsToRun := pg.GetWebAnalyticsEnabledProjectIDsFromList(projectIDs, excludeProjectIDs)
-	monthlyRanges := U.GetMonthlyQueryRangesTuplesIST(numMonths)
 	for _, projectID := range projectIDsToRun {
+		timezoneString, statusCode := pg.GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			errMsg := fmt.Sprintf("Failed to get project Timezone for %d", projectID)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
+		monthlyRanges := U.GetMonthlyQueryRangesTuplesZ(numMonths, timezoneString)
 		dashboardID, webAnalyticsQueries, errCode := pg.GetWebAnalyticsQueriesFromDashboardUnits(projectID)
 		if errCode != http.StatusFound {
 			errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)

@@ -716,8 +716,8 @@ func (pg *Postgres) PullGCLIDReport(projectID uint64, from, to int64, adwordsAcc
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone,
-		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
-		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)),
+		U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
 	rows, tx, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -1065,8 +1065,8 @@ func convertFromRequestToAdwordsSpecificRepresentation(query model.ChannelQueryV
 	if err3 != nil {
 		return query, err3
 	}
-	transformedQuery.From = U.GetDateAsStringZ(query.From, U.TimeZoneString(query.Timezone))
-	transformedQuery.To = U.GetDateAsStringZ(query.To, U.TimeZoneString(query.Timezone))
+	transformedQuery.From = U.GetDateAsStringIn(query.From, U.TimeZoneString(query.Timezone))
+	transformedQuery.To = U.GetDateAsStringIn(query.To, U.TimeZoneString(query.Timezone))
 	transformedQuery.Timezone = query.Timezone
 	transformedQuery.GroupByTimestamp = query.GroupByTimestamp
 

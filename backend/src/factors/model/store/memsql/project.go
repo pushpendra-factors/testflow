@@ -121,6 +121,14 @@ func createProject(project *model.Project) (*model.Project, int) {
 		return nil, http.StatusInternalServerError
 	}
 	project.Token = token
+	if project.TimeZone == "" {
+		project.TimeZone = string(U.TimeZoneStringIST)
+	}
+	_, errCode := time.LoadLocation(string(project.TimeZone))
+	if errCode != nil {
+		log.WithField("projectId", project.ID).Error("This project hasnt been given with wrong timezone")
+		project.TimeZone = string(U.TimeZoneStringIST)
+	}
 
 	// Add project private token before create.
 	// Unique (private_token).
@@ -175,6 +183,12 @@ func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int
 	}
 	if project.TimeZone != "" {
 		updateFields["time_zone"] = project.TimeZone
+	}
+
+	_, errCode := time.LoadLocation(string(project.TimeZone))
+	if errCode != nil {
+		log.WithField("projectId", project.ID).Error("This project hasnt been given with wrong timezone")
+		project.TimeZone = string(U.TimeZoneStringIST)
 	}
 
 	if !U.IsEmptyPostgresJsonb(&project.InteractionSettings) {
@@ -460,6 +474,27 @@ func (store *MemSQL) GetNextSessionStartTimestampForProject(projectID uint64) (i
 	}
 
 	return *sessionStartTimestamp, http.StatusFound
+}
+
+func (store *MemSQL) GetTimezoneForProject(projectID uint64) (U.TimeZoneString, int) {
+	project, statusCode := store.GetProject(projectID)
+	if statusCode != http.StatusFound {
+		return U.TimeZoneStringIST, statusCode
+	}
+	if !C.IsMultipleProjectTimezoneEnabled(projectID) {
+		return U.TimeZoneStringIST, http.StatusOK
+	}
+	if project.TimeZone == "" {
+		log.WithField("projectId", project.ID).Error("This project has been set with no timezone")
+		return U.TimeZoneStringIST, http.StatusFound
+	} else {
+		_, errCode := time.LoadLocation(string(project.TimeZone))
+		if errCode != nil {
+			log.WithField("projectId", project.ID).Error("This project has been given with wrong timezone")
+			return "", http.StatusNotFound
+		}
+		return U.TimeZoneString(project.TimeZone), statusCode
+	}
 }
 
 // UpdateNextSessionStartTimestampForProject - Updates next session start timestamp
