@@ -796,25 +796,33 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 	// sync missing campaign and campaignmember if not available from first date of data pull
 	if objectName == model.SalesforceDocumentTypeNameCampaignMember || objectName == model.SalesforceDocumentTypeNameCampaign {
 		docIDs := make([]string, 0)
-		var objectName string
+		var docObjectName string
 		// sync missing campaign from campaignmember
 		if objectName == model.SalesforceDocumentTypeNameCampaignMember {
+			// sync missing campaigns for project id 566
+			if ps.ProjectID == 566 {
+				docIDs = append(docIDs, "7010I000001KtJaQAK", "7012s000000kjQMAAY",
+					"7012s000000DIskAAG", "7010I000001KkOaQAK", "7012s000000DKulAAG",
+					"7012s000000DLa9AAG", "7010I000001KsSvQAK", "7012s000000cGpwAAE",
+					"7010I000001KpstQAC", "7010I000001KqhmQAC", "7012s000000kjEuAAI",
+					"7010I000001KsAcQAK", "7010I000001NujcQAC")
+			}
 			for campaignID := range allCampaignIDs {
 				docIDs = append(docIDs, campaignID)
 			}
-			objectName = model.SalesforceDocumentTypeNameCampaign
+			docObjectName = model.SalesforceDocumentTypeNameCampaign
 		}
 		// sync missing campaignmember from campaign
 		if objectName == model.SalesforceDocumentTypeNameCampaign {
 			for _, memberID := range allCampaignMemberIDs {
 				docIDs = append(docIDs, memberID)
 			}
-			objectName = model.SalesforceDocumentTypeNameCampaignMember
+			docObjectName = model.SalesforceDocumentTypeNameCampaignMember
 		}
 
 		batchedDocIDs := U.GetStringListAsBatch(docIDs, 50)
 		for i := range batchedDocIDs {
-			paginatedObjectByID, err := salesforceDataClient.GetObjectRecordsByIDs(objectName, batchedDocIDs[i])
+			paginatedObjectByID, err := salesforceDataClient.GetObjectRecordsByIDs(docObjectName, batchedDocIDs[i])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to re-initialize salesforce data client.")
 				return salesforceObjectStatus, err
@@ -830,7 +838,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 				}
 
 				for i := range campaignRecords {
-					err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, objectName, campaignRecords[i])
+					err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, docObjectName, campaignRecords[i])
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to insert unsynced campaing related document on BuildAndUpsertDocument.")
 					}

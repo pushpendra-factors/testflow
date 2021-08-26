@@ -155,7 +155,7 @@ func getDummyValidArchivalScheduledTask(projectID uint64) (model.ScheduledTask, 
 
 	taskDetails := model.EventArchivalTaskDetails{
 		FromTimestamp: U.TimeNowUnix(),
-		ToTimestamp:   U.TimeNow().AddDate(0, 0, 1).Unix(),
+		ToTimestamp:   U.TimeNowZ().AddDate(0, 0, 1).Unix(),
 		EventCount:    10,
 		BucketName:    "/usr/local/var/factors/cloud_storage",
 	}

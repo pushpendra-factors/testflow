@@ -34,8 +34,8 @@ func (pg *Postgres) RegisterTaskDependency(taskId uint64, dependentTaskId uint64
 		TaskID:           taskId,
 		DependentTaskID:  dependentTaskId,
 		DependencyOffset: offset,
-		CreatedAt:        U.TimeNow(),
-		UpdatedAt:        U.TimeNow(),
+		CreatedAt:        U.TimeNowZ(),
+		UpdatedAt:        U.TimeNowZ(),
 	}
 
 	baseTask, code1, _ := pg.GetTaskDetailsById(taskId)

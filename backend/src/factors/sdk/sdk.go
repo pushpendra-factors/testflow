@@ -336,13 +336,13 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 		}
 
 		logCtx.WithField("dateFormat", dateFormat).Info("Begin: Event names - DB query by occurence")
-		begin := U.TimeNow()
+		begin := U.TimeNowZ()
 		events, err := store.GetStore().GetOrderedEventNamesFromDb(
 			project_id,
 			currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 			currentTime.AddDate(0, 0, -(i-1)).Unix(),
 			eventsLimit)
-		end := U.TimeNow()
+		end := U.TimeNowZ()
 		logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Event names - DB query by occurence")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get values from DB - All event names")
@@ -361,9 +361,9 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 			return
 		}
 		logCtx.Info("Begin:EN:SB")
-		begin = U.TimeNow()
+		begin = U.TimeNowZ()
 		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), expiry)
-		end = U.TimeNow()
+		end = U.TimeNowZ()
 		logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to set events in cache")
@@ -383,13 +383,13 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 			dateFormat := currentTime.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 
 			logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event}).Info("Begin: Get event Properties DB call")
-			begin := U.TimeNow()
+			begin := U.TimeNowZ()
 			properties, err := store.GetStore().GetRecentEventPropertyKeysWithLimits(
 				project_id, event,
 				currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 				currentTime.AddDate(0, 0, -(i-1)).Unix(),
 				propertyLimit)
-			end := U.TimeNow()
+			end := U.TimeNowZ()
 			logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get event Properties DB call")
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to fetch values from DB - user properties")
@@ -406,11 +406,11 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 				for _, property := range properties {
 
 					logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key}).Info("Begin: Get event Property values DB call")
-					begin := U.TimeNow()
+					begin := U.TimeNowZ()
 					values, category, err := store.GetStore().GetRecentEventPropertyValuesWithLimits(project_id, event, property.Key, valuesLimit, rowsLimit,
 						currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 						currentTime.AddDate(0, 0, -(i-1)).Unix())
-					end := U.TimeNow()
+					end := U.TimeNowZ()
 					logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get event Property values DB call")
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to get values from db - property values")
@@ -453,9 +453,9 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 				}
 				eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
 				logCtx.Info("Begin:EPV:SB")
-				begin = U.TimeNow()
+				begin = U.TimeNowZ()
 				err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, expiry)
-				end = U.TimeNow()
+				end = U.TimeNowZ()
 				logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to set property values in cache")

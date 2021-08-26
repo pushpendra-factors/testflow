@@ -460,7 +460,7 @@ func (pg *Postgres) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dashb
 	}
 	return
 }
-func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string){
+func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string) {
 	var temp_query model.Query
 	var queryGroup model.QueryGroup
 	// try decoding for Query
@@ -478,6 +478,7 @@ func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, e
 	}
 	return
 }
+
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
@@ -486,16 +487,25 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
 	}
-
 	// excluding 'Web' class dashboard units
 	if queryClass == model.QueryClassWeb {
 		return
 	}
-
+	timezoneString, statusCode := pg.GetTimezoneForProject(dashboardUnit.ProjectID)
+	if statusCode != http.StatusFound {
+		errMsg := fmt.Sprintf("Failed to get project Timezone for %d", dashboardUnit.ProjectID)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
+	}
 	var unitWaitGroup sync.WaitGroup
 	unitWaitGroup.Add(len(U.QueryDateRangePresets))
 	for _, rangeFunction := range U.QueryDateRangePresets {
-		from, to := rangeFunction()
+		from, to, errCode := rangeFunction(timezoneString)
+		if errCode != nil {
+			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
 		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
 		baseQuery, err := model.DecodeQueryForClass(dashboardUnit.Query, queryClass)
 		if err != nil {
@@ -504,6 +514,7 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 			return
 		}
 		baseQuery.SetQueryDateRange(from, to)
+		baseQuery.SetTimeZone(timezoneString)
 		cachePayload := model.DashboardUnitCachePayload{
 			DashboardUnit: dashboardUnit,
 			BaseQuery:     baseQuery,
@@ -523,6 +534,7 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 	projectID := dashboardUnit.ProjectID
 	dashboardID := dashboardUnit.DashboardId
 	dashboardUnitID := dashboardUnit.ID
+	timezoneString := baseQuery.GetTimeZone()
 	from, to := baseQuery.GetQueryDateRange()
 	logCtx := log.WithFields(log.Fields{
 		"Method":          "CacheDashboardUnitForDateRange",
@@ -531,7 +543,7 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 		"DashboardUnitID": dashboardUnitID,
 		"FromTo":          fmt.Sprintf("%d-%d", from, to),
 	})
-	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, false) {
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, timezoneString, false) {
 		return http.StatusOK, ""
 	}
 	logCtx.Info("Starting to cache unit for date range")
@@ -563,6 +575,7 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 		result, errCode = pg.RunEventsGroupQuery(groupQuery.Queries, projectID)
 	}
 	if errCode != http.StatusOK {
+		logCtx.Info("failed to run the query for dashboard caching")
 		return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg)
 	}
 
@@ -570,7 +583,7 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 	timeTakenString := U.SecondsToHMSString(timeTaken)
 	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
 		Info("Done caching unit for range")
-	model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to)
+	model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to, timezoneString)
 
 	// Set in query cache result as well in case someone runs the same query from query handler.
 	model.SetQueryCacheResult(projectID, baseQuery, result)
@@ -602,8 +615,14 @@ func (pg *Postgres) cacheDashboardUnitForDateRange(cachePayload model.DashboardU
 // CacheDashboardsForMonthlyRange To cache monthly dashboards for the project id.
 func (pg *Postgres) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int) {
 	projectIDsToRun := pg.GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs)
-	monthlyRanges := U.GetMonthlyQueryRangesTuplesIST(numMonths)
 	for _, projectID := range projectIDsToRun {
+		timezoneString, statusCode := pg.GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			errMsg := fmt.Sprintf("Failed to get project Timezone for %d", projectID)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			continue
+		}
+		monthlyRanges := U.GetMonthlyQueryRangesTuplesZ(numMonths, timezoneString)
 		dashboardUnits, errCode := pg.GetDashboardUnitsForProjectID(projectID)
 		if errCode != http.StatusFound || len(dashboardUnits) == 0 {
 			return
@@ -635,6 +654,7 @@ func (pg *Postgres) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs
 					return
 				}
 				baseQuery.SetQueryDateRange(from, to)
+				baseQuery.SetTimeZone(timezoneString)
 				cachePayload := model.DashboardUnitCachePayload{
 					DashboardUnit: dashboardUnit,
 					BaseQuery:     baseQuery,

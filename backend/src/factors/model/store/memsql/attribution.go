@@ -477,7 +477,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			value := U.GetInterfaceList(users)
 			queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND " +
 				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
-				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
+				" AND user_id IN ( " + usersPlaceHolder + " ) "
 			qParams := []interface{}{projectID, queryFrom, queryTo}
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
@@ -654,8 +654,8 @@ func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID stri
 	logCtx := log.WithField("ProjectId", projectID)
 	// Checking just for customerAccountIDs[0], we are assuming that all accounts have same currency.
 	rows, tx, err := store.ExecQueryWithContext(queryCurrency,
-		[]interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestamp(from),
-			U.GetDateOnlyFromTimestamp(to)})
+		[]interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestampZ(from),
+			U.GetDateOnlyFromTimestampZ(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("failed to build meta for attribution query result")
 		return "", err

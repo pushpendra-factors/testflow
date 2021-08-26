@@ -6,7 +6,7 @@ import { Button, InputNumber, Tooltip } from 'antd';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import FaDatepicker from '../../FaDatepicker';
 import FaSelect from '../../FaSelect';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 
 const defaultOpProps = {
@@ -158,15 +158,15 @@ const AttrFilterSelect = ({
     }
 
     const parseDateRangeFilter = (fr, to) => {
-        const fromVal = fr ? fr : new Date(moment().startOf('day')).getTime();
-        const toVal = to ? to : new Date(moment()).getTime();
+        const fromVal = fr ? fr : new Date(MomentTz().startOf('day')).getTime();
+        const toVal = to ? to : new Date(MomentTz()).getTime();
         return {
             from: fromVal,
             to: toVal,
             ovp: false
         }
-        // return (moment(fromVal).format('MMM DD, YYYY') + ' - ' +
-        //           moment(toVal).format('MMM DD, YYYY'));
+        // return (MomentTz(fromVal).format('MMM DD, YYYY') + ' - ' +
+        //           MomentTz(toVal).format('MMM DD, YYYY'));
     }
 
     const renderGroupDisplayName = (propState) => {

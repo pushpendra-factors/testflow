@@ -2,7 +2,7 @@ import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import moment from 'moment';
 import { generateTableColumns, generateTableData } from '../utils';
 import DataTable from '../../../../components/DataTable';
-import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
+import { GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
 import { useSelector } from 'react-redux';
 
@@ -12,7 +12,6 @@ function FunnelsResultTable({
   setVisibleProperties,
   queries,
   groups,
-  isWidgetModal,
   arrayMapper,
   reportTitle = 'FunnelAnalysis',
   chartData,
@@ -22,8 +21,9 @@ function FunnelsResultTable({
   durationObj,
   comparison_duration,
   resultData,
+  sorter,
+  setSorter,
 }) {
-  const [sorter, setSorter] = useState({});
   const [columns, setColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [searchText, setSearchText] = useState('');
@@ -31,11 +31,14 @@ function FunnelsResultTable({
     (state) => state.coreQuery
   );
 
-  const handleSorting = useCallback((prop) => {
-    setSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
-    });
-  }, []);
+  const handleSorting = useCallback(
+    (prop) => {
+      setSorter((currentSorter) => {
+        return getNewSorterState(currentSorter, prop);
+      });
+    },
+    [setSorter]
+  );
 
   useEffect(() => {
     setColumns(
@@ -98,12 +101,13 @@ function FunnelsResultTable({
     if (!comparisonChartData) {
       return {
         fileName: `${reportTitle}.csv`,
-        data: tableData.map(({ index, ...rest }) => {
+        data: tableData.map(({ index, value, name, nonConvertedName, ...rest }) => {
           arrayMapper.forEach((elem, index) => {
-            rest[`${elem.displayName}-${index}`] = rest[`${elem.mapper}`].value;
+            rest[`${elem.displayName}-${index}`] =
+              rest[`${elem.displayName}-${index}`].value;
             delete rest[`${elem.mapper}`];
           });
-          return { ...rest };
+          return { ...rest, Conversion: rest.Conversion + '%' };
         }),
       };
     } else {
@@ -137,10 +141,10 @@ function FunnelsResultTable({
         arrayMapper.forEach((elem, index) => {
           rest[
             `${elem.displayName}-${index} (${duration_from} - ${duration_to})`
-          ] = rest[`${elem.mapper}`].value;
+          ] = rest[`${elem.displayName}-${index}`].value;
           rest[
             `${elem.displayName}-${index} (${compare_duration_from} - ${compare_duration_to})`
-          ] = rest[`${elem.mapper}`].compare_count;
+          ] = rest[`${elem.displayName}-${index}`].compare_count;
 
           if (index < arrayMapper.length - 1) {
             rest[
@@ -169,7 +173,7 @@ function FunnelsResultTable({
     (selectedRowKeys) => {
       if (
         !selectedRowKeys.length ||
-        selectedRowKeys.length > MAX_ALLOWED_VISIBLE_PROPERTIES
+        selectedRowKeys.length > GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES
       ) {
         return false;
       }
@@ -196,7 +200,6 @@ function FunnelsResultTable({
 
   return (
     <DataTable
-      isWidgetModal={isWidgetModal}
       tableData={tableData}
       searchText={searchText}
       setSearchText={setSearchText}

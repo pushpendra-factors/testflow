@@ -78,8 +78,8 @@ func (store *MemSQL) RegisterTask(taskName string, source string, frequency int,
 		Recurrence:         recurrence,
 		OffsetStartMinutes: offsetStartMinutes,
 		IsProjectEnabled:   isProjectEnabled,
-		CreatedAt:          U.TimeNow(),
-		UpdatedAt:          U.TimeNow(),
+		CreatedAt:          U.TimeNowZ(),
+		UpdatedAt:          U.TimeNowZ(),
 	}
 
 	taskNameFilter := &model.TaskDetails{

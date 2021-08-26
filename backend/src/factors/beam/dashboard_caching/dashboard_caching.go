@@ -50,22 +50,15 @@ func initConf(config *C.Configuration) {
 	C.KillDBQueriesOnExit()
 }
 
-func emitIndividualProjectID(ctx context.Context, projectIDsString string, emit func(string)) {
-	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(projectIDsString, "")
-	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
-	if allProjects {
-		var errCode int
-		projectIDs, errCode = store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			return
-		}
-	}
-	for _, pid := range projectIDs {
-		emit(fmt.Sprint(pid))
-	}
-}
-
 func EmitProjectKeyCacheResponse(ctx context.Context, cacheResponse CacheResponse, emit func(uint64, CacheResponse)) {
+	log.WithFields(log.Fields{
+		"Method":          "EmitProjectKeyCacheResponse",
+		"ProjectID":       cacheResponse.ProjectID,
+		"DashboardID":     cacheResponse.DashboardID,
+		"DashboardUnitID": cacheResponse.DashboardUnitID,
+		"Type":            cacheResponse.CacheResponseType,
+		"ErrorMessage":    cacheResponse.ErrorMessage,
+	}).Info("EmitProjectKeyCacheResponse in caching.")
 	emit(cacheResponse.ProjectID, cacheResponse)
 }
 
@@ -166,10 +159,14 @@ func (f *GetDashboardUnitCachePayloadsFn) StartBundle(ctx context.Context, emit 
 
 func (f *GetDashboardUnitCachePayloadsFn) FinishBundle(ctx context.Context, emit func(model.BeamDashboardUnitCachePayload)) {
 	log.Info("Closing DB Connection from FinishBundle getDashboardUnitCachePayloadsFn")
-	C.GetServices().Db.Close()
+	err := C.GetServices().Db.Close()
+	if err != nil {
+		log.Info("error while closing the Closing DB Connection from FinishBundle GetDashboardUnitCachePayloadsFn")
+	}
 	C.SafeFlushAllCollectors()
 }
 
+// TODO: we need a way to figure if something is getting skipped. Here timezoneString could error out.
 func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, projectsToRunString string,
 	emit func(model.BeamDashboardUnitCachePayload)) {
 
@@ -179,6 +176,11 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 
 	projectIDs := store.GetStore().GetProjectsToRunForIncludeExcludeString(stringProjectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDs {
+		timezoneString, statusCode := store.GetStore().GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			log.Errorf("Failed to get project Timezone for %d", projectID)
+			continue
+		}
 		dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(uint64(projectID))
 		if errCode != http.StatusFound {
 			continue
@@ -188,7 +190,12 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 			queryClass, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 			if errMsg == "" && queryClass != model.QueryClassWeb {
 				for preset, rangeFunction := range U.QueryDateRangePresets {
-					fr, t := rangeFunction()
+					fr, t, errCode := rangeFunction(timezoneString)
+					if errCode != nil {
+						log.Errorf("Failed to get proper project Timezone for %d", projectID)
+						continue
+					}
+					// kark
 					// Filtering queries on type and range for attribution query
 					shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t, f.JobProps.OnlyAttribution, f.JobProps.SkipAttribution)
 					if !shouldCache {
@@ -200,6 +207,7 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 						Query:         dashboardUnit.Query,
 						From:          from,
 						To:            to,
+						TimeZone:      timezoneString,
 					}
 					emit(cachePayload)
 				}
@@ -219,7 +227,10 @@ func (f *CacheDashboardUnitDoFn) StartBundle(ctx context.Context, emit func(Cach
 
 func (f *CacheDashboardUnitDoFn) FinishBundle(ctx context.Context, emit func(CacheResponse)) {
 	log.Info("Closing DB Connection from FinishBundle cacheDashboardUnitDoFn")
-	C.GetServices().Db.Close()
+	err := C.GetServices().Db.Close()
+	if err != nil {
+		log.Info("error while closing the Closing DB Connection from FinishBundle CacheDashboardUnitDoFn")
+	}
 	C.SafeFlushAllCollectors()
 }
 
@@ -233,15 +244,38 @@ func (f *CacheDashboardUnitDoFn) ProcessElement(ctx context.Context,
 
 	baseQuery, err := model.DecodeQueryForClass(beamCachePayload.Query, beamCachePayload.QueryClass)
 	if err != nil {
+		FB.GetLogContext().WithFields(log.Fields{
+			"Project":     beamCachePayload.DashboardUnit.ProjectID,
+			"DashboardId": beamCachePayload.DashboardUnit.DashboardId,
+			"UnitId":      beamCachePayload.DashboardUnit.ID,
+			"Query":       beamCachePayload.Query,
+			"QueryClass":  beamCachePayload.QueryClass,
+		}).Info("dashboard caching - DecodeQueryForClass failed")
 		return
 	}
+
 	baseQuery.SetQueryDateRange(beamCachePayload.From, beamCachePayload.To)
+	baseQuery.SetTimeZone(beamCachePayload.TimeZone)
 	cachePayload := model.DashboardUnitCachePayload{
 		DashboardUnit: beamCachePayload.DashboardUnit,
 		BaseQuery:     baseQuery,
 	}
 	startTime := U.TimeNowUnix()
 	errCode, errMsg := store.GetStore().CacheDashboardUnitForDateRange(cachePayload)
+
+	if errCode != http.StatusOK {
+		FB.GetLogContext().WithFields(log.Fields{
+			"Project":     beamCachePayload.DashboardUnit.ProjectID,
+			"DashboardId": beamCachePayload.DashboardUnit.DashboardId,
+			"UnitId":      beamCachePayload.DashboardUnit.ID,
+			"Query":       beamCachePayload.Query,
+			"QueryClass":  beamCachePayload.QueryClass,
+			"errCode":     errCode,
+			"errMsg":      errMsg,
+		}).Info("dashboard caching - couldn't run the caching query")
+		return
+	}
+
 	timeTaken := U.TimeNowUnix() - startTime
 
 	dashboardUnit := cachePayload.DashboardUnit
@@ -275,7 +309,10 @@ func (f *GetWebAnalyticsCachePayloadsNowFn) StartBundle(ctx context.Context, emi
 
 func (f *GetWebAnalyticsCachePayloadsNowFn) FinishBundle(ctx context.Context, emit func(model.WebAnalyticsCachePayload)) {
 	log.Info("Closing DB Connection from FinishBundle getWebAnalyticsCachePayloadsFn")
-	C.GetServices().Db.Close()
+	err := C.GetServices().Db.Close()
+	if err != nil {
+		log.Info("error while closing the Closing DB Connection from FinishBundle GetWebAnalyticsCachePayloadsNowFn")
+	}
 	C.SafeFlushAllCollectors()
 }
 
@@ -295,14 +332,23 @@ func (f *GetWebAnalyticsCachePayloadsNowFn) ProcessElement(ctx context.Context, 
 			log.Errorf("Failed to get web analytics queries for project %d", projectID)
 			continue
 		}
-
+		timezoneString, statusCode := store.GetStore().GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			log.Errorf("Failed to get project Timezone for %d", projectID)
+			continue
+		}
 		// Get only last 30mins preset for caching.
-		from, to := U.WebAnalyticsQueryDateRangePresets[U.DateRangePreset30Minutes]()
+		from, to, err := U.WebAnalyticsQueryDateRangePresets[U.DateRangePreset30Minutes](timezoneString)
+		if err != nil {
+			log.Errorf("Failed to get proper project Timezone for %d", projectID)
+			continue
+		}
 		cachePayload := model.WebAnalyticsCachePayload{
 			ProjectID:   projectID,
 			DashboardID: dashboardID,
 			From:        from,
 			To:          to,
+			Timezone:    timezoneString,
 			Queries:     webAnalyticsQueries,
 		}
 		emit(cachePayload)
@@ -320,7 +366,10 @@ func (f *GetWebAnalyticsCachePayloadsFn) StartBundle(ctx context.Context, emit f
 
 func (f *GetWebAnalyticsCachePayloadsFn) FinishBundle(ctx context.Context, emit func(model.WebAnalyticsCachePayload)) {
 	log.Info("Closing DB Connection from FinishBundle getWebAnalyticsCachePayloadsFn")
-	C.GetServices().Db.Close()
+	err := C.GetServices().Db.Close()
+	if err != nil {
+		log.Info("error while closing the Closing DB Connection from FinishBundle GetWebAnalyticsCachePayloadsFn")
+	}
 	C.SafeFlushAllCollectors()
 }
 
@@ -355,7 +404,10 @@ func (f *CacheWebAnalyticsDoFn) StartBundle(ctx context.Context, emit func(Cache
 
 func (f *CacheWebAnalyticsDoFn) FinishBundle(ctx context.Context, emit func(CacheResponse)) {
 	log.Info("Closing DB Connection from FinishBundle cacheWebAnalyticsDoFn")
-	C.GetServices().Db.Close()
+	err := C.GetServices().Db.Close()
+	if err != nil {
+		log.Info("error while closing the Closing DB Connection from FinishBundle CacheWebAnalyticsDoFn")
+	}
 	C.SafeFlushAllCollectors()
 }
 

@@ -427,7 +427,6 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, numRoutin
 	if numRoutines == 0 {
 		numRoutines = 1
 	}
-
 	dashboardUnits, errCode := store.GetDashboardUnitsForProjectID(projectID)
 	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
 		return 0
@@ -507,10 +506,21 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitG
 		return
 	}
 
+	timezoneString, statusCode := store.GetTimezoneForProject(dashboardUnit.ProjectID)
+	if statusCode != http.StatusFound {
+		errMsg := fmt.Sprintf("Failed to get project Timezone for %d", dashboardUnit.ProjectID)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
+	}
 	var unitWaitGroup sync.WaitGroup
 	unitWaitGroup.Add(len(U.QueryDateRangePresets))
 	for _, rangeFunction := range U.QueryDateRangePresets {
-		from, to := rangeFunction()
+		from, to, errCode := rangeFunction(timezoneString)
+		if errCode != nil {
+			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
 		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
 		baseQuery, err := model.DecodeQueryForClass(dashboardUnit.Query, queryClass)
 		if err != nil {
@@ -519,6 +529,7 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitG
 			return
 		}
 		baseQuery.SetQueryDateRange(from, to)
+		baseQuery.SetTimeZone(timezoneString)
 		cachePayload := model.DashboardUnitCachePayload{
 			DashboardUnit: dashboardUnit,
 			BaseQuery:     baseQuery,
@@ -539,6 +550,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	dashboardID := dashboardUnit.DashboardId
 	dashboardUnitID := dashboardUnit.ID
 	from, to := baseQuery.GetQueryDateRange()
+	timezoneString := baseQuery.GetTimeZone()
 	logCtx := log.WithFields(log.Fields{
 		"Method":          "CacheDashboardUnitForDateRange",
 		"ProjectID":       projectID,
@@ -546,7 +558,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 		"DashboardUnitID": dashboardUnitID,
 		"FromTo":          fmt.Sprintf("%d-%d", from, to),
 	})
-	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, false) {
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, timezoneString, false) {
 		return http.StatusOK, ""
 	}
 	logCtx.Info("Starting to cache unit for date range")
@@ -585,7 +597,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	timeTakenString := U.SecondsToHMSString(timeTaken)
 	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
 		Info("Done caching unit for range")
-	model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to)
+	model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to, timezoneString)
 
 	// Set in query cache result as well in case someone runs the same query from query handler.
 	model.SetQueryCacheResult(projectID, baseQuery, result)
@@ -617,8 +629,14 @@ func (store *MemSQL) cacheDashboardUnitForDateRange(cachePayload model.Dashboard
 // CacheDashboardsForMonthlyRange To cache monthly dashboards for the project id.
 func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int) {
 	projectIDsToRun := store.GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs)
-	monthlyRanges := U.GetMonthlyQueryRangesTuplesIST(numMonths)
 	for _, projectID := range projectIDsToRun {
+		timezoneString, statusCode := store.GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			errMsg := fmt.Sprintf("Failed to get project Timezone for %d", projectID)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			continue
+		}
+		monthlyRanges := U.GetMonthlyQueryRangesTuplesZ(numMonths, timezoneString)
 		dashboardUnits, errCode := store.GetDashboardUnitsForProjectID(projectID)
 		if errCode != http.StatusFound || len(dashboardUnits) == 0 {
 			return
@@ -650,6 +668,7 @@ func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectID
 					return
 				}
 				baseQuery.SetQueryDateRange(from, to)
+				baseQuery.SetTimeZone(timezoneString)
 				cachePayload := model.DashboardUnitCachePayload{
 					DashboardUnit: dashboardUnit,
 					BaseQuery:     baseQuery,

@@ -60,8 +60,9 @@ var (
 	onlyWebAnalytics  = flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
 	skipWebAnalytics  = flag.Bool("skip_web_analytics", false, "Skip the web analytics and run other.")
 	// better to have 0 or 1 values instead of false/true
-	onlyAttribution = flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
-	skipAttribution = flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
+	onlyAttribution                 = flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
+	skipAttribution                 = flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
+	multipleTimezoneEnabledProjects = flag.String("timezone_enabled_projects", "", "List of projectIds where multiple timezones are enabled")
 
 	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName           = flag.String("app_name", "", "Override default app_name.")
@@ -246,10 +247,11 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		RedisHost:        *redisHost,
-		RedisPort:        *redisPort,
-		SentryDSN:        *sentryDSN,
+		PrimaryDatastore:                *primaryDatastore,
+		RedisHost:                       *redisHost,
+		RedisPort:                       *redisPort,
+		SentryDSN:                       *sentryDSN,
+		MultipleTimezoneEnabledProjects: C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", healthcheckPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))

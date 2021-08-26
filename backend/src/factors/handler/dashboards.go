@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 
@@ -573,6 +574,8 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 	var queryResult *model.WebAnalyticsQueryResult
 	var fromCache, hardRefresh bool
 	var lastRefreshedAt int64
+	var timezoneString U.TimeZoneString
+	var statusCode int
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
@@ -596,9 +599,28 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
 
+	if requestPayload.Timezone != "" {
+		_, errCode := time.LoadLocation(string(requestPayload.Timezone))
+		if errCode != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "Query failed. Invalid Timezone provided."})
+			return
+		}
+		timezoneString = U.TimeZoneString(requestPayload.Timezone)
+	} else {
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+		if statusCode != http.StatusFound {
+			logCtx.WithError(err).Error("Query failed. Failed to get Timezone.")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "Channel query failed. Failed to get TimeZone."})
+			return
+		}
+		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+	}
+
 	cacheResult, errCode := model.GetCacheResultForWebAnalyticsDashboard(projectId, dashboardId,
-		requestPayload.From, requestPayload.To)
-	if errCode == http.StatusFound && !H.ShouldAllowHardRefresh(requestPayload.From, requestPayload.To, hardRefresh) {
+		requestPayload.From, requestPayload.To, timezoneString)
+	if errCode == http.StatusFound && !H.ShouldAllowHardRefresh(requestPayload.From, requestPayload.To, timezoneString, hardRefresh) {
 		queryResult = cacheResult.Result
 		fromCache = true
 		lastRefreshedAt = cacheResult.RefreshedAt
@@ -669,13 +691,13 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		model.SetQueryCacheResult(projectId, &requestPayload, queryResult)
 
 		model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectId,
-			dashboardId, requestPayload.From, requestPayload.To)
+			dashboardId, requestPayload.From, requestPayload.To, timezoneString)
 		lastRefreshedAt = U.TimeNowIn(U.TimeZoneStringIST).Unix()
 	}
 
 	webAnalyticsResult := sanitizeWebAnalyticsResult(queryResult, requestPayload)
 	c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
-		Result: webAnalyticsResult, Cache: fromCache, RefreshedAt: lastRefreshedAt})
+		Result: webAnalyticsResult, Cache: fromCache, RefreshedAt: lastRefreshedAt, TimeZone: string(timezoneString)})
 }
 
 func sanitizeWebAnalyticsResult(queryResult *model.WebAnalyticsQueryResult,

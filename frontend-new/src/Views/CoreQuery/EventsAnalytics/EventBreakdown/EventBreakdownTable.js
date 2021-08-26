@@ -3,38 +3,35 @@ import { getTableColumns, getTableData } from './utils';
 import DataTable from '../../../../components/DataTable';
 import { useSelector } from 'react-redux';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
+import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
 
 function EventBreakdownTable({
   breakdown,
   data,
   visibleProperties,
   setVisibleProperties,
-  maxAllowedVisibleProperties,
   reportTitle = 'Events Analytics',
+  sorter,
+  setSorter,
 }) {
   const { userPropNames, eventPropNames } = useSelector(
     (state) => state.coreQuery
   );
-  const [sorter, setSorter] = useState({
-    key: 'User Count',
-    type: 'numerical',
-    subtype: null,
-    order: 'descend',
-  });
+  
   const [searchText, setSearchText] = useState('');
 
   const handleSorting = useCallback((prop) => {
     setSorter((currentSorter) => {
       return getNewSorterState(currentSorter, prop);
     });
-  }, []);
+  }, [setSorter]);
 
   const columns = getTableColumns(
     breakdown,
     sorter,
     handleSorting,
     userPropNames,
-    eventPropNames
+    eventPropNames,
   );
   const tableData = getTableData(data, breakdown, searchText, sorter);
 
@@ -48,7 +45,7 @@ function EventBreakdownTable({
   };
 
   const onSelectionChange = (selectedIncices) => {
-    if (selectedIncices.length > maxAllowedVisibleProperties) {
+    if (selectedIncices.length > MAX_ALLOWED_VISIBLE_PROPERTIES) {
       return false;
     }
     if (!selectedIncices.length) {

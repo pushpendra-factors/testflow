@@ -1,4 +1,4 @@
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import {
   getEventsData,
   getFunnelData,
@@ -38,8 +38,8 @@ export const getDataFromServer = (
       queryGroup = queryGroup.map((elem) => {
         return {
           ...elem,
-          fr: moment(durationObj.from).startOf('day').utc().unix(),
-          to: moment(durationObj.to).endOf('day').utc().unix(),
+          fr: MomentTz(durationObj.from).startOf('day').utc().unix(),
+          to: MomentTz(durationObj.to).endOf('day').utc().unix(),
           gbt: elem.gbt
             ? isCampaignQuery
               ? 'date'
@@ -51,11 +51,11 @@ export const getDataFromServer = (
       queryGroup = queryGroup.map((elem) => {
         return {
           ...elem,
-          fr: moment().startOf('week').utc().unix(),
+          fr: MomentTz().startOf('week').utc().unix(),
           to:
-            moment().format('dddd') !== 'Sunday'
-              ? moment().subtract(1, 'day').endOf('day').utc().unix()
-              : moment().utc().unix(),
+            MomentTz().format('dddd') !== 'Sunday'
+              ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+              : MomentTz().utc().unix(),
           gbt: elem.gbt
             ? isCampaignQuery
               ? 'date'
@@ -88,8 +88,8 @@ export const getDataFromServer = (
         ...attributionQuery,
         query: {
           ...attributionQuery.query,
-          from: moment(durationObj.from).startOf('day').utc().unix(),
-          to: moment(durationObj.to).endOf('day').utc().unix(),
+          from: MomentTz(durationObj.from).startOf('day').utc().unix(),
+          to: MomentTz(durationObj.to).endOf('day').utc().unix(),
         },
       };
     } else {
@@ -97,11 +97,11 @@ export const getDataFromServer = (
         ...attributionQuery,
         query: {
           ...attributionQuery.query,
-          from: moment().startOf('week').utc().unix(),
+          from: MomentTz().startOf('week').utc().unix(),
           to:
-            moment().format('dddd') !== 'Sunday'
-              ? moment().subtract(1, 'day').endOf('day').utc().unix()
-              : moment().utc().unix(),
+            MomentTz().format('dddd') !== 'Sunday'
+              ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+              : MomentTz().utc().unix(),
         },
       };
     }
@@ -115,17 +115,17 @@ export const getDataFromServer = (
     if (durationObj.from && durationObj.to) {
       funnelQuery = {
         ...funnelQuery,
-        fr: moment(durationObj.from).startOf('day').utc().unix(),
-        to: moment(durationObj.to).endOf('day').utc().unix(),
+        fr: MomentTz(durationObj.from).startOf('day').utc().unix(),
+        to: MomentTz(durationObj.to).endOf('day').utc().unix(),
       };
     } else {
       funnelQuery = {
         ...funnelQuery,
-        fr: moment().startOf('week').utc().unix(),
+        fr: MomentTz().startOf('week').utc().unix(),
         to:
-          moment().format('dddd') !== 'Sunday'
-            ? moment().subtract(1, 'day').endOf('day').utc().unix()
-            : moment().utc().unix(),
+          MomentTz().format('dddd') !== 'Sunday'
+            ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+            : MomentTz().utc().unix(),
       };
     }
     return getFunnelData(activeProjectId, funnelQuery, {
@@ -162,18 +162,18 @@ export const getWebAnalyticsRequestBody = (units, durationObj) => {
 
   if (durationObj.from && durationObj.to) {
     if (durationObj?.dateType === 'now' || durationObj?.dateType === 'today') {
-      query.from = moment(durationObj.from).utc().unix();
-      query.to = moment(durationObj.to).utc().unix();
+      query.from = MomentTz(durationObj.from).utc().unix();
+      query.to = MomentTz(durationObj.to).utc().unix();
     } else {
-      query.from = moment(durationObj.from).startOf('day').utc().unix();
-      query.to = moment(durationObj.to).endOf('day').utc().unix();
+      query.from = MomentTz(durationObj.from).startOf('day').utc().unix();
+      query.to = MomentTz(durationObj.to).endOf('day').utc().unix();
     }
   } else {
-    query.from = moment().startOf('week').utc().unix();
+    query.from = MomentTz().startOf('week').utc().unix();
     query.to =
-      moment().format('dddd') !== 'Sunday'
-        ? moment().subtract(1, 'day').endOf('day').utc().unix()
-        : moment().utc().unix();
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+        : MomentTz().utc().unix();
   }
   // query.from = 1601490600;
   // query.to = 1604168999;
@@ -190,15 +190,15 @@ export const getDashboardDateRange = () => {
       case PREDEFINED_DATES.TODAY: {
         return {
           ...lastAppliedDuration,
-          from: moment().startOf('day'),
-          to: moment().endOf('day'),
+          from: MomentTz().startOf('day'),
+          to: MomentTz().endOf('day'),
         };
       }
       case PREDEFINED_DATES.YESTERDAY: {
         return {
           ...lastAppliedDuration,
-          from: moment().subtract(1, 'day').startOf('day'),
-          to: moment().subtract(1, 'day').endOf('day'),
+          from: MomentTz().subtract(1, 'day').startOf('day'),
+          to: MomentTz().subtract(1, 'day').endOf('day'),
         };
       }
       case PREDEFINED_DATES.THIS_WEEK: {
@@ -214,23 +214,23 @@ export const getDashboardDateRange = () => {
       case PREDEFINED_DATES.LAST_MONTH: {
         return {
           ...lastAppliedDuration,
-          from: moment().subtract(1, 'month').startOf('month'),
-          to: moment().subtract(1, 'month').endOf('month'),
+          from: MomentTz().subtract(1, 'month').startOf('month'),
+          to: MomentTz().subtract(1, 'month').endOf('month'),
         };
       }
       case PREDEFINED_DATES.THIS_MONTH: {
-        if (moment().format('D') === '1') {
+        if (MomentTz().format('D') === '1') {
           return {
             ...lastAppliedDuration,
-            from: moment().subtract(1, 'day').startOf('month'),
-            to: moment().subtract(1, 'day').endOf('month'),
+            from: MomentTz().subtract(1, 'day').startOf('month'),
+            to: MomentTz().subtract(1, 'day').endOf('month'),
             dateType: PREDEFINED_DATES.LAST_MONTH,
           };
         } else {
           return {
             ...lastAppliedDuration,
-            from: moment().startOf('month'),
-            to: moment().subtract(1, 'day').endOf('day'),
+            from: MomentTz().startOf('month'),
+            to: MomentTz().subtract(1, 'day').endOf('day'),
           };
         }
       }

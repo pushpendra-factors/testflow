@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-replication
+  labels:
+    env: production
+    project: factors-production
+data:
+  MEMESQL_REPLICATOR_EXCLUDED_TABLES: "event_names,events,users,user_properties,property_details"
+  REVERSE_REPLICATOR_INCLUDED_TABLES: ""

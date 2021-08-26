@@ -432,6 +432,39 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		assert.Equal(t, float64(0.000001), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
 	})
 
+	t.Run("AttributionWithMarketingPropertySource", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeySource,
+			AttributionMethodology:  model.AttributionMethodFirstTouch,
+			AttributionKeyDimension: []string{model.FieldSource},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, "google", result.Rows[0][0])
+
+	})
+
+	t.Run("AttributionWithMarketingPropertyChannel", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyChannel,
+			AttributionMethodology:  model.AttributionMethodFirstTouch,
+			AttributionKeyDimension: []string{model.FieldChannelGroup},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
+		}
+
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, "Paid Search", result.Rows[0][0])
+	})
+
 	t.Run("AttributionWithMarketingPropertyAdgroup", func(t *testing.T) {
 		query := &model.AttributionQuery{
 			From:                    timestamp,

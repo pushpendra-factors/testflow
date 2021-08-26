@@ -8,18 +8,27 @@ import {
   SortData,
 } from '../../../utils/dataFormatter';
 import {
-  SVG,
   Number as NumFormat,
   Text,
 } from '../../../components/factorsComponents';
 import styles from './index.module.scss';
 import { parseForDateTimeLabel } from '../EventsAnalytics/SingleEventSingleBreakdown/utils';
+import { GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../utils/constants';
+import DurationCol from './FunnelsResultTable/DurationCol';
 
 const windowSize = {
   w: window.outerWidth,
   h: window.outerHeight,
   iw: window.innerWidth,
   ih: window.innerHeight,
+};
+
+export const getVisibleData = (data, sorter) => {
+  const result = SortResults(data, sorter).slice(
+    0,
+    GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES
+  );
+  return result;
 };
 
 const NoBreakdownUsersColumn = (d, breakdown, isComparisonApplied) => {
@@ -100,13 +109,16 @@ export const formatData = (response, arrayMapper) => {
     return { groups: [], events: [] };
   }
   console.log('funnels format data');
+
   const { rows, headers, meta } = response;
-  let breakdowns = [...meta.query.gbp];
+  const breakdowns = [...meta.query.gbp];
   const firstEventIdx = headers.findIndex((header) => header === 'step_0');
   const netConversionIndex = headers.findIndex(
     (header) => header === 'conversion_overall'
   );
+
   const grns = grnByIndex(headers.slice(0, firstEventIdx), breakdowns);
+
   const eventsData = arrayMapper.map((am, index) => {
     return {
       index: index + 1,
@@ -114,33 +126,68 @@ export const formatData = (response, arrayMapper) => {
       data: {},
     };
   });
+
   const result = rows.map((row, index) => {
-    const name = row
-      .slice(0, firstEventIdx)
-      ?.map((label, ind) => {
-        return parseForDateTimeLabel(grns[ind], label);
-      })
-      ?.join(',');
+    const breakdownData = {};
+    const breakdownVals = row.slice(0, firstEventIdx);
+    for (let i = 0; i < breakdowns.length; i++) {
+      const bkd = breakdowns[i];
+      const bkdVal = parseForDateTimeLabel(grns[i], breakdownVals[i]);
+      breakdownData[`${bkd.pr} - ${bkd.eni}`] =
+        bkdVal === '$no_group' ? 'Overall' : bkdVal;
+    }
+    const name = Object.values(breakdownData).join(',');
     const nonConvertedName = row.slice(0, firstEventIdx).join(',');
-    const value = row[netConversionIndex];
+
+    const durationMetric = meta.metrics.find(
+      (elem) => elem.title === 'MetaStepTimeInfo'
+    );
+    const durationGrp = durationMetric.rows.find(
+      (elem) => elem.slice(0, firstEventIdx).join(',') === nonConvertedName
+    );
+
+    const timeData = {};
     const groupEventData = {};
+    let totalDuration = 0;
+
     arrayMapper.forEach((am, idx) => {
       const eventIdx = headers.findIndex(
         (headers) => headers === `step_${idx}`
       );
-      groupEventData[am.mapper] = calculatePercentage(
-        row[eventIdx],
-        row[firstEventIdx]
-      );
+
+      const percent = calculatePercentage(row[eventIdx], row[firstEventIdx]);
+
+      groupEventData[`${am.displayName}-${idx}`] = {
+        percentage: percent,
+        value: row[eventIdx],
+      };
+      groupEventData[am.mapper] = percent;
+
       eventsData[idx].data[name] = row[eventIdx];
+
+      if (idx < arrayMapper.length - 1) {
+        const durationIdx = durationMetric.headers.findIndex(
+          (elem) => elem === `step_${idx}_${idx + 1}_time`
+        );
+        timeData[`time[${idx}-${idx + 1}]`] = durationGrp
+          ? formatDuration(durationGrp[durationIdx])
+          : 'NA';
+        totalDuration += durationGrp ? Number(durationGrp[durationIdx]) : 0;
+      }
     });
+
+    const value = row[netConversionIndex];
+
     return {
       index,
       name,
       value: `${value}%`,
+      Conversion: value, //used for sorting, value will be removed soon
       nonConvertedName,
-      // is_visible: index < maxAllowedVisibleProperties ? true : false,
+      'Converstion Time': formatDuration(totalDuration),
       ...groupEventData,
+      ...breakdownData,
+      ...timeData,
     };
   });
 
@@ -170,9 +217,9 @@ const compareSkeleton = (val1, val2) => {
 
 const RenderTotalConversion = (d, breakdown, isComparisonApplied) => {
   if (breakdown.length || !isComparisonApplied) {
-    return d;
+    return d + '%';
   } else {
-    return compareSkeleton(d.conversion, d.comparsion_conversion);
+    return compareSkeleton(d.conversion + '%', d.comparsion_conversion + '%');
   }
 };
 
@@ -355,24 +402,16 @@ export const generateTableColumns = (
     },
   ];
   const eventColumns = [];
-  const clockCol = (
-    <div className='flex items-center justify-between'>
-      <div className='text-base' style={{ color: '#8692A3' }}>
-        &mdash;
-      </div>
-      <SVG name='clock' />
-      <div className='text-base' style={{ color: '#8692A3', marginTop: '2px' }}>
-        &rarr;
-      </div>
-    </div>
-  );
-  queries.forEach((_, index) => {
+
+  const clockCol = <DurationCol />;
+
+  queries.forEach((q, index) => {
     eventColumns.push({
       title: isBreakdownApplied
         ? getClickableTitleSorter(
             arrayMapper[index].displayName,
             {
-              key: arrayMapper[index].mapper,
+              key: `${arrayMapper[index].displayName}-${index}`,
               type: 'numerical',
               subtype: null,
             },
@@ -380,7 +419,7 @@ export const generateTableColumns = (
             handleSorting
           )
         : arrayMapper[index].displayName,
-      dataIndex: arrayMapper[index].mapper,
+      dataIndex: `${arrayMapper[index].displayName}-${index}`,
       width: 200,
       render: (d) => RenderEventData(d, breakdown, isComparisonApplied),
     });
@@ -443,7 +482,7 @@ export const generateTableData = (
       comparisonChartDurations
     );
     queries.forEach((_, index) => {
-      queryData[arrayMapper[index].mapper] = {
+      queryData[`${arrayMapper[index].displayName}-${index}`] = {
         percentage: data[index].value,
         value: data[index].netCount,
         compare_percent:
@@ -464,10 +503,10 @@ export const generateTableData = (
           : time;
       }
     });
-    const conversion = data[data.length - 1].value + '%';
+    const conversion = data[data.length - 1].value;
     const comparsion_conversion =
       comparisonChartData &&
-      comparisonChartData[comparisonChartData.length - 1].value + '%';
+      comparisonChartData[comparisonChartData.length - 1].value;
     return [
       {
         index: 0,
@@ -484,68 +523,10 @@ export const generateTableData = (
       },
     ];
   } else {
-    const appliedGroups = groups
-      .map((elem) => elem.name)
-      .filter(
-        (elem) => elem.toLowerCase().indexOf(searchText.toLowerCase()) > -1
-      );
-    const durationMetric = durations.metrics.find(
-      (elem) => elem.title === 'MetaStepTimeInfo'
+    const appliedGroups = groups.filter(
+      (elem) => elem.name.toLowerCase().indexOf(searchText.toLowerCase()) > -1
     );
-    const firstEventIdx = durationMetric.headers.findIndex(
-      (elem) => elem === 'step_0_1_time'
-    );
-
-    const grns = grnByIndex(
-      resultData?.headers?.slice(0, firstEventIdx),
-      breakdown
-    );
-    const result = appliedGroups.map((grp, index) => {
-      const group = grp;
-      const breakdownData = {};
-      breakdown.forEach((b, index) => {
-        let val = group.split(',')[index];
-        val = val === '$no_group' ? 'Overall' : val;
-        breakdownData[`${b.pr} - ${b.eni}`] = val;
-      });
-      const durationGrp = durationMetric.rows.find(
-        (elem) =>
-          elem
-            .slice(0, firstEventIdx)
-            .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
-            .join(',') === grp
-      );
-      const eventsData = {};
-      let totalDuration = 0;
-      data.forEach((d, idx) => {
-        eventsData[`${d.name}`] = {
-          percentage: calculatePercentage(d.data[group], data[0].data[group]),
-          value: d.data[group],
-        };
-        if (idx < data.length - 1) {
-          const durationIdx = durationMetric.headers.findIndex(
-            (elem) => elem === `step_${idx}_${idx + 1}_time`
-          );
-          eventsData[`time[${idx}-${idx + 1}]`] = durationGrp
-            ? formatDuration(durationGrp[durationIdx])
-            : 'NA';
-          totalDuration += durationGrp ? Number(durationGrp[durationIdx]) : 0;
-        }
-      });
-      return {
-        index,
-        Grouping: group,
-        'Converstion Time': formatDuration(totalDuration),
-        Conversion:
-          calculatePercentage(
-            data[data.length - 1].data[group],
-            data[0].data[group]
-          ) + '%',
-        ...breakdownData,
-        ...eventsData,
-      };
-    });
-    return SortResults(result, currentSorter);
+    return SortResults(appliedGroups, currentSorter);
   }
 };
 

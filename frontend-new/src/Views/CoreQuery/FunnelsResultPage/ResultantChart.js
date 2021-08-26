@@ -10,6 +10,7 @@ function ResultantChart({
   arrayMapper,
   section,
   durationObj,
+  renderedCompRef
 }) {
   if (!breakdown.length) {
     return (
@@ -20,6 +21,7 @@ function ResultantChart({
         arrayMapper={arrayMapper}
         section={section}
         durationObj={durationObj}
+        ref={renderedCompRef}
       />
     );
   } else {
@@ -31,6 +33,7 @@ function ResultantChart({
         isWidgetModal={isWidgetModal}
         arrayMapper={arrayMapper}
         section={section}
+        ref={renderedCompRef}
       />
     );
   }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import AttributionTable from '../../CoreQuery/AttributionsResult/AttributionTable';
+import AttributionTable from './AttributionsTable';
 import GroupedBarChart from '../../../components/GroupedBarChart';
 import { formatGroupedData } from '../../CoreQuery/AttributionsResult/utils';
 import {

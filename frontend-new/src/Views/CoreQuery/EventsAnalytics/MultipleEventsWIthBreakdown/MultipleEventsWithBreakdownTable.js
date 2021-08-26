@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, memo } from 'react';
 import {
   getTableColumns,
   getTableData,
@@ -12,6 +12,7 @@ import {
   DASHBOARD_WIDGET_SECTION,
 } from '../../../../utils/constants';
 import { useSelector } from 'react-redux';
+import { isSeriesChart } from '../../../../utils/dataFormatter';
 
 function MultipleEventsWithBreakdownTable({
   chartType,
@@ -30,6 +31,8 @@ function MultipleEventsWithBreakdownTable({
   handleSorting,
   dateSorter,
   handleDateSorting,
+  visibleSeriesData,
+  setVisibleSeriesData,
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames, userPropNames, eventPropNames } = useSelector(
@@ -64,8 +67,8 @@ function MultipleEventsWithBreakdownTable({
   ]);
 
   useEffect(() => {
-    setTableData(getTableData(data, breakdown, searchText, sorter));
-  }, [data, breakdown, searchText, sorter]);
+    setTableData(getTableData(data, searchText, sorter));
+  }, [data, searchText, sorter]);
 
   useEffect(() => {
     setDateBasedColumns(
@@ -91,23 +94,9 @@ function MultipleEventsWithBreakdownTable({
 
   useEffect(() => {
     setDateBasedTableData(
-      getDateBasedTableData(
-        seriesData,
-        categories,
-        breakdown,
-        dateSorter,
-        searchText,
-        durationObj.frequency
-      )
+      getDateBasedTableData(seriesData, dateSorter, searchText)
     );
-  }, [
-    breakdown,
-    categories,
-    dateSorter,
-    durationObj.frequency,
-    searchText,
-    seriesData,
-  ]);
+  }, [dateSorter, searchText, seriesData]);
 
   const getCSVData = () => {
     const activeTableData =
@@ -143,13 +132,34 @@ function MultipleEventsWithBreakdownTable({
     setVisibleProperties(newSelectedRows);
   };
 
-  const selectedRowKeys = useMemo(() => {
-    return visibleProperties.map((vp) => vp.index);
-  }, [visibleProperties]);
+  const onDateWiseSelectionChange = useCallback(
+    (_, selectedRows) => {
+      if (
+        selectedRows.length > MAX_ALLOWED_VISIBLE_PROPERTIES ||
+        !selectedRows.length
+      ) {
+        return false;
+      }
+      const newVisibleSeriesData = selectedRows.map((elem) => {
+        const obj = seriesData.find((d) => d.index === elem.index);
+        return obj;
+      });
+      setVisibleSeriesData(newVisibleSeriesData);
+    },
+    [setVisibleSeriesData, seriesData]
+  );
+
+  const selectedRowKeys = useCallback((rows) => {
+    return rows.map((vp) => vp.index);
+  }, []);
 
   const rowSelection = {
-    selectedRowKeys,
-    onChange: onSelectionChange,
+    selectedRowKeys: isSeriesChart(chartType)
+      ? selectedRowKeys(visibleSeriesData)
+      : selectedRowKeys(visibleProperties),
+    onChange: isSeriesChart(chartType)
+      ? onDateWiseSelectionChange
+      : onSelectionChange,
   };
 
   return (
@@ -176,4 +186,4 @@ function MultipleEventsWithBreakdownTable({
   );
 }
 
-export default MultipleEventsWithBreakdownTable;
+export default memo(MultipleEventsWithBreakdownTable);

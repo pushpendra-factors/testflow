@@ -100,6 +100,7 @@ func main() {
 		"", "List of UUIDs whitelisted for project analytics API")
 	customerEnabledProjectsWeeklyInsights := flag.String("customer_enabled_projects_wi",
 		"", "List of projects customer enabled for Weekly Insights")
+	multipleTimezoneEnabledProjects := flag.String("timezone_enabled_projects", "", "List of projectIds where multiple timezones are enabled")
 	attributionDebug := flag.Int("attribution_debug", 0, "Enables debug logging for attribution queries")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -169,6 +170,7 @@ func main() {
 		AllowSmartEventRuleCreation:             *allowSmartEventRuleCreation,
 		ProjectAnalyticsWhitelistedUUIds:        C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
 		CustomerEnabledProjectsWeeklyInsights:   C.GetTokensFromStringListAsUint64(*customerEnabledProjectsWeeklyInsights),
+		MultipleTimezoneEnabledProjects:         C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableMemSQLDBWrites:                   disableMemSQLDBWrites,
 		DisableMemSQLRedisWrites:                disableMemSQLRedisWrites,

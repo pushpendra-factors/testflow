@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -49,6 +50,9 @@ func ChannelQueryHandler(c *gin.Context) {
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
+	var timezoneString U.TimeZoneString
+	var statusCode int
+
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
@@ -75,9 +79,29 @@ func ChannelQueryHandler(c *gin.Context) {
 			"error": "Channel query failed. Json decode failed."})
 		return
 	}
+	if queryPayload.Timezone != "" {
+		_, errCode := time.LoadLocation(string(queryPayload.Timezone))
+		if errCode != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "Query failed. Invalid Timezone provided."})
+			return
+		}
+
+		timezoneString = U.TimeZoneString(queryPayload.Timezone)
+	} else {
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+		if statusCode != http.StatusFound {
+			logCtx.WithError(err).Error("Query failed. Failed to get Timezone.")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "Channel query failed. Failed to get TimeZone."})
+			return
+		}
+		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+	}
+
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(queryPayload.From, queryPayload.To, hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(queryPayload.From, queryPayload.To, timezoneString, hardRefresh) {
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, queryPayload.From, queryPayload.To, timezoneString)
 		if shouldReturn {
 			c.AbortWithStatusJSON(resCode, resMsg)
 			return
@@ -89,6 +113,7 @@ func ChannelQueryHandler(c *gin.Context) {
 		Class: model.QueryClassChannel,
 		Query: &queryPayload,
 	}
+	channelQueryUnitPayload.SetTimeZone(timezoneString)
 	shouldReturn, resCode, _ := H.GetResponseIfCachedQuery(c, projectId, &channelQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId)
 	if shouldReturn {
 		c.AbortWithStatusJSON(resCode, gin.H{"error": "Error Processing/Fetching data from Query cache"})
@@ -109,9 +134,9 @@ func ChannelQueryHandler(c *gin.Context) {
 	model.SetQueryCacheResult(projectId, &channelQueryUnitPayload, queryResult)
 
 	if isDashboardQueryRequest {
-		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
+		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, queryPayload.From, queryPayload.To, U.TimeZoneString(queryPayload.Timezone))
 		c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
-			Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
+			Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)})
 		return
 	}
 

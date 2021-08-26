@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { SVG } from '../factorsComponents';
 import { DatePicker, Menu, Dropdown, Button } from 'antd';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
+import { useSelector } from 'react-redux';
+// import { TimeZoneOffsetValues } from 'Utils/constants';
 import {
   getFirstDayOfLastWeek,
   getLastDayOfLastWeek,
@@ -32,7 +34,12 @@ const FaDatepicker = ({
   const [datePickerType, setdatePickerType] = useState('');
   const [dateString, setdateString] = useState(false);
 
-  const momentKey = {
+  // const { active_project } = useSelector((state) => state.global); 
+  
+  // active_project.time_zone ? MomentTz.tz.setDefault(TimeZoneOffsetValues[active_project.time_zone]?.city): MomentTz.tz.setDefault('Asia/Kolkata');
+  // console.log('MomentTz.tz.setDefault',TimeZoneOffsetValues[active_project.time_zone]?.city, MomentTz().format())
+
+  const MomentTzKey = {
     day: 'days',
     week: 'weeks',
     month: 'months',
@@ -50,7 +57,7 @@ const FaDatepicker = ({
   const onChange = (startDate, dateString) => {
     setShowDatePicker(false);
     const dateType = datePickerType;
-    const endDate = moment(startDate).add(1, momentKey[dateType]);
+    const endDate = MomentTz(startDate).add(1, MomentTzKey[dateType]);
 
     const newDateData = {
       ...dateData,
@@ -61,8 +68,8 @@ const FaDatepicker = ({
     };
 
     if (datePickerType == 'month') {
-      let startDateMonth = moment(startDate).startOf('month');
-      let endDateMonth = moment(startDate).endOf('month');
+      let startDateMonth = MomentTz(startDate).startOf('month');
+      let endDateMonth = MomentTz(startDate).endOf('month');
       let newDateDataMonth = {
         ...dateData,
         startDate: startDateMonth,
@@ -72,8 +79,8 @@ const FaDatepicker = ({
       onSelect(newDateDataMonth);
       // setdateString('++Month');
     } else if (datePickerType === 'quarter') {
-      if (endDate.isAfter(moment())) {
-        const endDateMonth = moment();
+      if (endDate.isAfter(MomentTz())) {
+        const endDateMonth = MomentTz();
         let newDateDataMonth = {
           ...dateData,
           startDate,
@@ -98,12 +105,12 @@ const FaDatepicker = ({
   };
 
   const onCustomChange = (startDate, dateString) => {
-    const startDt = moment(startDate[0]).startOf('day');
-    let endDt = moment(startDate[1]);
-    if (endDt.isBefore(moment().startOf('day'))) {
+    const startDt = MomentTz(startDate[0]).startOf('day');
+    let endDt = MomentTz(startDate[1]);
+    if (endDt.isBefore(MomentTz().startOf('day'))) {
       endDt = endDt.endOf('day');
     } else {
-      endDt = moment();
+      endDt = MomentTz();
     }
 
     let newDateData = {
@@ -120,11 +127,11 @@ const FaDatepicker = ({
 
   const returnPreSetDate = (type) => {
     setdatePickerType(null);
-    const today = moment();
+    const today = MomentTz();
     if (type == 'now') {
       let newDateData = {
         ...dateData,
-        startDate: moment().subtract(30, 'minutes'),
+        startDate: MomentTz().subtract(30, 'minutes'),
         endDate: today,
         dateType: type,
         dateString: 'Now',
@@ -135,7 +142,7 @@ const FaDatepicker = ({
     if (type == 'today') {
       let newDateData = {
         ...dateData,
-        startDate: moment(today).startOf('day'),
+        startDate: MomentTz(today).startOf('day'),
         endDate: today,
         dateType: type,
         dateString: 'Today',
@@ -146,8 +153,8 @@ const FaDatepicker = ({
     if (type == 'yesterday') {
       let newDateData = {
         ...dateData,
-        startDate: moment(today).subtract(1, 'days').startOf('day'),
-        endDate: moment(today).subtract(1, 'days').endOf('day'),
+        startDate: MomentTz(today).subtract(1, 'days').startOf('day'),
+        endDate: MomentTz(today).subtract(1, 'days').endOf('day'),
         dateType: type,
         dateString: 'Yesterday',
       };
@@ -169,8 +176,8 @@ const FaDatepicker = ({
       onSelect(newDateData);
     }
     if (type == 'last_week') {
-      let startDate = moment(getFirstDayOfLastWeek()).startOf('day').toDate();
-      let endDate = moment(getLastDayOfLastWeek()).endOf('day').toDate();
+      let startDate = MomentTz(getFirstDayOfLastWeek()).startOf('day').toDate();
+      let endDate = MomentTz(getLastDayOfLastWeek()).endOf('day').toDate();
       let newDateData = {
         ...dateData,
         startDate,
@@ -196,8 +203,8 @@ const FaDatepicker = ({
       onSelect(newDateData);
     }
     if (type == 'last_month') {
-      let startDate = moment(getFirstDayOfLastMonth()).startOf('day').toDate();
-      let endDate = moment(getLastDayOfLastMonth()).endOf('day').toDate();
+      let startDate = MomentTz(getFirstDayOfLastMonth()).startOf('day').toDate();
+      let endDate = MomentTz(getLastDayOfLastMonth()).endOf('day').toDate();
       let newDateData = {
         ...dateData,
         startDate,
@@ -315,16 +322,16 @@ const FaDatepicker = ({
 
   const displayRange = (range) => {
     if (dateString == 'Now') {
-      // return moment(range.startDate).format('MMM DD, YYYY hh:mma')
+      // return MomentTz(range.startDate).format('MMM DD, YYYY hh:mma')
       return 'Now';
     }
     if (dateString == 'Today' || range.startDate == range.endDate) {
-      return moment(range.startDate).format('MMM DD, YYYY');
+      return MomentTz(range.startDate).format('MMM DD, YYYY');
     } else {
       return (
-        moment(range.startDate).format('MMM DD, YYYY') +
+        MomentTz(range.startDate).format('MMM DD, YYYY') +
         ' - ' +
-        moment(range.endDate).format('MMM DD, YYYY')
+        MomentTz(range.endDate).format('MMM DD, YYYY')
       );
     }
   };
@@ -348,7 +355,7 @@ const FaDatepicker = ({
                   {datePickerType == 'custom' ? (
                     <RangePicker
                       format={'MMM DD YYYY'}
-                      disabledDate={(d) => !d || d.isAfter(moment())}
+                      disabledDate={(d) => !d || d.isAfter(MomentTz())}
                       dropdownClassName={'fa-custom-datepicker--datepicker'}
                       size={'small'}
                       suffixIcon={null}
@@ -365,7 +372,7 @@ const FaDatepicker = ({
                   ) : (
                     <DatePicker
                       picker={datePickerType}
-                      disabledDate={(d) => !d || d.isAfter(moment())}
+                      disabledDate={(d) => !d || d.isAfter(MomentTz())}
                       dropdownClassName={'fa-custom-datepicker--datepicker'}
                       autoFocus={true}
                       open={true}

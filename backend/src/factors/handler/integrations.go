@@ -44,7 +44,6 @@ func IntSegmentHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
-	metrics.Increment(metrics.IncrIntegrationRequestOverallCount)
 
 	var bodyBuffer bytes.Buffer
 	body := io.TeeReader(r.Body, &bodyBuffer)
@@ -82,6 +81,7 @@ func IntSegmentHandler(c *gin.Context) {
 		return
 	}
 
+	metrics.Increment(metrics.IncrIntegrationRequestOverallCount)
 	// Always send StatusOK for failure on direct processing.
 	c.JSON(http.StatusOK, response)
 }
@@ -801,7 +801,7 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 		return
 	}
 
-	resp, err := http.Get("https://graph.facebook.com/v9.0/oauth/access_token?" +
+	resp, err := http.Get("https://graph.facebook.com/v11.0/oauth/access_token?" +
 		"grant_type=fb_exchange_token&client_id=" + C.GetFacebookAppId() + "&client_secret=" + C.GetFacebookAppSecret() +
 		"&fb_exchange_token=" + requestPayload.AccessToken)
 	if err != nil || resp.StatusCode != http.StatusOK {

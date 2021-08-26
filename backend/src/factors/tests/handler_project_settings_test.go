@@ -58,6 +58,7 @@ func TestAPIGetProjectSettingHandler(t *testing.T) {
 		assert.NotEqual(t, 0, jsonResponseMap["id"])
 		assert.NotNil(t, jsonResponseMap["auto_track"])
 		assert.NotNil(t, jsonResponseMap["int_drift"])
+		assert.NotNil(t, jsonResponseMap["int_clear_bit"])
 	})
 
 	// Test get project settings with bad id.
@@ -124,6 +125,17 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
 		assert.NotNil(t, jsonResponseMap["int_drift"])
+	})
+
+	t.Run("UpdateIntClearBit", func(t *testing.T) {
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
+			"int_clear_bit": true,
+		})
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonResponseMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.NotNil(t, jsonResponseMap["int_clear_bit"])
 	})
 
 	t.Run("UpdateExcludeBot", func(t *testing.T) {

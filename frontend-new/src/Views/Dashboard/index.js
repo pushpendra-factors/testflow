@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import ProjectTabs from './ProjectTabs';
@@ -8,25 +8,16 @@ import { useDispatch } from 'react-redux';
 import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
 import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
-import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
-import { fetchEventNames } from '../../reducers/coreQuery/middleware';
 import { setItemToLocalStorage } from '../../utils/dataFormatter';
 import { getDashboardDateRange } from './utils';
 import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
 
-function Dashboard({ fetchEventNames, activeProject }) {
+function Dashboard() {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
   const dispatch = useDispatch();
-
-  useEffect(() => {
-    if (activeProject && activeProject.id) {
-      fetchEventNames(activeProject.id);
-    }
-  }, [activeProject, fetchEventNames]);
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -44,7 +35,7 @@ function Dashboard({ fetchEventNames, activeProject }) {
       from = dates.startDate;
       to = dates.endDate;
     }
-    if (moment(to).diff(from, 'hours') < 24) {
+    if (MomentTz(to).diff(from, 'hours') < 24) {
       frequency = 'hour';
     }
 
@@ -112,16 +103,4 @@ function Dashboard({ fetchEventNames, activeProject }) {
   );
 }
 
-const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
-});
-
-const mapDispatchToProps = (dispatch) =>
-  bindActionCreators(
-    {
-      fetchEventNames,
-    },
-    dispatch
-  );
-
-export default connect(mapStateToProps, mapDispatchToProps)(Dashboard);
+export default Dashboard;

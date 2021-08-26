@@ -1,14 +1,16 @@
 import React from 'react';
 import moment from 'moment';
 import {
-  SortData,
   getClickableTitleSorter,
   SortResults,
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
 import { labelsObj } from '../../utils';
-import { DATE_FORMATS } from '../../../../utils/constants';
+import {
+  DATE_FORMATS,
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+} from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
   return {
@@ -17,6 +19,22 @@ export const defaultSortProp = () => {
     type: 'numerical',
     subtype: null,
   };
+};
+
+export const getVisibleData = (aggregateData, sorter) => {
+  const result = SortResults(aggregateData, sorter).slice(
+    0,
+    MAX_ALLOWED_VISIBLE_PROPERTIES
+  );
+  return result;
+};
+
+export const getVisibleSeriesData = (data, sorter) => {
+  const result = SortResults(data, sorter).slice(
+    0,
+    MAX_ALLOWED_VISIBLE_PROPERTIES
+  );
+  return result;
 };
 
 export const formatData = (data) => {
@@ -30,33 +48,40 @@ export const formatData = (data) => {
   ) {
     return [];
   }
-  console.log('format data');
+  console.log('semb format data');
   const { headers, rows } = data.metrics;
   const eventNameIndex = headers.findIndex((header) => header === 'event_name');
   const countIndex = headers.findIndex((header) => header === 'count');
 
   const headerSlice = headers.slice(eventNameIndex + 1, countIndex);
-  let breakdowns = data.meta.query.gbp ? [...data.meta.query.gbp] : [];
-  let grns = getBreakDownGranularities(headerSlice, breakdowns);
+  const breakdowns = data.meta.query.gbp ? [...data.meta.query.gbp] : [];
+  const grns = getBreakDownGranularities(headerSlice, breakdowns);
 
   const result = rows.map((d, index) => {
-    const str = d.slice(eventNameIndex + 1, countIndex).join(',');
-    const grpLabel = str
-      .split(',')
-      .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
-      .join(',');
+    const breakdownVals = d.slice(eventNameIndex + 1, countIndex);
+    const breakdownData = {};
+    for (let i = 0; i < breakdowns.length; i++) {
+      const bkd = breakdowns[i];
+      breakdownData[`${bkd.pr} - ${i}`] = parseForDateTimeLabel(
+        grns[i],
+        breakdownVals[i]
+      );
+    }
+    const grpLabel = Object.values(breakdownData).join(',');
     return {
       label: grpLabel,
       value: d[countIndex],
+      'Event Count': d[countIndex], //used for sorting, value key will be removed soon
       index,
+      ...breakdownData,
     };
   });
-  return SortData(result, 'value', 'descend');
+  return result;
 };
 
 export const getBreakDownGranularities = (breakDownSlice, breakdowns) => {
   const grns = [];
-  let brks = breakdowns;
+  let brks = [...breakdowns];
   breakDownSlice.forEach((h) => {
     const brkIndex = brks.findIndex((x) => h === x.pr);
     grns.push(brks[brkIndex]?.grn);
@@ -75,6 +100,7 @@ export const getTableColumns = (
   userPropNames,
   eventPropNames
 ) => {
+  console.log('semb getTableColumns');
   const breakdownColumns = breakdown.map((e, index) => {
     let displayTitle =
       e.prop_category === 'user'
@@ -120,32 +146,12 @@ export const getTableColumns = (
   return [...breakdownColumns, countColumn];
 };
 
-export const getDataInTableFormat = (
-  data,
-  breakdown,
-  searchText,
-  currentSorter
-) => {
+export const getDataInTableFormat = (data, searchText, currentSorter) => {
+  console.log('semb getDataInTableFormat');
   const filteredData = data.filter((elem) =>
     elem.label.toLowerCase().includes(searchText.toLowerCase())
   );
-  const result = filteredData.map((d) => {
-    const splittedLabel = d.label.split(',');
-    const breakdownData = {};
-    breakdown.forEach((b, index) => {
-      let brkLabel = splittedLabel[index];
-      if (b.grn) {
-        brkLabel = parseForDateTimeLabel(b.grn, brkLabel);
-      }
-      breakdownData[`${b.property} - ${index}`] = brkLabel;
-    });
-    return {
-      index: d.index,
-      'Event Count': d.value,
-      ...breakdownData,
-    };
-  });
-  return SortResults(result, currentSorter);
+  return SortResults(filteredData, currentSorter);
 };
 
 export const getDateBasedColumns = (
@@ -157,6 +163,17 @@ export const getDateBasedColumns = (
   userPropNames,
   eventPropNames
 ) => {
+  console.log('semb getDateBasedColumns');
+  const OverallColumn = {
+    title: getClickableTitleSorter(
+      'Overall',
+      { key: `Event Count`, type: 'numerical', subtype: null },
+      currentSorter,
+      handleSorting
+    ),
+    dataIndex: `Event Count`,
+    width: 150,
+  };
   const breakdownColumns = breakdown.map((e, index) => {
     let displayTitle =
       e.prop_category === 'user'
@@ -199,44 +216,27 @@ export const getDateBasedColumns = (
       },
     };
   });
-  return [...breakdownColumns, ...dateColumns];
+  return [...breakdownColumns, ...dateColumns, OverallColumn];
 };
 
 export const getDateBasedTableData = (
   seriesData,
-  categories,
-  breakdown,
   searchText,
-  currentSorter,
-  frequency
+  currentSorter
 ) => {
-  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
-  const result = seriesData
-    .filter((sd) => sd.name.toLowerCase().includes(searchText.toLowerCase()))
-    .map((sd) => {
-      const dateWiseData = {};
-      categories.forEach((cat, index) => {
-        dateWiseData[moment(cat).format(format)] = sd.data[index];
-      });
-      const splittedLabel = sd.name.split(',');
-      const breakdownData = {};
-      breakdown.forEach((b, index) => {
-        let brkLabel = splittedLabel[index];
-        if (b.grn) {
-          brkLabel = parseForDateTimeLabel(b.grn, brkLabel);
-        }
-        breakdownData[`${b.property} - ${index}`] = brkLabel;
-      });
-      return {
-        index: sd.index,
-        ...breakdownData,
-        ...dateWiseData,
-      };
-    });
+  console.log('semb getDateBasedTableData');
+  const result = seriesData.filter((sd) =>
+    sd.name.toLowerCase().includes(searchText.toLowerCase())
+  );
+
   return SortResults(result, currentSorter);
 };
 
-export const formatDataInStackedAreaFormat = (data, aggregateData) => {
+export const formatDataInStackedAreaFormat = (
+  data,
+  aggregateData,
+  frequency
+) => {
   if (
     !data.headers ||
     !data.headers.length ||
@@ -249,7 +249,7 @@ export const formatDataInStackedAreaFormat = (data, aggregateData) => {
       data: [],
     };
   }
-  console.log('formatDataInStackedAreaFormat');
+  console.log('semb formatDataInStackedAreaFormat');
   const dateIndex = data.headers.findIndex((h) => h === 'datetime');
   const countIndex = data.headers.findIndex((h) => h === 'count');
   const eventIndex = data.headers.findIndex((h) => h === 'event_name');
@@ -268,16 +268,17 @@ export const formatDataInStackedAreaFormat = (data, aggregateData) => {
     return {
       name: d.label,
       data: [...initializedDatesData],
-      index: d.index,
       marker: {
         enabled: false,
       },
+      ...d,
     };
   });
 
   const headerSlice = data.headers.slice(breakdownIndex, countIndex);
   let breakdowns = data.meta.query.gbp ? [...data.meta.query.gbp] : [];
   let grns = getBreakDownGranularities(headerSlice, breakdowns);
+  const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
 
   data.rows.forEach((row) => {
     const breakdownJoin = row
@@ -285,8 +286,10 @@ export const formatDataInStackedAreaFormat = (data, aggregateData) => {
       .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
       .join(',');
     const bIdx = labelsMapper[breakdownJoin];
-    const idx = differentDates.indexOf(row[dateIndex]);
+    const category = row[dateIndex];
+    const idx = differentDates.indexOf(category);
     if (resultantData[bIdx]) {
+      resultantData[bIdx][moment(category).format(format)] = row[countIndex];
       resultantData[bIdx].data[idx] = row[countIndex];
     }
   });

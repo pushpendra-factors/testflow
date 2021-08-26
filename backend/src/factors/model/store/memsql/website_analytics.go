@@ -1365,16 +1365,25 @@ func (store *MemSQL) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([
 		errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)
 		return []model.WebAnalyticsCachePayload{}, errCode, errMsg
 	}
+	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
+	if statusCode != http.StatusFound {
+		errMsg := fmt.Sprintf("Failed to get project Timezone for %d", projectID)
+		return []model.WebAnalyticsCachePayload{}, statusCode, errMsg
+	}
 
 	var cachePayloads []model.WebAnalyticsCachePayload
 	for _, rangeFunction := range U.QueryDateRangePresets {
-		from, to := rangeFunction()
-
+		from, to, errCode := rangeFunction(timezoneString)
+		if errCode != nil {
+			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", projectID)
+			return []model.WebAnalyticsCachePayload{}, http.StatusNotFound, errMsg
+		}
 		cachePayloads = append(cachePayloads, model.WebAnalyticsCachePayload{
 			ProjectID:   projectID,
 			DashboardID: dashboardID,
 			From:        from,
 			To:          to,
+			Timezone:    timezoneString,
 			Queries:     webAnalyticsQueries,
 		})
 	}
@@ -1405,7 +1414,8 @@ func (store *MemSQL) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAna
 	from, to := cachePayload.From, cachePayload.To
 	queries := cachePayload.Queries
 	logCtx := log.WithFields(log.Fields{"did": dashboardID, "pid": projectID, "from": from, "to": to})
-	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, true) {
+	timezoneString := cachePayload.Timezone
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, timezoneString, true) {
 		return http.StatusOK
 	}
 
@@ -1427,7 +1437,7 @@ func (store *MemSQL) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAna
 	timeTakenString := U.SecondsToHMSString(timeTaken)
 	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).Info("Completed website analytics query.")
 
-	model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to)
+	model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to, timezoneString)
 	return http.StatusOK
 }
 
@@ -1487,8 +1497,14 @@ func (store *MemSQL) CacheWebsiteAnalyticsForProjects(stringProjectsIDs, exclude
 // CacheWebsiteAnalyticsForMonthlyRange Cache monthly range dashboards for website analytics.
 func (store *MemSQL) CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int) {
 	projectIDsToRun := store.GetWebAnalyticsEnabledProjectIDsFromList(projectIDs, excludeProjectIDs)
-	monthlyRanges := U.GetMonthlyQueryRangesTuplesIST(numMonths)
 	for _, projectID := range projectIDsToRun {
+		timezoneString, statusCode := store.GetTimezoneForProject(projectID)
+		if statusCode != http.StatusFound {
+			errMsg := fmt.Sprintf("Failed to get project Timezone for %d", projectID)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
+		monthlyRanges := U.GetMonthlyQueryRangesTuplesZ(numMonths, timezoneString)
 		dashboardID, webAnalyticsQueries, errCode := store.GetWebAnalyticsQueriesFromDashboardUnits(projectID)
 		if errCode != http.StatusFound {
 			errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)

@@ -621,6 +621,8 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	propertiesJoinStmnt := ""
 	if hasGroupEntity(q.GroupByProperties, model.PropertyEntityUser) {
 		propertiesJoinStmnt = fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id", funnelSteps[0])
+		// Using string format for project_id condition, as the value is from internal system.
+		propertiesJoinStmnt = propertiesJoinStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectId)
 	}
 
 	stepFunnelName := "funnel"
@@ -726,7 +728,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 
 // builds group keys for event properties for given step (event_with_properties).
 func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
-	groupProps []model.QueryGroupByProperty, ewpIndex int, timeZone string) (string, []interface{}, string, bool) {
+	groupProps []model.QueryGroupByProperty, ewpIndex int, timezoneString string) (string, []interface{}, string, bool) {
 
 	groupPropsByStep := make([]model.QueryGroupByProperty, 0, 0)
 	groupByUserProperties := false
@@ -740,6 +742,6 @@ func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEven
 		}
 	}
 
-	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep, timeZone)
+	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep, timezoneString)
 	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }

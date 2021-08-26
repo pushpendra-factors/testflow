@@ -163,6 +163,7 @@ type Configuration struct {
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []uint64
+	MultipleTimezoneEnabledProjects        []uint64
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
@@ -290,7 +291,7 @@ func InitPropertiesTypeCache(enablePropertyTypeFromDB bool, propertiesTypeCacheS
 
 	configuration.enablePropertyTypeFromDB = enablePropertyTypeFromDB
 
-	propertiesTypeCache.LastResetDate = U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
+	propertiesTypeCache.LastResetDate = U.GetDateOnlyFromTimestampZ(U.TimeNowUnix())
 	log.Info("Properties_type cache initialized.")
 }
 
@@ -322,7 +323,7 @@ func GetPropertiesTypeCache() *PropertiesTypeCache {
 
 // ResetPropertyDetailsCacheByDate reset PropertiesTypeCache with date
 func ResetPropertyDetailsCacheByDate(timestamp int64) {
-	date := U.GetDateOnlyFromTimestamp(timestamp)
+	date := U.GetDateOnlyFromTimestampZ(timestamp)
 	propertiesTypeCache.Cache.Purge()
 	propertiesTypeCache.LastResetDate = date
 }
@@ -668,6 +669,7 @@ func isValidMemSQLResourcePool(resourcePool string) bool {
 		availablePools = []string{
 			"soft_cpu_50",
 			"timeout_5m",
+			"soft_cpu_45_timeout_5m",
 		}
 
 	} else if IsStaging() {
@@ -686,7 +688,7 @@ func isValidMemSQLResourcePool(resourcePool string) bool {
 	return exists
 }
 
-func setMemSQLResourcePool(memSQLDB *gorm.DB, resourcePool string) error {
+func SetMemSQLResourcePool(memSQLDB *gorm.DB, resourcePool string) error {
 	if resourcePool != "" {
 		log.Infof("Using memsql resource pool %s", resourcePool)
 	}
@@ -720,7 +722,7 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 		log.WithError(err).Fatal("Failed connecting to memsql.")
 	}
 
-	err = setMemSQLResourcePool(memSQLDB, configuration.MemSQLInfo.ResourcePool)
+	err = SetMemSQLResourcePool(memSQLDB, configuration.MemSQLInfo.ResourcePool)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to set resource pool.")
 	}
@@ -1678,6 +1680,15 @@ func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId uint64) bool {
 	}
 	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
 		if uuid == loggedInUUID {
+			return true
+		}
+	}
+	return false
+}
+
+func IsMultipleProjectTimezoneEnabled(projectId uint64) bool {
+	for _, id := range configuration.MultipleTimezoneEnabledProjects {
+		if id == projectId {
 			return true
 		}
 	}

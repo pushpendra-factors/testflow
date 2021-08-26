@@ -5,9 +5,9 @@ import { useHistory } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
 import { fetchTemplateConfig, fetchTemplateInsights } from 'Reducers/templates';
 import { connect } from 'react-redux';
-import FaDatepicker from 'Components/FaDatepicker';
-import moment from 'moment';
+import FaDatepicker from 'Components/FaDatepicker'; 
 import styles from './index.module.scss';
+import MomentTz from 'Components/MomentTz'; 
 
 const { TabPane } = Tabs;
 
@@ -39,12 +39,12 @@ function TemplateResults({
   };
 
   const [dateRange1, setDateRange1] = useState({
-    t1: moment().subtract(2, 'weeks').startOf('week'),
-    t2: moment().subtract(2, 'weeks').endOf('week'),
+    t1: MomentTz().subtract(2, 'weeks').startOf('week'),
+    t2: MomentTz().subtract(2, 'weeks').endOf('week'),
   });
   const [dateRange2, setDateRange2] = useState({
-    t1: moment().subtract(1, 'weeks').startOf('week'),
-    t2: moment().subtract(1, 'weeks').endOf('week'),
+    t1: MomentTz().subtract(1, 'weeks').startOf('week'),
+    t2: MomentTz().subtract(1, 'weeks').endOf('week'),
   });
 
   const addShadowToHeader = useCallback(() => {
@@ -227,15 +227,15 @@ function TemplateResults({
     setLoading(true);
     const queryData = {
       "metric": key, 
-      'prev_from': dateRange1 ? moment(dateRange1.t1).unix() : moment().subtract(2, 'weeks').startOf('week').unix(),
-      'prev_to': dateRange1 ? moment(dateRange1.t2).unix() : moment().subtract(2, 'weeks').endOf('week').unix(),
-      "from": dateRange2 ? moment(dateRange2.t1).unix() : moment().subtract(1, 'weeks').startOf('week').unix(),
-      "to": dateRange2 ? moment(dateRange2.t2).unix() : moment().subtract(1, 'weeks').endOf('week').unix(),
+      'prev_from': dateRange1 ? MomentTz(dateRange1.t1).unix() : MomentTz().subtract(2, 'weeks').startOf('week').unix(),
+      'prev_to': dateRange1 ? MomentTz(dateRange1.t2).unix() : MomentTz().subtract(2, 'weeks').endOf('week').unix(),
+      "from": dateRange2 ? MomentTz(dateRange2.t1).unix() : MomentTz().subtract(1, 'weeks').startOf('week').unix(),
+      "to": dateRange2 ? MomentTz(dateRange2.t2).unix() : MomentTz().subtract(1, 'weeks').endOf('week').unix(),
       thresholds: {
         percentage_change: 10,
         absolute_change: 0,
       },
-      time_zone: 'Asia/Kolkata' 
+      time_zone: localStorage.getItem('project_timeZone') || 'Asia/Kolkata'
     }
     fetchTemplateInsights(activeProject.id, queryData).then(() => {
       setLoading(false);
@@ -270,16 +270,16 @@ function TemplateResults({
 
   const dateChange1 = (ranges) => {
     let timestamps = {
-      t1: moment(ranges.startDate),
-      t2: moment(ranges.endDate),
+      t1: MomentTz(ranges.startDate),
+      t2: MomentTz(ranges.endDate),
     }
     setDateRange1(timestamps);
   }
 
   const dateChange2 = (ranges) => {
     let timestamps = {
-      t1: moment(ranges.startDate),
-      t2: moment(ranges.endDate),
+      t1: MomentTz(ranges.startDate),
+      t2: MomentTz(ranges.endDate),
     }
     setDateRange2(timestamps);
   }

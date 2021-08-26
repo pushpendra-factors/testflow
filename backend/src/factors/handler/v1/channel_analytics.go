@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -134,6 +135,8 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
 	refreshParam := c.Query("refresh")
+	var timezoneString U.TimeZoneString
+	var statusCode int
 
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
@@ -153,15 +156,32 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 		}
 	}
 
+	if queryPayload.Queries[0].Timezone != "" {
+		_, errCode := time.LoadLocation(string(queryPayload.Queries[0].Timezone))
+		if errCode != nil {
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+		}
+
+		timezoneString = U.TimeZoneString(queryPayload.Queries[0].Timezone)
+	} else {
+		timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+		if statusCode != http.StatusFound {
+			logCtx.Error("Query failed. Failed to get Timezone.")
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+		}
+		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+	}
+
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqID, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, timezoneString, hardRefresh) {
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqID, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false
 			}
 		}
 	}
+	queryPayload.SetTimeZone(timezoneString)
 
 	var cacheResult model.ChannelResultGroupV1
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &queryPayload, cacheResult, isDashboardQueryRequest, reqID)
@@ -191,8 +211,8 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
-		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
-		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
+		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
+		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
 	}
 	return gin.H{"result": queryResult}, http.StatusOK, "", "", false
 }

@@ -64,7 +64,7 @@ func (sd *S3Driver) GetProjectModelDir(projectId, modelId uint64) string {
 }
 
 func (sd *S3Driver) GetProjectEventFileDir(projectId uint64, startTimestamp int64, modelType string) string {
-	dateFormatted := U.GetDateOnlyFromTimestamp(startTimestamp)
+	dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
 	return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
 }
 

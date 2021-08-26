@@ -830,6 +830,8 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
+		// Using string format for project_id condition, as the value is from internal system.
+		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
 
 	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone)
@@ -933,6 +935,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (str
 	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
 	var qSelect string
+	// This is sorted Kark.
 	qSelect = appendSelectTimestampIfRequired(qSelect, q.GetGroupByTimestamp(), q.Timezone)
 	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", model.AliasAggr))
 
@@ -1555,6 +1558,8 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 	// join with users for latest user_properties.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
+		// Using string format for project_id condition, as the value is from internal system.
+		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
 
 	withUsersStepName := "users_any_event"
@@ -1692,7 +1697,8 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps, stepsToKeysMap, err := addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams)
+	steps, stepsToKeysMap, err :=
+		addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams)
 	if err != nil {
 		return qStmnt, qParams, err
 	}
@@ -1888,6 +1894,8 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
+		// Using string format for project_id condition, as the value is from internal system.
+		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
 
 	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties, query.Timezone)

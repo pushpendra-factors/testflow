@@ -289,6 +289,7 @@ type Model interface {
 	UpdateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int
 	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []uint64
 	GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[uint64]bool) (projectIds []uint64, errCode int)
+	GetTimezoneForProject(projectID uint64) (U.TimeZoneString, int)
 
 	// queries
 	CreateQuery(projectID uint64, query *model.Queries) (*model.Queries, int, string)
@@ -392,10 +393,6 @@ type Model interface {
 		goalEvents []model.QueryEventWithProperties, startTime, endTime, lookbackDays int64, eventFiles,
 		userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager)
 
-	// replication_metadata
-	GetReplicationMetadataByTable(tableName string) (*model.ReplicationMetadata, int)
-	CreateOrUpdateReplicationMetadataByTable(tableName string, lastRunAt *time.Time, count uint64) int
-
 	// smart_properties
 	GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int)
 	CreateSmartPropertyRules(projectID uint64, smartProperty *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int)
@@ -474,4 +471,8 @@ type Model interface {
 	// weekly insights
 	CreateWeeklyInsightsMetadata(pmm *model.WeeklyInsightsMetadata) (int, string)
 	GetWeeklyInsightsMetadata(projectId uint64) ([]model.WeeklyInsightsMetadata, int, string)
+
+	// feedback
+	PostFeedback(ProjectID uint64, agentUUID string, Feature string, Property *postgres.Jsonb, VoteType int) (int, string)
+	GetRecordsFromFeedback(projectID uint64, agentUUID string) ([]model.Feedback, error)
 }

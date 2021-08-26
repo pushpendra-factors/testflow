@@ -92,7 +92,11 @@ func createEtsStruct(userId string, user1CreatedTime,
 			UserProperties:    nil,
 		}
 		emap[et] = t
-		tmp := P.EvSameTs{EventsNames: enameList, EventsMap: emap, EventTimestamp: nextEventCreatedTime.Unix()}
+		tmp := P.EvSameTs{EventsNames: enameList, EventTimestamp: nextEventCreatedTime.Unix()}
+		tmp.EventsMap = make(map[string]P.CounterEventFormat)
+		for k,v := range emap {
+			tmp.EventsMap[k] = v
+		}
 		etsList = append(etsList, tmp)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -105,8 +109,8 @@ func TestPatternCountEvents(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	// Count A -> B -> C
-	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
-	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
+	// U1: F, B, A, C, B, A, B, C   (A(1) -> B(2) -> C(1):1)
+	// U2: B, A, A, C, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
 	// Count:3, OncePerUserCount:2, UserCount:2
 	pCountOccur := []bool{true}
 	for _, countOccurFlag := range pCountOccur {

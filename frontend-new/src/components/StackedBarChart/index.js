@@ -6,7 +6,7 @@ import moment from 'moment';
 import Highcharts from 'highcharts';
 import { high_charts_default_spacing } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
-import { formatCount } from '../../utils/dataFormatter';
+import { formatCount, generateColors } from '../../utils/dataFormatter';
 import TopLegends from '../GroupedBarChart/TopLegends';
 
 function StackedBarChart({
@@ -18,7 +18,9 @@ function StackedBarChart({
   cardSize = 1,
   spacing = high_charts_default_spacing,
   chartId = 'barChartContainer',
+  showAllLegends = false,
 }) {
+  const colors = generateColors(data.length);
   const drawChart = useCallback(() => {
     Highcharts.chart(chartId, {
       chart: {
@@ -116,9 +118,11 @@ function StackedBarChart({
           stacking: 'normal',
         },
       },
-      series: data,
+      series: data.map((d, index) => {
+        return { ...d, color: colors[index] };
+      }),
     });
-  }, [cardSize, categories, chartId, data, frequency, height, spacing]);
+  }, [cardSize, categories, chartId, data, frequency, height, spacing, colors]);
 
   useEffect(() => {
     drawChart();
@@ -130,7 +134,8 @@ function StackedBarChart({
         <TopLegends
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
-          colors={data.map((d) => d.color)}
+          colors={colors}
+          showAllLegends={showAllLegends}
         />
       ) : null}
       <div id={chartId} className={styles.columnChart}></div>
@@ -138,7 +143,8 @@ function StackedBarChart({
         <TopLegends
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
-          colors={data.map((d) => d.color)}
+          colors={colors}
+          showAllLegends={showAllLegends}
         />
       ) : null}
     </>

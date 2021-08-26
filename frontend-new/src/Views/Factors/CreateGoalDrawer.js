@@ -9,10 +9,11 @@ import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules, saveGoalIn
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import _, { isEmpty } from 'lodash';
-import moment from 'moment';
 import FilterBlock from '../../components/QueryComposer/FilterBlock';
 import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import EventFilterBy from './DrawerUtil/EventFilterBy';
+// import MomentTz from 'Components/MomentTz';
+import moment from 'moment-timezone';  
 
 const title = (props) => {
   return (
@@ -118,6 +119,7 @@ const getFilters = (filters) => {
     setglobalFilter(fltrs);
   }  
   const onChangeGroupSelect2 = (grp, value) => {
+    
     setShowDropDown2(false);
     setEvent2(value[0]); 
   }

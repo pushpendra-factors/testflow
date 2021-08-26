@@ -763,12 +763,195 @@ func TestBaseQuery(t *testing.T) {
 	}
 }
 
+func TestDashboardUnitEventForTimeZone(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	event_timestamp := 1575138601
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", userID1, event_timestamp, "A", 1234)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", userID1, event_timestamp+10, "B", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	rName := U.RandomString(5)
+	dashboard, _ := store.GetStore().CreateDashboard(project.ID, agent.UUID,
+		&model.Dashboard{Name: rName, Type: model.DashboardTypeProjectVisible})
+
+	query1 := model.Query{
+		From: 1575138600,
+		To:   1575224999,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name: "s0",
+			},
+		},
+		Class: model.QueryClassEvents,
+		Type:  model.QueryTypeEventsOccurrence,
+		//Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	query1Json, _ := json.Marshal(query1)
+	rTitle := U.RandomString(5)
+	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
+		Presentation: "pl",
+		Query:        &postgres.Jsonb{query1Json},
+		Title:        rTitle,
+	})
+	dashboardUnits, _ := store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
+
+	decChannelResult := struct {
+		Cache  bool              `json:"cache"`
+		Result model.QueryResult `json:"result"`
+	}{}
+
+	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, &gin.H{"query": query1})
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+	assert.Equal(t, false, decChannelResult.Cache)
+
+	query1.From = 1575158400
+	query1.To = 1575244799
+	query1.Timezone = "Europe/Lisbon"
+
+	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, &gin.H{"query": query1})
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+	assert.Equal(t, false, decChannelResult.Cache)
+}
+
+func TestDashboardUnitChannelForTimeZone(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, _ := SetupProjectWithAgentDAO()
+
+	customerAccountId := fmt.Sprintf("%d", U.RandomUint64())
+	store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountId,
+		IntAdwordsEnabledAgentUUID:  &agent.UUID,
+	})
+	rName := U.RandomString(5)
+	dashboard, _ := store.GetStore().CreateDashboard(project.ID, agent.UUID,
+		&model.Dashboard{Name: rName, Type: model.DashboardTypeProjectVisible})
+	value := []byte(`{"id": 2061667885,"clicks":989, "campaign_id": 12,"impressions":10, "end_date": "20371230", "start_date": "20190711", "conversions":111, "cost":42.94}`)
+	document := model.AdwordsDocument{
+		ProjectID:         project.ID,
+		CustomerAccountID: customerAccountId,
+		Type:              5,
+		Timestamp:         20191201,
+		ID:                "2061667885",
+		Value:             &postgres.Jsonb{value},
+		TypeAlias:         "campaign_performance_report",
+	}
+	errCode := store.GetStore().CreateAdwordsDocument(&document)
+	log.Warn(errCode)
+	query := &model.ChannelQuery{
+		Channel:     "google_ads",
+		FilterKey:   "campaign",
+		FilterValue: "all",
+		From:        1575138600,
+		To:          1575224999,
+	}
+	queryJson, _ := json.Marshal(query)
+	rTitle := U.RandomString(5)
+	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
+		Presentation: "pc",
+		Query:        &postgres.Jsonb{queryJson},
+		Title:        rTitle,
+	})
+	decChannelResult := struct {
+		Cache  bool                     `json:"cache"`
+		Result model.ChannelQueryResult `json:"result"`
+	}{}
+	dashboardUnits, _ := store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
+	w := sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query)
+	json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+	assert.Equal(t, false, decChannelResult.Cache)
+	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
+
+	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query)
+	json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+	assert.Equal(t, true, decChannelResult.Cache)
+	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
+
+	query.Timezone = "Europe/Lisbon"
+	query.From = 1575158400
+	query.To = 1575244799
+	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query)
+	json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+	assert.Equal(t, false, decChannelResult.Cache)
+	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
+
+	// Evaluating for channelv1 handler.
+	query1 := &model.ChannelGroupQueryV1{
+		Class: "channel_v1",
+		Queries: []model.ChannelQueryV1{{Channel: "google_ads", SelectMetrics: []string{"clicks"},
+			Timezone: string(U.TimeZoneStringIST), From: 1575138600, To: 1575224999, GroupByTimestamp: "",
+			Filters: []model.ChannelFilterV1{}, GroupBy: []model.ChannelGroupBy{}}},
+	}
+	query1Json, _ := json.Marshal(query1)
+	rTitle = U.RandomString(5)
+	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
+		Presentation: "pc",
+		Query:        &postgres.Jsonb{query1Json},
+		Title:        rTitle,
+	})
+	decChannelResult1 := struct {
+		Cache  bool                       `json:"cache"`
+		Result model.ChannelResultGroupV1 `json:"result"`
+	}{}
+	dashboardUnits, _ = store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
+
+	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
+	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
+	assert.Equal(t, false, decChannelResult.Cache)
+	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
+
+	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
+	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
+	assert.Equal(t, true, decChannelResult1.Cache)
+	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
+
+	query1.Queries[0].Timezone = "Europe/Lisbon"
+	query1.Queries[0].From = 1575138600
+	query1.Queries[0].To = 1575224999
+	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
+	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
+	assert.Equal(t, true, decChannelResult1.Cache)
+	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
+
+	query1.Queries[0].Timezone = "Europe/Lisbon"
+	query1.Queries[0].From = 1575158400
+	query1.Queries[0].To = 1575244799
+	w = sendGetDashboardUnitChannelV1Result(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, query1)
+	json.Unmarshal(w.Body.Bytes(), &decChannelResult1)
+	assert.Equal(t, false, decChannelResult1.Cache)
+	assert.Equal(t, float64(989), (*&decChannelResult1.Result.Results[0].Rows[0][0]))
+
+}
+
 func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
+	project.TimeZone = "Europe/Lisbon"
+	store.GetStore().UpdateProject(project.ID, project)
 
 	_, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "$session"})
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -778,6 +961,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		IntAdwordsCustomerAccountId: &customerAccountID,
 	})
 
+	timezonestring := U.TimeZoneString(project.TimeZone)
 	dashboardName := U.RandomString(5)
 	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: dashboardName, Type: model.DashboardTypeProjectVisible})
 	assert.NotNil(t, dashboard)
@@ -787,7 +971,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
 	var dashboardQueriesStr = map[string]string{
 		model.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
-		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
 		model.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
 		model.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
 	}
@@ -814,7 +998,8 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	assert.Equal(t, 4, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
-		from, to := rangeFunction()
+		from, to, errCode := rangeFunction(timezonestring)
+		assert.Nil(t, errCode)
 		for unitID, queryMap := range dashboardUnitQueriesMap {
 			queryClass := queryMap["class"].(string)
 			query := queryMap["query"].(model.BaseQuery)
@@ -854,7 +1039,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 				assert.Equal(t, "true", w.HeaderMap.Get(model.QueryCacheResponseFromCacheHeader), assertMsg)
 			}
 
-			if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+			if from == U.GetBeginningOfDayTimestampIn(U.TimeNowUnix(), timezonestring) {
 				// If queried again with refresh as false, should return from cache.
 				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, query, false, true)
 				result = nil
@@ -875,6 +1060,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	timezoneString := U.TimeZoneString(project.TimeZone)
 	_, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "$session"})
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -916,9 +1102,9 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 
 	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
-
 	for _, rangeFunction := range U.QueryDateRangePresets {
-		from, to := rangeFunction()
+		from, to, errCode := rangeFunction(timezoneString)
+		assert.Nil(t, errCode)
 		for unitID, queryMap := range dashboardUnitQueriesMap {
 			queryClass := queryMap["class"].(string)
 			queries := queryMap["queries"].(model.BaseQuery)
@@ -940,7 +1126,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 			result = nil
 			json.Unmarshal([]byte(w.Body.String()), &result)
 
-			if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+			if from == U.GetBeginningOfDayTimestampIn(U.TimeNowUnix(), timezoneString) {
 				// If queried again with refresh as false, should return from cache.
 				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false, true)
 				result = nil
@@ -1002,9 +1188,10 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 
 	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
-
+	timezonestring := U.TimeZoneString(project.TimeZone)
 	for _, rangeFunction := range U.QueryDateRangePresets {
-		from, to := rangeFunction()
+		from, to, errCode := rangeFunction(timezonestring)
+		assert.Nil(t, errCode)
 		for unitID, queryMap := range dashboardUnitQueriesMap {
 			queryClass := queryMap["class"].(string)
 			queries := queryMap["queries"].(model.BaseQuery)
@@ -1026,7 +1213,7 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 			result = nil
 			json.Unmarshal([]byte(w.Body.String()), &result)
 
-			if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+			if from == U.GetBeginningOfDayTimestampIn(U.TimeNowUnix(), U.TimeZoneString(timezonestring)) {
 				// If queried again with refresh as false, should return from cache.
 				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false, true)
 				result = nil
@@ -1245,9 +1432,9 @@ func TestGetEffectiveTimeRangeForDashboardUnitAttributionQuery(t *testing.T) {
 	july3End := int64(1625336999)
 
 	// Today
-	toValid1 := U.GetBeginningOfDayTimestampZ(U.TimeNow().Unix(), U.TimeZoneStringIST) - 1
+	toValid1 := U.GetBeginningOfDayTimestampIn(time.Now().Unix(), U.TimeZoneStringIST) - 1
 	fromValid1 := toValid1 - 7*U.SECONDS_IN_A_DAY + 1
-	toValid2 := U.GetBeginningOfDayTimestampZ(U.TimeNow().Unix(), U.TimeZoneStringIST) - 1
+	toValid2 := U.GetBeginningOfDayTimestampIn(time.Now().Unix(), U.TimeZoneStringIST) - 1
 	fromValid2 := toValid2 - 1*U.SECONDS_IN_A_DAY + 1
 
 	tests := []struct {

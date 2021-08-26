@@ -380,7 +380,7 @@ func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 	assert.NotEmpty(t, userID)
 	assert.Equal(t, http.StatusCreated, status)
 
-	timeNow := U.TimeNow()
+	timeNow := U.TimeNowZ()
 	timeNowUnix := timeNow.Unix()
 
 	user, errCode := store.GetStore().GetUser(project.ID, userID)

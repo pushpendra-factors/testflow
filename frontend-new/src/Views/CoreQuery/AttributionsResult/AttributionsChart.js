@@ -4,284 +4,281 @@ import React, {
   useMemo,
   useCallback,
   useEffect,
+  forwardRef,
+  useImperativeHandle,
 } from 'react';
-import { formatData } from './utils';
-import chartStyles from '../../../components/HCBarLineChart/styles.module.scss';
-import moment from 'moment';
-import ReactDOMServer from 'react-dom/server';
+import {
+  defaultSortProp,
+  getTableColumns,
+  getTableData,
+  getSingleTouchPointChartData,
+  getDualTouchPointChartData,
+} from './utils';
+
 import AttributionTable from './AttributionTable';
 import {
   DASHBOARD_MODAL,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
-  ATTRIBUTION_METHODOLOGY,
+  GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../utils/constants';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
-import HCBarLineChart from '../../../components/HCBarLineChart';
-import {
-  Text,
-  Number as NumFormat,
-} from '../../../components/factorsComponents';
+import OptionsPopover from './OptionsPopover';
+import { useSelector } from 'react-redux';
+import { getNewSorterState } from '../../../utils/dataFormatter';
+import DualTouchPointChart from './DualTouchPointChart';
+import SingleTouchPointChart from './SingleTouchPointChart';
 
-function AttributionsChart({
-  data,
-  event,
-  attribution_method,
-  touchpoint,
-  linkedEvents,
-  section,
-  durationObj,
-  attr_dimensions,
-}) {
-  const [aggregateData, setAggregateData] = useState({
-    categories: [],
-    series: [],
-  });
-
-  const {
-    coreQueryState: { comparison_data, comparison_duration },
-  } = useContext(CoreQueryContext);
-
-  useEffect(() => {
-    setAggregateData(
-      formatData(data, touchpoint, event, attr_dimensions, comparison_data.data)
-    );
-  }, [data, touchpoint, event, attr_dimensions, comparison_data.data]);
-
-  const [visibleIndices, setVisibleIndices] = useState(
-    Array.from(Array(MAX_ALLOWED_VISIBLE_PROPERTIES).keys())
-  );
-  const { attributionMetrics, setAttributionMetrics } = useContext(
-    CoreQueryContext
-  );
-
-  const chartData = useMemo(() => {
-    if (!aggregateData.categories.length) {
-      return {
-        ...aggregateData,
-      };
-    }
-    return {
-      categories: aggregateData.categories.filter((_, index) =>
-        visibleIndices.includes(index)
-      ),
-      series: aggregateData.series.map((s) => {
-        return {
-          ...s,
-          data: s.data.filter((_, index) => visibleIndices.includes(index)),
-        };
-      }),
-    };
-  }, [aggregateData, visibleIndices]);
-
-  const generateTooltip = useCallback(
-    (category) => {
-      const categoryIdx = chartData.categories.findIndex((d) => d === category);
-      const conversionIdx = 0;
-      const compareConversionIdx = comparison_data.data ? 1 : null;
-      const costIdx = comparison_data.data ? 2 : 1;
-      const compareCostIdx = comparison_data.data ? 3 : null;
-      return ReactDOMServer.renderToString(
-        <>
-          <Text
-            color='grey-6'
-            weight='normal'
-            type='title'
-            extraClass={`text-sm mb-0 ${chartStyles.categoryBottomBorder}`}
-          >
-            {category}
-          </Text>
-          <span className='flex items-center mt-3'>
-            <Text
-              color='grey'
-              type='title'
-              weight='bold'
-              extraClass='text-sm mb-0'
-            >
-              Conversions
-            </Text>
-          </span>
-          <span className='flex justify-between items-center mt-3'>
-            <span
-              className={`flex flex-col justify-center items-start pl-2 ${
-                comparison_data.data ? 'w-1/2' : ''
-              } ${chartStyles.leftBlueBar}`}
-            >
-              <Text
-                color='grey'
-                type='title'
-                weight='normal'
-                extraClass='text-sm mb-0'
-              >
-                {moment(durationObj.from).format('MMM DD')}
-                {' - '}
-                {moment(durationObj.to).format('MMM DD')}
-              </Text>
-              <Text
-                color='grey-6'
-                type='title'
-                weight='bold'
-                extraClass='text-base mb-0'
-              >
-                <NumFormat
-                  number={chartData.series[conversionIdx].data[categoryIdx]}
-                />
-              </Text>
-            </span>
-            {comparison_data.data ? (
-              <span
-                className={`flex flex-col justify-center items-start ml-2 w-1/2`}
-              >
-                <span className={chartStyles.leftDashedBlueBar}></span>
-                <Text
-                  color='grey'
-                  type='title'
-                  weight='normal'
-                  extraClass='text-sm mb-0 ml-4'
-                >
-                  {moment(comparison_duration.from).format('MMM DD')}
-                  {' - '}
-                  {moment(comparison_duration.to).format('MMM DD')}
-                </Text>
-                <Text
-                  color='grey-6'
-                  type='title'
-                  weight='bold'
-                  extraClass='text-base mb-0 ml-4'
-                >
-                  <NumFormat
-                    number={
-                      chartData.series[compareConversionIdx].data[categoryIdx]
-                    }
-                  />
-                </Text>
-              </span>
-            ) : null}
-          </span>
-          <span className='flex items-center mt-3'>
-            <Text
-              color='grey'
-              type='title'
-              weight='bold'
-              extraClass='text-sm mb-0'
-            >
-              Cost per conversion
-            </Text>
-          </span>
-          <span className='flex justify-between items-center mt-3'>
-            <span
-              className={`flex flex-col justify-center items-start pl-2 ${
-                comparison_data.data ? 'w-1/2' : ''
-              } ${chartStyles.leftRedBar}`}
-            >
-              <Text
-                color='grey'
-                type='title'
-                weight='normal'
-                extraClass='text-sm mb-0'
-              >
-                {moment(durationObj.from).format('MMM DD')}
-                {' - '}
-                {moment(durationObj.to).format('MMM DD')}
-              </Text>
-              <Text
-                color='grey-6'
-                type='title'
-                weight='bold'
-                extraClass='text-base mb-0'
-              >
-                <NumFormat
-                  number={chartData.series[costIdx].data[categoryIdx]}
-                />
-              </Text>
-            </span>
-            {comparison_data.data ? (
-              <span
-                className={`flex flex-col justify-center items-start ml-2 pl-2 w-1/2 ${chartStyles.leftDashedRedBar}`}
-              >
-                <Text
-                  color='grey'
-                  type='title'
-                  weight='normal'
-                  extraClass='text-sm mb-0'
-                >
-                  {moment(comparison_duration.from).format('MMM DD')}
-                  {' - '}
-                  {moment(comparison_duration.to).format('MMM DD')}
-                </Text>
-                <Text
-                  color='grey-6'
-                  type='title'
-                  weight='bold'
-                  extraClass='text-base mb-0'
-                >
-                  <NumFormat
-                    number={chartData.series[compareCostIdx].data[categoryIdx]}
-                  />
-                </Text>
-              </span>
-            ) : null}
-          </span>
-        </>
-      );
-    },
-    [
-      chartData.categories,
-      chartData.series,
-      comparison_data.data,
+const AttributionsChart = forwardRef(
+  (
+    {
+      data,
+      event,
+      attribution_method,
+      attribution_method_compare = null,
+      currMetricsValue,
+      touchpoint,
+      linkedEvents,
+      section,
       durationObj,
-      comparison_duration,
-    ]
-  );
+      attr_dimensions,
+    },
+    ref
+  ) => {
+    const {
+      coreQueryState: {
+        comparison_data,
+        comparison_duration,
+        savedQuerySettings,
+      },
+      attributionMetrics,
+      setAttributionMetrics,
+    } = useContext(CoreQueryContext);
 
-  const attributionMethodsMapper = useMemo(() => {
-    const mapper = {};
-    ATTRIBUTION_METHODOLOGY.forEach((am) => {
-      mapper[am.value] = am.text;
+    const { eventNames } = useSelector((state) => state.coreQuery);
+
+    const [aggregateData, setAggregateData] = useState({
+      categories: [],
+      series: [],
     });
-    return mapper;
-  }, []);
+    const [dualTouchpointChartData, setDualTouchpointChartData] = useState([]);
+    const [searchText, setSearchText] = useState('');
+    const [columns, setColumns] = useState([]);
+    const [tableData, setTableData] = useState([]);
+    const [sorter, setSorter] = useState(
+      savedQuerySettings.sorter || defaultSortProp()
+    );
+    const [visibleIndices, setVisibleIndices] = useState([]);
 
-  if (!chartData.categories.length) {
-    return null;
-  }
+    useImperativeHandle(ref, () => {
+      return {
+        currentSorter: { sorter },
+      };
+    });
 
-  const legends = [
-    `Conversions as Unique users (${attributionMethodsMapper[attribution_method]})`,
-    'Cost per conversion',
-  ];
+    const handleSorting = useCallback((prop) => {
+      setSorter((currentSorter) => {
+        return getNewSorterState(currentSorter, prop);
+      });
+    }, []);
 
-  return (
-    <div className='flex items-center justify-center flex-col'>
-      <div className='w-full'>
-        <HCBarLineChart
-          series={chartData.series}
-          categories={chartData.categories}
-          legends={legends}
-          generateTooltip={generateTooltip}
+    const handleMetricsVisibilityChange = useCallback(
+      (option) => {
+        setAttributionMetrics((curMetrics) => {
+          const newState = curMetrics.map((metric) => {
+            if (metric.header === option.header) {
+              return {
+                ...metric,
+                enabled: !metric.enabled,
+              };
+            }
+            return metric;
+          });
+          const enabledOptions = newState.filter((metric) => metric.enabled);
+          if (!enabledOptions.length) {
+            return curMetrics;
+          } else {
+            return newState;
+          }
+        });
+      },
+      [setAttributionMetrics]
+    );
+
+    const metricsOptionsPopover = useMemo(() => {
+      return (
+        <OptionsPopover
+          options={attributionMetrics}
+          onChange={handleMetricsVisibilityChange}
         />
-      </div>
-      <div className='mt-12 w-full'>
-        <AttributionTable
-          linkedEvents={linkedEvents}
-          touchpoint={touchpoint}
+      );
+    }, [attributionMetrics, handleMetricsVisibilityChange]);
+
+    useEffect(() => {
+      setColumns(
+        getTableColumns(
+          sorter,
+          handleSorting,
+          attribution_method,
+          attribution_method_compare,
+          touchpoint,
+          linkedEvents,
+          event,
+          eventNames,
+          attributionMetrics,
+          metricsOptionsPopover,
+          attr_dimensions,
+          durationObj,
+          comparison_data.data,
+          comparison_duration
+        )
+      );
+    }, [
+      attr_dimensions,
+      attributionMetrics,
+      attribution_method,
+      attribution_method_compare,
+      event,
+      eventNames,
+      handleSorting,
+      linkedEvents,
+      metricsOptionsPopover,
+      sorter,
+      touchpoint,
+      durationObj,
+      comparison_data.data,
+      comparison_duration,
+    ]);
+
+    useEffect(() => {
+      const tableData = getTableData(
+        data,
+        event,
+        searchText,
+        sorter,
+        attribution_method_compare,
+        touchpoint,
+        linkedEvents,
+        attributionMetrics,
+        attr_dimensions,
+        comparison_data.data
+      );
+      setTableData(tableData);
+      setVisibleIndices(
+        tableData
+          .slice(
+            0,
+            attribution_method_compare
+              ? GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES
+              : MAX_ALLOWED_VISIBLE_PROPERTIES
+          )
+          .map((v) => v.index)
+      );
+    }, [
+      attr_dimensions,
+      attributionMetrics,
+      attribution_method_compare,
+      data,
+      event,
+      linkedEvents,
+      searchText,
+      sorter,
+      touchpoint,
+      comparison_data.data,
+    ]);
+
+    useEffect(() => {
+      if (attribution_method_compare) {
+        if (tableData.length && visibleIndices.length) {
+          const chartData = getDualTouchPointChartData(
+            tableData,
+            visibleIndices,
+            attr_dimensions,
+            touchpoint,
+            attribution_method,
+            attribution_method_compare,
+            currMetricsValue
+          );
+          setDualTouchpointChartData(chartData);
+        }
+      } else {
+        if (tableData.length && visibleIndices.length) {
+          const chartData = getSingleTouchPointChartData(
+            tableData,
+            visibleIndices,
+            attr_dimensions,
+            touchpoint,
+            !!comparison_data.data
+          );
+          setAggregateData(chartData);
+        }
+      }
+    }, [
+      tableData,
+      visibleIndices,
+      attr_dimensions,
+      touchpoint,
+      comparison_data.data,
+      attribution_method,
+      attribution_method_compare,
+      currMetricsValue,
+    ]);
+
+    let chart = null;
+
+    if (!attribution_method_compare) {
+      if (!aggregateData.categories.length) {
+        return null;
+      }
+      chart = (
+        <SingleTouchPointChart
+          aggregateData={aggregateData}
+          durationObj={durationObj}
+          comparison_duration={comparison_duration}
+          comparison_data={comparison_data}
+          attribution_method={attribution_method}
+        />
+      );
+    } else {
+      if (!dualTouchpointChartData.length) {
+        return null;
+      }
+      chart = (
+        <DualTouchPointChart
+          attribution_method={attribution_method}
+          attribution_method_compare={attribution_method_compare}
+          currMetricsValue={currMetricsValue}
+          chartsData={dualTouchpointChartData}
+          visibleIndices={visibleIndices}
           event={event}
           data={data}
-          comparison_data={comparison_data.data}
-          durationObj={durationObj}
-          cmprDuration={comparison_duration}
-          isWidgetModal={section === DASHBOARD_MODAL}
-          visibleIndices={visibleIndices}
-          setVisibleIndices={setVisibleIndices}
-          maxAllowedVisibleProperties={MAX_ALLOWED_VISIBLE_PROPERTIES}
-          attribution_method={attribution_method}
-          attributionMetrics={attributionMetrics}
-          setAttributionMetrics={setAttributionMetrics}
-          section={section}
-          attr_dimensions={attr_dimensions}
         />
+      );
+    }
+
+    console.log('tableData', tableData);
+    return (
+      <div className='flex items-center justify-center flex-col'>
+        <div className='w-full'>{chart}</div>
+        <div className='mt-12 w-full'>
+          <AttributionTable
+            comparison_data={comparison_data.data}
+            durationObj={durationObj}
+            cmprDuration={comparison_duration}
+            isWidgetModal={section === DASHBOARD_MODAL}
+            visibleIndices={visibleIndices}
+            setVisibleIndices={setVisibleIndices}
+            maxAllowedVisibleProperties={MAX_ALLOWED_VISIBLE_PROPERTIES}
+            attributionMetrics={attributionMetrics}
+            section={section}
+            columns={columns}
+            tableData={tableData}
+            searchText={searchText}
+            setSearchText={setSearchText}
+          />
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+);
 
 export default AttributionsChart;

@@ -55,6 +55,14 @@ func (q *AttributionQueryUnit) GetQueryDateRange() (from, to int64) {
 	return q.Query.From, q.Query.To
 }
 
+func (q *AttributionQueryUnit) SetTimeZone(timezoneString U.TimeZoneString) {
+	q.Query.Timezone = string(timezoneString)
+}
+
+func (q *AttributionQueryUnit) GetTimeZone() U.TimeZoneString {
+	return U.TimeZoneString(q.Query.Timezone)
+}
+
 func (q *AttributionQueryUnit) SetQueryDateRange(from, to int64) {
 	q.Query.From, q.Query.To = from, to
 }
@@ -80,12 +88,12 @@ func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRe
 	if err != nil {
 		return nil, err
 	}
-	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To)
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To, U.TimeZoneString(q.Query.Timezone))
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.Query.From, q.Query.To)
+	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
 }
 
 const (
@@ -100,6 +108,7 @@ const (
 	AttributionKeySource                 = "Source"
 	AttributionKeyAdgroup                = "AdGroup"
 	AttributionKeyKeyword                = "Keyword"
+	AttributionKeyChannel                = "ChannelGroup"
 
 	ReportCampaign = "Campaign"
 	ReportAdGroup  = "AdGroup"
@@ -147,6 +156,7 @@ const (
 	FieldKeywordMatchType = "keyword_match_type"
 	FieldKeyword          = "keyword"
 	FieldSource           = "source"
+	FieldChannelGroup     = "channel_group"
 
 	EventTypeGoalEvent         = 0
 	EventTypeLinkedFunnelEvent = 1
@@ -164,6 +174,7 @@ var KeyDimensionToHeaderMap = map[string]string{
 	FieldKeywordMatchType: "MatchType",
 	FieldKeyword:          "Keyword",
 	FieldSource:           "Source",
+	FieldChannelGroup:     "ChannelGroup",
 }
 
 type MarketingReports struct {
@@ -225,6 +236,7 @@ type MarketingData struct {
 	AdName           string
 	Slot             string
 	Source           string
+	ChannelGroup     string
 	Impressions      int64
 	Clicks           int64
 	Spend            float64
@@ -367,6 +379,8 @@ func AddDefaultKeyDimensionsToAttributionQuery(query *AttributionQuery) {
 			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldCampaignName, FieldAdgroupName, FieldKeywordMatchType, FieldKeyword)
 		case AttributionKeySource:
 			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldSource)
+		case AttributionKeyChannel:
+			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldChannelGroup)
 		}
 	}
 }
@@ -509,6 +523,9 @@ func enrichMarketData(v *MarketingData, sessionUTMMarketingValue *MarketingData)
 	if U.IsNonEmptyKey(v.Source) {
 		sessionUTMMarketingValue.Source = v.Source
 	}
+	if U.IsNonEmptyKey(v.ChannelGroup) {
+		sessionUTMMarketingValue.ChannelGroup = v.ChannelGroup
+	}
 }
 
 // IsASearchSlotKeyword Returns true if it is not a search click using slot's v
@@ -531,6 +548,8 @@ func GetQuerySessionProperty(attributionKey string) (string, error) {
 		return U.EP_CAMPAIGN, nil
 	} else if attributionKey == AttributionKeySource {
 		return U.EP_SOURCE, nil
+	} else if attributionKey == AttributionKeyChannel {
+		return U.EP_CHANNEL, nil
 	} else if attributionKey == AttributionKeyAdgroup {
 		return U.EP_ADGROUP, nil
 	} else if attributionKey == AttributionKeyKeyword {
@@ -732,6 +751,8 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 			attributionIdName = data.MarketingInfo.KeywordName
 		case AttributionKeySource:
 			attributionIdName = data.MarketingInfo.Source
+		case AttributionKeyChannel:
+			attributionIdName = data.MarketingInfo.ChannelGroup
 		default:
 		}
 		if attributionIdName == "" {
@@ -1168,6 +1189,8 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].KeywordName
 					case AttributionKeySource:
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].Source
+					case AttributionKeyChannel:
+						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].ChannelGroup
 					}
 					// Sessions
 					(*attributionData)[key].Sessions = sessionKeyCount[key]
@@ -1287,6 +1310,8 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 				(*attributionData)[key].Name = reportKeyData[key].KeywordName
 			case AttributionKeySource:
 				(*attributionData)[key].Name = reportKeyData[key].Source
+			case AttributionKeyChannel:
+				(*attributionData)[key].Name = reportKeyData[key].ChannelGroup
 			}
 			(*attributionData)[key].ConversionEventCount = 0
 			(*attributionData)[key].ConversionEventCompareCount = 0
@@ -1347,6 +1372,8 @@ func GetMarketingDataKey(attributionKey string, data MarketingData) string {
 		key = key + data.Channel + KeyDelimiter + data.CampaignName + KeyDelimiter + data.AdgroupName + KeyDelimiter + data.KeywordMatchType + KeyDelimiter + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.KeywordName).(string)
 	case AttributionKeySource:
 		key = key + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.Source).(string)
+	case AttributionKeyChannel:
+		key = key + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.ChannelGroup).(string)
 	default:
 		key = key + data.Name
 	}
@@ -1389,10 +1416,11 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 		var keywordName string
 		var keywordMatchType string
 		var sourceName string
+		var channelGroup string
 		var attributionId string
 		var gclID string
 		var timestamp int64
-		if err := rows.Scan(&userID, &sessionSpentTime, &pageCount, &campaignID, &campaignName, &adgroupID, &adgroupName, &keywordName, &keywordMatchType, &sourceName, &attributionId, &gclID, &timestamp); err != nil {
+		if err := rows.Scan(&userID, &sessionSpentTime, &pageCount, &campaignID, &campaignName, &adgroupID, &adgroupName, &keywordName, &keywordMatchType, &sourceName, &channelGroup, &attributionId, &gclID, &timestamp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
@@ -1406,7 +1434,8 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			userIdsWithSession = append(userIdsWithSession, userID)
 			userIdMap[userID] = true
 		}
-		marketingValues := MarketingData{Channel: PropertyValueNone, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID, AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName}
+		marketingValues := MarketingData{Channel: PropertyValueNone, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID, AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName, ChannelGroup: channelGroup}
+		gclIDEnrichSuccess := 0
 		// Override GCLID based campaign info if presents
 		if gclID != PropertyValueNone && !(query.AttributionKey == AttributionKeyKeyword && !IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
 			var attributionIdBasedOnGclID string
@@ -1416,11 +1445,13 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			// fallback is attributionId
 			if U.IsNonEmptyKey(attributionIdBasedOnGclID) {
 				attributionId = attributionIdBasedOnGclID
+				gclIDEnrichSuccess = 1
 			} else {
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, GCLID: gclID})
 			}
-		} else if (query.AttributionKey == AttributionKeyCampaign && U.IsNonEmptyKey(campaignID)) ||
-			(query.AttributionKey == AttributionKeyAdgroup && U.IsNonEmptyKey(adgroupID)) {
+		}
+		if ((query.AttributionKey == AttributionKeyCampaign && U.IsNonEmptyKey(campaignID)) ||
+			(query.AttributionKey == AttributionKeyAdgroup && U.IsNonEmptyKey(adgroupID))) && gclIDEnrichSuccess == 0 {
 			// enrich for campaign/adgroup based session having campaign_id/adgroup_id
 			var attributionIdBasedOnEnrichment string
 			attributionIdBasedOnEnrichment, marketingValues = EnrichUsingMarketingID(query.AttributionKey, marketingValues, reports)
@@ -1429,10 +1460,8 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			} else {
 				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, CampaignID: campaignID, AdgroupID: adgroupID})
 			}
-		} else {
-			// can't enrich the values in any other way, why?
-			// Because, an adgroup can belong to multiple campaign, keyword also has match type, adgroup, campaign as keys
 		}
+
 		// Name
 		marketingValues.Name = attributionId
 		// Add the unique attributionKey key

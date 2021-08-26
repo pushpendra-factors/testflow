@@ -12,7 +12,7 @@ import { MoreOutlined } from '@ant-design/icons';
 import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import { connect, useSelector, useDispatch } from 'react-redux';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
@@ -49,7 +49,7 @@ import {
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { getDashboardDateRange } from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
-import {  fetchWeeklyIngishts } from '../../reducers/insights'; 
+import { fetchWeeklyIngishts } from '../../reducers/insights';
 import _ from 'lodash';
 
 const coreQueryoptions = [
@@ -127,6 +127,7 @@ function CoreQuery({
   setNavigatedFromDashboard,
   fetchWeeklyIngishts,
   activeProject,
+  updateSavedQuerySettings,
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
@@ -135,7 +136,7 @@ function CoreQuery({
   const { attr_dimensions } = useSelector((state) => state.coreQuery);
   const history = useHistory();
   const { metadata } = useSelector((state) => state.insights);
-  const [ templatesModalVisible, setTemplatesModalVisible] = useState(false);
+  const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
 
   const getFormattedRow = (q) => {
     let svgName = 'funnels_cq';
@@ -149,9 +150,10 @@ function CoreQuery({
       type: <SVG name={svgName} size={24} />,
       title: q.title,
       author: q.created_by_name,
+      settings: q.settings,
       date: (
         <div className='flex justify-between items-center'>
-          <div>{moment(q.created_at).format('MMM DD, YYYY')}</div>
+          <div>{MomentTz(q.created_at).format('MMM DD, YYYY')}</div>
           <div>
             <Dropdown overlay={getMenu(q)} trigger={['hover']}>
               <Button type='text' icon={<MoreOutlined />} />
@@ -318,6 +320,7 @@ function CoreQuery({
           equivalentQuery = getStateQueryFromRequestQuery(record.query);
           updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
         }
+        updateSavedQuerySettings(record.settings);
         setQueryType(equivalentQuery.queryType);
         setRowClicked({
           queryType: equivalentQuery.queryType,
@@ -373,13 +376,12 @@ function CoreQuery({
       return getFormattedRow(q);
     });
 
-  const setQueryTypeTab = (item) => { 
+  const setQueryTypeTab = (item) => {
     if (item.title === 'Templates') {
-      setTemplatesModalVisible(true); 
+      setTemplatesModalVisible(true);
       // setQueryType(QUERY_TYPE_TEMPLATE);
-    }
-    else{
-      setDrawerVisible(true);  
+    } else {
+      setDrawerVisible(true);
     }
 
     if (item.title === 'Funnels') {
@@ -413,8 +415,6 @@ function CoreQuery({
     if (item.title === 'Campaigns') {
       setQueryType(QUERY_TYPE_CAMPAIGN);
     }
-
-   
   };
 
   return (
@@ -440,7 +440,10 @@ function CoreQuery({
           okText='Confirm'
           cancelText='Cancel'
         />
-        <TemplatesModal templatesModalVisible={templatesModalVisible} setTemplatesModalVisible={setTemplatesModalVisible} />
+        <TemplatesModal
+          templatesModalVisible={templatesModalVisible}
+          setTemplatesModalVisible={setTemplatesModalVisible}
+        />
         <Header>
           <div className='w-full h-full py-4 flex flex-col justify-center items-center'>
             <SearchBar setQueryToState={setQueryToState} />
@@ -561,7 +564,6 @@ function CoreQuery({
               />
             </Col>
           </Row>
-          
         </div>
       </ErrorBoundary>
     </>

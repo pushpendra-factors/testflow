@@ -43,7 +43,7 @@ func (store *MemSQL) GetAllProcessedIntervalsFromStartDate(taskID uint64, projec
 	var endDelta uint64
 	if startDate == nil {
 		endDelta = 9999999999
-		startDelta = U.DateAsFormattedInt(U.TimeNow())
+		startDelta = U.DateAsFormattedInt(U.TimeNowZ())
 	} else {
 		endDelta = 9999999999
 		startDelta = U.DateAsFormattedInt((*startDate))
@@ -94,7 +94,7 @@ func (store *MemSQL) GetAllProcessedIntervals(taskID uint64, projectId uint64, l
 	var endDelta uint64
 	if endDate == nil {
 		endDelta = ^uint64(0)
-		startDelta = U.DateAsFormattedInt(U.TimeNow().AddDate(0, 0, -lookbackInDays))
+		startDelta = U.DateAsFormattedInt(U.TimeNowZ().AddDate(0, 0, -lookbackInDays))
 	} else {
 		endDelta = U.DateAsFormattedInt(*endDate)
 		startDelta = U.DateAsFormattedInt((*endDate).AddDate(0, 0, -lookbackInDays))
@@ -146,7 +146,7 @@ func (store *MemSQL) GetAllInProgressIntervals(taskID uint64, projectId uint64, 
 	var endDelta uint64
 	if endDate == nil {
 		endDelta = ^uint64(0)
-		startDelta = U.DateAsFormattedInt(U.TimeNow().AddDate(0, 0, -lookbackInDays))
+		startDelta = U.DateAsFormattedInt(U.TimeNowZ().AddDate(0, 0, -lookbackInDays))
 	} else {
 		endDelta = U.DateAsFormattedInt(*endDate)
 		startDelta = U.DateAsFormattedInt((*endDate).AddDate(0, 0, -lookbackInDays))
@@ -197,8 +197,8 @@ func (store *MemSQL) InsertTaskBeginRecord(taskId uint64, projectId uint64, delt
 		TaskID:      taskId,
 		Delta:       delta,
 		IsCompleted: false,
-		CreatedAt:   U.TimeNow(),
-		UpdatedAt:   U.TimeNow(),
+		CreatedAt:   U.TimeNowZ(),
+		UpdatedAt:   U.TimeNowZ(),
 	}
 
 	if isProjectEnabled == true {
@@ -354,7 +354,7 @@ func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays i
 	var startDateTime time.Time
 	var endDateTime time.Time
 	if endDate == nil {
-		endDateTime = U.TimeNow()
+		endDateTime = U.TimeNowZ()
 	} else {
 		endDateTime = *endDate
 	}
@@ -439,7 +439,7 @@ func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays i
 		}
 	}
 	if taskDetails.Frequency == model.Stateless {
-		deltas = append(deltas, U.DateAsFormattedInt(U.TimeNow()))
+		deltas = append(deltas, U.DateAsFormattedInt(U.TimeNowZ()))
 	}
 	return deltas, http.StatusOK, ""
 }
@@ -651,7 +651,7 @@ func (store *MemSQL) IsDependentTaskDone(taskId uint64, projectId uint64, delta 
 // Get All the date/time range that are yet to be executed
 func (store *MemSQL) GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 	if endDate == nil {
-		currentTime := U.TimeNow()
+		currentTime := U.TimeNowZ()
 		endDate = &currentTime
 	}
 	taskDetails, _, _ := store.GetTaskDetailsById(taskId)

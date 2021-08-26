@@ -73,7 +73,15 @@ func (q *TemplateQuery) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key
 }
 
 func (q *TemplateQuery) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.From, q.To)
+	return getQueryCacheResultExpiry(q.From, q.To, string(q.Timezone))
+}
+
+func (q *TemplateQuery) SetTimeZone(timezoneString U.TimeZoneString) {
+	q.Timezone = string(timezoneString)
+}
+
+func (q *TemplateQuery) GetTimeZone() U.TimeZoneString {
+	return U.TimeZoneString(q.Timezone)
 }
 
 var DefaultThresholds = RequestThresholds{
@@ -231,14 +239,8 @@ func ValidateTemplateThresholds(thresholds []TemplateThreshold) bool {
 	return true
 }
 
-func GetInputOrDefaultTimestampsForTemplateQueryWithDays(query TemplateQuery, days int) (int64, int64, int64, int64, error) {
-	var timeZoneString U.TimeZoneString
-	if len(query.Timezone) < 1 {
-		timeZoneString = U.TimeZoneStringIST
-	} else {
-		timeZoneString = U.TimeZoneString(query.Timezone)
-	}
-	location, err := time.LoadLocation(string(timeZoneString))
+func GetInputOrDefaultTimestampsForTemplateQueryWithDays(query TemplateQuery, timezoneString U.TimeZoneString, days int) (int64, int64, int64, int64, error) {
+	location, err := time.LoadLocation(string(timezoneString))
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
@@ -455,6 +457,7 @@ func SanitiseCampaignAnalysisResult(query TemplateQuery, campaignAnalysisResult 
 	return sanitisedCampaignsAnalysisResult
 }
 func sanitiseNullValues(query TemplateQuery, absoluteChange float64, percentageChange float64, lastWeekValue float64, previousWeekValue float64) (float64, float64, bool) {
+	absoluteChange = math.Abs(absoluteChange)
 	if absoluteChange == 0 {
 		absoluteChange = math.Abs(lastWeekValue - previousWeekValue)
 		percentageChange = calcPercentagesForTemplates(lastWeekValue, previousWeekValue)

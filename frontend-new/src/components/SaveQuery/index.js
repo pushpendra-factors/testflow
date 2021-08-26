@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useContext } from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import {
   Button,
   Modal,
@@ -35,6 +35,7 @@ function SaveQuery({
   queryType,
   setQuerySaved,
   fetchWeeklyIngishtsMetaData,
+  getCurrentSorter,
 }) {
   const [title, setTitle] = useState('');
   const [addToDashboard, setAddToDashboard] = useState(false);
@@ -47,6 +48,9 @@ function SaveQuery({
   const { active_project } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
+
+  const startOfWeek =  MomentTz().startOf('week').utc().unix();
+  const todayNow =  MomentTz().utc().unix();
 
   const handleTitleChange = useCallback((e) => {
     setTitle(e.target.value);
@@ -114,19 +118,20 @@ function SaveQuery({
     try {
       setApisCalled(true);
       let query;
+      const querySettings = getCurrentSorter();
       if (queryType === QUERY_TYPE_FUNNEL) {
         query = {
           ...requestQuery,
-          fr: moment().startOf('week').utc().unix(),
-          to: moment().utc().unix(),
+          fr: startOfWeek,
+          to: todayNow,
         };
       } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
         query = {
           ...requestQuery,
           query: {
             ...requestQuery.query,
-            from: moment().startOf('week').utc().unix(),
-            to: moment().utc().unix(),
+            from: startOfWeek,
+            to: todayNow,
           },
         };
       } else if (queryType === QUERY_TYPE_EVENT) {
@@ -134,8 +139,8 @@ function SaveQuery({
           query_group: requestQuery.map((q) => {
             return {
               ...q,
-              fr: moment().startOf('week').utc().unix(),
-              to: moment().utc().unix(),
+              fr: startOfWeek,
+              to: todayNow,
               gbt: q.gbt ? 'date' : '',
             };
           }),
@@ -146,15 +151,21 @@ function SaveQuery({
           query_group: requestQuery.query_group.map((q) => {
             return {
               ...q,
-              fr: moment().startOf('week').utc().unix(),
-              to: moment().utc().unix(),
+              fr: startOfWeek,
+              to: todayNow,
               gbt: q.gbt ? 'date' : '',
             };
           }),
         };
       }
       const type = addToDashboard ? 1 : 2;
-      const res = await saveQuery(active_project.id, title, query, type);
+      const res = await saveQuery(
+        active_project.id,
+        title,
+        query,
+        type,
+        querySettings
+      );
       if (addToDashboard) {
         const settings = {
           chart: dashboardPresentation,
@@ -203,7 +214,8 @@ function SaveQuery({
     queryType,
     setQuerySaved,
     attributionMetrics,
-    fetchWeeklyIngishtsMetaData
+    fetchWeeklyIngishtsMetaData,
+    getCurrentSorter
   ]);
 
   let dashboardHelpText = 'Create a dashboard widget for regular monitoring';

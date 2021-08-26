@@ -18,7 +18,7 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 	propertiesLimit := configs["propertiesLimit"].(int)
 	valuesLimit := configs["valuesLimit"].(int)
 
-	currentTimeDatePart := U.TimeNow().Format(U.DATETIME_FORMAT_YYYYMMDD)
+	currentTimeDatePart := U.TimeNowZ().Format(U.DATETIME_FORMAT_YYYYMMDD)
 	uniqueUsersCountKey, err := model.UserCountAnalyticsCacheKey(
 		currentTimeDatePart)
 	if err != nil {
