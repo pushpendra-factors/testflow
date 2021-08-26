@@ -54,6 +54,7 @@ type ProjectSetting struct {
 	IntLinkedinAgentUUID          *string `json:"int_linkedin_agent_uuid"`
 	IntDrift                      *bool   `gorm:"not null;default:false" json:"int_drift,omitempty"`
 	IntGoogleIngestionTimezone    string  `json:"int_google_ingestion_timezone"`
+	IntClearBit                   *bool   `gorm:"not null;default:false" json:"int_clear_bit,omitempty"`
 }
 
 const ProjectSettingKeyToken = "token"

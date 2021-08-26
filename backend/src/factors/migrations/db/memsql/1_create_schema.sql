@@ -384,6 +384,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_google_organic_enabled_agent_uuid text,
     int_google_organic_url_prefixes text,
     int_google_ingestion_timezone text,
+    int_clear_bit boolean NOT NULL DEFAULT FALSE,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
