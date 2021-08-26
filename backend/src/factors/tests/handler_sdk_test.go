@@ -1773,6 +1773,7 @@ func TestSDKGetProjectSettingsHandler(t *testing.T) {
 	assert.NotEqual(t, 0, jsonResponseMap["id"])
 	assert.NotNil(t, jsonResponseMap["auto_track"])
 	assert.NotNil(t, jsonResponseMap["int_drift"])
+	assert.NotNil(t, jsonResponseMap["int_clear_bit"])
 
 	// Test Get project settings with random token.
 	// Returns default settings.

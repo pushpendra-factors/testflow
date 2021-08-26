@@ -205,8 +205,9 @@ func (pg *Postgres) createProjectDependencies(projectID uint64, agentUUID string
 	defaultAutoTrackState := true
 	defaultExcludebotState := true
 	defaultDriftIntegrationState := false
+	defaultClearBitIntegrationState := false
 	_, errCode := createProjectSetting(&model.ProjectSetting{ProjectId: projectID,
-		AutoTrack: &defaultAutoTrackState, ExcludeBot: &defaultExcludebotState, IntDrift: &defaultDriftIntegrationState})
+		AutoTrack: &defaultAutoTrackState, ExcludeBot: &defaultExcludebotState, IntDrift: &defaultDriftIntegrationState, IntClearBit: &defaultClearBitIntegrationState})
 	if errCode != http.StatusCreated {
 		logCtx.Error("Create project settings failed on create project dependencies.")
 		return errCode
