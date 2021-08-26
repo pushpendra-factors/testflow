@@ -7,9 +7,11 @@ import { fetchEventNames, getUserProperties, getEventProperties } from 'Reducers
 import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel } from 'Reducers/factors';
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom'; 
-import moment from 'moment'; 
 import FilterBlock from '../../../components/QueryComposer/FilterBlock';
 import { fetchUserPropertyValues } from 'Reducers/coreQuery/services'; 
+// import MomentTz from 'Components/MomentTz'; 
+import moment from 'moment-timezone';
+
 
 const EventFilterBy = (props) => { 
   const [TrackedEventNames, SetTrackedEventNames] = useState([]); 

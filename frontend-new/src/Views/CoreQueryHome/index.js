@@ -12,7 +12,7 @@ import { MoreOutlined } from '@ant-design/icons';
 import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import { connect, useSelector, useDispatch } from 'react-redux';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
@@ -153,7 +153,7 @@ function CoreQuery({
       settings: q.settings,
       date: (
         <div className='flex justify-between items-center'>
-          <div>{moment(q.created_at).format('MMM DD, YYYY')}</div>
+          <div>{MomentTz(q.created_at).format('MMM DD, YYYY')}</div>
           <div>
             <Dropdown overlay={getMenu(q)} trigger={['hover']}>
               <Button type='text' icon={<MoreOutlined />} />

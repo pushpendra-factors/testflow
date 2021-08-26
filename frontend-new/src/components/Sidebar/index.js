@@ -93,7 +93,8 @@ function Sidebar(props) {
     setVisible(false);
   };
 
-  const switchProject = () => {
+  const switchProject = () => {  
+    localStorage.setItem('activeProject', selectedProject?.id);
     props.setActiveProject(selectedProject);
     history.push('/');
     notification.success({
@@ -102,16 +103,12 @@ function Sidebar(props) {
     });
   };
 
-  useEffect(() => {
-    // document.onkeydown = keydown;
-    // function keydown(evt) {
-    //   // Shift+G to trigger grid debugger
-    //   if (evt.shiftKey && evt.keyCode === 71) { setVisible(!visible); }
-    // }
-    // Setting first project as active project if no-active project exisit in redux-persist/localStorage.
-    if (_.isEmpty(props.active_project)) {
-      props.setActiveProject(props.projects[0]);
-    }
+  useEffect(() => { 
+
+    let activeItem = props?.projects?.filter((item)=> item.id==localStorage.getItem('activeProject'))
+    let projectDetails = _.isEmpty(activeItem) ? props.projects[0] : activeItem[0]
+    props.setActiveProject(projectDetails); 
+    
   }, []);
 
   return (

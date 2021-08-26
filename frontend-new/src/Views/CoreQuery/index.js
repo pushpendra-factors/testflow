@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useReducer,
 } from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import QueryComposer from '../../components/QueryComposer';
@@ -273,7 +273,7 @@ function CoreQuery({
       try {
         if (!durationObj) {
           durationObj = dateRange;
-        }
+        } 
         const query = getQuery(
           groupBy,
           queries,
@@ -628,8 +628,8 @@ function CoreQuery({
       }
 
       const payload = {
-        from: moment(from).startOf('day'),
-        to: moment(to).endOf('day'),
+        from: MomentTz(from).startOf('day'),
+        to: MomentTz(to).endOf('day'),
         frequency,
         dateType,
       };
@@ -658,10 +658,12 @@ function CoreQuery({
         ...payload,
       };
 
-      if (queryType === QUERY_TYPE_FUNNEL) {
+      if (queryType === QUERY_TYPE_FUNNEL) { 
+        console.log('QUERY_TYPE_EVENT')
         runFunnelQuery(querySaved, appliedDateRange, isCompareDate);
       }
       if (queryType === QUERY_TYPE_EVENT) {
+        console.log('QUERY_TYPE_EVENT')
         runQuery(querySaved, appliedDateRange);
       }
 

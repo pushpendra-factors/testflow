@@ -3,7 +3,7 @@ import { Button, Tooltip } from 'antd';
 import { Text, SVG } from '../../components/factorsComponents';
 import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import FaDatepicker from '../../components/FaDatepicker';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import { connect } from 'react-redux';
 import { DASHBOARD_TYPES } from '../../utils/constants';
 
@@ -94,7 +94,7 @@ function DashboardSubMenu({
               className={'fa-button-ghost p-0 py-2'}
             >
               {activeDashboard?.refreshed_at
-                ? moment.unix(activeDashboard.refreshed_at).fromNow()
+                ? MomentTz.unix(activeDashboard.refreshed_at).fromNow()
                 : 'Refresh Data'}
             </Button>
           </Tooltip>

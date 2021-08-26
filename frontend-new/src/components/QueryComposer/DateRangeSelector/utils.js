@@ -1,7 +1,6 @@
 /* eslint-disable */
 import { createStaticRanges } from 'react-date-range';
-import moment from 'moment';
-import mt from 'moment-timezone';
+import MomentTz from 'Components/MomentTz';
 
 export const DATE_RANGE_LABEL_CURRENT_MONTH = 'This Month';
 export const DEFAULT_DATE_RANGE_LABEL = 'This Week';
@@ -15,11 +14,11 @@ export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins';
 
 export const DEFAULT_DATE_RANGE = {
   ...(!isTodayTheFirstDayOfWeek() && {
-    startDate: moment(getFirstDayOfCurrentWeek()).startOf('day').toDate(),
-    endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate()
+    startDate: MomentTz(getFirstDayOfCurrentWeek()).startOf('day').toDate(),
+    endDate: MomentTz(new Date()).subtract(1, 'days').endOf('day').toDate()
   }),
   ...(isTodayTheFirstDayOfWeek() && {
-    startDate: moment(new Date()).startOf('day').toDate(),
+    startDate: MomentTz(new Date()).startOf('day').toDate(),
     endDate: new Date()
   }),
   label: DEFAULT_DATE_RANGE_LABEL,
@@ -74,35 +73,35 @@ const DEFAULT_DATE_RANGES = [
   {
     label: DATE_RANGE_TODAY_LABEL,
     range: () => ({
-      startDate: moment(new Date()).startOf('day').toDate(),
+      startDate: MomentTz(new Date()).startOf('day').toDate(),
       endDate: new Date()
     }),
     isSelected(range) {
       const definedRange = this.range();
       return (
-        moment(range.startDate).isSame(definedRange.startDate, 'seconds') &&
-        moment(range.endDate).isSame(definedRange.endDate, 'seconds')
+        MomentTz(range.startDate).isSame(definedRange.startDate, 'seconds') &&
+        MomentTz(range.endDate).isSame(definedRange.endDate, 'seconds')
       );
     }
   },
   {
     label: DATE_RANGE_YESTERDAY_LABEL,
     range: () => ({
-      startDate: moment(new Date()).subtract(1, 'days').startOf('day').toDate(),
-      endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate()
+      startDate: MomentTz(new Date()).subtract(1, 'days').startOf('day').toDate(),
+      endDate: MomentTz(new Date()).subtract(1, 'days').endOf('day').toDate()
     })
   },
   {
     label: DEFAULT_DATE_RANGE_LABEL,
     ...(!isTodayTheFirstDayOfWeek() && {
       range: () => ({
-        startDate: moment(getFirstDayOfCurrentWeek()).startOf('day').toDate(),
-        endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate()
+        startDate: MomentTz(getFirstDayOfCurrentWeek()).startOf('day').toDate(),
+        endDate: MomentTz(new Date()).subtract(1, 'days').endOf('day').toDate()
       })
     }),
     ...(isTodayTheFirstDayOfWeek() && {
       range: () => ({
-        startDate: moment(new Date()).startOf('day').toDate(),
+        startDate: MomentTz(new Date()).startOf('day').toDate(),
         endDate: new Date()
       })
     })
@@ -111,13 +110,13 @@ const DEFAULT_DATE_RANGES = [
     label: DATE_RANGE_LABEL_CURRENT_MONTH,
     ...(!isTodayTheFirstDayOfMonth() && {
       range: () => ({
-        startDate: moment(getFirstDayOfCurrentMonth()).startOf('day').toDate(),
-        endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate()
+        startDate: MomentTz(getFirstDayOfCurrentMonth()).startOf('day').toDate(),
+        endDate: MomentTz(new Date()).subtract(1, 'days').endOf('day').toDate()
       })
     }),
     ...(isTodayTheFirstDayOfMonth() && {
       range: () => ({
-        startDate: moment(new Date()).startOf('day').toDate(),
+        startDate: MomentTz(new Date()).startOf('day').toDate(),
         endDate: new Date()
       })
     })
@@ -125,22 +124,22 @@ const DEFAULT_DATE_RANGES = [
   {
     label: DATE_RANGE_LABEL_LAST_WEEK,
     range: () => ({
-      startDate: moment(getFirstDayOfLastWeek()).startOf('day').toDate(),
-      endDate: moment(getLastDayOfLastWeek()).endOf('day').toDate()
+      startDate: MomentTz(getFirstDayOfLastWeek()).startOf('day').toDate(),
+      endDate: MomentTz(getLastDayOfLastWeek()).endOf('day').toDate()
     })
   },
   {
     label: DATE_RANGE_LABEL_LAST_MONTH,
     range: () => ({
-      startDate: moment(getFirstDayOfLastMonth()).startOf('day').toDate(),
-      endDate: moment(getLastDayOfLastMonth()).endOf('day').toDate()
+      startDate: MomentTz(getFirstDayOfLastMonth()).startOf('day').toDate(),
+      endDate: MomentTz(getLastDayOfLastMonth()).endOf('day').toDate()
     })
   },
   {
     label: DATE_RANGE_LABEL_LAST_7_DAYS,
     range: () => ({
-      startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),
-      endDate: moment(new Date())
+      startDate: MomentTz(new Date()).subtract(7, 'days').startOf('day').toDate(),
+      endDate: MomentTz(new Date())
     })
   }
 ];
@@ -149,28 +148,28 @@ export const DEFAULT_TODAY_DATE_RANGES = [
   {
     label: DATE_RANGE_LAST_2_MIN_LABEL,
     range: () => ({
-      startDate: moment(new Date()).subtract(60 * 2, 'seconds').toDate(),
+      startDate: MomentTz(new Date()).subtract(60 * 2, 'seconds').toDate(),
       endDate: new Date()
     }),
     isSelected(range) {
       const definedRange = this.range();
       return (
-        moment(range.startDate).isSame(definedRange.startDate, 'seconds') &&
-        moment(range.endDate).isSame(definedRange.endDate, 'seconds')
+        MomentTz(range.startDate).isSame(definedRange.startDate, 'seconds') &&
+        MomentTz(range.endDate).isSame(definedRange.endDate, 'seconds')
       );
     }
   },
   {
     label: DATE_RANGE_LAST_30_MIN_LABEL,
     range: () => ({
-      startDate: moment(new Date()).subtract(60 * 30, 'seconds').toDate(),
+      startDate: MomentTz(new Date()).subtract(60 * 30, 'seconds').toDate(),
       endDate: new Date()
     }),
     isSelected(range) {
       const definedRange = this.range();
       return (
-        moment(range.startDate).isSame(definedRange.startDate, 'seconds') &&
-        moment(range.endDate).isSame(definedRange.endDate, 'seconds')
+        MomentTz(range.startDate).isSame(definedRange.startDate, 'seconds') &&
+        MomentTz(range.endDate).isSame(definedRange.endDate, 'seconds')
       );
     }
   }
@@ -190,8 +189,8 @@ export const WEB_ANALYTICS_DEFINED_DATE_RANGES = createStaticRanges([...DEFAULT_
 //   }
 
 //   return [{
-//     startDate: moment.unix(storedRange.fr).toDate(),
-//     endDate: moment.unix(storedRange.to).toDate(),
+//     startDate: MomentTz.unix(storedRange.fr).toDate(),
+//     endDate: MomentTz.unix(storedRange.to).toDate(),
 //     key: 'selected'
 //   }];
 // };
@@ -199,19 +198,19 @@ export const WEB_ANALYTICS_DEFINED_DATE_RANGES = createStaticRanges([...DEFAULT_
 export const readableDateRange = function (range) {
   const defaultRange = DEFAULT_DATE_RANGES.filter((rng) => {
     const rngDates = rng.range();
-    return moment(rngDates.startDate).isSame(moment(range.startDate)) && moment(rngDates.endDate).isSame(moment(range.endDate));
+    return MomentTz(rngDates.startDate).isSame(MomentTz(range.startDate)) && MomentTz(rngDates.endDate).isSame(MomentTz(range.endDate));
   });
   if (defaultRange.length) {
     return defaultRange[0].label;
   }
 
-  return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
-    moment(range.endDate).format('MMM DD, YYYY');
+  return MomentTz(range.startDate).format('MMM DD, YYYY') + ' - ' +
+    MomentTz(range.endDate).format('MMM DD, YYYY');
 };
 
 export const displayRange = (range) => {
-  return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
-    moment(range.endDate).format('MMM DD, YYYY');
+  return MomentTz(range.startDate).format('MMM DD, YYYY') + ' - ' +
+    MomentTz(range.endDate).format('MMM DD, YYYY');
 }
 
 export const getDateRange = (durationObj) => {
@@ -223,8 +222,8 @@ export const getDateRange = (durationObj) => {
     queryOptionsState.from &&
     queryOptionsState.to
   ) {
-    ranges[0].startDate = moment(queryOptionsState.from).toDate();
-    ranges[0].endDate = moment(queryOptionsState.to).toDate();
+    ranges[0].startDate = MomentTz(queryOptionsState.from).toDate();
+    ranges[0].endDate = MomentTz(queryOptionsState.to).toDate();
   }
 
   return ranges;

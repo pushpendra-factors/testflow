@@ -87,6 +87,7 @@ const ConfigureDP = (props) => {
 
 
   const onChangeEventDD = (grp, value) => {
+    console.log('grp, value onChangeEventDD',grp, value);
     setShowDropDown(false);  
     const EventData = {
       "event_name": `${value[1] ? value[1] : value[0]}`
@@ -102,6 +103,7 @@ const ConfigureDP = (props) => {
   }
   
   const onChangeUserPropertiesDD = (grp, value) => {
+    console.log('grp, value onChangeUserPropertiesDD',grp, value);
     setShowDropDown1(false);  
     const UserPropertyData = {
       "user_property_name": `${value[1] ? value[1] : value[0]}`

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DateRangePicker } from 'react-date-range';
 import styles from './index.module.scss';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import {
   DEFINED_DATE_RANGES,
   DEFAULT_DATE_RANGE
@@ -26,8 +26,8 @@ const DateRangeSelector = ({
     if (!selectedDate || !selectedDate.selected) return;
 
     const ranges = [{ ...DEFAULT_DATE_RANGE }];
-    ranges[0].startDate = moment(selectedDate.selected.startDate).toDate();
-    ranges[0].endDate = moment(selectedDate.selected.endDate).toDate();
+    ranges[0].startDate = MomentTz(selectedDate.selected.startDate).toDate();
+    ranges[0].endDate = MomentTz(selectedDate.selected.endDate).toDate();
 
     setSelectedRngState(ranges);
   };
@@ -43,7 +43,7 @@ const DateRangeSelector = ({
             staticRanges={ DEFINED_DATE_RANGES }
             inputRanges={[]}
             minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
-            maxDate={moment(new Date()).subtract(1, 'days').endOf('day').toDate()}
+            maxDate={MomentTz(new Date()).subtract(1, 'days').endOf('day').toDate()}
             closeDatePicker={closeDatePicker} />
             <div className={styles.dt_actions}>
               <Button className={'mr-2'} onClick={closeDatePicker}>Cancel</Button>
