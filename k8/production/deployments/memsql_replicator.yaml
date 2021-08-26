@@ -65,6 +65,8 @@ spec:
           - $(MEMSQL_CERTIFICATE)
           - --project_ids
           - "*"
+          - --exclude_tables
+          - $(MEMESQL_REPLICATOR_EXCLUDED_TABLES)
           - --page_size
           - "10000"
         envFrom:
@@ -74,6 +76,8 @@ spec:
             name: config-postgres
         - configMapRef:
             name: config-memsql
+        - configMapRef:
+            name: config-replication
         - secretRef:
             name: secret-postgres
         - secretRef:
