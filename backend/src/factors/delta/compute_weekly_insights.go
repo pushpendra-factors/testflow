@@ -74,6 +74,7 @@ var Funnel string = "Funnel"
 
 var BlackListedKeys map[string]bool
 var WhiteListedKeys map[string]bool
+var DecreaseBoostKeys map[string]bool
 
 func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, EventType string) WeeklyInsights {
 	var KeyMapForConversion = make(map[string]bool)
@@ -188,6 +189,8 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.DeltaRatio = file.DeltaRatio[keys][keys2] * temp.W1
 						if WhiteListedKeys[value.Key] {
 							temp.DeltaRatio *= 2 // boosting the sorting factor if upvoted
+						}else if DecreaseBoostKeys[value.Key]{
+							temp.DeltaRatio *= 0.5 // reverse
 						}
 					}
 
@@ -315,6 +318,8 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
 						if WhiteListedKeys[val2.Key] {
 							temp.JSDivergence *= 2 // boosting 2X
+						}else if DecreaseBoostKeys[val2.Key]{
+							temp.JSDivergence *= 0.5
 						}
 					}
 					val2.ActualValues = temp
@@ -369,6 +374,8 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
 						if WhiteListedKeys[val2.Key] {
 							temp.JSDivergence *= 2
+						}else if DecreaseBoostKeys[val2.Key]{
+							temp.JSDivergence *= 0.5
 						}
 					}
 					val2.ActualValues = temp
@@ -501,7 +508,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	if isEventOccurence {
 		EventType = CRM
 	}
-	 	BlackListedKeys = map[string]bool{
+	BlackListedKeys = map[string]bool{
 		"$day_of_week":                 true,
 		"$page_raw_url":                true,
 		"$initial_page_domain":         true,
@@ -517,8 +524,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 		"$joinTime":      true,
 	}
 	WhiteListedKeys = make(map[string]bool)
-	fmt.Println(WhiteListedKeys,BlackListedKeys)
-	CaptureBlackListedAndWhiteListedKeys(projectId, agentUUID)
+	CaptureBlackListedAndWhiteListedKeys(projectId, agentUUID, queryId)
 	insightsObj := GetInsights(insights, numberOfRecords, class, EventType)
 	// adding query groups
 	gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj)
@@ -565,6 +571,8 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.DeltaRatio = file.DeltaRatio[property][values] * temp.W1
 							if WhiteListedKeys[property] {
 								temp.DeltaRatio *= 2
+							}else if DecreaseBoostKeys[property]{
+								temp.DeltaRatio *= 0.5
 							}
 						}
 
@@ -648,6 +656,8 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.JSDivergence = file.JSDivergence.Target[property][values] * temp.W1
 							if WhiteListedKeys[property] {
 								temp.JSDivergence *= 2
+							}else if DecreaseBoostKeys[property]{
+								temp.JSDivergence *= 0.5
 							}
 
 						}
@@ -689,6 +699,8 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.JSDivergence = file.JSDivergence.Base[property][values]
 							if WhiteListedKeys[property] {
 								temp.JSDivergence *= 2
+							}else if DecreaseBoostKeys[property]{
+								temp.JSDivergence *= 0.5
 							}
 
 						}
@@ -779,11 +791,13 @@ func removeNegativePercentageFromInsights(insightsObj *WeeklyInsights) {
 	}
 
 }
-func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string) {
+func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string, queryID uint64) {
 	records, err := store.GetStore().GetRecordsFromFeedback(projectID, agentUUID)
 	if err != nil {
 		log.Error(err)
 	}
+	DecreaseBoostKeys = make(map[string]bool)
+
 	for _, record := range records {
 		bytes, err := json.Marshal(record.Property)
 		if err != nil {
@@ -795,7 +809,11 @@ func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string) {
 		if record.VoteType == model.VOTE_TYPE_UPVOTE { // upvote
 			WhiteListedKeys[property.Key] = true
 		} else { // downvote
-			BlackListedKeys[property.Key] = true
+			if property.QueryID == queryID {
+				BlackListedKeys[property.Key] = true
+			} else {
+				DecreaseBoostKeys[property.Key] = true
+			}
 		}
 
 	}

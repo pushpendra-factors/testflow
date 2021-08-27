@@ -19,14 +19,15 @@ func TestPostFeedback(t *testing.T) {
 		Key:         "$browser",
 		Value:       "Chrome",
 		QueryID:     123,
+		Type:        "Conversion",
 		Order:       2,
 		Entity:      "up",
 		IsIncreased: true,
 		Date:        "",
 	}
-	propertyBytes,err:= json.Marshal(WIProperty)
-	assert.Nil(t,err)
-	property:= postgres.Jsonb{RawMessage:json.RawMessage(propertyBytes)}
+	propertyBytes, err := json.Marshal(WIProperty)
+	assert.Nil(t, err)
+	property := postgres.Jsonb{RawMessage: json.RawMessage(propertyBytes)}
 	status, errmsg := store.GetStore().PostFeedback(1, agent.UUID, "WeeklyInsights", &property, 2)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, "", errmsg)

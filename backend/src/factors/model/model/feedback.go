@@ -23,6 +23,7 @@ type WeeklyInsightsProperty struct {
 	Key         string `json:"key"`
 	Value       string `json:"value"`
 	QueryID     uint64 `json:"query_id"`
+	Type        string `json:"type"`
 	Order       int    `json:"order"`
 	Entity      string `json:"entity"`
 	IsIncreased bool   `json:"is_increased"`
