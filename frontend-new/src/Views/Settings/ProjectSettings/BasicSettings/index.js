@@ -17,7 +17,7 @@ function BasicSettings({
       await fetchProjectAgents(activeProject.id);
     };
     getData();
-  });
+  }, [activeProject]);
   return (
     <>
     {editMode ? <EditBasicSettings setEditMode={setEditMode} /> : <ViewBasicSettings setEditMode={setEditMode} /> }
