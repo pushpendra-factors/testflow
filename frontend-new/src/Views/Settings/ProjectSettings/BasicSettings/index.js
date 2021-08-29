@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ViewBasicSettings from './ViewBasicSettings';
 import EditBasicSettings from './EditBasicSettings';
 import { connect } from 'react-redux';
-import { fetchProjectAgents, fetchAgentInfo, fetchProjects } from 'Reducers/agentActions';
+import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
+import { fetchProjects } from "Reducers/global";
 
 function BasicSettings({
   fetchProjectAgents, fetchAgentInfo, fetchProjects, activeProject

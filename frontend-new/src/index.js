@@ -40,7 +40,7 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['agent', 'factors']
+  whitelist: ['agent','factors']
 };
 const persistedReducer = persistReducer(persistConfig, reducers);
 

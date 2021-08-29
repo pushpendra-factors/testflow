@@ -274,7 +274,7 @@ function AddDashboard({
       }
     }
   }, [activeKey, editDashboard, selectedQueries.length]);
-
+  
   return (
     <>
       <Modal

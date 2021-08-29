@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense } from "react"; 
+import React, { useEffect, Suspense } from "react"; 
 import { connect } from "react-redux";
 import {
   BrowserRouter as Router,
@@ -11,8 +11,7 @@ import * as Sentry from "@sentry/react";
 import LogRocket from "logrocket";
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
-import {ErrorBoundary} from 'react-error-boundary'; 
-import { enableSearchConsoleIntegration } from "./reducers/global";
+import { ErrorBoundary } from 'react-error-boundary';
 import { setActiveProject } from 'Reducers/global';
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
@@ -23,11 +22,6 @@ const Activate = lazyWithRetry(() => import("./Views/Pages/Activate"));
 const Templates = lazyWithRetry(() => import("./Views/CoreQuery/Templates/ResultsPage"));
 const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
 const FactorsInsights = lazyWithRetry(() => import("./Views/Factors/FactorsInsights"));
-
-// import AppLayout from "./Views/AppLayout"; 
-// import FactorsInsights from "./Views/Factors/FactorsInsights";
-
-
 
 function App({ isAgentLoggedIn, agent_details, active_project, projects, setActiveProject }) {
 
@@ -138,14 +132,14 @@ function App({ isAgentLoggedIn, agent_details, active_project, projects, setActi
   });
 
 
-  useEffect(() => { 
- 
-    if(projects){
-      let activeItem = projects?.filter((item)=> item.id==localStorage.getItem('activeProject')) 
-      let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0] 
-      setActiveProject(projectDetails);  
+  useEffect(() => {
+    if (projects.length) {
+      let activeItem = projects?.filter(
+        (item) => item.id == localStorage.getItem('activeProject')
+      );
+      let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0];
+      setActiveProject(projectDetails);
     }
-    
   }, [projects]);
 
   return (
@@ -206,9 +200,9 @@ function App({ isAgentLoggedIn, agent_details, active_project, projects, setActi
 
 const mapStateToProps = (state) => ({
   isAgentLoggedIn: state.agent.isLoggedIn,
-  projects: state.agent.projects,
+  projects: state.global.projects,
   agent_details: state.agent.agent_details,
   active_project: state.global.active_project, 
 });
 
-export default connect(mapStateToProps,  { setActiveProject} )(App);
+export default connect(mapStateToProps, { setActiveProject })(App);

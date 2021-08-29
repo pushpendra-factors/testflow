@@ -213,7 +213,7 @@ function Sidebar(props) {
 }
 const mapStateToProps = (state) => {
   return {
-    projects: state.agent.projects,
+    projects: state.global.projects,
     active_project: state.global.active_project,
     currentAgent: state.agent.agent_details
   };
