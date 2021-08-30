@@ -18,13 +18,11 @@ const DriftIntegration = ({
 }) =>{  
     const [loading, setLoading] = useState(false); 
 
-useEffect(()=>{
-    fetchProjectSettings(activeProject.id).then(()=>{ 
-      if(currentProjectSettings?.int_drift){
+    useEffect(() => {
+      if (currentProjectSettings?.int_drift) {
         setIsActive(true);
       }
-    })
-},[]);
+    }, [currentProjectSettings]);
 
 const enableDrift = () => { 
     setLoading(true); 
