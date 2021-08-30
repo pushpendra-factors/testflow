@@ -224,10 +224,10 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
         })
         .then(function() {
-            return _this.autoDriftEventsCapture(_this.getConfig("int_drift"));
+            return _this.autoDriftEventsCapture(_this, _this.getConfig("int_drift"));
         })
         .then(function() {
-            return _this.autoClearbitRevealCapture(_this.getConfig("int_clear_bit"));
+            return _this.autoClearbitRevealCapture(_this, _this.getConfig("int_clear_bit"));
         })
         .catch(function(err) {
             logger.errorLine(err);
