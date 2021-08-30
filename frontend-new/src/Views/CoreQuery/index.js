@@ -273,7 +273,7 @@ function CoreQuery({
       try {
         if (!durationObj) {
           durationObj = dateRange;
-        } 
+        }
         const query = getQuery(
           groupBy,
           queries,
@@ -658,12 +658,10 @@ function CoreQuery({
         ...payload,
       };
 
-      if (queryType === QUERY_TYPE_FUNNEL) { 
-        console.log('QUERY_TYPE_EVENT')
+      if (queryType === QUERY_TYPE_FUNNEL) {
         runFunnelQuery(querySaved, appliedDateRange, isCompareDate);
       }
       if (queryType === QUERY_TYPE_EVENT) {
-        console.log('QUERY_TYPE_EVENT')
         runQuery(querySaved, appliedDateRange);
       }
 

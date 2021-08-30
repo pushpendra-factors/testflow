@@ -320,7 +320,7 @@ function CoreQuery({
           equivalentQuery = getStateQueryFromRequestQuery(record.query);
           updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
         }
-        updateSavedQuerySettings(record.settings);
+        updateSavedQuerySettings(record.settings || {});
         setQueryType(equivalentQuery.queryType);
         setRowClicked({
           queryType: equivalentQuery.queryType,
