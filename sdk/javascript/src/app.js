@@ -85,18 +85,34 @@ function getLastPollerId() {
     return factorsWindow().lastPollerId;
 }
 
-function waitForGlobalKey(key, callback, timer = 0) {
-    if (window[key]) {
-      callback();
+function isObject(obj) {
+  return Object.prototype.toString.call(obj) === '[object Object]';
+}
+
+function waitForGlobalKey(key, callback, timer = 0, subkey = null) {
+  if (window[key]) {
+    if (subkey) {
+      if (Array.isArray(window[key])) {
+        const isPresent = window[key].find((elem) => {
+          return isObject(elem) && Object.keys(elem).indexOf(subkey) > -1;
+        });
+        if (isPresent) {
+          callback();
+          return;
+        }
+      }
     } else {
-    if(timer <= 10) {
-        logger.debug("Checking for key: times " + timer, false);
-        setTimeout(function() {
-            waitForGlobalKey(key, callback, timer + 1);
-        }, 10000);
+      callback();
+      return;
     }
-    }
-};
+  }
+  if (timer <= 10) {
+    logger.debug('Checking for key: times ' + timer, false);
+    setTimeout(function () {
+      waitForGlobalKey(key, callback, timer + 1, subkey);
+    }, 10000);
+  }
+}
 
 const FACTORS_WINDOW_TIMEOUT_KEY_PREFIX = 'lastTimeoutId_';
 
@@ -208,7 +224,10 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
         })
         .then(function() {
-            return _this.autoDriftEventsCapture(_this, true);
+            return _this.autoDriftEventsCapture(_this.getConfig("int_drift"));
+        })
+        .then(function() {
+            return _this.autoClearbitRevealCapture(_this.getConfig("int_clear_bit"));
         })
         .catch(function(err) {
             logger.errorLine(err);
@@ -464,6 +483,82 @@ App.prototype.autoDriftEventsCapture = function(appInstance, enabled) {
 
     return true;
 }
+
+function handleRevealData(appInstance) {
+  const revealData = window.dataLayer.find(function (d) {
+    return isObject(d) && Object.keys(d).indexOf('reveal') > -1;
+  }).reveal;
+  const availableProperties = {};
+  if (revealData) {
+    if (revealData.company && isObject(revealData.company)) {
+      const companyData = revealData.company;
+      const companyPrefix = '$clr_company';
+
+      if (companyData.name) {
+        availableProperties[companyPrefix + '_name'] = companyData.name;
+      }
+
+      if (companyData.geo && isObject(companyData.geo)) {
+        const companyGeographicalData = companyData.geo;
+        const requiredGeographicalKeys = [
+          'city',
+          'country',
+          'postalCode',
+          'state',
+          'stateCode',
+          'countryCode',
+          'lat',
+          'lng',
+        ];
+        const availableGeographicalKeys = requiredGeographicalKeys.filter(
+          (key) => companyGeographicalData[key]
+        );
+        for (let i = 0; i < availableGeographicalKeys.length; i++) {
+          const key = availableGeographicalKeys[i];
+          availableProperties[companyPrefix + '_geo_' + key] =
+            companyGeographicalData[key];
+        }
+      }
+
+      if (companyData.metrics && isObject(companyData.metrics)) {
+        const companyMetricsData = companyData.metrics;
+        const requiredMetricsKeys = [
+          'alexaUsRank',
+          'alexaGlobalRank',
+          'employees',
+          'employeesRange',
+          'marketCap',
+          'raised',
+          'annualRevenue',
+          'estimatedAnnualRevenue',
+          'fiscalYearEnd',
+        ];
+        const availableMetricsKeys = requiredMetricsKeys.filter(
+          (key) => companyMetricsData[key]
+        );
+        for (let i = 0; i < availableMetricsKeys.length; i++) {
+          const key = availableMetricsKeys[i];
+          availableProperties[companyPrefix + '_metrics_' + key] =
+            companyMetricsData[key];
+        }
+      }
+    }
+  }
+  if (Object.keys(availableProperties).length) {
+    appInstance.addUserProperties(availableProperties);
+  }
+}
+
+App.prototype.autoClearbitRevealCapture = function (appInstance, enabled) {
+  if (!enabled) return false; // not enabled.
+  waitForGlobalKey(
+    'dataLayer',
+    handleRevealData.bind(null, appInstance),
+    0,
+    'reveal'
+  );
+  return true;
+};
 
 App.prototype.autoFormCapture = function(enabled=false) {
     if (!enabled) return false; // not enabled.
