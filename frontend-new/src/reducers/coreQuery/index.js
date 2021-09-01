@@ -35,7 +35,13 @@ import {
 } from '../types';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 
-const DEFAULT_TOUCHPOINTS = ['Campaign', 'Source', 'AdGroup', 'Keyword'];
+const DEFAULT_TOUCHPOINTS = [
+  'Campaign',
+  'Source',
+  'AdGroup',
+  'Keyword',
+  'Channel',
+];
 
 const defaultState = {
   eventOptions: [],
@@ -47,7 +53,7 @@ const defaultState = {
   },
   touchpointOptions: [
     {
-      label: 'Paid Marketing',
+      label: 'Digital',
       icon: 'fav',
       values: DEFAULT_TOUCHPOINTS.map((v) => [v]),
     },

@@ -255,7 +255,6 @@ const AttributionsChart = forwardRef(
       );
     }
 
-    console.log('tableData', tableData);
     return (
       <div className='flex items-center justify-center flex-col'>
         <div className='w-full'>{chart}</div>

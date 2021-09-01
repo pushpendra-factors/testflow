@@ -26,7 +26,7 @@ const MarkTouchpointBlock = ({
   const [filterDD, setFilterDD] = useState(false);
   const [filterProps, setFilterProperties] = useState({
     event: [],
-    user: []
+    user: [],
   });
 
   useEffect(() => {
@@ -49,18 +49,20 @@ const MarkTouchpointBlock = ({
     fltrs[index] = val;
     setTouchPointFilters(fltrs);
     setFilterDD(false);
-  }
+  };
 
   const delFilter = (index) => {
     const fltrs = [...filters].filter((f, i) => i !== index);
     setTouchPointFilters(fltrs);
     setFilterDD(false);
-  }
+  };
 
-  const addFilterBlock = () => { setFilterDD(true) };
+  const addFilterBlock = () => {
+    setFilterDD(true);
+  };
 
   const deleteItem = () => {
-    setTouchpoint("");
+    setTouchpoint('');
     setFilters([]);
   };
   const toggleTouchPointSelect = () => {
@@ -68,9 +70,11 @@ const MarkTouchpointBlock = ({
   };
 
   const onEventSelect = (val) => {
-    let currTouchpoint = (' ' + touchPoint).slice(1);
-    currTouchpoint = val;
-    setTouchpoint(currTouchpoint);
+    if (val === 'Channel') {
+      setTouchpoint('ChannelGroup');
+    } else {
+      setTouchpoint(val);
+    }
     setTouchPointFilters([]);
     setSelectVisible(false);
   };
@@ -102,7 +106,8 @@ const MarkTouchpointBlock = ({
           <SVG name={'plus'} color={'purple'}></SVG>
         </div>
 
-        {<Button size={'large'} type='link' onClick={toggleTouchPointSelect}>
+        {
+          <Button size={'large'} type='link' onClick={toggleTouchPointSelect}>
             Add a Touchpoint
           </Button>
         }
@@ -165,39 +170,44 @@ const MarkTouchpointBlock = ({
       filters.forEach((filt, id) => {
         filtrs.push(
           <div key={id} className={`mt-4`}>
-            <AttrFilterBlock activeProject={activeProject}
+            <AttrFilterBlock
+              activeProject={activeProject}
               index={id}
-              blockType={'event'} filterType={'channel'}
+              blockType={'event'}
+              filterType={'channel'}
               filter={filt}
               insertFilter={(val) => editFilter(id, val)}
               closeFilter={() => setFilterDD(false)}
               deleteFilter={delFilter}
               closeFilter={() => setFilterDD(false)}
-              typeProps={{ channel: "all_ads" }} filterProps={filterProps}
+              typeProps={{ channel: 'all_ads' }}
+              filterProps={filterProps}
               propsConstants={Object.keys(filterProps)}
             ></AttrFilterBlock>
           </div>
-        )
-      })
+        );
+      });
 
       if (filterDD) {
         filtrs.push(
           <div key={filtrs.length} className={`mt-4`}>
-            <AttrFilterBlock activeProject={activeProject}
-              blockType={'event'} filterType={'channel'}
-
+            <AttrFilterBlock
+              activeProject={activeProject}
+              blockType={'event'}
+              filterType={'channel'}
               delBtnClass={styles.filterDelBtn}
-              typeProps={{ channel: 'all_ads' }} filterProps={filterProps}
+              typeProps={{ channel: 'all_ads' }}
+              filterProps={filterProps}
               propsConstants={Object.keys(filterProps)}
               insertFilter={insertFilter}
               deleteFilter={() => setFilterDD(false)}
               closeFilter={() => setFilterDD(false)}
             ></AttrFilterBlock>
           </div>
-        )
+        );
       }
 
-      return (<div className={styles.block}>{filtrs}</div>);
+      return <div className={styles.block}>{filtrs}</div>;
     }
   };
 
@@ -206,9 +216,10 @@ const MarkTouchpointBlock = ({
       <div
         className={`${styles.block__content} fa--query_block_section--basic`}
       >
-        {<Button type='link' onClick={toggleTouchPointSelect}>
+        {
+          <Button type='link' onClick={toggleTouchPointSelect}>
             <SVG name='mouseevent' extraClass={'mr-1'}></SVG>
-            {touchPoint}
+            {touchPoint === 'ChannelGroup' ? 'Channel' : touchPoint}
           </Button>
         }
 
