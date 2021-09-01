@@ -537,46 +537,49 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 		}
 	}
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
-	if err != nil {
-		return nil, err
-	}
-
-	filterStmnt := "ConvertedOpportunityId IN (" + "'" + strings.Join(oppIDs, "','") + "')"
-	paginatedLeads, err := salesforceDataClient.getRecordByObjectNameANDFilter(model.SalesforceDocumentTypeNameLead, filterStmnt)
-	if err != nil {
-		return nil, err
-	}
-
-	var objectRecords []model.SalesforceRecord
-	done := false
-	for !done {
-		objectRecords, done, err = paginatedLeads.getNextBatch()
+	batchedOppIDs := util.GetStringListAsBatch(oppIDs, 50)
+	for bi := range batchedOppIDs {
+		salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
 		if err != nil {
 			return nil, err
 		}
 
-		for i := range objectRecords {
-			leadID := util.GetPropertyValueAsString(objectRecords[i]["Id"])
-			if leadID != "" {
-				convertOppID := util.GetPropertyValueAsString(objectRecords[i]["ConvertedOpportunityId"])
-				if convertOppID != "" {
-					if leadID, exist := oppToLeadID[convertOppID]; exist && leadID != "" {
-						log.WithFields(log.Fields{"lead_id": leadID}).Error("Duplicate opportunity id on multiple leads")
-					}
+		filterStmnt := "ConvertedOpportunityId IN (" + "'" + strings.Join(batchedOppIDs[bi], "','") + "')"
+		paginatedLeads, err := salesforceDataClient.getRecordByObjectNameANDFilter(model.SalesforceDocumentTypeNameLead, filterStmnt)
+		if err != nil {
+			return nil, err
+		}
 
-					oppToLeadID[convertOppID] = leadID
-				} else {
-					log.WithFields(log.Fields{"project_id": projectID}).Warn("Missing ConvertedOpportunityId on lead document")
-				}
-
-			} else {
-				log.WithFields(log.Fields{"project_id": projectID}).Error("Missing lead id on lead document")
+		var objectRecords []model.SalesforceRecord
+		done := false
+		for !done {
+			objectRecords, done, err = paginatedLeads.getNextBatch()
+			if err != nil {
+				return nil, err
 			}
 
-			err = store.GetStore().BuildAndUpsertDocument(projectID, model.SalesforceDocumentTypeNameLead, objectRecords[i])
-			if err != nil {
-				log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to BuildAndUpsertDocument opportunity lead sync .")
+			for i := range objectRecords {
+				leadID := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+				if leadID != "" {
+					convertOppID := util.GetPropertyValueAsString(objectRecords[i]["ConvertedOpportunityId"])
+					if convertOppID != "" {
+						if leadID, exist := oppToLeadID[convertOppID]; exist && leadID != "" {
+							log.WithFields(log.Fields{"lead_id": leadID}).Error("Duplicate opportunity id on multiple leads")
+						}
+
+						oppToLeadID[convertOppID] = leadID
+					} else {
+						log.WithFields(log.Fields{"project_id": projectID}).Warn("Missing ConvertedOpportunityId on lead document")
+					}
+
+				} else {
+					log.WithFields(log.Fields{"project_id": projectID}).Error("Missing lead id on lead document")
+				}
+
+				err = store.GetStore().BuildAndUpsertDocument(projectID, model.SalesforceDocumentTypeNameLead, objectRecords[i])
+				if err != nil {
+					log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to BuildAndUpsertDocument opportunity lead sync .")
+				}
 			}
 		}
 	}

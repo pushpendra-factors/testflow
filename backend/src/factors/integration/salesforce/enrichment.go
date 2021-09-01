@@ -55,8 +55,8 @@ type RelationshipCampaignMember struct {
 }
 
 var opportunityMappingOrder = []string{
-	model.SalesforceChildRelationshipNameOpportunityContactRoles,
 	model.SalesforceDocumentTypeNameLead,
+	model.SalesforceChildRelationshipNameOpportunityContactRoles,
 }
 
 var allowedCampaignFields = map[string]bool{}
@@ -657,7 +657,7 @@ func getOpportunityLinkedLeadOrContactDocument(projectID uint64, document *model
 		if opportunityMappingOrder[i] == model.SalesforceChildRelationshipNameOpportunityContactRoles && oppContactID != "" {
 			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppContactID}, model.SalesforceDocumentTypeContact)
 			if status == http.StatusFound {
-				return &linkedObject[len(linkedObject)-1], nil
+				return &linkedObject[0], nil // get the first document
 			}
 
 		}
@@ -665,13 +665,17 @@ func getOpportunityLinkedLeadOrContactDocument(projectID uint64, document *model
 		if opportunityMappingOrder[i] == model.SalesforceDocumentTypeNameLead && oppLeadID != "" {
 			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppLeadID}, model.SalesforceDocumentTypeLead)
 			if status == http.StatusFound {
-				return &linkedObject[len(linkedObject)-1], nil
+				return &linkedObject[0], nil
 			}
 
 		}
 	}
 
-	return nil, errMissingOpportunityLeadAndContact
+	if oppLeadID != "" || oppContactID != "" {
+		return nil, errMissingOpportunityLeadAndContact
+	}
+
+	return nil, errors.New("no object associated with opportunity")
 }
 
 func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
@@ -699,32 +703,38 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 	var eventID string
 	var eventUserID string
 	var customerUserID, userID string
+	var assocationPresent bool
 	if C.UseOpportunityAssociationByProjectID(projectID) {
 		linkedDocument, err := getOpportunityLinkedLeadOrContactDocument(projectID, document)
 		if err != nil {
-			if err != errMissingOpportunityLeadAndContact {
+			if err == errMissingOpportunityLeadAndContact {
+				// record may not be processed. Should be made success on next call
 				logCtx.WithError(err).Error("Failed to get linked document for opportunity.")
+				return http.StatusOK
 			}
 		} else {
-			linkedDocEnProperties, _, err := GetSalesforceDocumentProperties(projectID, linkedDocument)
-			if err == nil {
-				customerUserID, userID = getCustomerUserIDFromProperties(projectID, *linkedDocEnProperties, model.GetSalesforceAliasByDocType(linkedDocument.Type), &model.SalesforceProjectIdentificationFieldStore)
-				if document.Action == model.SalesforceDocumentUpdated && customerUserID != "" { // set user_id = null to allow indentification without user_id change
-					userID = ""
+			assocationPresent = true
+			if linkedDocument.Synced == true && linkedDocument.UserID != "" {
+				user, status := store.GetStore().GetUser(projectID, linkedDocument.UserID)
+				if status != http.StatusFound {
+					logCtx.WithError(err).Error("Failed to get opportunity associated document user.")
+					return http.StatusInternalServerError
 				}
-
-				if document.Action == model.SalesforceDocumentCreated && customerUserID == "" && userID == "" && linkedDocument.UserID != "" {
-					userID = linkedDocument.UserID
-				}
-
+				customerUserID = user.CustomerUserId
+				userID = user.ID
 			} else {
-				logCtx.WithError(err).Error("Failed to get properties on opportunities associations")
+				/*
+					Document associated is not processed yet.
+					Skip processing or opportunities event user properties won't have the lead data.
+				*/
+				logCtx.WithError(err).Error("Failed to process linked document for opportunity.")
+				return http.StatusOK
 			}
 
 		}
 	}
 
-	if userID == "" && customerUserID == "" {
+	if userID == "" && customerUserID == "" && !assocationPresent {
 		customerUserID, userID = getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	}
 
@@ -742,7 +752,6 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 			return http.StatusInternalServerError
 		}
 	} else {
-		trackPayload.UserId = userID
 		eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
 		if err != nil {
 			logCtx.WithError(err).Error(

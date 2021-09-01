@@ -2558,6 +2558,76 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 	assert.Subset(t, []interface{}{[]interface{}{"1", float64(2)}, []interface{}{"3", float64(1)}}, analyzeResult.Rows)
 }
 
+func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	leadCreatedDate := time.Now().AddDate(0, 0, -4)
+	leadLastModifiedDate := time.Now().AddDate(0, 0, -1)
+	leadDocument := map[string]interface{}{
+		"Id":               "1",
+		"Name":             "lead1",
+		"CreatedDate":      leadCreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": leadLastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, leadDocument, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+
+	oppCreatedDate := time.Now().AddDate(0, 0, -3)
+	oppLastModifiedDate := time.Now().AddDate(0, 0, -3)
+	leadDocument = map[string]interface{}{
+		"Id":                            "1",
+		"Name":                          "lead1",
+		"CreatedDate":                   oppCreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate":              oppLastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		IntSalesforce.OpportunityLeadID: "1",
+	}
+	err = createDummySalesforceDocument(project.ID, leadDocument, model.SalesforceDocumentTypeNameOpportunity)
+	assert.Nil(t, err)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 2)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+
+	query := model.Query{
+		From: leadCreatedDate.AddDate(0, 0, -1).Unix(),
+		To:   oppLastModifiedDate.AddDate(0, 0, 1).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
+			},
+			{
+				Name: U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+	analyzeResult, status, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, analyzeResult.Rows, 1)
+	// no opportunity available
+	assert.Equal(t, U.EVENT_NAME_SALESFORCE_LEAD_CREATED, analyzeResult.Rows[0][0])
+	assert.Equal(t, float64(1), analyzeResult.Rows[0][1])
+
+	// failed opportunity should be process now
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 1)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+
+	analyzeResult, status, _ = store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, analyzeResult.Rows, 2)
+	assert.Equal(t, U.EVENT_NAME_SALESFORCE_LEAD_CREATED, analyzeResult.Rows[0][0])
+	assert.Equal(t, float64(1), analyzeResult.Rows[0][1])
+
+	assert.Equal(t, U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED, analyzeResult.Rows[1][0])
+	assert.Equal(t, float64(1), analyzeResult.Rows[1][1])
+
+}
 func TestSalesforceGetDocumentsByTypeForSyncWithTimeRange(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
