@@ -255,6 +255,10 @@ function TemplateResults({
   }, []);
 
   const onTabChange = (key) => {
+    setSearchTerm('')
+    setShowSearch(false)
+    setSubSearchTerm('')
+    setShowSearchSub(false)
     setSubInsightData(null)
     setSelectedInsight(null);
     setSelectedTab(key);
@@ -407,8 +411,8 @@ function TemplateResults({
                             <div className={'flex justify-between'}>
                               {showSearch ? <Input
                                 className={styles.input}
-                                placeholder={searchTerm}
-                                onKeyUp={onInputSearch}
+                                defaultValue={searchTerm}
+                                onChange={onInputSearch}
                                 prefix={(<SVG name="search" size={16} color={'grey'} />)}
                               /> : null}
                               <Button
@@ -442,8 +446,8 @@ function TemplateResults({
                             <div className={'flex justify-between'}>
                               {showSearchSub ? <Input
                                 className={styles.input}
-                                placeholder={subSearchTerm}
-                                onKeyUp={onSubInputSearch}
+                                defaultValue={subSearchTerm}
+                                onChange={onSubInputSearch}
                                 prefix={(<SVG name="search" size={16} color={'grey'} />)}
                               /> : null}
                               <Button
