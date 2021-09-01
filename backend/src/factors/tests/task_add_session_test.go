@@ -55,6 +55,113 @@ func assertAssociatedSession(t *testing.T, projectId uint64, eventIdsInOrder []s
 
 	return sessionEvent
 }
+
+func TestAddSessionLatestUserProperties(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := time.Now().AddDate(0, 0, -1)
+	timestampUnix := timestamp.Unix()
+
+	/*
+		Test flow
+		Session event - t1 -> Non session event - t2 -> -> Non session event - t3 -> Add session job
+		Expected
+		Event on t3 properties should be on latest user properties even after session creation for old timestamp
+	*/
+	randomEventName := RandomURL()
+	trackEventProperties := U.PropertiesMap{
+		U.EP_PAGE_URL:     "https://example.com",
+		U.EP_PAGE_RAW_URL: "https://example.com",
+		U.EP_CAMPAIGN_ID:  "124",
+	}
+	trackUserProperties := U.PropertiesMap{
+		U.UP_OS: "android1",
+	}
+	trackPayload := SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestampUnix,
+		EventProperties: trackEventProperties,
+		UserProperties:  trackUserProperties,
+	}
+	status, res := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	userID := res.UserId
+	// session not created.
+	_, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	// skip session event
+	trackEventProperties = U.PropertiesMap{
+		U.EP_PAGE_URL:     "https://example.com/1",
+		U.EP_PAGE_RAW_URL: "https://example.com/1?x=1",
+		U.EP_CAMPAIGN_ID:  "123456",
+	}
+	trackUserProperties = U.PropertiesMap{
+		U.UP_OS: "android2",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestampUnix + 1*60,
+		EventProperties: trackEventProperties,
+		UserProperties:  trackUserProperties,
+		UserId:          userID,
+	}
+	status, _ = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	user, status := store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap := make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, "123456", properitesMap[U.UP_LATEST_CAMPAIGN_ID])
+	assert.Equal(t, "android2", properitesMap[U.UP_OS])
+
+	// skip session event
+	trackEventProperties = U.PropertiesMap{
+		U.EP_PAGE_URL:     "https://example.com/2",
+		U.EP_PAGE_RAW_URL: "https://example.com/2?x=1",
+		U.EP_CAMPAIGN_ID:  "1234567",
+	}
+	trackUserProperties = U.PropertiesMap{
+		U.UP_OS: "android3",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestampUnix + 40*60,
+		EventProperties: trackEventProperties,
+		UserProperties:  trackUserProperties,
+		UserId:          userID,
+	}
+	status, _ = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, "1234567", properitesMap[U.UP_LATEST_CAMPAIGN_ID])
+	assert.Equal(t, "android3", properitesMap[U.UP_OS])
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, 2*24*60*60, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	// session created.
+	_, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, "1234567", properitesMap[U.UP_LATEST_CAMPAIGN_ID])
+	assert.Equal(t, "android3", properitesMap[U.UP_OS])
+}
+
 func TestAddSessionWithChannelGroup(t *testing.T) {
 	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)

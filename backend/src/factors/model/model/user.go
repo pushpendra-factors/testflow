@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -516,4 +517,103 @@ func SetCacheUserIDByAMPUserID(projectID uint64, ampUserID, userID string) int {
 	}
 
 	return http.StatusOK
+}
+
+func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, customerUserID string) (*map[string]interface{}, int) {
+	logCtx := log.WithField("project_id", projectID).
+		WithField("users", users).
+		WithField("customer_user_id", customerUserID)
+
+	usersLength := len(users)
+	if usersLength == 0 {
+		logCtx.Error("No users for merging the user_properties.")
+		return nil, http.StatusInternalServerError
+	}
+
+	initialPropertiesVisitedMap := make(map[string]bool)
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_INITIAL {
+		initialPropertiesVisitedMap[property] = false
+	}
+
+	// Order the properties by jointime to maintain the initial properties
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].JoinTimestamp < users[j].JoinTimestamp
+	})
+
+	initialProperties := make(map[string]interface{})
+	for i := range users {
+		user := users[i]
+		userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+		if err != nil {
+			logCtx.WithField("user_properties", user.Properties).
+				Error("Failed to decode user properties on initial properties.")
+			return nil, http.StatusInternalServerError
+		}
+
+		for property := range *userProperties {
+			isAlreadySet, isInitialProperty := initialPropertiesVisitedMap[property]
+			if isInitialProperty {
+				if !isAlreadySet {
+					// For initial properties, set only once for earliest user.
+					initialProperties[property] = (*userProperties)[property]
+					initialPropertiesVisitedMap[property] = true
+				}
+			}
+		}
+	}
+
+	// Order the properties before merging the properties to
+	// ensure the precendence of value.
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].PropertiesUpdatedTimestamp < users[j].PropertiesUpdatedTimestamp
+	})
+
+	mergedUserProperties := make(map[string]interface{})
+	for property := range initialProperties {
+		mergedUserProperties[property] = initialProperties[property]
+	}
+
+	mergedUserPropertiesValues := make(map[string][]interface{})
+	var mergedUpdatedTimestamp int64
+	for i := range users {
+		user := users[i]
+		userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+		if err != nil {
+			logCtx.WithField("user_properties", user.Properties).
+				Error("Failed to decode user properties on merge.")
+			return &mergedUserProperties, http.StatusInternalServerError
+		}
+		if user.PropertiesUpdatedTimestamp > mergedUpdatedTimestamp {
+			mergedUpdatedTimestamp = user.PropertiesUpdatedTimestamp
+		}
+
+		for property := range *userProperties {
+
+			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
+			_, isInitialProperty := initialPropertiesVisitedMap[property]
+			if !isInitialProperty {
+				if !U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) &&
+					!IsEmptyPropertyValue((*userProperties)[property]) {
+					// For all other properties, overwrite with the latest user property.
+					mergedUserProperties[property] = (*userProperties)[property]
+				}
+			}
+		}
+	}
+
+	// Handle merge for add type properties separately.
+	userPropertiesToBeMerged := make([]postgres.Jsonb, 0, 0)
+	for i := range users {
+		userPropertiesToBeMerged = append(userPropertiesToBeMerged, users[i].Properties)
+	}
+	MergeAddTypeUserProperties(&mergedUserProperties, userPropertiesToBeMerged)
+
+	// Additional check for properties that can be added. If merge is triggered for users with same set of properties,
+	// value of properties that can be added will change after addition. Below check is to avoid update in such case.
+	if !AnyPropertyChanged(mergedUserPropertiesValues, len(users)) {
+		return &mergedUserProperties, http.StatusOK
+	}
+	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
+
+	return &mergedUserProperties, http.StatusOK
 }
