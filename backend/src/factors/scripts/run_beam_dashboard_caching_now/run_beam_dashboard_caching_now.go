@@ -54,8 +54,9 @@ var (
 	redisPort = flag.Int("redis_port", 6379, "")
 	sentryDSN = flag.String("sentry_dsn", "", "Sentry DSN")
 
-	projectIDs        = flag.String("project_id", "3", "Project ids to run for. * for all.")
-	excludeProjectIDs = flag.String("exclude_project_id", "", "Comma separated project ids to exclude for the run")
+	projectIDs                      = flag.String("project_id", "3", "Project ids to run for. * for all.")
+	excludeProjectIDs               = flag.String("exclude_project_id", "", "Comma separated project ids to exclude for the run")
+	multipleTimezoneEnabledProjects = flag.String("timezone_enabled_projects", "", "List of projectIds where multiple timezones are enabled")
 
 	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName           = flag.String("app_name", "", "Override default app_name.")
@@ -107,10 +108,11 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		RedisHost:        *redisHost,
-		RedisPort:        *redisPort,
-		SentryDSN:        *sentryDSN,
+		PrimaryDatastore:                *primaryDatastore,
+		RedisHost:                       *redisHost,
+		RedisPort:                       *redisPort,
+		SentryDSN:                       *sentryDSN,
+		MultipleTimezoneEnabledProjects: C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", healthcheckPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))

@@ -11,6 +11,7 @@ export const COMPARISON_DATA_ERROR = 'COMPARISON_DATA_ERROR';
 export const RESET_COMPARISON_DATA = 'RESET_COMPARISON_DATA';
 export const SET_COMPARE_DURATION = 'SET_COMPARE_DURATION';
 export const UPDATE_CHART_TYPES = 'UPDATE_CHART_TYPES';
+export const SET_SAVED_QUERY_SETTINGS = 'SET_SAVED_QUERY_SETTINGS';
 
 export const CORE_QUERY_INITIAL_STATE = {
   comparison_data: { ...initialState },
@@ -20,4 +21,5 @@ export const CORE_QUERY_INITIAL_STATE = {
   comparison_duration: null,
   attributionMetrics: [...ATTRIBUTION_METRICS],
   chartTypes: DefaultChartTypes,
+  savedQuerySettings: {},
 };

@@ -531,8 +531,8 @@ func convertFromRequestToFacebookSpecificRepresentation(query model.ChannelQuery
 	if err3 != nil {
 		return query, err3
 	}
-	transformedQuery.From = U.GetDateAsStringZ(query.From, U.TimeZoneString(query.Timezone))
-	transformedQuery.To = U.GetDateAsStringZ(query.To, U.TimeZoneString(query.Timezone))
+	transformedQuery.From = U.GetDateAsStringIn(query.From, U.TimeZoneString(query.Timezone))
+	transformedQuery.To = U.GetDateAsStringIn(query.To, U.TimeZoneString(query.Timezone))
 	transformedQuery.Timezone = query.Timezone
 	transformedQuery.GroupByTimestamp = query.GroupByTimestamp
 

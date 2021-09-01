@@ -4,6 +4,8 @@ import {
   formatSingleEventAnalyticsData,
   formatMultiEventsAnalyticsData,
   getDataInLineChartFormat,
+  getDefaultSortProp,
+  getDefaultDateSortProp,
 } from '../../CoreQuery/EventsAnalytics/NoBreakdownCharts/utils';
 import NoBreakdownTable from '../../CoreQuery/EventsAnalytics/NoBreakdownCharts/NoBreakdownTable';
 import SparkLineChart from '../../../components/SparkLineChart';
@@ -32,6 +34,8 @@ function NoBreakdownCharts({
   const { eventNames } = useSelector((state) => state.coreQuery);
   const { handleEditQuery } = useContext(DashboardContext);
   const appliedColors = generateColors(queries.length);
+  const [sorter, setSorter] = useState(getDefaultSortProp(arrayMapper));
+  const [dateSorter, setDateSorter] = useState(getDefaultDateSortProp());
 
   let chartsData = [];
 
@@ -126,6 +130,11 @@ function NoBreakdownCharts({
         isWidgetModal={false}
         durationObj={durationObj}
         arrayMapper={arrayMapper}
+        sorter={sorter}
+        setSorter={setSorter}
+        dateSorter={dateSorter}
+        setDateSorter={setDateSorter}
+        responseData={resultState.data}
       />
     );
   } else {

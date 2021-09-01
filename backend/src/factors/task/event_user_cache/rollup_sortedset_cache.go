@@ -21,7 +21,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 	rollupLookback := configs["rollupLookback"].(int)
 
 	var isCurrentDay bool
-	currentDate := U.TimeNow()
+	currentDate := U.TimeNowZ()
 	for i := 0; i <= rollupLookback; i++ {
 		if i == 0 {
 			isCurrentDay = true

@@ -20,25 +20,27 @@ type DashboardQueryResponsePayload struct {
 	Result      interface{} `json:"result"`
 	Cache       bool        `json:"cache"`
 	RefreshedAt int64       `json:"refreshed_at"`
+	TimeZone    string      `json:"timezone"`
 }
 
 func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, forDashboard bool) (bool, int, interface{}) {
 	if forDashboard {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: cacheResult.TimeZone}
 	}
 	// To Indicate if the result is served from cache without changing the response format.
 	c.Header(model.QueryCacheResponseFromCacheHeader, "true")
 	c.Header(model.QueryCacheResponseCacheRefreshedAt, fmt.Sprint(cacheResult.RefreshedAt))
+	c.Header(model.QueryCacheResponseCacheTimeZone, fmt.Sprint(cacheResult.TimeZone))
 	return true, http.StatusOK, cacheResult.Result
 }
 
 // ShouldAllowHardRefresh To check from query api if hard refresh should be applied or return from cache.
-func ShouldAllowHardRefresh(from, to int64, hardRefresh bool) bool {
+func ShouldAllowHardRefresh(from, to int64, timezoneString U.TimeZoneString, hardRefresh bool) bool {
 	if C.DisableMemSQLQueryCache() {
 		// Always do hard refresh if configured.
 		return true
 	}
-	return ((U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) || U.Is30MinutesTimeRange(from, to)) && hardRefresh)
+	return ((U.IsStartOfTodaysRangeIn(from, timezoneString) || U.Is30MinutesTimeRange(from, to)) && hardRefresh)
 }
 
 // SleepIfHeaderSet Sleep in request handler if header set. Currently used in testing.
@@ -97,10 +99,10 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload m
 }
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.
-func GetResponseIfCachedDashboardQuery(reqId string, projectID, dashboardID, unitID uint64, from, to int64) (bool, int, interface{}) {
-	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, from, to)
+func GetResponseIfCachedDashboardQuery(reqId string, projectID, dashboardID, unitID uint64, from, to int64, timezoneString U.TimeZoneString) (bool, int, interface{}) {
+	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, from, to, timezoneString)
 	if errCode == http.StatusFound && cacheResult != nil {
-		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt}
+		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt, TimeZone: string(timezoneString)}
 	}
 	return false, errCode, err
 }

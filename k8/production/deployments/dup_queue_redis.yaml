@@ -5,7 +5,7 @@ metadata:
     layer: dup-queue-redis
     env: production
     project: factors-production
-    nodePool: dup-queue-redis-pool
+    nodePool: queue-pool3
   name: dup-queue-redis
   namespace: default
 spec:
@@ -24,10 +24,10 @@ spec:
     metadata:      
       labels:
         layer: dup-queue-redis
-        nodePool: dup-queue-redis-pool
+        nodePool: queue-pool3
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: dup-queue-redis-pool
+        cloud.google.com/gke-nodepool: queue-pool3
       terminationGracePeriodSeconds: 30
       volumes:
         - name: dup-queue-redis-storage

@@ -81,7 +81,7 @@ func (dd *DiskDriver) GetProjectModelDir(projectId, modelId uint64) string {
 }
 
 func (dd *DiskDriver) GetProjectEventFileDir(projectId uint64, startTimestamp int64, modelType string) string {
-	dateFormatted := U.GetDateOnlyFromTimestamp(startTimestamp)
+	dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
 	return fmt.Sprintf("%s/projects/%d/events/%s/%s/", dd.baseDir, projectId, modelType, dateFormatted)
 }
 

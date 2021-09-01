@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import {
   getTableColumns,
@@ -12,6 +12,7 @@ import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DASHBOARD_WIDGET_SECTION,
 } from '../../../../utils/constants';
+import { isSeriesChart } from '../../../../utils/dataFormatter';
 
 function SingleEventMultipleBreakdownTable({
   data,
@@ -31,6 +32,8 @@ function SingleEventMultipleBreakdownTable({
   handleSorting,
   dateSorter,
   handleDateSorting,
+  visibleSeriesData,
+  setVisibleSeriesData,
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames, userPropNames, eventPropNames } = useSelector(
@@ -66,8 +69,8 @@ function SingleEventMultipleBreakdownTable({
   ]);
 
   useEffect(() => {
-    setTableData(getDataInTableFormat(data, breakdown, searchText, sorter));
-  }, [data, breakdown, searchText, sorter]);
+    setTableData(getDataInTableFormat(data, searchText, sorter));
+  }, [data, searchText, sorter]);
 
   useEffect(() => {
     setDateBasedColumns(
@@ -93,23 +96,9 @@ function SingleEventMultipleBreakdownTable({
 
   useEffect(() => {
     setDateBasedTableData(
-      getDateBasedTableData(
-        seriesData,
-        categories,
-        breakdown,
-        searchText,
-        dateSorter,
-        durationObj.frequency
-      )
+      getDateBasedTableData(seriesData, searchText, dateSorter)
     );
-  }, [
-    seriesData,
-    categories,
-    breakdown,
-    searchText,
-    dateSorter,
-    durationObj.frequency,
-  ]);
+  }, [seriesData, searchText, dateSorter]);
 
   const getCSVData = () => {
     const activeTableData =
@@ -122,9 +111,9 @@ function SingleEventMultipleBreakdownTable({
     };
   };
 
-  const selectedRowKeys = useMemo(() => {
-    return visibleProperties.map((vp) => vp.index);
-  }, [visibleProperties]);
+  const selectedRowKeys = useCallback((rows) => {
+    return rows.map((vp) => vp.index);
+  }, []);
 
   const onSelectionChange = useCallback(
     (_, selectedRows) => {
@@ -143,9 +132,30 @@ function SingleEventMultipleBreakdownTable({
     [setVisibleProperties, data]
   );
 
+  const onDateWiseSelectionChange = useCallback(
+    (_, selectedRows) => {
+      if (
+        selectedRows.length > MAX_ALLOWED_VISIBLE_PROPERTIES ||
+        !selectedRows.length
+      ) {
+        return false;
+      }
+      const newVisibleSeriesData = selectedRows.map((elem) => {
+        const obj = seriesData.find((d) => d.index === elem.index);
+        return obj;
+      });
+      setVisibleSeriesData(newVisibleSeriesData);
+    },
+    [setVisibleSeriesData, seriesData]
+  );
+
   const rowSelection = {
-    selectedRowKeys,
-    onChange: onSelectionChange,
+    selectedRowKeys: isSeriesChart(chartType)
+      ? selectedRowKeys(visibleSeriesData)
+      : selectedRowKeys(visibleProperties),
+    onChange: isSeriesChart(chartType)
+      ? onDateWiseSelectionChange
+      : onSelectionChange,
   };
 
   return (
@@ -172,4 +182,4 @@ function SingleEventMultipleBreakdownTable({
   );
 }
 
-export default SingleEventMultipleBreakdownTable;
+export default React.memo(SingleEventMultipleBreakdownTable);

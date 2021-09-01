@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { connect, useSelector } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Button, Collapse, Select, Popover } from "antd";
-import moment from "moment";
+import MomentTz from 'Components/MomentTz';
 import { SVG, Text } from "../factorsComponents";
 import styles from "./index.module.scss";
 import QueryBlock from "./QueryBlock";
@@ -177,14 +177,15 @@ function QueryComposer({
       queryOptionsState.date_range.from &&
       queryOptionsState.date_range.to
     ) {
-      ranges[0].startDate = moment(queryOptionsState.date_range.from).toDate();
-      ranges[0].endDate = moment(queryOptionsState.date_range.to).toDate();
+      ranges[0].startDate = MomentTz(queryOptionsState.date_range.from).toDate();
+      ranges[0].endDate = MomentTz(queryOptionsState.date_range.to).toDate();
     }
 
     return ranges;
   };
 
   const setDateRange = (dates) => {
+    console.log('setDateRange',dates);
     const queryOptionsState = Object.assign({}, queryOptions);
     if (dates && dates.startDate && dates.endDate) {
       if (Array.isArray(dates.startDate)) {

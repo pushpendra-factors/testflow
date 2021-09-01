@@ -5,10 +5,10 @@ import React, {
   useCallback,
   useEffect,
 } from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import ReactDOMServer from 'react-dom/server';
 import { formatData } from '../../CoreQuery/AttributionsResult/utils';
-import AttributionTable from '../../CoreQuery/AttributionsResult/AttributionTable';
+import AttributionsTable from './AttributionsTable';
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_TABLE,
@@ -113,9 +113,9 @@ function SingleTouchPoint({
                 weight='normal'
                 extraClass='text-sm mb-0'
               >
-                {moment(durationObj.from).format('MMM DD')}
+                {MomentTz(durationObj.from).format('MMM DD')}
                 {' - '}
-                {moment(durationObj.to).format('MMM DD')}
+                {MomentTz(durationObj.to).format('MMM DD')}
               </Text>
               <Text
                 color='grey-6'
@@ -149,9 +149,9 @@ function SingleTouchPoint({
                 weight='normal'
                 extraClass='text-sm mb-0'
               >
-                {moment(durationObj.from).format('MMM DD')}
+                {MomentTz(durationObj.from).format('MMM DD')}
                 {' - '}
-                {moment(durationObj.to).format('MMM DD')}
+                {MomentTz(durationObj.to).format('MMM DD')}
               </Text>
               <Text
                 color='grey-6'
@@ -205,7 +205,7 @@ function SingleTouchPoint({
     );
   } else {
     chartContent = (
-      <AttributionTable
+      <AttributionsTable
         linkedEvents={linkedEvents}
         touchpoint={touchpoint}
         event={event}

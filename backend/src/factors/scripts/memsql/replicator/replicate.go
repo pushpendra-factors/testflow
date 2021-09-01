@@ -19,11 +19,11 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/jinzhu/gorm/dialects/postgres"
 
+	"factors/config"
 	C "factors/config"
 	U "factors/util"
 
 	"factors/model/model"
-	"factors/model/store"
 )
 
 var memSQLDB *gorm.DB
@@ -32,6 +32,7 @@ var migrationPageSize int
 var migrationRoutinesHeavy int
 var migrationRoutinesOther int
 var disableSyncColumns bool
+var sourceDatastore *string
 
 var migrageAllTables bool
 var includeTablesMap map[string]bool
@@ -74,8 +75,8 @@ const (
 	tableTaskExecutionDependencyDetails = "task_execution_dependency_details"
 	tableWeekyInsightsMetadata          = "weekly_insights_metadata"
 	tableTemplates                      = "templates"
-
-	healthcheckPingID = "e6e3735b-82a3-4534-82be-b621470c4c69"
+	tableFeedback                       = "feedbacks"
+	healthcheckPingID                   = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
 
 var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
@@ -122,7 +123,7 @@ type TableRecord struct {
 	SyncId string `json:"sync_id"`
 }
 
-type memsql_EventName struct {
+type dest_EventName struct {
 	// Composite primary key with projectId.
 	ID   string `gorm:"primary_key:true;" json:"-"` // DISABLED json tag for overriding on programatically.
 	Name string `json:"name"`
@@ -137,7 +138,7 @@ type memsql_EventName struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-type memsql_Event struct {
+type dest_Event struct {
 	// Composite primary key with project_id and uuid.
 	ID              string  `gorm:"primary_key:true;type:uuid" json:"id"`
 	CustomerEventId *string `json:"customer_event_id"`
@@ -180,6 +181,7 @@ func main() {
 	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
 	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
 	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+	sourceDatastore = flag.String("source", C.DatastoreTypePostgres, "")
 
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
@@ -187,6 +189,7 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
+	memSQLResourcePool := flag.String("memsql_resource_pool", "", "")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	projectIDStringList := flag.String("project_ids", "", "")
@@ -195,7 +198,7 @@ func main() {
 	routinesOther := flag.Int("routines_other", 5, "No.of parallel routines to use for all other tables.")
 	migrate := flag.Bool("migrate", false, "Disable's additional queries like dedupe query for migration.")
 
-	includeTables := flag.String("include_tables", "*", "Comma separated tables to run or *")
+	includeTables := flag.String("include_tables", "", "Comma separated tables to run or *")
 	excludeTables := flag.String("exclude_tables", "", "Comma separated tables to exclude from the run")
 	disableSyncColumnsFlag := flag.Bool("disable_sync_column", false, "To disable sync columns like jobs_metadata, synced etc")
 
@@ -214,6 +217,10 @@ func main() {
 		log.Fatal("Invalid project_id.")
 	}
 
+	if *includeTables == "" {
+		log.Fatal("Invalid include_tables. It should be either * or list of tables.")
+	}
+
 	if *pageSize == 0 {
 		log.Fatal("Migration page size cannot be zero.")
 	}
@@ -221,6 +228,10 @@ func main() {
 	migrationRoutinesHeavy = *routinesHeavy
 	migrationRoutinesOther = *routinesOther
 	modeMigrate = *migrate
+
+	if !U.StringValueIn(*sourceDatastore, []string{C.DatastoreTypePostgres, C.DatastoreTypeMemSQL}) {
+		log.WithField("source", *sourceDatastore).Fatal("Invalid source provided.")
+	}
 
 	includeTablesMap = make(map[string]bool)
 	excludeTablesMap = make(map[string]bool)
@@ -261,12 +272,13 @@ func main() {
 
 	maxOpenConns := (24 * migrationRoutinesOther) + (4 * migrationRoutinesHeavy) + 10
 	memSQLDBConf := C.DBConf{
-		Host:        *memSQLHost,
-		Port:        *memSQLPort,
-		User:        *memSQLUser,
-		Name:        *memSQLName,
-		Password:    *memSQLPass,
-		Certificate: *memSQLCertificate,
+		Host:         *memSQLHost,
+		Port:         *memSQLPort,
+		User:         *memSQLUser,
+		Name:         *memSQLName,
+		Password:     *memSQLPass,
+		Certificate:  *memSQLCertificate,
+		ResourcePool: *memSQLResourcePool,
 	}
 	initMemSQLDB(*env, &memSQLDBConf, maxOpenConns)
 
@@ -293,6 +305,12 @@ func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
 	if err != nil {
 		log.WithError(err).Fatal("Failed connecting to memsql.")
 	}
+
+	err = config.SetMemSQLResourcePool(memSQLDB, dbConf.ResourcePool)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to set resource pool.")
+	}
+
 	// Disables before callback for create method.
 	memSQLDB.Callback().Create().Remove("gorm:before_create")
 	// Removes unneccesary select after insert triggered by gorm.
@@ -307,6 +325,32 @@ func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
 		memSQLDB.DB().SetMaxOpenConns(maxOpenConns)
 		memSQLDB.DB().SetMaxIdleConns(maxOpenConns)
 	}
+}
+
+func getDestinationDB() *gorm.DB {
+	switch *sourceDatastore {
+	case C.DatastoreTypePostgres:
+		return memSQLDB
+	case C.DatastoreTypeMemSQL:
+		return C.GetServices().Db
+	default:
+		return nil
+	}
+}
+
+func getSourceDB() *gorm.DB {
+	switch *sourceDatastore {
+	case C.DatastoreTypePostgres:
+		return C.GetServices().Db
+	case C.DatastoreTypeMemSQL:
+		return memSQLDB
+	default:
+		return nil
+	}
+}
+
+func isDestination(store string) bool {
+	return store != *sourceDatastore
 }
 
 func getDedupeMap(tableName string) *sync.Map {
@@ -332,7 +376,7 @@ func doesExistByUserAndIDOnMemSQLDB(tableName string, projectID uint64,
 
 	var record TableRecord
 	// Select only id to use index only read and avoid disk read.
-	err := memSQLDB.Table(tableName).Select("id, updated_at").Limit(1).
+	err := getDestinationDB().Table(tableName).Select("id, updated_at").Limit(1).
 		Where("project_id = ? AND user_id = ? AND id = ?", projectID, userID, id).
 		Find(&record).Error
 	if err != nil {
@@ -466,7 +510,7 @@ func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interfa
 
 	var record TableRecord
 	condition, params := getPrimaryKeyConditionByTableName(tableName, sourceTableRecord)
-	db := memSQLDB.Table(tableName).Limit(1).Where(condition, params...)
+	db := getDestinationDB().Table(tableName).Limit(1).Where(condition, params...)
 	if !isTableWithoutProjectID(tableName) {
 		db = db.Where("project_id = ?", projectID)
 	}
@@ -516,7 +560,7 @@ func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, sour
 		}
 	}
 
-	rows, err := memSQLDB.Raw(query, params...).Rows()
+	rows, err := getDestinationDB().Raw(query, params...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed deleting record in memsql.")
 		return http.StatusInternalServerError
@@ -527,7 +571,8 @@ func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, sour
 }
 
 func isDuplicateError(err error) bool {
-	return strings.Contains(err.Error(), "Duplicate")
+	return strings.Contains(err.Error(), "Duplicate") ||
+		strings.Contains(err.Error(), "violates unique constraint")
 }
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
@@ -552,7 +597,7 @@ func createOnMemSQL(projectID uint64, tableName string, record interface{}, id i
 		record = disallowCreateWithSyncColumns(tableName, record)
 	}
 
-	if err := memSQLDB.Table(tableName).Create(record).Error; err != nil {
+	if err := getDestinationDB().Table(tableName).Create(record).Error; err != nil {
 		if isDuplicateError(err) {
 			return http.StatusConflict
 		}
@@ -733,10 +778,12 @@ func createIfNotExistOrUpdateIfChangedOnMemSQL(tableName string, pgRecord interf
 		WithField("table_name", tableName).
 		WithField("pg_record_id", pgTableRecord.ID)
 
-	if isTableWithoutUniquePrimaryKey(tableName) && !modeMigrate && !U.StringValueIn(tableName, skipPrimaryKeyDedupeTables) {
-		// TODO: Try to add a procedure/trigger to do the existence check before create on memsql itself for long term.
-		// Now doing it on the script itself, as it is sequential.
-		currentMemsqlRecord, status := getTableRecordByIDFromMemSQL(pgTableRecord.ProjectID, tableName, pgTableRecord.ID, pgTableRecord)
+	if isDestination(C.DatastoreTypeMemSQL) && isTableWithoutUniquePrimaryKey(tableName) &&
+		!modeMigrate && !U.StringValueIn(tableName, skipPrimaryKeyDedupeTables) {
+		// TODO: Try to add a procedure/trigger to do the existence check before create on memsql
+		// itself for long term. Now doing it on the script itself, as it is sequential.
+		currentMemsqlRecord, status := getTableRecordByIDFromMemSQL(pgTableRecord.ProjectID,
+			tableName, pgTableRecord.ID, pgTableRecord)
 		if status == http.StatusInternalServerError || status == http.StatusBadRequest {
 			logCtx.WithField("status", status).Error("Failed to get the existing record from memsql.")
 			return nil, http.StatusInternalServerError
@@ -857,6 +904,9 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 	case tableProjects:
 		record = &model.Project{}
 
+	// feedback table
+	case tableFeedback:
+		record = &model.Feedback{}
 	default:
 		// Critical error. Should not proceed without adding support for table.
 		log.Fatalf("Unsupported table name %s on get_record_interface_by_table_name", tableName)
@@ -960,7 +1010,7 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 
 	timestampSubQuery = timestampSubQuery + " " + fmt.Sprintf("ORDER BY updated_at ASC LIMIT %d", migrationPageSize)
 	timestampQuery := fmt.Sprintf("SELECT COUNT(*), MIN(updated_at), MAX(updated_at) FROM (%s) subq", timestampSubQuery)
-	db := C.GetServices().Db
+	db := getSourceDB()
 
 	rows, err := db.Raw(timestampQuery).Rows()
 	if err != nil {
@@ -1110,7 +1160,7 @@ func convertColumnTypeByTable(tableName string, record interface{}) (interface{}
 	switch tableName {
 	case tableEventNames:
 		eventName := record.(*model.EventName)
-		var memsqlEventName memsql_EventName
+		var memsqlEventName dest_EventName
 		err := convertStruct(eventName, &memsqlEventName)
 		if err != nil {
 			return record, err
@@ -1126,7 +1176,7 @@ func convertColumnTypeByTable(tableName string, record interface{}) (interface{}
 
 	case tableEvents:
 		event := record.(*model.Event)
-		var memsqlEvent memsql_Event
+		var memsqlEvent dest_Event
 		err := convertStruct(event, &memsqlEvent)
 		if err != nil {
 			log.WithError(err).Error("Failed to convert event to memsql event.")
@@ -1226,6 +1276,7 @@ func migrateAllTables(projectIDs []uint64) {
 		tableTaskExecutionDependencyDetails,
 		tableWeekyInsightsMetadata,
 		tableTemplates,
+		tableFeedback,
 	}
 
 	// Runs replication continiously for each table
@@ -1264,7 +1315,7 @@ func migrateTableByNameWithPagination(table string, projectIDs []uint64) int {
 
 	for {
 		var lastRunAt *time.Time
-		metadata, status := store.GetStore().GetReplicationMetadataByTable(table)
+		metadata, status := GetReplicationMetadataByTable(table)
 		if status == http.StatusFound {
 			lastRunAt = &metadata.LastRunAt
 		}
@@ -1291,11 +1342,83 @@ func migrateTableByNameWithPagination(table string, projectIDs []uint64) int {
 		}
 
 		// Check point is updated after processing each pull of data (page).
-		if status := store.GetStore().CreateOrUpdateReplicationMetadataByTable(table, newLastRunAt, totalCount); status != http.StatusAccepted {
+		if status := CreateOrUpdateReplicationMetadataByTable(table, newLastRunAt, totalCount); status != http.StatusAccepted {
 			log.WithField("table", table).Error("Failed to update last run metadata.")
 			return http.StatusInternalServerError
 		}
 	}
 
 	return http.StatusOK
+}
+
+func GetReplicationMetadataByTable(tableName string) (*model.ReplicationMetadata, int) {
+	if tableName == "" {
+		log.Error("Empty table name in GetReplicationMetadataByTable.")
+		return nil, http.StatusInternalServerError
+	}
+
+	var metadata model.ReplicationMetadata
+
+	db := getSourceDB()
+	err := db.Model(&model.ReplicationMetadata{}).Limit(1).
+		Where("table_name = ?", tableName).Find(&metadata).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		log.WithField("table", tableName).WithError(err).
+			Error("Failed to get replication metadata for table on GetReplicationMetadataByTable.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return &metadata, http.StatusFound
+}
+
+func updateReplicationMetadataByTable(tableName string, lastRunAt *time.Time, count uint64) int {
+	logCtx := log.WithField("table", tableName).WithField("last_run_at", lastRunAt)
+
+	fields := make(map[string]interface{}, 0)
+	if lastRunAt != nil {
+		fields["last_run_at"] = *lastRunAt
+	}
+	if count > 0 {
+		fields["count"] = count
+	}
+
+	db := getSourceDB()
+	err := db.Model(&model.ReplicationMetadata{}).Where("table_name = ?", tableName).Update(fields).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update the fields on replication_metadata.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func createReplicationMetadataByTable(tableName string, lastRunAt *time.Time, count uint64) int {
+	logCtx := log.WithField("table", tableName).WithField("last_run_at", lastRunAt)
+
+	db := getSourceDB()
+	metadata := model.ReplicationMetadata{TableName: tableName, LastRunAt: *lastRunAt, Count: count}
+	err := db.Create(&metadata).Error
+	if err != nil {
+		if isDuplicateError(err) {
+			return http.StatusConflict
+		}
+
+		logCtx.WithError(err).Error("Failed to create replication metadata.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func CreateOrUpdateReplicationMetadataByTable(tableName string, lastRunAt *time.Time, count uint64) int {
+	status := createReplicationMetadataByTable(tableName, lastRunAt, count)
+	if status == http.StatusConflict {
+		return updateReplicationMetadataByTable(tableName, lastRunAt, count)
+	}
+
+	return status
 }

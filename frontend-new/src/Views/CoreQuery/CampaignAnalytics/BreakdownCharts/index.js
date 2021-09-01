@@ -124,6 +124,7 @@ function BreakdownCharts({
           frequency='date'
           categories={categories}
           data={visibleSeriesData}
+          showAllLegends={true}
         />
       </div>
     );
@@ -134,6 +135,7 @@ function BreakdownCharts({
           frequency='date'
           categories={categories}
           data={visibleSeriesData}
+          showAllLegends={true}
         />
       </div>
     );
@@ -144,6 +146,7 @@ function BreakdownCharts({
           frequency='date'
           categories={categories}
           data={visibleSeriesData}
+          showAllLegends={true}
         />
       </div>
     );

@@ -271,8 +271,19 @@ func PullEvents(projectId uint64, configs map[string]interface{}) (map[string]in
 		return status, false
 	}
 
+	projectDetails, _ := store.GetStore().GetProject(projectId)
+	startTimestampInProjectTimezone := startTimestamp
+	endTimestampInProjectTimezone := endTimestamp
+	if projectDetails.TimeZone != "" {
+		// Input time is in UTC. We need the same time in the other timezone
+		// if 2021-08-30 00:00:00 is UTC then we need the epoch equivalent in 2021-08-30 00:00:00 IST(project time zone)
+		offset := U.FindOffsetInUTC(U.TimeZoneString(projectDetails.TimeZone))
+		startTimestampInProjectTimezone = startTimestamp - int64(offset)
+		endTimestampInProjectTimezone = endTimestamp - int64(offset)
+	}
+
 	logCtx := peLog.WithFields(log.Fields{"ProjectId": projectId,
-		"StartTime": startTimestamp, "EndTime": endTimestamp})
+		"StartTime": startTimestampInProjectTimezone, "EndTime": endTimestampInProjectTimezone})
 
 	logCtx.Info("Pulling events.")
 	// Writing events to tmp file before upload.
@@ -280,7 +291,8 @@ func PullEvents(projectId uint64, configs map[string]interface{}) (map[string]in
 	serviceDisk.MkdirAll(fPath) // create dir if not exist.
 	tmpEventsFile := fPath + fName
 	startAt := time.Now().UnixNano()
-	eventsCount, eventsFilePath, err := pullEventsForBuildSeq(projectId, startTimestamp, endTimestamp, tmpEventsFile)
+
+	eventsCount, eventsFilePath, err := pullEventsForBuildSeq(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, tmpEventsFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Pull events failed. Pull and write events failed.")
 		status["error"] = err.Error()

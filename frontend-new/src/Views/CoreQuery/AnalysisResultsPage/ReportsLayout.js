@@ -1,4 +1,10 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+} from 'react';
 import AnalysisHeader from './AnalysisHeader';
 import ReportContent from './ReportContent';
 import { FaErrorComp, FaErrorLog } from '../../../components/factorsComponents';
@@ -19,6 +25,7 @@ function ReportsLayout({
   fetchWeeklyIngishts,
   ...rest
 }) {
+  const renderedCompRef = useRef(null);
   const { setNavigatedFromDashboard } = useContext(CoreQueryContext);
   const [activeTab, setActiveTab] = useState(1);
   // const [insights, setInsights] = useState(null);
@@ -28,6 +35,13 @@ function ReportsLayout({
     setShowResult(false);
     setNavigatedFromDashboard(false);
   }, [setNavigatedFromDashboard, setShowResult]);
+
+  const getCurrentSorter = useCallback(() => {
+    if (renderedCompRef.current && renderedCompRef.current.currentSorter) {
+      return renderedCompRef.current.currentSorter;
+    }
+    return {};
+  }, []);
 
   function changeTab(key) {
     // console.log('current tab is=-->>',key);
@@ -52,6 +66,7 @@ function ReportsLayout({
         breakdownType={breakdownType}
         changeTab={changeTab}
         activeTab={activeTab}
+        getCurrentSorter={getCurrentSorter}
       />
       <div className='mt-24 px-20'>
         <ErrorBoundary
@@ -67,24 +82,21 @@ function ReportsLayout({
           onError={FaErrorLog}
         >
           {Number(activeTab) === 1 && (
-            <>
-              <ReportContent
-                breakdownType={breakdownType}
-                queryTitle={querySaved}
-                queryType={queryType}
-                {...rest}
-              />
-            </>
+            <ReportContent
+              breakdownType={breakdownType}
+              queryTitle={querySaved}
+              queryType={queryType}
+              renderedCompRef={renderedCompRef}
+              {...rest}
+            />
           )}
 
           {Number(activeTab) === 2 && (
-            <>
-              <WeeklyInsights
-                requestQuery={requestQuery}
-                queryType={queryType}
-                queryTitle={querySaved}
-              />
-            </>
+            <WeeklyInsights
+              requestQuery={requestQuery}
+              queryType={queryType}
+              queryTitle={querySaved}
+            />
           )}
         </ErrorBoundary>
       </div>

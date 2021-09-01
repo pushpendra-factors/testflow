@@ -774,8 +774,8 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone,
-		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
-		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
+		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)),
+		U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err
@@ -1123,8 +1123,8 @@ func convertFromRequestToAdwordsSpecificRepresentation(query model.ChannelQueryV
 	if err3 != nil {
 		return query, err3
 	}
-	transformedQuery.From = U.GetDateAsStringZ(query.From, U.TimeZoneString(query.Timezone))
-	transformedQuery.To = U.GetDateAsStringZ(query.To, U.TimeZoneString(query.Timezone))
+	transformedQuery.From = U.GetDateAsStringIn(query.From, U.TimeZoneString(query.Timezone))
+	transformedQuery.To = U.GetDateAsStringIn(query.To, U.TimeZoneString(query.Timezone))
 	transformedQuery.Timezone = query.Timezone
 	transformedQuery.GroupByTimestamp = query.GroupByTimestamp
 

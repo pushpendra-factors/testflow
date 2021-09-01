@@ -384,6 +384,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_google_organic_enabled_agent_uuid text,
     int_google_organic_url_prefixes text,
     int_google_ingestion_timezone text,
+    int_clear_bit boolean NOT NULL DEFAULT FALSE,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
@@ -685,6 +686,20 @@ CREATE TABLE IF NOT EXISTS public.templates (
     updated_at timestamp with time zone,
     PRIMARY KEY (project_id, type),
     SHARD KEY (project_id)
+)
+
+CREATE TABLE IF NOT EXISTS feedbacks(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    feature text NOT NULL,
+    property json,
+    vote_type integer NOT NULL,
+    created_by text NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    PRIMARY KEY (id,project_id),
+    SHARD KEY (project_id)
+    
 )
 -- DOWN
 

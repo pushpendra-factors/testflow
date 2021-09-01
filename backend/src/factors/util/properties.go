@@ -290,6 +290,26 @@ var SP_INITIAL_PAGE_SCROLL_PERCENT string = UP_INITIAL_PAGE_SCROLL_PERCENT
 var SP_INITIAL_COST string = UP_INITIAL_COST
 var SP_INITIAL_REVENUE string = UP_INITIAL_REVENUE
 
+// clearbit properties
+var CLR_COMPANY_NAME = "$clr_company_name"
+var CLR_COMPANY_GEO_CITY = "$clr_company_geo_city"
+var CLR_COMPANY_GEO_COUNTRY = "$clr_company_geo_country"
+var CLR_COMPANY_GEO_POSTALCODE = "$clr_company_geo_postalCode"
+var CLR_COMPANY_GEO_STATE = "$clr_company_geo_state"
+var CLR_COMPANY_GEO_STATECODE = "$clr_company_geo_stateCode"
+var CLR_COMPANY_GEO_COUNTRYCODE = "$clr_company_geo_countryCode"
+var CLR_COMPANY_GEO_LATITUDE = "$clr_company_geo_lat"
+var CLR_COMPANY_GEO_LONGTITUDE = "$clr_company_geo_lng"
+var CLR_COMPANY_METRICS_ALEXAUSRANK = "$clr_company_metrics_alexaUsRank"
+var CLR_COMPANY_METRICS_ALEXAGLOBALRANK = "$clr_company_metrics_alexaGlobalRank"
+var CLR_COMPANY_METRICS_EMPLOYEES = "$clr_company_metrics_employees"
+var CLR_COMPANY_METRICS_EMPLOYEESRANGE = "$clr_company_metrics_employeesRange"
+var CLR_COMPANY_METRICS_RAISED = "$clr_company_metrics_raised"
+var CLR_COMPANY_METRICS_ESTIMATED_ANNUAL_REVENUE = "$clr_company_metrics_estimatedAnnualRevenue"
+var CLR_COMPANY_METRICS_MARKET_CAP = "$clr_company_metrics_marketCap"
+var CLR_COMPANY_METRICS_ANNUAL_REVENUE = "$clr_company_metrics_annualRevenue"
+var CLR_COMPANY_METRICS_FISCALYEAR = "$clr_company_metrics_fiscalYearEnd"
+
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
@@ -447,6 +467,24 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_LATEST_REFERRER,
 	UP_LATEST_REFERRER_URL,
 	UP_LATEST_REFERRER_DOMAIN,
+	CLR_COMPANY_NAME,
+	CLR_COMPANY_GEO_CITY,
+	CLR_COMPANY_GEO_COUNTRY,
+	CLR_COMPANY_GEO_POSTALCODE,
+	CLR_COMPANY_GEO_STATE,
+	CLR_COMPANY_GEO_STATECODE,
+	CLR_COMPANY_GEO_COUNTRYCODE,
+	CLR_COMPANY_GEO_LATITUDE,
+	CLR_COMPANY_GEO_LONGTITUDE,
+	CLR_COMPANY_METRICS_ALEXAUSRANK,
+	CLR_COMPANY_METRICS_ALEXAGLOBALRANK,
+	CLR_COMPANY_METRICS_EMPLOYEES,
+	CLR_COMPANY_METRICS_EMPLOYEESRANGE,
+	CLR_COMPANY_METRICS_RAISED,
+	CLR_COMPANY_METRICS_ESTIMATED_ANNUAL_REVENUE,
+	CLR_COMPANY_METRICS_MARKET_CAP,
+	CLR_COMPANY_METRICS_ANNUAL_REVENUE,
+	CLR_COMPANY_METRICS_FISCALYEAR,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -1085,88 +1123,106 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 }
 
 var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
-	"$platform":                    "Platform",
-	"$browser":                     "Browser",
-	"$browser_version":             "Browser Version",
-	"$os":                          "OS",
-	"$os_version":                  "OS Version",
-	"$screen_width":                "Screen Width",
-	"$screen_height":               "Screen Height",
-	"$screen_density":              "Screen Density",
-	"$language":                    "Language",
-	"$locale":                      "Locale",
-	"$device_name":                 "Device Name",
-	"$device_brand":                "Device Brand",
-	"$device_model":                "Device Model",
-	"$device_type":                 "Device Type",
-	"$device_family":               "Device Family",
-	"$device_manufacturer":         "Device Manufacturer",
-	"$device_carrier":              "Device Carrier",
-	"$country":                     "Country",
-	"$city":                        "City",
-	"$region":                      "Region",
-	"$timezone":                    "Timezone",
-	"$user_id":                     "User ID",
-	"$email":                       "Email ID",
-	"$company":                     "Company",
-	"$name":                        "Name",
-	"$first_name":                  "First Name",
-	"$last_name":                   "Last Name",
-	"$phone":                       "Phone",
-	"$initial_page_url":            "Initial Page URL",
-	"$initial_page_domain":         "Initial Page Domain",
-	"$initial_page_raw_url":        "Initial Page Raw URL",
-	"$initial_page_load_time":      "Initial Page Load Time",
-	"$initial_page_spent_time":     "Initial Page Spent Time",
-	"$initial_page_scroll_percent": "Initial Page Scroll Percent",
-	"$initial_campaign":            "Initial Campaign",
-	"$initial_campaign_id":         "Initial Campaign ID",
-	"$initial_source":              "Initial Source",
-	"$initial_medium":              "Initial Medium",
-	"$initial_keyword":             "Initial Keyword",
-	"$initial_keyword_match_type":  "Initial Keyword Match Type",
-	"$initial_content":             "Initial Content",
-	"$initial_adgroup":             "Initial Adgroup",
-	"$initial_adgroup_id":          "Initial Adgroup ID",
-	"$initial_creative":            "Initial Creative",
-	"$initial_gclid":               "Initial GCLID",
-	"$initial_fbclid":              "Initial FBCLID",
-	"$initial_cost":                "Initial Cost",
-	"$total_cost":                  "Total Cost",
-	"$initial_revenue":             "Initial Revenue",
-	"$total_revenue":               "Total Revenue",
-	"$initial_referrer":            "Initial Referrer",
-	"$initial_referrer_url":        "Initial Referrer URL",
-	"$initial_referrer_domain":     "Initial Referrer Domain",
-	"$day_of_first_event":          "Day of First Event",
-	"$hour_of_first_event":         "Hour of First Event",
-	"$session_count":               "Session Count",
-	"$page_count":                  "Page Count",
-	"$session_spent_time":          "Session Spent Time",
-	"$latest_page_url":             "Latest Page URL",
-	"$latest_page_domain":          "Latest Page Domain",
-	"$latest_page_raw_url":         "Latest Page Raw URL",
-	"$latest_page_load_time":       "Latest Page Load Time",
-	"$latest_page_spent_time":      "Latest Page Spent Time",
-	"$latest_page_scroll_percent":  "Latest Page Scroll Percent",
-	"$latest_campaign":             "Latest Campaign",
-	"$latest_campaign_id":          "Latest Campaign ID",
-	"$latest_source":               "Latest Source",
-	"$latest_medium":               "Latest Medium",
-	"$latest_keyword":              "Latest Keyword",
-	"$latest_keyword_match_type":   "Latest Keyword Match Type",
-	"$latest_content":              "Latest Content",
-	"$latest_adgroup":              "Latest Adgroup",
-	"$latest_adgroup_id":           "Latest Adgroup ID",
-	"$latest_creative":             "Latest Creative",
-	"$latest_gclid":                "Latest GCLID",
-	"$latest_fbclid":               "Latest FBCLID",
-	"$latest_cost":                 "Latest Cost",
-	"$latest_revenue":              "Latest Revenue",
-	"$latest_referrer":             "Latest Referrer",
-	"$latest_referrer_url":         "Latest Referrer URL",
-	"$latest_referrer_domain":      "Latest Referrer Domain",
-	"$joinTime":                    "Join Time",
+	"$platform":                         "Platform",
+	"$browser":                          "Browser",
+	"$browser_version":                  "Browser Version",
+	"$os":                               "OS",
+	"$os_version":                       "OS Version",
+	"$screen_width":                     "Screen Width",
+	"$screen_height":                    "Screen Height",
+	"$screen_density":                   "Screen Density",
+	"$language":                         "Language",
+	"$locale":                           "Locale",
+	"$device_name":                      "Device Name",
+	"$device_brand":                     "Device Brand",
+	"$device_model":                     "Device Model",
+	"$device_type":                      "Device Type",
+	"$device_family":                    "Device Family",
+	"$device_manufacturer":              "Device Manufacturer",
+	"$device_carrier":                   "Device Carrier",
+	"$country":                          "Country",
+	"$city":                             "City",
+	"$region":                           "Region",
+	"$timezone":                         "Timezone",
+	"$user_id":                          "User ID",
+	"$email":                            "Email ID",
+	"$company":                          "Company",
+	"$name":                             "Name",
+	"$first_name":                       "First Name",
+	"$last_name":                        "Last Name",
+	"$phone":                            "Phone",
+	"$initial_page_url":                 "Initial Page URL",
+	"$initial_page_domain":              "Initial Page Domain",
+	"$initial_page_raw_url":             "Initial Page Raw URL",
+	"$initial_page_load_time":           "Initial Page Load Time",
+	"$initial_page_spent_time":          "Initial Page Spent Time",
+	"$initial_page_scroll_percent":      "Initial Page Scroll Percent",
+	"$initial_campaign":                 "Initial Campaign",
+	"$initial_campaign_id":              "Initial Campaign ID",
+	"$initial_source":                   "Initial Source",
+	"$initial_medium":                   "Initial Medium",
+	"$initial_keyword":                  "Initial Keyword",
+	"$initial_keyword_match_type":       "Initial Keyword Match Type",
+	"$initial_content":                  "Initial Content",
+	"$initial_adgroup":                  "Initial Adgroup",
+	"$initial_adgroup_id":               "Initial Adgroup ID",
+	"$initial_creative":                 "Initial Creative",
+	"$initial_gclid":                    "Initial GCLID",
+	"$initial_fbclid":                   "Initial FBCLID",
+	"$initial_cost":                     "Initial Cost",
+	"$total_cost":                       "Total Cost",
+	"$initial_revenue":                  "Initial Revenue",
+	"$total_revenue":                    "Total Revenue",
+	"$initial_referrer":                 "Initial Referrer",
+	"$initial_referrer_url":             "Initial Referrer URL",
+	"$initial_referrer_domain":          "Initial Referrer Domain",
+	"$day_of_first_event":               "Day of First Event",
+	"$hour_of_first_event":              "Hour of First Event",
+	"$session_count":                    "Session Count",
+	"$page_count":                       "Page Count",
+	"$session_spent_time":               "Session Spent Time",
+	"$latest_page_url":                  "Latest Page URL",
+	"$latest_page_domain":               "Latest Page Domain",
+	"$latest_page_raw_url":              "Latest Page Raw URL",
+	"$latest_page_load_time":            "Latest Page Load Time",
+	"$latest_page_spent_time":           "Latest Page Spent Time",
+	"$latest_page_scroll_percent":       "Latest Page Scroll Percent",
+	"$latest_campaign":                  "Latest Campaign",
+	"$latest_campaign_id":               "Latest Campaign ID",
+	"$latest_source":                    "Latest Source",
+	"$latest_medium":                    "Latest Medium",
+	"$latest_keyword":                   "Latest Keyword",
+	"$latest_keyword_match_type":        "Latest Keyword Match Type",
+	"$latest_content":                   "Latest Content",
+	"$latest_adgroup":                   "Latest Adgroup",
+	"$latest_adgroup_id":                "Latest Adgroup ID",
+	"$latest_creative":                  "Latest Creative",
+	"$latest_gclid":                     "Latest GCLID",
+	"$latest_fbclid":                    "Latest FBCLID",
+	"$latest_cost":                      "Latest Cost",
+	"$latest_revenue":                   "Latest Revenue",
+	"$latest_referrer":                  "Latest Referrer",
+	"$latest_referrer_url":              "Latest Referrer URL",
+	"$latest_referrer_domain":           "Latest Referrer Domain",
+	"$joinTime":                         "Join Time",
+	CLR_COMPANY_NAME:                    "Clearbit Company Name",
+	CLR_COMPANY_GEO_CITY:                "Clearbit Company Geo City",
+	CLR_COMPANY_GEO_COUNTRY:             "Clearbit Company Geo Country",
+	CLR_COMPANY_GEO_STATE:               "Clearbit Company Geo State",
+	CLR_COMPANY_GEO_STATECODE:           "Clearbit Company Geo State Code",
+	CLR_COMPANY_METRICS_ALEXAUSRANK:     "Clearbit Company Metrics Alexa US Rank",
+	CLR_COMPANY_METRICS_ALEXAGLOBALRANK: "Clearbit Company Metrics Alexa Global Rank",
+	CLR_COMPANY_METRICS_EMPLOYEES:       "Clearbit Company Metrics Employees",
+	CLR_COMPANY_METRICS_EMPLOYEESRANGE:  "Clearbit Company Metrics Employee Range",
+	CLR_COMPANY_METRICS_RAISED:          "Clearbit Company Metrics Raised",
+	CLR_COMPANY_GEO_POSTALCODE:          "Clearbit Company Geo Postal Code",
+	CLR_COMPANY_GEO_COUNTRYCODE:         "Clearbit Company Geo Country Code",
+	CLR_COMPANY_GEO_LATITUDE:            "Clearbit Company Geo Latitude",
+	CLR_COMPANY_GEO_LONGTITUDE:          "Clearbit Company Geo Longitude",
+	CLR_COMPANY_METRICS_ESTIMATED_ANNUAL_REVENUE: "Clearbit Company Metrics Estimated Annual Revenue",
+	CLR_COMPANY_METRICS_MARKET_CAP:               "Clearbit Company Metrics Market Cap",
+	CLR_COMPANY_METRICS_ANNUAL_REVENUE:           "Clearbit Company Metrics Annual Revenue",
+	CLR_COMPANY_METRICS_FISCALYEAR:               "Clearbit Company Metrics Fiscal Year End",
 }
 
 var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
@@ -2574,11 +2630,15 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 }
 
 func UnEscapeQueryParamProperties(properties *PropertiesMap) {
-	for k := range *properties {
+	UnEscapedProperties := make(PropertiesMap)
+	for k, v := range *properties {
 		if strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) {
-			(*properties)[k] = GetUnEscapedPropertyValue((*properties)[k])
+			UnEscapedProperties[GetUnEscapedPropertyValue(k).(string)] = GetUnEscapedPropertyValue(v)
+		} else {
+			UnEscapedProperties[k] = v
 		}
 	}
+	*properties = UnEscapedProperties
 }
 
 func HasDefinedMarketingProperty(properties *PropertiesMap) bool {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -124,6 +125,14 @@ func createProject(project *model.Project) (*model.Project, int) {
 		return nil, http.StatusInternalServerError
 	}
 	project.PrivateToken = privateToken
+	if project.TimeZone == "" {
+		project.TimeZone = string(U.TimeZoneStringIST)
+	}
+	_, errCode := time.LoadLocation(string(project.TimeZone))
+	if errCode != nil {
+		log.WithField("projectId", project.ID).Error("This project hasnt been given with wrong timezone")
+		project.TimeZone = string(U.TimeZoneStringIST)
+	}
 
 	db := C.GetServices().Db
 	if err := db.Create(project).Error; err != nil {
@@ -153,6 +162,11 @@ func (pg *Postgres) UpdateProject(projectId uint64, project *model.Project) int 
 	}
 	if project.TimeZone != "" {
 		updateFields["time_zone"] = project.TimeZone
+	}
+	_, errCode := time.LoadLocation(string(project.TimeZone))
+	if errCode != nil {
+		log.WithField("projectId", project.ID).Error("This project hasnt been given with wrong timezone")
+		project.TimeZone = string(U.TimeZoneStringIST)
 	}
 
 	if !U.IsEmptyPostgresJsonb(&project.InteractionSettings) {
@@ -191,8 +205,9 @@ func (pg *Postgres) createProjectDependencies(projectID uint64, agentUUID string
 	defaultAutoTrackState := true
 	defaultExcludebotState := true
 	defaultDriftIntegrationState := false
+	defaultClearBitIntegrationState := false
 	_, errCode := createProjectSetting(&model.ProjectSetting{ProjectId: projectID,
-		AutoTrack: &defaultAutoTrackState, ExcludeBot: &defaultExcludebotState, IntDrift: &defaultDriftIntegrationState})
+		AutoTrack: &defaultAutoTrackState, ExcludeBot: &defaultExcludebotState, IntDrift: &defaultDriftIntegrationState, IntClearBit: &defaultClearBitIntegrationState})
 	if errCode != http.StatusCreated {
 		logCtx.Error("Create project settings failed on create project dependencies.")
 		return errCode
@@ -438,6 +453,27 @@ func (pg *Postgres) GetNextSessionStartTimestampForProject(projectID uint64) (in
 	}
 
 	return *sessionStartTimestamp, http.StatusFound
+}
+
+func (pg *Postgres) GetTimezoneForProject(projectID uint64) (U.TimeZoneString, int) {
+	project, statusCode := pg.GetProject(projectID)
+	if statusCode != http.StatusFound {
+		return U.TimeZoneStringIST, statusCode
+	}
+	if !C.IsMultipleProjectTimezoneEnabled(projectID) {
+		return U.TimeZoneStringIST, http.StatusFound
+	}
+	if project.TimeZone == "" {
+		log.WithField("projectId", project.ID).Error("This project has been set with no timezone")
+		return U.TimeZoneStringIST, http.StatusFound
+	} else {
+		_, errCode := time.LoadLocation(string(project.TimeZone))
+		if errCode != nil {
+			log.WithField("projectId", project.ID).Error("This project has been given with wrong timezone")
+			return "", http.StatusNotFound
+		}
+		return U.TimeZoneString(project.TimeZone), http.StatusFound
+	}
 }
 
 // UpdateNextSessionStartTimestampForProject - Updates next session start timestamp

@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useReducer,
 } from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import QueryComposer from '../../components/QueryComposer';
@@ -74,6 +74,7 @@ import {
   SET_COMPARE_DURATION,
   SET_NAVIGATED_FROM_DASHBOARD,
   UPDATE_CHART_TYPES,
+  SET_SAVED_QUERY_SETTINGS,
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -209,6 +210,13 @@ function CoreQuery({
     [updateLocalReducer]
   );
 
+  const updateSavedQuerySettings = useCallback(
+    (payload) => {
+      updateLocalReducer(SET_SAVED_QUERY_SETTINGS, payload);
+    },
+    [updateLocalReducer]
+  );
+
   const configActionsOnRunningQuery = useCallback(
     (isQuerySaved) => {
       closeDrawer();
@@ -217,6 +225,7 @@ function CoreQuery({
       setQuerySaved(isQuerySaved);
       if (!isQuerySaved) {
         setNavigatedFromDashboard(false);
+        updateSavedQuerySettings({});
       }
       localDispatch({
         type: SET_COMPARISON_SUPPORTED,
@@ -235,6 +244,7 @@ function CoreQuery({
       models,
       updateAppliedBreakdown,
       setNavigatedFromDashboard,
+      updateSavedQuerySettings,
     ]
   );
 
@@ -263,7 +273,7 @@ function CoreQuery({
       try {
         if (!durationObj) {
           durationObj = dateRange;
-        }
+        } 
         const query = getQuery(
           groupBy,
           queries,
@@ -618,8 +628,8 @@ function CoreQuery({
       }
 
       const payload = {
-        from: moment(from).startOf('day'),
-        to: moment(to).endOf('day'),
+        from: MomentTz(from).startOf('day'),
+        to: MomentTz(to).endOf('day'),
         frequency,
         dateType,
       };
@@ -648,10 +658,12 @@ function CoreQuery({
         ...payload,
       };
 
-      if (queryType === QUERY_TYPE_FUNNEL) {
+      if (queryType === QUERY_TYPE_FUNNEL) { 
+        console.log('QUERY_TYPE_EVENT')
         runFunnelQuery(querySaved, appliedDateRange, isCompareDate);
       }
       if (queryType === QUERY_TYPE_EVENT) {
+        console.log('QUERY_TYPE_EVENT')
         runQuery(querySaved, appliedDateRange);
       }
 
@@ -924,6 +936,7 @@ function CoreQuery({
             setActiveKey={setActiveKey}
             setBreakdownType={setBreakdownType}
             setNavigatedFromDashboard={setNavigatedFromDashboard}
+            updateSavedQuerySettings={updateSavedQuerySettings}
           />
         )}
       </ErrorBoundary>

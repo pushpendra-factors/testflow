@@ -46,6 +46,7 @@ function ReportContent({
   campaignsArrayMapper,
   handleGranularityChange,
   updateChartTypes,
+  renderedCompRef
 }) {
   let content = null,
     queryDetail = null,
@@ -199,6 +200,7 @@ function ReportContent({
           arrayMapper={arrayMapper}
           section={section}
           durationObj={durationObj}
+          renderedCompRef={renderedCompRef}
         />
       );
     }
@@ -211,6 +213,7 @@ function ReportContent({
           attributionsState={attributionsState}
           section={section}
           currMetricsValue={currMetricsValue}
+          renderedCompRef={renderedCompRef}
         />
       );
     }
@@ -225,6 +228,7 @@ function ReportContent({
           currMetricsValue={currMetricsValue}
           section={section}
           durationObj={durationObj}
+          renderedCompRef={renderedCompRef}
         />
       );
     }
@@ -241,6 +245,7 @@ function ReportContent({
           durationObj={durationObj}
           breakdownType={breakdownType}
           section={section}
+          renderedCompRef={renderedCompRef}
         />
       );
     }

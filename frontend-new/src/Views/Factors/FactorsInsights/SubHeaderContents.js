@@ -3,10 +3,11 @@ import {  Button , Badge, message, Spin} from 'antd';
 import { SVG, Text} from 'factorsComponents';
 import { Link } from 'react-router-dom'; 
 import {connect} from 'react-redux'; 
-import _, { isEmpty } from 'lodash'; 
-import GroupSelect2 from '../../../components/QueryComposer/GroupSelect2'; 
-import moment from 'moment';
+import _, { isEmpty } from 'lodash';  
+import GroupSelect2 from '../../../components/QueryComposer/GroupSelect2';  
 import { fetchGoalInsights} from 'Reducers/factors';
+// import MomentTz from 'Components/MomentTz';
+import moment from 'moment-timezone';
 
 function Header({factors_insight_rules, factors_models, fetchGoalInsights, activeProject, goal_insights, factors_insight_model, savedName}) {
 

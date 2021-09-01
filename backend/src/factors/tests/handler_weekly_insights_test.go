@@ -53,7 +53,7 @@ func TestWeeklyInsights(t *testing.T) {
 	data.NumberOfRecords = 2
 	err:=createPathAndAddCpiFile(data.ProjectID,data.BaseStartTime,data.QueryId)
 	assert.Nil(t,err)
-	response, err := delta.GetWeeklyInsights(data.ProjectID, data.QueryId, &data.BaseStartTime, &data.CompStartTime, data.InsightsType, data.NumberOfRecords)
+	response, err := delta.GetWeeklyInsights(data.ProjectID,"", data.QueryId, &data.BaseStartTime, &data.CompStartTime, data.InsightsType, data.NumberOfRecords)
 	err = deletePath("projects")
 	assert.Nil(t,err)
 	deleteQuery(&queryObj)
@@ -270,7 +270,7 @@ func isTokenExist(token string, private bool) (exists int, err error) {
 	return 0, nil
 }
 func createPathAndAddCpiFile(projectID uint64, baseStartTime time.Time, QueryId uint64)(err error){
-	path:= fmt.Sprintf("projects/"+strconv.FormatUint(projectID,10)+"/weeklyinsights/"+ U.GetDateOnlyFromTimestamp(baseStartTime.Unix())+"/q-"+strconv.FormatUint(QueryId,10)+"/k-10")
+	path:= fmt.Sprintf("projects/"+strconv.FormatUint(projectID,10)+"/weeklyinsights/"+ U.GetDateOnlyFromTimestampZ(baseStartTime.Unix())+"/q-"+strconv.FormatUint(QueryId,10)+"/k-10")
 	os.MkdirAll(path, 0777)
 
 	sourceFile, err := os.Open("data/cpi.txt")

@@ -38,8 +38,8 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	val1, _ := U.EncodeStructTypeToPostgresJsonb(interactionSettings)
 
 	salesforceTouchPoint := model.SalesforceTouchPoints{}
-	salesforceTouchPoint.TouchPointRules = make(map[string][]string)
-	salesforceTouchPoint.TouchPointRules["Sales"] = []string{"Force"}
+	salesforceTouchPoint.TouchPointRules = make(map[string][]model.SFTouchPointRule)
+	salesforceTouchPoint.TouchPointRules["Sales"] = []model.SFTouchPointRule{model.SFTouchPointRule{TouchPointTimeRef: "Force"}}
 	val2, _ := U.EncodeStructTypeToPostgresJsonb(salesforceTouchPoint)
 
 	hubspotTouchPoint := model.HubspotTouchPoints{}
@@ -60,7 +60,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 
 	valUpdated2 := model.SalesforceTouchPoints{}
 	_ = U.DecodePostgresJsonbToStructType(&getProject.SalesforceTouchPoints, &valUpdated2)
-	assert.Equal(t, valUpdated2.TouchPointRules["Sales"], []string{"Force"})
+	assert.Equal(t, valUpdated2.TouchPointRules["Sales"], []model.SFTouchPointRule{model.SFTouchPointRule{TouchPointTimeRef: "Force"}})
 
 	valUpdated3 := model.HubspotTouchPoints{}
 	_ = U.DecodePostgresJsonbToStructType(&getProject.HubspotTouchPoints, &valUpdated3)

@@ -19,18 +19,19 @@ type Project struct {
 	// An index created on token.
 	Token string `gorm:"size:32" json:"token"`
 	// An index created on private_token.
-	PrivateToken          string          `gorm:"size:32" json:"private_token"`
-	CreatedAt             time.Time       `json:"created_at"`
-	UpdatedAt             time.Time       `json:"updated_at"`
-	ProjectURI            string          `json:"project_uri"`
-	TimeFormat            string          `json:"time_format"`
-	DateFormat            string          `json:"date_format"`
-	TimeZone              string          `json:"time_zone"`
-	InteractionSettings   postgres.Jsonb  `json:"interaction_settings"`
-	SalesforceTouchPoints postgres.Jsonb  `json:"salesforce_touch_points"`
-	HubspotTouchPoints    postgres.Jsonb  `json:"hubspot_touch_points"`
-	JobsMetadata          *postgres.Jsonb `json:"jobs_metadata"`
-	ChannelGroupRules     postgres.Jsonb  `json:"channel_group_rules"`
+	PrivateToken                     string          `gorm:"size:32" json:"private_token"`
+	CreatedAt                        time.Time       `json:"created_at"`
+	UpdatedAt                        time.Time       `json:"updated_at"`
+	ProjectURI                       string          `json:"project_uri"`
+	TimeFormat                       string          `json:"time_format"`
+	DateFormat                       string          `json:"date_format"`
+	TimeZone                         string          `json:"time_zone"`
+	InteractionSettings              postgres.Jsonb  `json:"interaction_settings"`
+	SalesforceTouchPoints            postgres.Jsonb  `json:"salesforce_touch_points"`
+	HubspotTouchPoints               postgres.Jsonb  `json:"hubspot_touch_points"`
+	JobsMetadata                     *postgres.Jsonb `json:"jobs_metadata"`
+	ChannelGroupRules                postgres.Jsonb  `json:"channel_group_rules"`
+	IsMultipleProjectTimezoneEnabled bool            `gorm:"-" json:"is_multiple_project_timezone_enabled"`
 }
 
 const (
@@ -45,27 +46,38 @@ type InteractionSettings struct {
 }
 
 type SalesforceTouchPoints struct {
-	TouchPointRules map[string][]string `json:"touch_point_rules"`
+	TouchPointRules map[string][]SFTouchPointRule `json:"sf_touch_point_rules"`
 }
 
-type HubspotTouchPoints struct {
-	TouchPointRules map[string][]string `json:"touch_point_rules"`
+type SFTouchPointRule struct {
+	Filters           []SFTouchPointFilter `json:"filters"`
+	TouchPointTimeRef string               `json:"touch_point_time_ref"`
+	PropertiesMap     map[string]string    `json:"properties_map"`
 }
 
-// DefaultHubspotTouchPointsRules returns default query params and order (utm then qp) for various event properties.
-func DefaultHubspotTouchPointsRules() HubspotTouchPoints {
-
-	rules := HubspotTouchPoints{}
-	// Todo (Anil): Add default rules
-	rules.TouchPointRules = make(map[string][]string)
-	return rules
+type SFTouchPointFilter struct {
+	Property  string `json:"pr"`
+	Operator  string `json:"op"`
+	Value     string `json:"va"`
+	LogicalOp string `json:"lop"`
 }
 
 // DefaultSalesforceTouchPointsRules returns default query params and order (utm then qp) for various event properties.
 func DefaultSalesforceTouchPointsRules() SalesforceTouchPoints {
 
 	rules := SalesforceTouchPoints{}
-	// Todo (Anil): Add default rules
+	rules.TouchPointRules = make(map[string][]SFTouchPointRule)
+	return rules
+}
+
+type HubspotTouchPoints struct {
+	TouchPointRules map[string][]string `json:"hs_touch_point_rules"`
+}
+
+// DefaultHubspotTouchPointsRules returns default query params and order (utm then qp) for various event properties.
+func DefaultHubspotTouchPointsRules() HubspotTouchPoints {
+
+	rules := HubspotTouchPoints{}
 	rules.TouchPointRules = make(map[string][]string)
 	return rules
 }

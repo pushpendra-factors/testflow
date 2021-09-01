@@ -17,6 +17,7 @@ type WebAnalyticsQueries struct {
 	CustomGroupQueries []WebAnalyticsCustomGroupQuery `json:"custom_group_queries"`
 	From               int64                          `json:"from"`
 	To                 int64                          `json:"to"`
+	Timezone           string                         `json:"time_zone"`
 }
 
 type WebAnalyticsCustomGroupQuery struct {
@@ -52,6 +53,7 @@ type WebAnalyticsCacheResult struct {
 	Result      *WebAnalyticsQueryResult `json:"result"`
 	From        int64                    `json:"from"`
 	To          int64                    `json:"tom"`
+	Timezone    string                   `json:"timezone"`
 	RefreshedAt int64                    `json:"refreshed_at"`
 }
 
@@ -81,11 +83,11 @@ var DefaultWebAnalyticsQueries = map[string]string{
 }
 
 func getWebAnalyticsQueryResultCacheKey(projectID, dashboardID uint64,
-	from, to int64) (*cacheRedis.Key, error) {
+	from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
 
 	prefix := "dashboard:query:web"
 	var suffix string
-	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
+	if U.IsStartOfTodaysRangeIn(from, timezoneString) {
 		// Query for today's dashboard. Use to as 'now'.
 		suffix = fmt.Sprintf("did:%d:from:%d:to:now", dashboardID, from)
 	} else if U.Is30MinutesTimeRange(from, to) {
@@ -161,6 +163,7 @@ const (
 type WebAnalyticsCachePayload struct {
 	ProjectID, DashboardID uint64
 	From, To               int64
+	Timezone               U.TimeZoneString
 	Queries                *WebAnalyticsQueries
 }
 
@@ -175,6 +178,7 @@ type DashboardUnitWebAnalyticsCustomGroupQuery struct {
 	GroupByProperties []string `json:"gbp"`
 }
 
+// This can also depend on timezone.
 type DashboardUnitsWebAnalyticsQuery struct {
 	Class string `json:"cl"`
 	// Units - Supports redundant metric keys with different unit_ids.
@@ -183,6 +187,7 @@ type DashboardUnitsWebAnalyticsQuery struct {
 	CustomGroupUnits []DashboardUnitWebAnalyticsCustomGroupQuery `json:"custom_group_units"`
 	From             int64                                       `json:"from"`
 	To               int64                                       `json:"to"`
+	Timezone         string                                      `json:"time_zone"`
 }
 
 func (q *DashboardUnitsWebAnalyticsQuery) GetClass() string {
@@ -194,6 +199,14 @@ func (q *DashboardUnitsWebAnalyticsQuery) GetClass() string {
 
 func (q *DashboardUnitsWebAnalyticsQuery) GetQueryDateRange() (from, to int64) {
 	return q.From, q.To
+}
+
+func (q *DashboardUnitsWebAnalyticsQuery) SetTimeZone(timezoneString U.TimeZoneString) {
+	q.Timezone = string(timezoneString)
+}
+
+func (q *DashboardUnitsWebAnalyticsQuery) GetTimeZone() U.TimeZoneString {
+	return U.TimeZoneString(q.Timezone)
 }
 
 func (q *DashboardUnitsWebAnalyticsQuery) SetQueryDateRange(from, to int64) {
@@ -220,16 +233,16 @@ func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheRedisKey(projectID uint64
 	if err != nil {
 		return nil, err
 	}
-	suffix := getQueryCacheRedisKeySuffix(hashString, q.From, q.To)
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.From, q.To, U.TimeZoneString(q.Timezone))
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheExpiry() float64 {
-	return getQueryCacheResultExpiry(q.From, q.To)
+	return getQueryCacheResultExpiry(q.From, q.To, q.Timezone)
 }
 
 func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64,
-	from, to int64) (WebAnalyticsCacheResult, int) {
+	from, to int64, timezoneString U.TimeZoneString) (WebAnalyticsCacheResult, int) {
 
 	var cacheResult WebAnalyticsCacheResult
 	if shouldSkipWindow(from, to) {
@@ -246,7 +259,7 @@ func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64,
 		return cacheResult, http.StatusBadRequest
 	}
 
-	cacheKey, err := getWebAnalyticsQueryResultCacheKey(projectID, dashboardID, from, to)
+	cacheKey, err := getWebAnalyticsQueryResultCacheKey(projectID, dashboardID, from, to, timezoneString)
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting cache key")
 		return cacheResult, http.StatusInternalServerError
@@ -283,7 +296,7 @@ func shouldSkipWindow(from, to int64) bool {
 }
 
 func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
-	projectID, dashboardID uint64, from, to int64) {
+	projectID, dashboardID uint64, from, to int64, timezoneString U.TimeZoneString) {
 
 	if shouldSkipWindow(from, to) {
 		return
@@ -299,7 +312,7 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 		return
 	}
 
-	cacheKey, err := getWebAnalyticsQueryResultCacheKey(projectID, dashboardID, from, to)
+	cacheKey, err := getWebAnalyticsQueryResultCacheKey(projectID, dashboardID, from, to, timezoneString)
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting cache key for web analytics dashboard")
 	}
@@ -307,6 +320,7 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 		Result:      result,
 		From:        from,
 		To:          to,
+		Timezone:    string(timezoneString),
 		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 	}
 
@@ -315,7 +329,8 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult")
 		return
 	}
-	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), U.GetDashboardCacheResultExpiryInSeconds(from, to))
+
+	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return

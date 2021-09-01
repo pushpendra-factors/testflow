@@ -710,4 +710,43 @@ func main() {
 	} else {
 		log.Info("Created template table.")
 	}
+
+	// Create Feedback Table
+	if err := db.CreateTable(&model.Feedback{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("feedback table creation failed.")
+	} else {
+		log.Info("Created feedback table.")
+	}
+	if err := db.Exec("ALTER TABLE events DROP CONSTRAINT events_project_id_event_name_id_event_names_project_id_id_foreign_key;").Error; err != nil {
+		log.WithError(err).Error("Failed to drop constraint on events table")
+	} else {
+		log.Info("Altered type of id of event_names table.")
+	}
+	if err := db.Exec("ALTER TABLE events ALTER COLUMN event_name_id TYPE bigint USING event_name_id::bigint;").Error; err != nil {
+		log.WithError(err).Error("Failed to alter type of event_name_id on events.")
+	} else {
+		log.Info("Dropped constraint on events for fixing event_name_id type.")
+	}
+
+	if err := db.Exec("ALTER TABLE property_details DROP CONSTRAINT property_details_project_id_event_name_id_event_names_project_id_id_foreign_key;").Error; err != nil {
+		log.WithError(err).Error("Failed to drop constraint on property_details")
+	} else {
+		log.Info("Dropped constraint on property_details for fixing event_name_id type.")
+	}
+	if err := db.Exec("ALTER TABLE property_details ALTER COLUMN event_name_id TYPE bigint USING event_name_id::bigint;").Error; err != nil {
+		log.WithError(err).Error("Failed to alter type of event_name_id on property_details.")
+	} else {
+		log.Info("Altered type of event_name_id of property_details table.")
+	}
+
+	if err := db.Exec("ALTER TABLE event_names ALTER COLUMN id TYPE bigint USING id::bigint;").Error; err != nil {
+		log.WithError(err).Error("Failed to alter type of id on event_names.")
+	} else {
+		log.Info("Altered type of id of event_names table.")
+	}
+	if err := db.Exec("ALTER TABLE property_details ADD CONSTRAINT property_details_project_id_event_name_id_event_names_project_id_id_foreign_key FOREIGN KEY (project_id, event_name_id) REFERENCES event_names(project_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT;;").Error; err != nil {
+		log.WithError(err).Error("Failed to add constraint back to event_names.")
+	} else {
+		log.Info("Added foreign key constraint to event_names")
+	}
 }

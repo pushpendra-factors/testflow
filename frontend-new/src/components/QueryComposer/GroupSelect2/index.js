@@ -16,7 +16,7 @@ function GroupSelect2({
 
     useEffect(() => {
         const groupColState = Object.assign({}, groupCollapseState);
-        Object.keys(groupedProperties).forEach((index) => { groupColState[index] = true })
+        Object.keys(groupedProperties)?.forEach((index) => { groupColState[index] = true })
         setGroupCollapseState(groupColState);
     }, [groupedProperties]);
 
@@ -53,7 +53,7 @@ function GroupSelect2({
 
     const renderOptions = (options) => {
         const renderGroupedOptions = [];
-        options.forEach((group, grpIndex) => {
+        options?.forEach((group, grpIndex) => {
             const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
             
             let hasSearchTerm = false;
@@ -72,7 +72,7 @@ function GroupSelect2({
                     <div className={styles.dropdown__filter_select__option_group_container_sec}>
                         {collState
                             ? (() => {
-                                group.values.forEach((val, i) => {
+                                group?.values?.forEach((val, i) => {
                                     if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                                         hasSearchTerm = true;
                                         valuesOptions.push(

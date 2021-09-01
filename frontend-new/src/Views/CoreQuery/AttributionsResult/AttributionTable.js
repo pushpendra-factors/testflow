@@ -1,145 +1,25 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React from 'react';
 import moment from 'moment';
-import {
-  getTableColumns,
-  getTableData,
-  calcChangePerc,
-  defaultSortProp,
-} from './utils';
+import { calcChangePerc } from './utils';
 import DataTable from '../../../components/DataTable';
-import { useSelector } from 'react-redux';
-import OptionsPopover from './OptionsPopover';
 import { DASHBOARD_WIDGET_SECTION } from '../../../utils/constants';
-import { getNewSorterState } from '../../../utils/dataFormatter';
 
 function AttributionTable({
-  data,
   comparison_data,
   isWidgetModal,
-  event,
   setVisibleIndices,
   visibleIndices,
   maxAllowedVisibleProperties,
-  attribution_method,
-  attribution_method_compare,
-  touchpoint,
-  linkedEvents,
   reportTitle = 'Attributions',
   durationObj,
   cmprDuration,
   attributionMetrics,
-  setAttributionMetrics,
   section = null,
-  attr_dimensions,
+  columns,
+  tableData,
+  setSearchText,
+  searchText,
 }) {
-  const [searchText, setSearchText] = useState('');
-  const [sorter, setSorter] = useState(defaultSortProp());
-  const [columns, setColumns] = useState([]);
-  const [tableData, setTableData] = useState([]);
-  const { eventNames } = useSelector((state) => state.coreQuery);
-
-  const handleSorting = useCallback((prop) => {
-    setSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
-    });
-  }, []);
-
-  const handleMetricsVisibilityChange = useCallback(
-    (option) => {
-      setAttributionMetrics((curMetrics) => {
-        const newState = curMetrics.map((metric) => {
-          if (metric.header === option.header) {
-            return {
-              ...metric,
-              enabled: !metric.enabled,
-            };
-          }
-          return metric;
-        });
-        const enabledOptions = newState.filter((metric) => metric.enabled);
-        if (!enabledOptions.length) {
-          return curMetrics;
-        } else {
-          return newState;
-        }
-      });
-    },
-    [setAttributionMetrics]
-  );
-
-  const metricsOptionsPopover = useMemo(() => {
-    return (
-      <OptionsPopover
-        options={attributionMetrics}
-        onChange={handleMetricsVisibilityChange}
-      />
-    );
-  }, [attributionMetrics, handleMetricsVisibilityChange]);
-
-  useEffect(() => {
-    setColumns(
-      getTableColumns(
-        sorter,
-        handleSorting,
-        attribution_method,
-        attribution_method_compare,
-        touchpoint,
-        linkedEvents,
-        event,
-        eventNames,
-        attributionMetrics,
-        metricsOptionsPopover,
-        attr_dimensions,
-        durationObj,
-        comparison_data,
-        cmprDuration
-      )
-    );
-  }, [
-    attr_dimensions,
-    attributionMetrics,
-    attribution_method,
-    attribution_method_compare,
-    event,
-    eventNames,
-    handleSorting,
-    linkedEvents,
-    metricsOptionsPopover,
-    sorter,
-    touchpoint,
-    durationObj,
-    comparison_data,
-    cmprDuration,
-  ]);
-
-  useEffect(() => {
-    setTableData(
-      getTableData(
-        data,
-        event,
-        searchText,
-        sorter,
-        attribution_method_compare,
-        touchpoint,
-        linkedEvents,
-        attributionMetrics,
-        attr_dimensions,
-        comparison_data
-      )
-    );
-  }, [
-    attr_dimensions,
-    attributionMetrics,
-    attribution_method_compare,
-    data,
-    event,
-    linkedEvents,
-    searchText,
-    sorter,
-    touchpoint,
-    comparison_data,
-  ]);
-
   const getCSVData = () => {
     const dt = tableData;
     const enabledAttributionMetricKeys = attributionMetrics

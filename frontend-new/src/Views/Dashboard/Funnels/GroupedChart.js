@@ -19,6 +19,7 @@ function GroupedChart({
   const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
+  const [sorter, setSorter] = useState({});
 
   useEffect(() => {
     const { groups: appliedGroups, events } = formatData(
@@ -71,6 +72,8 @@ function GroupedChart({
         arrayMapper={arrayMapper}
         durations={resultState.data.meta}
         resultData={resultState.data}
+        sorter={sorter}
+        setSorter={setSorter}
       />
     );
   }

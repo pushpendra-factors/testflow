@@ -4,7 +4,7 @@ import styles from '../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index
 import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPage/utils';
 import { getMaxYpoint, getBarChartLeftMargin } from './utils';
 import ChartLegends from './ChartLegends';
-import { numberWithCommas } from '../../utils/dataFormatter';
+import { numberWithCommas, generateColors } from '../../utils/dataFormatter';
 import {
   BAR_CHART_XAXIS_TICK_LENGTH,
   REPORT_SECTION,
@@ -248,10 +248,9 @@ function BarChart({
   let legendColors = {};
 
   if (queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION) {
+    const appliedColors = generateColors(queries.length);
     legendsMapper = queries.map((q, index) => {
-      legendColors[`event${index + 1}`] = chartData.find(
-        (d) => d.eventIndex === index
-      ).color;
+      legendColors[`event${index + 1}`] = appliedColors[index];
       return {
         index,
         eventName: q,

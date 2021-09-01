@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import { Modal, Spin } from 'antd';
 import ActiveUnitContent from './ActiveUnitContent';
 import {
@@ -126,7 +126,7 @@ function ExpandableView({
         from = dates.startDate;
         to = dates.endDate;
       }
-      if (moment(to).diff(from, 'hours') < 24) {
+      if (MomentTz(to).diff(from, 'hours') < 24) {
         frequency = 'hour';
       }
       const newDurationObj = {

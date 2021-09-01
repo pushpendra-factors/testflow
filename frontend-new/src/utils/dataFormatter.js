@@ -72,10 +72,10 @@ export const SortDataByDuration = (arr, key, order) => {
     const val1 = getDurationInSeconds(a[key]);
     const val2 = getDurationInSeconds(b[key]);
     if (order === 'ascend') {
-      return val1 >= val2 ? 1 : -1;
+      return Number(val1) >= Number(val2) ? 1 : -1;
     }
     if (order === 'descend') {
-      return val1 <= val2 ? 1 : -1;
+      return Number(val1) <= Number(val2) ? 1 : -1;
     }
     return 0;
   });
@@ -109,27 +109,22 @@ export const SortData = (arr, key, order) => {
   const result = [...arr];
   result.sort((a, b) => {
     // type of a[key] can be an object when the comparison is applied
-    const val1 = typeof a[key] === 'object' ? a[key].value : a[key];
-    const val2 = typeof b[key] === 'object' ? b[key].value : b[key];
-    if (order === 'ascend') {
-      return parseFloat(val1) >= parseFloat(val2) ? 1 : -1;
-    }
-    if (order === 'descend') {
-      return parseFloat(val1) <= parseFloat(val2) ? 1 : -1;
-    }
-    return 0;
-  });
-  return result;
-};
+    let val1 = typeof a[key] === 'object' ? a[key].value : a[key];
+    let val2 = typeof b[key] === 'object' ? b[key].value : b[key];
 
-export const SortDataByObject = (arr, key, subkey, order) => {
-  const result = [...arr];
-  result.sort((a, b) => {
+    if (isNaN(val1)) {
+      val1 = 0;
+    }
+
+    if (isNaN(val2)) {
+      val2 = 0;
+    }
+
     if (order === 'ascend') {
-      return parseFloat(a[key][subkey]) >= parseFloat(b[key][subkey]) ? 1 : -1;
+      return Number(val1) >= Number(val2) ? 1 : -1;
     }
     if (order === 'descend') {
-      return parseFloat(a[key][subkey]) <= parseFloat(b[key][subkey]) ? 1 : -1;
+      return Number(val1) <= Number(val2) ? 1 : -1;
     }
     return 0;
   });
