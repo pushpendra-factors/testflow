@@ -411,14 +411,13 @@ function TemplateResults({
                             <div className={'flex justify-between'}>
                               {showSearch ? <Input
                                 className={styles.input}
-                                defaultValue={searchTerm}
                                 onChange={onInputSearch}
                                 prefix={(<SVG name="search" size={16} color={'grey'} />)}
                               /> : null}
                               <Button
                                 type='text'
                                 className={styles.btn}
-                                onClick={() => { setShowSearch(!showSearch) }}
+                                onClick={() => { setShowSearch(!showSearch); if(showSearch){setSearchTerm('')} }}
                               >
                                 <SVG name={!showSearch ? 'search' : 'close'} size={20} color={'grey'} />
                               </Button>
@@ -446,14 +445,13 @@ function TemplateResults({
                             <div className={'flex justify-between'}>
                               {showSearchSub ? <Input
                                 className={styles.input}
-                                defaultValue={subSearchTerm}
                                 onChange={onSubInputSearch}
                                 prefix={(<SVG name="search" size={16} color={'grey'} />)}
                               /> : null}
                               <Button
                                 type='text'
                                 className={styles.btn}
-                                onClick={() => { setShowSearchSub(!showSearchSub) }}
+                                onClick={() => { setShowSearchSub(!showSearchSub); if(showSearchSub){setSubSearchTerm('')} }}
                               >
                                 <SVG name={!showSearchSub ? 'search' : 'close'} size={20} color={'grey'} />
                               </Button>
