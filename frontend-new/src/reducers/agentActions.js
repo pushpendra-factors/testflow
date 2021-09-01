@@ -42,26 +42,6 @@ export default function reducer(state = {
     case 'UPDATE_AGENT_ROLE_FULFILLED': {
       return state;
     }
-    case "FETCH_PROJECTS_REJECTED": {
-      return {...state, fetchingProjects: false, projectsError: action.payload}
-    }
-    case "FETCH_PROJECTS_FULFILLED": {
-      // Indexed project objects by projectId. Kept projectId on value also intentionally 
-      // for array of projects from Object.values().
-     
-      let projectsWithRoles = [];
-      _.toArray(action.payload).map((project, index)=>{
-        project.map((projectDetails)=>{
-        projectDetails.role = index+1; 
-        projectsWithRoles.push(projectDetails); 
-        }) 
-      })
-
-      return {
-        ...state, 
-        projects: projectsWithRoles, 
-      }
-    }
     case "PROJECT_AGENT_INVITE_FULFILLED": {
       let nextState = { ...state };  
       let projectAgentMapping = action.payload.project_agent_mappings[0]; 
@@ -203,21 +183,6 @@ export function activate(password, token){
         
         reject("Activation failed. Please try again.");
       })
-    });
-  }
-}
-
-export function fetchProjects() {
-  return function(dispatch) {
-    return new Promise((resolve,reject) => {
-      get(dispatch, host + "v1/projects")
-        .then((response)=>{        
-          dispatch({type:"FETCH_PROJECTS_FULFILLED", payload: response.data});
-          resolve(response)
-        }).catch((err)=>{        
-          dispatch({type:"FETCH_PROJECTS_REJECTED", payload: err});
-          reject(err);
-        });
     });
   }
 }

@@ -33,7 +33,7 @@ func main() {
 
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	RedisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-
+	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 	// This is in days
 	rollupLookback := flag.Int("rollup_lookback", 1, "")
 
@@ -42,6 +42,7 @@ func main() {
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	flag.Parse()
+	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	if *env != "development" &&
 		*env != "staging" &&
 		*env != "production" {
@@ -79,7 +80,8 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      taskID,
 		},
-		PrimaryDatastore: *primaryDatastore,
+		PrimaryDatastore:         *primaryDatastore,
+		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
 	}
 
 	C.InitConf(config)

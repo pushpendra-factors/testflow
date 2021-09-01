@@ -315,7 +315,7 @@ const MartInt = ({activeProject, udpateProjectDetails}) => {
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
     agents: state.agent.agents,
-    projects: state.agent.projects,
+    projects: state.global.projects,
     currentAgent: state.agent.agent_details
 });
 

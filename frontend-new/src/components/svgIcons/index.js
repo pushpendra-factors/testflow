@@ -1450,6 +1450,73 @@ const OthersSVG = ({ size = 20, color, extraClass }) => {
   )
 }
 
+const ClearbitLogoSVG = ({ size = 24, extraClass }) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox='0 0 24 24'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+      className={extraClass}
+    >
+      <path
+        fillRule='evenodd'
+        clipRule='evenodd'
+        d='M23 12V17.1244L22.9987 17.3892C22.9807 19.2334 22.7695 19.9416 22.3878 20.6553C21.9884 21.4022 21.4022 21.9884 20.6553 22.3878L20.5556 22.44C19.8399 22.8058 19.0767 23 17.1244 23H12V12H23Z'
+        fill='url(#paint0_linear)'
+      />
+      <path
+        fillRule='evenodd'
+        clipRule='evenodd'
+        d='M20.6553 1.61218C21.4022 2.01163 21.9884 2.59781 22.3878 3.34473L22.44 3.4444C22.8058 4.16007 23 4.92331 23 6.87557V12H12V1H17.1244C19.1675 1 19.9084 1.21273 20.6553 1.61218Z'
+        fill='url(#paint1_linear)'
+      />
+      <path
+        fillRule='evenodd'
+        clipRule='evenodd'
+        d='M12 1V23H6.87557L6.61076 22.9987C4.76664 22.9807 4.05845 22.7695 3.34473 22.3878C2.59781 21.9884 2.01163 21.4022 1.61218 20.6553L1.56003 20.5556C1.19424 19.8399 1 19.0767 1 17.1244V6.87557C1 4.83251 1.21273 4.09164 1.61218 3.34473C2.01163 2.59781 2.59781 2.01163 3.34473 1.61218L3.4444 1.56003C4.16007 1.19424 4.92331 1 6.87557 1H12Z'
+        fill='url(#paint2_linear)'
+      />
+      <defs>
+        <linearGradient
+          id='paint0_linear'
+          x1='17.5'
+          y1='12'
+          x2='23'
+          y2='23'
+          gradientUnits='userSpaceOnUse'
+        >
+          <stop stopColor='#DEF2FE' />
+          <stop offset='1' stopColor='#DBF1FE' />
+        </linearGradient>
+        <linearGradient
+          id='paint1_linear'
+          x1='12'
+          y1='1'
+          x2='17.5'
+          y2='12'
+          gradientUnits='userSpaceOnUse'
+        >
+          <stop stopColor='#57BCFD' />
+          <stop offset='1' stopColor='#51B5FD' />
+        </linearGradient>
+        <linearGradient
+          id='paint2_linear'
+          x1='5.125'
+          y1='1'
+          x2='14.475'
+          y2='19.7'
+          gradientUnits='userSpaceOnUse'
+        >
+          <stop stopColor='#1CA7FD' />
+          <stop offset='1' stopColor='#148CFC' />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+};
+
 export {
   BrandSVG,
   DeleteSVG,
@@ -1553,5 +1620,6 @@ export {
   Website_eventsSVG,
   SegmentSVG,
   Most_recentSVG,
-  OthersSVG
+  OthersSVG,
+  ClearbitLogoSVG
 };

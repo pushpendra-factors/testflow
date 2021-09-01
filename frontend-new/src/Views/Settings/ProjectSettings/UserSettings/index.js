@@ -7,7 +7,7 @@ import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import InviteUsers from './InviteUsers';
 import { connect } from 'react-redux';
 import { fetchProjectAgents, projectAgentRemove, updateAgentRole } from 'Reducers/agentActions';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 
 const { confirm } = Modal;
 
@@ -48,7 +48,7 @@ function UserSettings({
         updateAgentRole(activeProjectID, uuid, 2).then(() => {
           message.success('User role updated!');
         }).catch((err) => {
-          message.error(err);
+          message.error(err.data.error); 
         });
       }
     });
@@ -118,7 +118,7 @@ function UserSettings({
           name: `${agent.first_name || agent.last_name ? (agent.first_name + ' ' + agent.last_name) : '---'}`,
           email: agent.email,
           role: `${agent.role === 2 ? 'Admin' : 'User'}`,
-          lastActivity: `${agent.last_logged_in ? moment(agent.last_logged_in).fromNow() : !agent.is_email_verified ? 'Pending Invite' : '---'}`,
+          lastActivity: `${agent.last_logged_in ? MomentTz(agent.last_logged_in).fromNow() : !agent.is_email_verified ? 'Pending Invite' : '---'}`,
           actions: values
         });
         setdataSource(formattedArray);

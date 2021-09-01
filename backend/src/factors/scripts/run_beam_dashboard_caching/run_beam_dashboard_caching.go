@@ -66,6 +66,7 @@ var (
 
 	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName           = flag.String("app_name", "", "Override default app_name.")
+	enableMemSQLRedisWrites   = flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 )
 
 func registerStructs() {
@@ -209,7 +210,7 @@ func (f *reportJobSummaryCombineFn) ExtractOutput(a jobStatsAccumulator) {
 // TODO(prateek): Check a way to add handling for panic and worker errors.
 func main() {
 	flag.Parse()
-
+	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	defaultAppName := "beam_dashboard_caching"
 	defaultHealthcheckPingID := C.HealthcheckBeamDashboardCachingPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
@@ -252,6 +253,7 @@ func main() {
 		RedisPort:                       *redisPort,
 		SentryDSN:                       *sentryDSN,
 		MultipleTimezoneEnabledProjects: C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
+		DisableMemSQLRedisWrites:        &disableMemSQLRedisWrites,
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", healthcheckPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))

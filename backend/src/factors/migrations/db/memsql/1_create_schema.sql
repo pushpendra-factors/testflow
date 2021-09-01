@@ -632,7 +632,6 @@ CREATE TABLE IF NOT EXISTS task_details
 CREATE TABLE IF NOT EXISTS task_execution_details
 (
     id text NOT NULL,
-    execution_id bigint AUTO_INCREMENT,
     task_id bigint NOT NULL,
     project_id bigint NOT NULL,
     delta bigint NOT NULL,
@@ -642,7 +641,7 @@ CREATE TABLE IF NOT EXISTS task_execution_details
     is_completed boolean,
     SHARD KEY (task_id),
     KEY (task_id) USING HASH,
-    PRIMARY KEY (task_id, execution_id)
+    PRIMARY KEY (task_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS task_execution_dependency_details

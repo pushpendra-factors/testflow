@@ -85,6 +85,7 @@ var (
 	cacheSortedSet                    = flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	allowChannelGroupingForProjectIDs = flag.String("allow_channel_grouping_for_projects",
 		"", "List of projects to allow channel property population in session events.")
+	enableMemSQLRedisWrites = flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 )
 
 func registerStructs() {
@@ -611,6 +612,7 @@ type AddSessionJobProps struct {
 func main() {
 
 	flag.Parse()
+	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	if *env != "development" &&
 		*env != "staging" &&
 		*env != "production" {
@@ -683,6 +685,7 @@ func main() {
 		SentryDSN:                         *sentryDSN,
 		CacheSortedSet:                    *cacheSortedSet,
 		AllowChannelGroupingForProjectIDs: *allowChannelGroupingForProjectIDs,
+		DisableMemSQLRedisWrites:          &disableMemSQLRedisWrites,
 	}
 
 	beam.PipelineOptions.Set("HealthchecksPingID", "0e224a5e-01bd-454c-b361-651d303562c6")

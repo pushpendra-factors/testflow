@@ -50,10 +50,12 @@ func main() {
 	overrideDateRangeEnd := flag.String("overrride_date_range_end", "", "")
 	perQueryPullRange := flag.Int("per_query_pull_range", 0, "")
 	skipExpiry := flag.Bool("skip_expiry_for_cache", false, "")
+	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
+	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	if *env != "development" &&
 		*env != "staging" &&
 		*env != "production" {
@@ -83,10 +85,11 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *RedisPortPersistent,
-		SentryDSN:           *sentryDSN,
+		PrimaryDatastore:         *primaryDatastore,
+		RedisHostPersistent:      *redisHostPersistent,
+		RedisPortPersistent:      *RedisPortPersistent,
+		SentryDSN:                *sentryDSN,
+		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
 	}
 
 	C.InitConf(config)

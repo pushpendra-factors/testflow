@@ -407,6 +407,15 @@ export const PREDEFINED_DATES = {
   YESTERDAY: 'yesterday',
 };
 
+export const TimeZoneOffsetValues = {
+  IST: {offset:'+05:30', city:'Asia/Kolkata'},
+  PT: {offset:'−08:00', city:'America/Vancouver'},
+  CT: {offset:'−06:00', city:'America/Costa_Rica'},
+  ET: {offset:'−05:00', city:'America/Chicago'},
+  GMT: {offset:'+00:00', city:'UTC'},
+  AEST: {offset:'+10:00', city:'Australia/Sydney'},
+}
+
 export const DATE_FORMATS = {
   month: 'MMM-YYYY',
   date: 'D-MMM-YYYY',

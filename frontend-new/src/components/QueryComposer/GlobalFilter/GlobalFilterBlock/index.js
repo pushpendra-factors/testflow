@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { DateRangePicker } from 'react-date-range';
-import { Input, Button, Result } from 'antd';
-import moment from 'moment';
+import { Input, Button, Result } from 'antd'; 
 import { SVG, Text } from 'factorsComponents';
 import {
   DEFAULT_DATE_RANGE,
 } from 'Components/QueryComposer/DateRangeSelector/utils';
-
+import MomentTz from 'Components/MomentTz';
 const defaultOpProps = {
   "categorical": [
     '=',
@@ -103,8 +102,8 @@ export default function GlobalFilterBlock({
   }, [filterProps])
 
   const parseDateRangeFilter = (fr, to) => {
-    return (moment(fr).format('MMM DD, YYYY') + ' - ' +
-              moment(to).format('MMM DD, YYYY'));
+    return (MomentTz(fr).format('MMM DD, YYYY') + ' - ' +
+              MomentTz(to).format('MMM DD, YYYY'));
   }
 
   const renderFilterContent = () => {
@@ -266,7 +265,7 @@ export default function GlobalFilterBlock({
     const newRange = [...selectedRngState];
     const newFilter = Object.assign({}, newFilterState);
     newRange[0] = range.selected;
-    const endRange = moment(newRange[0].endDate).endOf('day').toDate().getTime();
+    const endRange = MomentTz(newRange[0].endDate).endOf('day').toDate().getTime();
     setSelectedRngState(newRange);
     const rangeValue = {
       "fr": newRange[0].startDate.getTime(),
@@ -386,7 +385,7 @@ export default function GlobalFilterBlock({
               ranges={selectedRngState}
               onChange={onDateSelect}
               minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
-              maxDate={moment(new Date()).subtract(1, 'days').endOf('day').toDate()}
+              maxDate={MomentTz(new Date()).subtract(1, 'days').endOf('day').toDate()}
             />
           </span>)
         }

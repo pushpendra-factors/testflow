@@ -3,6 +3,7 @@ package main
 import (
 	C "factors/config"
 	"flag"
+
 	"github.com/gomodule/redigo/redis"
 	log "github.com/sirupsen/logrus"
 )
@@ -15,14 +16,17 @@ func main() {
 	env := flag.String("env", "development", "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	RedisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 
 	flag.Parse()
+	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	taskID := "cleanup_offline"
 	config := &C.Configuration{
-		AppName:             taskID,
-		Env:                 *env,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *RedisPortPersistent,
+		AppName:                  taskID,
+		Env:                      *env,
+		RedisHostPersistent:      *redisHostPersistent,
+		RedisPortPersistent:      *RedisPortPersistent,
+		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
 	}
 	C.InitConf(config)
 

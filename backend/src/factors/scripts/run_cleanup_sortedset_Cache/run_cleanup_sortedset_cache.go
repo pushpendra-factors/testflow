@@ -29,6 +29,7 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	RedisPortPersistent := flag.Int("redis_port_ps", 6379, "")
@@ -45,6 +46,7 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	flag.Parse()
+	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	if *env != "development" &&
 		*env != "staging" &&
 		*env != "production" {
@@ -84,7 +86,8 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
+		PrimaryDatastore:         *primaryDatastore,
+		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
 	}
 
 	C.InitConf(config)

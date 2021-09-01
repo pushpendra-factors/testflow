@@ -59,8 +59,9 @@ func main() {
 	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
 		false, "Enables SDK and Integration request queue duplication.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
+	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 	flag.Parse()
-
+	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	workerName := defaultWorkerName
 	if *enableSDKAndIntegrationRequestQueueDuplication {
 		workerName = duplicateWorkerName
@@ -105,6 +106,7 @@ func main() {
 		DuplicateQueueRedisHost:                        *duplicateQueueRedisHost,
 		DuplicateQueueRedisPort:                        *duplicateQueueRedisPort,
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
+		DisableMemSQLRedisWrites:                       &disableMemSQLRedisWrites,
 	}
 	C.InitConf(config)
 

@@ -93,26 +93,15 @@ function Sidebar(props) {
     setVisible(false);
   };
 
-  const switchProject = () => {
+  const switchProject = () => {  
+    localStorage.setItem('activeProject', selectedProject?.id);
     props.setActiveProject(selectedProject);
     history.push('/');
     notification.success({
       message: 'Project Changed!',
       description: `You are currently viewing data from ${selectedProject.name}`
     });
-  };
-
-  useEffect(() => {
-    // document.onkeydown = keydown;
-    // function keydown(evt) {
-    //   // Shift+G to trigger grid debugger
-    //   if (evt.shiftKey && evt.keyCode === 71) { setVisible(!visible); }
-    // }
-    // Setting first project as active project if no-active project exisit in redux-persist/localStorage.
-    if (_.isEmpty(props.active_project)) {
-      props.setActiveProject(props.projects[0]);
-    }
-  }, []);
+  }; 
 
   return (
     <>
@@ -224,7 +213,7 @@ function Sidebar(props) {
 }
 const mapStateToProps = (state) => {
   return {
-    projects: state.agent.projects,
+    projects: state.global.projects,
     active_project: state.global.active_project,
     currentAgent: state.agent.agent_details
   };

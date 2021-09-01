@@ -489,7 +489,7 @@ func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *Tabl
 }
 
 func isValidProjectID(tableName string, id uint64) bool {
-	return id > 0 || tableName == tableTaskExecutionDetails
+	return id > 0
 }
 
 func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interface{},
@@ -877,16 +877,6 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.DisplayName{}
 	case tableGoogleOrganicDocuments:
 		record = &model.GoogleOrganicDocument{}
-	case tableProjectModelMetadata:
-		record = &model.ProjectModelMetadata{}
-	case tableTaskDetails:
-		record = &model.TaskDetails{}
-	case tableTaskExecutionDetails:
-		record = &model.TaskExecutionDetails{}
-	case tableTaskExecutionDependencyDetails:
-		record = &model.TaskExecutionDependencyDetails{}
-	case tableWeekyInsightsMetadata:
-		record = &model.WeeklyInsightsMetadata{}
 	case tableTemplates:
 		record = &model.Template{}
 
@@ -1270,11 +1260,6 @@ func migrateAllTables(projectIDs []uint64) {
 		tableSmartPropertyRules,
 		tableDisplayNames,
 		tableGoogleOrganicDocuments,
-		tableProjectModelMetadata,
-		tableTaskDetails,
-		tableTaskExecutionDetails,
-		tableTaskExecutionDependencyDetails,
-		tableWeekyInsightsMetadata,
 		tableTemplates,
 		tableFeedback,
 	}

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useContext } from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import {
   Button,
   Modal,
@@ -48,6 +48,9 @@ function SaveQuery({
   const { active_project } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
+
+  const startOfWeek =  MomentTz().startOf('week').utc().unix();
+  const todayNow =  MomentTz().utc().unix();
 
   const handleTitleChange = useCallback((e) => {
     setTitle(e.target.value);
@@ -119,16 +122,16 @@ function SaveQuery({
       if (queryType === QUERY_TYPE_FUNNEL) {
         query = {
           ...requestQuery,
-          fr: moment().startOf('week').utc().unix(),
-          to: moment().utc().unix(),
+          fr: startOfWeek,
+          to: todayNow,
         };
       } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
         query = {
           ...requestQuery,
           query: {
             ...requestQuery.query,
-            from: moment().startOf('week').utc().unix(),
-            to: moment().utc().unix(),
+            from: startOfWeek,
+            to: todayNow,
           },
         };
       } else if (queryType === QUERY_TYPE_EVENT) {
@@ -136,8 +139,8 @@ function SaveQuery({
           query_group: requestQuery.map((q) => {
             return {
               ...q,
-              fr: moment().startOf('week').utc().unix(),
-              to: moment().utc().unix(),
+              fr: startOfWeek,
+              to: todayNow,
               gbt: q.gbt ? 'date' : '',
             };
           }),
@@ -148,8 +151,8 @@ function SaveQuery({
           query_group: requestQuery.query_group.map((q) => {
             return {
               ...q,
-              fr: moment().startOf('week').utc().unix(),
-              to: moment().utc().unix(),
+              fr: startOfWeek,
+              to: todayNow,
               gbt: q.gbt ? 'date' : '',
             };
           }),

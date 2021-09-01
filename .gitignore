@@ -7,6 +7,10 @@ frontend/.firebase
 frontend-new/build
 frontend-new/node_modules
 
+# slack
+slack-app/build
+slack-app/node_modules
+
 # backend
 backend/pkg/**
 backend/bin/**

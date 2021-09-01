@@ -26,12 +26,10 @@ const FacebookIntegration = ({
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    fetchProjectSettings(activeProject.id).then(() => {
-      if (currentProjectSettings?.int_facebook_ad_account) {
-        setIsActive(true);
-      }
-    })
-  }, []);
+    if (currentProjectSettings?.int_facebook_ad_account) {
+      setIsActive(true);
+    }
+  }, [currentProjectSettings]);
 
   const makeSelectOpt = (value, label) => {
     if (!label) label = value;
