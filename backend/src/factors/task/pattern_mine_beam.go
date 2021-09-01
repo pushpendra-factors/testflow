@@ -58,14 +58,8 @@ func InitConfBeam(config *C.Configuration) {
 
 	C.InitConf(config)
 	C.SetIsBeamPipeline()
-	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 5, 2)
-	if err != nil {
-		// TODO(prateek): Check how a panic here will effect the pipeline.
-		log.WithError(err).Panic("Failed to initalize DB inside worker.")
-	}
 	C.InitRedisConnection(config.RedisHost, config.RedisPort, true, 20, 0)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	C.KillDBQueriesOnExit()
 }
 
 func readPatternFromFile(partFilesDir string, cloudManager *filestore.FileManager, projectId, modelId uint64) ([]*P.Pattern, error) {
@@ -320,7 +314,6 @@ func (f *CpThreadDoFn) StartBundle(ctx context.Context) {
 
 func (f *CpThreadDoFn) FinishBundle(ctx context.Context) {
 	beamlog.Info(ctx, "Closing DB Connection from FinishBundle cpThreadDoFn")
-	C.GetServices().Db.Close()
 	C.SafeFlushAllCollectors()
 }
 

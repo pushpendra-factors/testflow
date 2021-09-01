@@ -7,8 +7,7 @@ import (
 )
 
 type TaskExecutionDetails struct {
-	ID          string          `gorm:"type:uuid;default:uuid_generate_v4()" json:"id"`
-	ExecutionID uint64          `gorm:"primary_key:true;auto_increment:false" json:"execution_id"`
+	ID          string          `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
 	TaskID      uint64          `json:"task_id"`
 	ProjectID   uint64          `json:"project_id"`
 	Delta       uint64          `json:"delta"`

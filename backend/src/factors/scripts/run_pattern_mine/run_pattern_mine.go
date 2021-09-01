@@ -138,11 +138,7 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
+		PrimaryDatastore: *primaryDatastore,
 	}
 
 	C.InitConf(config)
@@ -164,9 +160,6 @@ func main() {
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Fatal("Failed to init etcd client")
 	}
-
-	C.InitRedis(config.RedisHost, config.RedisPort)
-	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	log.WithFields(log.Fields{
 		"Env":             *envFlag,

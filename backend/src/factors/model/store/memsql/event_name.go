@@ -1208,20 +1208,14 @@ func (store *MemSQL) GetEventTypeFromDb(
 			tmpEventNames = append(tmpEventNames, b)
 		}
 	}
-
-	queryStr := "SELECT name,type FROM event_names WHERE project_id=? and name IN (?)"
+	queryStr := fmt.Sprintf("SELECT name,type FROM event_names WHERE project_id = %d and name IN (?)", projectID)
 
 	if hasLimit {
-		queryStr = queryStr + " " + "LIMIT ?"
+		queryStr = queryStr + fmt.Sprintf(" LIMIT %d", limit)
 	}
 
 	params := make([]interface{}, 0)
-	params = append(params, projectID)
 	params = append(params, tmpEventNames)
-	if hasLimit {
-		params = append(params, limit)
-	}
-
 	rows, err := db.Raw(queryStr, params...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error(

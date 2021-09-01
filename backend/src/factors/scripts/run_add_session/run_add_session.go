@@ -62,8 +62,9 @@ func main() {
 	allowChannelGroupingForProjectIDs := flag.String("allow_channel_grouping_for_projects",
 		"", "List of projects to allow channel property population in sesion events.")
 
+	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 	flag.Parse()
-
+	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	if *env != "development" &&
 		*env != "staging" &&
 		*env != "production" {
@@ -108,6 +109,7 @@ func main() {
 		SentryDSN:                         *sentryDSN,
 		CacheSortedSet:                    *cacheSortedSet,
 		AllowChannelGroupingForProjectIDs: *allowChannelGroupingForProjectIDs,
+		DisableMemSQLRedisWrites:          &disableMemSQLRedisWrites,
 	}
 
 	C.InitConf(config)

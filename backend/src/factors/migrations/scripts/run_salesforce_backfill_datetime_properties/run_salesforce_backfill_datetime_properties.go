@@ -41,8 +41,9 @@ func main() {
 	from := flag.Int64("start_timestamp", 0, "Staring timestamp from events search.")
 	to := flag.Int64("end_timestamp", 0, "Ending timestamp from events search. End timestamp will be excluded")
 	wetRun := flag.Bool("wet", false, "Wet run")
-
+	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 	flag.Parse()
+	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	defer util.NotifyOnPanic("Task#run_salesforce_backfill_datetime_properties", *env)
 
 	taskID := "run_salesforce_backfill_datetime_properties"
@@ -75,12 +76,13 @@ func main() {
 			Password: *dbPass,
 			AppName:  taskID,
 		},
-		SentryDSN:           *sentryDSN,
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:                *sentryDSN,
+		PrimaryDatastore:         *primaryDatastore,
+		RedisHost:                *redisHost,
+		RedisPort:                *redisPort,
+		RedisHostPersistent:      *redisHostPersistent,
+		RedisPortPersistent:      *redisPortPersistent,
+		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
 	}
 
 	C.InitConf(config)
