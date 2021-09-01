@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    layer: dataserver-memsql
+    env: production
+    project: factors-production
+    nodePool: persistent-pool-standard
+  name: dataserver-memsql
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 4
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: dataserver-memsql
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: dataserver-memsql
+        nodePool: persistent-pool-standard
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: persistent-pool-standard
+      containers:
+      - name: dataserver-memsql
+        image: us.gcr.io/factors-production/data-server:a2a665c97-2611
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8089
+        volumeMounts:
+        - name: workdir
+          mountPath: /usr/local/var/factors
+        resources:
+          requests:
+            memory: "100M"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext: {}
+        readinessProbe:
+          tcpSocket:
+            port: 8089
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8089
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        args:
+          - --env
+          - $(ENV)
+          - --port
+          - "8089"
+          - --app_name
+          - "dataserver_memsql"
+          - --memsql_host
+          - $(MEMSQL_HOST)
+          - --memsql_port
+          - $(MEMSQL_PORT)
+          - --memsql_name
+          - $(MEMSQL_DB)
+          - --memsql_user
+          - $(MEMSQL_USER)
+          - --memsql_pass
+          - $(MEMSQL_PASSWORD)
+          - --memsql_cert
+          - $(MEMSQL_CERTIFICATE)
+          - --memsql_resource_pool
+          - $(MEMSQL_RPOOL_SOFT_CPU_50)
+          - --primary_datastore
+          - "memsql"
+          - --redis_host
+          - $(REDIS_HOST)
+          - --redis_port
+          - $(REDIS_PORT)
+          - --sentry_dsn
+          - $(SENTRY_DSN)
+          - --gcp_project_id
+          - $(GCP_PROJECT_ID)
+          - --gcp_project_location
+          - $(GCP_PROJECT_LOCATION)
+        envFrom:
+        - configMapRef:
+            name: config-env
+        - configMapRef:
+            name: config-memsql
+        - configMapRef:
+            name: config-redis
+        - secretRef:
+            name: secret-memsql
+        - secretRef:
+            name: secret-sentry
+      volumes:
+      - name: workdir
+        emptyDir: {}

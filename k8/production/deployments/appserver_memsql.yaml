@@ -70,15 +70,15 @@ spec:
           - $(API_HTTP_PORT)
           - --etcd
           - $(ETCD)
-          - --db_host
+          - --memsql_host
           - $(MEMSQL_HOST)
-          - --db_port
+          - --memsql_port
           - $(MEMSQL_PORT)
-          - --db_name
+          - --memsql_name
           - $(MEMSQL_DB)
-          - --db_user
+          - --memsql_user
           - $(MEMSQL_USER)
-          - --db_pass
+          - --memsql_pass
           - $(MEMSQL_PASSWORD)
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)

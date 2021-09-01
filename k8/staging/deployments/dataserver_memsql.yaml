@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    layer: dataserver-dup
-    env: production
-    project: factors-production
-    nodePool: persistent-pool-standard
-  name: dataserver-dup
+    layer: dataserver-memsql
+    env: staging
+    project: factors-staging
+    nodePool: factors-staging-node-pool
+  name: dataserver-memsql
   namespace: default
 spec:
   progressDeadlineSeconds: 600
@@ -14,7 +14,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      layer: dataserver-dup
+      layer: dataserver-memsql
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -23,14 +23,14 @@ spec:
   template:
     metadata:      
       labels:
-        layer: dataserver-dup
-        nodePool: persistent-pool-standard
+        layer: dataserver-memsql
+        nodePool: factors-staging-node-pool
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-pool-standard
+        cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
-      - name: dataserver-dup
-        image: us.gcr.io/factors-production/data-server:4ab1185-1718
+      - name: dataserver-memsql
+        image: us.gcr.io/factors-staging/data-server:40c3da8ed-channels-etl-3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8089
@@ -58,16 +58,20 @@ spec:
           - $(ENV)
           - --port
           - "8089"
-          - --db_host
-          - $(DB_HOST_CLONE)
-          - --db_port
-          - $(DB_PORT)
-          - --db_name
-          - $(POSTGRES_DB)
-          - --db_user
-          - $(POSTGRES_USER)
-          - --db_pass
-          - $(POSTGRES_PASSWORD)
+          - --memsql_host
+          - $(MEMSQL_HOST)
+          - --memsql_port
+          - $(MEMSQL_PORT)
+          - --memsql_user
+          - $(MEMSQL_USER)
+          - --memsql_name
+          - $(MEMSQL_DB)
+          - --memsql_pass
+          - $(MEMSQL_PASSWORD)
+          - --memsql_cert
+          - $(MEMSQL_CERTIFICATE)
+          - --primary_datastore
+          - "memsql"
           - --redis_host
           - $(REDIS_HOST_2)
           - --redis_port
@@ -82,11 +86,11 @@ spec:
         - configMapRef:
             name: config-env
         - configMapRef:
-            name: config-postgres
+            name: config-memsql
         - configMapRef:
-          name: config-redis
+            name: config-redis
         - secretRef:
-            name: secret-postgres
+            name: secret-memsql
         - secretRef:
             name: secret-sentry
       volumes:

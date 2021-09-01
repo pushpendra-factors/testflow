@@ -79,6 +79,43 @@ const (
 	healthcheckPingID                   = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
 
+var supportedTables = []string{
+	tableUsers,
+	tableEventNames,
+	tableEvents,
+	tableProjects,
+	tableAgents,
+	tableProjectAgentMappings,
+	tableProjectBillingAccountMappings,
+	tableProjectSettings,
+	tableAdwordsDocuments,
+	tableBigquerySettings,
+	tableBillingAccounts,
+	tableDashboardUnits,
+	tableDashboards,
+	tableFacebookDocuments,
+	tableFactorsGoals,
+	tableFactorsTrackedEvents,
+	tableFactorsTrackedUserProperties,
+	tableHubspotDocuments,
+	tableSalesforceDocuments,
+	tableQueries,
+	tableScheduledTasks,
+	tableLinkedInDocuments,
+	tablePropertyDetails,
+	tableSmartProperties,
+	tableSmartPropertyRules,
+	tableDisplayNames,
+	tableProjectModelMetadata,
+	tableGoogleOrganicDocuments,
+	tableTaskDetails,
+	tableTaskExecutionDetails,
+	tableTaskExecutionDependencyDetails,
+	tableWeekyInsightsMetadata,
+	tableTemplates,
+	tableFeedback,
+}
+
 var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
 
 type TableRecord struct {
@@ -221,6 +258,16 @@ func main() {
 		log.Fatal("Invalid include_tables. It should be either * or list of tables.")
 	}
 
+	if *includeTables != "" && *includeTables != "*" &&
+		!isValidTables(U.CleanSplitByDelimiter(*includeTables, ",")) {
+		log.Fatal("Invalid table names on include_tables.")
+	}
+
+	if *excludeTables != "" && *excludeTables != "*" &&
+		!isValidTables(U.CleanSplitByDelimiter(*excludeTables, ",")) {
+		log.Fatal("Invalid table names on exclude_tables.")
+	}
+
 	if *pageSize == 0 {
 		log.Fatal("Migration page size cannot be zero.")
 	}
@@ -295,6 +342,15 @@ func main() {
 
 	log.WithField("project_ids", projectIDs).Info("Running in replication mode.")
 	migrateAllTables(projectIDs)
+}
+
+func isValidTables(tables []string) bool {
+	for _, t := range tables {
+		if !U.StringValueIn(t, supportedTables) {
+			return false
+		}
+	}
+	return true
 }
 
 func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
