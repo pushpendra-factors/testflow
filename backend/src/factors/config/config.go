@@ -1067,13 +1067,15 @@ func InitSentryLogging(sentryDSN, appName string) {
 // SafeFlushAllCollectors Safe flush sentry and metrics collectors. Used with `defer` statement.
 // Useful while running scripts in development mode where sentry is not initialized.
 func SafeFlushAllCollectors() {
-	if services.SentryHook != nil {
-		services.SentryHook.Flush()
-	}
+	if services != nil {
+		if services.SentryHook != nil {
+			services.SentryHook.Flush()
+		}
 
-	if services.MetricsExporter != nil {
-		services.MetricsExporter.StopMetricsExporter()
-		services.MetricsExporter.Flush()
+		if services.MetricsExporter != nil {
+			services.MetricsExporter.StopMetricsExporter()
+			services.MetricsExporter.Flush()
+		}
 	}
 }
 

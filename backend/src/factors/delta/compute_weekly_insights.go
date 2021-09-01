@@ -189,7 +189,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.DeltaRatio = file.DeltaRatio[keys][keys2] * temp.W1
 						if WhiteListedKeys[value.Key] {
 							temp.DeltaRatio *= 2 // boosting the sorting factor if upvoted
-						}else if DecreaseBoostKeys[value.Key]{
+						} else if DecreaseBoostKeys[value.Key] {
 							temp.DeltaRatio *= 0.5 // reverse
 						}
 					}
@@ -318,7 +318,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
 						if WhiteListedKeys[val2.Key] {
 							temp.JSDivergence *= 2 // boosting 2X
-						}else if DecreaseBoostKeys[val2.Key]{
+						} else if DecreaseBoostKeys[val2.Key] {
 							temp.JSDivergence *= 0.5
 						}
 					}
@@ -374,7 +374,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
 						if WhiteListedKeys[val2.Key] {
 							temp.JSDivergence *= 2
-						}else if DecreaseBoostKeys[val2.Key]{
+						} else if DecreaseBoostKeys[val2.Key] {
 							temp.JSDivergence *= 0.5
 						}
 					}
@@ -451,6 +451,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	k[559] = 100
 	k[628] = 100
 	k[616] = 100
+	k[519] = 100
 	kValue, ok := k[projectId]
 	if !ok {
 		kValue = 10
@@ -571,7 +572,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.DeltaRatio = file.DeltaRatio[property][values] * temp.W1
 							if WhiteListedKeys[property] {
 								temp.DeltaRatio *= 2
-							}else if DecreaseBoostKeys[property]{
+							} else if DecreaseBoostKeys[property] {
 								temp.DeltaRatio *= 0.5
 							}
 						}
@@ -656,7 +657,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.JSDivergence = file.JSDivergence.Target[property][values] * temp.W1
 							if WhiteListedKeys[property] {
 								temp.JSDivergence *= 2
-							}else if DecreaseBoostKeys[property]{
+							} else if DecreaseBoostKeys[property] {
 								temp.JSDivergence *= 0.5
 							}
 
@@ -699,7 +700,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.JSDivergence = file.JSDivergence.Base[property][values]
 							if WhiteListedKeys[property] {
 								temp.JSDivergence *= 2
-							}else if DecreaseBoostKeys[property]{
+							} else if DecreaseBoostKeys[property] {
 								temp.JSDivergence *= 0.5
 							}
 
