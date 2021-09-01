@@ -1,5 +1,5 @@
 import React from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
@@ -145,14 +145,14 @@ export const getFunnelQuery = (
 
   const period = {};
   if (dateRange.from && dateRange.to) {
-    period.from = moment(dateRange.from).startOf('day').utc().unix();
-    period.to = moment(dateRange.to).endOf('day').utc().unix();
+    period.from = MomentTz(dateRange.from).startOf('day').utc().unix();
+    period.to = MomentTz(dateRange.to).endOf('day').utc().unix();
   } else {
-    period.from = moment().startOf('week').utc().unix();
+    period.from = MomentTz().startOf('week').utc().unix();
     period.to =
-      moment().format('dddd') !== 'Sunday'
-        ? moment().subtract(1, 'day').endOf('day').utc().unix()
-        : moment().utc().unix();
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+        : MomentTz().utc().unix();
   }
 
   query.fr = period.from;
@@ -194,7 +194,7 @@ export const getFunnelQuery = (
   //   query.see = session_analytics_seq.end;
   // }
   query.ec = 'any_given_event';
-  query.tz = 'Asia/Kolkata';
+  query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
   return query;
 };
 
@@ -216,14 +216,14 @@ export const getQuery = (
 
   const period = {};
   if (dateRange.from && dateRange.to) {
-    period.from = moment(dateRange.from).utc().unix();
-    period.to = moment(dateRange.to).utc().unix();
+    period.from = MomentTz(dateRange.from).utc().unix();
+    period.to = MomentTz(dateRange.to).utc().unix();
   } else {
-    period.from = moment().startOf('week').utc().unix();
+    period.from = MomentTz().startOf('week').utc().unix();
     period.to =
-      moment().format('dddd') !== 'Sunday'
-        ? moment().subtract(1, 'day').utc().unix()
-        : moment().utc().unix();
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').utc().unix()
+        : MomentTz().utc().unix();
   }
 
   query.fr = period.from;
@@ -262,7 +262,7 @@ export const getQuery = (
     return gbpReq;
   });
   query.ec = constantObj[user_type];
-  query.tz = 'Asia/Kolkata';
+  query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
   const sessionsQuery = {
     cl: QUERY_TYPE_EVENT,
     ty: TYPE_UNIQUE_USERS,
@@ -277,7 +277,7 @@ export const getQuery = (
     gup: [],
     gbt: '',
     ec: constantObj.each,
-    tz: 'Asia/Kolkata',
+    tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
   };
   if (result_criteria === ACTIVE_USERS_CRITERIA) {
     return [query, { ...query, gbt: '' }, sessionsQuery];
@@ -581,23 +581,23 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
 
 export const DefaultDateRangeFormat = {
   from:
-    moment().format('dddd') === 'Sunday'
-      ? moment().subtract(1, 'day').startOf('week')
-      : moment().startOf('week'),
+    MomentTz().format('dddd') === 'Sunday'
+      ? MomentTz().subtract(1, 'day').startOf('week')
+      : MomentTz().startOf('week'),
   to:
-    moment().format('dddd') === 'Sunday'
-      ? moment().subtract(1, 'day').endOf('week')
-      : moment().subtract(1, 'day').endOf('day'),
-  frequency: moment().format('dddd') === 'Monday' ? 'hour' : 'date',
+    MomentTz().format('dddd') === 'Sunday'
+      ? MomentTz().subtract(1, 'day').endOf('week')
+      : MomentTz().subtract(1, 'day').endOf('day'),
+  frequency: MomentTz().format('dddd') === 'Monday' ? 'hour' : 'date',
   dateType:
-    moment().format('dddd') === 'Sunday'
+    MomentTz().format('dddd') === 'Sunday'
       ? PREDEFINED_DATES.LAST_WEEK
       : PREDEFINED_DATES.THIS_WEEK,
 };
 
 export const DashboardDefaultDateRangeFormat = {
-  from: moment().subtract(7, 'days').startOf('week'),
-  to: moment().subtract(7, 'days').endOf('week'),
+  from: MomentTz().subtract(7, 'days').startOf('week'),
+  to: MomentTz().subtract(7, 'days').endOf('week'),
   frequency: 'date',
   dateType: PREDEFINED_DATES.LAST_WEEK,
 };
@@ -701,14 +701,14 @@ export const getAttributionQuery = (
     },
   };
   if (dateRange.from && dateRange.to) {
-    query.query.from = moment(dateRange.from).startOf('day').utc().unix();
-    query.query.to = moment(dateRange.to).endOf('day').utc().unix();
+    query.query.from = MomentTz(dateRange.from).startOf('day').utc().unix();
+    query.query.to = MomentTz(dateRange.to).endOf('day').utc().unix();
   } else {
-    query.query.from = moment().startOf('week').utc().unix();
+    query.query.from = MomentTz().startOf('week').utc().unix();
     query.query.to =
-      moment().format('dddd') !== 'Sunday'
-        ? moment().subtract(1, 'day').endOf('day').utc().unix()
-        : moment().utc().unix();
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+        : MomentTz().utc().unix();
   }
   if (models[1]) {
     query.query.attribution_methodology_c = models[1];
@@ -868,14 +868,14 @@ export const getCampaignsQuery = (
     gbt: dateRange.frequency,
   };
   if (dateRange.from && dateRange.to) {
-    query.fr = moment(dateRange.from).startOf('day').utc().unix();
-    query.to = moment(dateRange.to).endOf('day').utc().unix();
+    query.fr = MomentTz(dateRange.from).startOf('day').utc().unix();
+    query.to = MomentTz(dateRange.to).endOf('day').utc().unix();
   } else {
-    query.fr = moment().startOf('week').utc().unix();
+    query.fr = MomentTz().startOf('week').utc().unix();
     query.to =
-      moment().format('dddd') !== 'Sunday'
-        ? moment().subtract(1, 'day').endOf('day').utc().unix()
-        : moment().utc().unix();
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+        : MomentTz().utc().unix();
   }
   return {
     query_group: [query, { ...query, gbt: '' }],

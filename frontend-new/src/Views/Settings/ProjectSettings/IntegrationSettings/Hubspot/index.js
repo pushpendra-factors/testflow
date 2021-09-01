@@ -22,13 +22,11 @@ const HubspotIntegration = ({
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
-useEffect(()=>{
-    fetchProjectSettings(activeProject.id).then(()=>{
-      if(currentProjectSettings?.int_hubspot){
+    useEffect(() => {
+      if (currentProjectSettings?.int_hubspot) {
         setIsActive(true);
       }
-    })
-},[]);
+    }, [currentProjectSettings]);
 
 const onFinish = values => { 
     setLoading(true);

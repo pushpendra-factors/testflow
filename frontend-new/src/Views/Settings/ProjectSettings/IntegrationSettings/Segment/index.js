@@ -19,13 +19,11 @@ const SegmentIntegration = ({
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
-useEffect(()=>{
-    fetchProjectSettings(activeProject.id).then(()=>{ 
-      if(currentProjectSettings?.int_segment){
+    useEffect(() => {
+      if (currentProjectSettings?.int_segment) {
         setIsActive(true);
       }
-    })
-},[]);
+    }, [currentProjectSettings]);
 
 const enableSegment = () => { 
     setLoading(true);

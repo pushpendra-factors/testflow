@@ -38,12 +38,10 @@ const LinkedInIntegration = ({
     }
 
     useEffect(() => {
-        fetchProjectSettings(activeProject.id).then(() => {
-            if (currentProjectSettings?.int_linkedin_ad_account) {
-                setIsActive(true);
-            }
-        });
-    }, []);
+      if (currentProjectSettings?.int_linkedin_ad_account) {
+        setIsActive(true);
+      }
+    }, [currentProjectSettings]);
 
     useEffect(() => {
         let code = localStorage.getItem("Linkedin_code");

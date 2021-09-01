@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import ProjectTabs from './ProjectTabs';
@@ -35,7 +35,7 @@ function Dashboard() {
       from = dates.startDate;
       to = dates.endDate;
     }
-    if (moment(to).diff(from, 'hours') < 24) {
+    if (MomentTz(to).diff(from, 'hours') < 24) {
       frequency = 'hour';
     }
 

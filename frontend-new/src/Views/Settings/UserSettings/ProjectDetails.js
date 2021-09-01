@@ -3,9 +3,11 @@ import {
   Row, Col, Button, Avatar, Skeleton, Tooltip, message, Modal
 } from 'antd';
 import { Text } from 'factorsComponents';
-import { fetchProjects, projectAgentRemove, fetchAgentInfo } from 'Reducers/agentActions';
+import { projectAgentRemove, fetchAgentInfo } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { fetchProjects } from "Reducers/global";
+
 const { confirm } = Modal;
 
 function ProjectDetails({
@@ -83,7 +85,7 @@ function ProjectDetails({
 
 const mapStateToProps = (state) => {
   return ({
-    projects: state.agent.projects,
+    projects: state.global.projects,
     currentAgent: state.agent.agent_details
 
   }

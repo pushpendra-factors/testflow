@@ -23,6 +23,7 @@ import LinkedInIntegration from "./LinkedIn";
 import GoogleSearchConsole from "./GoogleSearchConsole";
 
 import { ErrorBoundary } from "react-error-boundary";
+import RevealIntegration from "./Reveal";
 
 const IntegrationProviderData = [
   {
@@ -73,6 +74,12 @@ const IntegrationProviderData = [
     icon: 'Google',
     kbLink:false,
   },
+  {
+    name: 'Clearbit Reveal',
+    desc: 'Take action as soon as a target account hits your site',
+    icon: 'ClearbitLogo',
+    kbLink:false,
+  },
 ];
 
 
@@ -92,6 +99,7 @@ const IntegrationCard = ({ item, index }) => {
       case 'Google Ads': return <GoogleAdWords kbLink={item.kbLink} setIsActive={setIsActive} />;
       case 'LinkedIn': return <LinkedInIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
       case 'Google Search Console': return <GoogleSearchConsole kbLink={item.kbLink} setIsActive={setIsActive} />;
+      case 'Clearbit Reveal': return <RevealIntegration active={isActive} setIsActive={setIsActive} />
       default: return <><Tag color="orange" style={{ marginTop: '8px' }}>Enable from <a href="https://app-old.factors.ai/" target="_blank">here</a></Tag> </>
     }
   }

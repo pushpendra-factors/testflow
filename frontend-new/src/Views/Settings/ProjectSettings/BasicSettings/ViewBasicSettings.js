@@ -2,9 +2,23 @@ import React, { useState, useEffect } from 'react';
 import {
   Row, Col, Button, Avatar, Skeleton, Tooltip
 } from 'antd';
-import { Text } from 'factorsComponents';
-import { UserOutlined } from '@ant-design/icons';
-import { connect } from 'react-redux';
+import { Text } from 'factorsComponents'; 
+import { connect } from 'react-redux'; 
+import { TimeZoneOffsetValues } from 'Utils/constants';
+
+
+const getKeyByValue = (obj, value) =>  Object.keys(obj).find(key => obj[key]?.city === value);
+
+const TimeZoneName = 
+{
+  "IST":'IST',
+  "PT" :'PT (Pacific Time)',
+  "CT" :'CT (Central Time)',
+  "ET" :'ET (Eastern Time)',
+  "GMT" :'GMT',
+  "AEST" :'AEST (Australia Eastern Standard Time)', 
+}
+
 
 function ViewBasicSettings({
   activeProject,
@@ -84,8 +98,8 @@ function ViewBasicSettings({
         <Row className={'mt-6'}>
           <Col span={12}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Time Zone</Text>
-            { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{activeProject.time_zone ? activeProject.time_zone : '---'}</Text>
+            { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} /> 
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{(activeProject?.time_zone && activeProject?.is_multiple_project_timezone_enabled) ? TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject.time_zone)] : '---'}</Text>
             }
           </Col>
         </Row>
@@ -99,7 +113,7 @@ function ViewBasicSettings({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   agents: state.agent.agents,
-  projects: state.agent.projects,
+  projects: state.global.projects,
   currentAgent: state.agent.agent_details
 });
 

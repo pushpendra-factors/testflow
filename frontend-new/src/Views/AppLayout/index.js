@@ -11,7 +11,7 @@ import {
   Switch,
   useHistory,
 } from "react-router-dom";
-import { fetchProjects } from "../../reducers/agentActions";
+import { fetchProjects } from "Reducers/global";
 import { fetchQueries, fetchSmartPropertyRules } from "../../reducers/coreQuery/services";
 import { getUserProperties, getEventProperties, fetchEventNames } from "../../reducers/coreQuery/middleware";
 import { fetchDashboards } from "../../reducers/dashboard/services";
@@ -58,7 +58,7 @@ function AppLayout({ fetchProjects,
   }, [asyncCallOnLoad]);
 
   useEffect(() => {
-    if (active_project.id) {
+    if (active_project && active_project.id) {
       fetchDashboards(dispatch, active_project.id);
       fetchQueries(dispatch, active_project.id);
       fetchEventNames(active_project.id);
@@ -67,7 +67,7 @@ function AppLayout({ fetchProjects,
       fetchSmartPropertyRules(dispatch, active_project.id);
       fetchWeeklyIngishtsMetaData(active_project.id);
     }
-  }, [dispatch, active_project.id]);
+  }, [dispatch, active_project]);
 
   if (!isAgentLoggedIn) {
     history.push("/login");

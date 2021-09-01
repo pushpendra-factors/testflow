@@ -27,12 +27,8 @@ const SalesForceIntegration = ({
 
       
 useEffect(()=>{
-    fetchProjectSettings(activeProject.id).then(()=>{ 
-      if(isSalesforceEnabled()){
-        setIsActive(true);
-      }
-    })
-},[activeProject]);
+  setIsActive(isSalesforceEnabled());
+},[]);
  
  
   const handleRedirectToURL = () =>{
