@@ -58,7 +58,6 @@ func InitConfBeam(config *C.Configuration) {
 
 	C.InitConf(config)
 	C.SetIsBeamPipeline()
-	C.InitRedisConnection(config.RedisHost, config.RedisPort, true, 20, 0)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 }
 

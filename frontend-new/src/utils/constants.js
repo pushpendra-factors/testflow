@@ -241,7 +241,7 @@ export const ATTRIBUTION_METRICS = [
 
 export const KEY_TOUCH_POINT_DIMENSIONS = [
   {
-    title: 'Channel Name',
+    title: 'Ads Platform',
     header: 'channel_name',
     responseHeader: 'ChannelName',
     enabled: false,
@@ -259,7 +259,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     defaultValue: true,
   },
   {
-    title: 'Channel Name',
+    title: 'Ads Platform',
     header: 'channel_name',
     responseHeader: 'ChannelName',
     enabled: false,
@@ -286,7 +286,7 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     defaultValue: true,
   },
   {
-    title: 'Channel Name',
+    title: 'Ads Platform',
     header: 'channel_name',
     responseHeader: 'ChannelName',
     enabled: false,
@@ -408,13 +408,13 @@ export const PREDEFINED_DATES = {
 };
 
 export const TimeZoneOffsetValues = {
-  IST: {offset:'+05:30', city:'Asia/Kolkata'},
-  PT: {offset:'−08:00', city:'America/Vancouver'},
-  CT: {offset:'−06:00', city:'America/Costa_Rica'},
-  ET: {offset:'−05:00', city:'America/Chicago'},
-  GMT: {offset:'+00:00', city:'UTC'},
-  AEST: {offset:'+10:00', city:'Australia/Sydney'},
-}
+  IST: { offset: '+05:30', city: 'Asia/Kolkata' },
+  PT: { offset: '−08:00', city: 'America/Vancouver' },
+  CT: { offset: '−06:00', city: 'America/Costa_Rica' },
+  ET: { offset: '−05:00', city: 'America/Chicago' },
+  GMT: { offset: '+00:00', city: 'UTC' },
+  AEST: { offset: '+10:00', city: 'Australia/Sydney' },
+};
 
 export const DATE_FORMATS = {
   month: 'MMM-YYYY',

@@ -55,9 +55,11 @@ export const getSingleTouchPointChartData = (
   );
 
   const categories = slicedTableData.map((d) => {
-    const cat = enabledDimensions.map((dimension) => {
-      return d[dimension.title];
-    });
+    const cat = enabledDimensions.length
+      ? enabledDimensions.map((dimension) => {
+          return d[dimension.title];
+        })
+      : [d[touchpoint]];
     return cat.join(', ');
   });
 
@@ -134,9 +136,11 @@ export const getDualTouchPointChartData = (
     (d) => visibleIndices.indexOf(d.index) > -1
   );
   const result = slicedTableData.map((d) => {
-    const name = enabledDimensions.map((dimension) => {
-      return d[dimension.title];
-    });
+    const name = enabledDimensions.length
+      ? enabledDimensions.map((dimension) => {
+          return d[dimension.title];
+        })
+      : [d[touchpoint]];
     return {
       name: name.join(', '),
       [attribution_method]: !currMetricsValue
@@ -430,7 +434,7 @@ export const getTableColumns = (
     dimensionColumns = [
       {
         title: getClickableTitleSorter(
-          touchpoint,
+          touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
           { key: touchpoint, type: 'categorical', subtype: null },
           currentSorter,
           handleSorting

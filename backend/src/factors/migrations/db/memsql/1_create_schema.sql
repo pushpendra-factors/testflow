@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS adwords_documents (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
+    KEY (updated_at) USING HASH,
     KEY (project_id, customer_account_id, timestamp) USING CLUSTERED COLUMNSTORE
     
     -- Required constraints.
@@ -135,6 +136,7 @@ CREATE TABLE IF NOT EXISTS agents (
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
+    KEY (updated_at),
     KEY (email)
 
     -- Required constraints.
@@ -152,6 +154,7 @@ CREATE TABLE IF NOT EXISTS bigquery_settings (
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
+    KEY (updated_at),
     PRIMARY KEY (project_id, id),
     UNIQUE KEY (project_id, bq_project_id)
 
@@ -169,6 +172,7 @@ CREATE TABLE IF NOT EXISTS billing_accounts (
     phone_no text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     PRIMARY KEY (agent_uuid, id)
 
     -- Required constraints.
@@ -188,6 +192,7 @@ CREATE TABLE IF NOT EXISTS dashboard_units (
     is_deleted boolean NOT NULL DEFAULT FALSE,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, dashboard_id, id)
 
@@ -212,6 +217,7 @@ CREATE TABLE IF NOT EXISTS dashboards (
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
 	KEY (project_id, agent_uuid),
+    KEY (updated_at),
     UNIQUE KEY unique_project_id_agent_uuid_id_idx(project_id, agent_uuid, id)
 
     -- Required constraits.
@@ -232,6 +238,7 @@ CREATE TABLE IF NOT EXISTS facebook_documents (
     ad_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at) USING HASH,
     SHARD KEY (project_id),
     KEY (project_id, customer_ad_account_id, platform, timestamp) USING CLUSTERED COLUMNSTORE
 
@@ -252,6 +259,7 @@ CREATE TABLE IF NOT EXISTS factors_goals (
     is_active boolean,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
 	UNIQUE KEY unique_project_id_name_idx(project_id, name)
@@ -271,6 +279,7 @@ CREATE TABLE IF NOT EXISTS factors_tracked_events (
     is_active boolean,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
 	UNIQUE KEY (project_id, event_name_id)
@@ -291,6 +300,7 @@ CREATE TABLE IF NOT EXISTS factors_tracked_user_properties (
     is_active boolean,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
 	UNIQUE KEY (project_id, user_property_name)
@@ -312,6 +322,7 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
     user_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at) USING HASH,
     SHARD KEY (project_id, type, action),
     KEY (project_id, type, action, id, timestamp) USING CLUSTERED COLUMNSTORE,
     KEY (user_id) USING HASH,
@@ -331,6 +342,7 @@ CREATE TABLE IF NOT EXISTS project_agent_mappings (
     invited_by text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, agent_uuid)
 
@@ -345,6 +357,7 @@ CREATE TABLE IF NOT EXISTS project_billing_account_mappings (
     billing_account_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, billing_account_id)
 
@@ -387,6 +400,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_clear_bit boolean NOT NULL DEFAULT FALSE,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
 
@@ -415,6 +429,7 @@ CREATE TABLE IF NOT EXISTS projects (
     hubspot_touch_points json,
     jobs_metadata json,
     channel_group_rules json,
+    KEY (updated_at),
     PRIMARY KEY (id),
     KEY (token),
     KEY (private_token)
@@ -435,6 +450,7 @@ CREATE TABLE IF NOT EXISTS queries (
     created_by text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
     UNIQUE KEY (project_id, type, id)
@@ -456,6 +472,7 @@ CREATE TABLE IF NOT EXISTS salesforce_documents (
     user_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at) USING HASH,
     SHARD KEY (project_id, type, action),
     KEY (project_id, type, action, id, timestamp) USING CLUSTERED COLUMNSTORE,
     KEY (user_id) USING HASH,
@@ -479,6 +496,7 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
     task_details json,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id)
 
@@ -498,6 +516,7 @@ CREATE TABLE IF NOT EXISTS linkedin_documents (
     campaign_id text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at) USING HASH,
     SHARD KEY (project_id),
     KEY (project_id, customer_ad_account_id, timestamp) USING CLUSTERED COLUMNSTORE
 
@@ -518,6 +537,7 @@ CREATE TABLE IF NOT EXISTS smart_property_rules (
     is_deleted bool DEFAULT FALSE,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id)
 );
@@ -532,6 +552,7 @@ CREATE TABLE IF NOT EXISTS smart_properties (
     rules_ref json NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, object_id, object_type, source)
 );
@@ -544,6 +565,7 @@ CREATE TABLE IF NOT EXISTS property_details (
     entity integer NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     UNIQUE KEY property_details_project_id_event_name_id_key_unique_idx(project_id, event_name_id,`key`)
 
@@ -564,6 +586,7 @@ CREATE TABLE IF NOT EXISTS display_names (
     group_object_name text NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
     UNIQUE KEY  display_names_project_id_event_name_property_name_tag_unique_idx(project_id, event_name, property_name, tag),
@@ -582,6 +605,7 @@ CREATE TABLE IF NOT EXISTS google_organic_documents (
     value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at) USING HASH,
     SHARD KEY (project_id),
     KEY (project_id, url_prefix, timestamp, type, id) USING CLUSTERED COLUMNSTORE
 
@@ -601,6 +625,7 @@ CREATE TABLE IF NOT EXISTS project_model_metadata
     chunks text NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     UNIQUE KEY  project_model_metadata_project_id_stdate_enddate_unique_idx(project_id, start_time, end_time),
     KEY (project_id) USING HASH
@@ -625,6 +650,7 @@ CREATE TABLE IF NOT EXISTS task_details
     delay_alert_threshold_hours integer,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (task_id),
     PRIMARY KEY (task_id)
 );
@@ -639,6 +665,7 @@ CREATE TABLE IF NOT EXISTS task_execution_details
     updated_at timestamp(6) NOT NULL,
     metadata json,
     is_completed boolean,
+    KEY (updated_at),
     SHARD KEY (task_id),
     KEY (task_id) USING HASH,
     PRIMARY KEY (task_id, id)
@@ -652,6 +679,7 @@ CREATE TABLE IF NOT EXISTS task_execution_dependency_details
     dependency_offset integer NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (task_id),
     PRIMARY KEY (task_id, id),
     KEY (task_id) USING HASH
@@ -670,6 +698,7 @@ CREATE TABLE IF NOT EXISTS weekly_insights_metadata
     insight_id bigint NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     SHARD KEY (project_id),
     UNIQUE KEY  weekly_insights_metadata_project_id_stdate_enddate_unique_idx(project_id, query_id, base_start_time, base_end_time, comparison_start_time, comparison_end_time),
     KEY (project_id) USING HASH,
@@ -677,15 +706,16 @@ CREATE TABLE IF NOT EXISTS weekly_insights_metadata
 
 );
 
-CREATE TABLE IF NOT EXISTS public.templates (
+CREATE TABLE IF NOT EXISTS templates (
     project_id bigint NOT NULL,
     type int NOT NULL,
-    thresholds JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone,
+    thresholds JSON,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     PRIMARY KEY (project_id, type),
     SHARD KEY (project_id)
-)
+);
 
 CREATE TABLE IF NOT EXISTS feedbacks(
     id text NOT NULL,
@@ -696,10 +726,11 @@ CREATE TABLE IF NOT EXISTS feedbacks(
     created_by text NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
     PRIMARY KEY (id,project_id),
     SHARD KEY (project_id)
     
-)
+);
 -- DOWN
 
 -- DROP DATABASE factors;
