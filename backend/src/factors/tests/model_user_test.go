@@ -1080,3 +1080,48 @@ func TestGetSelectedUsersByCustomerUserID(t *testing.T) {
 	}
 
 }
+
+func TestUserIntialPropertiesOnOldTimestamp(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	currentTime := time.Now()
+	u1JointTimestamp := currentTime.AddDate(0, 0, -3)
+	u2JointTimestamp := currentTime.AddDate(0, 0, -2)
+	cuid := getRandomEmail()
+	user1, status := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		CustomerUserId: cuid,
+		JoinTimestamp:  u1JointTimestamp.Unix(),
+	})
+	assert.Equal(t, http.StatusCreated, status)
+
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user1, &postgres.Jsonb{[]byte(`{"city":"A"}`)}, currentTime.Unix())
+	assert.Equal(t, http.StatusAccepted, status)
+
+	user2, status := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		CustomerUserId: cuid,
+		JoinTimestamp:  u2JointTimestamp.Unix(),
+	})
+	assert.Equal(t, http.StatusCreated, status)
+
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user1, &postgres.Jsonb{[]byte(`{"city":"B"}`)}, currentTime.Unix())
+	assert.Equal(t, http.StatusAccepted, status)
+
+	user, status := store.GetStore().GetUser(project.ID, user1)
+	assert.Equal(t, http.StatusFound, status)
+	userproperties, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+
+	assert.Equal(t, float64(u1JointTimestamp.Unix()), (*userproperties)["$joinTime"])
+	assert.Equal(t, "B", (*userproperties)["city"])
+
+	user, status = store.GetStore().GetUser(project.ID, user2)
+	assert.Equal(t, http.StatusFound, status)
+	userproperties, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+
+	assert.Equal(t, float64(u1JointTimestamp.Unix()), (*userproperties)["$joinTime"])
+	assert.Equal(t, "B", (*userproperties)["city"])
+}

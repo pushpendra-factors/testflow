@@ -1016,77 +1016,6 @@ func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
 	return &user, http.StatusFound
 }
 
-func mergeUserPropertiesByCustomerUserID(projectID uint64, users []model.User, customerUserID string) (*map[string]interface{}, int) {
-	logCtx := log.WithField("project_id", projectID).
-		WithField("users", users).
-		WithField("customer_user_id", customerUserID)
-
-	usersLength := len(users)
-	if usersLength == 0 {
-		logCtx.Error("No users for merging the user_properties.")
-		return nil, http.StatusInternalServerError
-	}
-
-	initialPropertiesVisitedMap := make(map[string]bool)
-	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_INITIAL {
-		initialPropertiesVisitedMap[property] = false
-	}
-
-	// Order the properties before merging the properties to
-	// ensure the precendence of value.
-	sort.Slice(users, func(i, j int) bool {
-		return users[i].PropertiesUpdatedTimestamp < users[j].PropertiesUpdatedTimestamp
-	})
-
-	mergedUserProperties := make(map[string]interface{})
-	mergedUserPropertiesValues := make(map[string][]interface{})
-	var mergedUpdatedTimestamp int64
-	for i := range users {
-		user := users[i]
-		userProperties, err := U.DecodePostgresJsonb(&user.Properties)
-		if err != nil {
-			logCtx.WithField("user_properties", user.Properties).
-				Error("Failed to decode user properties on merge.")
-			return &mergedUserProperties, http.StatusInternalServerError
-		}
-		if user.PropertiesUpdatedTimestamp > mergedUpdatedTimestamp {
-			mergedUpdatedTimestamp = user.PropertiesUpdatedTimestamp
-		}
-
-		for property := range *userProperties {
-			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
-			isAlreadySet, isInitialProperty := initialPropertiesVisitedMap[property]
-			if isInitialProperty {
-				if !isAlreadySet {
-					// For initial properties, set only once for earliest user.
-					mergedUserProperties[property] = (*userProperties)[property]
-					initialPropertiesVisitedMap[property] = true
-				}
-			} else if !U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) &&
-				!model.IsEmptyPropertyValue((*userProperties)[property]) {
-				// For all other properties, overwrite with the latest user property.
-				mergedUserProperties[property] = (*userProperties)[property]
-			}
-		}
-	}
-
-	// Handle merge for add type properties separately.
-	userPropertiesToBeMerged := make([]postgres.Jsonb, 0, 0)
-	for i := range users {
-		userPropertiesToBeMerged = append(userPropertiesToBeMerged, users[i].Properties)
-	}
-	model.MergeAddTypeUserProperties(&mergedUserProperties, userPropertiesToBeMerged)
-
-	// Additional check for properties that can be added. If merge is triggered for users with same set of properties,
-	// value of properties that can be added will change after addition. Below check is to avoid update in such case.
-	if !model.AnyPropertyChanged(mergedUserPropertiesValues, len(users)) {
-		return &mergedUserProperties, http.StatusOK
-	}
-	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
-
-	return &mergedUserProperties, http.StatusOK
-}
-
 func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint64,
 	customerUserID string) ([]model.User, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
@@ -1272,7 +1201,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 		}
 	}
 
-	mergedByCustomerUserIDMap, errCode := mergeUserPropertiesByCustomerUserID(projectID, users, user.CustomerUserId)
+	mergedByCustomerUserIDMap, errCode := model.MergeUserPropertiesByCustomerUserID(projectID, users, user.CustomerUserId)
 	if errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}
