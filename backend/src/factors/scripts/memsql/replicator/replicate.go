@@ -116,6 +116,16 @@ var supportedTables = []string{
 	tableFeedback,
 }
 
+// Disabled tables to avoid accidental replication.
+var permanantlyDisabledTables = []string{
+	tableUsers,
+	tableEventNames,
+	tableEvents,
+	tableTaskDetails,
+	tableTaskExecutionDetails,
+	tableTaskExecutionDependencyDetails,
+}
+
 var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
 
 type TableRecord struct {
@@ -293,6 +303,10 @@ func main() {
 	for _, tableName := range U.CleanSplitByDelimiter(*excludeTables, ",") {
 		excludeTablesMap[tableName] = true
 	}
+	for _, tableName := range permanantlyDisabledTables {
+		excludeTablesMap[tableName] = true
+	}
+
 	disableSyncColumns = *disableSyncColumnsFlag
 
 	skipPrimaryKeyDedupeTables = U.CleanSplitByDelimiter(*skipDedupeTables, ",")
@@ -545,7 +559,7 @@ func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *Tabl
 }
 
 func isValidProjectID(tableName string, id uint64) bool {
-	return id > 0
+	return id > 0 || tableName == tableTaskExecutionDetails
 }
 
 func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interface{},
@@ -935,6 +949,16 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.GoogleOrganicDocument{}
 	case tableTemplates:
 		record = &model.Template{}
+	case tableProjectModelMetadata:
+		record = &model.ProjectModelMetadata{}
+	case tableTaskDetails:
+		record = &model.TaskDetails{}
+	case tableTaskExecutionDetails:
+		record = &model.TaskExecutionDetails{}
+	case tableTaskExecutionDependencyDetails:
+		record = &model.TaskExecutionDependencyDetails{}
+	case tableWeekyInsightsMetadata:
+		record = &model.WeeklyInsightsMetadata{}
 
 	// Tables related to analytics.
 	case tableEvents:
@@ -1288,47 +1312,15 @@ func createOrUpdateOnMemSQLInParallel(tableName string, records []interface{}, w
 }
 
 func migrateAllTables(projectIDs []uint64) {
-	tables := []string{
-		tableUsers,
-		tableEventNames,
-		tableEvents,
-		tableProjects,
-		tableAgents,
-		tableProjectAgentMappings,
-		tableProjectBillingAccountMappings,
-		tableProjectSettings,
-		tableAdwordsDocuments,
-		tableBigquerySettings,
-		tableBillingAccounts,
-		tableDashboardUnits,
-		tableDashboards,
-		tableFacebookDocuments,
-		tableFactorsGoals,
-		tableFactorsTrackedEvents,
-		tableFactorsTrackedUserProperties,
-		tableHubspotDocuments,
-		tableSalesforceDocuments,
-		tableQueries,
-		tableScheduledTasks,
-		tableLinkedInDocuments,
-		tablePropertyDetails,
-		tableSmartProperties,
-		tableSmartPropertyRules,
-		tableDisplayNames,
-		tableGoogleOrganicDocuments,
-		tableTemplates,
-		tableFeedback,
-	}
-
 	// Runs replication continiously for each table
 	// on a separate go routine.
-	for i := range tables {
-		_, includeFound := includeTablesMap[tables[i]]
-		_, excludeFound := excludeTablesMap[tables[i]]
+	for i := range supportedTables {
+		_, includeFound := includeTablesMap[supportedTables[i]]
+		_, excludeFound := excludeTablesMap[supportedTables[i]]
 		if (!migrageAllTables && !includeFound) || excludeFound {
 			continue
 		}
-		go migrateTableContiniously(tables[i], projectIDs)
+		go migrateTableContiniously(supportedTables[i], projectIDs)
 	}
 
 	select {} // Keeps main routine alive forever.
