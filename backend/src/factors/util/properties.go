@@ -1268,6 +1268,15 @@ var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$fbclid":                      "FBCLID",
 }
 
+var CHANNEL_PROPERTIES_DISPLAY_NAMES = map[string]string{
+	"$initial_referrer_domain": "Referrer Domain",
+	"$campaign":                "Campaign",
+	"$source":                  "Source",
+	"$medium":                  "Medium",
+	"$gclid":                   "GCLID",
+	"$fbclid":                  "FBCLID",
+}
+
 // USER_PROPERTIES_MERGE_TYPE_INITIAL Properties for which preference will be given to first occurrence while merging.
 // For rest all properties, latest user values will prevail on conflict.
 var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
