@@ -219,6 +219,16 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, properties)
 }
+func GetChannelGroupingPropertiesHandler(c *gin.Context) {
+
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"display_names": U.CHANNEL_PROPERTIES_DISPLAY_NAMES})
+}
 
 // GetEventPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties/offer_id?model_id=:model_id
 // GetEventPropertyValuesHandler godoc

@@ -19,14 +19,15 @@ type ChannelPropertyRule struct {
 }
 
 const (
-	direct        = "Direct"
-	paidSearch    = "Paid Search"
-	paidSocial    = "Paid Social"
-	organicSearch = "Organic Search"
-	organicSocial = "Organic Social"
-	email         = "Email"
-	affiliate     = "Affiliate"
-	referral      = "Referral"
+	direct         = "Direct"
+	paidSearch     = "Paid Search"
+	paidSocial     = "Paid Social"
+	organicSearch  = "Organic Search"
+	organicSocial  = "Organic Social"
+	email          = "Email"
+	affiliate      = "Affiliate"
+	otherCampaigns = "Other Campaigns"
+	referral       = "Referral"
 )
 
 var DefaultChannelPropertyRules = []ChannelPropertyRule{
@@ -257,6 +258,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
+				Property:  U.EP_SOURCE,
+				Condition: EqualsOpStr,
+				Value:     "instagram",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
 				Property:  U.EP_MEDIUM,
 				Condition: EqualsOpStr,
 				Value:     "paid",
@@ -367,6 +374,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Value:     "snapchat.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: ContainsOpStr,
+				Value:     "instagram.",
+				LogicalOp: LOGICAL_OP_OR,
+			},
 		},
 	},
 	{
@@ -442,6 +455,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
 				Condition: ContainsOpStr,
 				Value:     "youtube.",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
+				Condition: ContainsOpStr,
+				Value:     "imstagram.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
@@ -557,6 +576,17 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Property:  U.EP_MEDIUM,
 				Condition: EqualsOpStr,
 				Value:     "affiliate",
+				LogicalOp: LOGICAL_OP_AND,
+			},
+		},
+	},
+	{
+		Channel: otherCampaigns,
+		Conditions: []ChannelPropertyFilter{
+			{
+				Property:  U.EP_CAMPAIGN,
+				Condition: NotEqualOpStr,
+				Value:     "$none",
 				LogicalOp: LOGICAL_OP_AND,
 			},
 		},
