@@ -255,11 +255,13 @@ function TemplateResults({
   }, []);
 
   const onTabChange = (key) => {
-    setSearchTerm('')
-    setShowSearch(false)
-    setSubSearchTerm('')
-    setShowSearchSub(false)
-    setSubInsightData(null)
+    setSearchTerm('');
+    setShowSearch(false);
+    setSubSearchTerm('');
+    setShowSearchSub(false);
+    setSortInsight(false);
+    setSortSubInsight(false);
+    setSubInsightData(null);
     setSelectedInsight(null);
     setSelectedTab(key);
     // fetchInsights(key);
