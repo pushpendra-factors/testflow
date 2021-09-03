@@ -235,6 +235,7 @@ func GormCleanupCallback(scope *gorm.Scope) {
 			}
 		case "postgres.Jsonb":
 			fieldValue := field.Field.Interface().(postgres.Jsonb)
+			fieldValue.RawMessage = RemoveNullCharacterBytes(fieldValue.RawMessage)
 			jsonAsString := string(fieldValue.RawMessage)
 			fieldValue.RawMessage = []byte(SanitizeStringValueForUnicode(jsonAsString))
 			err := field.Set(fieldValue)
@@ -242,12 +243,14 @@ func GormCleanupCallback(scope *gorm.Scope) {
 				log.WithError(err).Error("Failed to cleanup postgres.Jsonb field value.")
 				return
 			}
+
 		case "*postgres.Jsonb":
 			fieldValue := field.Field.Interface().(*postgres.Jsonb)
 			if fieldValue == nil {
 				return
 			}
 
+			fieldValue.RawMessage = RemoveNullCharacterBytes(fieldValue.RawMessage)
 			jsonAsString := string(fieldValue.RawMessage)
 			fieldValue.RawMessage = []byte(SanitizeStringValueForUnicode(jsonAsString))
 			err := field.Set(fieldValue)
