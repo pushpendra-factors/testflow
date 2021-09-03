@@ -597,7 +597,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 }
 
 // getLinkedEventColumnAsInterfaceList return interface list having linked event count and CPC
-func getLinkedEventColumnAsInterfaceList(users int64, spend float64, data []float64, linkedEventCount int) []interface{} {
+func getLinkedEventColumnAsInterfaceList(convertedUsers float64, spend float64, data []float64, linkedEventCount int) []interface{} {
 
 	var list []interface{}
 	// If empty linked events, add 0s
@@ -608,12 +608,12 @@ func getLinkedEventColumnAsInterfaceList(users int64, spend float64, data []floa
 	} else {
 		for _, val := range data {
 			cpc := 0.0
-			userConvRate := 0.0
 			if val != 0.0 {
 				cpc, _ = U.FloatRoundOffWithPrecision(spend/val, U.DefaultPrecision)
 			}
-			if users != 0 {
-				userConvRate, _ = U.FloatRoundOffWithPrecision(val/float64(users)*100, U.DefaultPrecision)
+			userConvRate := 0.0
+			if convertedUsers != 0 {
+				userConvRate, _ = U.FloatRoundOffWithPrecision(val/convertedUsers*100, U.DefaultPrecision)
 			}
 			list = append(list, val, cpc, userConvRate)
 		}
@@ -806,7 +806,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 			} else {
 				row = append(row, cpc, userConvRate, float64(0), float64(0), float64(0))
 			}
-			row = append(row, getLinkedEventColumnAsInterfaceList(data.Users, data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
+			row = append(row, getLinkedEventColumnAsInterfaceList(data.ConversionEventCount, data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
 			rows = append(rows, row)
 		}
 	}
@@ -948,8 +948,8 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 					seenRow[i+1] = float64(0) // Funnel - Conversion - CPC.
 				}
 
-				if seenRow[keyIndex+9].(int64) > 0 {
-					seenRow[i+2] = seenRow[i].(float64) / float64(seenRow[keyIndex+9].(int64)) // Funnel - User Conversion - CPC Rate
+				if seenRow[keyIndex+12].(float64) > 0 {
+					seenRow[i+2] = seenRow[i].(float64) / seenRow[keyIndex+12].(float64) // Funnel - User Conversion - CPC Rate
 				} else {
 					seenRow[i+2] = float64(0) // Funnel - User Conversion Rate (%)
 				}
