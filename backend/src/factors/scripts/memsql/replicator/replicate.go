@@ -330,6 +330,7 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize db in add session.")
 	}
+	registerReplicationCallbacks(C.GetServices().Db)
 
 	maxOpenConns := (24 * migrationRoutinesOther) + (4 * migrationRoutinesHeavy) + 10
 	memSQLDBConf := C.DBConf{
@@ -367,6 +368,16 @@ func isValidTables(tables []string) bool {
 	return true
 }
 
+func registerReplicationCallbacks(db *gorm.DB) {
+	// Disables before callback for create method.
+	db.Callback().Create().Remove("gorm:before_create")
+	// Removes unneccesary select after insert triggered by gorm.
+	db.Callback().Create().Remove("gorm:force_reload_after_create")
+	// Removes emoji and cleans up string and postgres.Jsonb columns.
+	db.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
+	db.Callback().Create().Before("gorm:update").Register("cleanup", U.GormCleanupCallback)
+}
+
 func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
 	dbConf.UseSSL = C.IsStaging() || C.IsProduction()
 
@@ -380,13 +391,7 @@ func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to set resource pool.")
 	}
-
-	// Disables before callback for create method.
-	memSQLDB.Callback().Create().Remove("gorm:before_create")
-	// Removes unneccesary select after insert triggered by gorm.
-	memSQLDB.Callback().Create().Remove("gorm:force_reload_after_create")
-	// Removes emoji and cleans up string and postgres.Jsonb columns.
-	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
+	registerReplicationCallbacks(memSQLDB)
 
 	if C.IsDevelopment() {
 		memSQLDB.LogMode(true)
