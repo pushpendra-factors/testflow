@@ -76,6 +76,11 @@ func main() {
 	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
+	redisHost := flag.String("redis_host", "localhost", "")
+	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	flag.Parse()
 
@@ -133,7 +138,11 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
+		PrimaryDatastore:    *primaryDatastore,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
 	}
 
 	C.InitConf(config)
@@ -156,6 +165,8 @@ func main() {
 		log.WithFields(log.Fields{"err": err}).Fatal("Failed to init etcd client")
 	}
 
+	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	log.WithFields(log.Fields{
 		"Env":             *envFlag,
 		"EtcdEndpoints":   *etcd,
