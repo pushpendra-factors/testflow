@@ -142,13 +142,11 @@ func (store *MemSQL) DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (
 func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int) {
 	db := C.GetServices().Db
 
-	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = ? LIMIT %d) "+
+	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = %d LIMIT %d) "+
 		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names "+
-		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = ?;", 10000)
-	params := make([]interface{}, 0)
-	params = append(params, ProjectID, ProjectID)
+		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = %d;", ProjectID, 10000, ProjectID)
 	trackedEvents := make([]model.FactorsTrackedEventInfo, 0)
-	rows, err := db.Raw(queryStr, params...).Rows()
+	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
 		log.WithError(err).Error("Tracked events get all failed")
 		return nil, http.StatusInternalServerError
@@ -169,13 +167,11 @@ func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]mo
 func (store *MemSQL) GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int) {
 	db := C.GetServices().Db
 
-	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = ? AND is_active = true LIMIT %d) "+
+	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = %d AND is_active = true LIMIT %d) "+
 		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names "+
-		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = ?;", 10000)
-	params := make([]interface{}, 0)
-	params = append(params, ProjectID, ProjectID)
+		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = %d;", ProjectID, 10000, ProjectID)
 	trackedEvents := make([]model.FactorsTrackedEventInfo, 0)
-	rows, err := db.Raw(queryStr, params...).Rows()
+	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
 		log.WithError(err).Error("Tracked events get all failed")
 		return nil, http.StatusInternalServerError

@@ -624,9 +624,9 @@ func GetGoalPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNames
 		for _, p := range goalPatternsFromDB {
 			if valPattern, ok := tmpPatterns[p.Name]; ok {
 				goalPatterns = append(goalPatterns, valPattern)
-				mineLog.Info(fmt.Sprint("Goal event from db ", valPattern.String()))
+				mineLog.Infof("Goal event from db :%s", valPattern.String())
 			} else {
-				mineLog.Info(fmt.Sprint("Goal event from db not available in filtered lenOne Pattern ", p.Name))
+				mineLog.Infof("Goal event from db not available in filtered lenOne Pattern :%s", p.Name)
 				if _, ok := eventNamesWithType[p.Name]; ok {
 					p, err := P.NewPattern([]string{p.Name}, userAndEventsInfo)
 					if err != nil {
