@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -283,6 +284,7 @@ type QueryGroupByProperty struct {
 
 type QueryEventWithProperties struct {
 	Name       string          `json:"na"`
+	AliasName  string          `json:"an"`
 	Properties []QueryProperty `json:"pr"`
 }
 
@@ -653,4 +655,46 @@ func CheckIfHasNoneFilter(properties []QueryProperty) bool {
 		}
 	}
 	return false
+}
+
+// AddAliasNameOnEventCondEachGivenEventQueryResult replaces EventName in the result's header with the AliasName
+func AddAliasNameOnEventCondEachGivenEventQueryResult(result *QueryResult, query Query) {
+	// Identify the index for the event_name
+	eventNameIndex := -1
+	for k, key := range result.Headers {
+		if key == AliasEventName {
+			eventNameIndex = k
+		}
+	}
+
+	// If eventNameIndex == -1, the AliasEventName is not found in the header. Hence skip!
+	if eventNameIndex == -1 {
+		return
+	}
+
+	i := 0
+	for i < len(result.Rows) {
+		// Fetching the index from the indexed event_name in result.rows, and utilizing it to establish mapping
+		// with the corresponding alias_name in the query
+		eventName, validConversion := result.Rows[i][eventNameIndex].(string)
+		if !validConversion {
+			i += 1
+			continue
+		}
+		splitPos := strings.Index(eventName, "_")
+		j := eventName[0:splitPos]
+		index, err := strconv.Atoi(j)
+		if err == nil {
+			// Replace the event_name only if corresponding alias_name is provided
+			// Replacing the event_name with "{index}_{alias_name}". This is becasue this name will get
+			// replaced with pure {alias_name} inside method updateEventNameInHeaderAndAddMeta, which gets
+			// invoked subsequently
+			if query.EventsWithProperties[index].AliasName != "" {
+				result.Rows[i][eventNameIndex] = j + "_" + query.EventsWithProperties[index].AliasName
+			}
+		} else {
+			log.WithError(err).WithField("query : ", query).WithField("result : ", result).Error("Failed to get index of event_name for replacing with alias_name.")
+		}
+		i += 1
+	}
 }
