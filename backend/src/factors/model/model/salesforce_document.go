@@ -101,6 +101,10 @@ const (
 	SalesforceDocumentTypeNameCampaign       = "campaign"
 	SalesforceDocumentTypeNameCampaignMember = "campaignmember"
 
+	SFCampaignMemberResponded    = "campaign_member_first_responded_date"
+	SFCampaignMemberCreated      = "campaign_member_created_date"
+	EP_SFCampaignMemberResponded = "$salesforce_campaignmember_hasresponded"
+
 	SalesforceDocumentCreated SalesforceAction = 1
 	SalesforceDocumentUpdated SalesforceAction = 2
 

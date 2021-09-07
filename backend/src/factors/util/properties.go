@@ -26,6 +26,7 @@ const SEN_ALL_EVENTS = "$AllEvents"
 const SEN_ALL_EVENTS_DISPLAY_STRING = "All Events"
 
 const EVENT_NAME_SESSION = "$session"
+const EVENT_NAME_OFFLINE_TOUCH_POINT = "$offline_touch_point"
 const EVENT_NAME_FORM_SUBMITTED = "$form_submitted"
 
 // Integration: Hubspot event names.

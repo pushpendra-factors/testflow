@@ -214,6 +214,11 @@ func (store *MemSQL) CreateOrGetSessionEventName(projectId uint64) (*model.Event
 		Type: model.TYPE_INTERNAL_EVENT_NAME})
 }
 
+func (store *MemSQL) CreateOrGetOfflineTouchPointEventName(projectId uint64) (*model.EventName, int) {
+	return store.CreateOrGetEventName(&model.EventName{ProjectId: projectId, Name: U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+		Type: model.TYPE_INTERNAL_EVENT_NAME})
+}
+
 func (store *MemSQL) GetSessionEventName(projectId uint64) (*model.EventName, int) {
 	if projectId == 0 {
 		return nil, http.StatusBadRequest

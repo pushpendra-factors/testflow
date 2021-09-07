@@ -9,6 +9,7 @@ import (
 	IntSalesforce "factors/integration/salesforce"
 	"factors/model/model"
 	"factors/model/store"
+	SDK "factors/sdk"
 	"factors/task/event_user_cache"
 	"factors/util"
 	U "factors/util"
@@ -29,10 +30,10 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	refreshToken := U.RandomLowerAphaNumString(5)
-	instancURL := U.RandomLowerAphaNumString(5)
+	instanceURL := U.RandomLowerAphaNumString(5)
 	errCode := store.GetStore().UpdateAgentIntSalesforce(agent.UUID,
 		refreshToken,
-		instancURL,
+		instanceURL,
 	)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
@@ -41,12 +42,12 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	//should return list of supported doc type with timestamp 0
+	// should return list of supported doc type with timestamp 0.
 	syncInfo, status := store.GetStore().GetSalesforceSyncInfo()
 	assert.Equal(t, http.StatusFound, status)
 
 	assert.Equal(t, refreshToken, syncInfo.ProjectSettings[project.ID].RefreshToken)
-	assert.Equal(t, instancURL, syncInfo.ProjectSettings[project.ID].InstanceURL)
+	assert.Equal(t, instanceURL, syncInfo.ProjectSettings[project.ID].InstanceURL)
 
 	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameContact)
 	assert.Equal(t, int64(0), syncInfo.LastSyncInfo[project.ID][model.SalesforceDocumentTypeNameContact])
@@ -55,7 +56,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameLead)
 	assert.Equal(t, int64(0), syncInfo.LastSyncInfo[project.ID][model.SalesforceDocumentTypeNameLead])
 
-	//should contain opportunity by default
+	// should contain opportunity by default.
 	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameOpportunity)
 
 	contactID := U.RandomLowerAphaNumString(5)
@@ -63,7 +64,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 
 	createdDate := time.Now()
 
-	// salesforce record with created == updated
+	// salesforce record with created == updated.
 	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument := &model.SalesforceDocument{
 		ProjectID: project.ID,
@@ -75,14 +76,14 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	syncInfo, status = store.GetStore().GetSalesforceSyncInfo()
 
-	//should return latest timestamp from the databse
+	// should return the latest timestamp from the database.
 	assert.Equal(t, createdDate.Unix(), syncInfo.LastSyncInfo[project.ID][model.SalesforceDocumentTypeNameContact])
 
-	//should return error on duplicate
+	// should return error on duplicate.
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusConflict, status)
 
-	//enrich job, create contact created and contact updated event
+	// enrich job, create contact created and contact updated event.
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 1)
@@ -1256,7 +1257,7 @@ func TestSalesforcePropertyDetails(t *testing.T) {
 
 }
 
-func TestSalesforceIndentification(t *testing.T) {
+func TestSalesforceIdentification(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
@@ -1419,6 +1420,7 @@ func createDummySalesforceDocument(projectID uint64, value interface{}, doctType
 
 	return nil
 }
+
 func TestSmartEventPropertyDetails(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
@@ -1933,7 +1935,7 @@ func TestSalesforceCampaignTest(t *testing.T) {
 	assert.Equal(t, 4, success)
 }
 
-func TestGetLatestSalesforeDocument(t *testing.T) {
+func TestGetLatestSalesforceDocument(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
@@ -2683,4 +2685,93 @@ func TestSalesforceGetDocumentsByTypeForSyncWithTimeRange(t *testing.T) {
 	documents, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeLead, resultTimeSeries[1][0], resultTimeSeries[2][1])
 	assert.Equal(t, http.StatusFound, status)
 	assert.Len(t, documents, 2)
+}
+
+func TestSalesforceOfflineTouchPoint(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	_, status := store.GetStore().CreateOrGetOfflineTouchPointEventName(project.ID)
+	if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+		fmt.Println("failed to create event name on SF for offline touch point")
+		return
+	}
+
+	campaign1CreatedTimestamp := time.Now().AddDate(0, 0, -5)
+	campaign1ID := U.RandomString(5)
+	campaign1Name := "Webinar_" + U.RandomString(3)
+	campaignMember1ID := U.RandomString(5)
+	campaignMember1LeadID := U.RandomString(5)
+	Campaign1 := map[string]interface{}{
+		"Id":   campaign1ID,
+		"Name": campaign1Name,
+		"CampaignMembers": IntSalesforce.RelationshipCampaignMember{
+			Records: []IntSalesforce.RelationshipCampaignMemberRecord{
+				{
+					ID: campaignMember1ID,
+				},
+			},
+		},
+		"Members":          1,
+		"CreatedDate":      campaign1CreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaign1CreatedTimestamp.Add(2 * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, Campaign1, model.SalesforceDocumentTypeNameCampaign)
+	assert.Nil(t, err)
+
+	// TestCampaignMember
+
+	campaignMember1CreatedTimestamp := campaign1CreatedTimestamp.Add(10 * time.Minute)
+	campaignMember1 := map[string]interface{}{
+		"Id":               campaignMember1ID,
+		"CampaignId":       campaign1ID,
+		"CampaignName":     campaign1Name,
+		"LeadId":           campaignMember1LeadID,
+		"City":             "Mumbai",
+		"Status":           "NotResponded",
+		"HasResponded":     false,
+		"CreatedDate":      campaignMember1CreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaignMember1CreatedTimestamp.Add(2 * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, campaignMember1, model.SalesforceDocumentTypeNameCampaignMember)
+	assert.Nil(t, err)
+
+	campaignMemberDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(campaignMember1ID)},
+		model.SalesforceDocumentTypeCampaignMember, campaign1CreatedTimestamp.Add(10*time.Hour).Unix())
+	assert.Equal(t, status, http.StatusFound)
+
+	// len(campaignMemberDocuments) > 0 && timestamp sorted desc
+	enCampaignMemberProperties, _, err := IntSalesforce.GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[0])
+	assert.Nil(t, err)
+
+	trackPayload := &SDK.TrackPayload{
+		ProjectId:       project.ID,
+		EventProperties: *enCampaignMemberProperties,
+	}
+
+	filter1 := model.SFTouchPointFilter{
+		Property:  "$salesforce_campaign_name",
+		Operator:  "contains",
+		Value:     "Webinar",
+		LogicalOp: "AND",
+	}
+
+	rule := model.SFTouchPointRule{
+		Filters:           []model.SFTouchPointFilter{filter1},
+		TouchPointTimeRef: model.SFCampaignMemberCreated, // SFCampaignMemberResponded
+		PropertiesMap:     map[string]string{"$campaign": "$salesforce_campaignmember_campaignname"},
+	}
+
+	trackResponse, err := IntSalesforce.CreateTouchPointEvent(project, trackPayload, &campaignMemberDocuments[0], rule)
+	assert.Nil(t, err)
+	assert.NotNil(t, trackResponse)
+
+	event, errCode := store.GetStore().GetEventById(project.ID, trackResponse.EventId, trackResponse.UserId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, event)
+	eventPropertiesBytes, err := event.Properties.Value()
+	var eventPropertiesMap map[string]interface{}
+	_ = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+	assert.Equal(t, eventPropertiesMap["$campaign"], campaign1Name)
 }
