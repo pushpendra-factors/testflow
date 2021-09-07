@@ -454,7 +454,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	k[519] = 100
 	kValue, ok := k[projectId]
 	if !ok {
-		kValue = 10
+		kValue = 100
 	}
 	path, file := C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue)
 	fmt.Println(path, file)

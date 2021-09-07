@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	C "factors/config"
@@ -216,30 +217,32 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 /*
 TrackSalesforceEventByDocumentType tracks salesforce events by action
 	for action created -> create both created and updated events with date created timestamp
-	for action updated -> create on updated event with lastmodified timestamp
+	for action updated -> create on updated event with last modified timestamp
 */
-func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, customerUserID string) (string, string, error) {
+func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, customerUserID string) (string, string, SDK.TrackPayload, error) {
+
+	var finalPayload SDK.TrackPayload
 	if projectID == 0 {
-		return "", "", errors.New("invalid project id")
+		return "", "", finalPayload, errors.New("invalid project id")
 	}
 
 	if trackPayload == nil || document == nil {
-		return "", "", errors.New("invalid operation")
+		return "", "", finalPayload, errors.New("invalid operation")
 	}
 
 	createdTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentCreated)
 	if err != nil {
-		return "", "", err
+		return "", "", finalPayload, err
 	}
 
 	lastModifiedTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 	if err != nil {
-		return "", "", err
+		return "", "", finalPayload, err
 	}
 
 	var eventID, userID string
 	if document.Action == model.SalesforceDocumentCreated {
-		payload := *trackPayload
+		finalPayload = *trackPayload
 		if customerUserID != "" {
 			userID, status := store.GetStore().CreateUser(&model.User{
 				ProjectId:      projectID,
@@ -248,44 +251,46 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 			})
 
 			if status != http.StatusCreated {
-				return "", "", fmt.Errorf("create user failed for doc type %d, status code %d", document.Type, status)
+				return "", "", finalPayload, fmt.Errorf("create user failed for doc type %d, status code %d", document.Type, status)
 			}
-			payload.UserId = userID
+			finalPayload.UserId = userID
 		}
 
-		payload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentCreated)
-		payload.Timestamp = createdTimestamp
+		finalPayload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentCreated)
+		finalPayload.Timestamp = createdTimestamp
 
-		status, response := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce)
+		status, trackResponse := SDK.Track(projectID, &finalPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			return "", "", fmt.Errorf("created event track failed for doc type %d, message %s", document.Type, response.Error)
+			return "", "", finalPayload, fmt.Errorf("created event track failed for doc type %d, message %s", document.Type, trackResponse.Error)
 		}
 
-		if payload.UserId != "" {
-			userID = payload.UserId
+		if finalPayload.UserId != "" {
+			userID = finalPayload.UserId
 		} else {
-			userID = response.UserId
+			userID = trackResponse.UserId
+			// writing back the same userID to final payload to use this for offline touch point
+			finalPayload.UserId = userID
 		}
 
-		eventID = response.EventId
+		eventID = trackResponse.EventId
 	}
 
 	if document.Action == model.SalesforceDocumentCreated || document.Action == model.SalesforceDocumentUpdated {
-		payload := *trackPayload
-		payload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
+		finalPayload = *trackPayload
+		finalPayload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
 
 		if document.Action == model.SalesforceDocumentUpdated {
 
-			payload.Timestamp = lastModifiedTimestamp
+			finalPayload.Timestamp = lastModifiedTimestamp
 			// TODO(maisa): Use GetSyncedSalesforceDocumentByType while updating multiple contacts in an account object
 			documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type)
 			if status != http.StatusFound {
-				return "", "", errors.New("failed to get synced document")
+				return "", "", finalPayload, errors.New("failed to get synced document")
 			}
 
 			event, status := store.GetStore().GetEventById(projectID, documents[0].SyncID, "")
 			if status != http.StatusFound {
-				return "", "", errors.New("failed to get event from sync id ")
+				return "", "", finalPayload, errors.New("failed to get event from sync id ")
 			}
 
 			if customerUserID != "" {
@@ -296,25 +301,24 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 				}, false)
 
 				if status != http.StatusOK {
-					return "", "", fmt.Errorf("failed indentifying user on update event track")
+					return "", "", finalPayload, fmt.Errorf("failed indentifying user on update event track")
 				}
 			}
-
 			userID = event.UserId
 		} else {
-			payload.Timestamp = createdTimestamp
+			finalPayload.Timestamp = createdTimestamp
 		}
 
-		payload.UserId = userID
+		finalPayload.UserId = userID
 
-		status, response := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce)
+		status, trackResponse := SDK.Track(projectID, &finalPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			return "", "", fmt.Errorf("updated event track failed for doc type %d", document.Type)
+			return "", "", finalPayload, fmt.Errorf("updated event track failed for doc type %d", document.Type)
 		}
 
-		eventID = response.EventId
+		eventID = trackResponse.EventId
 	} else {
-		return "", "", errors.New("invalid action on salesforce document sync")
+		return "", "", finalPayload, errors.New("invalid action on salesforce document sync")
 	}
 
 	// create additional event for created action if document is not the first version
@@ -325,11 +329,11 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		payload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
 		status, _ := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			return "", "", fmt.Errorf("updated event for different timestamp track failed for doc type %d", document.Type)
+			return "", "", finalPayload, fmt.Errorf("updated event for different timestamp track failed for doc type %d", document.Type)
 		}
 	}
 
-	return eventID, userID, nil
+	return eventID, userID, finalPayload, nil
 }
 
 func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
@@ -360,14 +364,14 @@ func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesfo
 		logCtx.Warn("Skipping user identification on salesforce account sync. No customer_user_id on properties.")
 	}
 
-	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
+	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to track salesforce account event.")
 		return http.StatusInternalServerError
 	}
 
-	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
+	// Always use lastmodified timestamp for updated properties. Error handling already done during event creation
 	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 
 	var prevProperties *map[string]interface{}
@@ -436,14 +440,13 @@ func enrichContact(projectID uint64, document *model.SalesforceDocument, salesfo
 		logCtx.Warn("Skipping user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
 
-	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
+	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
 	if err != nil {
-		logCtx.WithError(err).Error(
-			"Failed to track salesforce contact event.")
+		logCtx.WithError(err).Error("Failed to track salesforce contact event.")
 		return http.StatusInternalServerError
 	}
 
-	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
+	// Always use lastmodified timestamp for updated properties. Error handling already done during event creation
 	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 
 	var prevProperties *map[string]interface{}
@@ -741,9 +744,9 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 	if customerUserID != "" || userID != "" {
 		if userID != "" {
 			trackPayload.UserId = userID // will also handle opportunity updated event which is not stiched with other object
-			eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
+			eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
 		} else {
-			eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
+			eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
 		}
 
 		if err != nil {
@@ -752,7 +755,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 			return http.StatusInternalServerError
 		}
 	} else {
-		eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
+		eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
 		if err != nil {
 			logCtx.WithError(err).Error(
 				"Failed to track salesforce opportunity event.")
@@ -766,7 +769,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 		userID = eventUserID
 	}
 
-	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
+	// Always use lastmodified timestamp for updated properties. Error handling already done during event creation
 	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 
 	var prevProperties *map[string]interface{}
@@ -811,10 +814,9 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 		logCtx.Warn("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
 	}
 
-	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
+	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
 	if err != nil {
-		logCtx.WithError(err).Error(
-			"Failed to track salesforce lead event.")
+		logCtx.WithError(err).Error("Failed to track salesforce lead event.")
 		return http.StatusInternalServerError
 	}
 
@@ -853,13 +855,13 @@ func getCampaignMemberIDsFromCampaign(document *model.SalesforceDocument) ([]str
 	return campaignMemberIDs, nil
 }
 
-func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.SalesforceDocument, endTimestamp int64) int {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID, "end_timestamp": endTimestamp})
+func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID, "end_timestamp": endTimestamp})
 	if document.Type != model.SalesforceDocumentTypeCampaign {
 		return http.StatusBadRequest
 	}
 
-	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties for campaign.")
 		return http.StatusInternalServerError
@@ -872,7 +874,7 @@ func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.Salesf
 	}
 
 	if len(campaignMemberIDs) < 1 {
-		status := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, "", "")
+		status := store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, document, "", "")
 		if status != http.StatusAccepted {
 			logCtx.Error("Failed to mark campaign as synced.")
 			return http.StatusInternalServerError
@@ -886,15 +888,15 @@ func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.Salesf
 
 	/*
 		NOTE: IF member document is not available for this time range, mark it as synced.
-		This can only happend on the first time of this campaign pull where campaign is created on day 1 and member on day 2
+		This can only happened on the first time of this campaign pull where campaign is created on day 1 and member on day 2
 
 		When CAMPAIGN MEMBER is picked up for processing then, it will refer this document as for last campaign update.
 		Refer enrichCampaignMember function for opposite case
 	*/
-	memberDocuments, status = store.GetStore().GetLatestSalesforceDocumentByID(projectID, campaignMemberIDs, model.SalesforceDocumentTypeCampaignMember, endTimestamp)
+	memberDocuments, status = store.GetStore().GetLatestSalesforceDocumentByID(project.ID, campaignMemberIDs, model.SalesforceDocumentTypeCampaignMember, endTimestamp)
 	if status != http.StatusFound {
 		logCtx.Warn("Failed to get campaign members.")
-		status = store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, "", "")
+		status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, document, "", "")
 		if status != http.StatusAccepted {
 			logCtx.Error("Failed to mark campaign as synced.")
 			return http.StatusInternalServerError
@@ -904,7 +906,7 @@ func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.Salesf
 	}
 
 	for i := range memberDocuments {
-		enMemberProperties, _, err := GetSalesforceDocumentProperties(projectID, &memberDocuments[i])
+		enMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &memberDocuments[i])
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get campaign member properties.")
 			return http.StatusInternalServerError
@@ -917,7 +919,7 @@ func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.Salesf
 		referenceDocument := memberDocuments[i]
 		existingUserID := ""
 		if referenceDocument.Action == model.SalesforceDocumentCreated && memberDocuments[i].Synced == false {
-			existingUserID = getExistingCampaignMemberUserIDFromProperties(projectID, enMemberProperties)
+			existingUserID = getExistingCampaignMemberUserIDFromProperties(project.ID, enMemberProperties)
 			if existingUserID == "" {
 				logCtx.WithField("member_id", referenceDocument.ID).Error("Missing lead or contact record for a campaign.")
 			}
@@ -932,12 +934,12 @@ func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.Salesf
 		}
 
 		trackPayload := &SDK.TrackPayload{
-			ProjectId:       projectID,
+			ProjectId:       project.ID,
 			EventProperties: *enMemberProperties, // no user properties for campaign members
 			UserId:          existingUserID,
 		}
 
-		eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, &referenceDocument, "")
+		eventID, userID, finalTrackPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, &referenceDocument, "")
 		if err != nil {
 			logCtx.WithField("member_id", referenceDocument.ID).WithError(err).Error(
 				"Failed to track salesforce campaign member update on campaign update.")
@@ -945,7 +947,15 @@ func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.Salesf
 		}
 
 		if memberDocuments[i].Synced == false {
-			status = store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, &memberDocuments[i], eventID, userID)
+			err = ApplyOfflineTouchPointRule(project, &finalTrackPayload, &memberDocuments[i], endTimestamp)
+			if err != nil {
+				// log and continue
+				logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("Create SF offline touch point")
+			}
+		}
+
+		if memberDocuments[i].Synced == false {
+			status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, &memberDocuments[i], eventID, userID)
 			if status != http.StatusAccepted {
 				logCtx.WithField("member_id", referenceDocument.ID).Error("Failed to mark campaign member as synced.")
 				return http.StatusInternalServerError
@@ -953,7 +963,7 @@ func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.Salesf
 		}
 	}
 
-	status = store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, "", "")
+	status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, document, "", "")
 	if status != http.StatusAccepted {
 		logCtx.Error("Failed to mark campaign as synced.")
 		return http.StatusInternalServerError
@@ -990,73 +1000,229 @@ func getExistingCampaignMemberUserIDFromProperties(projectID uint64, properties 
 	return existingUserID
 }
 
-func enrichCampaignMember(projectID uint64, document *model.SalesforceDocument, endTimestamp int64) int {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID})
+func enrichCampaignMember(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "document_id": document.ID})
 	if document.Type != model.SalesforceDocumentTypeCampaignMember {
 		return http.StatusBadRequest
 	}
 
-	enCampaingMemberProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties for campaign member.")
 		return http.StatusInternalServerError
 	}
 
-	campaignID, exist := (*enCampaingMemberProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "CampaignId")]
+	campaignID, exist := (*enCampaignMemberProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "CampaignId")]
 	if !exist {
 		logCtx.Error("Missing campaign_id in campaign member")
 		return http.StatusInternalServerError
 	}
 
 	/*
-		NOTE: IF campaing document is not available for this time range don't mark it as synced and continue.
+		NOTE: IF campaign document is not available for this time range don't mark it as synced and continue.
 
 		When CAMPAIGN is picked up for processing then, it will refer this document as for last campaign member.
 		Refer enrichCampaignToAllCampaignMembers function for opposite case
 	*/
-	campaignDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(projectID, []string{util.GetPropertyValueAsString(campaignID)}, model.SalesforceDocumentTypeCampaign, endTimestamp)
+	campaignDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(campaignID)}, model.SalesforceDocumentTypeCampaign, endTimestamp)
 	if status != http.StatusFound { // log warning and don't mark it as synced. It will be processed when campaign is found
 		logCtx.Warn("Failed to get campaign document for campaign member.")
 		return http.StatusOK
 	}
 
-	enCampaignProperties, _, err := GetSalesforceDocumentProperties(projectID, &campaignDocuments[len(campaignDocuments)-1])
+	enCampaignProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignDocuments[len(campaignDocuments)-1])
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties for campaign member.")
 		return http.StatusInternalServerError
 	}
 
 	for pName := range *enCampaignProperties {
-		(*enCampaingMemberProperties)[pName] = (*enCampaignProperties)[pName]
+		(*enCampaignMemberProperties)[pName] = (*enCampaignProperties)[pName]
 	}
 
 	existingUserID := ""
 	// use user_id from lead or contact id
 	if document.Action == model.SalesforceDocumentCreated {
-		existingUserID = getExistingCampaignMemberUserIDFromProperties(projectID, enCampaingMemberProperties)
+		existingUserID = getExistingCampaignMemberUserIDFromProperties(project.ID, enCampaignMemberProperties)
 	}
 
 	trackPayload := &SDK.TrackPayload{
-		ProjectId:       projectID,
-		EventProperties: *enCampaingMemberProperties,
+		ProjectId:       project.ID,
+		EventProperties: *enCampaignMemberProperties,
 		UserId:          existingUserID,
 	}
 
-	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
+	eventID, userID, finalTrackPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, document, "")
 	if err != nil {
-		logCtx.WithError(err).Error(
-			"Failed to track salesforce lead event.")
+		logCtx.WithError(err).Error("Failed to track salesforce lead event.")
 		return http.StatusInternalServerError
 	}
 
-	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	err = ApplyOfflineTouchPointRule(project, &finalTrackPayload, document, endTimestamp)
+	if err != nil {
+		// log and continue
+		logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("Create SF offline touch point")
+	}
+
+	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, document, eventID, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce lead document as synced.")
 		return http.StatusInternalServerError
 	}
-
 	return http.StatusOK
+}
 
+func ApplyOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyOfflineTouchPointRule", "document_id": document.ID, "document_action": document.Action})
+
+	if &project.SalesforceTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.SalesforceTouchPoints) {
+
+		var salesforceTouchPoints model.SalesforceTouchPoints
+		err := U.DecodePostgresJsonbToStructType(&project.SalesforceTouchPoints, &salesforceTouchPoints)
+		if err != nil {
+			// logging and continuing.
+			logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to fetch offline touch point rules for salesforce document.")
+			return err
+		}
+
+		rules := salesforceTouchPoints.TouchPointRules["sf_touch_point_rules"]
+
+		for _, rule := range rules {
+
+			// check if rule is applicable
+			if !canCreateSFTouchPoint(rule.TouchPointTimeRef, document.Action) || !filterCheck(rule, trackPayload, logCtx) {
+				continue
+			}
+
+			switch document.Action {
+
+			case model.SalesforceDocumentCreated:
+
+				_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to create touch point for campaign member document.")
+					continue
+				}
+			case model.SalesforceDocumentUpdated:
+
+				campaignMemberDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, endTimestamp)
+				if status != http.StatusFound {
+					logCtx.Warn("Failed to get campaign member document for campaign member.")
+					continue
+				}
+				logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).WithField("Document[0]", campaignMemberDocuments[0]).Info("Found existing campaign member document")
+
+				// len(campaignMemberDocuments) > 0 && timestamp sorted desc
+				enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[0])
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get properties for campaign member.")
+					continue
+				}
+				// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
+				if val, exists := (*enCampaignMemberProperties)[model.EP_SFCampaignMemberResponded]; exists {
+					if val.(bool) == true {
+						continue
+					}
+				}
+				logCtx.Info("Found existing campaign member document")
+				if val, exists := trackPayload.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
+					if val.(bool) == true {
+						_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
+						if err != nil {
+							logCtx.WithError(err).Error("Failed to create touch point for campaign member document.")
+							continue
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, rule model.SFTouchPointRule) (*SDK.TrackResponse, error) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent", "document_id": document.ID, "document_action": document.Action})
+	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("CreateTouchPointEvent: creating member document")
+	var trackResponse *SDK.TrackResponse
+	var err error
+	payload := &SDK.TrackPayload{
+		ProjectId:       project.ID,
+		EventProperties: trackPayload.EventProperties,
+		UserId:          trackPayload.UserId,
+		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+	}
+
+	var timestamp int64
+	if document.Action == model.SalesforceDocumentCreated {
+		timestamp, err = model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentCreated)
+		if err != nil {
+			logCtx.Error("failed to timestamp for SF for offline touch point.")
+			return trackResponse, err
+		}
+	} else if document.Action == model.SalesforceDocumentUpdated {
+		timestamp, err = model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
+		if err != nil {
+			logCtx.Error("failed to timestamp for SF for offline touch point.")
+			return trackResponse, err
+		}
+	}
+	payload.Timestamp = timestamp
+
+	// Mapping touch point properties:
+	for key, value := range rule.PropertiesMap {
+		if _, exists := trackPayload.EventProperties[value]; exists {
+			payload.EventProperties[key] = trackPayload.EventProperties[value]
+		} else {
+			payload.EventProperties[key] = model.PropertyValueNone
+		}
+	}
+
+	status, trackResponse := SDK.Track(project.ID, payload, true, "")
+	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("created touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+		return trackResponse, errors.New(fmt.Sprintf("created touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+	return trackResponse, nil
+}
+
+func canCreateSFTouchPoint(touchPointTimeRef string, documentActionType model.SalesforceAction) bool {
+	// Ignore created event for "first responded" based rule.
+	if touchPointTimeRef == model.SFCampaignMemberResponded && documentActionType == model.SalesforceDocumentCreated {
+		return false
+	}
+
+	// Ignore responded event for "Created event" based rule.
+	if touchPointTimeRef == model.SFCampaignMemberCreated && documentActionType == model.SalesforceDocumentUpdated {
+		return false
+	}
+	return true
+}
+
+func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+
+	filtersPassed := 0
+	for _, filter := range rule.Filters {
+		switch filter.LogicalOp {
+		case model.EqualsOpStr:
+			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
+				if trackPayload.EventProperties[filter.Property] == filter.Value {
+					filtersPassed++
+				}
+			}
+		case model.ContainsOpStr:
+			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
+				if strings.Contains(trackPayload.EventProperties[filter.Property].(string), filter.Value) {
+					filtersPassed++
+				}
+			}
+		default:
+			logCtx.WithField("Document", trackPayload).Error("No matching operator found for offline touch point rules for salesforce document.")
+			continue
+		}
+	}
+	return filtersPassed != 0 && filtersPassed == len(rule.Filters)
 }
 
 /*
@@ -1081,27 +1247,27 @@ func enrichCampaignMember(projectID uint64, document *model.SalesforceDocument, 
 		ContactID:
 	}
 */
-func enrichCampaign(projectID uint64, document *model.SalesforceDocument, endTimestamp int64) int {
-	if projectID == 0 || document == nil {
+func enrichCampaign(project *model.Project, document *model.SalesforceDocument, endTimestamp int64) int {
+	if project.ID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaign {
-		return enrichCampaignToAllCampaignMembers(projectID, document, endTimestamp)
+		return enrichCampaignToAllCampaignMembers(project, document, endTimestamp)
 	}
 
 	if document.Type == model.SalesforceDocumentTypeCampaignMember {
-		return enrichCampaignMember(projectID, document, endTimestamp)
+		return enrichCampaignMember(project, document, endTimestamp)
 	}
 
 	return http.StatusBadRequest
 }
 
-func enrichAll(projectID uint64, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, endTimestamp int64) int {
-	if projectID == 0 {
+func enrichAll(project *model.Project, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName, endTimestamp int64) int {
+	if project.ID == 0 {
 		return http.StatusBadRequest
 	}
-	logCtx := log.WithField("project_id", projectID)
+	logCtx := log.WithField("project_id", project.ID)
 
 	var seenFailures bool
 	var errCode int
@@ -1110,15 +1276,15 @@ func enrichAll(projectID uint64, documents []model.SalesforceDocument, salesforc
 
 		switch documents[i].Type {
 		case model.SalesforceDocumentTypeAccount:
-			errCode = enrichAccount(projectID, &documents[i], salesforceSmartEventNames)
+			errCode = enrichAccount(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeContact:
-			errCode = enrichContact(projectID, &documents[i], salesforceSmartEventNames)
+			errCode = enrichContact(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeLead:
-			errCode = enrichLeads(projectID, &documents[i], salesforceSmartEventNames)
+			errCode = enrichLeads(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeOpportunity:
-			errCode = enrichOpportunities(projectID, &documents[i], salesforceSmartEventNames)
+			errCode = enrichOpportunities(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeCampaign, model.SalesforceDocumentTypeCampaignMember:
-			errCode = enrichCampaign(projectID, &documents[i], endTimestamp)
+			errCode = enrichCampaign(project, &documents[i], endTimestamp)
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue
@@ -1202,6 +1368,13 @@ func Enrich(projectID uint64) ([]Status, bool) {
 		return statusByProjectAndType, true
 	}
 
+	// Get/Create SF touch point event name
+	_, status = store.GetStore().CreateOrGetOfflineTouchPointEventName(projectID)
+	if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+		logCtx.Error("failed to create event name on SF for offline touch point")
+		return statusByProjectAndType, true
+	}
+
 	allowedDocTypes := model.GetSalesforceDocumentTypeAlias(projectID)
 
 	salesforceSmartEventNames := GetSalesforceSmartEventNames(projectID)
@@ -1221,6 +1394,12 @@ func Enrich(projectID uint64) ([]Status, bool) {
 	}
 
 	orderedTimeSeries := model.GetCRMTimeSeriesByStartTimestamp(projectID, minTimestamp, model.SmartCRMEventSourceSalesforce)
+
+	project, errCode := store.GetStore().GetProject(projectID)
+	if errCode != http.StatusFound {
+		log.Error("Failed to get project")
+		return statusByProjectAndType, true
+	}
 
 	anyFailure := false
 	overAllSyncStatus := make(map[string]bool)
@@ -1247,7 +1426,7 @@ func Enrich(projectID uint64) ([]Status, bool) {
 				continue
 			}
 
-			errCode = enrichAll(projectID, documents, (*salesforceSmartEventNames)[docTypeAlias], timeRange[1])
+			errCode = enrichAll(project, documents, (*salesforceSmartEventNames)[docTypeAlias], timeRange[1])
 			if errCode == http.StatusOK {
 				if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
 					overAllSyncStatus[docTypeAlias] = false

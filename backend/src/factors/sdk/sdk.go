@@ -546,6 +546,8 @@ func Track(projectId uint64, request *TrackPayload,
 	} else if request.SmartEventType != "" {
 		request.Name = strings.TrimSuffix(request.Name, "/")
 		eventName, eventNameErrCode = store.GetStore().GetSmartEventEventName(&model.EventName{Name: request.Name, ProjectId: projectId, Type: request.SmartEventType})
+	} else if request.Name == U.EVENT_NAME_OFFLINE_TOUCH_POINT {
+		eventName, eventNameErrCode = store.GetStore().CreateOrGetOfflineTouchPointEventName(projectId)
 	} else {
 		eventName, eventNameErrCode = store.GetStore().CreateOrGetUserCreatedEventName(
 			&model.EventName{Name: request.Name, ProjectId: projectId})

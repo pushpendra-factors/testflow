@@ -55,7 +55,7 @@ func (pg *Postgres) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
 			// add projects not synced before.
 			enabledProjectLastSync[ps.ProjectID] = make(map[string]int64, 0)
 		} else {
-			// add sync info if avaliable.
+			// add sync info if available.
 			enabledProjectLastSync[ps.ProjectID] = lastSyncInfoByProject[ps.ProjectID]
 		}
 

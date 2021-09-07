@@ -137,6 +137,7 @@ type Model interface {
 	GetSmartEventEventName(eventName *model.EventName) (*model.EventName, int)
 	GetSmartEventEventNameByNameANDType(projectID uint64, name, typ string) (*model.EventName, int)
 	CreateOrGetSessionEventName(projectID uint64) (*model.EventName, int)
+	CreateOrGetOfflineTouchPointEventName(projectID uint64) (*model.EventName, int)
 	GetSessionEventName(projectID uint64) (*model.EventName, int)
 	GetEventName(name string, projectID uint64) (*model.EventName, int)
 	GetEventNames(projectID uint64) ([]model.EventName, int)

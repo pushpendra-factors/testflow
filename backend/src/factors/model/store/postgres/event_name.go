@@ -191,6 +191,11 @@ func (pg *Postgres) CreateOrGetSessionEventName(projectId uint64) (*model.EventN
 		Type: model.TYPE_INTERNAL_EVENT_NAME})
 }
 
+func (pg *Postgres) CreateOrGetOfflineTouchPointEventName(projectId uint64) (*model.EventName, int) {
+	return pg.CreateOrGetEventName(&model.EventName{ProjectId: projectId, Name: U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+		Type: model.TYPE_INTERNAL_EVENT_NAME})
+}
+
 func (pg *Postgres) GetSessionEventName(projectId uint64) (*model.EventName, int) {
 	if projectId == 0 {
 		return nil, http.StatusBadRequest
