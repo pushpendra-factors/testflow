@@ -1711,6 +1711,269 @@ func TestAnalyticsInsightsQuery(t *testing.T) {
 	})
 }
 
+func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID3)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	/*
+		user1 -> event www.factors.ai with property1 -> www.factors.ai with property2 -> www.factors.ai/pricing with propterty2
+		user2 -> event www.factors.ai with property1 -> www.factors.ai/pricing with property1
+		user3 -> event www.factors.ai with property2 -> www.factors.ai/pricing with property2
+	*/
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "www.factors.ai", createdUserID1, stepTimestamp, "A", 1234)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "www.factors.ai", createdUserID1, stepTimestamp+10, "B", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "www.factors.ai/pricing", createdUserID1, stepTimestamp+20, "B", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "www.factors.ai", createdUserID2, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "www.factors.ai/pricing", createdUserID2, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "www.factors.ai", createdUserID3, stepTimestamp, "B", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "www.factors.ai/pricing", createdUserID3, stepTimestamp+10, "B", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("AnalyticsInsightsQueryUniqueUserWithUserPropertyFilterAndBreakdown", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name:      "www.factors.ai/pricing",
+					AliasName: "a0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				model.QueryEventWithProperties{
+					Name:      "www.factors.ai",
+					AliasName: "a1",
+				},
+			},
+			Class:            model.QueryClassInsights,
+			GroupByTimestamp: model.GroupByTimestampDate,
+
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		a0_Index := 0
+		a1_Index := 0
+		for index := range result.Headers {
+			if result.Headers[index] == "a0" {
+				a0_Index = index
+			} else if result.Headers[index] == "a1" {
+				a1_Index = index
+			}
+		}
+		assert.Equal(t, float64(1), result.Rows[0][a0_Index])
+		assert.Equal(t, float64(4), result.Rows[0][a1_Index])
+	})
+
+	// Test for the scenario with no alias_name
+	t.Run("AnalyticsInsightsQueryUniqueUserWithUserPropertyFilterAndBreakdown", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "www.factors.ai/pricing",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				model.QueryEventWithProperties{
+					Name: "www.factors.ai",
+				},
+			},
+			Class:            model.QueryClassInsights,
+			GroupByTimestamp: model.GroupByTimestampDate,
+
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		pricing_Index := 0
+		ai_Index := 0
+		for index := range result.Headers {
+			if result.Headers[index] == "www.factors.ai/pricing" {
+				pricing_Index = index
+			} else if result.Headers[index] == "www.factors.ai" {
+				ai_Index = index
+			}
+		}
+		assert.Equal(t, float64(1), result.Rows[0][pricing_Index])
+		assert.Equal(t, float64(4), result.Rows[0][ai_Index])
+	})
+
+	// Test for the scenario with alias_name having spaces in it
+	t.Run("AnalyticsInsightsQueryUniqueUserWithUserPropertyFilterAndBreakdown", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name:      "www.factors.ai/pricing",
+					AliasName: "a 0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				model.QueryEventWithProperties{
+					Name:      "www.factors.ai",
+					AliasName: "a 1",
+				},
+			},
+			Class:            model.QueryClassInsights,
+			GroupByTimestamp: model.GroupByTimestampDate,
+
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		a0_Index := 0
+		a1_Index := 0
+		for index := range result.Headers {
+			if result.Headers[index] == "a 0" {
+				a0_Index = index
+			} else if result.Headers[index] == "a 1" {
+				a1_Index = index
+			}
+		}
+		assert.Equal(t, float64(1), result.Rows[0][a0_Index])
+		assert.Equal(t, float64(4), result.Rows[0][a1_Index])
+	})
+
+	// Test for verifying the counts by alias_name
+	t.Run("AnalyticsInsightsQueryUniqueUserWithUserPropertyFilterAndBreakdown", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name:      "www.factors.ai/pricing",
+					AliasName: "a0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				model.QueryEventWithProperties{
+					Name:      "www.factors.ai",
+					AliasName: "a1",
+				},
+			},
+			Class:            model.QueryClassInsights,
+			GroupByTimestamp: model.GroupByTimestampDate,
+
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		a0_Index := 0
+		a1_Index := 0
+		for index := range result.Headers {
+			if result.Headers[index] == "a0" {
+				a0_Index = index
+			} else if result.Headers[index] == "a1" {
+				a1_Index = index
+			}
+		}
+		assert.Equal(t, float64(1), result.Rows[0][a0_Index])
+		assert.Equal(t, float64(4), result.Rows[0][a1_Index])
+	})
+}
+
 func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()

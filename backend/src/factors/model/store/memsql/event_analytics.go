@@ -106,6 +106,11 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
+	// Replace the event_name with alias, if the event condition is each_given_event
+	if query.EventsCondition == model.EventCondEachGivenEvent {
+		model.AddAliasNameOnEventCondEachGivenEventQueryResult(result, query)
+	}
+
 	// if and only if breakdown is by datetime (condition for both events/users count for each event.)
 	if len(query.GroupByProperties) == 0 &&
 		query.EventsCondition == model.EventCondEachGivenEvent &&
