@@ -226,10 +226,14 @@ function CoreQuery({
 
   const getWeeklyIngishts = (record) => {
     if (metadata?.QueryWiseResult) {
-      console.log('saved query unit id-->>', record);
+      // console.log('saved query unit id-->>', record);
       const insightsItem = metadata?.QueryWiseResult[record.key];
       if (insightsItem) {
-        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
+        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: { 
+          id: record?.key,
+          isDashboard: false,
+          ...insightsItem
+        } });
       } else {
         dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
       }

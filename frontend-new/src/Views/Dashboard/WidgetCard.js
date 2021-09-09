@@ -280,14 +280,19 @@ function WidgetCard({
   );
 
   const handleEditQuery = useCallback(() => {
-    console.log('dashboard unit id-->>', unit);
+    // console.log('dashboard unit id-->>', unit);
     // console.log('metadata',metadata);
     // console.log('metadata',metadata.DashboardUnitWiseResult[unit.id]);
 
     if (metadata?.DashboardUnitWiseResult) {
       const insightsItem = metadata?.DashboardUnitWiseResult[unit.id];
       if (insightsItem) {
-        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
+        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: { 
+          id: unit?.id,
+          isDashboard: true,
+          ...insightsItem
+        } 
+      });
       } else {
         dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
       }
