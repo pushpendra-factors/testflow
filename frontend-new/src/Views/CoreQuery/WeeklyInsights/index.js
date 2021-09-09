@@ -46,7 +46,7 @@ const NoData = ({data}) => {
     )
 }
 
-const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, fetchWeeklyIngishts }) => {    
+const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, userPropNames, fetchWeeklyIngishts }) => {    
 
     const [defaultActive, setDefaultActive] = useState(null);
     const [expandAll, setExpandAll] = useState(true);
@@ -54,16 +54,14 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
 
     const TagIconSize = 14;
     const UpIcon = 'growthUp';
-    const DownIcon = 'growthDown';
+    const DownIcon = 'growthDown'; 
 
-
-  const matchEventName = (item) => { 
-    let findItem = eventPropNames?.[item]
+  const matchEventName = (item) => {   
+      let findItem = eventPropNames?.[item] || userPropNames?.[item] 
     return findItem ? findItem : item
   }
 
-    const panelActive = (panelNo) =>{
-        // console.log('click event here-->', panelNo)
+    const panelActive = (panelNo) =>{ 
         setDefaultActive(_.map(panelNo, _.parseInt));
     }
      
@@ -196,8 +194,8 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
             console.log('weekly-ingishts fetch error', e);
           }); 
     }
-    
-    const defaultDate = `${moment.unix(Object.keys(dateData)[0]).format("MMM DD, YYYY")} - ${moment.unix(Object.keys(dateData)[0]).endOf('week').format("MMM DD, YYYY")}`;
+    let insightsLen =  Object.keys(dateData)?.length || 0; 
+    const defaultDate = `${moment.unix(Object.keys(dateData)[insightsLen-1]).format("MMM DD, YYYY")} - ${moment.unix(Object.keys(dateData)[insightsLen-1]).endOf('week').format("MMM DD, YYYY")}`;
     // const WeekData = `${moment.unix(1624147200).format("MMM DD, YYYY")} - ${moment.unix(1624147200).endOf('week').format("MMM DD, YYYY")}`; 
     const baseName = requestQuery?.cl == "funnel" ? requestQuery?.ewp[0].na : "Sessions";
 
@@ -297,7 +295,9 @@ const WeeklyInishgts = ({
     queryType,
     queryTitle,
     fetchWeeklyIngishts,
-    activeProject
+    activeProject,
+    eventPropNames,
+    userPropNames
 }) => { 
     const [insightsData, setInsightsData] = useState(null); 
 
@@ -327,6 +327,8 @@ const WeeklyInishgts = ({
             queryTitle={queryTitle}
             fetchWeeklyIngishts={fetchWeeklyIngishts}
             activeProject={activeProject}
+            eventPropNames={eventPropNames}
+            userPropNames={userPropNames}
              />
         }
 
@@ -342,7 +344,8 @@ const WeeklyInishgts = ({
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
     insights: state.insights,
-    eventPropNames: state.coreQuery.eventPropNames
+    eventPropNames: state.coreQuery.eventPropNames,
+    userPropNames: state.coreQuery.userPropNames
 
 });
 

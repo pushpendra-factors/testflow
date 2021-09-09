@@ -299,12 +299,13 @@ function WidgetCard({
 
       if (insightsItem?.Enabled) {
         if (!_.isEmpty(insightsItem?.InsightsRange)) {
+          let insightsLen =  Object.keys(insightsItem?.InsightsRange)?.length || 0; 
           fetchWeeklyIngishts(
             active_project.id,
             unit.id,
-            Object.keys(insightsItem.InsightsRange)[0],
+            Object.keys(insightsItem.InsightsRange)[insightsLen-1],
             insightsItem.InsightsRange[
-              Object.keys(insightsItem.InsightsRange)[0]
+              Object.keys(insightsItem.InsightsRange)[insightsLen-1]
             ][0]
           ).catch((e) => {
             console.log('weekly-ingishts fetch error', e);
