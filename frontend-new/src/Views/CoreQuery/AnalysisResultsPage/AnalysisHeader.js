@@ -83,7 +83,7 @@ function AnalysisHeader({
   return (
     <div
       id='app-header'
-      className={`bg-white z-50 ${requestQuery && 'fixed'} flex-col pt-3 px-8 w-11/12 ${isInsightsEnabled ? 'pb-0 border-bottom--thin-2' : "pb-3"} ${styles.topHeader}`}
+      className={`bg-white z-50 ${requestQuery && 'fixed'} flex-col pt-3 px-8 w-11/12 ${requestQuery && isInsightsEnabled ? 'pb-0' : "pb-3"} ${styles.topHeader}`}
     >
       <div className={'items-center flex justify-between w-full'}>
 
@@ -152,9 +152,7 @@ function AnalysisHeader({
       </div>
 
 
-
-
-      {isInsightsEnabled &&
+      {requestQuery && isInsightsEnabled &&
         <div className={'items-center flex justify-center w-full'}>
           <Tabs defaultActiveKey={activeTab} onChange={changeTab} className={'fa-tabs--dashboard'}>
             <TabPane tab="Reports" key="1" />
