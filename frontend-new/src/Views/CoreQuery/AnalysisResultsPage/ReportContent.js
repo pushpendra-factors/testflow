@@ -253,29 +253,34 @@ function ReportContent({
 
   return (
     <>
-      <ReportTitle
-        setDrawerVisible={setDrawerVisible}
-        title={queryTitle}
-        queryDetail={queryDetail}
-        section={section}
-        onReportClose={onReportClose}
-        queryType={queryType}
-        apiCallStatus={resultState.apiCallStatus}
-      />
-      <div className='mt-6'>
-        <CalendarRow
-          queryType={queryType}
-          handleDurationChange={handleDurationChange}
-          durationObj={durationObj}
-          handleChartTypeChange={handleChartTypeChange}
-          chartTypeMenuItems={chartTypeMenuItems}
-          chartType={chartType}
-          metricsDropdown={metricsDropdown}
-          triggerAttrComparision={runAttrCmprQuery}
-          handleGranularityChange={handleGranularityChange}
-          section={section}
-        />
-      </div>
+      <>
+        {((queryType === QUERY_TYPE_CAMPAIGN) || (queryType === QUERY_TYPE_WEB)) ?
+          <ReportTitle
+            setDrawerVisible={setDrawerVisible}
+            title={queryTitle}
+            queryDetail={queryDetail}
+            section={section}
+            onReportClose={onReportClose}
+            queryType={queryType}
+            apiCallStatus={resultState.apiCallStatus}
+          />
+          : null
+        }
+        <div className='mt-6'>
+          <CalendarRow
+            queryType={queryType}
+            handleDurationChange={handleDurationChange}
+            durationObj={durationObj}
+            handleChartTypeChange={handleChartTypeChange}
+            chartTypeMenuItems={chartTypeMenuItems}
+            chartType={chartType}
+            metricsDropdown={metricsDropdown}
+            triggerAttrComparision={runAttrCmprQuery}
+            handleGranularityChange={handleGranularityChange}
+            section={section}
+          />
+        </div> </>
+
       <div className='mt-12'>{content}</div>
     </>
   );

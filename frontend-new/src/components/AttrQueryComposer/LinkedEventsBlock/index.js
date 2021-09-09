@@ -9,6 +9,7 @@ import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
 import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { isArray } from 'lodash';
+import FaSelect from 'Components/FaSelect';
 
 const LinkedEventsBlock = ({
     linkEvent, 
@@ -28,6 +29,8 @@ const LinkedEventsBlock = ({
         event: [],
         user: []
     });
+
+    const [moreOptions, setMoreOptions] = useState(false);
     
     useEffect(() => {
         if(!linkEvent || !linkEvent?.label?.length) {return};
@@ -135,10 +138,46 @@ const LinkedEventsBlock = ({
         setSelectVisible(false);
     };
 
+    const addModelAction = () => {
+        return (
+          <div className={'fa--query_block--actions--cols relative ml-2'}>
+              <div className={`relative`}>
+                <Button
+                    type='text'
+                    onClick={() => setMoreOptions(true)}
+                    className={'ml-1 mr-1'}
+                >
+                <SVG name='more'></SVG>
+                </Button>
+        
+                {moreOptions ? <FaSelect
+                options={[[`Filter By`]]}
+                optionClick={(val) => setCompareModelActive(true) && setMoreOptions(false)}
+                onClickOutside={() => setMoreOptions(false)}
+                ></FaSelect> : false}
+            </div>
+          </div>
+        );
+      };
+
     const additionalActions = () => {
         return (
-                <div className={'fa--query_block--actions'}>
-                   <Button  type="text" onClick={addFilterBlock} className={'mr-1'}><SVG name="filter"></SVG></Button>
+            <div className={'fa--query_block--actions--cols flex relative ml-2'}>
+                <div className={`relative flex`}>
+                    <Button
+                        type='text'
+                        onClick={() => setMoreOptions(true)}
+                        className={'ml-1 mr-1'}
+                    >
+                        <SVG name='more'></SVG>
+                    </Button>
+
+                    {moreOptions ? <FaSelect
+                        options={[[`Filter By`, 'filter']]}
+                        optionClick={(val) => {addFilterBlock(); setMoreOptions(false)}}
+                        onClickOutside={() => setMoreOptions(false)}
+                    ></FaSelect> : false}
+                </div>
                    <Button  type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
                 </div>
         );
@@ -165,10 +204,10 @@ const LinkedEventsBlock = ({
 
     const renderLinkEventBlockContent = () => {
         return (
-            <div className={`${styles.block__content} fa--query_block_section--basic mt-2`}>
+            <div className={`${styles.block__content} fa--query_block_section--basic mt-2 relative`}>
                 {<Tooltip title={eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}> <Button 
                     type="link" 
-                    className={`fa-button--truncate`}
+                    className={``}
                     onClick={toggleEventSelect}>
                         <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
                         {eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}
@@ -185,13 +224,8 @@ const LinkedEventsBlock = ({
 
         return (
             <div className={`${styles.block__content} mt-2`}>
-                    <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
-                        <SVG name={'plus'} color={'purple'}></SVG>
-                    </div>
-                    
-                    {<Button type="link" onClick={toggleEventSelect}>Add new</Button>}
-                    
-                    {selectEvents()}
+                {<Button type="text" onClick={toggleEventSelect} icon={<SVG name={'plus'} color={'grey'}/>}>Add new</Button>}
+                {selectEvents()}
             </div> 
         )
     };

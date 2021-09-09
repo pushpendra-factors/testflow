@@ -12,6 +12,7 @@ import FaSelect from '../../FaSelect';
 const EventGroupBlock = ({
   index,
   eventIndex,
+  grpIndex,
   groupByEvent,
   event,
   userProperties,
@@ -152,7 +153,7 @@ const EventGroupBlock = ({
 
     return (
       <>
-        <Button type={'link'} className={'ml-2 fa-button--truncate'}>
+        <Button type={'link'} className={'ml-2'}>
           {propName}
         </Button>
         {renderGroupPropertyOptions(groupByEvent)}
@@ -177,13 +178,13 @@ const EventGroupBlock = ({
   return (
     <div className={`flex items-center relative w-full`}>
       <Button
-        type='text'
-        onClick={() => delGroupState(groupByEvent)}
-        className={`mr-1`}
-        icon={<SVG name='remove' />}
-      />
+          type="text"
+          onClick={() => delGroupState(groupByEvent)}
+          size={'small'}
+          className={`mr-1`}
+        >  <SVG name={'remove'} />  </Button>
       <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>
-        group by{' '}
+        {grpIndex<1? 'Breakdown' : '...and'}{' '}
       </Text>
       {groupByEvent && groupByEvent.property ? (
         renderGroupContent()

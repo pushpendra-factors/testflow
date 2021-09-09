@@ -38,7 +38,7 @@ function TouchPointDimensions({
       >
         Include
       </Text>
-      <div className='ml-4'>
+      <div className='ml-4 relative'>
         <Text
           weight='bold'
           type='paragraph'

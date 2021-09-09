@@ -6,7 +6,7 @@ import {Collapse} from 'antd';
 
 const {Panel} = Collapse;
 
-const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onClick, children}) => {
+const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onClick, children, extraClass}) => {
 
     const renderHeader = () => {
         return (
@@ -33,7 +33,7 @@ const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onC
     }
 
     return (
-        <div className={`${styles.cmpBlock} fa--query_block bordered`}>
+        <div className={`${styles.cmpBlock} fa--query_block bordered ${extraClass}`}>
             <Collapse
                 bordered={false}
                 activeKey={isOpen ? [1] : [0]}

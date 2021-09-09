@@ -63,6 +63,12 @@
 
 }
 
+.composer_footer_right { 
+    @extend .composer_footer;
+    justify-content: flex-end;
+
+}
+
 .ant-drawer-body {
     padding: 0 !important;
 }

@@ -53,11 +53,10 @@ const GLobalFilter = ({filters = [],  setGlobalFilters, onFiltersLoad=[]}) => {
                 <div key={id} className={id !== 0 ? `mt-4` : null}>
                     <GlobalFilterBlock activeProject={activeProject}
                         index={id}
-                        blockType={'global'} filterType={'analytics'}
+                         filterType={'analytics'}
                         filter={filt}
                         extraClass={styles.filterSelect}
-                        delBtnClass={styles.filterDelBtn}
-                        delIcon={`trash`}
+                        delIcon={`remove`}
                         deleteFilter={delFilter}
                         insertFilter={(val) => editFilter(id, val)}
                         closeFilter={closeFilter}
@@ -88,7 +87,7 @@ const GLobalFilter = ({filters = [],  setGlobalFilters, onFiltersLoad=[]}) => {
         } else {
             filtrs.push(
                 <div key={filtrs.length} className={`flex mt-4`}>
-                    <Button className={`fa-button--truncate`} type="text" onClick={() => setFilterDD(true)} icon={<SVG name="plus" />}> Add new </Button> 
+                    <Button className={``} type="text" onClick={() => setFilterDD(true)} icon={<SVG name="plus" />}> Add new </Button> 
                 </div>
             )
         }

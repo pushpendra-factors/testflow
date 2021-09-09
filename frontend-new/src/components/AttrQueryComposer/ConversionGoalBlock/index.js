@@ -9,6 +9,7 @@ import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
 import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { isArray } from 'lodash';
+import FaSelect from 'Components/FaSelect';
 
 const ConversionGoalBlock = ({
     eventGoal, 
@@ -23,6 +24,8 @@ const ConversionGoalBlock = ({
 
     const [selectVisible, setSelectVisible] = useState(false);
     const [filterBlockVisible, setFilterBlockVisible] = useState(false);
+
+    const [moreOptions, setMoreOptions] = useState(false);
 
     const [filterProps, setFilterProperties] = useState({
         event: [],
@@ -135,9 +138,23 @@ const ConversionGoalBlock = ({
 
     const additionalActions = () => {
         return (
-                <div className={'fa--query_block--actions'}>
-                   <Button size={'large'} type="text" onClick={addFilterBlock} className={'mr-1'}><SVG name="filter"></SVG></Button>
-                   <Button size={'large'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
+                <div className={'fa--query_block--actions-cols flex relative ml-2'}>
+                <div className={`relative flex`}>
+                    <Button
+                        type='text'
+                        onClick={() => setMoreOptions(true)}
+                        className={'ml-1 mr-1 md-1'}
+                    >
+                        <SVG name='more'></SVG>
+                    </Button>
+
+                    {moreOptions ? <FaSelect
+                        options={[[`Filter By`, 'filter']]}
+                        optionClick={(val) => {addFilterBlock(); setMoreOptions(false)}}
+                        onClickOutside={() => setMoreOptions(false)}
+                    ></FaSelect> : false}
+                </div>
+                <Button size={'large'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
                 </div>
         );
     };
@@ -167,7 +184,7 @@ const ConversionGoalBlock = ({
                     type="link" 
                     onClick={toggleEventSelect}
                     icon={<SVG name="mouseevent" />}
-                    className={'fa-button--truncate fa-button--truncate-xs'}
+                    className={''}
                     >
                         {eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}
                 </Button> 
@@ -183,22 +200,16 @@ const ConversionGoalBlock = ({
     };
 
     const renderGoalSelect = () => {
-
         return (
-            <div className={'flex items-center relative'}>
-                    <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
-                        <SVG name={'plus'} color={'purple'}></SVG>
-                    </div>
-                    
-                    {<Button size={'large'} type="link" onClick={toggleEventSelect}>Add a goal event</Button>}
-                    
-                    {selectEvents()}
-            </div> 
-        )
+            <div className={'flex justify-start items-center mt-6'}>
+                {<Button type="text" onClick={toggleEventSelect} icon={<SVG name={'plus'} color={'grey'} />}>Add a goal event</Button>}
+                {selectEvents()}
+            </div>
+        );
     };
 
     return (
-        <div className={`${styles.block} fa--query_block_section--basic`}>
+        <div className={`${styles.block} fa--query_block_section--basic relative`}>
             {eventGoal?.label?.length ? renderGoalBlockContent() : renderGoalSelect()}
             {eventFilters()}
         </div>

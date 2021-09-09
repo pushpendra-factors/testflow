@@ -20,6 +20,10 @@ const AttributionOptions = ({
   const [selectVisibleWindow, setSelectVisibleWindow] = useState(false);
   const [compareModelActive, setCompareModelActive] = useState(false);
 
+  const [moreOptions, setMoreOptions] = useState(false);
+
+  const [timelineSelect, setTimelineSelect] = useState(false);
+
   const modelOpts = [
     ['First Touch', 'First_Touch'],
     ['Last Touch', 'Last_Touch'],
@@ -29,6 +33,11 @@ const AttributionOptions = ({
     ['U Shaped', 'U_Shaped'],
     ['Time Decay', 'Time_Decay'],
   ];
+
+  const timeLineMap = {
+    'EngagementBased': 'Interaction Time',
+    'ConversionBased': 'Conversion Time'
+  }
 
   useEffect(() => {
     if (models && models[1]) {
@@ -101,21 +110,12 @@ const AttributionOptions = ({
           className={`${styles.block__select_wrapper} fa--query_block_section--basic`}
         >
           <div className={styles.block__select_wrapper__block}>
-            {index < 1 && (
-              <div
-                className={
-                  'fa--query_block--add-event flex justify-center items-center mr-2'
-                }
-              >
-                <SVG name={'plus'} color={'purple'}></SVG>
-              </div>
-            )}
-
             {
               <Button
                 size={'normal'}
-                type='link'
+                type="text"
                 onClick={() => toggleModelSelect(index)}
+                icon={index < 1 && <SVG name={'plus'} color={'grey'}/>}
               >
                 Add Model
               </Button>
@@ -128,52 +128,55 @@ const AttributionOptions = ({
     }
   };
 
+  const modelActions = (selectFlag) => {
+    if(selectFlag) {
+
+    }
+  }
+
   const addModelAction = () => {
     return (
-      <div className={'fa--query_block--actions mt-2'}>
+      <div className={'fa--query_block--actions--cols relative ml-2'}>
         <Button
           type='text'
-          onClick={() => setCompareModelActive(true)}
+          onClick={() => setMoreOptions(true)}
           className={'mr-1'}
         >
-          <SVG name='compare'></SVG>
+          <SVG name='more'></SVG>
         </Button>
+
+        {moreOptions? <FaSelect
+          options={[[`Compare model`]]}
+          optionClick={(val) => setCompareModelActive(true) && setMoreOptions(false)}
+          onClickOutside={() => setMoreOptions(false)}
+        ></FaSelect> : false}
       </div>
     );
   };
 
   const renderAttributionModel = () => {
     return (
-      <div className={`${styles.block}`}>
-        <Text
-          type={'paragraph'}
-          color={`grey`}
-          extraClass={`${styles.block__content__title_muted}`}
-        >
-          Attribution Model
-        </Text>
 
-        <div
-          className={`${styles.block__content} flex items-center relative fa--query_block_section--basic`}
-        >
-          {renderModel(0)}
+      <div
+        className={`${styles.block__content} flex items-center relative fa--query_block_section--basic`}
+      >
+        {renderModel(0)}
 
-          {compareModelActive && (
-            <div className={`${styles.block__select_wrapper} mr-1`}>
-              <Text
-                type={'paragraph'}
-                color={`grey`}
-                extraClass={`${styles.block__content__txt_muted}`}
-              >
-                compared to{' '}
-              </Text>
-            </div>
-          )}
+        {compareModelActive && (
+          <div className={`${styles.block__select_wrapper} mr-2 ml-2`}>
+            <Text
+              type={'paragraph'}
+              color={`grey`}
+              extraClass={`${styles.block__content__txt_muted}`}
+            >
+              vs{' '}
+            </Text>
+          </div>
+        )}
 
-          {compareModelActive && renderModel(1)}
+        {compareModelActive && renderModel(1)}
 
-          {!compareModelActive && models[0] && addModelAction()}
-        </div>
+        {!compareModelActive && models[0] && addModelAction()}
       </div>
     );
   };
@@ -203,13 +206,12 @@ const AttributionOptions = ({
   const renderWindow = () => {
     if (window !== null && window !== undefined && window >= 0) {
       return (
-        <div className={styles.block__select_wrapper}>
+        <div className={`ml-2 relative`}>
           <Button
-            size={'large'}
+            size={'small'}
             type='link'
             onClick={() => setSelectVisibleWindow(!selectVisibleWindow)}
           >
-            <SVG name='clock' className={`mr-1`}></SVG>
             {window} {window === 1 ? 'day' : 'days'}
           </Button>
 
@@ -219,20 +221,13 @@ const AttributionOptions = ({
     } else {
       return (
         <div className={styles.block__select_wrapper}>
-          <div className={styles.block__select_wrapper__block}>
-            <div
-              className={
-                'fa--query_block--add-event flex justify-center items-center mr-2'
-              }
-            >
-              <SVG name={'plus'} color={'purple'}></SVG>
-            </div>
-
+          <div className={`${styles.block__select_wrapper__block} ml-2`}>
             {
               <Button
-                size={'normal'}
+                size={'small'}
                 type='link'
                 onClick={() => setSelectVisibleWindow(!selectVisibleWindow)}
+                icon={<SVG name={'plus'} color={'purple'}/>}
               >
                 Add Window
               </Button>
@@ -247,55 +242,104 @@ const AttributionOptions = ({
 
   const renderAttributionWindow = () => {
     return (
-      <div className={styles.block}>
+      <>
         <Text
           type={'paragraph'}
           color={`grey`}
-          extraClass={`${styles.block__content__title_muted}`}
+          extraClass={`${styles.block__content__txt_muted}`}
         >
-          Attribution Window
+          Within a window of
         </Text>
 
-        <div className={`${styles.block__content}`}>{renderWindow()}</div>
-      </div>
+        {renderWindow()}
+      </>
     );
   };
 
+  const selectTimeline = () => {
+    if (timelineSelect) {
+      return (
+        <FaSelect
+          options={[[ 'Interaction Time', 'EngagementBased'], ['Conversion Time', 'ConversionBased']]}
+          optionClick={(val) => setattrQueryType(val[1]) && setTimelineSelect(false)}
+          onClickOutside={() => setTimelineSelect(false)}
+        ></FaSelect>
+      );
+    }
+  };
+
   const renderTimeLine = () => {
-    return (
-      <Radio.Group
-        onChange={(e) => setattrQueryType(e.target.value)}
-        value={timeline}
-      >
-        <Radio value={'EngagementBased'}>Interaction Time</Radio>
-        <Radio value={'ConversionBased'}>Conversion Time</Radio>
-      </Radio.Group>
-    );
+    if (timeline !== null && timeline !== undefined) {
+      return (
+        <div className={`ml-2 relative`}>
+          <Button
+            size={'small'}
+            type='link'
+            onClick={() => setTimelineSelect(!timelineSelect)}
+          >
+            {timeLineMap[timeline]}
+          </Button>
+
+          {selectTimeline()}
+        </div>
+      );
+    } else {
+      return (
+        <div className={styles.block__select_wrapper}>
+          <div className={styles.block__select_wrapper__block}>
+            <div
+              className={
+                'fa--query_block--add-event flex justify-center items-center mr-2'
+              }
+            >
+              <SVG name={'plus'} color={'purple'}></SVG>
+            </div>
+
+            {!timelineSelect && (
+              <Button
+                size={'small'}
+                type='link'
+                onClick={() => setTimelineSelect(timelineSelect)}
+              >
+                Add Timeline
+              </Button>
+            )}
+
+            {selectTimeline()}
+          </div>
+        </div>
+      );
+    }
   };
 
   const renderAttributionTimeline = () => {
     return (
-      <div className={styles.block}>
+      <>
         <Text
           type={'paragraph'}
           color={`grey`}
-          extraClass={`${styles.block__content__title_muted}`}
+          extraClass={`${styles.block__content__title_muted} ml-2`}
         >
-          Attribution Timeline
+          as timeline of
         </Text>
 
-        <div className={`${styles.block__content} mt-4`}>
-          {renderTimeLine()}
-        </div>
-      </div>
+        {renderTimeLine()}
+
+      </>
     );
   };
 
   return (
-    <div className={`mt-2`}>
+    <div className={`${styles.block}`}>
       {renderAttributionModel()}
-      {renderAttributionWindow()}
-      {renderAttributionTimeline()}
+      <div className={`flex mt-4`}>
+        <div className={`flex flex-col justify-center`}>
+          <SVG name='clock' size={20} extraClass={`mr-4`}></SVG>
+        </div>
+        {renderAttributionWindow()}
+        {renderAttributionTimeline()}
+      </div>
+
     </div>
   );
 };

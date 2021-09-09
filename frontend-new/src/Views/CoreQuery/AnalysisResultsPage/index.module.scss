@@ -15,3 +15,40 @@
     right: 4px;
   }
 }
+
+.query_header {
+  &__link {
+    font-family: Source Sans Pro;
+    font-style: normal;
+    font-weight: bold;
+    font-size: 12px;
+    line-height: 24px;
+    /* identical to box height, or 200% */
+
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+
+    /* Brand Colours/brand-5 */
+
+    color: #7A6DC9;
+    background: #EEEDF8;
+    border-radius: 2px;
+
+    max-width: fit-content;
+    display: flex;
+    padding: 4px;
+
+    margin-bottom: 8px;
+  }
+
+  &__content {
+    display: flex;
+
+    &__trail {
+      background: #E7E9ED;
+      border-radius: 3px;
+      padding: 2px 6px;
+      margin: 0 4px;
+    }
+  }
+}

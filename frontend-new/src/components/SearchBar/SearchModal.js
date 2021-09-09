@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useRef, useCallback } from 'react';
 import { Modal, Input, Tag } from 'antd';
 import styles from './index.module.scss';
@@ -67,8 +68,21 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
             <div className={`p-4 ${styles.searchHeadings}`}>Saved Reports</div>
             <div className='fa-global-search--contents'>
               {data.map((d) => {
-                let svgName = 'funnels_cq';
                 const queryType = getQueryType(d.query);
+
+                const queryTypeName = {
+                  events: 'events_cq',
+                  funnel: 'funnels_cq',
+                  channel_v1: 'campaigns_cq',
+                  attribution: 'attributions_cq'
+                };
+                let svgName = '';
+                Object.entries(queryTypeName).forEach(([k, v]) => {
+                  if (queryType === k) {
+                    svgName = v;
+                  }
+                });
+              
                 return (
                   <div
                     onClick={() => handleQueryClick(d)}

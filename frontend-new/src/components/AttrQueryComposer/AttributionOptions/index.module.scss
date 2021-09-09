@@ -9,18 +9,15 @@
         &__txt_muted {
             display: flex;
             align-items: center;
-            margin-left: 16px;
         }
 
         &__title_muted {
             @extend .block__content__txt_muted;
-            margin-left: 0;
         }
     }
 
     &__select_wrapper {
         position: relative;
-        margin-top: 16px;
         display: flex;
 
         &__block {

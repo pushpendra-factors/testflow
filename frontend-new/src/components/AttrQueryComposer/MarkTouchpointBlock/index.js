@@ -11,6 +11,7 @@ import { setTouchPointFilters } from '../../../reducers/coreQuery/middleware';
 import { Button } from 'antd';
 import { SVG } from '../../factorsComponents';
 import TouchPointDimensions from './TouchPointDimensions';
+import FaSelect from 'Components/FaSelect';
 
 const MarkTouchpointBlock = ({
   touchPoint,
@@ -24,6 +25,7 @@ const MarkTouchpointBlock = ({
   const [tpDimensionsSelection, setTPDimensionsSelection] = useState(false);
   const [selectVisible, setSelectVisible] = useState(false);
   const [filterDD, setFilterDD] = useState(false);
+  const [moreOptions, setMoreOptions] = useState(false);
   const [filterProps, setFilterProperties] = useState({
     event: [],
     user: [],
@@ -97,21 +99,8 @@ const MarkTouchpointBlock = ({
 
   const renderTouchPointSelect = () => {
     return (
-      <div className={`${styles.block__content}`}>
-        <div
-          className={
-            'fa--query_block--add-event flex justify-center items-center mr-2'
-          }
-        >
-          <SVG name={'plus'} color={'purple'}></SVG>
-        </div>
-
-        {
-          <Button size={'large'} type='link' onClick={toggleTouchPointSelect}>
-            Add a Touchpoint
-          </Button>
-        }
-
+      <div className={'flex justify-start items-center mt-2'}>
+        {<Button type="text" onClick={toggleTouchPointSelect} icon={<SVG name={'plus'} color={'grey'} />}>Add a Touchpoint</Button>}
         {selectEvents()}
       </div>
     );
@@ -145,16 +134,25 @@ const MarkTouchpointBlock = ({
 
   const additionalActions = () => {
     return (
-      <div className={'fa--query_block--actions'}>
+      <div className={'fa--query_block--actions-cols flex'}>
         {ifTouchPointFilter() && (
-          <Button
-            size={'large'}
-            type='text'
-            onClick={addFilterBlock}
-            className={'mr-1'}
-          >
-            <SVG name='filter'></SVG>
-          </Button>
+          <div className={`relative`}>
+            <Button
+              type='text'
+              size={'large'}
+              onClick={() => setMoreOptions(true)}
+              className={'ml-1 mr-1'}
+            >
+              <SVG name='more'></SVG>
+            </Button>
+
+            {moreOptions ? <FaSelect
+              options={[[`Filter By`, 'filter']]}
+              optionClick={(val) => {addFilterBlock(); setMoreOptions(false)}}
+              onClickOutside={() => setMoreOptions(false)}
+            ></FaSelect> : false}
+          </div>
+
         )}
         <Button size={'large'} type='text' onClick={deleteItem}>
           <SVG name='trash'></SVG>
@@ -214,7 +212,7 @@ const MarkTouchpointBlock = ({
   const renderMarkTouchpointBlockContent = () => {
     return (
       <div
-        className={`${styles.block__content} fa--query_block_section--basic`}
+        className={`${styles.block__content} fa--query_block_section--basic relative`}
       >
         {
           <Button type='link' onClick={toggleTouchPointSelect}>

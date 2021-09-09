@@ -171,7 +171,7 @@ function GroupBlock({
     }
     return (
       <Tooltip title={propertyName}>
-        <Button className={`fa-button--truncate`} type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {propertyName}</Button>
+        <Button className={``} type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {propertyName}</Button>
       </Tooltip>
     )
   }
@@ -183,11 +183,13 @@ function GroupBlock({
         {<>
           <Button
             type="text"
-            className={`fa-button--truncate`}
             onClick={() => delOption(index)}
-            className={`${styles.group_block__remove} mr-2`}
-            icon={<SVG name="delete" />}
-          />
+            size={'small'}
+            className={`mr-1`}
+          >  <SVG name={"remove"} />  </Button>
+          {
+            <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>{index >= 1 ? '...and' : 'Breakdown'}</Text>
+          }
           {renderGroupDisplayName(opt, index)}
           {renderGroupPropertyOptions(opt, index)}
         </>
@@ -214,7 +216,7 @@ function GroupBlock({
 
       {/* <div className={`${styles.group_block__event} flex justify-start items-center`}>
         <div className={'fa--query_block--add-event inactive flex justify-center items-center mr-2'}><SVG name={'groupby'} size={24} color={'purple'}/></div>
-        <Text type={'title'} level={6} weight={'thin'} extraClass={'m-0'}>Group By</Text>
+        <Text type={'title'} level={6} weight={'thin'} extraClass={'m-0'}>Breakdown</Text>
       </div> */}
 
       {renderExistingBreakdowns()}

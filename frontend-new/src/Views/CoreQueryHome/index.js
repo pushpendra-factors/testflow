@@ -51,6 +51,7 @@ import { getDashboardDateRange } from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
 import { fetchWeeklyIngishts } from '../../reducers/insights';
 import _ from 'lodash';
+import { getQueryType } from '../../utils/dataFormatter';
 
 const coreQueryoptions = [
   {
@@ -139,11 +140,20 @@ function CoreQuery({
   const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
 
   const getFormattedRow = (q) => {
-    let svgName = 'funnels_cq';
-    let requestQuery = q.query;
-    if (requestQuery.query_group) {
-      svgName = 'events_cq';
-    }
+    const requestQuery = q.query;
+    const queryType = getQueryType(q.query);
+    const queryTypeName = {
+      events: 'events_cq',
+      funnel: 'funnels_cq',
+      channel_v1: 'campaigns_cq',
+      attribution: 'attributions_cq'
+    };
+    let svgName = '';
+    Object.entries(queryTypeName).forEach(([k, v]) => {
+      if (queryType === k) {
+        svgName = v;
+      }
+    });
 
     return {
       key: q.id,

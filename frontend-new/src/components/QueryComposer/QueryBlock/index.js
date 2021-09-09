@@ -15,6 +15,8 @@ import GroupSelect2 from '../GroupSelect2';
 import EventGroupBlock from '../EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 
+import FaSelect from 'Components/FaSelect';
+
 function QueryBlock({
   index,
   event,
@@ -33,6 +35,7 @@ function QueryBlock({
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
+  const [moreOptions, setMoreOptions] = useState(false);
   const [filterProps, setFilterProperties] = useState({
     event: [],
     user: [],
@@ -154,31 +157,44 @@ function QueryBlock({
     }
   };
 
+  const setAdditionalactions = (opt) => {
+    if(opt[1] === 'filter') {
+      addFilter();
+    } else {
+      addGroupBy();
+    }
+    setMoreOptions(false);
+  }
+
   const additionalActions = () => {
     return (
-      <div className={'fa--query_block--actions'}>
-        <Button
-          type='text'
-          onClick={addGroupBy}
-          icon={<SVG size={16} name='groupby' color={'grey'} />}
-        />
-        <Button
-          type='text'
-          onClick={addFilter}
-          icon={<SVG size={16} name='filter' color={'grey'} />}
-        />
-        <Button
-          type='text'
-          onClick={deleteItem}
-          icon={<SVG size={16} name='trash' color={'grey'} />}
-        />
+      <div className={'fa--query_block--actions-cols flex'}>
+        <div className={`relative`}>
+            <Button
+              type='text'
+              size={'large'}
+              onClick={() => setMoreOptions(true)}
+              className={'ml-1 mr-1'}
+            >
+              <SVG name='more'></SVG>
+            </Button>
+
+            {moreOptions ? <FaSelect
+              options={[[`Filter By`, 'filter'], [`Breakdown`, 'groupby']]}
+              optionClick={(val) => setAdditionalactions(val)}
+              onClickOutside={() => setMoreOptions(false)}
+            ></FaSelect> : false}
+          </div>
+        <Button size={'large'} type='text' onClick={deleteItem}>
+          <SVG name='trash'></SVG>
+        </Button>
       </div>
     );
   };
 
   const eventFilters = () => {
     const filters = [];
-    if (event && event.filters.length) {
+    if (event && event?.filters?.length) {
       event.filters.forEach((filter, index) => {
         filters.push(
           <div key={index} className={'fa--query_block--filters'}>
@@ -224,6 +240,7 @@ function QueryBlock({
             <div key={gbpIndex} className={'fa--query_block--filters'}>
               <EventGroupBlock
                 index={gbp.groupByIndex}
+                grpIndex={gbpIndex}
                 eventIndex={index}
                 groupByEvent={orgGbp}
                 event={event}
@@ -296,20 +313,23 @@ function QueryBlock({
           </Text>{' '}
         </div>
         {
+          <div className="max-w-7xl">
           <Tooltip title={eventNames[event.label]? eventNames[event.label] : event.label}>
             <Button
               icon={<SVG name='mouseevent' size={16} color={'purple'} />}
-              className={`fa-button--truncate`}
+              className={``}
               type='link'
               onClick={triggerDropDown}
             >
               {' '}
               {eventNames[event.label]? eventNames[event.label] : event.label}{' '}
             </Button>
+            {selectEvents()}
           </Tooltip>
+          </div>
         }
         {additionalActions()}
-        {selectEvents()}
+        
       </div>
       {eventFilters()}
       {groupByItems()}
