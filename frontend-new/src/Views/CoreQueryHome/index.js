@@ -352,12 +352,12 @@ function CoreQuery({
             View Report
           </a>
         </Menu.Item>
-        <Menu.Item key='1'>
+        {/* <Menu.Item key='1'>
           <a onClick={(e) => e.stopPropagation()} href='#!'>
             Copy Link
           </a>
-        </Menu.Item>
-        <Menu.Item key='2'>
+        </Menu.Item> */}
+        <Menu.Item key='1'>
           <a onClick={handleDelete.bind(this, row)} href='#!'>
             Delete Report
           </a>
@@ -569,7 +569,7 @@ function CoreQuery({
                 className='fa-table--basic'
                 columns={columns}
                 dataSource={data}
-                pagination={false}
+                pagination={true}
                 rowClassName='cursor-pointer'
               />
             </Col>
