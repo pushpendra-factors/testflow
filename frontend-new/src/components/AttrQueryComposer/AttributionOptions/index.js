@@ -288,9 +288,10 @@ const AttributionOptions = ({
           <div className={styles.block__select_wrapper__block}>
             {!timelineSelect && (
               <Button
+                className={`ml-2 relative`}
                 size={'small'}
                 type='link'
-                onClick={() => setTimelineSelect(timelineSelect)}
+                onClick={() => setTimelineSelect(!timelineSelect)}
               >
                 Add Timeline
               </Button>
