@@ -99,6 +99,11 @@ type DBConf struct {
 	UseSSL       bool
 	Certificate  string
 	ResourcePool string
+
+	// Pooling
+	MaxOpenConnections     int
+	MaxIdleConnections     int
+	UseExactConnFromConfig bool
 }
 
 type Configuration struct {
@@ -419,7 +424,7 @@ func initDeviceDetectorPath(deviceDetectorPath string) {
 	services.DeviceDetector = deviceDetector
 }
 
-func initServices(config *Configuration) error {
+func initAppServerServices(config *Configuration) error {
 	services = &Services{patternServers: make(map[string]string)}
 
 	err := InitDB(*config)
@@ -721,6 +726,7 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 	if err != nil {
 		log.WithError(err).Fatal("Failed connecting to memsql.")
 	}
+	memSQLDB.LogMode(IsDevelopment())
 
 	err = SetMemSQLResourcePool(memSQLDB, configuration.MemSQLInfo.ResourcePool)
 	if err != nil {
@@ -731,11 +737,11 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
 	memSQLDB.Callback().Create().Before("gorm:update").Register("cleanup", U.GormCleanupCallback)
 
-	if IsDevelopment() {
-		memSQLDB.LogMode(true)
+	if configuration.MemSQLInfo.UseExactConnFromConfig {
+		// Use connection configuration from flag.
+		maxOpenConns = configuration.MemSQLInfo.MaxOpenConnections
+		maxIdleConns = configuration.MemSQLInfo.MaxIdleConnections
 	} else {
-		memSQLDB.LogMode(false)
-
 		// Using same no.of connections for both max_open and
 		// max_idle (greatest among two) as a workaround to
 		// avoid connection timout error, while adding new
@@ -747,11 +753,23 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 		}
 		log.Warnf("Using %d connections for both max_idle and max_open for memsql.", connections)
 
-		memSQLDB.DB().SetMaxOpenConns(connections)
-		memSQLDB.DB().SetMaxIdleConns(connections)
+		maxOpenConns = connections
+		maxIdleConns = connections
+	}
+	logCtx := log.WithField("max_open_connections", maxOpenConns).
+		WithField("max_idle_connections", maxIdleConns)
+
+	if maxOpenConns == 0 {
+		logCtx.Fatal("Invalid max_open_connections. Should be greater than zero.")
+	}
+	if maxIdleConns == 0 {
+		logCtx.Warn("Max idle connections configured as zero.")
 	}
 
-	log.Info("MemSQL Db Service initialized")
+	memSQLDB.DB().SetMaxOpenConns(maxOpenConns)
+	memSQLDB.DB().SetMaxIdleConns(maxIdleConns)
+
+	logCtx.Info("MemSQL DB Service initialized")
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -1134,12 +1152,25 @@ func watchPatternServers(psUpdateChannel clientv3.WatchChan) {
 	}
 }
 
-func Init(config *Configuration) error {
+func InitAppServer(config *Configuration) error {
 	if !IsConfigInitialized() {
 		log.Fatal("Config not initialised on Init.")
 	}
 
-	err := initServices(config)
+	err := initAppServerServices(config)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func InitTestServer(config *Configuration) error {
+	if !IsConfigInitialized() {
+		log.Fatal("Config not initialised on Init.")
+	}
+
+	err := initAppServerServices(config)
 	if err != nil {
 		return err
 	}

@@ -84,7 +84,7 @@ func TestMain(m *testing.M) {
 
 	// Setup.
 	// Initialize configs and connections.
-	if err := C.Init(config); err != nil {
+	if err := C.InitTestServer(config); err != nil {
 		log.Fatal("Failed to initialize config and services.")
 		os.Exit(1)
 	}
