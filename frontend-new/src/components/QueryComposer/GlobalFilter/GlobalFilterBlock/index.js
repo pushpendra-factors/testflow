@@ -562,17 +562,16 @@ export default function GlobalFilterBlock({
   return (
     <div className={`flex items-center relative w-full`}>
       {
-        delFilter && 
-          <Button 
-          type="text" 
+        delFilter &&
+        <Button
+          type="text"
           onClick={delFilter}
+          size={'small'}
           className={`mr-1`}
-          icon={<SVG name={delIcon} />}
-        /> 
+        >  <SVG name={delIcon} />  </Button>
       }
       {  
-          filter && blockType === 'event' 
-          && <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>{index >=1 ? 'and' : 'where'}</Text>
+          <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>{index >=1 ? '...and' : 'Filter By'}</Text>
       }
       <div className={`relative flex flex-grow ${filter ? 'ml-2': ''}`}>  
         {filter

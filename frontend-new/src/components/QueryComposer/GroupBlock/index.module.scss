@@ -27,12 +27,6 @@
         
     }
 
-    &__select:hover {
-        .group_block__remove {
-            display: initial;
-        }
-    }
-
     &__event_selector { 
         position: absolute;
         top: 36px;
@@ -48,10 +42,7 @@
     }
 
     &__remove {
-        display: none;
-        position: absolute;
-        right: 0;
-
+        
     }
 }
 

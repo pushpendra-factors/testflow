@@ -63,7 +63,6 @@ function AppLayout({ fetchProjects,
       fetchQueries(dispatch, active_project.id);
       fetchEventNames(active_project.id);
       getUserProperties(active_project.id);
-      getEventProperties(active_project.id);
       fetchSmartPropertyRules(dispatch, active_project.id);
       fetchWeeklyIngishtsMetaData(active_project.id);
     }

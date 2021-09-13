@@ -51,6 +51,7 @@ import { getDashboardDateRange } from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
 import { fetchWeeklyIngishts } from '../../reducers/insights';
 import _ from 'lodash';
+import { getQueryType } from '../../utils/dataFormatter';
 
 const coreQueryoptions = [
   {
@@ -139,11 +140,20 @@ function CoreQuery({
   const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
 
   const getFormattedRow = (q) => {
-    let svgName = 'funnels_cq';
-    let requestQuery = q.query;
-    if (requestQuery.query_group) {
-      svgName = 'events_cq';
-    }
+    const requestQuery = q.query;
+    const queryType = getQueryType(q.query);
+    const queryTypeName = {
+      events: 'events_cq',
+      funnel: 'funnels_cq',
+      channel_v1: 'campaigns_cq',
+      attribution: 'attributions_cq'
+    };
+    let svgName = '';
+    Object.entries(queryTypeName).forEach(([k, v]) => {
+      if (queryType === k) {
+        svgName = v;
+      }
+    });
 
     return {
       key: q.id,
@@ -216,21 +226,26 @@ function CoreQuery({
 
   const getWeeklyIngishts = (record) => {
     if (metadata?.QueryWiseResult) {
-      console.log('saved query unit id-->>', record);
+      // console.log('saved query unit id-->>', record);
       const insightsItem = metadata?.QueryWiseResult[record.key];
       if (insightsItem) {
-        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
+        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: { 
+          id: record?.key,
+          isDashboard: false,
+          ...insightsItem
+        } });
       } else {
         dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
       }
       if (insightsItem?.Enabled) {
         if (!_.isEmpty(insightsItem?.InsightsRange)) {
+          let insightsLen =  Object.keys(insightsItem?.InsightsRange)?.length || 0; 
           fetchWeeklyIngishts(
             activeProject.id,
             record.key,
-            Object.keys(insightsItem.InsightsRange)[0],
+            Object.keys(insightsItem.InsightsRange)[insightsLen-1],
             insightsItem.InsightsRange[
-              Object.keys(insightsItem.InsightsRange)[0]
+              Object.keys(insightsItem.InsightsRange)[insightsLen-1]
             ][0],
             false
           ).catch((e) => {

@@ -112,7 +112,7 @@ export default function FilterBlock({
       values = filter.values;
     }
     return (
-      <Button type={'link'} className={'ml-2 fa-button--truncate'}>
+      <Button type={'link'} className={'ml-2'}>
         {filter.props[0] + ' ' + filter.operator + ' ' + values} 
       </Button> 
     );
@@ -496,7 +496,7 @@ export default function FilterBlock({
       }
       {  
           filter && blockType === 'event' 
-          && <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>{index >=1 ? 'and' : 'where'}</Text>
+          && <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>{index >=1 ? '...and' : 'where'}</Text>
       }
       <div className={'relative flex flex-grow'}>  
         {filter

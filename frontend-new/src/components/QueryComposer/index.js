@@ -44,6 +44,8 @@ function QueryComposer({
   queryOptions,
   setQueryOptions,
   runFunnelQuery,
+  collapse = false,
+  setCollapse
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
@@ -111,6 +113,7 @@ function QueryComposer({
   }
 
   const renderGlobalFilterBlock = () => {
+    const [filterBlockOpen, setFilterBlockOpen] = useState(true);
     try {
       if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
         return null;
@@ -120,7 +123,13 @@ function QueryComposer({
       }
 
       return (
-        <ComposerBlock blockTitle={'FILTER BY'} isOpen={true} showIcon={false}>
+        <ComposerBlock 
+          blockTitle={'FILTER BY'} 
+          isOpen={filterBlockOpen} 
+          showIcon={true} 
+          onClick={() => setFilterBlockOpen(!filterBlockOpen)}
+          extraClass={`no-padding-l`}
+        >
           <div key={0} className={"fa--query_block borderless no-padding "}>
             <GLobalFilter filters={queryOptions.globalFilters} 
               setGlobalFilters={setGlobalFiltersOption}
@@ -135,6 +144,8 @@ function QueryComposer({
   
 
   const groupByBlock = () => {
+    const [groupBlockOpen, setGroupBlockOpen] = useState(true);
+
     try {
       if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
         return null;
@@ -144,7 +155,10 @@ function QueryComposer({
       }
 
       return (
-        <ComposerBlock blockTitle={'GROUP BY'} isOpen={true} showIcon={false}>
+        <ComposerBlock blockTitle={'BREAKDOWN'} isOpen={groupBlockOpen} 
+          showIcon={true} onClick={() => setGroupBlockOpen(!groupBlockOpen)}
+          extraClass={`no-padding-l`}
+        >
           <div key={0} className={'fa--query_block borderless no-padding '}>
             <GroupBlock queryType={queryType} events={queries}></GroupBlock>
           </div>
@@ -229,21 +243,24 @@ function QueryComposer({
         return null;
       } else {
         return (
-          <div className={styles.composer_footer}>
-            <FaDatepicker
+          <div className={!collapse? styles.composer_footer: styles.composer_footer_right}>
+            {!collapse? <FaDatepicker
               customPicker
               presetRange
               monthPicker
               placement='topRight'
+              buttonSize={'large'}
               range={{
                 startDate: queryOptions.date_range.from,
                 endDate: queryOptions.date_range.to,
               }}
               onSelect={setDateRange}
-            />
-            <Button size={'large'} type='primary' onClick={handleRunQuery}>
+            />: <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(false)}>
+            <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse all
+          </Button>}
+          <Button className={`ml-2`} size={'large'} type='primary' onClick={handleRunQuery}>
               Run Query
-            </Button>
+          </Button>
           </div>
         );
       }
@@ -360,12 +377,14 @@ function QueryComposer({
   };
 
   const renderCriteria = () => {
+    const [criterieaBlockOpen, setCriterieaBlockOpen] = useState(true);
     try {
       if (queryType === QUERY_TYPE_EVENT) {
         if (queries.length <= 0) return null;
 
         return (
-          <ComposerBlock blockTitle={'CRITERIA'} isOpen={true} showIcon={false}>
+          <ComposerBlock blockTitle={'CRITERIA'} isOpen={criterieaBlockOpen} showIcon={true} 
+            onClick={() => {setCriterieaBlockOpen(!criterieaBlockOpen)}} extraClass={`no-padding-l`}>
             <div className={styles.criteria}>{renderEACrit()}</div>
           </ComposerBlock>
         );
@@ -387,9 +406,15 @@ function QueryComposer({
   };
 
   const renderQueryList = () => {
+    const [eventBlockOpen, setEventBlockOpen] = useState(true);
     try {
       return (
-        <ComposerBlock blockTitle={'EVENTS'} isOpen={true} showIcon={false}>
+        <ComposerBlock 
+          blockTitle={'EVENTS'} isOpen={eventBlockOpen} 
+          showIcon={true} 
+          onClick={() => setEventBlockOpen(!eventBlockOpen)}
+          extraClass={`no-padding-l`}
+        >
           {queryList()}
         </ComposerBlock>
       );

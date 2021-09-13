@@ -13,8 +13,14 @@
 
     &__footer {
         display: flex;
-    justify-content: space-between;
-    flex-direction: row;
+        justify-content: flex-end;
+        flex-direction: row;
     }
+
+}
+
+.composer_footer_right { 
+    @extend .composer__footer;
+    justify-content: flex-end;
 
 }

@@ -185,7 +185,7 @@ const AttrFilterSelect = ({
             <Tooltip title={renderGroupDisplayName(propState)}>
                 <Button
                     icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
-                    className={`fa-button--truncate fa-button--truncate-xs`}
+                    className={``}
                     type="link"
                     onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderGroupDisplayName(propState)}
                 </Button>
@@ -212,7 +212,7 @@ const AttrFilterSelect = ({
         return (<div className={styles.filter__propContainer}>
 
             <Button
-                className={`fa-button--truncate ml-2`}
+                className={` ml-2`}
                 type="link"
                 onClick={() => setOperSelectOpen(true)}> {operatorState ? operatorState : 'Select Operator'}
             </Button>
@@ -270,7 +270,7 @@ const AttrFilterSelect = ({
 
         return (<div className={`${styles.filter__propContainer} ml-4`}>
             {propState.type === 'categorical' ? <> <Tooltip title={valuesState && valuesState.length ? valuesState.join(', ') : null}><Button
-                className={`fa-button--truncate fa-button--truncate-xs`}
+                className={`fa-button--truncate fa-button--truncate-lg`}
                 type="link"
                 onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}> {valuesState && valuesState.length ? valuesState.join(', ') : 'Select Values'}
             </Button> </Tooltip> {valuesSelectionOpen && selectionComponent} </> : null}

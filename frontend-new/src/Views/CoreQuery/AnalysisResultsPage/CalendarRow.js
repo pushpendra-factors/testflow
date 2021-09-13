@@ -125,7 +125,7 @@ function CalendarRow({
       <div className='flex items-center'>
         {metricsDropdown}
         <div className='calendar'>
-          <FaDatepicker
+          { <FaDatepicker
             customPicker
             presetRange
             monthPicker
@@ -137,7 +137,7 @@ function CalendarRow({
             onSelect={setDateRange}
             comparison_supported={comparison_supported}
             handleCompareWithClick={handleCompareWithClick}
-          />
+          />}
         </div>
         {comparison_supported && renderCompareScenario()}
         {granularity}

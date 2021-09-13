@@ -5,6 +5,7 @@ import styles from './index.module.scss';
 import { SVG, Text } from '../../components/factorsComponents';
 import ConversionGoalBlock from './ConversionGoalBlock';
 import FaDatepicker from '../../components/FaDatepicker';
+import ComposerBlock from '../QueryCommons/ComposerBlock';
 
 import {
     fetchEventNames,
@@ -28,10 +29,14 @@ const AttrQueryComposer = ({ activeProject,
     runAttributionQuery, eventGoal, setGoalEvent,
     touchPoint, setTouchPoint, models, setModels,
     window, setWindow, linkedEvents, setLinkedEvents,
-    setAttrDateRange, dateRange
+    setAttrDateRange, dateRange,
+    collapse = false, setCollapse
 }) => {
 
-    const [linkEvExpansion, setLinkEvExpansion] = useState(false);
+    const [linkEvExpansion, setLinkEvExpansion] = useState(true);
+    const [convGblockOpen, setConvGblockOpen] = useState(true);
+    const [tchPointblockOpen, setTchPointblockOpen] = useState(true);
+    const [criteriablockOpen, setCriteriablockOpen] = useState(true);
 
     useEffect(() => {
         if (activeProject && activeProject.id) {
@@ -167,7 +172,9 @@ const AttrQueryComposer = ({ activeProject,
 
         return (
             <div className={`${styles.composer__footer} fa--query_block`}>
-                <FaDatepicker customPicker presetRange
+                {!collapse ? <FaDatepicker customPicker presetRange
+                    buttonSize={`large`}
+                    className={`mr-2`}
                     monthPicker
                     range={
                         {
@@ -175,7 +182,9 @@ const AttrQueryComposer = ({ activeProject,
                             endDate: dateRange.to
                         }
                     }
-                    placement="topRight" onSelect={setDateRange} />
+                    placement="topRight" onSelect={setDateRange} /> : <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(false)}>
+                    <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse all
+                </Button>}
 
                 <Button size={'large'} type="primary" onClick={handleRunQuery}>Analyse</Button>
             </div>
@@ -186,51 +195,50 @@ const AttrQueryComposer = ({ activeProject,
     try {
         return (
             <div className={`${styles.composer}`}>
-                <div className={`${styles.composer__section} fa--query_block`}>
-                    <div className={styles.composer__section__title}>
-                        <Text type={'title'} level={7} weight={'bold'}>CONVERSION GOAL</Text>
-                    </div>
-                    <div className={styles.composer__section__content}>
-                        {renderConversionBlock()}
-                    </div>
-                </div>
+                <ComposerBlock
+                    blockTitle={'CONVERSION GOAL'}
+                    isOpen={convGblockOpen}
+                    showIcon={true}
+                    onClick={() => setConvGblockOpen(!convGblockOpen)}
+                    extraClass={`no-padding-l`}
+                >
+                    {renderConversionBlock()}
+                </ComposerBlock>
 
                 {eventGoal?.label?.length &&
-                    <div className={`${styles.composer__section} fa--query_block`}>
-                        <div className={styles.composer__section__title}>
-                            <Text type={'title'} level={7} weight={'bold'}>MARKETING TOUCHPOINTS</Text>
-                        </div>
-                        <div className={styles.composer__section__content}>
-                            {renderMarkTouchpointBlock()}
-                        </div>
-                    </div>
+                    <ComposerBlock
+                        blockTitle={'MARKETING TOUCHPOINTS'}
+                        isOpen={tchPointblockOpen}
+                        showIcon={true}
+                        onClick={() => setTchPointblockOpen(!tchPointblockOpen)}
+                        extraClass={`no-padding-l`}
+                    >
+                        {renderMarkTouchpointBlock()}
+                    </ComposerBlock>
                 }
 
                 {eventGoal?.label?.length &&
-                    <div className={`${styles.composer__section} fa--query_block`}>
-                        <div className={styles.composer__section__title}>
-                            <Text type={'title'} level={7} weight={'bold'}>CRITERIA</Text>
-                        </div>
-                        <div className={styles.composer__section__content}>
-                            {renderAttributionOptions()}
-                        </div>
-                    </div>
+                    <ComposerBlock
+                        blockTitle={'CRITERIA'}
+                        isOpen={criteriablockOpen}
+                        showIcon={true}
+                        onClick={() => setCriteriablockOpen(!criteriablockOpen)}
+                        extraClass={`no-padding-l`}
+                    >
+                        {renderAttributionOptions()}
+                    </ComposerBlock>
                 }
 
                 {eventGoal?.label?.length &&
-                    <div className={`${styles.composer__section} fa--query_block`}>
-                        <div className={styles.composer__section__title}>
-                            <Text type={'title'} level={7} weight={'bold'}>LINKED EVENTS</Text>
-                            <Tooltip placement="top" title="Disabled in compare mode!" trigger={models.length > 1 ? ['hover'] : []}>
-                                <Button type={'text'} onClick={toggleLinkEvExpansion}>
-                                    <SVG name={linkEvExpansion && models.length <= 1 ? 'minus' : 'plus'} color={'black'}></SVG>
-                                </Button>
-                            </Tooltip>
-                        </div>
-                        <div className={styles.composer__section__content}>
-                            {linkEvExpansion && models.length <= 1 && renderLinkedEvents()}
-                        </div>
-                    </div>
+                    <ComposerBlock
+                        blockTitle={'LINKED EVENTS'}
+                        isOpen={linkEvExpansion}
+                        showIcon={true}
+                        onClick={() => toggleLinkEvExpansion()}
+                        extraClass={`no-padding-l`}
+                    >
+                        {linkEvExpansion && models.length <= 1 && renderLinkedEvents()}
+                    </ComposerBlock>
                 }
 
                 {eventGoal?.label?.length && footer()}

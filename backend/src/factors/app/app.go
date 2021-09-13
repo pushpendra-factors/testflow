@@ -45,6 +45,10 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
+
+	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
+	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
+
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 	disableMemSQLDBWrites := flag.Bool("disable_mql_db_writes", true, "To disable DB writes when using MemSQL")
 	disableMemSQLRedisWrites := flag.Bool("disable_mql_redis_writes", true, "To disable redis writes when using MemSQL")
@@ -135,6 +139,10 @@ func main() {
 			Certificate:  *memSQLCertificate,
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
+
+			MaxOpenConnections:     *memSQLDBMaxOpenConnections,
+			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
+			UseExactConnFromConfig: true,
 		},
 		PrimaryDatastore:                        *primaryDatastore,
 		RedisHost:                               *redisHost,
@@ -180,7 +188,7 @@ func main() {
 	C.InitConf(config)
 
 	// Initialize configs and connections.
-	err := C.Init(config)
+	err := C.InitAppServer(config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return

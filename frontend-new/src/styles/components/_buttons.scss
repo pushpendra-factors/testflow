@@ -35,6 +35,9 @@
         &.fa-button--truncate-xs{
             max-width: 200px;
         }
+        &.fa-button--truncate-lg {
+            max-width: 75em;
+        }
     }
     &.ant-btn-icon-only{
         border-radius: 100% !important;
