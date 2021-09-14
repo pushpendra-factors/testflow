@@ -7,14 +7,17 @@ var host = getHostUrl();
 
     const inititalState = {
       loading: false,
-      error: false, 
+      error: false,
+      metadata: {},
+      weekly_insights: {},
+      active_insight: {},
     };
 
     export default function reducer(state= inititalState, action) {
       switch (action.type) {
         
         case 'RESET_WEEKLY_INSIGHTS': {
-          return { ...state, weekly_insights: false };
+          return { ...state, weekly_insights: inititalState.weekly_insights };
         } 
         case 'SET_ACTIVE_INSIGHT': {
           return { ...state, active_insight: action.payload };

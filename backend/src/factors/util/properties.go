@@ -310,6 +310,15 @@ var CLR_COMPANY_METRICS_ESTIMATED_ANNUAL_REVENUE = "$clr_company_metrics_estimat
 var CLR_COMPANY_METRICS_MARKET_CAP = "$clr_company_metrics_marketCap"
 var CLR_COMPANY_METRICS_ANNUAL_REVENUE = "$clr_company_metrics_annualRevenue"
 var CLR_COMPANY_METRICS_FISCALYEAR = "$clr_company_metrics_fiscalYearEnd"
+var CLR_COMPANY_FOUNDEDYEAR = "$clr_company_foundedYear"
+var CLR_COMPANY_TYPE = "$clr_company_type"
+var CLR_COMPANY_CATEGORY_SECTOR = "$clr_company_category_sector"
+var CLR_COMPANY_CATEGORY_INDUSTRYGROUP = "$clr_company_category_industryGroup"
+var CLR_COMPANY_CATEGORY_INDUSTRY = "$clr_company_category_industry"
+var CLR_COMPANY_CATEGORY_SUBINDUSTRY = "$clr_company_category_subIndustry"
+var CLR_COMPANY_CATEGORY_SICCODE = "$clr_company_category_sicCode"
+var CLR_COMPANY_CATEGORY_NAICSCODE = "$clr_company_category_naicsCode"
+var CLR_COMPANY_PARENT_DOMAIN = "$clr_company_parent_domain"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -486,6 +495,15 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	CLR_COMPANY_METRICS_MARKET_CAP,
 	CLR_COMPANY_METRICS_ANNUAL_REVENUE,
 	CLR_COMPANY_METRICS_FISCALYEAR,
+	CLR_COMPANY_FOUNDEDYEAR,
+	CLR_COMPANY_TYPE,
+	CLR_COMPANY_CATEGORY_SECTOR,
+	CLR_COMPANY_CATEGORY_INDUSTRYGROUP,
+	CLR_COMPANY_CATEGORY_INDUSTRY,
+	CLR_COMPANY_CATEGORY_SUBINDUSTRY,
+	CLR_COMPANY_CATEGORY_SICCODE,
+	CLR_COMPANY_CATEGORY_NAICSCODE,
+	CLR_COMPANY_PARENT_DOMAIN,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -1224,6 +1242,15 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	CLR_COMPANY_METRICS_MARKET_CAP:               "Clearbit Company Metrics Market Cap",
 	CLR_COMPANY_METRICS_ANNUAL_REVENUE:           "Clearbit Company Metrics Annual Revenue",
 	CLR_COMPANY_METRICS_FISCALYEAR:               "Clearbit Company Metrics Fiscal Year End",
+	CLR_COMPANY_FOUNDEDYEAR:                      "Clearbit Company Founded Year",
+	CLR_COMPANY_TYPE:                             "Clearbit Company Type",
+	CLR_COMPANY_CATEGORY_SECTOR:                  "Clearbit Company Category Sector",
+	CLR_COMPANY_CATEGORY_INDUSTRYGROUP:           "Clearbit Company Category Industry Group",
+	CLR_COMPANY_CATEGORY_INDUSTRY:                "Clearbit Company Category Industry",
+	CLR_COMPANY_CATEGORY_SUBINDUSTRY:             "Clearbit Company Category Sub Industry",
+	CLR_COMPANY_CATEGORY_SICCODE:                 "Clearbit Company Category Sic Code",
+	CLR_COMPANY_CATEGORY_NAICSCODE:               "Clearbit Company Category Naics Code",
+	CLR_COMPANY_PARENT_DOMAIN:                    "Clearbit Company Parent Domain",
 }
 
 var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{

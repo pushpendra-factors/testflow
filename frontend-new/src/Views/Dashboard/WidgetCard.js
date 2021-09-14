@@ -332,7 +332,7 @@ function WidgetCard({
     active_project.id,
     dispatch,
     fetchWeeklyIngishts,
-    metadata.DashboardUnitWiseResult,
+    metadata?.DashboardUnitWiseResult,
   ]);
 
   return (
