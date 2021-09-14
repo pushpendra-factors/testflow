@@ -23,6 +23,7 @@ const (
 	QueryClassAttribution = "attribution"
 	QueryClassWeb         = "web"
 
+	PresentationScatterPlot   = "sp"
 	PresentationLine          = "pl"
 	PresentationBar           = "pb"
 	PresentationTable         = "pt"
