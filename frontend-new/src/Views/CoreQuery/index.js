@@ -966,7 +966,7 @@ function CoreQuery({
         >
 
 
-          <div className='mt-24 px-20'>
+          <div className='mt-16 px-20'>
             <ErrorBoundary
               fallback={
                 <FaErrorComp

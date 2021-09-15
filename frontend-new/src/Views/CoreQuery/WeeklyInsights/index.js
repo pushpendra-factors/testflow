@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Tabs, Row, Col, Tooltip, Select, Button, Collapse, Tag } from 'antd'; 
+import { Tabs, Row, Col, Tooltip, Select, Button, Collapse, Tag, Spin } from 'antd'; 
 import { SVG, Text, Number } from 'factorsComponents';
 import { connect, useDispatch } from 'react-redux';
 import _ from 'lodash';
-import moment from 'moment'; 
+import moment from 'moment';
+import { fetchWeeklyIngishts } from 'Reducers/insights';
+
 const { Option } = Select;
 
 const { Panel } = Collapse;
@@ -44,23 +46,22 @@ const NoData = ({data}) => {
     )
 }
 
-const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, queryTitle, eventPropNames }) => {    
+const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, userPropNames, fetchWeeklyIngishts }) => {    
 
     const [defaultActive, setDefaultActive] = useState(null);
     const [expandAll, setExpandAll] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     const TagIconSize = 14;
     const UpIcon = 'growthUp';
-    const DownIcon = 'growthDown';
+    const DownIcon = 'growthDown'; 
 
-
-  const matchEventName = (item) => { 
-    let findItem = eventPropNames?.[item]
+  const matchEventName = (item) => {   
+      let findItem = eventPropNames?.[item] || userPropNames?.[item] 
     return findItem ? findItem : item
   }
 
-    const panelActive = (panelNo) =>{
-        // console.log('click event here-->', panelNo)
+    const panelActive = (panelNo) =>{ 
         setDefaultActive(_.map(panelNo, _.parseInt));
     }
      
@@ -119,7 +120,6 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
     const genBody = (item)=> {
         const prevalance = item.change_in_prevalance;
         const conversion = item.change_in_conversion;   
-        console.log("item data", item); 
         if(item?.type== 'distribution' ){
             const data = item?.change_in_distribution;
             const value1 = item?.change_in_distribution?.w1;
@@ -160,19 +160,43 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
         )
     }
 
-    // const handleChangeWeek = (value) => {
-    //     console.log(`selected ${value}`);
-    // }
- 
-    const dateData = activeInsight?.InsightsRange;
-    const defaultDate = `${moment.unix(Object.keys(dateData)[0]).format("MMM DD, YYYY")} - ${moment.unix(Object.keys(dateData)[0]).endOf('week').format("MMM DD, YYYY")}`;
-    
-    // const dataOptions = Object.keys(dateData).map((item,index)=>{
-    //     let displayString = `${moment.unix(item).format("MMM DD, YYYY")} - ${moment.unix(item).endOf('week').format("MMM DD, YYYY")}`
-    //     return  <Option value={dateData[Object.keys(dateData)[index]]}>{displayString}</Option> 
-    // })
 
-    const WeekData = `${moment.unix(1624147200).format("MMM DD, YYYY")} - ${moment.unix(1624147200).endOf('week').format("MMM DD, YYYY")}`; 
+    const dateData = activeInsight?.InsightsRange;
+
+    let dataObjArr = Object.keys(dateData).map((item,index)=>{
+        return {
+            text:`${moment.unix(item).format("MMM DD, YYYY")} - ${moment.unix(item).endOf('week').format("MMM DD, YYYY")}`,
+            value: item
+        }
+    }); 
+    
+    
+    const dataOptions = dataObjArr.map((item,index)=>{ 
+        return  <Option value={item.text}>{item.text}</Option> 
+    })
+    
+    const handleChangeWeek = (value) => {
+        setLoading(true)
+        let dataObjItem = dataObjArr?.find((item)=>{ 
+            return item.text == value
+        })
+        let dataObjVal = dataObjItem?.value;
+        fetchWeeklyIngishts(
+            activeProject?.id,
+            activeInsight?.id,
+            dataObjVal,
+            dateData?.[dataObjVal][0],
+            activeInsight?.isDashboard
+        ).then(()=>{
+            setLoading(false);
+        }).catch((e) => {
+            setLoading(false);
+            console.log('weekly-ingishts fetch error', e);
+          }); 
+    }
+    let insightsLen =  Object.keys(dateData)?.length || 0; 
+    const defaultDate = `${moment.unix(Object.keys(dateData)[insightsLen-1]).format("MMM DD, YYYY")} - ${moment.unix(Object.keys(dateData)[insightsLen-1]).endOf('week').format("MMM DD, YYYY")}`;
+    // const WeekData = `${moment.unix(1624147200).format("MMM DD, YYYY")} - ${moment.unix(1624147200).endOf('week').format("MMM DD, YYYY")}`; 
     const baseName = requestQuery?.cl == "funnel" ? requestQuery?.ewp[0].na : "Sessions";
 
     
@@ -184,12 +208,12 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
                         <div className={'flex items-center mt-6'}>
                             <Text type={"title"} level={7} color={'grey'} weight={''} extraClass={"m-0"}>Insights for</Text> 
                            
-                            <Text type={"title"} level={7} weight={'bold'} extraClass={"m-0 ml-2"}>{defaultDate}</Text> 
-                           {/* <div className={'ml-2'}> 
-                                <Select className={'fa-select'} defaultValue={defaultDate} style={{ width: 220 }} onChange={handleChangeWeek}>
+                            {/* <Text type={"title"} level={7} weight={'bold'} extraClass={"m-0 ml-2"}>{defaultDate}</Text>  */}
+                           <div className={'ml-2'}> 
+                                <Select loading={loading} disabled={loading} className={'fa-select'} defaultValue={defaultDate} style={{ width: 240 }} onChange={handleChangeWeek}>
                                         {dataOptions}
                                 </Select>
-                            </div> */}
+                            </div>
                             
                             <Text type={"title"} level={7} color={'grey'} weight={''} extraClass={"m-0 ml-2"}> compared to</Text> 
                             <Text type={"title"} level={7} weight={'bold'} extraClass={"m-0 ml-2"}> Week Before</Text> 
@@ -203,6 +227,9 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
                     
                 </Row>
             <div className={'fa-container mt-0'}>
+                { loading ?  <div className='flex justify-center items-center mt-10'>
+        <Spin  />
+      </div> : <>
                 <Row>
                     <Col span={24}> 
                         <div className={'flex items-baseline justify-between'}> 
@@ -257,6 +284,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery, queryType, qu
                         </div>
                     </Col>
                 </Row>
+                </>}
             </div>
         </div>
     )
@@ -266,16 +294,19 @@ const WeeklyInishgts = ({
     requestQuery,
     queryType,
     queryTitle,
+    fetchWeeklyIngishts,
+    activeProject,
+    eventPropNames,
+    userPropNames
 }) => { 
-    const [insightsData, setInsightsData] = useState(null);
-    const dispatch = useDispatch();
+    const [insightsData, setInsightsData] = useState(null); 
 
-    useEffect(()=>{
-
-        if(!insightsData){
+    useEffect(()=>{ 
+         if(insights){
             setInsightsData(insights)
         }  
-    }, [insights]);  
+    }, [insights]);
+
     const renderData = (insightsData) =>{
         if(!insightsData?.active_insight){
             return  <NoData data={'add-to-dashboard'} />
@@ -293,7 +324,12 @@ const WeeklyInishgts = ({
             data={insightsData?.weekly_insights} 
             requestQuery={requestQuery}
             queryType={queryType}
-            queryTitle={queryTitle} />
+            queryTitle={queryTitle}
+            fetchWeeklyIngishts={fetchWeeklyIngishts}
+            activeProject={activeProject}
+            eventPropNames={eventPropNames}
+            userPropNames={userPropNames}
+             />
         }
 
     }
@@ -308,9 +344,10 @@ const WeeklyInishgts = ({
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
     insights: state.insights,
-    eventPropNames: state.coreQuery.eventPropNames
+    eventPropNames: state.coreQuery.eventPropNames,
+    userPropNames: state.coreQuery.userPropNames
 
 });
 
 
-export default connect(mapStateToProps, null)(WeeklyInishgts)
+export default connect(mapStateToProps, {fetchWeeklyIngishts})(WeeklyInishgts)

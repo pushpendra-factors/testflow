@@ -280,26 +280,32 @@ function WidgetCard({
   );
 
   const handleEditQuery = useCallback(() => {
-    console.log('dashboard unit id-->>', unit);
+    // console.log('dashboard unit id-->>', unit);
     // console.log('metadata',metadata);
     // console.log('metadata',metadata.DashboardUnitWiseResult[unit.id]);
 
     if (metadata?.DashboardUnitWiseResult) {
       const insightsItem = metadata?.DashboardUnitWiseResult[unit.id];
       if (insightsItem) {
-        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
+        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: { 
+          id: unit?.id,
+          isDashboard: true,
+          ...insightsItem
+        } 
+      });
       } else {
         dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
       }
 
       if (insightsItem?.Enabled) {
         if (!_.isEmpty(insightsItem?.InsightsRange)) {
+          let insightsLen =  Object.keys(insightsItem?.InsightsRange)?.length || 0; 
           fetchWeeklyIngishts(
             active_project.id,
             unit.id,
-            Object.keys(insightsItem.InsightsRange)[0],
+            Object.keys(insightsItem.InsightsRange)[insightsLen-1],
             insightsItem.InsightsRange[
-              Object.keys(insightsItem.InsightsRange)[0]
+              Object.keys(insightsItem.InsightsRange)[insightsLen-1]
             ][0]
           ).catch((e) => {
             console.log('weekly-ingishts fetch error', e);
@@ -326,7 +332,7 @@ function WidgetCard({
     active_project.id,
     dispatch,
     fetchWeeklyIngishts,
-    metadata.DashboardUnitWiseResult,
+    metadata?.DashboardUnitWiseResult,
   ]);
 
   return (

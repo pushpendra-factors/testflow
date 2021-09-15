@@ -69,6 +69,7 @@ const (
 )
 
 var DashboardUnitPresentations = [...]string{
+	PresentationScatterPlot,
 	PresentationLine,
 	PresentationBar,
 	PresentationTable,

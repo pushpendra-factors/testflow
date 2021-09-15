@@ -226,21 +226,26 @@ function CoreQuery({
 
   const getWeeklyIngishts = (record) => {
     if (metadata?.QueryWiseResult) {
-      console.log('saved query unit id-->>', record);
+      // console.log('saved query unit id-->>', record);
       const insightsItem = metadata?.QueryWiseResult[record.key];
       if (insightsItem) {
-        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: insightsItem });
+        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: { 
+          id: record?.key,
+          isDashboard: false,
+          ...insightsItem
+        } });
       } else {
         dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
       }
       if (insightsItem?.Enabled) {
         if (!_.isEmpty(insightsItem?.InsightsRange)) {
+          let insightsLen =  Object.keys(insightsItem?.InsightsRange)?.length || 0; 
           fetchWeeklyIngishts(
             activeProject.id,
             record.key,
-            Object.keys(insightsItem.InsightsRange)[0],
+            Object.keys(insightsItem.InsightsRange)[insightsLen-1],
             insightsItem.InsightsRange[
-              Object.keys(insightsItem.InsightsRange)[0]
+              Object.keys(insightsItem.InsightsRange)[insightsLen-1]
             ][0],
             false
           ).catch((e) => {

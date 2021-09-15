@@ -227,7 +227,6 @@ const AttributionOptions = ({
                 size={'small'}
                 type='link'
                 onClick={() => setSelectVisibleWindow(!selectVisibleWindow)}
-                icon={<SVG name={'plus'} color={'purple'}/>}
               >
                 Add Window
               </Button>
@@ -287,19 +286,12 @@ const AttributionOptions = ({
       return (
         <div className={styles.block__select_wrapper}>
           <div className={styles.block__select_wrapper__block}>
-            <div
-              className={
-                'fa--query_block--add-event flex justify-center items-center mr-2'
-              }
-            >
-              <SVG name={'plus'} color={'purple'}></SVG>
-            </div>
-
             {!timelineSelect && (
               <Button
+                className={`ml-2 relative`}
                 size={'small'}
                 type='link'
-                onClick={() => setTimelineSelect(timelineSelect)}
+                onClick={() => setTimelineSelect(!timelineSelect)}
               >
                 Add Timeline
               </Button>
