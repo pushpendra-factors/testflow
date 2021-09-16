@@ -104,22 +104,24 @@ function AttributionsScatterPlot({
               {xAxisTitle}
             </Text>
           </span>
-          <span className='flex justify-between items-center mt-3'>
+          <span className='flex justify-between items-center mt-1'>
             <span
               className={`flex flex-col justify-center items-start ${
                 comparison_data.data ? 'w-1/2' : ''
               }`}
             >
-              <Text
-                color='grey'
-                type='title'
-                weight='normal'
-                extraClass='text-sm mb-0'
-              >
-                {moment(durationObj.from).format('MMM DD')}
-                {' - '}
-                {moment(durationObj.to).format('MMM DD')}
-              </Text>
+              {!!comparison_data.data && (
+                <Text
+                  color='grey'
+                  type='title'
+                  weight='normal'
+                  extraClass='text-sm mb-0'
+                >
+                  {moment(durationObj.from).format('MMM DD')}
+                  {' - '}
+                  {moment(durationObj.to).format('MMM DD')}
+                </Text>
+              )}
               <Text
                 color='grey-6'
                 type='title'
@@ -170,22 +172,24 @@ function AttributionsScatterPlot({
               {yAxisTitle}
             </Text>
           </span>
-          <span className='flex justify-between items-center mt-3'>
+          <span className={'flex justify-between items-center mt-1'}>
             <span
               className={`flex flex-col justify-center items-start ${
                 comparison_data.data ? 'w-1/2' : ''
               }`}
             >
-              <Text
-                color='grey'
-                type='title'
-                weight='normal'
-                extraClass='text-sm mb-0'
-              >
-                {moment(durationObj.from).format('MMM DD')}
-                {' - '}
-                {moment(durationObj.to).format('MMM DD')}
-              </Text>
+              {!!comparison_data.data && (
+                <Text
+                  color='grey'
+                  type='title'
+                  weight='normal'
+                  extraClass='text-sm mb-0'
+                >
+                  {moment(durationObj.from).format('MMM DD')}
+                  {' - '}
+                  {moment(durationObj.to).format('MMM DD')}
+                </Text>
+              )}
               <Text
                 color='grey-6'
                 type='title'
@@ -278,6 +282,8 @@ function AttributionsScatterPlot({
           xAxisMetric={xAxisTitle}
           yAxisMetric={yAxisTitle}
           visiblePointsCount={visibleIndices.length}
+          xAxisValue={xAxisMetric}
+          yAxisValue={yAxisMetric}
         />
       )}
     </>

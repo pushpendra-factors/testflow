@@ -61,7 +61,7 @@ const FunnelsScatterPlot = ({
               {xAxisTitle}
             </Text>
           </span>
-          <span className='flex justify-between items-center mt-3'>
+          <span className='flex justify-between items-center mt-1'>
             <span className={`flex flex-col justify-center items-start`}>
               <Text
                 color='grey-6'
@@ -83,7 +83,7 @@ const FunnelsScatterPlot = ({
               {yAxisTitle}
             </Text>
           </span>
-          <span className='flex justify-between items-center mt-3'>
+          <span className='flex justify-between items-center mt-1'>
             <span className={`flex flex-col justify-center items-start`}>
               <Text
                 color='grey-6'
@@ -121,6 +121,8 @@ const FunnelsScatterPlot = ({
           xAxisMetric={xAxisTitle}
           yAxisMetric={yAxisTitle}
           visiblePointsCount={visibleProperties.length}
+          xAxisValue={xAxisMetric}
+          yAxisValue={yAxisMetric}
         />
       )}
     </>

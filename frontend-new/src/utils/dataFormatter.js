@@ -48,15 +48,15 @@ export const getDurationInSeconds = (duration) => {
     if (duration.indexOf('d') > -1) {
       const dayStr = duration.split(' ')[0];
       const hourStr = duration.split(' ')[1];
-      const days = Number(dayStr.split('m')[0]);
-      const hours = Number(hourStr.split('s')[0]);
+      const days = Number(dayStr.split('d')[0]);
+      const hours = Number(hourStr.split('h')[0]);
       return days * 86400 + hours * 3600;
     }
     if (duration.indexOf('h') > -1) {
       const hourStr = duration.split(' ')[0];
       const minsStr = duration.split(' ')[1];
-      const hours = Number(hourStr.split('m')[0]);
-      const minutes = Number(minsStr.split('s')[0]);
+      const hours = Number(hourStr.split('h')[0]);
+      const minutes = Number(minsStr.split('m')[0]);
       return hours * 3600 + minutes * 60;
     }
     if (duration.indexOf('m') > -1) {

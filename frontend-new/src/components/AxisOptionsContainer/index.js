@@ -11,12 +11,18 @@ const AxisOptionsContainer = ({
   xAxisMetric,
   yAxisMetric,
   visiblePointsCount,
+  xAxisValue,
+  yAxisValue,
 }) => {
   const xAxisMenu = (
     <Menu>
       {xAxisOptions.map((item) => {
         return (
-          <Menu.Item key={item.value} onClick={onXAxisOptionChange}>
+          <Menu.Item
+            className={item.value === xAxisValue ? styles.selectedItem : ''}
+            key={item.value}
+            onClick={onXAxisOptionChange}
+          >
             <div className={'flex items-center'}>
               <span className='mr-3'>{item.title}</span>
             </div>
@@ -30,7 +36,11 @@ const AxisOptionsContainer = ({
     <Menu>
       {yAxisOptions.map((item) => {
         return (
-          <Menu.Item key={item.value} onClick={onYAxisOptionChange}>
+          <Menu.Item
+            className={item.value === yAxisValue ? styles.selectedItem : ''}
+            key={item.value}
+            onClick={onYAxisOptionChange}
+          >
             <div className={'flex items-center'}>
               <span className='mr-3'>{item.title}</span>
             </div>
