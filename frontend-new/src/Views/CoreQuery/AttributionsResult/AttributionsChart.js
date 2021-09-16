@@ -20,6 +20,7 @@ import {
   DASHBOARD_MODAL,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES,
+  CHART_TYPE_BARCHART,
 } from '../../../utils/constants';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import OptionsPopover from './OptionsPopover';
@@ -27,6 +28,14 @@ import { useSelector } from 'react-redux';
 import { getNewSorterState } from '../../../utils/dataFormatter';
 import DualTouchPointChart from './DualTouchPointChart';
 import SingleTouchPointChart from './SingleTouchPointChart';
+import AttributionsScatterPlot from './AttributionsScatterPlot';
+import NoDataChart from '../../../components/NoDataChart';
+
+const nodata = (
+  <div className='mt-4 flex justify-center items-center w-full h-full'>
+    <NoDataChart />
+  </div>
+);
 
 const AttributionsChart = forwardRef(
   (
@@ -41,6 +50,7 @@ const AttributionsChart = forwardRef(
       section,
       durationObj,
       attr_dimensions,
+      chartType,
     },
     ref
   ) => {
@@ -225,34 +235,60 @@ const AttributionsChart = forwardRef(
 
     let chart = null;
 
-    if (!attribution_method_compare) {
-      if (!aggregateData.categories.length) {
-        return null;
-      }
-      chart = (
-        <SingleTouchPointChart
-          aggregateData={aggregateData}
-          durationObj={durationObj}
-          comparison_duration={comparison_duration}
-          comparison_data={comparison_data}
-          attribution_method={attribution_method}
-        />
-      );
-    } else {
+    const scatterPlotChart = (
+      <AttributionsScatterPlot
+        visibleIndices={visibleIndices}
+        selectedTouchpoint={touchpoint}
+        attr_dimensions={attr_dimensions}
+        data={tableData}
+        attribution_method={attribution_method}
+        attribution_method_compare={attribution_method_compare}
+        section={section}
+        linkedEvents={linkedEvents}
+        durationObj={durationObj}
+        comparison_duration={comparison_duration}
+        comparison_data={comparison_data}
+      />
+    );
+
+    if (attribution_method_compare) {
       if (!dualTouchpointChartData.length) {
-        return null;
+        return nodata;
       }
-      chart = (
-        <DualTouchPointChart
-          attribution_method={attribution_method}
-          attribution_method_compare={attribution_method_compare}
-          currMetricsValue={currMetricsValue}
-          chartsData={dualTouchpointChartData}
-          visibleIndices={visibleIndices}
-          event={event}
-          data={data}
-        />
-      );
+      if (chartType === CHART_TYPE_BARCHART) {
+        chart = (
+          <DualTouchPointChart
+            attribution_method={attribution_method}
+            attribution_method_compare={attribution_method_compare}
+            currMetricsValue={currMetricsValue}
+            chartsData={dualTouchpointChartData}
+            visibleIndices={visibleIndices}
+            event={event}
+            data={tableData}
+            chartType={chartType}
+          />
+        );
+      } else {
+        chart = scatterPlotChart;
+      }
+    } else {
+      if (!aggregateData.categories.length) {
+        return nodata;
+      }
+      if (chartType === CHART_TYPE_BARCHART) {
+        chart = (
+          <SingleTouchPointChart
+            aggregateData={aggregateData}
+            durationObj={durationObj}
+            comparison_duration={comparison_duration}
+            comparison_data={comparison_data}
+            attribution_method={attribution_method}
+            chartType={chartType}
+          />
+        );
+      } else {
+        chart = scatterPlotChart;
+      }
     }
 
     return (
@@ -266,7 +302,11 @@ const AttributionsChart = forwardRef(
             isWidgetModal={section === DASHBOARD_MODAL}
             visibleIndices={visibleIndices}
             setVisibleIndices={setVisibleIndices}
-            maxAllowedVisibleProperties={MAX_ALLOWED_VISIBLE_PROPERTIES}
+            maxAllowedVisibleProperties={
+              attribution_method_compare
+                ? GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES
+                : MAX_ALLOWED_VISIBLE_PROPERTIES
+            }
             attributionMetrics={attributionMetrics}
             section={section}
             columns={columns}

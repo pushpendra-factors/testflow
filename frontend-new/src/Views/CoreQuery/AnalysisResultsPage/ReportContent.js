@@ -13,6 +13,7 @@ import {
   QUERY_TYPE_CAMPAIGN,
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
+  CHART_TYPE_BARCHART,
 } from '../../../utils/constants';
 import { Spin } from 'antd';
 import FunnelsResultPage from '../FunnelsResultPage';
@@ -46,7 +47,7 @@ function ReportContent({
   campaignsArrayMapper,
   handleGranularityChange,
   updateChartTypes,
-  renderedCompRef
+  renderedCompRef,
 }) {
   let content = null,
     queryDetail = null,
@@ -59,7 +60,7 @@ function ReportContent({
 
   const chartType = useMemo(() => {
     let key;
-    if (queryType === QUERY_TYPE_EVENT) {
+    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
       key = breakdown.length ? 'breakdown' : 'no_breakdown';
       return chartTypes[queryType][key];
     }
@@ -67,7 +68,20 @@ function ReportContent({
       key = campaignState.group_by.length ? 'breakdown' : 'no_breakdown';
       return chartTypes[queryType][key];
     }
-  }, [breakdown, campaignState.group_by, chartTypes, queryType]);
+    if (queryType === QUERY_TYPE_ATTRIBUTION) {
+      key =
+        attributionsState.models.length === 1
+          ? 'single_touch_point'
+          : 'dual_touch_point';
+      return chartTypes[queryType][key];
+    }
+  }, [
+    breakdown,
+    campaignState.group_by,
+    chartTypes,
+    queryType,
+    attributionsState.models,
+  ]);
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
   const [chartTypeMenuItems, setChartTypeMenuItems] = useState([]);
@@ -75,13 +89,19 @@ function ReportContent({
   const handleChartTypeChange = useCallback(
     ({ key }) => {
       let changedKey;
-      if (queryType === QUERY_TYPE_EVENT) {
+      if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
         changedKey = breakdown.length ? 'breakdown' : 'no_breakdown';
       }
       if (queryType === QUERY_TYPE_CAMPAIGN) {
         changedKey = campaignState.group_by.length
           ? 'breakdown'
           : 'no_breakdown';
+      }
+      if (queryType === QUERY_TYPE_ATTRIBUTION) {
+        changedKey =
+          attributionsState.models.length > 1
+            ? 'dual_touch_point'
+            : 'single_touch_point';
       }
       updateChartTypes({
         ...chartTypes,
@@ -91,7 +111,14 @@ function ReportContent({
         },
       });
     },
-    [queryType, updateChartTypes, breakdown, campaignState.group_by, chartTypes]
+    [
+      queryType,
+      updateChartTypes,
+      breakdown,
+      campaignState.group_by,
+      chartTypes,
+      attributionsState.models,
+    ]
   );
 
   useEffect(() => {
@@ -102,8 +129,15 @@ function ReportContent({
         campaignState.group_by.length > 0
       );
     }
-    if (queryType === QUERY_TYPE_EVENT && breakdownType === EACH_USER_TYPE) {
+    if (
+      (queryType === QUERY_TYPE_EVENT && breakdownType === EACH_USER_TYPE) ||
+      queryType === QUERY_TYPE_FUNNEL
+    ) {
       items = getChartTypeMenuItems(queryType, breakdown.length > 0);
+    }
+
+    if (queryType === QUERY_TYPE_ATTRIBUTION) {
+      items = getChartTypeMenuItems(queryType);
     }
     setChartTypeMenuItems(items);
   }, [queryType, campaignState.group_by, breakdown, breakdownType]);
@@ -152,7 +186,10 @@ function ReportContent({
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
     queryDetail = attributionsState.eventGoal.label;
     durationObj = attributionsState.date_range;
-    if (attributionsState.models.length === 2) {
+    if (
+      attributionsState.models.length === 2 &&
+      chartType === CHART_TYPE_BARCHART
+    ) {
       metricsDropdown = (
         <CampaignMetricsDropdown
           metrics={['Conversions', 'Cost Per Conversion']}
@@ -201,6 +238,7 @@ function ReportContent({
           section={section}
           durationObj={durationObj}
           renderedCompRef={renderedCompRef}
+          chartType={chartType}
         />
       );
     }
@@ -214,6 +252,7 @@ function ReportContent({
           section={section}
           currMetricsValue={currMetricsValue}
           renderedCompRef={renderedCompRef}
+          chartType={chartType}
         />
       );
     }

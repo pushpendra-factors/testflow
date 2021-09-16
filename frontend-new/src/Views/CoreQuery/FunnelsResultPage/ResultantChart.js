@@ -10,7 +10,8 @@ function ResultantChart({
   arrayMapper,
   section,
   durationObj,
-  renderedCompRef
+  chartType,
+  renderedCompRef,
 }) {
   if (!breakdown.length) {
     return (
@@ -34,6 +35,7 @@ function ResultantChart({
         arrayMapper={arrayMapper}
         section={section}
         ref={renderedCompRef}
+        chartType={chartType}
       />
     );
   }

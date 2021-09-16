@@ -25,6 +25,7 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
+  CHART_TYPE_SCATTER_PLOT,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 
@@ -914,22 +915,41 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
 
 export const getSaveChartOptions = (queryType, requestQuery) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
-    return (
-      <>
-        <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-          Display Funnel Chart
-        </Radio>
-        <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-          Display Table
-        </Radio>
-      </>
-    );
+    if (requestQuery.gbp.length) {
+      return (
+        <>
+          <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+            Display Funnel Chart
+          </Radio>
+          <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
+            Display Scatter Plot
+          </Radio>
+          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+            Display Table
+          </Radio>
+        </>
+      );
+    } else {
+      return (
+        <>
+          <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+            Display Funnel Chart
+          </Radio>
+          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+            Display Table
+          </Radio>
+        </>
+      );
+    }
   }
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
     return (
       <>
         <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
           Display Bar Chart
+        </Radio>
+        <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
+          Display Scatter Plot Chart
         </Radio>
         <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
           Display Table

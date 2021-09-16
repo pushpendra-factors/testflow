@@ -6,14 +6,24 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { formatData, getVisibleData } from '../utils';
-import Chart from './Chart';
+import BarChart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
 import NoDataChart from '../../../../components/NoDataChart';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
+import FunnelsScatterPlot from './FunnelsScatterPlot';
+import { CHART_TYPE_BARCHART } from '../../../../utils/constants';
 
 const GroupedChart = forwardRef(
   (
-    { resultState, queries, breakdown, isWidgetModal, arrayMapper, section },
+    {
+      resultState,
+      queries,
+      breakdown,
+      isWidgetModal,
+      arrayMapper,
+      section,
+      chartType,
+    },
     ref
   ) => {
     const {
@@ -51,9 +61,11 @@ const GroupedChart = forwardRef(
       );
     }
 
-    return (
-      <div className='flex items-center justify-center flex-col'>
-        <Chart
+    let chart = null;
+
+    if (chartType === CHART_TYPE_BARCHART) {
+      chart = (
+        <BarChart
           isWidgetModal={isWidgetModal}
           groups={visibleProperties}
           eventsData={eventsData}
@@ -61,7 +73,22 @@ const GroupedChart = forwardRef(
           section={section}
           durations={resultState.data.meta}
         />
+      );
+    } else {
+      chart = (
+        <div className='w-full'>
+          <FunnelsScatterPlot
+            visibleProperties={visibleProperties}
+            arrayMapper={arrayMapper}
+            section={section}
+          />
+        </div>
+      );
+    }
 
+    return (
+      <div className='flex items-center justify-center flex-col'>
+        {chart}
         <div className='mt-12 w-full'>
           <FunnelsResultTable
             breakdown={breakdown}
