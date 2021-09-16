@@ -70,7 +70,7 @@ function ActiveUnitContent({
     eventsMapper = {},
     reverseEventsMapper = {},
     arrayMapper = [],
-    attributionsState,
+    attributionsState = {},
     breakdownType;
 
   if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
