@@ -735,9 +735,11 @@ if __name__ == "__main__":
 
     next_sync_info = get_next_sync_info(project_settings, last_sync_info, options.first_sync)
 
+    log.warning("sync_info: "+str(next_sync_info))
     next_sync_failures = []
     next_sync_success = []
     for info in next_sync_info:
+        log.warning("Current processing sync_info: "+str(info))
         response = sync(info.get("project_id"), info.get("api_key"), 
                 info.get("doc_type"), info.get("sync_all"), info.get("last_sync_timestamp"))
         if response["status"] == "failed":
