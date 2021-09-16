@@ -89,11 +89,11 @@ function isObject(obj) {
   return Object.prototype.toString.call(obj) === '[object Object]';
 }
 
-function waitForGlobalKey(key, callback, timer = 0, subkey = null) {
+function waitForGlobalKey(key, callback, timer = 0, subkey = null, waitTime = 10000) {
   if (window[key]) {
     if (subkey) {
       if (Array.isArray(window[key])) {
-        const isPresent = window[key].find((elem) => {
+        const isPresent = window[key].find(function (elem) {
           return isObject(elem) && Object.keys(elem).indexOf(subkey) > -1;
         });
         if (isPresent) {
@@ -109,8 +109,8 @@ function waitForGlobalKey(key, callback, timer = 0, subkey = null) {
   if (timer <= 10) {
     logger.debug('Checking for key: times ' + timer, false);
     setTimeout(function () {
-      waitForGlobalKey(key, callback, timer + 1, subkey);
-    }, 10000);
+      waitForGlobalKey(key, callback, timer + 1, subkey, waitTime);
+    }, waitTime);
   }
 }
 
@@ -498,6 +498,15 @@ function handleRevealData(appInstance) {
         availableProperties[companyPrefix + '_name'] = companyData.name;
       }
 
+      if (companyData.foundedYear) {
+        availableProperties[companyPrefix + '_foundedYear'] =
+          companyData.foundedYear;
+      }
+
+      if (companyData.type) {
+        availableProperties[companyPrefix + '_type'] = companyData.type;
+      }
+
       if (companyData.geo && isObject(companyData.geo)) {
         const companyGeographicalData = companyData.geo;
         const requiredGeographicalKeys = [
@@ -511,12 +520,36 @@ function handleRevealData(appInstance) {
           'lng',
         ];
         const availableGeographicalKeys = requiredGeographicalKeys.filter(
-          (key) => companyGeographicalData[key]
+          function (key) {
+            return !!companyGeographicalData[key];
+          }
         );
         for (let i = 0; i < availableGeographicalKeys.length; i++) {
           const key = availableGeographicalKeys[i];
           availableProperties[companyPrefix + '_geo_' + key] =
             companyGeographicalData[key];
+        }
+      }
+
+      if (companyData.category && isObject(companyData.category)) {
+        const companyCategoryData = companyData.category;
+        const requiredCategoryKeys = [
+          'sector',
+          'industryGroup',
+          'industry',
+          'subIndustry',
+          'sicCode',
+          'naicsCode',
+        ];
+        const availableCategoryKeys = requiredCategoryKeys.filter(function (
+          key
+        ) {
+          return !!companyCategoryData[key];
+        });
+        for (let i = 0; i < availableCategoryKeys.length; i++) {
+          const key = availableCategoryKeys[i];
+          availableProperties[companyPrefix + '_category_' + key] =
+            companyCategoryData[key];
         }
       }
 
@@ -533,13 +566,26 @@ function handleRevealData(appInstance) {
           'estimatedAnnualRevenue',
           'fiscalYearEnd',
         ];
-        const availableMetricsKeys = requiredMetricsKeys.filter(
-          (key) => companyMetricsData[key]
-        );
+        const availableMetricsKeys = requiredMetricsKeys.filter(function (key) {
+          return !!companyMetricsData[key];
+        });
         for (let i = 0; i < availableMetricsKeys.length; i++) {
           const key = availableMetricsKeys[i];
           availableProperties[companyPrefix + '_metrics_' + key] =
             companyMetricsData[key];
+        }
+      }
+
+      if (companyData.parent && isObject(companyData.parent)) {
+        const companyParentData = companyData.parent;
+        const requiredParentKeys = ['domain'];
+        const availableParentKeys = requiredParentKeys.filter(function (key) {
+          return !!companyParentData[key];
+        });
+        for (let i = 0; i < availableParentKeys.length; i++) {
+          const key = availableParentKeys[i];
+          availableProperties[companyPrefix + '_parent_' + key] =
+            companyParentData[key];
         }
       }
     }
@@ -555,7 +601,8 @@ App.prototype.autoClearbitRevealCapture = function (appInstance, enabled) {
     'dataLayer',
     handleRevealData.bind(null, appInstance),
     0,
-    'reveal'
+    'reveal',
+    5000
   );
   return true;
 };
