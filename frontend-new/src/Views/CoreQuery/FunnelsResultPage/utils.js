@@ -6,6 +6,7 @@ import {
   getClickableTitleSorter,
   SortResults,
   SortData,
+  getDurationInSeconds,
 } from '../../../utils/dataFormatter';
 import {
   Number as NumFormat,
@@ -184,7 +185,7 @@ export const formatData = (response, arrayMapper) => {
       value: `${value}%`,
       Conversion: value, //used for sorting, value will be removed soon
       nonConvertedName,
-      'Converstion Time': formatDuration(totalDuration),
+      'Conversion Time': formatDuration(totalDuration),
       ...groupEventData,
       ...breakdownData,
       ...timeData,
@@ -388,7 +389,7 @@ export const generateTableColumns = (
         ? getClickableTitleSorter(
             'Conversion Time',
             {
-              key: `Converstion Time`,
+              key: `Conversion Time`,
               type: 'duration',
               subtype: null,
             },
@@ -396,7 +397,7 @@ export const generateTableColumns = (
             handleSorting
           )
         : 'Conversion Time',
-      dataIndex: 'Converstion Time',
+      dataIndex: 'Conversion Time',
       width: 150,
       render: (d) => RenderConversionTime(d, breakdown, isComparisonApplied),
     },
@@ -516,7 +517,7 @@ export const generateTableData = (
         Conversion: comparisonChartData
           ? { conversion, comparsion_conversion }
           : conversion,
-        'Converstion Time': comparisonChartData
+        'Conversion Time': comparisonChartData
           ? { overallDuration, comparisonOverallDuration }
           : overallDuration,
         ...queryData,
@@ -630,4 +631,72 @@ export const getStepDuration = (durationsObj, index1, index2) => {
     }
   }
   return durationVal;
+};
+
+const getConvertedValuesForScatterPlot = (metric, originalValue) => {
+  if (metric === 'Conversion Time' || metric.includes('time')) {
+    return Number(getDurationInSeconds(originalValue));
+  }
+  return originalValue.value
+    ? Number(originalValue.value)
+    : Number(originalValue);
+};
+
+export const getScatterPlotChartData = (
+  visibleData,
+  xAxisMetric,
+  yAxisMetric
+) => {
+  console.log('funnels getScatterPlotChartData');
+  const categories = [];
+  const plotData = visibleData.map((d) => {
+    categories.push(d.name);
+    const xValue = getConvertedValuesForScatterPlot(
+      xAxisMetric,
+      d[xAxisMetric]
+    );
+    const yValue = getConvertedValuesForScatterPlot(
+      yAxisMetric,
+      d[yAxisMetric]
+    );
+    return [xValue, yValue];
+  });
+  return {
+    series: [
+      {
+        color: '#4D7DB4',
+        data: plotData,
+      },
+    ],
+    categories,
+  };
+};
+
+export const getAxisMetricOptions = (arrayMapper) => {
+  console.log('funnels getAxisMetricOptions');
+  const result = [
+    {
+      title: 'Conversion',
+      value: 'Conversion',
+    },
+    {
+      title: 'Conversion Time (in seconds)',
+      value: 'Conversion Time',
+    },
+  ];
+  for (let i = 0; i < arrayMapper.length; i++) {
+    result.push({
+      title: `${
+        arrayMapper[i].displayName || arrayMapper[i].eventName
+      } (Event ${i + 1})`,
+      value: `${arrayMapper[i].displayName || arrayMapper[i].eventName}-${i}`,
+    });
+    if (i < arrayMapper.length - 1) {
+      result.push({
+        title: `Conversion Time from Event ${i + 1} to Event ${i + 2}`,
+        value: `time[${i}-${i + 1}]`,
+      });
+    }
+  }
+  return result;
 };

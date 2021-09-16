@@ -3,8 +3,15 @@ import { formatData } from '../../CoreQuery/FunnelsResultPage/utils';
 import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
 import { DashboardContext } from '../../../contexts/DashboardContext';
-import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../utils/constants';
+import {
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_SCATTER_PLOT,
+  DASHBOARD_WIDGET_SECTION,
+  DASHBOARD_WIDGET_SCATTERPLOT_CHART_HEIGHT,
+} from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
+import FunnelsScatterPlot from '../../CoreQuery/FunnelsResultPage/GroupedChart/FunnelsScatterPlot';
 
 function GroupedChart({
   resultState,
@@ -46,7 +53,7 @@ function GroupedChart({
 
   let chartContent = null;
 
-  if (chartType === 'barchart') {
+  if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <Chart
         groups={visibleProperties}
@@ -58,6 +65,19 @@ function GroupedChart({
         cardSize={unit.cardSize}
         durations={resultState.data.meta}
       />
+    );
+  } else if (chartType === CHART_TYPE_SCATTER_PLOT) {
+    chartContent = (
+      <div className='mt-2'>
+        <FunnelsScatterPlot
+          visibleProperties={visibleProperties}
+          arrayMapper={arrayMapper}
+          section={DASHBOARD_WIDGET_SECTION}
+          height={DASHBOARD_WIDGET_SCATTERPLOT_CHART_HEIGHT}
+          cardSize={unit.cardSize}
+          chartId={`funnels-scatterPlot-${unit.id}`}
+        />
+      </div>
     );
   } else {
     chartContent = (

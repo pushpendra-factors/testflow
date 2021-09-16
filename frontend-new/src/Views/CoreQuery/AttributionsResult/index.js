@@ -8,9 +8,8 @@ function AttributionsResult({
   durationObj,
   currMetricsValue,
   renderedCompRef,
+  chartType
 }) {
-  let content = null;
-
   const {
     eventGoal,
     touchpoint,
@@ -19,7 +18,7 @@ function AttributionsResult({
     attr_dimensions,
   } = attributionsState;
 
-  content = (
+  return (
     <AttributionsChart
       event={eventGoal.label}
       linkedEvents={linkedEvents}
@@ -35,10 +34,9 @@ function AttributionsResult({
       attr_dimensions={attr_dimensions}
       currMetricsValue={currMetricsValue}
       ref={renderedCompRef}
+      chartType={chartType}
     />
   );
-
-  return <>{content}</>;
 }
 
 export default AttributionsResult;

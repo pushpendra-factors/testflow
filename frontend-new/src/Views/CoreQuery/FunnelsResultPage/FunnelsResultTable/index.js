@@ -128,13 +128,13 @@ function FunnelsResultTable({
         rest[`Conversion (${compare_duration_from} - ${compare_duration_to})`] =
           rest[`Conversion`].comparsion_conversion;
 
-        rest[`Converstion Time (${duration_from} - ${duration_to})`] =
-          rest[`Converstion Time`].overallDuration;
+        rest[`Conversion Time (${duration_from} - ${duration_to})`] =
+          rest[`Conversion Time`].overallDuration;
         rest[
-          `Converstion Time (${compare_duration_from} - ${compare_duration_to})`
-        ] = rest[`Converstion Time`].comparisonOverallDuration;
+          `Conversion Time (${compare_duration_from} - ${compare_duration_to})`
+        ] = rest[`Conversion Time`].comparisonOverallDuration;
 
-        delete rest[`Converstion Time`];
+        delete rest[`Conversion Time`];
         delete rest[`Conversion`];
         delete rest['Grouping'];
 

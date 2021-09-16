@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, memo } from 'react';
 import moment from 'moment';
 import ReactDOMServer from 'react-dom/server';
 import HCBarLineChart from '../../../components/HCBarLineChart';
@@ -11,10 +11,14 @@ import chartStyles from '../../../components/HCBarLineChart/styles.module.scss';
 
 const SingleTouchPointChart = ({
   aggregateData,
-  comparison_data,
   durationObj,
-  comparison_duration,
   attribution_method,
+  comparison_data = {},
+  comparison_duration = {},
+  height,
+  cardSize = 1,
+  legendsPosition,
+  chartId = 'barLineChart',
 }) => {
   const generateTooltip = useCallback(
     (category) => {
@@ -203,8 +207,12 @@ const SingleTouchPointChart = ({
       categories={aggregateData.categories}
       legends={legends}
       generateTooltip={generateTooltip}
+      height={height}
+      cardSize={cardSize}
+      legendsPosition={legendsPosition}
+      chartId={chartId}
     />
   );
 };
 
-export default SingleTouchPointChart;
+export default memo(SingleTouchPointChart);

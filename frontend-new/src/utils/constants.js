@@ -43,6 +43,7 @@ export const CHART_TYPE_SPARKLINES = 'sparklines';
 export const CHART_TYPE_BARCHART = 'barchart';
 export const CHART_TYPE_LINECHART = 'linechart';
 export const CHART_TYPE_TABLE = 'table';
+export const CHART_TYPE_SCATTER_PLOT = 'scatterplotchart';
 export const BARCHART_TICK_LENGTH = 20;
 export const UNGROUPED_FUNNEL_TICK_LENGTH = 50;
 
@@ -90,6 +91,8 @@ export const DASHBOARD_WIDGET_MULTICOLORED_BAR_CHART_HEIGHT = 200;
 export const DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT = 225;
 export const DASHBOARD_WIDGET_LINE_CHART_HEIGHT = 225;
 export const DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT = 250;
+export const DASHBOARD_WIDGET_SCATTERPLOT_CHART_HEIGHT = 275;
+export const DASHBOARD_WIDGET_ATTRIBUTION_DUAL_TOUCHPOINT_BAR_CHART_HEIGHT = 225;
 
 export const BAR_CHART_XAXIS_TICK_LENGTH = {
   0: 10,
@@ -129,6 +132,7 @@ export const charts_legend_length = {
 
 export const high_charts_default_spacing = [20, 10, 15, 10];
 export const high_charts_barLine_default_spacing = [20, 0, 15, 0];
+export const high_charts_scatter_plot_default_spacing = [20, 0, 15, 0];
 
 export const presentationObj = {
   pb: CHART_TYPE_BARCHART,
@@ -137,6 +141,7 @@ export const presentationObj = {
   pc: CHART_TYPE_SPARKLINES,
   pa: CHART_TYPE_STACKED_AREA,
   ps: CHART_TYPE_STACKED_BAR,
+  sp: CHART_TYPE_SCATTER_PLOT,
 };
 
 export const apiChartAnnotations = {
@@ -146,6 +151,7 @@ export const apiChartAnnotations = {
   [CHART_TYPE_SPARKLINES]: 'pc',
   [CHART_TYPE_STACKED_AREA]: 'pa',
   [CHART_TYPE_STACKED_BAR]: 'ps',
+  [CHART_TYPE_SCATTER_PLOT]: 'sp',
 };
 
 export const MAX_ALLOWED_VISIBLE_PROPERTIES = 10;
@@ -384,6 +390,14 @@ export const DefaultChartTypes = {
   [QUERY_TYPE_CAMPAIGN]: {
     no_breakdown: CHART_TYPE_SPARKLINES,
     breakdown: CHART_TYPE_BARCHART,
+  },
+  [QUERY_TYPE_ATTRIBUTION]: {
+    single_touch_point: CHART_TYPE_BARCHART,
+    dual_touch_point: CHART_TYPE_BARCHART,
+  },
+  [QUERY_TYPE_FUNNEL]: {
+    breakdown: CHART_TYPE_BARCHART,
+    no_breakdown: CHART_TYPE_BARCHART,
   },
 };
 

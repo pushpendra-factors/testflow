@@ -1,5 +1,5 @@
-import React from "react";
-import ResultantChart from "./ResultantChart";
+import React from 'react';
+import ResultantChart from './ResultantChart';
 
 function FunnelsResultPage({
   queries,
@@ -9,7 +9,8 @@ function FunnelsResultPage({
   isWidgetModal,
   section,
   durationObj,
-  renderedCompRef
+  renderedCompRef,
+  chartType,
 }) {
   return (
     <ResultantChart
@@ -21,6 +22,7 @@ function FunnelsResultPage({
       section={section}
       durationObj={durationObj}
       renderedCompRef={renderedCompRef}
+      chartType={chartType}
     />
   );
 }

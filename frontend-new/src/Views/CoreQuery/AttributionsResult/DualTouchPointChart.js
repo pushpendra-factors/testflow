@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import GroupedBarChart from '../../../components/GroupedBarChart';
-import { ATTRIBUTION_METHODOLOGY, REPORT_SECTION } from '../../../utils/constants';
+import {
+  ATTRIBUTION_METHODOLOGY,
+  REPORT_SECTION,
+} from '../../../utils/constants';
 
 const DualTouchPointChart = ({
   attribution_method,
@@ -9,7 +12,11 @@ const DualTouchPointChart = ({
   chartsData,
   visibleIndices,
   data,
-  event
+  event,
+  cardSize = 1,
+  chartId,
+  height,
+  section = REPORT_SECTION,
 }) => {
   const attributionMethodsMapper = useMemo(() => {
     const mapper = {};
@@ -44,22 +51,24 @@ const DualTouchPointChart = ({
     ];
     tooltipTitle = 'Conversions';
   }
-  
+
   return (
     <GroupedBarChart
       colors={getColors()}
       chartData={chartsData}
       visibleIndices={visibleIndices}
-      responseRows={data.rows}
-      responseHeaders={data.headers}
+      metricsData={data}
       method1={attribution_method}
       method2={attribution_method_compare}
       event={event}
-      section={REPORT_SECTION}
+      section={section}
       allValues={allValues}
       legends={legends}
       tooltipTitle={tooltipTitle}
       attributionMethodsMapper={attributionMethodsMapper}
+      cardSize={cardSize}
+      title={chartId}
+      height={height}
     />
   );
 };

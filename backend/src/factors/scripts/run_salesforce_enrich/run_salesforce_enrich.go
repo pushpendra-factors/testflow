@@ -287,4 +287,5 @@ func main() {
 	}
 
 	C.PingHealthcheckForSuccess(healthcheckPingID, jobStatus)
+	log.WithFields(log.Fields{"jobStatus": jobStatus}).Info("Job completed.")
 }

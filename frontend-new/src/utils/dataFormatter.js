@@ -9,6 +9,10 @@ import {
   CHART_TYPE_SPARKLINES,
   PREDEFINED_DATES,
   DATE_FORMATS,
+  QUERY_TYPE_ATTRIBUTION,
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_SCATTER_PLOT,
+  QUERY_TYPE_FUNNEL,
 } from './constants';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
 
@@ -169,12 +173,13 @@ export const getClickableTitleSorter = (
   title,
   sorterProp,
   currentSorter,
-  handleSorting
+  handleSorting,
+  alignmentClass = 'items-center'
 ) => {
   return (
     <div
       onClick={() => handleSorting(sorterProp)}
-      className='flex items-end justify-between cursor-pointer h-full'
+      className={`flex ${alignmentClass} justify-between cursor-pointer h-full`}
     >
       <div className='mr-2 break-all'>{title}</div>
       {currentSorter.key === sorterProp.key &&
@@ -212,34 +217,58 @@ export const getChartTypeMenuItems = (queryType, hasBreakdown) => {
     if (hasBreakdown) {
       menuItems = [
         {
-          key: 'barchart',
+          key: CHART_TYPE_BARCHART,
           name: 'Barchart',
         },
         {
-          key: 'linechart',
+          key: CHART_TYPE_LINECHART,
           name: 'Line Chart',
         },
         {
-          key: 'stackedareachart',
+          key: CHART_TYPE_STACKED_AREA,
           name: 'Stacked Area Chart',
         },
         {
-          key: 'stackedbarchart',
+          key: CHART_TYPE_STACKED_BAR,
           name: 'Stacked Bar Chart',
         },
       ];
     } else {
       menuItems = [
         {
-          key: 'sparklines',
+          key: CHART_TYPE_SPARKLINES,
           name: 'Sparkline',
         },
         {
-          key: 'linechart',
+          key: CHART_TYPE_LINECHART,
           name: 'Line Chart',
         },
       ];
     }
+  }
+  if (queryType === QUERY_TYPE_ATTRIBUTION) {
+    menuItems = [
+      {
+        key: CHART_TYPE_BARCHART,
+        name: 'Barchart',
+      },
+      {
+        key: CHART_TYPE_SCATTER_PLOT,
+        name: 'Scatter Plot',
+      },
+    ];
+  }
+  if (queryType === QUERY_TYPE_FUNNEL && hasBreakdown) {
+    menuItems = [
+      {
+        key: CHART_TYPE_BARCHART,
+        name: 'Barchart',
+      },
+      {
+        key: CHART_TYPE_SCATTER_PLOT,
+        name: 'Scatter Plot',
+      },
+    ];
   }
   return menuItems;
 };

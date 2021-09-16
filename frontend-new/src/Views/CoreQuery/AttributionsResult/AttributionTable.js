@@ -25,7 +25,7 @@ function AttributionTable({
     const enabledAttributionMetricKeys = attributionMetrics
       .filter((d) => d.enabled)
       .map((d) => d.title);
-    const mappedData = dt.map(({ index, ...rest }) => {
+    const mappedData = dt.map(({ index, category, ...rest }) => {
       if (!comparison_data) {
         return rest;
       }

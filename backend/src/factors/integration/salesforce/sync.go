@@ -46,13 +46,14 @@ type QueryResponse struct {
 
 // ObjectStatus represents sync info from query to db
 type ObjectStatus struct {
-	ProjetID     uint64   `json:"project_id"`
-	Status       string   `json:"status"`
-	DocType      string   `json:"doc_type"`
-	TotalRecords int      `json:"total_records"`
-	Message      string   `json:"message,omitempty"`
-	SyncAll      bool     `json:"syncall"`
-	Failures     []string `json:"failures,omitempty"`
+	ProjetID      uint64         `json:"project_id"`
+	Status        string         `json:"status"`
+	DocType       string         `json:"doc_type"`
+	TotalRecords  int            `json:"total_records"`
+	Message       string         `json:"message,omitempty"`
+	SyncAll       bool           `json:"syncall"`
+	Failures      []string       `json:"failures,omitempty"`
+	TotalAPICalls map[string]int `json:"total_api_calls"`
 }
 
 // JobStatus list all success and failed while sync from salesforce to db
@@ -185,6 +186,7 @@ type DataClient struct {
 	isFirstRun     bool
 	nextBatchRoute string
 	queryURL       string
+	APICall        int
 }
 
 // NewSalesforceDataClient create new instance of DataClient for fetching data from salesforce
@@ -334,6 +336,7 @@ func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
 	if err != nil {
 		return nil, errors.New("failed to decode response")
 	}
+	s.APICall++
 
 	return &jsonResponse, nil
 }
@@ -408,18 +411,19 @@ func getSalesforceContactIDANDLeadIDFromCampaignMember(properties *model.Salesfo
 	return contactID, leadID
 }
 
-func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberIDs []string, accessToken, instanceURL string) ([]model.SalesforceRecord, []string, error) {
+func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberIDs []string, accessToken, instanceURL string) ([]model.SalesforceRecord, []string, int, int, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforce data client to getAllCampaignMemberContactAndLeadRecords.")
-		return nil, nil, err
+		return nil, nil, 0, 0, err
 	}
 
 	campaignMemberLeadIDs := make([]string, 0)
 	campaignMemberContactIDs := make([]string, 0)
 
+	campaingMemberAPICalls := 0
 	if len(campaignMemberIDs) > 0 {
 
 		batchedCampaignMemberIDs := U.GetStringListAsBatch(campaignMemberIDs, 50)
@@ -427,7 +431,7 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 			paginatedCampaignMembersByID, err := salesforceDataClient.GetObjectRecordsByIDs(model.SalesforceDocumentTypeNameCampaignMember, batchedCampaignMemberIDs[i])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to initialize salesforce data client to getAllCampaignMemberContactAndLeadRecords.")
-				return nil, nil, err
+				return nil, nil, 0, 0, err
 			}
 
 			done := false
@@ -449,10 +453,14 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 					}
 				}
 			}
+
+			campaingMemberAPICalls += paginatedCampaignMembersByID.APICall
 		}
+
 	}
 
 	// sync all campaign member if not existed since the first date of data pull
+	memberObjectAPICalls := 0
 	var memberRecords []model.SalesforceRecord
 	var memberRecordsObjectType []string
 	for campaignMemberObject, campaignMemberObjectIDs := range map[string][]string{model.SalesforceDocumentTypeNameLead: campaignMemberLeadIDs, model.SalesforceDocumentTypeNameContact: campaignMemberContactIDs} {
@@ -461,7 +469,7 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 			paginatedObjectsByID, err := salesforceDataClient.GetObjectRecordsByIDs(campaignMemberObject, batchedCampaignMemberObjectIDs[i])
 			if err != nil {
 				logCtx.WithFields(log.Fields{"object_name": campaignMemberObject}).WithError(err).Error("Failed to re-initialze salesforce data cleint for lead and contact ids.")
-				return nil, nil, err
+				return nil, nil, 0, 0, err
 			}
 
 			done := false
@@ -470,7 +478,7 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 				records, done, err = paginatedObjectsByID.getNextBatch()
 				if err != nil {
 					logCtx.WithFields(log.Fields{"object_name": campaignMemberObject}).WithError(err).Error("Failed to get next batch for lead and contact ids.")
-					return nil, nil, err
+					return nil, nil, 0, 0, err
 				}
 
 				for i := range records {
@@ -479,34 +487,37 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 				}
 
 			}
+
+			memberObjectAPICalls += paginatedObjectsByID.APICall
 		}
 
 	}
 
-	return memberRecords, memberRecordsObjectType, nil
+	return memberRecords, memberRecordsObjectType, campaingMemberAPICalls, memberObjectAPICalls, nil
 }
 
-func syncOpportunityPrimaryContact(projectID uint64, primaryContactIDs []string, accessToken, instanceURL string) ([]string, bool) {
+func syncOpportunityPrimaryContact(projectID uint64, primaryContactIDs []string, accessToken, instanceURL string) ([]string, int, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build new salesforce data client fron primary contact sync")
-		return nil, true
+		return nil, 0, true
 	}
 
 	paginatedContacts, err := salesforceDataClient.GetObjectRecordsByIDs(model.SalesforceDocumentTypeNameContact, primaryContactIDs)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to initialize salesforce data client for sync oppportunities contact.")
-		return nil, true
+		return nil, 0, true
 	}
 
 	var failures []string
 	done := false
+	opportunityPrimaryContact := 0
 	var contactRecords []model.SalesforceRecord
 	for !done {
 		contactRecords, done, err = paginatedContacts.getNextBatch()
 		if err != nil {
-			return nil, true
+			return nil, 0, true
 		}
 
 		for i := range contactRecords {
@@ -518,13 +529,14 @@ func syncOpportunityPrimaryContact(projectID uint64, primaryContactIDs []string,
 		}
 	}
 
-	return failures, len(failures) > 0
+	opportunityPrimaryContact = paginatedContacts.APICall
+	return failures, opportunityPrimaryContact, len(failures) > 0
 }
 
 // getLeadIDForOpportunityRecords sync associated leads if missing and return all lead ids
-func getLeadIDForOpportunityRecords(projectID uint64, records []model.SalesforceRecord, accessToken, instanceURL string) (map[string]string, error) {
+func getLeadIDForOpportunityRecords(projectID uint64, records []model.SalesforceRecord, accessToken, instanceURL string) (map[string]string, int, error) {
 	if len(records) < 1 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	oppToLeadID := make(map[string]string, 0)
@@ -537,17 +549,18 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 		}
 	}
 
+	leadIDForOpportunityRecordsAPICalls := 0
 	batchedOppIDs := util.GetStringListAsBatch(oppIDs, 50)
 	for bi := range batchedOppIDs {
 		salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		filterStmnt := "ConvertedOpportunityId IN (" + "'" + strings.Join(batchedOppIDs[bi], "','") + "')"
 		paginatedLeads, err := salesforceDataClient.getRecordByObjectNameANDFilter(model.SalesforceDocumentTypeNameLead, filterStmnt)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		var objectRecords []model.SalesforceRecord
@@ -555,7 +568,7 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 		for !done {
 			objectRecords, done, err = paginatedLeads.getNextBatch()
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 
 			for i := range objectRecords {
@@ -582,9 +595,10 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 				}
 			}
 		}
+		leadIDForOpportunityRecordsAPICalls += paginatedLeads.APICall
 	}
 
-	return oppToLeadID, nil
+	return oppToLeadID, leadIDForOpportunityRecordsAPICalls, nil
 
 }
 
@@ -628,35 +642,38 @@ func getOpportunityPrimaryContactIDs(projectID uint64, oppRecords []model.Salesf
 
 }
 
-func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceURL string, timestamp int64) ([]string, error) {
+func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceURL string, timestamp int64) ([]string, int, int, int, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 	allowedObject := model.GetSalesforceDocumentTypeAlias(projectID)
 	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient for opportunity sync.")
-		return nil, err
+		return nil, 0, 0, 0, err
 	}
 
 	paginatedOpportunitiesByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(model.SalesforceDocumentTypeNameOpportunity, timestamp)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to initialize salesforce data client for opportunity sync.")
-		return nil, err
+		return nil, 0, 0, 0, err
 	}
 
 	done := false
 	var objectRecords []model.SalesforceRecord
 	var failures []string
 
+	opportunityAPICalls := 0
+	leadIDForOpportunityRecordsAPICalls := 0
+	opportunityPrimaryContactAPICalls := 0
 	for !done {
 		objectRecords, done, err = paginatedOpportunitiesByStartTimestamp.getNextBatch()
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to getNextBatch on opportunity sync.")
-			return failures, err
+			return failures, 0, 0, 0, err
 		}
 
 		var oppToLeadIDs map[string]string
 		if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
-			oppToLeadIDs, err = getLeadIDForOpportunityRecords(projectID, objectRecords, accessToken, instanceURL)
+			oppToLeadIDs, leadIDForOpportunityRecordsAPICalls, err = getLeadIDForOpportunityRecords(projectID, objectRecords, accessToken, instanceURL)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get lead converted opportunity id for opportunity sync.")
 			}
@@ -687,31 +704,38 @@ func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceUR
 				continue
 			}
 
-			allFailures, failure := syncOpportunityPrimaryContact(projectID, primaryContactIDs, accessToken, instanceURL)
+			allFailures, apiCalls, failure := syncOpportunityPrimaryContact(projectID, primaryContactIDs, accessToken, instanceURL)
 			if failure {
 				failures = append(failures, allFailures...)
 			}
+			opportunityPrimaryContactAPICalls = apiCalls
 		}
 
 	}
+	opportunityAPICalls = paginatedOpportunitiesByStartTimestamp.APICall
 
-	return failures, nil
+	return failures, opportunityAPICalls, leadIDForOpportunityRecordsAPICalls, opportunityPrimaryContactAPICalls, nil
 }
 
 func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName string, timestamp int64) (ObjectStatus, error) {
 	var salesforceObjectStatus ObjectStatus
 	salesforceObjectStatus.ProjetID = ps.ProjectID
 	salesforceObjectStatus.DocType = objectName
+	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
 
 	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName})
 
 	if objectName == model.SalesforceDocumentTypeNameOpportunity && config.UseOpportunityAssociationByProjectID(ps.ProjectID) {
-		failures, err := syncOpporunitiesUsingAssociations(ps.ProjectID, accessToken, ps.InstanceURL, timestamp)
+		failures, opportunityAPICalls, leadIDForOpportunityRecordsAPICall, opportunityPrimaryContact, err := syncOpporunitiesUsingAssociations(ps.ProjectID, accessToken, ps.InstanceURL, timestamp)
 		if err != nil {
 			logCtx.WithError(err).Error("Failure on sync opportunities.")
 			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
 			return salesforceObjectStatus, err
 		}
+
+		salesforceObjectStatus.TotalAPICalls["opportunityAPICalls"] = opportunityAPICalls
+		salesforceObjectStatus.TotalAPICalls["leadIDForOpportunityRecordsAPICalls"] = leadIDForOpportunityRecordsAPICall
+		salesforceObjectStatus.TotalAPICalls["opportunityPrimaryContactAPICalls"] = opportunityPrimaryContact
 		return salesforceObjectStatus, nil
 	}
 
@@ -777,14 +801,18 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
 	}
 
+	salesforceObjectStatus.TotalAPICalls[objectName] = paginatedObjectsByStartTimestamp.APICall
+
 	// sync missing lead or contact id if not available from first date of data pull
 	if objectName == model.SalesforceDocumentTypeNameCampaign || objectName == model.SalesforceDocumentTypeNameCampaignMember {
 
-		campaignMemberRecords, recordObjectType, err := getAllCampaignMemberContactAndLeadRecords(ps.ProjectID, allCampaignMemberIDs, accessToken, ps.InstanceURL)
+		campaignMemberRecords, recordObjectType, campaingMemberAPICalls, memberObjectAPICalls, err := getAllCampaignMemberContactAndLeadRecords(ps.ProjectID, allCampaignMemberIDs, accessToken, ps.InstanceURL)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to getAllCampaignMemberContactAndLeadRecords")
 			return salesforceObjectStatus, err
 		}
+		salesforceObjectStatus.TotalAPICalls["CampaignMemberAPICalls"] = campaingMemberAPICalls
+		salesforceObjectStatus.TotalAPICalls["MemberObjectAPICalls"] = memberObjectAPICalls
 
 		var failures []string
 		for i := range campaignMemberRecords {
@@ -802,14 +830,6 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		var docObjectName string
 		// sync missing campaign from campaignmember
 		if objectName == model.SalesforceDocumentTypeNameCampaignMember {
-			// sync missing campaigns for project id 566
-			if ps.ProjectID == 566 {
-				docIDs = append(docIDs, "7010I000001KtJaQAK", "7012s000000kjQMAAY",
-					"7012s000000DIskAAG", "7010I000001KkOaQAK", "7012s000000DKulAAG",
-					"7012s000000DLa9AAG", "7010I000001KsSvQAK", "7012s000000cGpwAAE",
-					"7010I000001KpstQAC", "7010I000001KqhmQAC", "7012s000000kjEuAAI",
-					"7010I000001KsAcQAK", "7010I000001NujcQAC")
-			}
 			for campaignID := range allCampaignIDs {
 				docIDs = append(docIDs, campaignID)
 			}
@@ -847,6 +867,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 					}
 				}
 			}
+			salesforceObjectStatus.TotalAPICalls[docObjectName] += paginatedObjectByID.APICall
 		}
 	}
 
