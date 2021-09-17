@@ -253,6 +253,20 @@ $cq-card-transition: transform .2s ease-in-out;
         }
     }
 
+    .fa-select--ghost.ant-select {
+        .ant-select-selector {
+            background: none !important;
+            border: none !important;
+            height: 28px !important;
+        }
+    
+        &:hover,&:active,&:focus {
+            border: none !important;
+            outline: none;
+            border-radius: 0;
+        }
+    }
+
 
     .ant-collapse
     {

@@ -333,7 +333,7 @@ function WidgetCard({
 
   return (
     <div
-      className={`${unit.title.split(' ').join('-')} ${
+      className={`${unit?.title?.split(' ').join('-')} ${
         unit.className
       } py-3 flex widget-card-top-div`}
     >

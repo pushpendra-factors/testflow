@@ -9,30 +9,13 @@ import { SVG, Text } from 'factorsComponents';
 import {
   DEFAULT_DATE_RANGE,
 } from '../DateRangeSelector/utils';
-
-const defaultOpProps = {
-  "categorical": [
-    '=',
-    '!=',
-    'contains',
-    'does not contain'
-  ],
-  "numerical": [
-    '=',
-    '!=',
-    '<',
-    '<=',
-    '>',
-    '>='
-  ],
-  "datetime": [
-    '='
-  ]
-};
+import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
 
 import { fetchEventPropertyValues, fetchUserPropertyValues, 
   fetchChannelObjPropertyValues } from '../../../reducers/coreQuery/services';
 import FAFilterSelect from '../../FaFilterSelect';
+
+const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 export default function EventFilterWrapper({ 
   index, 
