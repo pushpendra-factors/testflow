@@ -265,7 +265,7 @@ const FAFilterSelect = ({
 
     const selectDateTimeSelector = (operator, rang, parsedVals) => {
         let selectorComponent = null;
-        const rangePicker = ['between', 'not between'];
+        const rangePicker = ['=', '!=', 'between', 'not between'];
         const deltaPicker = ['in the last', 'not in the last'];
         const datePicker = ['before', 'since'];
         

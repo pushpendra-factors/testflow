@@ -76,6 +76,8 @@ const reverseOperatorMap = {
 };
 
 const reverseDateOperatorMap = {
+  equals: '=',
+  notEqual: '!=',
   between: 'between',
   notInBetween: 'not between',
   inLast: 'in the last',

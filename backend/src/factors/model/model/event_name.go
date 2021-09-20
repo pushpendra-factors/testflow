@@ -747,7 +747,10 @@ func EventsCountAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
 	prefix := "SS:A:EC"
 	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s", prefix, dateKey))
 }
-
+func EventCountKeyByDocumentType(documentType string, dateKey string)(*cacheRedis.Key,error){
+	prefix:= "SS:A:CK"
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s:%s", prefix, documentType, dateKey))
+}
 // FillEventPropertiesByFilterExpr - Parses and fills event properties
 // from tokenized_event_uri using tokenized_filter_expr.
 func FillEventPropertiesByFilterExpr(eventProperties *U.PropertiesMap,

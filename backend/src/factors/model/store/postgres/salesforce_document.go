@@ -10,9 +10,7 @@ import (
 	"sort"
 	"strings"
 	"time"
-
 	C "factors/config"
-
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -232,7 +230,7 @@ func (pg *Postgres) CreateSalesforceDocument(projectID uint64, document *model.S
 
 			return status
 		}
-
+		UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"salesforce")
 		return http.StatusCreated
 	}
 
@@ -244,9 +242,10 @@ func (pg *Postgres) CreateSalesforceDocument(projectID uint64, document *model.S
 
 		return status
 	}
-
+	UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"salesforce")
 	return http.StatusCreated
 }
+
 
 // CreateSalesforceDocumentByAction inserts salesforce_document to table by SalesforceAction
 func (pg *Postgres) CreateSalesforceDocumentByAction(projectID uint64, document *model.SalesforceDocument, action model.SalesforceAction) int {
@@ -276,7 +275,6 @@ func (pg *Postgres) CreateSalesforceDocumentByAction(projectID uint64, document 
 		log.WithError(err).Error("Failed to create salesforce document")
 		return http.StatusInternalServerError
 	}
-
 	return http.StatusOK
 }
 
