@@ -515,6 +515,12 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 		}
 		baseQuery.SetQueryDateRange(from, to)
 		baseQuery.SetTimeZone(timezoneString)
+		err = baseQuery.TransformDateTypeFilters()
+		if err != nil {
+			errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
 		cachePayload := model.DashboardUnitCachePayload{
 			DashboardUnit: dashboardUnit,
 			BaseQuery:     baseQuery,
@@ -655,6 +661,12 @@ func (pg *Postgres) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs
 				}
 				baseQuery.SetQueryDateRange(from, to)
 				baseQuery.SetTimeZone(timezoneString)
+				err = baseQuery.TransformDateTypeFilters()
+				if err != nil {
+					errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
+					C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+					return
+				}
 				cachePayload := model.DashboardUnitCachePayload{
 					DashboardUnit: dashboardUnit,
 					BaseQuery:     baseQuery,

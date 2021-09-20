@@ -31,6 +31,20 @@ type AttributionQuery struct {
 	Timezone                      string                 `json:"time_zone"`
 }
 
+func (query *AttributionQuery) TransformDateTypeFilters() error {
+	for _, ewp := range query.ConversionEvent.Properties {
+		err := ewp.TransformDateTypeFilters(query.GetTimeZone())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (query *AttributionQuery) GetTimeZone() U.TimeZoneString {
+	return U.TimeZoneString(query.Timezone)
+}
+
 type AttributionQueryUnit struct {
 	Class string                  `json:"cl"`
 	Query *AttributionQuery       `json:"query"`
@@ -60,7 +74,7 @@ func (q *AttributionQueryUnit) SetTimeZone(timezoneString U.TimeZoneString) {
 }
 
 func (q *AttributionQueryUnit) GetTimeZone() U.TimeZoneString {
-	return U.TimeZoneString(q.Query.Timezone)
+	return q.Query.GetTimeZone()
 }
 
 func (q *AttributionQueryUnit) SetQueryDateRange(from, to int64) {
@@ -94,6 +108,10 @@ func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRe
 
 func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
 	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
+}
+
+func (query *AttributionQueryUnit) TransformDateTypeFilters() error {
+	return query.Query.TransformDateTypeFilters()
 }
 
 const (

@@ -76,6 +76,10 @@ func (q *TemplateQuery) GetQueryCacheExpiry() float64 {
 	return getQueryCacheResultExpiry(q.From, q.To, string(q.Timezone))
 }
 
+func (q *TemplateQuery) TransformDateTypeFilters() error {
+	return nil
+}
+
 func (q *TemplateQuery) SetTimeZone(timezoneString U.TimeZoneString) {
 	q.Timezone = string(timezoneString)
 }

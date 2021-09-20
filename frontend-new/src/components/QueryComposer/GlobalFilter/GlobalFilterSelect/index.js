@@ -2,32 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
-import { Button, InputNumber, Tooltip } from 'antd';
+import { Button, InputNumber, Tooltip, Select, DatePicker } from 'antd';
 import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
+import moment from 'moment';
 
-const defaultOpProps = {
-    "categorical": [
-      '=',
-      '!=',
-      'contains',
-      'does not contain'
-    ],
-    "numerical": [
-      '=',
-      '!=',
-      '<',
-      '<=',
-      '>',
-      '>='
-    ],
-    "datetime": [
-      '='
-    ]
-  };
+import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
+
+const defaultOpProps = DEFAULT_OPERATOR_PROPS;
+
+const {Option} = Select;
 
 const GlobalFilterSelect = ({
     propOpts = [],
@@ -52,10 +39,13 @@ const GlobalFilterSelect = ({
     const [propSelectOpen, setPropSelectOpen] = useState(false);
     const [operSelectOpen, setOperSelectOpen] = useState(false);
     const [valuesSelectionOpen, setValuesSelectionOpen] = useState(false);
+    const [grnSelectOpen, setGrnSelectOpen] = useState(false);
+    const [showDatePicker ,setShowDatePicker] = useState(false);
 
     const [updateState, updateStateApply] = useState(false);
 
     const {userPropNames, eventPropNames} = useSelector((state) => state.coreQuery)
+    
 
     useEffect(() => {
         if (filter) {
@@ -84,7 +74,7 @@ const GlobalFilterSelect = ({
         let values;
         if (filter.props[1] === 'datetime') { 
             const parsedValues = (filter.values[0] ? (typeof filter.values[0] === 'string')? JSON.parse(filter.values) : filter.values : {});
-            values = parseDateRangeFilter(parsedValues.fr, parsedValues.to)
+            values = parseDateRangeFilter(parsedValues.fr, parsedValues.to, parsedValues)
         } else {
             values = filter.values;
         }
@@ -126,7 +116,7 @@ const GlobalFilterSelect = ({
     const propSelect = (prop) => {
         setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
         setPropSelectOpen(false);
-        setOperatorState("=");
+        setOperatorState(prop[2] === 'datetime' ? 'between' : "=");
         setValuesState(null);
         setValuesByProps(prop);
     }
@@ -172,13 +162,15 @@ const GlobalFilterSelect = ({
         setValuesState(String(ev).toString());
     }
 
-    const parseDateRangeFilter = (fr, to) => {
+    const parseDateRangeFilter = (fr, to, value) => {
         const fromVal = fr ? fr : new Date(MomentTz().startOf('day')).getTime();
         const toVal = to ? to : new Date(MomentTz()).getTime();
         return {
             from: fromVal,
             to: toVal,
-            ovp: false
+            ovp: false,
+            num: value["num"],
+            gran: value["gran"]
         }
         // return (MomentTz(fromVal).format('MMM DD, YYYY') + ' - ' +
         //           MomentTz(toVal).format('MMM DD, YYYY'));
@@ -242,6 +234,104 @@ const GlobalFilterSelect = ({
         </div>)
     }
 
+    const setDeltaNumber = (val) => {
+        const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
+        parsedValues['num'] = val;
+        parsedValues['gran'] = 'days';
+        setValuesState(JSON.stringify(parsedValues));
+        updateStateApply(true);
+    }
+
+    const setDeltaGran = (val) => {
+        const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
+        parsedValues['gran'] = val[0];
+        setValuesState(JSON.stringify(parsedValues));
+        setGrnSelectOpen(false);
+        setDeltaFilt();
+    }
+
+    const setDeltaFilt = () => {
+        const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
+        if(parsedValues["num"] && parsedValues["gran"]) {
+            updateStateApply(true)
+        }
+    }
+
+    const onDatePickerSelect = (val) => {
+        let dateT;
+        let dateValue = {};
+        const operatorSt = isArray(operatorState)? operatorState[0] : operatorState;
+        if(operatorSt === 'before') {
+            dateT = MomentTz(val).startOf('day');
+            dateValue["to"] = dateT.toDate().getTime();
+        }
+
+        if(operatorSt === 'since') {
+            dateT = MomentTz(val).startOf('day');
+            dateValue["fr"] = dateT.toDate().getTime();
+        }
+
+        setValuesState(JSON.stringify(dateValue));
+        updateStateApply(true);
+    }
+
+    const selectDateTimeSelector = (operator, rang, parsedVals) => {
+        let selectorComponent = null;
+        const rangePicker = ['between', 'not between'];
+        const deltaPicker = ['in the last', 'not in the last'];
+        const datePicker = ['before', 'since'];
+        
+        if(rangePicker.includes(operator)) {
+            selectorComponent = (<FaDatepicker
+                customPicker
+                presetRange
+                monthPicker
+                placement="topRight"
+                range={rang}
+                onSelect={(rng) => onDateSelect(rng)
+                }
+            />);
+        }
+
+        if (deltaPicker.includes(operator)) {
+            const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
+            selectorComponent = (
+                <div className={`fa-filter-dateDeltaContainer`}>
+                    <InputNumber value={parsedValues["num"]} onChange={setDeltaNumber}></InputNumber>
+                    {
+                        <>
+                            <Select defaultValue="days" className={'fa-select--ghost'} onChange={setDeltaGran}>
+                                <Option value="days">Days</Option>
+                            </Select>
+                        </>
+                    }
+                </div>
+            );
+        }
+
+        if(datePicker.includes(operator)) {
+            const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
+            selectorComponent = (<DatePicker
+                disabledDate={(d) => !d || d.isAfter(MomentTz())}
+                autoFocus={true}
+                className={`fa-date-picker`}
+                open={showDatePicker}
+                onOpenChange={()=>{
+                  setShowDatePicker(!showDatePicker);
+                }}
+                value={operator === 'before'? moment(parsedValues["to"]) : moment(parsedValues["from"])}
+                size={'small'}
+                suffixIcon={null}
+                showToday={false}
+                bordered={true}
+                allowClear={true}
+                onChange={onDatePickerSelect}
+              />)
+        }
+
+        return selectorComponent;
+    }
+
     const renderValuesSelector = () => {
         let selectionComponent = null;
         const values = [];
@@ -261,21 +351,13 @@ const GlobalFilterSelect = ({
         if (propState.type === 'datetime') {
             const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
             const fromRange = parsedValues.fr? parsedValues.fr : parsedValues.from;
-            const dateRange = parseDateRangeFilter(fromRange, parsedValues.to);
+            const dateRange = parseDateRangeFilter(fromRange, parsedValues.to, parsedValues);
             const rang = {
                 startDate: dateRange.from,
                 endDate: dateRange.to,
             }
 
-            selectionComponent = (<FaDatepicker
-                customPicker
-                presetRange
-                monthPicker
-                placement="topRight"
-                range={rang}
-                onSelect={(rng) => onDateSelect(rng)
-                }
-            />)
+            selectionComponent = selectDateTimeSelector(isArray(operatorState)? operatorState[0] : operatorState, rang);
         }
 
         if (propState.type === 'numerical') {

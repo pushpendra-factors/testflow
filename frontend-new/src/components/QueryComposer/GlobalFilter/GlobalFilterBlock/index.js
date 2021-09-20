@@ -7,29 +7,13 @@ import {
   DEFAULT_DATE_RANGE,
 } from 'Components/QueryComposer/DateRangeSelector/utils';
 import MomentTz from 'Components/MomentTz';
-const defaultOpProps = {
-  "categorical": [
-    '=',
-    '!=',
-    'contains',
-    'does not contain'
-  ],
-  "numerical": [
-    '=',
-    '!=',
-    '<',
-    '<=',
-    '>',
-    '>='
-  ],
-  "datetime": [
-    '='
-  ]
-};
 
 import { fetchEventPropertyValues, fetchUserPropertyValues, 
   fetchChannelObjPropertyValues } from 'Reducers/coreQuery/services';
 import GlobalFilterSelect from '../GlobalFilterSelect';
+import { DEFAULT_OPERATOR_PROPS } from '../../../FaFilterSelect/utils';
+
+const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
 export default function GlobalFilterBlock({ 
   index, 

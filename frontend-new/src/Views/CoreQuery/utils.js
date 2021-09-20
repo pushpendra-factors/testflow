@@ -56,6 +56,12 @@ const operatorMap = {
   '<=': 'lesserThanOrEqual',
   '>': 'greaterThan',
   '>=': 'greaterThanOrEqual',
+  'between': 'between',
+  'not between': 'notInBetween',
+  'in the last': 'inLast',
+  'not in the last': 'notInLast',
+  'before': 'before',
+  'since': 'since'
 };
 
 const reverseOperatorMap = {
@@ -68,6 +74,15 @@ const reverseOperatorMap = {
   greaterThan: '>',
   greaterThanOrEqual: '>=',
 };
+
+const reverseDateOperatorMap = {
+  between: 'between',
+  notInBetween: 'not between',
+  inLast: 'in the last',
+  notInLast: 'not in the last',
+  before: 'before',
+  since: 'since',
+}
 
 const getEventsWithProperties = (queries) => {
   const ewps = [];
@@ -502,7 +517,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
         filters.push({
-          operator: reverseOperatorMap[pr.op],
+          operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
           values: [pr.va],
         });
@@ -522,7 +537,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     requestQuery.gup.forEach((pr) => {
       if (pr.lop === 'AND') {
         globalFilters.push({
-          operator: reverseOperatorMap[pr.op],
+          operator: pr.ty === 'datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
           values: [pr.va],
         });
@@ -749,7 +764,7 @@ export const getAttributionStateFromRequestQuery = (
     if (pr.lop === 'AND') {
       let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
-        operator: reverseOperatorMap[pr.op],
+        operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
         values: val,
       });
@@ -764,7 +779,7 @@ export const getAttributionStateFromRequestQuery = (
       if (pr.lop === 'AND') {
         let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
         touchPointFilters.push({
-          operator: reverseOperatorMap[pr.op],
+          operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.attribution_key],
           values: val,
         });
@@ -816,7 +831,7 @@ export const getAttributionStateFromRequestQuery = (
         if (pr.lop === 'AND') {
           let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
           linkedFilters.push({
-            operator: reverseOperatorMap[pr.op],
+            operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
             props: [pr.pr, pr.ty, pr.en],
             values: val,
           });

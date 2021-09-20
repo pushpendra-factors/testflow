@@ -504,6 +504,10 @@ func SanitizeQueryResult(result *model.QueryResult, query *model.Query) error {
 	if isGroupByTypeWithBuckets(query.GroupByProperties) {
 		sanitizeNumericalBucketRanges(result, query)
 	}
+
+	if hasGroupByDateTypeProperties(query.GroupByProperties) {
+		sanitizeDateTypeRows(result, query)
+	}
 	return nil
 }
 
@@ -940,7 +944,6 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (str
 	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
 	var qSelect string
-	// This is sorted Kark.
 	qSelect = appendSelectTimestampIfRequired(qSelect, q.GetGroupByTimestamp(), q.Timezone)
 	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", model.AliasAggr))
 

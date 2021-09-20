@@ -117,6 +117,11 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		Query: requestPayload.Query,
 	}
 	attributionQueryUnitPayload.SetTimeZone(timezoneString)
+	err = attributionQueryUnitPayload.TransformDateTypeFilters()
+	if err != nil {
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
+	}
+
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId)
 	if shouldReturn {
 		if resCode == http.StatusOK {

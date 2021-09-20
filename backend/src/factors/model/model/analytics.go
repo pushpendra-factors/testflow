@@ -114,6 +114,12 @@ const (
 	LesserThanOrEqualOpStr  = "lesserThanOrEqual"
 	ContainsOpStr           = "contains"
 	NotContainsOpStr        = "notContains"
+	BetweenStr              = "between"
+	NotInBetweenStr         = "notInBetween"
+	BeforeStr               = "before"
+	SinceStr                = "since"
+	InLastStr               = "inLast"
+	NotInLastStr            = "notInLast"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
@@ -167,6 +173,7 @@ type BaseQuery interface {
 	GetQueryCacheHashString() (string, error)
 	GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error)
 	GetQueryCacheExpiry() float64
+	TransformDateTypeFilters() error
 }
 
 type Query struct {
@@ -259,6 +266,16 @@ func (query *Query) GetGroupByTimestamp() string {
 	}
 }
 
+func (query *Query) TransformDateTypeFilters() error {
+	for _, ewp := range query.EventsWithProperties {
+		err := ewp.TransformDateTypeFilters(query.GetTimeZone())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type QueryProperty struct {
 	// Entity: user or event.
 	Entity string `json:"en"`
@@ -268,6 +285,21 @@ type QueryProperty struct {
 	Operator  string `json:"op"`
 	Value     string `json:"va"`
 	LogicalOp string `json:"lop"`
+}
+
+func (qp *QueryProperty) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
+	if qp.Type == U.PropertyTypeDateTime && (qp.Operator == InLastStr || qp.Operator == NotInLastStr) {
+		dateTimeValue, err := DecodeDateTimePropertyValue(qp.Value)
+		if err != nil {
+			log.WithError(err).Error("Failed reading timestamp on user join query.")
+			return err
+		}
+		lastXthDay := U.GetDateBeforeXPeriod(dateTimeValue.Number, dateTimeValue.Granularity, timezoneString)
+		dateTimeValue.From = lastXthDay
+		transformedValue, _ := json.Marshal(dateTimeValue)
+		qp.Value = string(transformedValue)
+	}
+	return nil
 }
 
 type QueryGroupByProperty struct {
@@ -287,6 +319,16 @@ type QueryEventWithProperties struct {
 	Name       string          `json:"na"`
 	AliasName  string          `json:"an"`
 	Properties []QueryProperty `json:"pr"`
+}
+
+func (ewp *QueryEventWithProperties) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
+	for i, _ := range ewp.Properties {
+		err := ewp.Properties[i].TransformDateTypeFilters(timezoneString)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // QueryGroup - Group of query objects.
@@ -357,10 +399,22 @@ func (q *QueryGroup) GetQueryCacheExpiry() float64 {
 	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
 }
 
+func (q *QueryGroup) TransformDateTypeFilters() error {
+	for _, query := range q.Queries {
+		err := query.TransformDateTypeFilters()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type DateTimePropertyValue struct {
-	From           int64 `json:"fr"`
-	To             int64 `json:"to"`
-	OverridePeriod bool  `json:"ovp"`
+	From           int64  `json:"fr"`
+	To             int64  `json:"to"`
+	OverridePeriod bool   `json:"ovp"`
+	Number         int64  `json:"num"`
+	Granularity    string `json:"gran"`
 }
 
 func DecodeDateTimePropertyValue(dateTimeJson string) (*DateTimePropertyValue, error) {
