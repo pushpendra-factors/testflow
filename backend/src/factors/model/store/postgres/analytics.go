@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -112,14 +113,12 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 			if p.Value != model.PropertyValueNone {
 				var pStmnt string
 				if p.Type == U.PropertyTypeDateTime {
-					pStmnt = fmt.Sprintf("(%s->>?>=? AND %s->>?<=?)", propertyEntity, propertyEntity)
-
-					dateTimeValue, err := model.DecodeDateTimePropertyValue(p.Value)
+					var pParams []interface{}
+					pStmnt, pParams, err = GetDateFilter(p, propertyEntity, p.Property)
 					if err != nil {
-						log.WithError(err).Error("Failed reading timestamp on user join query.")
-						return "", nil, err
+						return pStmnt, pParams, err
 					}
-					rParams = append(rParams, p.Property, dateTimeValue.From, p.Property, dateTimeValue.To)
+					rParams = append(rParams, pParams...)
 				} else if p.Type == U.PropertyTypeNumerical {
 					// convert to float for numerical properties.
 					pStmnt = fmt.Sprintf("CASE WHEN json_typeof(%s::json->?) = 'number' THEN  (%s->>?)::float %s ? ELSE false END", propertyEntity, propertyEntity, propertyOp)
@@ -190,6 +189,33 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 	}
 
 	return rStmnt, rParams, nil
+}
+
+func GetDateFilter(qP model.QueryProperty, propertyEntity string, property string) (string, []interface{}, error) {
+	var stmt string
+	var resultParams []interface{}
+	dateTimeValue, err := model.DecodeDateTimePropertyValue(qP.Value)
+	if err != nil {
+		log.WithError(err).Error("Failed reading timestamp on user join query.")
+		return "", nil, err
+	}
+	if qP.Operator == model.BeforeStr {
+		stmt = fmt.Sprintf("(%s->>?<?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.To)
+	} else if qP.Operator == model.NotInLastStr {
+		stmt = fmt.Sprintf("(%s->>?<?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.From)
+	} else if qP.Operator == model.SinceStr || qP.Operator == model.InLastStr {
+		stmt = fmt.Sprintf("(%s->>?>=?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.From)
+	} else if qP.Operator == model.EqualsOpStr || qP.Operator == model.BetweenStr { // equals - Backward Compatible of Between
+		stmt = fmt.Sprintf("(%s->>? BETWEEN ? AND ?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.From, dateTimeValue.To)
+	} else if qP.Operator == model.NotInBetweenStr {
+		stmt = fmt.Sprintf("(%s->>? NOT BETWEEN ? AND ?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.From, dateTimeValue.To)
+	}
+	return stmt, resultParams, nil
 }
 
 // returns SQL query condition to address conditions only on events.properties
@@ -312,6 +338,15 @@ func isGroupByTypeWithBuckets(groupProps []model.QueryGroupByProperty) bool {
 				// Empty condition for backward compatibility as existing queries will not have GroupByType.
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func hasGroupByDateTypeProperties(groupProps []model.QueryGroupByProperty) bool {
+	for _, groupByProp := range groupProps {
+		if groupByProp.Type == U.PropertyTypeDateTime {
+			return true
 		}
 	}
 	return false
@@ -999,6 +1034,42 @@ func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query
 			}
 			sanitizedProperties[gbp.Property] = true
 		}
+	}
+}
+
+// Adds timezone offset to dateType row value for dateType row.
+func sanitizeDateTypeRows(result *model.QueryResult, query *model.Query) {
+	headerIndexMap := make(map[string][]int)
+	for index, header := range result.Headers {
+		// If same group by is added twice, it will appear twice in headers.
+		// Keep as a list to sanitize both indexes.
+		headerIndexMap[header] = append(headerIndexMap[header], index)
+	}
+
+	alreadySanitizedProperties := make(map[string]bool)
+	for _, gbp := range query.GroupByProperties {
+		if gbp.Type == U.PropertyTypeDateTime {
+			if _, sanitizedAlready := alreadySanitizedProperties[gbp.Property]; sanitizedAlready {
+				continue
+			}
+			indexesToSanitize := headerIndexMap[gbp.Property]
+			for _, indexToSanitize := range indexesToSanitize {
+				sanitizeDateTypeForSpecificIndex(query, result.Rows, indexToSanitize)
+			}
+			alreadySanitizedProperties[gbp.Property] = true
+		}
+	}
+}
+
+func sanitizeDateTypeForSpecificIndex(query *model.Query, rows [][]interface{}, indexToSanitize int) {
+
+	for index, row := range rows {
+		if (query.Class == model.QueryClassFunnel && index == 0) || row[indexToSanitize].(string) == "" {
+			// For funnel queries, first row is $no_group query. Skip sanitization.
+			continue
+		}
+		currentValueInTimeFormat, _ := time.Parse(U.DATETIME_FORMAT_DB, row[indexToSanitize].(string))
+		row[indexToSanitize] = U.GetTimestampAsStrWithTimezone(currentValueInTimeFormat, query.Timezone)
 	}
 }
 

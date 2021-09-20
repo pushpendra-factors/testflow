@@ -798,9 +798,8 @@ func TestDashboardUnitEventForTimeZone(t *testing.T) {
 				Name: "s0",
 			},
 		},
-		Class: model.QueryClassEvents,
-		Type:  model.QueryTypeEventsOccurrence,
-		//Type:            model.QueryTypeUniqueUsers,
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
 		EventsCondition: model.EventCondAllGivenEvent,
 	}
 
@@ -1224,6 +1223,102 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 				assert.True(t, result["cache"].(bool))
 			}
 		}
+	}
+}
+
+// Testing by taking lastMonth into consideration.
+// Cache for lastMonth should be filled with data And normal query without lastXDays should return some values. but with lastXDays, it should return 0.
+func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+	lastXDays := int64(5)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	event_timestamp := time.Now().AddDate(0, -1, 0).Unix()
+	timezoneString, _ := store.GetStore().GetTimezoneForProject(project.ID)
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d, "$timestamp":%d}}`, "s0", userID1, event_timestamp, "A", 1234, time.Now().Unix())
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d, "$timestamp":%d}}`, "s0", userID1, event_timestamp+10, "B", 4321, time.Now().Unix())
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	rName := U.RandomString(5)
+	dashboard, _ := store.GetStore().CreateDashboard(project.ID, agent.UUID,
+		&model.Dashboard{Name: rName, Type: model.DashboardTypeProjectVisible})
+
+	dateTimeValue := model.DateTimePropertyValue{
+		From:           0,
+		To:             0,
+		OverridePeriod: false,
+		Number:         lastXDays,
+		Granularity:    U.GranularityDays,
+	}
+	stringifiedDateTimeValue, _ := json.Marshal(dateTimeValue)
+	var query1 model.BaseQuery
+	query1 = &model.Query{
+		From:     1575138600,
+		To:       1575224999,
+		Timezone: string(timezoneString),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []model.QueryProperty{
+					model.QueryProperty{
+						Entity:    "event",
+						Type:      U.PropertyTypeDateTime,
+						Property:  "_$timestamp",
+						LogicalOp: "AND",
+						Operator:  model.InLastStr,
+						Value:     string(stringifiedDateTimeValue),
+					}},
+			},
+		},
+		Class:           model.QueryClassInsights,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	queryJson, _ := json.Marshal(query1)
+
+	dashboardUnit, _, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+		DashboardId:  dashboard.ID,
+		Title:        U.RandomString(5),
+		Query:        postgres.Jsonb{queryJson},
+		Presentation: model.PresentationCard,
+	}, model.DashboardUnitForNoQueryID)
+	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
+	dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
+	dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = query1.GetClass()
+	dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = query1
+
+	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1)
+	result := struct {
+		Cache  bool              `json:"cache"`
+		Result model.QueryResult `json:"result"`
+	}{}
+
+	for unitID, queryMap := range dashboardUnitQueriesMap {
+		queryClass := queryMap["class"].(string)
+		query := queryMap["query"].(model.BaseQuery)
+		from, to, _ := U.GetQueryRangePresetLastMonthIn(timezoneString)
+		query.SetQueryDateRange(from, to)
+		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, query, false, true)
+		assert.NotNil(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+		err = json.Unmarshal(w.Body.Bytes(), &result)
+		assert.Equal(t, true, result.Cache)
+		assert.Equal(t, result.Result.Rows[0][0], float64(2))
 	}
 }
 

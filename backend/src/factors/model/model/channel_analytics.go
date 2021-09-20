@@ -152,6 +152,10 @@ func (q *ChannelQueryUnit) GetQueryCacheExpiry() float64 {
 	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
 }
 
+func (q *ChannelQueryUnit) TransformDateTypeFilters() error {
+	return nil
+}
+
 // ChannelGroupQueryV1 - @TODO Kark v1
 type ChannelGroupQueryV1 struct {
 	Class   string           `json:"cl"`
@@ -219,6 +223,10 @@ func (q *ChannelGroupQueryV1) GetQueryCacheRedisKey(projectID uint64) (*cacheRed
 
 func (q *ChannelGroupQueryV1) GetQueryCacheExpiry() float64 {
 	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To, q.Queries[0].Timezone)
+}
+
+func (q *ChannelGroupQueryV1) TransformDateTypeFilters() error {
+	return nil
 }
 
 func (query *ChannelQueryV1) GetGroupByTimestamp() string {
