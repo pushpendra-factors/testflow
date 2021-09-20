@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"strconv"
-	"time"
-
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"strconv"
+	"time"
 
 	C "factors/config"
 	"factors/model/model"
@@ -298,9 +297,10 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 		}
 
 	}
-
+	UpdateCountCacheByDocumentType(projectId,&document.CreatedAt,"hubspot")
 	return http.StatusCreated
 }
+
 
 func getHubspotTypeAlias(t int) string {
 	for alias, typ := range model.HubspotDocumentTypeAlias {

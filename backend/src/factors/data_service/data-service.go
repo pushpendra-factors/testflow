@@ -39,6 +39,9 @@ func main() {
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
+	
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -77,13 +80,15 @@ func main() {
 			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
 			UseExactConnFromConfig: true,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		RedisHost:        *redisHost,
-		RedisPort:        *redisPort,
-		SentryDSN:        *sentryDSN,
+		PrimaryDatastore:    *primaryDatastore,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:           *sentryDSN,
 	}
 	C.InitConf(config)
-
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	err := C.InitDataService(config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize.")

@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -406,10 +405,9 @@ func (pg *Postgres) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int
 			"Failed to create an adwords doc.")
 		return http.StatusInternalServerError
 	}
-
+	UpdateCountCacheByDocumentType(adwordsDoc.ProjectID,&adwordsDoc.CreatedAt,"adwords")
 	return http.StatusCreated
 }
-
 // CreateMultipleAdwordsDocument ...
 func (pg *Postgres) CreateMultipleAdwordsDocument(adwordsDocuments []model.AdwordsDocument) int {
 	status := validateAdwordsDocuments(adwordsDocuments)
@@ -430,6 +428,7 @@ func (pg *Postgres) CreateMultipleAdwordsDocument(adwordsDocuments []model.Adwor
 		insertValuesStatement = append(insertValuesStatement, fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
 		insertValues = append(insertValues, adwordsDoc.ProjectID, adwordsDoc.CustomerAccountID,
 			adwordsDoc.Type, adwordsDoc.Timestamp, adwordsDoc.ID, adwordsDoc.CampaignID, adwordsDoc.AdGroupID, adwordsDoc.AdID, adwordsDoc.KeywordID, adwordsDoc.Value, adwordsDoc.CreatedAt, adwordsDoc.UpdatedAt)
+			UpdateCountCacheByDocumentType(adwordsDoc.ProjectID,&adwordsDoc.CreatedAt,"adwords")
 	}
 	insertStatement += joinWithComma(insertValuesStatement...)
 	rows, err := db.Raw(insertStatement, insertValues...).Rows()

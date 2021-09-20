@@ -3,6 +3,7 @@ package memsql
 import (
 	"encoding/json"
 	"errors"
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -10,8 +11,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	C "factors/config"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -251,7 +250,7 @@ func (store *MemSQL) CreateSalesforceDocument(projectID uint64, document *model.
 
 			return status
 		}
-
+		UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"salesforce")
 		return http.StatusCreated
 	}
 
@@ -263,7 +262,7 @@ func (store *MemSQL) CreateSalesforceDocument(projectID uint64, document *model.
 
 		return status
 	}
-
+	UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"salesforce")
 	return http.StatusCreated
 }
 
@@ -305,7 +304,6 @@ func (store *MemSQL) CreateSalesforceDocumentByAction(projectID uint64, document
 
 		return http.StatusInternalServerError
 	}
-
 	return http.StatusOK
 }
 
