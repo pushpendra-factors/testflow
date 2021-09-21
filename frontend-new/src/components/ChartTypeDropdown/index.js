@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Dropdown, Button, Menu } from 'antd';
-import { SVG } from '../factorsComponents';
+import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
 
 function ChartTypeDropdown({ menuItems, onClick, chartType }) {
@@ -33,17 +33,55 @@ function ChartTypeDropdown({ menuItems, onClick, chartType }) {
     </Menu>
   );
 
+  const menu1 = (
+    <div
+      className={`flex shadow-md rounded items-center flex-wrap justify-between bg-white p-4 text-center ${
+        styles.dropdownMenu
+      } ${menuItems.length < 3 ? styles.smallMenu : ''}`}
+    >
+      {menuItems.map((item) => {
+        return (
+          <div
+            className={`${
+              styles.item
+            } flex flex-col items-center justify-center p-2 cursor-pointer ${
+              chartType === item.key ? styles.selectedItem : ''
+            }`}
+            key={item.key}
+            onClick={onClick.bind(null, { key: item.key })}
+          >
+            <SVG
+              name={item.key}
+              size={25}
+              color={chartType === item.key ? '#5949BC' : '#3E516C'}
+            />
+            <Text extraClass={`mb-0 ${styles.chartName}`} type='title'>
+              {item.name}
+            </Text>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const activeItem = menuItems.find((item) => item.key === chartType);
+
   return (
-    <Dropdown overlay={menu}>
+    <Dropdown overlay={menu1}>
       <Button
         size={'large'}
         className={`ant-dropdown-link flex items-center ${styles.dropdownBtn}`}
       >
-        {chartType ? <SVG name={chartType} size={25} color='#0E2647' /> : null}
+        {chartType ? (
+          <>
+            <SVG name={chartType} size={25} color='#0E2647' />{' '}
+            {activeItem ? activeItem.name : ''}
+          </>
+        ) : null}
         <SVG name={'dropdown'} size={25} color='#3E516C' />
       </Button>
     </Dropdown>
   );
 }
 
-export default ChartTypeDropdown;
+export default memo(ChartTypeDropdown);

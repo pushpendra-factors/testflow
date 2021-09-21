@@ -217,20 +217,20 @@ export const getChartTypeMenuItems = (queryType, hasBreakdown) => {
     if (hasBreakdown) {
       menuItems = [
         {
-          key: CHART_TYPE_BARCHART,
-          name: 'Barchart',
+          key: 'barchart',
+          name: 'Bars',
         },
         {
           key: CHART_TYPE_LINECHART,
           name: 'Line Chart',
         },
         {
-          key: CHART_TYPE_STACKED_AREA,
-          name: 'Stacked Area Chart',
+          key: 'stackedareachart',
+          name: 'Stacked Area',
         },
         {
-          key: CHART_TYPE_STACKED_BAR,
-          name: 'Stacked Bar Chart',
+          key: 'stackedbarchart',
+          name: 'Stacked Column',
         },
       ];
     } else {

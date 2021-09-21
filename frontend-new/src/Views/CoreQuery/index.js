@@ -82,7 +82,6 @@ import {
   shouldDataFetch,
 } from '../../utils/dataFormatter';
 
-
 const { Panel } = Collapse;
 
 function CoreQuery({
@@ -184,7 +183,6 @@ function CoreQuery({
   }, [activeProject, getCampaignConfigData]);
 
   const updateResultState = useCallback((newState) => {
-    console.log(newState);
     setResultState(newState);
   }, []);
 
@@ -834,10 +832,11 @@ function CoreQuery({
 
   const checkIfnewComposer = () => {
     return (
-      queryType === QUERY_TYPE_FUNNEL
-      || queryType === QUERY_TYPE_EVENT ||
-      queryType === QUERY_TYPE_ATTRIBUTION)
-  }
+      queryType === QUERY_TYPE_FUNNEL ||
+      queryType === QUERY_TYPE_EVENT ||
+      queryType === QUERY_TYPE_ATTRIBUTION
+    );
+  };
 
   const renderQueryComposer = () => {
     if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
@@ -856,8 +855,7 @@ function CoreQuery({
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      return <AttrQueryComposer runAttributionQuery={runAttributionQuery}
-      />;
+      return <AttrQueryComposer runAttributionQuery={runAttributionQuery} />;
     }
 
     if (queryType === QUERY_TYPE_CAMPAIGN) {
@@ -869,42 +867,63 @@ function CoreQuery({
     }
   };
 
+  // const renderQueryHeader = () => {
+  //   if (true) return null;
 
-  const renderQueryHeader = () => {
-    if (true) return null;
-
-    let eventList = [];
-    if (requestQuery.cl === 'attribution') {
-      eventList = [requestQuery.query.ce];
-    } else {
-      eventList = isArray(requestQuery) ? requestQuery[0].ewp : requestQuery.ewp;
-    }
-    return (<div className={`${styles.query_header} flex flex-col fa-act-header`}>
-      <span className={`${styles.query_header__link}`}>{queryType} Analysis</span>
-      <div className={`${styles.query_header__content}`}>
-        {requestQuery && eventList?.map((ev, index) => {
-          return (
-            <>
-              <Text level={6} type={'title'} extraClass={'m-0'} weight={'bold'}>{ev?.na}</Text>
-              <span className={`${styles.query_header__content__trail}`}>...</span>
-            </>
-          )
-        })}
-
-      </div>
-    </div>)
-  }
+  //   let eventList = [];
+  //   if (requestQuery.cl === 'attribution') {
+  //     eventList = [requestQuery.query.ce];
+  //   } else {
+  //     eventList = isArray(requestQuery)
+  //       ? requestQuery[0].ewp
+  //       : requestQuery.ewp;
+  //   }
+  //   return (
+  //     <div className={`${styles.query_header} flex flex-col fa-act-header`}>
+  //       <span className={`${styles.query_header__link}`}>
+  //         {queryType} Analysis
+  //       </span>
+  //       <div className={`${styles.query_header__content}`}>
+  //         {requestQuery &&
+  //           eventList?.map((ev, index) => {
+  //             return (
+  //               <>
+  //                 <Text
+  //                   level={6}
+  //                   type={'title'}
+  //                   extraClass={'m-0'}
+  //                   weight={'bold'}
+  //                 >
+  //                   {ev?.na}
+  //                 </Text>
+  //                 <span className={`${styles.query_header__content__trail}`}>
+  //                   ...
+  //                 </span>
+  //               </>
+  //             );
+  //           })}
+  //       </div>
+  //     </div>
+  //   );
+  // };
 
   const renderQueryComposerNew = () => {
-    if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_ATTRIBUTION) {
+    if (
+      queryType === QUERY_TYPE_FUNNEL ||
+      queryType === QUERY_TYPE_EVENT ||
+      queryType === QUERY_TYPE_ATTRIBUTION
+    ) {
       return (
-        <div className={queryOpen ? `query_card_open-add` : `query_card_close`} onClick={() => !queryOpen && setQueryOpen(true)}>
+        <div
+          className={queryOpen ? `query_card_open-add` : `query_card_close`}
+          onClick={() => !queryOpen && setQueryOpen(true)}
+        >
           {renderQueryComposer()}
         </div>
-      )
+      );
 
       // return (
-      //   <Collapse activeKey={true? ["1"] : ["0"]} onChange={() => setQueryOpen(!queryOpen)} className={`fa-query-edit ${queryOpen? 'query-open': ''}`} expandIcon={() => 
+      //   <Collapse activeKey={true? ["1"] : ["0"]} onChange={() => setQueryOpen(!queryOpen)} className={`fa-query-edit ${queryOpen? 'query-open': ''}`} expandIcon={() =>
       //     <SVG  name={`sliders`} extraClass={`query_header_icon`}></SVG>}>
       //     <Panel id={true? 'query_header' : ''} header={renderQueryHeader()} key="1">
       //       <div>
@@ -915,21 +934,20 @@ function CoreQuery({
       // )
     }
     return null;
-  }
+  };
 
   const handleBreadCrumbClick = () => {
     setShowResult(false);
     setNavigatedFromDashboard(false);
     setQuerySaved(false);
     updateRequestQuery(null);
-    closeDrawer()
+    closeDrawer();
   };
 
   function changeTab(key) {
     // console.log('current tab is=-->>',key);
     setActiveTab(key);
   }
-
 
   const renderCreateQFlow = () => {
     return (
@@ -944,17 +962,19 @@ function CoreQuery({
         }}
       >
         <Modal
-          title={<AnalysisHeader
-            requestQuery={requestQuery}
-            onBreadCrumbClick={handleBreadCrumbClick}
-            queryType={queryType}
-            queryTitle={querySaved}
-            setQuerySaved={setQuerySaved}
-            breakdownType={breakdownType}
-            changeTab={changeTab}
-            activeTab={activeTab}
-            getCurrentSorter={() => { }}
-          />}
+          title={
+            <AnalysisHeader
+              requestQuery={requestQuery}
+              onBreadCrumbClick={handleBreadCrumbClick}
+              queryType={queryType}
+              queryTitle={querySaved}
+              setQuerySaved={setQuerySaved}
+              breakdownType={breakdownType}
+              changeTab={changeTab}
+              activeTab={activeTab}
+              getCurrentSorter={() => {}}
+            />
+          }
           visible={drawerVisible}
           footer={null}
           centered={false}
@@ -962,10 +982,7 @@ function CoreQuery({
           mask={false}
           closable={false}
           className={'fa-modal--full-width'}
-
         >
-
-
           <div className='mt-16 px-20'>
             <ErrorBoundary
               fallback={
@@ -979,29 +996,29 @@ function CoreQuery({
               }
               onError={FaErrorLog}
             >
-              {Number(activeTab) === 1 && (
-                <>
-                  {renderQueryComposerNew()}
-                </>
-              )}
+              {Number(activeTab) === 1 && <>{renderQueryComposerNew()}</>}
             </ErrorBoundary>
           </div>
         </Modal>
       </CoreQueryContext.Provider>
-
     );
-  }
+  };
 
   const composerFunctions = {
-    runQuery, queryChange, setExtraOptions,
-    runFunnelQuery, runAttributionQuery, activeKey,
-    queries, showResult
-  }
+    runQuery,
+    queryChange,
+    setExtraOptions,
+    runFunnelQuery,
+    runAttributionQuery,
+    activeKey,
+    queries,
+    showResult,
+  };
 
   const closeResultPage = (flag = false) => {
     setQuerySaved(false);
     setDrawerVisible(flag);
-  }
+  };
 
   return (
     <>
@@ -1017,41 +1034,44 @@ function CoreQuery({
         }
         onError={FaErrorLog}
       >
-        {<Drawer
-          title={title()}
-          placement='left'
-          closable={false}
-          visible={drawerVisible && !checkIfnewComposer()}
-          onClose={closeDrawer}
-          getContainer={false}
-          width={'650px'}
-          className={'fa-drawer'}
-        >
-          <ErrorBoundary
-            fallback={
-              <FaErrorComp subtitle={'Facing issues with Query Builder'} />
-            }
-            onError={FaErrorLog}
+        {
+          <Drawer
+            title={title()}
+            placement='left'
+            closable={false}
+            visible={drawerVisible && !checkIfnewComposer()}
+            onClose={closeDrawer}
+            getContainer={false}
+            width={'650px'}
+            className={'fa-drawer'}
           >
-            {renderQueryComposer()}
-          </ErrorBoundary>
-        </Drawer>}
+            <ErrorBoundary
+              fallback={
+                <FaErrorComp subtitle={'Facing issues with Query Builder'} />
+              }
+              onError={FaErrorLog}
+            >
+              {renderQueryComposer()}
+            </ErrorBoundary>
+          </Drawer>
+        }
 
-
-        {!showResult && drawerVisible && checkIfnewComposer() ? renderCreateQFlow() : !showResult && (
-          <CoreQueryHome
-            setQueryType={setQueryType}
-            setDrawerVisible={closeResultPage}
-            setQueries={setQueries}
-            setQueryOptions={setExtraOptions}
-            setRowClicked={setRowClicked}
-            location={location}
-            setActiveKey={setActiveKey}
-            setBreakdownType={setBreakdownType}
-            setNavigatedFromDashboard={setNavigatedFromDashboard}
-            updateSavedQuerySettings={updateSavedQuerySettings}
-          />
-        )}
+        {!showResult && drawerVisible && checkIfnewComposer()
+          ? renderCreateQFlow()
+          : !showResult && (
+              <CoreQueryHome
+                setQueryType={setQueryType}
+                setDrawerVisible={closeResultPage}
+                setQueries={setQueries}
+                setQueryOptions={setExtraOptions}
+                setRowClicked={setRowClicked}
+                location={location}
+                setActiveKey={setActiveKey}
+                setBreakdownType={setBreakdownType}
+                setNavigatedFromDashboard={setNavigatedFromDashboard}
+                updateSavedQuerySettings={updateSavedQuerySettings}
+              />
+            )}
 
         {showResult ? (
           <CoreQueryContext.Provider

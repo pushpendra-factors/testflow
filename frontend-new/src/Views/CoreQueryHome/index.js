@@ -146,7 +146,7 @@ function CoreQuery({
       events: 'events_cq',
       funnel: 'funnels_cq',
       channel_v1: 'campaigns_cq',
-      attribution: 'attributions_cq'
+      attribution: 'attributions_cq',
     };
     let svgName = '';
     Object.entries(queryTypeName).forEach(([k, v]) => {
@@ -229,23 +229,27 @@ function CoreQuery({
       // console.log('saved query unit id-->>', record);
       const insightsItem = metadata?.QueryWiseResult[record.key];
       if (insightsItem) {
-        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: { 
-          id: record?.key,
-          isDashboard: false,
-          ...insightsItem
-        } });
+        dispatch({
+          type: 'SET_ACTIVE_INSIGHT',
+          payload: {
+            id: record?.key,
+            isDashboard: false,
+            ...insightsItem,
+          },
+        });
       } else {
         dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
       }
       if (insightsItem?.Enabled) {
         if (!_.isEmpty(insightsItem?.InsightsRange)) {
-          let insightsLen =  Object.keys(insightsItem?.InsightsRange)?.length || 0; 
+          let insightsLen =
+            Object.keys(insightsItem?.InsightsRange)?.length || 0;
           fetchWeeklyIngishts(
             activeProject.id,
             record.key,
-            Object.keys(insightsItem.InsightsRange)[insightsLen-1],
+            Object.keys(insightsItem.InsightsRange)[insightsLen - 1],
             insightsItem.InsightsRange[
-              Object.keys(insightsItem.InsightsRange)[insightsLen-1]
+              Object.keys(insightsItem.InsightsRange)[insightsLen - 1]
             ][0],
             false
           ).catch((e) => {
@@ -574,7 +578,7 @@ function CoreQuery({
                 className='fa-table--basic'
                 columns={columns}
                 dataSource={data}
-                pagination={false}
+                pagination={process.env.NODE_ENV === 'development'}
                 rowClassName='cursor-pointer'
               />
             </Col>
