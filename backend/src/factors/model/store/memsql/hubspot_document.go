@@ -17,17 +17,6 @@ import (
 	U "factors/util"
 )
 
-func (store *MemSQL) satisfiesHubspotDocumentForeignConstraints(document model.HubspotDocument) int {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"document": document})
-
-	// TODO: Add for project_id, user_id.
-	_, errCode := store.GetProject(document.ProjectId)
-	if errCode != http.StatusFound {
-		return http.StatusBadRequest
-	}
-	return http.StatusOK
-}
-
 func (store *MemSQL) satisfiesHubspotDocumentUniquenessConstraints(document *model.HubspotDocument) int {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"document": document})
 
@@ -337,11 +326,6 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 		// i.e, deal will be synced after updating a created deal with a
 		// contact or a company.
 		document.Timestamp = updatedTimestamp
-	}
-
-	errCode = store.satisfiesHubspotDocumentForeignConstraints(*document)
-	if errCode != http.StatusOK {
-		return http.StatusInternalServerError
 	}
 
 	errCode = store.satisfiesHubspotDocumentUniquenessConstraints(document)
