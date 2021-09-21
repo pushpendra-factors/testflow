@@ -578,7 +578,7 @@ function CoreQuery({
                 className='fa-table--basic'
                 columns={columns}
                 dataSource={data}
-                pagination={process.env.NODE_ENV === 'development'}
+                pagination={true}
                 rowClassName='cursor-pointer'
               />
             </Col>
