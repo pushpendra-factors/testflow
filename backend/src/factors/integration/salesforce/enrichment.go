@@ -1078,15 +1078,15 @@ func ApplyOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackP
 
 	if &project.SalesforceTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.SalesforceTouchPoints) {
 
-		var salesforceTouchPoints model.SalesforceTouchPoints
-		err := U.DecodePostgresJsonbToStructType(&project.SalesforceTouchPoints, &salesforceTouchPoints)
+		var touchPointRules map[string][]model.SFTouchPointRule
+		err := U.DecodePostgresJsonbToStructType(&project.SalesforceTouchPoints, &touchPointRules)
 		if err != nil {
 			// logging and continuing.
 			logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to fetch offline touch point rules for salesforce document.")
 			return err
 		}
 
-		rules := salesforceTouchPoints.TouchPointRules["sf_touch_point_rules"]
+		rules := touchPointRules["sf_touch_point_rules"]
 
 		for _, rule := range rules {
 

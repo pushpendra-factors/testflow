@@ -39,6 +39,9 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 		idKey = "companyId"
 	case model.HubspotDocumentTypeContact:
 		idKey = "vid"
+		if document.Action == model.HubspotDocumentActionDeleted {
+			idKey = "id"
+		}
 	case model.HubspotDocumentTypeDeal:
 		idKey = "dealId"
 	case model.HubspotDocumentTypeFormSubmission:
@@ -246,11 +249,18 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 
 	var updatedDocument model.HubspotDocument // use for duplicating new document to updated document.
 	if isNew {
+		// Skip adding the record if deleted record is to added for
+		// non-existing document.
+		if document.Action == model.HubspotDocumentActionDeleted {
+			return http.StatusOK
+		}
 		updatedDocument = *document
 		document.Action = model.HubspotDocumentActionCreated // created
 		document.Timestamp = createdTimestamp
 	} else {
-		document.Action = model.HubspotDocumentActionUpdated // updated
+		if document.Action != model.HubspotDocumentActionDeleted {
+			document.Action = model.HubspotDocumentActionUpdated // updated
+		}
 		// Any update on the entity would create a new hubspot document.
 		// i.e, deal will be synced after updating a created deal with a
 		// contact or a company.

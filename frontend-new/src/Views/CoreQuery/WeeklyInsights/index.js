@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Tabs, Row, Col, Tooltip, Select, Button, Collapse, Tag, Spin } from 'antd'; 
+import { Tabs, Row, Col, Tooltip, Select, Button, Collapse, Tag, Spin, message } from 'antd'; 
 import { SVG, Text, Number } from 'factorsComponents';
 import { connect, useDispatch } from 'react-redux';
 import _ from 'lodash';
 import moment from 'moment';
-import { fetchWeeklyIngishts } from 'Reducers/insights';
+import { fetchWeeklyIngishts, updateInsightFeedback } from 'Reducers/insights';
 
 const { Option } = Select;
 
@@ -46,7 +46,7 @@ const NoData = ({data}) => {
     )
 }
 
-const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, userPropNames, fetchWeeklyIngishts }) => {    
+const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, userPropNames, fetchWeeklyIngishts, updateInsightFeedback }) => {    
 
     const [defaultActive, setDefaultActive] = useState(null);
     const [expandAll, setExpandAll] = useState(true);
@@ -80,6 +80,58 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
         }
     }
 
+    const UserRatingComp = ({item, index}) =>{
+
+        const [isUpvote, seIsUpvote] = useState(false);
+        const [isDownvote, seIsDownvote] = useState(false);
+
+        const userRating = (e, item, index, rating) =>{
+            e.stopPropagation();
+    
+            let data = {
+                "feature":"weekly_insights",
+                "property":{
+                   "key":item?.key,
+                   "date":"",
+                   "order":index,
+                   "value":item?.value,
+                   "entity":item?.entity,
+                   "query_id":activeInsight?.id,
+                   "is_increased":item?.actual_values?.isIncrease
+                },
+                "vote_type":0
+             }
+    
+            if(rating===1){
+                data.vote_type = 1;
+                seIsUpvote(true);
+                seIsDownvote(false);
+            }
+            else if(rating===2){
+                seIsUpvote(false);
+                seIsDownvote(true);
+                data.vote_type = 2
+            }  
+            updateInsightFeedback(activeProject?.id,data).then(()=>{
+                // message.success('Successfully maked your feedback!');
+            }).catch((err) => { 
+                message.error('feedback submission failed!');
+                console.log('feedback submission failed!',err);
+              });
+            // console.log('clicked rating',rating )
+        }
+
+        return(
+            <div className={'flex items-center mx-4 insights-rating--block'}>
+                <Text type={"title"} color={'grey'} level={8} extraClass={"m-0 mx-2"}>{`Was this useful?`}</Text>
+                <Button onClick={(e)=>userRating(e, item, index, 1)}  size={'small'} icon={<SVG name={isUpvote? 'ThumbsUp_S': 'ThumbsUp'} color={isUpvote? 'blue': 'grey'} size={12} />} className={'ml-1'} />
+                <Button onClick={(e)=>userRating(e, item, index, 2)} size={'small'} icon={<SVG name={isDownvote? 'ThumbsDown_S': 'ThumbsDown'} size={12} color={isDownvote? 'blue': 'ThumbsUp'} />} className={'ml-1'} /> 
+        </div>
+        )
+    }
+
+   
+
     const highlightCard = (data, title, margin = false, isPercent = false) => {
         return (<div className={`flex items-center mt-4 border--thin-2 py-4 px-8 border-radius--sm  w-full ${margin ? 'mx-4' : ''}`} style={{maxWidth: '400px'}}>
             <div className={'flex items-center'}>
@@ -94,10 +146,10 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
         </div>)
     }
 
-    const genHeader = (item) => { 
-        const data = item.actual_values; 
+    const genHeader = (item,index=0) => { 
+        const data = item.actual_values;  
         return (
-            <div className={'flex justify-between items-center py-2'}>
+            <div className={'flex justify-between items-center py-2 insights-rating--container'}>
                 <div className={'flex  items-center'}>
                     <Tag color={data.isIncrease ? 'green' : "red"} className={`${data.isIncrease ? 'fa-tag--green' : "fa-tag--red"}`}>
                         {data.isIncrease ? <SVG name={UpIcon} size={TagIconSize} color={'green'} /> : <SVG name={DownIcon} size={TagIconSize} color={'red'} />}
@@ -110,6 +162,10 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                     <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0"}>{`(`}<Number number={data?.w1}   /> {` -> `}<Number number={data?.w2}   />{`)`}</Text>
                 </div>
                 <div className={'flex  items-center'}>
+                 <UserRatingComp 
+                 item={item}
+                 index={index}
+                 />
                     <Tag className={'fa-tag--grey uppercase'}>{item.type}</Tag>
                 </div>
 
@@ -270,11 +326,11 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                             className={`fa-insights--panel`}
                             onChange={panelActive}
                         >
-                            {data?.actual_metrics && data?.actual_metrics?.map((item, index) => {
+                            {data?.actual_metrics && data?.actual_metrics?.map((item, index) => { 
                                 return (
                                     <Panel 
                                      className={'fa-insights--panel-item'}
-                                     header={genHeader(item)} key={index} 
+                                     header={genHeader(item,index)} key={index} 
                                      > 
                                         {genBody(item)}
                                     </Panel>
@@ -297,7 +353,8 @@ const WeeklyInishgts = ({
     fetchWeeklyIngishts,
     activeProject,
     eventPropNames,
-    userPropNames
+    userPropNames,
+    updateInsightFeedback
 }) => { 
     const [insightsData, setInsightsData] = useState(null); 
 
@@ -305,7 +362,7 @@ const WeeklyInishgts = ({
          if(insights){
             setInsightsData(insights)
         }  
-    }, [insights]);
+    }, [insights]); 
 
     const renderData = (insightsData) =>{
         if(!insightsData?.active_insight){
@@ -329,6 +386,7 @@ const WeeklyInishgts = ({
             activeProject={activeProject}
             eventPropNames={eventPropNames}
             userPropNames={userPropNames}
+            updateInsightFeedback={updateInsightFeedback}
              />
         }
 
@@ -350,4 +408,4 @@ const mapStateToProps = (state) => ({
 });
 
 
-export default connect(mapStateToProps, {fetchWeeklyIngishts})(WeeklyInishgts)
+export default connect(mapStateToProps, {fetchWeeklyIngishts, updateInsightFeedback})(WeeklyInishgts)

@@ -47,6 +47,7 @@ type HubspotSyncInfo struct {
 const (
 	HubspotDocumentActionCreated = 1
 	HubspotDocumentActionUpdated = 2
+	HubspotDocumentActionDeleted = 3
 )
 
 const (
@@ -83,10 +84,12 @@ var (
 
 // Hubspot errors
 var (
-	ErrorHubspotUsingFallbackKey                 = errors.New("using fallback key from document")
-	ErrorHubspotInvalidHubspotDocumentType       = errors.New("invalid document type")
-	errorFailedToGetCreatedAtFromHubspotDocument = errors.New("failed to get created_at from document")
-	errorFailedToGetUpdatedAtFromHubspotDocument = errors.New("failed to get updated_at from document")
+	ErrorHubspotUsingFallbackKey                        = errors.New("using fallback key from document")
+	ErrorHubspotInvalidHubspotDocumentType              = errors.New("invalid document type")
+	errorFailedToGetCreatedAtFromHubspotDocument        = errors.New("failed to get created_at from document")
+	errorFailedToGetUpdatedAtFromHubspotDocument        = errors.New("failed to get updated_at from document")
+	errorFailedToGetPropertiesFromHubspotDocument       = errors.New("failed to get properties from document")
+	errorFailedToGetLastModifiedDateFromHubspotDocument = errors.New("failed to get results from document")
 )
 
 // HubspotProperty only holds the value for hubspot document properties
@@ -253,6 +256,10 @@ func GetHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 		return 0, ErrorHubspotInvalidHubspotDocumentType
 	}
 
+	if document.Action == HubspotDocumentActionDeleted {
+		return GetHubspotDocumentLastModifiedDate(document)
+	}
+
 	value, err := U.DecodePostgresJsonb(document.Value)
 	if err != nil {
 		return 0, err
@@ -321,6 +328,10 @@ func GetHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error) {
 	if document.Type == 0 {
 		return 0, ErrorHubspotInvalidHubspotDocumentType
+	}
+
+	if document.Action == HubspotDocumentActionDeleted {
+		return time.Now().UnixNano() / int64(time.Millisecond), nil
 	}
 
 	value, err := U.DecodePostgresJsonb(document.Value)
@@ -524,4 +535,32 @@ func GetHubspotSyncUpdatedInfo(incomingSyncInfo, existingSyncInfo *map[string]in
 	}
 
 	return &mergedSyncInfo
+}
+
+func GetHubspotDocumentLastModifiedDate(document *HubspotDocument) (int64, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": document.ProjectId})
+	if document.Type == 0 {
+		return 0, ErrorHubspotInvalidHubspotDocumentType
+	}
+
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return 0, err
+	}
+
+	properties, exists := (*value)["properties"]
+	if !exists || properties == nil {
+		return 0, errorFailedToGetPropertiesFromHubspotDocument
+	}
+	propertiesMap := properties.(map[string]interface{})
+	lastmodifieddate, exists := (propertiesMap)["lastmodifieddate"]
+	if !exists || lastmodifieddate == nil {
+		return 0, errorFailedToGetLastModifiedDateFromHubspotDocument
+	}
+	tm, err := time.Parse(HubspotDateTimeLayout, U.GetPropertyValueAsString(lastmodifieddate))
+	if err != nil {
+		logCtx.WithField("action", document.Action).WithError(err).Error("Failed to convert timestamp inside GetHubspotDocumentLastModifiedDate")
+		return time.Now().UnixNano() / int64(time.Millisecond), nil
+	}
+	return tm.UnixNano() / int64(time.Millisecond), nil
 }

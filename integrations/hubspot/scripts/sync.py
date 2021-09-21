@@ -70,7 +70,7 @@ def record_metric(metric_type, metric_name, metric_value=0):
     if not response.ok:
         log.error("Failed to record metric %s. Error: %s", metric_name, response.text)
 
-def create_document(project_id, doc_type, doc):
+def create_document(project_id, doc_type, doc, fetch_deleted_contact=False):
     uri = "/data_service/hubspot/documents/add"
     url = options.data_service_host + uri
 
@@ -79,6 +79,15 @@ def create_document(project_id, doc_type, doc):
         "type_alias": doc_type,
         "value": doc,
     }
+
+    # Adding property value action=3 when fetching deleted contact record.
+    if fetch_deleted_contact:
+        payload = {
+            "project_id": project_id,
+            "type_alias": doc_type,
+            "value": doc,
+            "action": 3
+        }
 
     start_time = time.time()
     retries = 0
@@ -101,13 +110,13 @@ def create_document(project_id, doc_type, doc):
             end_time = time.time()
             log.warning("Create_document took %ds", end_time-start_time )
 
-def create_all_documents(project_id, doc_type, docs):
+def create_all_documents(project_id, doc_type, docs, fetch_deleted_contact=False):
     if options.dry == "True":
         log.warning("Dry run. Skipped document upsert.")
         return
 
     for doc in docs:
-        create_document(project_id, doc_type, doc)
+        create_document(project_id, doc_type, doc, fetch_deleted_contact)
 
 def build_properties_param_str(properties=[]):
     param_str = ''
@@ -348,6 +357,36 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
         count = count + len(docs)
         log.warning("Downloaded and created %d contacts. total %d.", len(docs), count)
     return contact_api_calls, max_timestamp
+
+def get_deleted_contacts(project_id, api_key):
+    url = "https://api.hubapi.com/crm/v3/objects/contacts/?"
+    parameter_dict = {'archived': "true", 'hapikey': api_key}
+    parameters = urllib.parse.urlencode(parameter_dict)
+    final_url = url + parameters    
+    has_more = True
+    count_api_calls = 0
+    while has_more:
+        log.warning("Downloading deleted contacts from url: %s", final_url)
+        res = get_with_fallback_retry(project_id, final_url)
+        if not res.ok:
+            raise Exception('Failed to get deleted contacts: ' + str(res.status_code))
+
+        response_dict = json.loads(res.text)
+        count_api_calls+=1
+        docs = response_dict.get('results')
+        if not docs:
+            raise Exception('Found empty response for deleted_contacts')
+        create_all_documents(project_id, 'contact', docs, True)
+        has_more = response_dict.get('paging')
+        if has_more:
+            next_property = has_more.get('next')
+            if not next_property:
+                continue
+            next_link = next_property.get('link')
+            if not next_link:
+                raise Exception('Found empty link value to fetch deleted contacts')
+            final_url = next_link + "&" + "hapikey=" + api_key
+    return count_api_calls
 
 ## https://community.hubspot.com/t5/APIs-Integrations/Deals-Endpoint-Returning-414/m-p/320468/highlight/true#M30810
 def get_deals_with_properties(project_id,get_url):
@@ -673,6 +712,7 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
             log.error("Last sync info missing for project %d", project_id)
             continue
 
+        sync_info["deleted_contacts"] = 0
         for doc_type in sync_info:
             next_sync = {}
             next_sync["project_id"] = int(project_id)
@@ -707,6 +747,8 @@ def sync(project_id, api_key, doc_type, sync_all, last_sync_timestamp):
             sync_forms(project_id, api_key)
         elif doc_type == "form_submission":
             sync_form_submissions(project_id, api_key)
+        elif doc_type == "deleted_contacts":
+            response["deleted_contacts_api_calls"] = get_deleted_contacts(project_id, api_key)
         else:
             raise Exception("invalid doc_type "+ doc_type)
 
