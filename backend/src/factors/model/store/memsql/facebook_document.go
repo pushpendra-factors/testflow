@@ -785,7 +785,7 @@ func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 		if filter.LogicalOp == "" {
 			filter.LogicalOp = "AND"
 		}
-		filterOperator := getOp(filter.Condition)
+		filterOperator := getOp(filter.Condition, "categorical")
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
 			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {
@@ -811,7 +811,7 @@ func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFi
 		if filter.LogicalOp == "" {
 			filter.LogicalOp = "AND"
 		}
-		filterOperator := getOp(filter.Condition)
+		filterOperator := getOp(filter.Condition, "categorical")
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
 			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {
