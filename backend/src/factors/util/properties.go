@@ -204,6 +204,8 @@ var UP_APP_VERSION string = "$app_version"
 var UP_APP_BUILD string = "$app_build"
 var UP_COUNTRY string = "$country"
 var UP_CITY string = "$city"
+var UP_CONTINENT string = "$continent"
+var UP_POSTAL_CODE string = "$postal_code"
 var UP_REGION string = "$region"
 var UP_TIMEZONE string = "$timezone"
 var UP_USER_ID string = "$user_id"
@@ -417,6 +419,8 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_APP_BUILD,
 	UP_COUNTRY,
 	UP_CITY,
+	UP_CONTINENT,
+	UP_POSTAL_CODE,
 	UP_REGION,
 	UP_TIMEZONE,
 	UP_USER_ID,
@@ -652,6 +656,8 @@ var USER_TO_SESSION_PROPERTIES = [...]string{
 	UP_OS_WITH_VERSION,
 	UP_COUNTRY,
 	UP_CITY,
+	UP_CONTINENT,
+	UP_POSTAL_CODE,
 	UP_REGION,
 	UP_TIMEZONE,
 	UP_TOTAL_COST,
