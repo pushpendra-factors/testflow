@@ -17,6 +17,8 @@ parser.add_option('--dry', dest='dry', help='', default='False')
 parser.add_option('--skip_today', dest='skip_today', help='', default='False') 
 parser.add_option('--project_id', dest='project_id', help='', default=None, type=int)
 parser.add_option('--project_ids', dest='project_ids', help='', default=None, type=str)
+parser.add_option('--client_id', dest='client_id', help='',default=None, type=str)
+parser.add_option('--client_secret', dest='client_secret', help='',default=None, type=str)
 parser.add_option('--start_timestamp', dest='start_timestamp', help='', default=None, type=int)
 parser.add_option('--end_timestamp', dest='end_timestamp', help='', default=None, type=int)
 parser.add_option('--insert_metadata', dest='insert_metadata', help='', default='True')
@@ -416,6 +418,13 @@ def get_collections(linkedin_int_setting, sync_info_with_type):
     response[API_REQUESTS] = requests_counter
     response['msg'] = skipMsgs
     return response
+def get_access_token_from_refresh_token(refresh_token):
+    url = 'https://www.linkedin.com/oauth/v2/accessToken?grant_type=refresh_token&refresh_token={}&client_id={}&client_secret={}'.format(refresh_token, options.client_id, options.client_secret)
+    response = requests.get(url)
+    response_json = response.json()
+    if response.ok:
+        return response_json['access_token'], ''
+    return '', 'Failed to generate access token from refresh token'
 
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
@@ -433,15 +442,20 @@ if __name__ == '__main__':
         successes = []
         for linkedin_int_setting in linkedin_int_settings:
             response = {}
-            if start_timestamp == None:
-                sync_info_with_type, err = get_last_sync_info(linkedin_int_setting)
-                if err != '':
-                    response['status'] = 'failed'
-                    response['msg'] = 'Failed to get last sync info'
+            linkedin_int_setting[ACCESS_TOKEN], err = get_access_token_from_refresh_token(linkedin_int_setting['int_linkedin_refresh_token'])
+            if err == '':
+                if start_timestamp == None:
+                    sync_info_with_type, err = get_last_sync_info(linkedin_int_setting)
+                    if err != '':
+                        response['status'] = 'failed'
+                        response['msg'] = 'Failed to get last sync info'
+                    else:
+                        response = get_collections(linkedin_int_setting, sync_info_with_type)
                 else:
-                    response = get_collections(linkedin_int_setting, sync_info_with_type)
+                    response = get_collections(linkedin_int_setting, {})
             else:
-                response = get_collections(linkedin_int_setting, {})
+                response['status'] = 'failed'
+                response['msg'] = err
             response[PROJECT_ID] = linkedin_int_setting[PROJECT_ID]
             response[AD_ACCOUNT] = linkedin_int_setting[LINKEDIN_AD_ACCOUNT]
             if(response['status']=='failed'):
