@@ -5,7 +5,6 @@ import {
 } from 'antd';
 import styles from './index.module.scss';
 import { SearchOutlined } from '@ant-design/icons';
-import { getQueryType } from '../../../utils/dataFormatter';
 
 function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
   const [searchVal, setSearchVal] = useState('');
@@ -42,7 +41,7 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
   return (
     <div className="widget-selection">
 
-      <div className={`${styles.searchBar} query-search`}>
+      <div className="query-search">
         <Input
           onChange={handleSearchChange}
           value={searchVal}
@@ -55,19 +54,11 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
 
       <div className="queries-list">
         {filteredQueries.map(q => {
-          const queryType = getQueryType(q.query);
-          const queryTypeName = {
-            events: 'events_cq',
-            funnel: 'funnels_cq',
-            channel_v1: 'campaigns_cq',
-            attribution: 'attributions_cq'
-          };
-          let svgName = '';
-          Object.entries(queryTypeName).forEach(([k, v]) => {
-            if (queryType === k) {
-              svgName = v;
-            }
-          });
+          let svgName = 'funnels_cq';
+          const requestQuery = q.query;
+          if (requestQuery.query_group) {
+            svgName = 'events_dashboard_cq';
+          }
 
           const isSelected = selectedQueries.findIndex(sq => sq.query_id === q.id) > -1;
 

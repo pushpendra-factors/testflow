@@ -21,37 +21,23 @@ function DashboardSubMenu({
 
   if (dashboard.type === 'pr') {
     btn = (
-      <Tooltip
-        overlayStyle={{ maxWidth: '160px' }}
-        placement='bottom'
-        title={'This dashboard is visible only to you.'}
-        mouseEnterDelay={0.2}
+      <Button
+        style={{ display: 'flex' }}
+        type={'text'}
+        className={'m-0 fa-button-ghost items-center p-0 py-2'}
       >
-        <Button
-          style={{ cursor: 'default' }}
-          type={'text'}
-          className={'m-0 fa-button-ghost items-center p-0 py-2'}
-        >
-          <LockOutlined /> Private.
-        </Button>
-      </Tooltip>
+        <LockOutlined /> Private.
+      </Button>
     );
   } else {
     btn = (
-      <Tooltip
-        overlayStyle={{ maxWidth: '160px' }}
-        placement='bottom'
-        title={'This dashboard is visible to everyone.'}
-        mouseEnterDelay={0.2}
+      <Button
+        style={{ display: 'flex' }}
+        type={'text'}
+        className={'m-0 fa-button-ghost items-center p-0 py-2'}
       >
-        <Button
-          style={{ cursor: 'default' }}
-          type={'text'}
-          className={'m-0 fa-button-ghost items-center p-0 py-2'}
-        >
-          <UnlockOutlined /> Public.
-        </Button>
-      </Tooltip>
+        <UnlockOutlined /> Public.
+      </Button>
     );
   }
   useEffect(() => {

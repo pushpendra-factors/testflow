@@ -35,7 +35,7 @@ function SearchBar({ setQueryToState }) {
         <Input
           ref={inputRef}
           size="large"
-          placeholder="Search Reports"
+          placeholder="Search Factors"
           prefix={(
             <SVG name={'search'} size={16} color={'grey'} />
           )}
