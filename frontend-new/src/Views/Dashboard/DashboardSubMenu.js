@@ -22,8 +22,9 @@ function DashboardSubMenu({
   if (dashboard.type === 'pr') {
     btn = (
       <Tooltip
+        overlayStyle={{ maxWidth: '160px' }}
         placement='bottom'
-        title={'This dashboard is only visible to you.'}
+        title={'This dashboard is visible only to you.'}
         mouseEnterDelay={0.2}
       >
         <Button
@@ -38,6 +39,7 @@ function DashboardSubMenu({
   } else {
     btn = (
       <Tooltip
+        overlayStyle={{ maxWidth: '160px' }}
         placement='bottom'
         title={'This dashboard is visible to everyone.'}
         mouseEnterDelay={0.2}

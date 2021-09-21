@@ -19,6 +19,7 @@ function InfoCard({
     <Popover
       content={popoverContent}
       overlayClassName={'fa-popupcard--wrapper--info'}
+      placement='bottomLeft'
     >
       {title}
     </Popover>

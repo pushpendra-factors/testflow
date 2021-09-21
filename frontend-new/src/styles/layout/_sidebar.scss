@@ -153,8 +153,7 @@
 }
 
 .fa-popupcard--wrapper--info {
-    @extend .fa-popupcard--wrapper;
-    border-radius: 20px;
+    width: 320px; 
 }
 
 .fa-tag--beta

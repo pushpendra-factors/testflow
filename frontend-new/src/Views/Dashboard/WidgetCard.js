@@ -362,11 +362,11 @@ function WidgetCard({
                       type={'title'}
                       level={6}
                       weight={'bold'}
-                      extraClass={`${styles.widgetCard_text} m-0 mr-1`}
+                      extraClass={`${styles.widgetCard_text} m-0 mr-1 flex`}
                     >
-                      {unit.title}
+                      {unit.title} 
+                      <SVG extraClass={`${styles.expand_icon} ml-1`} size={20} name="expand" />
                     </Text>
-                    <SVG size={16} name='expand' />
                   </div>
                   {/* <div className="description">
                   <Text
