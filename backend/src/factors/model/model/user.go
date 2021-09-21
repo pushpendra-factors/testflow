@@ -402,6 +402,17 @@ func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string)
 			(*properties)[util.UP_CITY] = cityName
 		}
 	}
+	if continentName, ok := city.Continent.Names["en"]; ok && continentName != "" {
+		if c, ok := (*properties)[util.UP_CONTINENT]; !ok || c == "" {
+			(*properties)[util.UP_CONTINENT] = continentName
+		}
+	}
+	postalCode := city.Postal.Code
+	if postalCode != "" {
+		if c, ok := (*properties)[util.UP_POSTAL_CODE]; !ok || c == "" {
+			(*properties)[util.UP_POSTAL_CODE] = postalCode
+		}
+	}
 
 	return nil
 }

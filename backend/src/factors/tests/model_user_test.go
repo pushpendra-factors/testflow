@@ -388,6 +388,10 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 	assert.NotNil(t, propertiesMap[U.UP_COUNTRY])
 	assert.Equal(t, "India", propertiesMap[U.UP_COUNTRY])
 	assert.Equal(t, "Bengaluru", propertiesMap[U.UP_CITY])
+	assert.NotNil(t, propertiesMap[U.UP_CONTINENT])
+	assert.Equal(t, "Asia", propertiesMap[U.UP_CONTINENT])
+	assert.NotNil(t, propertiesMap[U.UP_POSTAL_CODE])
+	assert.Equal(t, "560002", propertiesMap[U.UP_POSTAL_CODE])
 	assert.NotNil(t, propertiesMap["prop_1"]) // Should append to existing values.
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
