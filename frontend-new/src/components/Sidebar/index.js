@@ -111,7 +111,7 @@ function Sidebar(props) {
           <div className={'flex flex-col justify-start items-center w-full '}>
             <Row justify="center" align="middle" className=" w-full py-5 relative">
               <NavLink className="active fa-brand-logo" exact to="/"><SVG name={'brand'} size={40} color="white"/></NavLink>
-              <Tag color="gold" className={'fa-tag--beta'}>BETA</Tag>
+              {/* <Tag color="gold" className={'fa-tag--beta'}>BETA</Tag> */}
             </Row>
             <Row justify="center" align="middle" className=" w-full pb-2">
               <div className={'fa-aside--divider'} />

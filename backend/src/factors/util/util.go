@@ -48,6 +48,9 @@ const (
 	DateRangePresetYesterday    = "YESTERDAY"
 	DateRangePresetToday        = "TODAY"
 	DateRangePreset30Minutes    = "30MINS"
+	GranularityMonth            = "month"
+	GranularityWeek             = "week"
+	GranularityDays             = "days"
 )
 
 // General convention for date Functions - suffix Z if utc based, In if timezone is passed, no suffix if localTime.
@@ -378,7 +381,7 @@ func FloatRoundOffWithPrecision(value float64, precision int) (float64, error) {
 const (
 	DATETIME_FORMAT_YYYYMMDD_HYPHEN string = "2006-01-02"
 	DATETIME_FORMAT_YYYYMMDD        string = "20060102"
-	DATETIME_FORMAT_DB              string = "2006-01-02 00:00:00"
+	DATETIME_FORMAT_DB              string = "2006-01-02 15:04:05"
 )
 
 // Returns date in YYYYMMDD format
@@ -441,9 +444,13 @@ func GetBeginningOfDayTimestampZ(timestamp int64) int64 {
 
 // GetBeginningOfDayTimestamp Get's beginning of the day timestamp in given timezone.
 func GetBeginningOfDayTimestampIn(timestamp int64, timezoneString TimeZoneString) int64 {
+	return GetBeginningOfDayTimeZ(timestamp, timezoneString).Unix()
+}
+
+func GetBeginningOfDayTimeZ(timestamp int64, timezoneString TimeZoneString) time.Time {
 	location, _ := time.LoadLocation(string(timezoneString))
 	t := time.Unix(timestamp, 0).In(location)
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
 // GetDateAsStringIn gets date in given timezone. Taking
@@ -455,6 +462,19 @@ func GetDateAsStringIn(timestamp int64, timezoneString TimeZoneString) int64 {
 	t := time.Unix(timestamp, 0).In(location)
 	value, _ := strconv.ParseInt(t.Format(DATETIME_FORMAT_YYYYMMDD), 10, 64)
 	return value
+}
+
+// To populate error instead.
+func GetDateBeforeXPeriod(lastX int64, granularity string, timezoneString TimeZoneString) int64 {
+	if granularity == GranularityDays {
+		return getDateBeforeXDays(lastX, timezoneString)
+	}
+	return 0
+}
+
+func getDateBeforeXDays(numberOfDays int64, timezoneString TimeZoneString) int64 {
+	todayBeginningTimestamp := GetBeginningOfTodayTime(timezoneString)
+	return todayBeginningTimestamp.AddDate(0, 0, int(-1*numberOfDays)).Unix()
 }
 
 func DateAsFormattedInt(dateTime time.Time) uint64 {
@@ -623,6 +643,12 @@ func GetQueryRangePresetTodayIn(timezoneString TimeZoneString) (int64, int64, er
 	timeNow := time.Now().In(location)
 	rangeStartTime := GetBeginningOfDayTimestampIn(timeNow.Unix(), timezoneString)
 	return rangeStartTime, timeNow.Unix(), nil
+}
+
+func GetBeginningOfTodayTime(timezoneString TimeZoneString) time.Time {
+	location, _ := time.LoadLocation(string(timezoneString))
+	timeNow := time.Now().In(location)
+	return GetBeginningOfDayTimeZ(timeNow.Unix(), timezoneString)
 }
 
 // GetQueryRangePresetLast30MinutesIn Returns start and end unix timestamp for last 30mins range.

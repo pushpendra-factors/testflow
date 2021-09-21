@@ -7,15 +7,14 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/jinzhu/gorm"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -267,10 +266,9 @@ func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.Fa
 			"Failed to create an facebook doc. Continued inserting other docs.")
 		return http.StatusInternalServerError
 	}
-
+	UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"facebook")
 	return http.StatusCreated
 }
-
 func getFacebookHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (string, string, string, error) {
 	if docType > len(facebookDocumentTypeAlias) {
 		return "", "", "", errors.New("invalid document type")

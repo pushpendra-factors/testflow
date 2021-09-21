@@ -1,40 +1,33 @@
-$fontFamily: 'Work Sans',sans-serif;
-
 .dropdownBtn {
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    border-radius: 0;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .dropdownMenu {
-    padding-top: 0.75rem !important;
-    padding-bottom: 0.75rem !important;
-    border-radius: 12px;
+  width: 350px;
+  box-shadow: 0px 0px 20px 0px #00000033;
+
+  &.smallMenu {
     width: 250px;
+  }
+
+  .item {
+    width: 90px;
+  }
 }
 
-.dropdownMenuItem {
-    font-family: $fontFamily;
-    font-weight: normal;
-    font-size: 14px;
-    line-height: 20px;
-    letter-spacing: -0.01em;
-    color: #3e516c;
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
-
-    &:hover {
-        background-color: #fff !important;
-    }
+.selectedItem {
+  border-radius: 4px;
+  background-color: #eeedf8;
+  h1 {
+    color: #5949bc !important;
+  }
 }
 
-.dropdownMenuItem.active {
-    background-color: #F5F6F8;
-    color: #3E516C;
-
-    &:hover {
-        background-color: #F5F6F8 !important;
-        color: #3E516C;
-    }
+.chartName {
+  font-size: 12px;
+  line-height: 18px;
 }

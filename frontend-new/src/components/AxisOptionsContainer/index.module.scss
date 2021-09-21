@@ -1,0 +1,11 @@
+.axisOptionsContainer {
+  background-color: #fafafa;
+
+  :global(.first-col) {
+    border-right: 1px solid #e7e9ed;
+  }
+}
+
+.selectedItem {
+  color: #5949bc;
+}

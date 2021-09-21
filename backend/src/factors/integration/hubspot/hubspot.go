@@ -555,6 +555,10 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 	logCtx := log.WithField("project_id",
 		projectID).WithField("document_id", document.ID)
 
+	if document.Action == model.HubspotDocumentActionDeleted {
+		return http.StatusOK
+	}
+
 	enProperties, properties, err := getContactProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properites from hubspot contact.")

@@ -474,7 +474,7 @@ func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dash
 	}
 	return
 }
-func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string){
+func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string) {
 	var temp_query model.Query
 	var queryGroup model.QueryGroup
 	// try decoding for Query
@@ -492,6 +492,7 @@ func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, 
 	}
 	return
 }
+
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
@@ -530,6 +531,12 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitG
 		}
 		baseQuery.SetQueryDateRange(from, to)
 		baseQuery.SetTimeZone(timezoneString)
+		err = baseQuery.TransformDateTypeFilters()
+		if err != nil {
+			errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
 		cachePayload := model.DashboardUnitCachePayload{
 			DashboardUnit: dashboardUnit,
 			BaseQuery:     baseQuery,
@@ -669,6 +676,12 @@ func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectID
 				}
 				baseQuery.SetQueryDateRange(from, to)
 				baseQuery.SetTimeZone(timezoneString)
+				err = baseQuery.TransformDateTypeFilters()
+				if err != nil {
+					errMsg := fmt.Sprintf("Error decoding query Value, query_id %d", dashboardUnit.QueryId)
+					C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+					return
+				}
 				cachePayload := model.DashboardUnitCachePayload{
 					DashboardUnit: dashboardUnit,
 					BaseQuery:     baseQuery,

@@ -36,19 +36,19 @@ const IntegrationProviderData = [
     name: 'Hubspot',
     desc: 'Sync your Contact, Company and Deal objects with Factors on a daily basis',
     icon: 'Hubspot_ads',
-    kbLink:false,
+    kbLink:'https://help.factors.ai/en/articles/5099532-hubspot',
   },
   {
     name: 'Salesforce',
     desc: 'Sync your Leads, Contact, Account, Opportunity and Campaign objects with Factors on a daily basis',
     icon: 'Salesforce_ads',
-    kbLink:false,
+    kbLink:'https://help.factors.ai/en/articles/5099533-salesforce',
   },
   {
     name: 'Google Ads',
     desc: 'Integrate reporting from Google Search, Youtube and Display Network',
     icon: 'Google_ads',
-    kbLink:false,
+    kbLink:'https://help.factors.ai/en/articles/5099504-google-ads',
   },
   {
     name: 'Facebook',
@@ -60,7 +60,7 @@ const IntegrationProviderData = [
     name: 'LinkedIn',
     desc: 'Sync LinkedIn ads reports with Factors for performance reporting',
     icon: 'Linkedin_ads',
-    kbLink:false,
+    kbLink:'https://help.factors.ai/en/articles/5099508-linkedin',
   },
   {
     name: 'Drift',
@@ -72,7 +72,7 @@ const IntegrationProviderData = [
     name: 'Google Search Console',
     desc: 'Track organic search impressions, clicks and position from Google Search',
     icon: 'Google',
-    kbLink:false,
+    kbLink:'https://help.factors.ai/en/articles/5576963-google-search-console',
   },
   {
     name: 'Clearbit Reveal',

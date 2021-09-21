@@ -16,8 +16,7 @@ import { Text, Number as NumFormat } from '../factorsComponents';
 function GroupedBarChart({
   chartData,
   colors,
-  responseRows,
-  responseHeaders,
+  metricsData,
   method1,
   method2,
   height: widgetHeight,
@@ -43,11 +42,7 @@ function GroupedBarChart({
     const tooltip = d3.select(tooltipRef.current);
 
     const showTooltip = (data) => {
-      const impressionsIdx = responseHeaders.indexOf('Impressions');
-      const clicksIdx = responseHeaders.indexOf('Clicks');
-      const spendIdx = responseHeaders.indexOf('Spend');
-      const sessionsIdx = responseHeaders.indexOf('Sessions');
-      const row = responseRows.find((elem) => elem[0] === data.group);
+      const row = metricsData.find((elem) => elem.category === data.group);
       let padY = 300;
       let padX = 10;
 
@@ -127,7 +122,7 @@ function GroupedBarChart({
                     extraClass='mb-0 leading-4'
                     level={8}
                   >
-                    <NumFormat number={row[impressionsIdx]} />
+                    <NumFormat number={row['Impressions']} />
                   </Text>
                 </div>
                 <div className='flex justify-between mt-2'>
@@ -145,7 +140,7 @@ function GroupedBarChart({
                     extraClass='mb-0 leading-4'
                     level={8}
                   >
-                    <NumFormat number={row[clicksIdx]} />
+                    <NumFormat number={row['Clicks']} />
                   </Text>
                 </div>
                 <div className='flex justify-between mt-2'>
@@ -163,7 +158,7 @@ function GroupedBarChart({
                     extraClass='mb-0 leading-4'
                     level={8}
                   >
-                    <NumFormat number={row[spendIdx]} />
+                    <NumFormat number={row['Spend']} />
                   </Text>
                 </div>
                 <div className='flex justify-between mt-2'>
@@ -181,9 +176,7 @@ function GroupedBarChart({
                     extraClass='mb-0 leading-4'
                     level={8}
                   >
-                    <NumFormat
-                      number={row[sessionsIdx] ? row[sessionsIdx] : 0}
-                    />
+                    <NumFormat number={row['Sessions']} />
                   </Text>
                 </div>
               </div>
@@ -319,12 +312,11 @@ function GroupedBarChart({
     method1,
     method2,
     renderedData,
-    responseHeaders,
-    responseRows,
+    metricsData,
     section,
     title,
     widgetHeight,
-    attributionMethodsMapper
+    attributionMethodsMapper,
   ]);
 
   useEffect(() => {

@@ -23,7 +23,8 @@ class SVG extends React.Component {
       color === 'white' ? '#FFFFFF'
         : color === 'black' ? '#0E2647'
           : color === 'purple' ? '#1E89FF' //blue color now.
-            : color === 'green' ? '#5ACA89'
+            : color === 'blue' ? '#1E89FF'
+              : color === 'green' ? '#5ACA89'
                 : color === 'red' ? '#EA6262'
                   : color === 'grey' ? '#63686F' : color;
 

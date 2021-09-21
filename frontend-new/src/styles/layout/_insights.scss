@@ -239,3 +239,24 @@ padding: 0px !important;
     overflow-y: auto;
     overflow-x: hidden;
 }
+   
+
+.insights-rating--container
+{
+    transition: all 1s;
+    min-height: 45px; 
+    .insights-rating--block{
+        display: none;
+        transition: all 1s; 
+    }
+  
+
+    &:hover{
+        .insights-rating--block{
+            transition: all 1s;
+            display: inline-flex;
+            animation-name: fa-fadeInDown; 
+            animation-duration: 0.2s; 
+        }
+    }
+}

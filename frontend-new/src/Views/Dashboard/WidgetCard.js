@@ -280,10 +280,6 @@ function WidgetCard({
   );
 
   const handleEditQuery = useCallback(() => {
-    // console.log('dashboard unit id-->>', unit);
-    // console.log('metadata',metadata);
-    // console.log('metadata',metadata.DashboardUnitWiseResult[unit.id]);
-
     if (metadata?.DashboardUnitWiseResult) {
       const insightsItem = metadata?.DashboardUnitWiseResult[unit.id];
       if (insightsItem) {
@@ -337,7 +333,7 @@ function WidgetCard({
 
   return (
     <div
-      className={`${unit.title.split(' ').join('-')} ${
+      className={`${unit?.title?.split(' ').join('-')} ${
         unit.className
       } py-3 flex widget-card-top-div`}
     >

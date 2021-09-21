@@ -112,14 +112,12 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 			if p.Value != model.PropertyValueNone {
 				var pStmnt string
 				if p.Type == U.PropertyTypeDateTime {
-					pStmnt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?)>=? AND JSON_EXTRACT_STRING(%s, ?)<=?)", propertyEntity, propertyEntity)
-
-					dateTimeValue, err := model.DecodeDateTimePropertyValue(p.Value)
+					var pParams []interface{}
+					pStmnt, pParams, err = GetDateFilter(p, propertyEntity, p.Property)
 					if err != nil {
-						log.WithError(err).Error("Failed reading timestamp on user join query.")
-						return "", nil, err
+						return pStmnt, pParams, err
 					}
-					rParams = append(rParams, p.Property, dateTimeValue.From, p.Property, dateTimeValue.To)
+					rParams = append(rParams, pParams...)
 				} else if p.Type == U.PropertyTypeNumerical {
 					// convert to float for numerical properties.
 					pStmnt = fmt.Sprintf("CASE WHEN JSON_GET_TYPE(JSON_EXTRACT_JSON(%s, ?)) = 'double' THEN  JSON_EXTRACT_DOUBLE(%s, ?) %s ? ELSE false END", propertyEntity, propertyEntity, propertyOp)
@@ -190,6 +188,30 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 	}
 
 	return rStmnt, rParams, nil
+}
+
+func GetDateFilter(qP model.QueryProperty, propertyEntity string, property string) (string, []interface{}, error) {
+	var stmt string
+	var resultParams []interface{}
+	dateTimeValue, err := model.DecodeDateTimePropertyValue(qP.Value)
+	if err != nil {
+		log.WithError(err).Error("Failed reading timestamp on user join query.")
+		return "", nil, err
+	}
+	if qP.Operator == model.BeforeStr || qP.Operator == model.NotInLastStr {
+		stmt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) < ?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.To)
+	} else if qP.Operator == model.SinceStr || qP.Operator == model.InLastStr {
+		stmt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) >= ?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.From)
+	} else if qP.Operator == model.EqualsOpStr || qP.Operator == model.BetweenStr { // equals - Backward Compatible of Between
+		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) BETWEEN ? AND ?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.From, dateTimeValue.To)
+	} else if qP.Operator == model.NotInBetweenStr {
+		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) NOT BETWEEN ? AND ?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.From, dateTimeValue.To)
+	}
+	return stmt, resultParams, nil
 }
 
 // returns SQL query condition to address conditions only on events.properties

@@ -241,6 +241,10 @@ func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheExpiry() float64 {
 	return getQueryCacheResultExpiry(q.From, q.To, q.Timezone)
 }
 
+func (q *DashboardUnitsWebAnalyticsQuery) TransformDateTypeFilters() error {
+	return nil
+}
+
 func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64,
 	from, to int64, timezoneString U.TimeZoneString) (WebAnalyticsCacheResult, int) {
 

@@ -25,6 +25,7 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
+  CHART_TYPE_SCATTER_PLOT,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 
@@ -55,6 +56,12 @@ const operatorMap = {
   '<=': 'lesserThanOrEqual',
   '>': 'greaterThan',
   '>=': 'greaterThanOrEqual',
+  'between': 'between',
+  'not between': 'notInBetween',
+  'in the last': 'inLast',
+  'not in the last': 'notInLast',
+  'before': 'before',
+  'since': 'since'
 };
 
 const reverseOperatorMap = {
@@ -67,6 +74,17 @@ const reverseOperatorMap = {
   greaterThan: '>',
   greaterThanOrEqual: '>=',
 };
+
+const reverseDateOperatorMap = {
+  equals: '=',
+  notEqual: '!=',
+  between: 'between',
+  notInBetween: 'not between',
+  inLast: 'in the last',
+  notInLast: 'not in the last',
+  before: 'before',
+  since: 'since',
+}
 
 const getEventsWithProperties = (queries) => {
   const ewps = [];
@@ -501,7 +519,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
         filters.push({
-          operator: reverseOperatorMap[pr.op],
+          operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
           values: [pr.va],
         });
@@ -521,7 +539,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     requestQuery.gup.forEach((pr) => {
       if (pr.lop === 'AND') {
         globalFilters.push({
-          operator: reverseOperatorMap[pr.op],
+          operator: pr.ty === 'datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
           values: [pr.va],
         });
@@ -748,7 +766,7 @@ export const getAttributionStateFromRequestQuery = (
     if (pr.lop === 'AND') {
       let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
-        operator: reverseOperatorMap[pr.op],
+        operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
         values: val,
       });
@@ -763,7 +781,7 @@ export const getAttributionStateFromRequestQuery = (
       if (pr.lop === 'AND') {
         let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
         touchPointFilters.push({
-          operator: reverseOperatorMap[pr.op],
+          operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.attribution_key],
           values: val,
         });
@@ -815,7 +833,7 @@ export const getAttributionStateFromRequestQuery = (
         if (pr.lop === 'AND') {
           let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
           linkedFilters.push({
-            operator: reverseOperatorMap[pr.op],
+            operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
             props: [pr.pr, pr.ty, pr.en],
             values: val,
           });
@@ -914,22 +932,41 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
 
 export const getSaveChartOptions = (queryType, requestQuery) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
-    return (
-      <>
-        <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-          Display Funnel Chart
-        </Radio>
-        <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-          Display Table
-        </Radio>
-      </>
-    );
+    if (requestQuery.gbp.length) {
+      return (
+        <>
+          <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+            Display Funnel Chart
+          </Radio>
+          <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
+            Display Scatter Plot
+          </Radio>
+          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+            Display Table
+          </Radio>
+        </>
+      );
+    } else {
+      return (
+        <>
+          <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+            Display Funnel Chart
+          </Radio>
+          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+            Display Table
+          </Radio>
+        </>
+      );
+    }
   }
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
     return (
       <>
         <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
           Display Bar Chart
+        </Radio>
+        <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
+          Display Scatter Plot Chart
         </Radio>
         <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
           Display Table

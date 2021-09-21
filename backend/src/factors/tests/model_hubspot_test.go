@@ -13,8 +13,10 @@ import (
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"sort"
 	"testing"
 	"time"
@@ -696,6 +698,133 @@ func TestHubspotDocumentTimestamp(t *testing.T) {
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
+}
+
+func TestHubspotDocumentDelete(t *testing.T) {
+	// The test case first creates the document in the system, and then processes the delete contact
+	// operation for the same
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	documentID := 1
+	createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	cuid := U.RandomLowerAphaNumString(5)
+
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdDate, createdDate, createdDate, "lead", cuid, "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	createdDate = time.Now().AddDate(0, 0, -1).Unix() * 1000
+	lastmodifieddate := time.Now().Format(model.HubspotDateTimeLayout)
+
+	jsonContactModel = `{
+		"id": %d,
+		"properties": {
+			"createdate": "%d",
+			"email": "test453@test.com",
+			"firstname": "11",
+			"hs_object_id": "451",
+			"lastmodifieddate": "%s",
+			"lastname": "11"
+		},
+		"createdAt": "%s",
+		"updatedAt": "%s", 
+		"archived": true,
+		"archivedAt": "%s"
+	}`
+
+	jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdDate, lastmodifieddate, lastmodifieddate, lastmodifieddate, lastmodifieddate)
+	var myStoredVariable map[string]interface{}
+	json.Unmarshal([]byte(jsonContact), &myStoredVariable)
+	tempJson := myStoredVariable["properties"].((map[string]interface{}))
+	get_lastmodifieddate := tempJson["lastmodifieddate"].(string)
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionDeleted,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, model.HubspotDocumentActionDeleted, hubspotDocument.Action)
+	tm, err := time.Parse(model.HubspotDateTimeLayout, U.GetPropertyValueAsString(get_lastmodifieddate))
+	if err != nil {
+		log.WithError(err).Error("Error while parsing lastmodifieddate to HubspotDateTimeLayout.")
+	}
+	assert.Equal(t, tm.UnixNano()/int64(time.Millisecond), hubspotDocument.Timestamp)
+	var contact map[string]interface{}
+	err = json.Unmarshal(hubspotDocument.Value.RawMessage, &contact)
+	assert.Nil(t, err)
+	assert.Equal(t, true, reflect.DeepEqual(myStoredVariable, contact))
+
+	// A negative test case, where the document which not present in our system, should not be inserted.
+	jsonContactModel = `{
+		"id": %d,
+		"properties": {
+			"createdate": "%d",
+			"email": "test453@test.com",
+			"firstname": "11",
+			"hs_object_id": "451",
+			"lastmodifieddate": "%s",
+			"lastname": "11"
+		},
+		"createdAt": "%s",
+		"updatedAt": "%s", 
+		"archived": true,
+		"archivedAt": "%s"
+	}`
+
+	documentID = rand.Intn(100)
+	createdDate = time.Now().AddDate(0, 0, -1).Unix() * 1000
+	lastmodifieddate = time.Now().Format(model.HubspotDateTimeLayout)
+	jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdDate, lastmodifieddate, lastmodifieddate, lastmodifieddate, lastmodifieddate)
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionDeleted,
+		Value:     &contactPJson,
+	}
+
+	project.ID = uint64(rand.Intn(10000))
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusOK, status)
+	document, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", documentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionDeleted})
+	assert.NotEqual(t, http.StatusFound, status)
+	assert.Equal(t, 0, len(document))
 }
 
 func TestHubspotPropertyDetails(t *testing.T) {

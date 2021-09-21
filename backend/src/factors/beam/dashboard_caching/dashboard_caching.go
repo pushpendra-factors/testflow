@@ -195,7 +195,6 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 						log.Errorf("Failed to get proper project Timezone for %d", projectID)
 						continue
 					}
-					// kark
 					// Filtering queries on type and range for attribution query
 					shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t, f.JobProps.OnlyAttribution, f.JobProps.SkipAttribution)
 					if !shouldCache {
@@ -243,19 +242,25 @@ func (f *CacheDashboardUnitDoFn) ProcessElement(ctx context.Context,
 	}).Info("ProcessElement log cacheDashboardUnitDoFn")
 
 	baseQuery, err := model.DecodeQueryForClass(beamCachePayload.Query, beamCachePayload.QueryClass)
+	logCtx := FB.GetLogContext().WithFields(log.Fields{
+		"Project":     beamCachePayload.DashboardUnit.ProjectID,
+		"DashboardId": beamCachePayload.DashboardUnit.DashboardId,
+		"UnitId":      beamCachePayload.DashboardUnit.ID,
+		"Query":       beamCachePayload.Query,
+		"QueryClass":  beamCachePayload.QueryClass,
+	})
 	if err != nil {
-		FB.GetLogContext().WithFields(log.Fields{
-			"Project":     beamCachePayload.DashboardUnit.ProjectID,
-			"DashboardId": beamCachePayload.DashboardUnit.DashboardId,
-			"UnitId":      beamCachePayload.DashboardUnit.ID,
-			"Query":       beamCachePayload.Query,
-			"QueryClass":  beamCachePayload.QueryClass,
-		}).Info("dashboard caching - DecodeQueryForClass failed")
+		logCtx.Info("dashboard caching - DecodeQueryForClass failed")
 		return
 	}
 
 	baseQuery.SetQueryDateRange(beamCachePayload.From, beamCachePayload.To)
 	baseQuery.SetTimeZone(beamCachePayload.TimeZone)
+	err = baseQuery.TransformDateTypeFilters()
+	if err != nil {
+		logCtx.WithField("transformed BaseQuery", baseQuery).Info("Error during transformation of DateType filters")
+		return
+	}
 	cachePayload := model.DashboardUnitCachePayload{
 		DashboardUnit: beamCachePayload.DashboardUnit,
 		BaseQuery:     baseQuery,
@@ -264,15 +269,7 @@ func (f *CacheDashboardUnitDoFn) ProcessElement(ctx context.Context,
 	errCode, errMsg := store.GetStore().CacheDashboardUnitForDateRange(cachePayload)
 
 	if errCode != http.StatusOK {
-		FB.GetLogContext().WithFields(log.Fields{
-			"Project":     beamCachePayload.DashboardUnit.ProjectID,
-			"DashboardId": beamCachePayload.DashboardUnit.DashboardId,
-			"UnitId":      beamCachePayload.DashboardUnit.ID,
-			"Query":       beamCachePayload.Query,
-			"QueryClass":  beamCachePayload.QueryClass,
-			"errCode":     errCode,
-			"errMsg":      errMsg,
-		}).Info("dashboard caching - couldn't run the caching query")
+		logCtx.WithField("transformed  BaseQuery", baseQuery).Info("dashboard caching - couldn't run the caching query")
 		return
 	}
 

@@ -33,7 +33,7 @@ var host = getHostUrl();
         } 
         case 'FETCH_WEEKLY_INSIGHTS_METADATA_REJECTED': {
           return { ...state };
-        }  
+        }   
         
       }
       return state;
@@ -67,6 +67,20 @@ export function fetchWeeklyIngishtsMetaData(projectID) {
           resolve(response)
         }).catch((err)=>{        
           dispatch({type:"FETCH_WEEKLY_INSIGHTS_METADATA_REJECTED", payload: err});
+          reject(err);
+        });
+    });
+  }
+}
+export function updateInsightFeedback(projectID,data) {
+  return function(dispatch) {
+    return new Promise((resolve,reject) => { 
+      post(dispatch, host + "projects/"+projectID+`/feedback`, data)    
+        .then((response)=>{        
+          dispatch({type:"UPDATE_INSIGHT_FEEDBACK_FULLFILLED", payload: response.data});
+          resolve(response)
+        }).catch((err)=>{        
+          dispatch({type:"UPDATE_INSIGHT_FEEDBACK__REJECTED", payload: err});
           reject(err);
         });
     });

@@ -9,6 +9,10 @@ import {
   CHART_TYPE_SPARKLINES,
   PREDEFINED_DATES,
   DATE_FORMATS,
+  QUERY_TYPE_ATTRIBUTION,
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_SCATTER_PLOT,
+  QUERY_TYPE_FUNNEL,
 } from './constants';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
 
@@ -44,15 +48,15 @@ export const getDurationInSeconds = (duration) => {
     if (duration.indexOf('d') > -1) {
       const dayStr = duration.split(' ')[0];
       const hourStr = duration.split(' ')[1];
-      const days = Number(dayStr.split('m')[0]);
-      const hours = Number(hourStr.split('s')[0]);
+      const days = Number(dayStr.split('d')[0]);
+      const hours = Number(hourStr.split('h')[0]);
       return days * 86400 + hours * 3600;
     }
     if (duration.indexOf('h') > -1) {
       const hourStr = duration.split(' ')[0];
       const minsStr = duration.split(' ')[1];
-      const hours = Number(hourStr.split('m')[0]);
-      const minutes = Number(minsStr.split('s')[0]);
+      const hours = Number(hourStr.split('h')[0]);
+      const minutes = Number(minsStr.split('m')[0]);
       return hours * 3600 + minutes * 60;
     }
     if (duration.indexOf('m') > -1) {
@@ -169,12 +173,13 @@ export const getClickableTitleSorter = (
   title,
   sorterProp,
   currentSorter,
-  handleSorting
+  handleSorting,
+  alignmentClass = 'items-center'
 ) => {
   return (
     <div
       onClick={() => handleSorting(sorterProp)}
-      className='flex items-end justify-between cursor-pointer h-full'
+      className={`flex ${alignmentClass} justify-between cursor-pointer h-full`}
     >
       <div className='mr-2 break-all'>{title}</div>
       {currentSorter.key === sorterProp.key &&
@@ -213,33 +218,57 @@ export const getChartTypeMenuItems = (queryType, hasBreakdown) => {
       menuItems = [
         {
           key: 'barchart',
-          name: 'Barchart',
+          name: 'Bars',
         },
         {
-          key: 'linechart',
+          key: CHART_TYPE_LINECHART,
           name: 'Line Chart',
         },
         {
           key: 'stackedareachart',
-          name: 'Stacked Area Chart',
+          name: 'Stacked Area',
         },
         {
           key: 'stackedbarchart',
-          name: 'Stacked Bar Chart',
+          name: 'Stacked Column',
         },
       ];
     } else {
       menuItems = [
         {
-          key: 'sparklines',
+          key: CHART_TYPE_SPARKLINES,
           name: 'Sparkline',
         },
         {
-          key: 'linechart',
+          key: CHART_TYPE_LINECHART,
           name: 'Line Chart',
         },
       ];
     }
+  }
+  if (queryType === QUERY_TYPE_ATTRIBUTION) {
+    menuItems = [
+      {
+        key: CHART_TYPE_BARCHART,
+        name: 'Barchart',
+      },
+      {
+        key: CHART_TYPE_SCATTER_PLOT,
+        name: 'Scatter Plot',
+      },
+    ];
+  }
+  if (queryType === QUERY_TYPE_FUNNEL && hasBreakdown) {
+    menuItems = [
+      {
+        key: CHART_TYPE_BARCHART,
+        name: 'Barchart',
+      },
+      {
+        key: CHART_TYPE_SCATTER_PLOT,
+        name: 'Scatter Plot',
+      },
+    ];
   }
   return menuItems;
 };

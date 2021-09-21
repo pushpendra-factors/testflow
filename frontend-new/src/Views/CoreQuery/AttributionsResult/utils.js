@@ -10,6 +10,7 @@ import {
   ATTRIBUTION_METHODOLOGY,
   FIRST_METRIC_IN_ATTR_RESPOSE,
   ARR_JOINER,
+  ATTRIBUTION_METRICS,
 } from '../../../utils/constants';
 import styles from './index.module.scss';
 
@@ -142,7 +143,7 @@ export const getDualTouchPointChartData = (
         })
       : [d[touchpoint]];
     return {
-      name: name.join(', '),
+      name: name.join(','),
       [attribution_method]: !currMetricsValue
         ? d['Conversion']
         : d['Cost per Conversion'],
@@ -405,7 +406,8 @@ export const getTableColumns = (
             d.title,
             { key: d.title, type: 'categorical', subtype: null },
             currentSorter,
-            handleSorting
+            handleSorting,
+            'items-end'
           ),
           dataIndex: d.title,
           fixed: 'left',
@@ -422,7 +424,8 @@ export const getTableColumns = (
             d.title,
             { key: d.title, type: 'categorical', subtype: null },
             currentSorter,
-            handleSorting
+            handleSorting,
+            'items-end'
           ),
           dataIndex: d.title,
           width: 200,
@@ -437,12 +440,15 @@ export const getTableColumns = (
           touchpoint === 'ChannelGroup' ? 'Channel' : touchpoint,
           { key: touchpoint, type: 'categorical', subtype: null },
           currentSorter,
-          handleSorting
+          handleSorting,
+          'items-end'
         ),
         dataIndex: touchpoint,
         fixed: 'left',
         width: 200,
         className: styles.headerAlignBottom,
+        render: (d) =>
+          firstColumn(d, durationObj, comparison_data ? cmprDuration : null),
       },
     ];
   }
@@ -456,7 +462,8 @@ export const getTableColumns = (
               metric.title,
               { key: metric.title, type: 'numerical', subtype: null },
               currentSorter,
-              handleSorting
+              handleSorting,
+              'items-end'
             )
           ) : (
             <div className='flex flex-col'>
@@ -805,9 +812,7 @@ export const getTableData = (
   const result = data.rows
     .map((row, index) => {
       const metricsData = {};
-      const enabledMetrics = metrics.filter(
-        (metric) => metric.enabled && !metric.isEventMetric
-      );
+      const enabledMetrics = metrics.filter((metric) => !metric.isEventMetric);
       const equivalent_compare_row =
         comparison_data && equivalentIndicesMapper[index] > -1
           ? comparison_data.rows[equivalentIndicesMapper[index]]
@@ -839,6 +844,7 @@ export const getTableData = (
 
       let resultantRow = {
         index,
+        category: Object.values(dimensionsData).join(','),
         ...dimensionsData,
         ...metricsData,
         Conversion: !comparison_data
@@ -923,4 +929,157 @@ export const getTableData = (
     });
 
   return SortResults(result, currentSorter);
+};
+
+export const getScatterPlotChartData = (
+  selectedTouchPoint,
+  attr_dimensions,
+  data,
+  visibleIndices,
+  xAxisMetric,
+  yAxisMetric,
+  isComparisonApplied
+) => {
+  console.log('attributions getScatterPlotChartData');
+  const enabledDimensions = attr_dimensions.filter(
+    (d) => d.touchPoint === selectedTouchPoint && d.enabled
+  );
+  const visibleData = data.filter((d) => visibleIndices.indexOf(d.index) > -1);
+  const categories = [];
+  const comparisonPlotData = [];
+  const plotData = visibleData.map((d) => {
+    const category = [];
+    if (enabledDimensions.length) {
+      for (let dimension of enabledDimensions) {
+        category.push(d[dimension.title]);
+      }
+    } else {
+      category.push(d[selectedTouchPoint]);
+    }
+
+    categories.push(category.join(','));
+    if (isComparisonApplied) {
+      comparisonPlotData.push([
+        Number(d[xAxisMetric].compare_value),
+        Number(d[yAxisMetric].compare_value),
+      ]);
+      return [Number(d[xAxisMetric].value), Number(d[yAxisMetric].value)];
+    }
+    return [Number(d[xAxisMetric]), Number(d[yAxisMetric])];
+  });
+
+  const finalResult = {
+    series: [
+      {
+        color: '#4D7DB4',
+        data: plotData,
+      },
+    ],
+    categories,
+  };
+
+  if (isComparisonApplied) {
+    finalResult.series.push({
+      color: '#d4787d',
+      data: comparisonPlotData,
+    });
+  }
+
+  return finalResult;
+};
+
+export const getAxisMetricOptions = (
+  linkedEvents,
+  attribution_method,
+  attribution_method_compare,
+  eventNames
+) => {
+  console.log('eventNames', eventNames);
+  console.log('attributions getAxisMetricOptions');
+  const result = ATTRIBUTION_METRICS.filter(
+    (metric) => !metric.isEventMetric
+  ).map((metric) => {
+    return {
+      title: metric.title,
+      value: metric.title,
+    };
+  });
+
+  result.push({
+    title: attribution_method_compare
+      ? `Conversion - ${
+          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+            .text
+        }`
+      : 'Conversion',
+    value: 'Conversion',
+  });
+
+  result.push({
+    title: attribution_method_compare
+      ? `Cost per Conversion - ${
+          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+            .text
+        }`
+      : 'Cost per Conversion',
+    value: 'Cost per Conversion',
+  });
+
+  result.push({
+    title: attribution_method_compare
+      ? `Conversion Rate - ${
+          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+            .text
+        }`
+      : 'Conversion Rate',
+    value: 'Conversion Rate',
+  });
+
+  if (attribution_method_compare) {
+    result.push({
+      title: `Conversion - ${
+        ATTRIBUTION_METHODOLOGY.find(
+          (m) => m.value === attribution_method_compare
+        ).text
+      }`,
+      value: 'conversion_compare',
+    });
+
+    result.push({
+      title: `Cost per Conversion - ${
+        ATTRIBUTION_METHODOLOGY.find(
+          (m) => m.value === attribution_method_compare
+        ).text
+      }`,
+      value: 'cost_compare',
+    });
+
+    result.push({
+      title: `Conversion Rate - ${
+        ATTRIBUTION_METHODOLOGY.find(
+          (m) => m.value === attribution_method_compare
+        ).text
+      }`,
+      value: 'conversion_rate_compare',
+    });
+  }
+
+  linkedEvents.map((le) => {
+    result.push({
+      title: `Conversion - ${eventNames[le.label] || le.label}`,
+      value: `Linked Event - ${le.label} - Users`,
+    });
+
+    result.push({
+      title: `Cost per Conversion - ${eventNames[le.label] || le.label}`,
+      value: `Linked Event - ${le.label} - CPC`,
+    });
+
+    result.push({
+      title: `Conversion Rate - ${eventNames[le.label] || le.label}`,
+      value: `Linked Event - ${le.label} - Conversion Rate`,
+    });
+  });
+
+  return result;
 };

@@ -134,6 +134,10 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 	}
 
+	err = requestPayload.TransformDateTypeFilters()
+	if err != nil {
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
+	}
 	var cacheResult model.ResultGroup
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest, reqId)
 	if shouldReturn {
@@ -294,6 +298,11 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 				return resMsg, resCode, "", "", false
 			}
 		}
+	}
+
+	err = requestPayload.Query.TransformDateTypeFilters()
+	if err != nil {
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
 	}
 
 	var cacheResult model.QueryResult

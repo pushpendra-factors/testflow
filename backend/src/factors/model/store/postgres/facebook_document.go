@@ -7,14 +7,13 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -210,7 +209,7 @@ func (pg *Postgres) CreateFacebookDocument(projectID uint64, document *model.Fac
 			"Failed to create an facebook doc. Continued inserting other docs.")
 		return http.StatusInternalServerError
 	}
-
+	UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"facebook")
 	return http.StatusCreated
 }
 
