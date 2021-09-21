@@ -2775,3 +2775,45 @@ func TestSalesforceOfflineTouchPoint(t *testing.T) {
 	_ = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 	assert.Equal(t, eventPropertiesMap["$campaign"], campaign1Name)
 }
+
+func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	filter1 := model.SFTouchPointFilter{
+		Property:  "$salesforce_campaign_name",
+		Operator:  "contains",
+		Value:     "Webinar",
+		LogicalOp: "AND",
+	}
+
+	rule := model.SFTouchPointRule{
+		Filters:           []model.SFTouchPointFilter{filter1},
+		TouchPointTimeRef: model.SFCampaignMemberCreated, // SFCampaignMemberResponded
+		PropertiesMap:     map[string]string{"$campaign": "$salesforce_campaignmember_campaignname"},
+	}
+
+	// creating manual rule
+	touchPointRules := make(map[string][]model.SFTouchPointRule)
+	touchPointRules["sf_touch_point_rules"] = []model.SFTouchPointRule{rule}
+
+	// adding json rule
+	project.SalesforceTouchPoints = postgres.Jsonb{RawMessage: json.RawMessage(`{"sf_touch_point_rules":[{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Field Events","lop":"AND"},{"pr":"$salesforce_campaign_name","op":"contains","va":"Sendoso","lop":"AND"}],"touch_point_time_ref":"campaign_member_created_date","properties_map":{"campaign_name":"$salesforce_campaign_name","campaign_id":"$salesforce_campaign_id","source":"$salesforce_campaign_type"}},{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Others","lop":"AND"}],"touch_point_time_ref":"campaign_member_created_date","properties_map":{"campaign_name":"$salesforce_campaign_name","campaign_id":"$salesforce_campaign_id","source":"$salesforce_campaign_type"}},{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Nurture","lop":"AND"}],"touch_point_time_ref":"campaign_member_first_responded_date","properties_map":{"campaign_name":"$salesforce_campaign_name","campaign_id":"$salesforce_campaign_id","source":"$salesforce_campaign_type"}}]}`)}
+	store.GetStore().UpdateProject(project.ID, project)
+
+	project, errCode := store.GetStore().GetProject(project.ID)
+	if errCode != http.StatusFound {
+		return
+	}
+	if &project.SalesforceTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.SalesforceTouchPoints) {
+
+		var touchPointRules map[string][]model.SFTouchPointRule
+		err := U.DecodePostgresJsonbToStructType(&project.SalesforceTouchPoints, &touchPointRules)
+		assert.Nil(t, err)
+
+		rules := touchPointRules["sf_touch_point_rules"]
+
+		assert.Equal(t, len(rules), 3)
+	}
+}
