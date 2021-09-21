@@ -91,6 +91,7 @@ const columns = [
   {
     title: 'Title of the Report',
     dataIndex: 'title',
+    width: 720,
     key: 'title',
     render: (text) => (
       <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
@@ -101,6 +102,7 @@ const columns = [
   {
     title: 'Created By',
     dataIndex: 'author',
+    width: 240,
     key: 'author',
     render: (text) => (
       <div className='flex items-center'>
