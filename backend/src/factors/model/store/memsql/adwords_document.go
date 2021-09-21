@@ -1549,7 +1549,7 @@ func getFilterPropertiesForAdwordsReports(filters []model.ChannelFilterV1) (stri
 		if filter.LogicalOp == "" {
 			filter.LogicalOp = "AND"
 		}
-		filterOperator := getOp(filter.Condition)
+		filterOperator := getOp(filter.Condition, "categorical")
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
 			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {
@@ -1586,7 +1586,7 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperty(filters []model.Channe
 		if filter.LogicalOp == "" {
 			filter.LogicalOp = "AND"
 		}
-		filterOperator := getOp(filter.Condition)
+		filterOperator := getOp(filter.Condition, "categorical")
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
 			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {

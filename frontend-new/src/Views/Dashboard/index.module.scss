@@ -54,3 +54,28 @@
     }
   }
 }
+
+.expand_icon {
+  visibility: hidden;
+}
+
+.widgetCard {
+  border-bottom: 2px solid rgb(231,233,237);
+  &_text:hover {
+    text-decoration: underline;
+    .expand_icon {
+      visibility: visible;
+    }
+  }
+}
+
+.infoCard {
+  border-radius: 10px;
+
+  &_footer {
+    padding: 8px 8px 0px;
+    font-weight: 900;
+    color: #808080;
+
+  }
+}

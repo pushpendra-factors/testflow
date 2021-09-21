@@ -37,7 +37,10 @@ func with(stmnt string) string {
 	return fmt.Sprintf("WITH %s", stmnt)
 }
 
-func getOp(OpStr string) string {
+func getOp(OpStr string, typeStr string) string {
+	if typeStr == U.PropertyTypeDateTime {
+		return queryOps[model.EqualsOpStr]
+	}
 	v, ok := queryOps[OpStr]
 	if !ok {
 		log.Errorf("invalid query operator %s, using default", OpStr)
@@ -108,7 +111,7 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 			}
 
 			propertyEntity := model.GetPropertyEntityFieldForFilter(p.Entity)
-			propertyOp := getOp(p.Operator)
+			propertyOp := getOp(p.Operator, p.Type)
 
 			if p.Value != model.PropertyValueNone {
 				var pStmnt string

@@ -36,7 +36,10 @@ func with(stmnt string) string {
 	return fmt.Sprintf("WITH %s", stmnt)
 }
 
-func getOp(OpStr string) string {
+func getOp(OpStr string, typeStr string) string {
+	if typeStr == U.PropertyTypeDateTime {
+		return queryOps[model.EqualsOpStr]
+	}
 	v, ok := queryOps[OpStr]
 	if !ok {
 		log.Errorf("invalid query operator %s, using default", OpStr)
@@ -107,7 +110,7 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 			}
 
 			propertyEntity := model.GetPropertyEntityFieldForFilter(p.Entity)
-			propertyOp := getOp(p.Operator)
+			propertyOp := getOp(p.Operator, p.Type)
 
 			if p.Value != model.PropertyValueNone {
 				var pStmnt string
@@ -199,10 +202,10 @@ func GetDateFilter(qP model.QueryProperty, propertyEntity string, property strin
 		return "", nil, err
 	}
 	if qP.Operator == model.BeforeStr || qP.Operator == model.NotInLastStr {
-		stmt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) < ?)", propertyEntity)
+		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) < ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.To)
 	} else if qP.Operator == model.SinceStr || qP.Operator == model.InLastStr {
-		stmt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) >= ?)", propertyEntity)
+		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) >= ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From)
 	} else if qP.Operator == model.EqualsOpStr || qP.Operator == model.BetweenStr { // equals - Backward Compatible of Between
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) BETWEEN ? AND ?)", propertyEntity)
