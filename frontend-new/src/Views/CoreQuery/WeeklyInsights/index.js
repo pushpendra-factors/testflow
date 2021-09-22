@@ -80,14 +80,13 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
         }
     }
 
-    const UserRatingComp = ({item, index}) =>{
+    const UserRatingComp = ({item, index, actualData}) =>{
 
         const [isUpvote, seIsUpvote] = useState(false);
         const [isDownvote, seIsDownvote] = useState(false);
 
         const userRating = (e, item, index, rating) =>{
-            e.stopPropagation();
-    
+            e.stopPropagation(); 
             let data = {
                 "feature":"weekly_insights",
                 "property":{
@@ -96,7 +95,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                    "order":index,
                    "value":item?.value,
                    "entity":item?.entity,
-                   "query_id":activeInsight?.id,
+                   "query_id":actualData?.query_id,
                    "is_increased":item?.actual_values?.isIncrease
                 },
                 "vote_type":0
@@ -146,7 +145,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
         </div>)
     }
 
-    const genHeader = (item,index=0) => { 
+    const genHeader = (item,index=0, actualData=false) => {  
         const data = item.actual_values;  
         return (
             <div className={'flex justify-between items-center py-2 insights-rating--container'}>
@@ -165,6 +164,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                  <UserRatingComp 
                  item={item}
                  index={index}
+                 actualData={actualData}
                  />
                     <Tag className={'fa-tag--grey uppercase'}>{item.type}</Tag>
                 </div>
@@ -330,7 +330,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                                 return (
                                     <Panel 
                                      className={'fa-insights--panel-item'}
-                                     header={genHeader(item,index)} key={index} 
+                                     header={genHeader(item,index, data)} key={index} 
                                      > 
                                         {genBody(item)}
                                     </Panel>

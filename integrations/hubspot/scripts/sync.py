@@ -16,6 +16,8 @@ parser.add_option("--app_name", dest="app_name",
     help="App name", default="")
 parser.add_option("--healthcheck_ping_id", dest="healthcheck_ping_id",
     help="Healthcheck ping id", default="")
+parser.add_option("--enable_deleted_contacts", dest="enable_deleted_contacts", help="Enable deleted contacts flag", default=False, action="store_true")
+parser.add_option("--enable_deleted_projectIDs", dest="enable_deleted_projectIDs", help="Enable deleted projectIDs", default="")
 
 
 APP_NAME = "hubspot_sync"
@@ -694,6 +696,12 @@ def update_sync_status(request_payload, first_sync=False):
 def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False):
     next_sync_info = []
     
+    project_map = {}
+    if options.enable_deleted_contacts:
+        projects_list = [s.strip() for s in options.enable_deleted_projectIDs.split(",")]
+        for project in projects_list:
+            project_map[project] = True
+
     for project_id in project_settings:
         settings = project_settings[project_id]
         if first_time_sync == True and settings.get("is_first_time_synced")!=False :
@@ -712,7 +720,9 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
             log.error("Last sync info missing for project %d", project_id)
             continue
 
-        sync_info["deleted_contacts"] = 0
+        if options.enable_deleted_contacts and project_id in project_map.keys():
+             sync_info["deleted_contacts"] = 0
+
         for doc_type in sync_info:
             next_sync = {}
             next_sync["project_id"] = int(project_id)
