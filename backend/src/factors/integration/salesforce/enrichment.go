@@ -1204,7 +1204,7 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 
 	filtersPassed := 0
 	for _, filter := range rule.Filters {
-		switch filter.LogicalOp {
+		switch filter.Operator {
 		case model.EqualsOpStr:
 			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
 				if trackPayload.EventProperties[filter.Property] == filter.Value {
