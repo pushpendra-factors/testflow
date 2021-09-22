@@ -72,7 +72,7 @@ export default function FilterBlock({
       props: [
         {
           label: 'Event Properties',
-          icon: 'event',
+          icon: 'mouseclick',
         },
         {
           label: 'User Properties',

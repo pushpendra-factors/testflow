@@ -14,8 +14,6 @@ import styles from "./index.module.scss";
 import NoDataChart from '../../components/NoDataChart';
 import { SVG, FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
-import InfoCard from '../../components/InfoCard';
-import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 
 const { TabPane } = Tabs;
 
@@ -190,60 +188,44 @@ function ProjectTabs({
         <NoDataChart />
       </div>
     );
-  }
-
-  const Footer = (type) => {
-    if (type === 'pr') {
-      return (<div className={`${styles.infoCard_footer}`}> <LockOutlined/> Private </div>);
-    } if (type === 'pv') {
-      return (<div className={`${styles.infoCard_footer}`}> <UnlockOutlined/> Public </div>);
-    }
-  };
-
+  } 
+  
   if (dashboards.data.length) {
     return (
       <>
        <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Dashboard Error'} subtitle={'We are facing trouble loading dashboards. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-          <Tabs
-            onChange={handleTabChange}
-            activeKey={getActiveKey()}
-            className={'fa-tabs--dashboard'}
-            tabBarExtraContent={operations}
-          >
-
-            {dashboards.data.map((d, index) => {
-              return (
-                <TabPane tab={
-                  <InfoCard
-                    title={d.name}
-                    info={!d.description.length ? <span style={{ fontStyle: 'italic', color: '#c8c8c8' }}>No Description</span> : d.description }
-                    footer={Footer(d.type)}
-                  ></InfoCard>
-                } key={d.id}>
-
-                  <div className={"fa-container mt-4 min-h-screen"}>
-                    <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Dashboard Widget Error'} subtitle={'We are facing trouble loading dashboard widgets. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-                      <DashboardSubMenu
-                        durationObj={durationObj}
-                        handleDurationChange={handleDurationChange}
-                        dashboard={activeDashboard}
-                        handleEditClick={handleEditClick}
-                        refreshClicked={refreshClicked}
-                        setRefreshClicked={setRefreshClicked}
-                      />
-                      <SortableCards
-                        durationObj={durationObj}
-                        setwidgetModal={handleToggleWidgetModal}
-                        showDeleteWidgetModal={showDeleteWidgetModal}
-                        refreshClicked={refreshClicked}
-                        setRefreshClicked={setRefreshClicked}
-                      />
-                    </ErrorBoundary>
-                  </div>
-                </TabPane>
-              );
-            })}
-          </Tabs>
+        <Tabs
+          onChange={handleTabChange}
+          activeKey={getActiveKey()}
+          className={"fa-tabs--dashboard"}
+          tabBarExtraContent={operations}
+        > 
+          {dashboards.data.map((d, index) => {
+            return (
+              <TabPane tab={getTabName(d, index)} key={d.id}>
+                <div className={"fa-container mt-4 min-h-screen"}>
+                  <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Dashboard Widget Error'} subtitle={'We are facing trouble loading dashboard widgets. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
+                  <DashboardSubMenu
+                    durationObj={durationObj}
+                    handleDurationChange={handleDurationChange}
+                    dashboard={activeDashboard}
+                    handleEditClick={handleEditClick}
+                    refreshClicked={refreshClicked}
+                    setRefreshClicked={setRefreshClicked}
+                  />
+                  <SortableCards
+                    durationObj={durationObj}
+                    setwidgetModal={handleToggleWidgetModal}
+                    showDeleteWidgetModal={showDeleteWidgetModal}
+                    refreshClicked={refreshClicked}
+                    setRefreshClicked={setRefreshClicked}
+                  />
+                  </ErrorBoundary>
+                </div>
+              </TabPane>
+            );
+          })}
+        </Tabs>
 
         <ExpandableView
           widgetModalLoading={widgetModalLoading}

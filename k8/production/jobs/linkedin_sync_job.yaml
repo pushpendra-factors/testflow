@@ -27,7 +27,13 @@ spec:
             - $(ENV)
             - --data_service_host
             - $(DATA_SERVICE_HOST_URL)
+            - --client_id
+            - $(LINKEDIN_CLIENT_ID)
+            - --client_secret
+            - $(LINKEDIN_CLIENT_SECRET)
             envFrom:
             - configMapRef:
                 name: config-env
+            - secretRef:
+              name: secret-linkedin
           restartPolicy: OnFailure

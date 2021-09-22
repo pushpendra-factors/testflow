@@ -109,6 +109,9 @@ func main() {
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
+	disableDashboardQueryDBExecution := flag.Bool("disable_dashboard_query_db_execution", false,
+		"Disable direct execution of query from dashboard, if not available on cache.")
+
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	flag.Parse()
 
@@ -184,6 +187,7 @@ func main() {
 		DisableMemSQLRedisWrites:                disableMemSQLRedisWrites,
 		DisableMemSQLQueryCache:                 disableMemSQLQueryCache,
 		AttributionDebug:                        *attributionDebug,
+		DisableDashboardQueryDBExecution:        *disableDashboardQueryDBExecution,
 	}
 	C.InitConf(config)
 

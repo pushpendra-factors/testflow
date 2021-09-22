@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import _ from 'lodash';
-import { connect, useDispatch, useSelector } from 'react-redux';
+import { connect, useDispatch } from 'react-redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { Text, SVG } from '../../components/factorsComponents';
 import { RightOutlined, LeftOutlined } from '@ant-design/icons';
 import CardContent from './CardContent';
+import { useSelector } from 'react-redux';
 import {
   initialState,
   formatApiData,
@@ -26,7 +27,6 @@ import { DashboardContext } from '../../contexts/DashboardContext';
 import { useHistory, useLocation } from 'react-router-dom';
 import { shouldDataFetch } from '../../utils/dataFormatter';
 import { fetchWeeklyIngishts } from '../../reducers/insights';
-import styles from './index.module.scss';
 
 function WidgetCard({
   unit,
@@ -345,7 +345,10 @@ function WidgetCard({
         <div className={'py-5 flex justify-between items-start w-full'}>
           <div className={'w-full flex flex-1 flex-col h-full'}>
             <div
-              className={`${styles.widgetCard} flex items-center justify-between px-6 pb-4`}
+              style={{
+                borderBottom: '1px solid rgb(231, 233, 237)',
+              }}
+              className='flex items-center justify-between px-6 pb-4'
             >
               <Tooltip title={unit.title} mouseEnterDelay={0.2}>
                 <div className='flex flex-col truncate'>
@@ -358,11 +361,11 @@ function WidgetCard({
                       type={'title'}
                       level={6}
                       weight={'bold'}
-                      extraClass={`${styles.widgetCard_text} m-0 mr-1 flex`}
+                      extraClass={'m-0 mr-1'}
                     >
-                      {unit.title} 
-                      <SVG extraClass={`${styles.expand_icon} ml-1`} size={20} name="expand" />
+                      {unit.title}
                     </Text>
+                    <SVG size={16} name='expand' />
                   </div>
                   {/* <div className="description">
                   <Text

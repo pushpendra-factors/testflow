@@ -98,10 +98,8 @@ type FacebookProjectSettings struct {
 type LinkedinProjectSettings struct {
 	ProjectId                     string `json:"project_id"`
 	IntLinkedinAdAccount          string `json:"int_linkedin_ad_account"`
-	IntLinkedinAccessToken        string `json:"int_linkedin_access_token"`
 	IntLinkedinRefreshToken       string `json:"int_linkedin_refresh_token"`
 	IntLinkedinRefreshTokenExpiry int64  `json:"int_linkedin_refresh_token_expiry"`
-	IntLinkedinAccessTokenExpiry  int64  `json:"int_linkedin_access_token_expiry"`
 }
 
 // SalesforceProjectSettings contains refresh_token and instance_url for enabled projects

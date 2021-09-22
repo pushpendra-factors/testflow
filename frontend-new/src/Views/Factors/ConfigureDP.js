@@ -250,7 +250,7 @@ const ConfigureDP = (props) => {
                                 return (
                                       <div key={index} className={'flex items-center justify-between px-4 py-2 fa-cdp--item'}>
                                           <div className={'flex items-center'}>
-                                            <SVG size={16} name={'event'} color={'purple'} className={'mr-1'} />
+                                            <SVG size={16} name={'Mouseclick'} color={'purple'} className={'mr-1'} />
                                             <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0 ml-2'} >{event.name}</Text> 
                                           </div>
                                           <Button onClick={()=>DeleteEvent(event.id) }className={'fa-cdp--action fa-button-ghost'} size={'small'} type="text"><SVG name="delete" color={'grey'} /></Button>

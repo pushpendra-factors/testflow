@@ -57,7 +57,7 @@ export default function EventFilterWrapper({
       props: [
         {
           label: 'Event Properties',
-          icon: 'event',
+          icon: 'mouseclick',
         },
         {
           label: 'User Properties',
@@ -82,7 +82,7 @@ export default function EventFilterWrapper({
       const filterDD = Object.assign({}, filterDropDownOptions);
       const propState = [];
       Object.keys(filterProps).forEach((k, i) => {
-        propState.push({label: k, icon: k === 'event'? 'event' : k, values: filterProps[k]});
+        propState.push({label: k, icon: k === 'event'? 'mouseclick' : k, values: filterProps[k]});
       })
       filterDD.props = propState;
       setFiltDD(filterDD);
