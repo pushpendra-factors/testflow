@@ -10,16 +10,17 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 type WeeklyInsightsParams struct {
@@ -305,7 +306,7 @@ func isTokenExist(token string, private bool) (exists int, err error) {
 	return 0, nil
 }
 func createPathAndAddCpiFile(projectID uint64, baseStartTime time.Time, QueryId uint64) (err error) {
-	path := fmt.Sprintf("projects/" + strconv.FormatUint(projectID, 10) + "/weeklyinsights/" + U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()) + "/q-" + strconv.FormatUint(QueryId, 10) + "/k-10")
+	path := fmt.Sprintf("projects/" + strconv.FormatUint(projectID, 10) + "/weeklyinsights/" + U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()) + "/q-" + strconv.FormatUint(QueryId, 10) + "/k-100")
 	os.MkdirAll(path, 0777)
 
 	sourceFile, err := os.Open("data/cpi.txt")

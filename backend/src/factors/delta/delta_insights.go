@@ -312,6 +312,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						EventCriterionList: []EventCriterion{},
 					}}
 				for _, event := range query.EventsWithProperties {
+					event.Properties = append(event.Properties, query.GlobalUserProperties...)
 					if query.EventsCondition == model.EventCondEachGivenEvent {
 						deltaQuery.Target.Operator = "And"
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
@@ -353,14 +354,14 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							EventCriterionList: []EventCriterion{EventCriterion{
 								Name:                query.EventsWithProperties[0].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[0].Properties),
+								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
 							}}},
 						Target: EventsCriteria{
 							Operator: "And",
 							EventCriterionList: []EventCriterion{EventCriterion{
 								Name:                query.EventsWithProperties[1].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[1].Properties),
+								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[1].Properties, query.GlobalUserProperties...)),
 							}},
 						}}
 					return deltaQuery, MultiFunnelQuery{}, true, false, false
@@ -371,7 +372,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							EventCriterionList: []EventCriterion{EventCriterion{
 								Name:                query.EventsWithProperties[0].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[0].Properties),
+								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
 							}}},
 						Intermediate: make([]EventsCriteria, 0),
 						Target: EventsCriteria{
@@ -379,7 +380,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							EventCriterionList: []EventCriterion{EventCriterion{
 								Name:                query.EventsWithProperties[len(query.EventsWithProperties)-1].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[len(query.EventsWithProperties)-1].Properties),
+								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[len(query.EventsWithProperties)-1].Properties, query.GlobalUserProperties...)),
 							}},
 						}}
 					for i := 1; i <= len(query.EventsWithProperties)-2; i++ {
@@ -388,7 +389,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							EventCriterionList: []EventCriterion{EventCriterion{
 								Name:                query.EventsWithProperties[i].Name,
 								EqualityFlag:        true,
-								FilterCriterionList: MapFilterProperties(query.EventsWithProperties[i].Properties),
+								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[i].Properties, query.GlobalUserProperties...)),
 							}},
 						}
 						multiStepFunnel.Intermediate = append(multiStepFunnel.Intermediate, criteria)
@@ -409,7 +410,7 @@ func MapFilterProperties(qp []model.QueryProperty) []EventFilterCriterion {
 			Key: prop.Property,
 		}
 		filterProp.Type = prop.Type
-		if prop.Entity == "user" {
+		if prop.Entity == "user" || prop.Entity == "user_g" {
 			filterProp.PropertiesMode = "user"
 		} else if prop.Entity == "event" {
 			filterProp.PropertiesMode = "event"

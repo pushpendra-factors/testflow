@@ -25,6 +25,7 @@ type WeeklyInsights struct {
 	Goal         Base            `json:"goal"`
 	Conv         Base            `json:"conv"`
 	Insights     []ActualMetrics `json:"actual_metrics"`
+	QueryId      uint64          `json:"query_id"`
 }
 type Base struct {
 	W1          float64 `json:"w1"`
@@ -532,6 +533,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	// appending at top
 	insightsObj.Insights = append(gbpInsights, insightsObj.Insights...)
 	removeNegativePercentageFromInsights(&insightsObj)
+	insightsObj.QueryId = queryId
 	return insightsObj, nil
 }
 
