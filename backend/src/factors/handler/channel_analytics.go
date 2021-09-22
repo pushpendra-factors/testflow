@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler/helpers"
 	mid "factors/middleware"
 	"factors/model/model"
@@ -118,6 +119,12 @@ func ChannelQueryHandler(c *gin.Context) {
 	if shouldReturn {
 		c.AbortWithStatusJSON(resCode, gin.H{"error": "Error Processing/Fetching data from Query cache"})
 		return
+	}
+
+	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() {
+		logCtx.WithField("request_payload", queryPayload).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": "Query failed. Not found in cache. Suspended db execution."})
 	}
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.

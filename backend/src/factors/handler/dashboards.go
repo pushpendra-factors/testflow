@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler/helpers"
 	mid "factors/middleware"
 	"factors/model/model"
@@ -667,6 +668,12 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 				Metrics:           unit.Metrics,
 				GroupByProperties: unit.GroupByProperties,
 			})
+		}
+
+		if C.DisableDashboardQueryDBExecution() {
+			logCtx.WithField("request_payload", requestPayload).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": "Query failed. Not found in cache. Suspended db execution."})
 		}
 
 		queryResult, errCode = store.GetStore().ExecuteWebAnalyticsQueries(
