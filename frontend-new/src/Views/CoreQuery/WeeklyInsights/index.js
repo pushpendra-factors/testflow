@@ -96,7 +96,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                    "order":index,
                    "value":item?.value,
                    "entity":item?.entity,
-                   "query_id":activeInsight?.id,
+                   "query_id":item?.query_id,
                    "is_increased":item?.actual_values?.isIncrease
                 },
                 "vote_type":0
