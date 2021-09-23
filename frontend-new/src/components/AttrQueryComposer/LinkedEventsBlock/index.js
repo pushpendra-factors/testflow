@@ -41,7 +41,7 @@ const LinkedEventsBlock = ({
         }
         assignFilterProps.user = userProperties;
         setFilterProperties(assignFilterProps);
-    }, [userProperties, eventProperties, linkEvent]);
+    }, [userProperties, eventProperties]);
 
     const toggleEventSelect = () => {
         setSelectVisible(!selectVisible);
@@ -137,6 +137,28 @@ const LinkedEventsBlock = ({
         linkEventChange(currentLinkEvent);
         setSelectVisible(false);
     };
+
+    const addModelAction = () => {
+        return (
+          <div className={'fa--query_block--actions--cols relative ml-2'}>
+              <div className={`relative`}>
+                <Button
+                    type='text'
+                    onClick={() => setMoreOptions(true)}
+                    className={'ml-1 mr-1'}
+                >
+                <SVG name='more'></SVG>
+                </Button>
+        
+                {moreOptions ? <FaSelect
+                options={[[`Filter By`]]}
+                optionClick={(val) => setCompareModelActive(true) && setMoreOptions(false)}
+                onClickOutside={() => setMoreOptions(false)}
+                ></FaSelect> : false}
+            </div>
+          </div>
+        );
+      };
 
     const additionalActions = () => {
         return (

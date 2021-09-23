@@ -183,6 +183,7 @@ type Configuration struct {
 	CloudManager                         filestore.FileManager
 	SegmentExcludedCustomerIDByProject   map[uint64]string // map[project_id]customer_user_id
 	AttributionDebug                     int
+	DisableDashboardQueryDBExecution     bool
 }
 
 type Services struct {
@@ -1763,4 +1764,8 @@ func GetAppName(defaultAppName, overrideAppName string) string {
 
 func GetCloudManager() filestore.FileManager {
 	return configuration.CloudManager
+}
+
+func DisableDashboardQueryDBExecution() bool {
+	return configuration.DisableDashboardQueryDBExecution
 }

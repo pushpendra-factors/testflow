@@ -717,14 +717,38 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 			}
 		} else {
 			assocationPresent = true
-			if linkedDocument.Synced == true && linkedDocument.UserID != "" {
-				user, status := store.GetStore().GetUser(projectID, linkedDocument.UserID)
+			if linkedDocument.Synced == true && (linkedDocument.UserID != "" || linkedDocument.SyncID != "") {
+
+				linkedDocumentUserID := ""
+				if linkedDocument.UserID != "" {
+					linkedDocumentUserID = linkedDocument.UserID
+				} else {
+					event, status := store.GetStore().GetEventById(projectID, linkedDocument.SyncID, "")
+					if status != http.StatusFound {
+						logCtx.WithFields(log.Fields{"linked_document_id": linkedDocument.ID}).WithError(err).
+							Error("Failed to get user by linked document event for opportunity.")
+						return http.StatusInternalServerError
+					}
+
+					// update the user_id column for later reference
+					errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, linkedDocument,
+						event.ID, event.UserId)
+					if errCode != http.StatusAccepted {
+						logCtx.WithFields(log.Fields{"linked_document_id": linkedDocument.ID}).
+							Error("Failed to update user id in linked document.")
+					}
+
+					linkedDocumentUserID = event.UserId
+				}
+
+				user, status := store.GetStore().GetUser(projectID, linkedDocumentUserID)
 				if status != http.StatusFound {
 					logCtx.WithError(err).Error("Failed to get opportunity associated document user.")
 					return http.StatusInternalServerError
 				}
 				customerUserID = user.CustomerUserId
 				userID = user.ID
+
 			} else {
 				/*
 					Document associated is not processed yet.
@@ -1204,7 +1228,7 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 
 	filtersPassed := 0
 	for _, filter := range rule.Filters {
-		switch filter.LogicalOp {
+		switch filter.Operator {
 		case model.EqualsOpStr:
 			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
 				if trackPayload.EventProperties[filter.Property] == filter.Value {

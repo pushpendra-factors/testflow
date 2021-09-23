@@ -36,6 +36,9 @@ func main() {
 	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
+	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
+	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
+
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	onlyWebAnalytics := flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
 
@@ -87,6 +90,10 @@ func main() {
 			Certificate:  *memSQLCertificate,
 			ResourcePool: *memSQLResourcePool,
 			AppName:      taskID,
+
+			MaxOpenConnections:     *memSQLDBMaxOpenConnections,
+			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
+			UseExactConnFromConfig: true,
 		},
 		PrimaryDatastore:         *primaryDatastore,
 		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
