@@ -444,6 +444,7 @@ if __name__ == '__main__':
             response = {}
             linkedin_int_setting[ACCESS_TOKEN], err = get_access_token_from_refresh_token(linkedin_int_setting['int_linkedin_refresh_token'])
             if err == '':
+                time.sleep(600)
                 if start_timestamp == None:
                     sync_info_with_type, err = get_last_sync_info(linkedin_int_setting)
                     if err != '':
