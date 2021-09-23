@@ -114,6 +114,7 @@ const getEventsWithProperties = (queries) => {
       }
     });
     ewps.push({
+      an: ev.alias,
       na: ev.label,
       pr: filterProps,
     });
@@ -528,6 +529,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       }
     });
     return {
+      alias: e.an,
       label: e.na,
       filters,
     };

@@ -16,6 +16,7 @@ import EventGroupBlock from '../EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 
 import FaSelect from 'Components/FaSelect';
+import AliasModal from '../AliasModal';
 
 function QueryBlock({
   index,
@@ -41,10 +42,26 @@ function QueryBlock({
     user: [],
   });
 
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const showModal = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+  };
+  const handleOk = (alias) => {
+    const newEvent = Object.assign({}, event);
+    newEvent.alias = alias;
+    setIsModalVisible(false);
+    eventChange(newEvent, index - 1, 'filters_updated');
+  };
+
   const alphabetIndex = 'ABCDEF';
 
   const onChange = (value) => {
-    const newEvent = { label: '', filters: [] };
+    const newEvent = { alias: '', label: '', filters: [] };
     newEvent.label = value;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
@@ -160,8 +177,10 @@ function QueryBlock({
   const setAdditionalactions = (opt) => {
     if(opt[1] === 'filter') {
       addFilter();
-    } else {
+    } else if(opt[1] === 'groupby') {
       addGroupBy();
+    } else { 
+      showModal();
     }
     setMoreOptions(false);
   }
@@ -170,22 +189,32 @@ function QueryBlock({
     return (
       <div className={'fa--query_block--actions-cols flex'}>
         <div className={`relative`}>
-            <Button
-              type='text'
-              size={'large'}
-              onClick={() => setMoreOptions(true)}
-              className={'ml-1 mr-1'}
-            >
-              <SVG name='more'></SVG>
-            </Button>
+          <Button
+            type='text'
+            size={'large'}
+            onClick={() => setMoreOptions(true)}
+            className={`${styles.custombtn} ml-1 mr-1`}
+          >
+            <SVG name='more'></SVG>
+          </Button>
 
-            {moreOptions ? <FaSelect
-              options={[[`Filter By`, 'filter'], [`Breakdown`, 'groupby']]}
-              optionClick={(val) => setAdditionalactions(val)}
-              onClickOutside={() => setMoreOptions(false)}
-            ></FaSelect> : false}
-          </div>
-        <Button size={'large'} type='text' onClick={deleteItem}>
+          {moreOptions ? <FaSelect
+            options={[['Filter By', 'filter'], ['Breakdown', 'groupby'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
+            optionClick={(val) => setAdditionalactions(val)}
+            onClickOutside={() => setMoreOptions(false)}
+          ></FaSelect> : false}
+
+          <AliasModal
+            visible={isModalVisible}
+            event={eventNames[event.label]? eventNames[event.label] : event.label}
+            onOk={handleOk}
+            onCancel={handleCancel}
+            alias={event.alias}
+          >
+          </AliasModal>
+    
+        </div>
+        <Button size={'large'} type='text' onClick={deleteItem} className={`${styles.custombtn}`}>
           <SVG name='trash'></SVG>
         </Button>
       </div>
@@ -295,41 +324,58 @@ function QueryBlock({
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}
     >
       <div
-        className={`${styles.query_block__event} block_section flex justify-start items-center`}
+        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${styles.query_block__event} block_section items-center`}
       >
-        <div
-          className={
-            'fa--query_block--add-event active flex justify-center items-center mr-2'
-          }
-        >
-          <Text
-            type={'title'}
-            level={7}
-            weight={'bold'}
-            color={'white'}
-            extraClass={'m-0'}
+        <div className={'flex'}>
+          <div
+            className={
+              'fa--query_block--add-event active flex justify-center items-center mr-2'
+            }
           >
-            {queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}
-          </Text>{' '}
-        </div>
-        {
-          <div className="max-w-7xl">
-          <Tooltip title={eventNames[event.label]? eventNames[event.label] : event.label}>
-            <Button
-              icon={<SVG name='mouseevent' size={16} color={'purple'} />}
-              className={``}
-              type='link'
-              onClick={triggerDropDown}
+            <Text
+              type={'title'}
+              level={7}
+              weight={'bold'}
+              color={'white'}
+              extraClass={'m-0'}
             >
-              {' '}
-              {eventNames[event.label]? eventNames[event.label] : event.label}{' '}
-            </Button>
-            {selectEvents()}
-          </Tooltip>
+              {queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}
+            </Text>{' '}
           </div>
-        }
-        {additionalActions()}
-        
+          {event?.alias?.length
+            ? (
+              <Text
+                type={'title'}
+                level={7}
+                weight={'bold'}
+                extraClass={'m-0'}
+              >
+                {event?.alias}
+                <Tooltip title={'Edit Alias'}>
+                  <Button
+                    className={`${styles.custombtn} mx-1`} type="text" onClick={showModal} ><SVG size={20} name="edit" color={'grey'} />
+                  </Button>
+                </Tooltip>
+              </Text>)
+            : null}
+        </div>
+        <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-2'}`}>
+          <div className="max-w-7xl">
+            <Tooltip title={eventNames[event.label] ? eventNames[event.label] : event.label}>
+              <Button
+                icon={<SVG name='mouseevent' size={16} color={'purple'} />}
+                className={``}
+                type='link'
+                onClick={triggerDropDown}
+              >
+                {' '}
+                {eventNames[event.label] ? eventNames[event.label] : event.label}{' '}
+              </Button>
+              {selectEvents()}
+            </Tooltip>
+          </div>
+          {additionalActions()}
+        </div>
       </div>
       {eventFilters()}
       {groupByItems()}
