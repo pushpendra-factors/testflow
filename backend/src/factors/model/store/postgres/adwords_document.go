@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -405,9 +406,10 @@ func (pg *Postgres) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int
 			"Failed to create an adwords doc.")
 		return http.StatusInternalServerError
 	}
-	UpdateCountCacheByDocumentType(adwordsDoc.ProjectID,&adwordsDoc.CreatedAt,"adwords")
+	UpdateCountCacheByDocumentType(adwordsDoc.ProjectID, &adwordsDoc.CreatedAt, "adwords")
 	return http.StatusCreated
 }
+
 // CreateMultipleAdwordsDocument ...
 func (pg *Postgres) CreateMultipleAdwordsDocument(adwordsDocuments []model.AdwordsDocument) int {
 	status := validateAdwordsDocuments(adwordsDocuments)
@@ -428,7 +430,7 @@ func (pg *Postgres) CreateMultipleAdwordsDocument(adwordsDocuments []model.Adwor
 		insertValuesStatement = append(insertValuesStatement, fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
 		insertValues = append(insertValues, adwordsDoc.ProjectID, adwordsDoc.CustomerAccountID,
 			adwordsDoc.Type, adwordsDoc.Timestamp, adwordsDoc.ID, adwordsDoc.CampaignID, adwordsDoc.AdGroupID, adwordsDoc.AdID, adwordsDoc.KeywordID, adwordsDoc.Value, adwordsDoc.CreatedAt, adwordsDoc.UpdatedAt)
-			UpdateCountCacheByDocumentType(adwordsDoc.ProjectID,&adwordsDoc.CreatedAt,"adwords")
+		UpdateCountCacheByDocumentType(adwordsDoc.ProjectID, &adwordsDoc.CreatedAt, "adwords")
 	}
 	insertStatement += joinWithComma(insertValuesStatement...)
 	rows, err := db.Raw(insertStatement, insertValues...).Rows()
@@ -947,9 +949,11 @@ func (pg *Postgres) getAdwordsFilterValuesByType(projectID uint64, docType int, 
 		logCtx.Info(integrationNotAvailable)
 		return []interface{}{}, http.StatusInternalServerError
 	}
+	var customerAccountIDs []string
+	customerAccountIDs = strings.Split(*customerAccountID, ",")
 
 	logCtx = log.WithField("doc_type", docType)
-	params := []interface{}{property, projectID, customerAccountID, docType, property}
+	params := []interface{}{property, projectID, customerAccountIDs, docType, property}
 	_, resultRows, err := pg.ExecuteSQL(adwordsFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", adwordsFilterQueryStr).WithField("params", params).Error(model.AdwordsSpecificError)
