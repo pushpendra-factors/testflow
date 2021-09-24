@@ -103,8 +103,8 @@ function FunnelsResultTable({
         fileName: `${reportTitle}.csv`,
         data: tableData.map(({ index, value, name, nonConvertedName, ...rest }) => {
           arrayMapper.forEach((elem, index) => {
-            rest[`${elem.displayName}-${index}`] =
-              rest[`${elem.displayName}-${index}`].value;
+            rest[`${elem.eventName}-${index}`] =
+              rest[`${elem.eventName}-${index}`].value;
             delete rest[`${elem.mapper}`];
           });
           return { ...rest, Conversion: rest.Conversion + '%' };
@@ -140,11 +140,11 @@ function FunnelsResultTable({
 
         arrayMapper.forEach((elem, index) => {
           rest[
-            `${elem.displayName}-${index} (${duration_from} - ${duration_to})`
-          ] = rest[`${elem.displayName}-${index}`].value;
+            `${elem.eventName}-${index} (${duration_from} - ${duration_to})`
+          ] = rest[`${elem.eventName}-${index}`].value;
           rest[
-            `${elem.displayName}-${index} (${compare_duration_from} - ${compare_duration_to})`
-          ] = rest[`${elem.displayName}-${index}`].compare_count;
+            `${elem.eventName}-${index} (${compare_duration_from} - ${compare_duration_to})`
+          ] = rest[`${elem.eventName}-${index}`].compare_count;
 
           if (index < arrayMapper.length - 1) {
             rest[

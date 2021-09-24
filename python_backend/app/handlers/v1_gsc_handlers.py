@@ -127,6 +127,7 @@ class GetGSCURLsV1Handler(BaseHandler):
         # Get search console urls
         webmasters_service = FetchService(app.CONFIG.GSC_OAUTH).get_webmasters_service(refresh_token)
         site_list = webmasters_service.sites().list().execute()
+        log.warning("List of sites: "+ str(site_list))
 
         if 'siteEntry' not in site_list:
             self.set_status(404)

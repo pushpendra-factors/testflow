@@ -1,7 +1,6 @@
 .query_block { 
 
     &__event {
-        display: flex;
         position: relative;
     }
 
@@ -64,3 +63,14 @@
 
 
 }
+
+.custombtn {
+    margin-left: 4px;
+    padding: 4px;
+    height: 32px;
+    width: 36px;
+}
+.customfooter {
+    display: flex;
+    justify-content: space-between;
+} 

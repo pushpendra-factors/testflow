@@ -158,7 +158,7 @@ export const formatData = (response, arrayMapper) => {
 
       const percent = calculatePercentage(row[eventIdx], row[firstEventIdx]);
 
-      groupEventData[`${am.displayName}-${idx}`] = {
+      groupEventData[`${am.eventName}-${idx}`] = {
         percentage: percent,
         value: row[eventIdx],
       };
@@ -410,17 +410,17 @@ export const generateTableColumns = (
     eventColumns.push({
       title: isBreakdownApplied
         ? getClickableTitleSorter(
-            arrayMapper[index].displayName,
+            arrayMapper[index].eventName,
             {
-              key: `${arrayMapper[index].displayName}-${index}`,
+              key: `${arrayMapper[index].eventName}-${index}`,
               type: 'numerical',
               subtype: null,
             },
             currentSorter,
             handleSorting
           )
-        : arrayMapper[index].displayName,
-      dataIndex: `${arrayMapper[index].displayName}-${index}`,
+        : arrayMapper[index].eventName,
+      dataIndex: `${arrayMapper[index].eventName}-${index}`,
       width: 200,
       render: (d) => RenderEventData(d, breakdown, isComparisonApplied),
     });
@@ -483,7 +483,7 @@ export const generateTableData = (
       comparisonChartDurations
     );
     queries.forEach((_, index) => {
-      queryData[`${arrayMapper[index].displayName}-${index}`] = {
+      queryData[`${arrayMapper[index].eventName}-${index}`] = {
         percentage: data[index].value,
         value: data[index].netCount,
         compare_percent:
@@ -687,9 +687,9 @@ export const getAxisMetricOptions = (arrayMapper) => {
   for (let i = 0; i < arrayMapper.length; i++) {
     result.push({
       title: `${
-        arrayMapper[i].displayName || arrayMapper[i].eventName
+        arrayMapper[i].eventName || arrayMapper[i].eventName
       } (Event ${i + 1})`,
-      value: `${arrayMapper[i].displayName || arrayMapper[i].eventName}-${i}`,
+      value: `${arrayMapper[i].eventName || arrayMapper[i].eventName}-${i}`,
     });
     if (i < arrayMapper.length - 1) {
       result.push({

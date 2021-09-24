@@ -239,7 +239,7 @@ function CoreQuery({
         payload: isComparisonEnabled(queryType, queries, groupBy, models),
       });
       if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
-        setAppliedQueries(queries.map((elem) => elem.label));
+        setAppliedQueries(queries.map((elem) => elem.alias? elem.alias : elem.label));
         updateAppliedBreakdown();
       }
     },
@@ -825,7 +825,7 @@ function CoreQuery({
         eventName: q,
         index,
         mapper: `event${index + 1}`,
-        displayName: eventNames[q] || q,
+        displayName: eventNames[q],
       };
     });
   }, [appliedQueries, eventNames]);

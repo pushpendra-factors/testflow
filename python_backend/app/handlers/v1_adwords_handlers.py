@@ -131,6 +131,7 @@ class GetCustomerAccountsV1Handler(BaseHandler):
             customer_service = FetchService(app.CONFIG.ADWORDS_OAUTH).get_customer_accounts(refresh_token)
             response = []
             customer_accounts = customer_service.getCustomers()
+            log.warning("List of customer accounts: "+ str(customer_accounts))
         except Exception as e:
             self.set_status(400)
             traceback.print_tb(e.__traceback__)

@@ -189,7 +189,7 @@ function ReportsLayout({
         breakdownType={breakdownType}
         changeTab={changeTab}
         activeTab={activeTab}
-        getCurrentSorter={getCurrentSorter}
+        getCurrentSorter={() => getCurrentSorter()}
       />
       <div className='mt-24 px-12'>
         <ErrorBoundary
