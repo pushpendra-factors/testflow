@@ -75,7 +75,6 @@ func registerStructs() {
 // TODO(prateek): Check a way to add handling for panic and worker errors.
 func main() {
 	flag.Parse()
-	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	defaultAppName := "beam_dashboard_caching_now"
 	defaultHealthcheckPingID := C.HealthcheckBeamDashboardCachingNowPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
@@ -113,13 +112,7 @@ func main() {
 		RedisHost:                       *redisHost,
 		RedisPort:                       *redisPort,
 		SentryDSN:                       *sentryDSN,
-		DisableMemSQLRedisWrites:        &disableMemSQLRedisWrites,
-		PrimaryDatastore:                *primaryDatastore,
-		RedisHost:                       *redisHost,
-		RedisPort:                       *redisPort,
-		SentryDSN:                       *sentryDSN,
 		MultipleTimezoneEnabledProjects: C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
-		DisableMemSQLRedisWrites:        &disableMemSQLRedisWrites,
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", healthcheckPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))

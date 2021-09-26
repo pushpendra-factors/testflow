@@ -16,17 +16,14 @@ func main() {
 	env := flag.String("env", "development", "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	RedisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 
 	flag.Parse()
-	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	taskID := "cleanup_offline"
 	config := &C.Configuration{
-		AppName:                  taskID,
-		Env:                      *env,
-		RedisHostPersistent:      *redisHostPersistent,
-		RedisPortPersistent:      *RedisPortPersistent,
-		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
+		AppName:             taskID,
+		Env:                 *env,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *RedisPortPersistent,
 	}
 	C.InitConf(config)
 
