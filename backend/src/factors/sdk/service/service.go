@@ -79,9 +79,8 @@ func main() {
 	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
-	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 	flag.Parse()
-	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
+
 	appName := "sdk_server"
 	config := &C.Configuration{
 		GCPProjectID:       *gcpProjectID,
@@ -120,11 +119,10 @@ func main() {
 		// List of tokens (public and private) to block SDK requests.
 		BlockedSDKRequestProjectTokens:                 C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
-		CacheSortedSet:           *cacheSortedSet,
-		DuplicateQueueRedisHost:  *duplicateQueueRedisHost,
-		DuplicateQueueRedisPort:  *duplicateQueueRedisPort,
-		SentryDSN:                *sentryDSN,
-		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
+		CacheSortedSet:          *cacheSortedSet,
+		DuplicateQueueRedisHost: *duplicateQueueRedisHost,
+		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
+		SentryDSN:               *sentryDSN,
 	}
 	C.InitConf(config)
 

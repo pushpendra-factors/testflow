@@ -172,11 +172,12 @@ type Configuration struct {
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
-	// Flags to disable DB and Redis writes when primary datastore is memSQL.
-	// Added as pointer to prevent accidental writes from other services while testing.
-	DisableMemSQLDBWrites                *bool
-	DisableMemSQLRedisWrites             *bool
-	DisableMemSQLQueryCache              *bool
+	// Flags to disable DB and Redis writes when enabled.
+	// Added as pointer to prevent accidental writes from
+	// other services while testing.
+	DisableDBWrites                      *bool
+	DisableRedisWrites                   *bool
+	DisableQueryCache                    *bool
 	AllowedCampaignEnrichmentByProjectID string
 	UseOpportunityAssociationByProjectID string
 	AllowChannelGroupingForProjectIDs    string
@@ -803,38 +804,38 @@ func GetRoutesURLPrefix() string {
 	return ""
 }
 
-// DisableMemSQLDBWrites If DB writes are disabled on MemSQL. Defaults to true unless specified explicitly.
-func DisableMemSQLDBWrites() bool {
-	if !UseMemSQLDatabaseStore() || GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
+// DisableMemSQLDBWrites If DB writes are disabled. Defaults to true unless specified explicitly.
+func DisableDBWrites() bool {
+	if GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
 		return false
 	}
 
-	if GetConfig().DisableMemSQLDBWrites != nil {
-		return *GetConfig().DisableMemSQLDBWrites
+	if GetConfig().DisableDBWrites != nil {
+		return *GetConfig().DisableDBWrites
 	}
 	return true
 }
 
-// DisableMemSQLRedisWrites If redis writes are disabled on MemSQL. Defaults to true unless specified explicitly.
-func DisableMemSQLRedisWrites() bool {
-	if !UseMemSQLDatabaseStore() || GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
+// DisableMemSQLRedisWrites If redis writes are disabled. Defaults to true unless specified explicitly.
+func DisableRedisWrites() bool {
+	if GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
 		return false
 	}
 
-	if GetConfig().DisableMemSQLRedisWrites != nil {
-		return *GetConfig().DisableMemSQLRedisWrites
+	if GetConfig().DisableRedisWrites != nil {
+		return *GetConfig().DisableRedisWrites
 	}
 	return true
 }
 
 // DisableMemSQLQueryCache If dashboard and query cache to be disabled. Defaults to false unless specified explicitly.
-func DisableMemSQLQueryCache() bool {
-	if !UseMemSQLDatabaseStore() || GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
+func DisableQueryCache() bool {
+	if GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
 		return false
 	}
 
-	if GetConfig().DisableMemSQLQueryCache != nil {
-		return *GetConfig().DisableMemSQLQueryCache
+	if GetConfig().DisableQueryCache != nil {
+		return *GetConfig().DisableQueryCache
 	}
 	return false
 }
