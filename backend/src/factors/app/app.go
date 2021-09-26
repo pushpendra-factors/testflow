@@ -50,9 +50,9 @@ func main() {
 	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
 
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
-	disableMemSQLDBWrites := flag.Bool("disable_mql_db_writes", true, "To disable DB writes when using MemSQL")
-	disableMemSQLRedisWrites := flag.Bool("disable_mql_redis_writes", true, "To disable redis writes when using MemSQL")
-	disableMemSQLQueryCache := flag.Bool("disable_mql_query_cache", false, "To disable dashboard and query analytics cache")
+	disableDBWrites := flag.Bool("disable_db_writes", true, "To disable DB writes.")
+	disableRedisWrites := flag.Bool("disable_redis_writes", true, "To disable redis writes.")
+	disableQueryCache := flag.Bool("disable_query_cache", false, "To disable dashboard and query analytics cache.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -183,9 +183,9 @@ func main() {
 		CustomerEnabledProjectsWeeklyInsights:   C.GetTokensFromStringListAsUint64(*customerEnabledProjectsWeeklyInsights),
 		MultipleTimezoneEnabledProjects:         C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
 		EnableMQLAPI:                            *enableMQLAPI,
-		DisableMemSQLDBWrites:                   disableMemSQLDBWrites,
-		DisableMemSQLRedisWrites:                disableMemSQLRedisWrites,
-		DisableMemSQLQueryCache:                 disableMemSQLQueryCache,
+		DisableDBWrites:                         disableDBWrites,
+		DisableRedisWrites:                      disableRedisWrites,
+		DisableQueryCache:                       disableQueryCache,
 		AttributionDebug:                        *attributionDebug,
 		DisableDashboardQueryDBExecution:        *disableDashboardQueryDBExecution,
 	}

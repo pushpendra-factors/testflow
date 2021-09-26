@@ -80,10 +80,9 @@ func main() {
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
-	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
+	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 
 	flag.Parse()
-	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
 	}
@@ -119,15 +118,15 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore:         *primaryDatastore,
-		RedisHost:                *redisHost,
-		RedisPort:                *redisPort,
-		RedisHostPersistent:      *redisHostPersistent,
-		RedisPortPersistent:      *redisPortPersistent,
-		SentryDSN:                *sentryDSN,
-		DryRunCRMSmartEvent:      *dryRunSmartEvent,
-		CacheSortedSet:           *cacheSortedSet,
-		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
+		PrimaryDatastore:    *primaryDatastore,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:           *sentryDSN,
+		DryRunCRMSmartEvent: *dryRunSmartEvent,
+		CacheSortedSet:      *cacheSortedSet,
+		DisableRedisWrites:  disableRedisWrites,
 	}
 
 	C.InitConf(config)

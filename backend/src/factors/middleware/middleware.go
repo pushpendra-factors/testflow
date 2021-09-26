@@ -689,9 +689,9 @@ func Logger() gin.HandlerFunc {
 	}
 }
 
-func SkipMemSQLAPIWritesIfDisabled() gin.HandlerFunc {
+func SkipAPIWritesIfDisabled() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if C.DisableMemSQLDBWrites() {
+		if C.DisableDBWrites() {
 			isAllowedPath := strings.HasSuffix(c.Request.URL.Path, "/query") ||
 				strings.HasSuffix(c.Request.URL.Path, "/query/web_analytics") ||
 				strings.HasSuffix(c.Request.URL.Path, "/agents/signin") ||

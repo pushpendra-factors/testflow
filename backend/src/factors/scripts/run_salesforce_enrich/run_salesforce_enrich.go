@@ -104,10 +104,9 @@ func main() {
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
-	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
+	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 
 	flag.Parse()
-	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	defaultAppName := "salesforce_enrich"
 	defaultHealthcheckPingID := C.HealthcheckSalesforceEnrichPingID
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
@@ -159,7 +158,7 @@ func main() {
 		CacheSortedSet:                       *cacheSortedSet,
 		AllowedCampaignEnrichmentByProjectID: *allowedCampaignEnrichmentByProjectID,
 		UseOpportunityAssociationByProjectID: *useOpportunityAssociationByProjectID,
-		DisableMemSQLRedisWrites:             &disableMemSQLRedisWrites,
+		DisableRedisWrites:                   disableRedisWrites,
 	}
 
 	C.InitConf(config)

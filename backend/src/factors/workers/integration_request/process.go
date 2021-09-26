@@ -78,9 +78,9 @@ func main() {
 		false, "Enables SDK and Integration request queue duplication.")
 	segmentExcludedCustomerUserIDByProject := flag.String("segment_excluded_customer_user_ids", "",
 		"Map of project_id and customer_user_id to exclude identification on segment.")
-	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
+	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	flag.Parse()
-	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
+
 	workerName := defaultWorkerName
 	if *enableSDKAndIntegrationRequestQueueDuplication {
 		workerName = duplicateWorkerName
@@ -127,7 +127,7 @@ func main() {
 		PrimaryDatastore: *primaryDatastore,
 		SegmentExcludedCustomerIDByProject: C.ParseProjectIDToStringMapFromConfig(
 			*segmentExcludedCustomerUserIDByProject, "SegmentExcludedCustomerIDByProject"),
-		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
+		DisableRedisWrites: disableRedisWrites,
 	}
 	C.InitConf(config)
 
