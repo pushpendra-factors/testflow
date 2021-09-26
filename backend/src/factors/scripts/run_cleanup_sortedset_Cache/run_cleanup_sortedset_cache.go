@@ -46,7 +46,6 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	flag.Parse()
-	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	if *env != "development" &&
 		*env != "staging" &&
 		*env != "production" {
@@ -86,8 +85,7 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:         *primaryDatastore,
-		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
+		PrimaryDatastore: *primaryDatastore,
 	}
 
 	C.InitConf(config)

@@ -37,14 +37,12 @@ func main() {
 	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
-	enableMemSQLRedisWrites := flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
 	flag.Parse()
-	disableMemSQLRedisWrites := !(*enableMemSQLRedisWrites)
 	taskID := "monthly_dashboard_caching"
 	healthcheckPingID := C.HealthcheckDashboardCachingPingID
 	defer C.PingHealthcheckForPanic(taskID, *envFlag, healthcheckPingID)
@@ -80,11 +78,10 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      taskID,
 		},
-		PrimaryDatastore:         *primaryDatastore,
-		RedisHost:                *redisHost,
-		RedisPort:                *redisPort,
-		SentryDSN:                *sentryDSN,
-		DisableMemSQLRedisWrites: &disableMemSQLRedisWrites,
+		PrimaryDatastore: *primaryDatastore,
+		RedisHost:        *redisHost,
+		RedisPort:        *redisPort,
+		SentryDSN:        *sentryDSN,
 	}
 	C.InitConf(config)
 
