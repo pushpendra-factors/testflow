@@ -45,7 +45,7 @@
       ]
     },
     {
-      "target": "flash-staging", 
+      "target": "sloth-staging", 
       "public": "dist/staging",
       "ignore": [
         "firebase.json",

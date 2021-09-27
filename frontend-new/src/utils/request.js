@@ -7,11 +7,12 @@ export function isRequestSuccess(status) {
 export const getHostUrl = () => {
     let host = BUILD_CONFIG.backend_host;
     host = (host[host.length - 1] === '/') ? host : host + '/';
+    let isSlothApp = window.location && window.location.host && window.location.host.indexOf("sloth") == 0;
+    // TODO: Remove isFlashApp after deployment of sloth on production.
     let isFlashApp = window.location && window.location.host && window.location.host.indexOf("flash") == 0;
-    var useMemSQL = localStorage.getItem("use-memsql-datastore");
-    if (isFlashApp || (useMemSQL && useMemSQL == "true")) {
+    if (isSlothApp || isFlashApp) {
         host = host + "mql/"
-    } 
+    }
     return host;
 }
 

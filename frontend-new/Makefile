@@ -10,7 +10,7 @@ build-prod:
 
 
 deploy-staging: build-staging
-	firebase use factors-staging; firebase deploy --only hosting:staging; firebase deploy --only hosting:flash-staging; node sdk-monitor.js stage 2
+	firebase use factors-staging; firebase deploy --only hosting:staging; firebase deploy --only hosting:sloth-staging; node sdk-monitor.js stage 2
 
 deploy-prod: notify-deployment
 deploy-prod: build-prod
