@@ -550,8 +550,7 @@ export default function GlobalFilterBlock({
         <Button
           type="text"
           onClick={delFilter}
-          size={'small'}
-          className={`mr-1`}
+          className={'fa-btn--custom mr-1 self-center'}
         >  <SVG name={delIcon} />  </Button>
       }
       {  

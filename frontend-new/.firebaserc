@@ -8,8 +8,8 @@
         "staging": [
           "factors-staging"
         ],
-        "flash-staging": [
-          "flash-staging-1"
+        "sloth-staging": [
+          "sloth-staging-1"
         ]
       }
     },

@@ -796,9 +796,9 @@ func GetPrimaryDatastore() string {
 	return DatastoreTypePostgres
 }
 
-// GetRoutesURLPrefix Prefix for urls supported on memsql. Returns /mql if memsql is enabled.
+// GetRoutesURLPrefix Prefix for urls supported on memsql. Returns /mql if enabled.
 func GetRoutesURLPrefix() string {
-	if UseMemSQLDatabaseStore() || EnableMQLAPI() {
+	if EnableMQLAPI() {
 		return "/mql"
 	}
 	return ""

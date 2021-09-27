@@ -99,7 +99,7 @@ const MarkTouchpointBlock = ({
 
   const renderTouchPointSelect = () => {
     return (
-      <div className={'flex justify-start items-center mt-2'}>
+      <div className={'flex justify-start items-center mt-3'}>
         {<Button type="text" onClick={toggleTouchPointSelect} icon={<SVG name={'plus'} color={'grey'} />}>Add a Touchpoint</Button>}
         {selectEvents()}
       </div>
@@ -141,7 +141,7 @@ const MarkTouchpointBlock = ({
               type='text'
               size={'large'}
               onClick={() => setMoreOptions(true)}
-              className={'ml-1 mr-1'}
+              className={'fa-btn--custom mr-1'}
             >
               <SVG name='more'></SVG>
             </Button>
@@ -154,7 +154,7 @@ const MarkTouchpointBlock = ({
           </div>
 
         )}
-        <Button size={'large'} type='text' onClick={deleteItem}>
+        <Button className={'fa-btn--custom'} size={'large'} type='text' onClick={deleteItem}>
           <SVG name='trash'></SVG>
         </Button>
       </div>
@@ -167,7 +167,7 @@ const MarkTouchpointBlock = ({
 
       filters.forEach((filt, id) => {
         filtrs.push(
-          <div key={id} className={`mt-4`}>
+          <div key={id} className={`mt-2`}>
             <AttrFilterBlock
               activeProject={activeProject}
               index={id}
@@ -188,7 +188,7 @@ const MarkTouchpointBlock = ({
 
       if (filterDD) {
         filtrs.push(
-          <div key={filtrs.length} className={`mt-4`}>
+          <div key={filtrs.length} className={`mt-2`}>
             <AttrFilterBlock
               activeProject={activeProject}
               blockType={'event'}
@@ -212,7 +212,7 @@ const MarkTouchpointBlock = ({
   const renderMarkTouchpointBlockContent = () => {
     return (
       <div
-        className={`${styles.block__content} fa--query_block_section--basic relative`}
+        className={`${styles.block__content} fa--query_block_section--basic relative mt-2 pt-1`}
       >
         {
           <Button type='link' onClick={toggleTouchPointSelect}>
@@ -231,7 +231,7 @@ const MarkTouchpointBlock = ({
 
         {selectEvents()}
 
-        {additionalActions()}
+        <div className={styles.block__additional_actions}>{additionalActions()}</div>
       </div>
     );
   };

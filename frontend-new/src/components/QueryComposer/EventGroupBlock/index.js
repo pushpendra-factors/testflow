@@ -181,7 +181,7 @@ const EventGroupBlock = ({
           type="text"
           onClick={() => delGroupState(groupByEvent)}
           size={'small'}
-          className={`mr-1`}
+          className={`mr-1 fa-btn--custom`}
         >  <SVG name={'remove'} />  </Button>
       <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>
         {grpIndex<1? 'Breakdown' : '...and'}{' '}

@@ -185,7 +185,7 @@ function GroupBlock({
             type="text"
             onClick={() => delOption(index)}
             size={'small'}
-            className={`mr-1`}
+            className={`mr-1 fa-btn--custom`}
           >  <SVG name={"remove"} />  </Button>
           {
             <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>{index >= 1 ? '...and' : 'Breakdown'}</Text>

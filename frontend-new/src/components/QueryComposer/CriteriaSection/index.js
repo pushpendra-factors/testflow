@@ -50,7 +50,6 @@ const CriteriaSection = ({queryType, queryCount = 0, crit_show, crit_perf, group
 
                 <div className={``}>
                     <Button 
-                            size={'large'} 
                             type="link" 
                             onClick={() => setCritPerfSelect(!critPerfSelect)}>
                                 {crit_perf? CRITERIA_PERF_OPTIONS.filter((op) => op[2] === crit_perf)[0][0] : 'Select'}</Button>
@@ -66,12 +65,9 @@ const CriteriaSection = ({queryType, queryCount = 0, crit_show, crit_perf, group
                             }}
                             onClickOutside={() => setCritPerfSelect(false)}
                         >
-
                         </FaSelect>}
-
                 </div>
 
-                
             </div>
         )
     }
@@ -101,7 +97,7 @@ const CriteriaSection = ({queryType, queryCount = 0, crit_show, crit_perf, group
     }
 
     if(queryType == QUERY_TYPE_EVENT) {
-        return (<div className={styles.criteria}>
+        return (<div className={`${styles.criteria} mt-2`}>
             <Text type={"title"} level={7} extraClass={"m-0 mr-2 inline"}>
                   Show
             </Text>

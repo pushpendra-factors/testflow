@@ -5751,7 +5751,7 @@ html {
   -ms-touch-action: manipulation;
       touch-action: manipulation;
   height: 32px;
-  padding: 4px 15px;
+  padding: 4px 8px;
   font-size: 14px;
   border-radius: 2px;
   color: rgba(0, 0, 0, 0.65);
@@ -18206,7 +18206,7 @@ textarea.ant-input {
   border-top: 0;
 }
 .ant-collapse-borderless > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
-  padding-top: 4px;
+  padding-top: 0;
 }
 .ant-collapse-ghost {
   background-color: transparent;

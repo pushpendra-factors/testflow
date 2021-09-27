@@ -52,7 +52,7 @@ function ReportContent({
   let content = null,
     queryDetail = null,
     durationObj = {},
-    metricsDropdown = <div className='mr-2'>Data from</div>;
+    metricsDropdown = <div className='mr-0'></div>;
 
   const {
     coreQueryState: { chartTypes },

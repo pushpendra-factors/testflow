@@ -50,6 +50,8 @@ class ReportsFetch(BaseJob):
         }
         response = downloader.searchanalytics().query(
             siteUrl=self._url_prefix, body=request).execute()
+        if ('rows' not in response) or (len(response['rows']) == 0):
+            log.warning("search_console: response: "+str(response) + " project_id: " + str(self._project_id) +" siteUrl: " + self._url_prefix + " request: " + str(request))
 
 
         # pagination 
@@ -59,6 +61,8 @@ class ReportsFetch(BaseJob):
             request['startRow']= row_start
             response = downloader.searchanalytics().query(
             siteUrl=self._url_prefix, body=request).execute()
+            if ('rows' not in response) or (len(response['rows']) == 0):
+                log.warning("search_console: response: "+str(response) + " project_id: " + str(self._project_id) +" siteUrl: " + self._url_prefix + " request: " + str(request))
 
         # adding hash
         for i in range(len(response_rows)):

@@ -187,13 +187,12 @@ function QueryBlock({
 
   const additionalActions = () => {
     return (
-      <div className={'fa--query_block--actions-cols flex'}>
+      <div className={`fa--query_block--actions-cols flex`}>
         <div className={`relative`}>
           <Button
             type='text'
-            size={'large'}
             onClick={() => setMoreOptions(true)}
-            className={`${styles.custombtn} ml-1 mr-1`}
+            className={`fa-btn--custom ml-1 mr-1`}
           >
             <SVG name='more'></SVG>
           </Button>
@@ -214,7 +213,7 @@ function QueryBlock({
           </AliasModal>
     
         </div>
-        <Button size={'large'} type='text' onClick={deleteItem} className={`${styles.custombtn}`}>
+        <Button type='text' onClick={deleteItem} className={`fa-btn--custom`}>
           <SVG name='trash'></SVG>
         </Button>
       </div>
@@ -297,7 +296,7 @@ function QueryBlock({
   if (!event) {
     return (
       <div
-        className={`${styles.query_block} fa--query_block mt-6 ${
+        className={`${styles.query_block} fa--query_block my-2 ${
           ifQueries ? 'borderless no-padding' : 'borderless no-padding'
         }`}
       >
@@ -374,7 +373,7 @@ function QueryBlock({
               {selectEvents()}
             </Tooltip>
           </div>
-          {additionalActions()}
+          <div className={styles.query_block__additional_actions}>{additionalActions()}</div>
         </div>
       </div>
       {eventFilters()}

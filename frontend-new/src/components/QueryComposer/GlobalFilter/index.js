@@ -50,7 +50,7 @@ const GLobalFilter = ({filters = [],  setGlobalFilters, onFiltersLoad=[]}) => {
 
         filters.forEach((filt, id) => {
             filtrs.push(
-                <div key={id} className={id !== 0 ? `mt-4` : null}>
+                <div key={id} className={`mt-2`}>
                     <GlobalFilterBlock activeProject={activeProject}
                         index={id}
                          filterType={'analytics'}
@@ -69,7 +69,7 @@ const GLobalFilter = ({filters = [],  setGlobalFilters, onFiltersLoad=[]}) => {
 
         if (filterDD) {
             filtrs.push(
-                <div key={filtrs.length} className={`mt-4`}>
+                <div key={filtrs.length} className={`mt-2`}>
                     <GlobalFilterBlock activeProject={activeProject}
                         blockType={'global'} filterType={'analytics'}
                         extraClass={styles.filterSelect}
@@ -86,7 +86,7 @@ const GLobalFilter = ({filters = [],  setGlobalFilters, onFiltersLoad=[]}) => {
             )
         } else {
             filtrs.push(
-                <div key={filtrs.length} className={`flex mt-4`}>
+                <div key={filtrs.length} className={`flex mt-2`}>
                     <Button className={``} type="text" onClick={() => setFilterDD(true)} icon={<SVG name="plus" />}> Add new </Button> 
                 </div>
             )
