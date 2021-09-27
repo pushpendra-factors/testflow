@@ -73,3 +73,14 @@ spec:
         backend:
           serviceName: frontend-service
           servicePort: 80
+  - host: "help.factors.ai"
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: intercom-help
+          servicePort: 80
+      - path: /*
+        backend:
+          serviceName: intercom-help
+          servicePort: 80
