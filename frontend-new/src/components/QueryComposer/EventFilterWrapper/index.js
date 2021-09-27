@@ -534,8 +534,7 @@ export default function EventFilterWrapper({
         <Button
           type="text"
           onClick={delFilter}
-          size={'small'}
-          className={`mr-1`}
+          className={'fa-btn--custom mr-1'}
         >  <SVG name={delIcon} />  </Button>
       }
       {

@@ -160,7 +160,7 @@ function ReportsLayout({
       return (
         <div className={`query_card_cont ${queryOpen? `query_card_open` : `query_card_close`}`} onClick={(e) => !queryOpen && setQueryOpen(true)}>
           <div className={`query_composer`}>{renderComposer()}</div>
-          <Button className={`query_card_expand`}><SVG name={'expand'}></SVG> {``} {`Expand`}</Button>
+          <Button size={'large'} className={`query_card_expand`}><SVG name={'expand'} size={20} ></SVG>Expand</Button>
         </div>
       )
     }
@@ -191,7 +191,7 @@ function ReportsLayout({
         activeTab={activeTab}
         getCurrentSorter={() => getCurrentSorter()}
       />
-      <div className='mt-24 px-12'>
+      <div className='mt-24 px-8'>
         <ErrorBoundary
           fallback={
             <FaErrorComp

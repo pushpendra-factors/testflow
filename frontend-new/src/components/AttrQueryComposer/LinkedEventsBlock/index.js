@@ -138,28 +138,6 @@ const LinkedEventsBlock = ({
         setSelectVisible(false);
     };
 
-    const addModelAction = () => {
-        return (
-          <div className={'fa--query_block--actions--cols relative ml-2'}>
-              <div className={`relative`}>
-                <Button
-                    type='text'
-                    onClick={() => setMoreOptions(true)}
-                    className={'ml-1 mr-1'}
-                >
-                <SVG name='more'></SVG>
-                </Button>
-        
-                {moreOptions ? <FaSelect
-                options={[[`Filter By`]]}
-                optionClick={(val) => setCompareModelActive(true) && setMoreOptions(false)}
-                onClickOutside={() => setMoreOptions(false)}
-                ></FaSelect> : false}
-            </div>
-          </div>
-        );
-      };
-
     const additionalActions = () => {
         return (
             <div className={'fa--query_block--actions--cols flex relative ml-2'}>
@@ -167,7 +145,7 @@ const LinkedEventsBlock = ({
                     <Button
                         type='text'
                         onClick={() => setMoreOptions(true)}
-                        className={'ml-1 mr-1'}
+                        className={'fa-btn--custom mr-1'}
                     >
                         <SVG name='more'></SVG>
                     </Button>
@@ -178,7 +156,7 @@ const LinkedEventsBlock = ({
                         onClickOutside={() => setMoreOptions(false)}
                     ></FaSelect> : false}
                 </div>
-                   <Button  type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
+                   <Button className={'fa-btn--custom'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
                 </div>
         );
     };
@@ -204,7 +182,7 @@ const LinkedEventsBlock = ({
 
     const renderLinkEventBlockContent = () => {
         return (
-            <div className={`${styles.block__content} fa--query_block_section--basic mt-2 relative`}>
+            <div className={`${styles.block__content} fa--query_block_section--basic mt-4 relative`}>
                 {<Tooltip title={eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}> <Button 
                     type="link" 
                     className={``}
@@ -215,7 +193,7 @@ const LinkedEventsBlock = ({
 
                 {selectEvents()}
 
-                {additionalActions()}
+                <div className={styles.block__additional_actions}>{additionalActions()}</div>
             </div>
         )
     };
@@ -223,7 +201,7 @@ const LinkedEventsBlock = ({
     const renderLinkEventSelect = () => {
 
         return (
-            <div className={`${styles.block__content} mt-2`}>
+            <div className={`${styles.block__content} mt-4`}>
                 {<Button type="text" onClick={toggleEventSelect} icon={<SVG name={'plus'} color={'grey'}/>}>Add new</Button>}
                 {selectEvents()}
             </div> 

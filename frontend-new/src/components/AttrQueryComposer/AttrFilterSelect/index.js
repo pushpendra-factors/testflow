@@ -268,9 +268,9 @@ const AttrFilterSelect = ({
             selectionComponent = (<InputNumber value={valuesState} onBlur={emitFilter} onChange={setNumericalValue}></InputNumber>);
         }
 
-        return (<div className={`${styles.filter__propContainer} ml-4`}>
+        return (<div className={`${styles.filter__propContainer} ml-2`}>
             {propState.type === 'categorical' ? <> <Tooltip title={valuesState && valuesState.length ? valuesState.join(', ') : null}><Button
-                className={`fa-button--truncate fa-button--truncate-lg`}
+                className={`fa-button--truncate`}
                 type="link"
                 onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}> {valuesState && valuesState.length ? valuesState.join(', ') : 'Select Values'}
             </Button> </Tooltip> {valuesSelectionOpen && selectionComponent} </> : null}

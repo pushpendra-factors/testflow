@@ -129,7 +129,7 @@ $cq-card-transition: transform .2s ease-in-out;
     display: flex;
     flex-direction: column;
     position: relative; 
-    padding: 22px 42px;
+    padding: 24px 42px;
     position: relative;
 
     border-top: 1px solid transparent;
@@ -142,6 +142,10 @@ $cq-card-transition: transform .2s ease-in-out;
 
     &.no-padding-l {
         padding-left: 0;
+    }
+
+    &.no-padding-r {
+        padding-right: 0;
     }
 
     &.bordered{
@@ -158,8 +162,9 @@ $cq-card-transition: transform .2s ease-in-out;
     }
 
     .ant-collapse-content-box {
-        padding-left: 0;
-        padding-right: 0;
+        // padding-left: 0;
+        // padding-right: 0;
+        padding: 0;
     }
 
     .fa--query_block--actions-cols{
@@ -186,15 +191,15 @@ $cq-card-transition: transform .2s ease-in-out;
  
     .fa--query_block--filters
     {
-        padding: 12px 0;
+        padding-top: 8px;
     }
     .fa--query_block--filters-values
     { 
 
     }
     .fa--query_block--add-event{
-        height: 28px;
-        width: 28px;
+        height: 24px;
+        width: 24px;
         border: 1px solid transparent; 
         border-radius: 100%;
         transition: all 0.3s;
@@ -476,8 +481,8 @@ $cq-card-transition: transform .2s ease-in-out;
 
 .query_card_cont {
     position: relative;
-    padding: 10px 30px;
-    padding-bottom: 60px;
+    padding: 0px 32px;
+    // padding-bottom: 60px;
     border: 1px solid #DBDBDB;
     border-radius: 8px;
     transition: 0.1s ease;
@@ -489,8 +494,8 @@ $cq-card-transition: transform .2s ease-in-out;
 
     .query_card_expand {
         position: absolute;
-        right: 10px;
-        bottom: 8px;
+        right: 32px;
+        bottom: 32px;
         z-index: 10;
     }
 
@@ -527,3 +532,9 @@ $cq-card-transition: transform .2s ease-in-out;
     }
 }
 
+.fa-btn--custom {
+    margin-left: 4px;
+    padding: 4px;
+    height: 32px;
+    width: 32px;
+}

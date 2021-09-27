@@ -140,7 +140,7 @@ const AttributionOptions = ({
         <Button
           type='text'
           onClick={() => setMoreOptions(true)}
-          className={'mr-1'}
+          className={'fa-btn--custom mr-1'}
         >
           <SVG name='more'></SVG>
         </Button>
@@ -158,7 +158,7 @@ const AttributionOptions = ({
     return (
 
       <div
-        className={`${styles.block__content} flex items-center relative fa--query_block_section--basic`}
+        className={`${styles.block__content} mt-3 flex items-center relative fa--query_block_section--basic`}
       >
         {renderModel(0)}
 
@@ -176,7 +176,7 @@ const AttributionOptions = ({
 
         {compareModelActive && renderModel(1)}
 
-        {!compareModelActive && models[0] && addModelAction()}
+        {!compareModelActive && models[0] && <div className={styles.block__additional_actions}>{addModelAction()}</div>}
       </div>
     );
   };
@@ -324,7 +324,7 @@ const AttributionOptions = ({
   return (
     <div className={`${styles.block}`}>
       {renderAttributionModel()}
-      <div className={`flex mt-4`}>
+      <div className={`flex pt-2`}>
         <div className={`flex flex-col justify-center`}>
           <SVG name='clock' size={20} extraClass={`mr-4`}></SVG>
         </div>

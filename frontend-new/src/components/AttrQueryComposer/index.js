@@ -171,8 +171,10 @@ const AttrQueryComposer = ({ activeProject,
         if (!eventGoal || !eventGoal?.label?.length) { return null; }
 
         return (
-            <div className={`${styles.composer__footer} fa--query_block`}>
-                {!collapse ? <FaDatepicker customPicker presetRange
+            <div className={`${!collapse ? styles.composer__footer : styles.composer_footer_right}`}>
+                {!collapse ? <FaDatepicker
+                    customPicker
+                    presetRange
                     buttonSize={`large`}
                     className={`mr-2`}
                     monthPicker
@@ -183,13 +185,10 @@ const AttrQueryComposer = ({ activeProject,
                         }
                     }
                     placement="topRight" onSelect={setDateRange} /> : <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(false)}>
-                    <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse all
-                </Button>}
-
-                <Button size={'large'} type="primary" onClick={handleRunQuery}>Analyse</Button>
+                    <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse all</Button>}
+                <Button className={`ml-2`} size={'large'} type='primary' onClick={handleRunQuery}>Analyse</Button>
             </div>
         );
-
     };
 
     try {
@@ -200,8 +199,8 @@ const AttrQueryComposer = ({ activeProject,
                     isOpen={convGblockOpen}
                     showIcon={true}
                     onClick={() => setConvGblockOpen(!convGblockOpen)}
-                    extraClass={`no-padding-l`}
-                >
+                    extraClass={`no-padding-l no-padding-r`}
+                    >
                     {renderConversionBlock()}
                 </ComposerBlock>
 
@@ -211,8 +210,8 @@ const AttrQueryComposer = ({ activeProject,
                         isOpen={tchPointblockOpen}
                         showIcon={true}
                         onClick={() => setTchPointblockOpen(!tchPointblockOpen)}
-                        extraClass={`no-padding-l`}
-                    >
+                        extraClass={`no-padding-l no-padding-r`}
+                        >
                         {renderMarkTouchpointBlock()}
                     </ComposerBlock>
                 }
@@ -223,8 +222,8 @@ const AttrQueryComposer = ({ activeProject,
                         isOpen={criteriablockOpen}
                         showIcon={true}
                         onClick={() => setCriteriablockOpen(!criteriablockOpen)}
-                        extraClass={`no-padding-l`}
-                    >
+                        extraClass={`no-padding-l no-padding-r`}
+                        >
                         {renderAttributionOptions()}
                     </ComposerBlock>
                 }
@@ -235,8 +234,8 @@ const AttrQueryComposer = ({ activeProject,
                         isOpen={linkEvExpansion}
                         showIcon={true}
                         onClick={() => toggleLinkEvExpansion()}
-                        extraClass={`no-padding-l`}
-                    >
+                        extraClass={`no-padding-l no-padding-r`}
+                        >
                         {linkEvExpansion && models.length <= 1 && renderLinkedEvents()}
                     </ComposerBlock>
                 }

@@ -983,7 +983,8 @@ function CoreQuery({
           closable={false}
           className={'fa-modal--full-width'}
         >
-          <div className='mt-16 px-20'>
+
+          <div className='mt-8 px-20'>
             <ErrorBoundary
               fallback={
                 <FaErrorComp

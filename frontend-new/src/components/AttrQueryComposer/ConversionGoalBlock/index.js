@@ -143,7 +143,7 @@ const ConversionGoalBlock = ({
                     <Button
                         type='text'
                         onClick={() => setMoreOptions(true)}
-                        className={'ml-1 mr-1 md-1'}
+                        className={'fa-btn--custom mr-1'}
                     >
                         <SVG name='more'></SVG>
                     </Button>
@@ -154,7 +154,7 @@ const ConversionGoalBlock = ({
                         onClickOutside={() => setMoreOptions(false)}
                     ></FaSelect> : false}
                 </div>
-                <Button size={'large'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
+                <Button className={'fa-btn--custom'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
                 </div>
         );
     };
@@ -177,10 +177,9 @@ const ConversionGoalBlock = ({
 
     const renderGoalBlockContent = () => {
         return (
-            <div className={'flex items-center relative'}>
+            <div className={`${styles.block__content} flex items-center relative mt-1`}>
                 {<Tooltip title={eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}>
                 <Button 
-                    size={'large'} 
                     type="link" 
                     onClick={toggleEventSelect}
                     icon={<SVG name="mouseevent" />}
@@ -194,14 +193,14 @@ const ConversionGoalBlock = ({
 
                 <Text type={'title'} level={7} weight={'regular'} color={'grey'} extraClass={'m-0 ml-2'}>as count of unique users</Text>
 
-                {additionalActions()}
+                <div className={styles.block__additional_actions}>{additionalActions()}</div>
             </div>
         )
     };
 
     const renderGoalSelect = () => {
         return (
-            <div className={'flex justify-start items-center mt-6'}>
+            <div className={'flex justify-start items-center pt-3 mt-1'}>
                 {<Button type="text" onClick={toggleEventSelect} icon={<SVG name={'plus'} color={'grey'} />}>Add a goal event</Button>}
                 {selectEvents()}
             </div>

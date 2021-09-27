@@ -2,11 +2,20 @@
   display: flex;
   flex-direction: column;
 
+  &__additional_actions {
+    visibility: hidden;
+}
+
   &__content {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     position: relative;
+    &:hover {
+      .block__additional_actions {
+          visibility: visible;
+      }
+  }
 
     &__txt_muted {
       display: flex;

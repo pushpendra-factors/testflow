@@ -128,7 +128,7 @@ function QueryComposer({
           isOpen={filterBlockOpen} 
           showIcon={true} 
           onClick={() => setFilterBlockOpen(!filterBlockOpen)}
-          extraClass={`no-padding-l`}
+          extraClass={`no-padding-l no-padding-r`}
         >
           <div key={0} className={"fa--query_block borderless no-padding "}>
             <GLobalFilter filters={queryOptions.globalFilters} 
@@ -157,7 +157,7 @@ function QueryComposer({
       return (
         <ComposerBlock blockTitle={'BREAKDOWN'} isOpen={groupBlockOpen} 
           showIcon={true} onClick={() => setGroupBlockOpen(!groupBlockOpen)}
-          extraClass={`no-padding-l`}
+          extraClass={`no-padding-l no-padding-r`}
         >
           <div key={0} className={'fa--query_block borderless no-padding '}>
             <GroupBlock queryType={queryType} events={queries}></GroupBlock>
@@ -256,8 +256,7 @@ function QueryComposer({
               }}
               onSelect={setDateRange}
             />: <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(false)}>
-            <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse all
-          </Button>}
+            <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse all</Button>}
           <Button className={`ml-2`} size={'large'} type='primary' onClick={handleRunQuery}>
               Run Query
           </Button>
@@ -384,7 +383,7 @@ function QueryComposer({
 
         return (
           <ComposerBlock blockTitle={'CRITERIA'} isOpen={criterieaBlockOpen} showIcon={true} 
-            onClick={() => {setCriterieaBlockOpen(!criterieaBlockOpen)}} extraClass={`no-padding-l`}>
+            onClick={() => {setCriterieaBlockOpen(!criterieaBlockOpen)}} extraClass={`no-padding-l no-padding-r`}>
             <div className={styles.criteria}>{renderEACrit()}</div>
           </ComposerBlock>
         );
@@ -413,7 +412,7 @@ function QueryComposer({
           blockTitle={'EVENTS'} isOpen={eventBlockOpen} 
           showIcon={true} 
           onClick={() => setEventBlockOpen(!eventBlockOpen)}
-          extraClass={`no-padding-l`}
+          extraClass={`no-padding-l no-padding-r pt-2`}
         >
           {queryList()}
         </ComposerBlock>
