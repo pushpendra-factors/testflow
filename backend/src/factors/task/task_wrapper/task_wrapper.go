@@ -40,6 +40,17 @@ func TaskFunc(JobName string, lookback int, f func(map[string]interface{}) (map[
 			store.GetStore().InsertTaskBeginRecord(taskDetails.TaskID, 0, delta)
 			configs["startTimestamp"] = getDeltaAsTime(delta)
 			configs["endTimestamp"] = getEndTimestamp(delta, taskDetails.Frequency, taskDetails.FrequencyInterval)
+			defer func() {
+				if r := recover(); r != nil {
+					buf := make([]byte, 1024)
+					runtime.Stack(buf, false)
+					msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", r, string(buf))
+					log.Errorf("Recovering from panic: %v", msg)
+					log.WithFields(log.Fields{"delta": delta, "is_project_enabled": taskDetails.IsProjectEnabled}).Info("processing failed")
+					// Report Error here
+					store.GetStore().DeleteTaskEndRecord(taskDetails.TaskID, 0, delta)
+				}
+			}()
 			status, isSuccess := f(configs)
 			finalStatus[deltaString] = status
 			finalStatus["Status"+deltaString] = isSuccess
@@ -114,6 +125,14 @@ func TaskFuncWithProjectId(JobName string, lookback int, projectIds []uint64, f 
 		}
 	}
 	return finalStatus
+}
+
+func GetTaskDeltaAsTime(delta uint64) int64 {
+	return getDeltaAsTime(delta)
+}
+
+func GetTaskEndTimestamp(delta uint64, frequency int, frequencyInterval int) int64 {
+	return getEndTimestamp(delta, frequency, frequencyInterval)
 }
 
 func getDeltaAsTime(delta uint64) int64 {

@@ -2,41 +2,15 @@ package main
 
 import (
 	C "factors/config"
-	"factors/model/store"
-	U "factors/util"
+	T "factors/task/hubspot_enrich"
 	"flag"
 	"fmt"
-	"net/http"
-	"sync"
 	"time"
 
-	IntHubspot "factors/integration/hubspot"
+	taskWrapper "factors/task/task_wrapper"
 
 	log "github.com/sirupsen/logrus"
 )
-
-type SyncStatus struct {
-	Status     []IntHubspot.Status
-	HasFailure bool
-	Lock       sync.Mutex
-}
-
-func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) {
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
-
-	s.Status = append(s.Status, status...)
-	if hasFailure {
-		s.HasFailure = hasFailure
-	}
-}
-
-func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus) {
-	defer wg.Done()
-
-	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines)
-	syncStatus.AddSyncStatus(status, hasFailure)
-}
 
 func main() {
 	env := flag.String("env", "development", "")
@@ -76,10 +50,12 @@ func main() {
 	projectIDList := flag.String("project_ids", "*", "List of project_id to run for.")
 	disabledProjectIDList := flag.String("disabled_project_ids", "", "List of project_ids to exclude.")
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
+
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+	taskManagementLookback := flag.Int("task_management_lookback", 1, "")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 
 	flag.Parse()
@@ -148,75 +124,13 @@ func main() {
 	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
-	hubspotEnabledProjectSettings, errCode := store.GetStore().GetAllHubspotProjectSettings()
-	if errCode != http.StatusFound {
-		log.Panic("No projects enabled hubspot integration.")
-	}
+	configs := make(map[string]interface{})
+	configs["project_ids"] = *projectIDList
+	configs["disabled_project_ids"] = *disabledProjectIDList
+	configs["num_unique_doc_routines"] = *numDocRoutines
+	configs["health_check_ping_id"] = defaultHealthcheckPingID
+	configs["override_healthcheck_ping_id"] = *overrideHealthcheckPingID
+	configs["num_project_routines"] = *numProjectRoutines
 
-	var propertyDetailSyncStatus []IntHubspot.Status
-	anyFailure := false
-
-	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
-		*projectIDList, *disabledProjectIDList)
-	if !allProjects {
-		log.WithField("projects", allowedProjects).Info("Running only for the given list of projects.")
-	}
-
-	if len(disabledProjects) > 0 {
-		log.WithField("excluded_projects", disabledProjectIDList).Info("Running with exclusion of projects.")
-	}
-
-	projectIDs := make([]uint64, 0, 0)
-	for _, settings := range hubspotEnabledProjectSettings {
-		if exists := disabledProjects[settings.ProjectId]; exists {
-			continue
-		}
-
-		if !allProjects {
-			if _, exists := allowedProjects[settings.ProjectId]; !exists {
-				continue
-			}
-		}
-
-		if C.IsEnabledPropertyDetailByProjectID(settings.ProjectId) {
-			log.Info(fmt.Sprintf("Starting sync property details for project %d", settings.ProjectId))
-
-			failure, propertyDetailStatus := IntHubspot.SyncDatetimeAndNumericalProperties(settings.ProjectId, settings.APIKey)
-			propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailStatus...)
-			if failure {
-				anyFailure = true
-			}
-
-			log.Info(fmt.Sprintf("Synced property details for project %d", settings.ProjectId))
-		}
-
-		projectIDs = append(projectIDs, settings.ProjectId)
-	}
-
-	// Runs enrichment for list of project_ids as batch using go routines.
-	batches := U.GetUint64ListAsBatch(projectIDs, *numProjectRoutines)
-	syncStatus := SyncStatus{}
-	for bi := range batches {
-		batch := batches[bi]
-
-		var wg sync.WaitGroup
-		for pi := range batch {
-			wg.Add(1)
-			go syncWorker(batch[pi], &wg, *numDocRoutines, &syncStatus)
-		}
-		wg.Wait()
-	}
-	anyFailure = anyFailure || syncStatus.HasFailure
-
-	jobStatus := map[string]interface{}{
-		"document_sync":      syncStatus.Status,
-		"property_type_sync": propertyDetailSyncStatus,
-	}
-
-	if anyFailure {
-		C.PingHealthcheckForFailure(healthcheckPingID, jobStatus)
-		return
-	}
-
-	C.PingHealthcheckForSuccess(healthcheckPingID, jobStatus)
+	taskWrapper.TaskFunc(appName, *taskManagementLookback, T.RunHubspotEnrich, configs)
 }

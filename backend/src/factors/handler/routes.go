@@ -338,6 +338,15 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.GET("/linkedin/project/settings/projects",
 		IH.DataServiceLinkedinGetProjectSettingsForProjects)
 
+	dataServiceRouteGroup.GET("/task/details", responseWrapper(V1.GetTaskDetailsByNameHandler))
+	dataServiceRouteGroup.GET("/task/deltas", responseWrapper(V1.GetAllToBeExecutedDeltasHandler))
+	dataServiceRouteGroup.GET("/task/delta_timestamp", responseWrapper(V1.GetTaskDeltaAsTimeHandler))
+	dataServiceRouteGroup.GET("/task/delta_end_timestamp", responseWrapper(V1.GetTaskEndTimeHandler))
+	dataServiceRouteGroup.POST("/task/begin", responseWrapper(V1.InsertTaskBeginRecordHandler))
+	dataServiceRouteGroup.POST("/task/end", responseWrapper(V1.InsertTaskEndRecordHandler))
+	dataServiceRouteGroup.DELETE("/task/end", responseWrapper(V1.DeleteTaskEndRecordHandler))
+	dataServiceRouteGroup.GET("/task/dependent_task_done", responseWrapper(V1.IsDependentTaskDoneHandler))
+
 }
 
 type Error struct {

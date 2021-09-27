@@ -1,10 +1,13 @@
 from optparse import OptionParser
 import logging as log
+from types import TracebackType
 import requests
 import json
 import urllib
 import sys
 import time
+
+from requests import status_codes
 
 parser = OptionParser()
 parser.add_option("--env", dest="env", default="development")
@@ -771,25 +774,120 @@ def sync(project_id, api_key, doc_type, sync_all, last_sync_timestamp):
     response["timestamp"]= max_timestamp
     return response
 
-if __name__ == "__main__":
-    (options, args) = parser.parse_args()
-    sync_info = get_sync_info(options.first_sync)
+def requests_with_retry(method,url):
+    retries = 0
+    while True:
+        try:
+            return requests.request(method=method, url = url)
+        except Exception as e:
+            if retries < RETRY_LIMIT:
+                log.error("Failed to perform request %s. Retrying in %dsec",e,2)
+                time.sleep(2)
+                continue
+            else:
+                raise Exception("Failed to perform request %s",e)
+
+def get_task_detail(job_name):
+    uri = "/data_service/task/details?task_name="+job_name
+    url = options.data_service_host + uri
+
+    response = requests_with_retry("GET",url)
+    if not response.ok:
+        raise Exception('Failed to get task details: '+str(response.status_code)+' %s'+response.text)
+    return response.json()
+
+def get_all_to_be_executed_deltas(task_id,project_id, lookback):
+    uri = "/data_service/task/deltas?task_id="+str(task_id) +"&lookback="+str(lookback) +"&project_id="+str(project_id)
+    url = options.data_service_host + uri
+
+    response = requests_with_retry("GET",url)
+    if not response.ok:
+        raise Exception('Failed to task deltas: '+str(response.status_code)+' %s'+response.text)
+    return response.json()
+
+def insert_task_begin_record(task_id,project_id, delta):
+    uri = "/data_service/task/begin?task_id="+str(task_id) +"&delta="+str(delta) +"&project_id="+str(project_id)
+    url = options.data_service_host + uri
+
+    response = requests_with_retry("POST",url)
+    if response.status_code != requests.codes["created"]:
+        raise Exception('Failed to insert task begin record: '+str(response.status_code)+' %s'+response.text)
+    return response
+
+def insert_task_end_record(task_id,project_id, delta):
+    uri = "/data_service/task/end?task_id="+str(task_id) +"&delta="+str(delta) +"&project_id="+str(project_id)
+    url = options.data_service_host + uri
+
+    response = requests_with_retry("POST",url)
+    if response.status_code != requests.codes["created"]:
+        raise Exception('Failed to insert task end record: '+str(response.status_code)+' %s'+response.text)
+    return response
+
+def delete_task_end_record(task_id,project_id, delta):
+    uri = "/data_service/task/end?task_id="+str(task_id) +"&delta="+str(delta) +"&project_id="+str(project_id)
+    url = options.data_service_host + uri
+
+    response = requests_with_retry("DELETE",url)
+    if response.status_code != requests.codes["accepted"]:
+        raise Exception('Failed to delete task delta: '+str(response.status_code)+' %s'+response.text)
+    return response
+
+def is_dependent_task_done(task_id,project_id,delta):
+    uri = "/data_service/task/dependent_task_done?task_id="+str(task_id) +"&delta="+str(delta) +"&project_id="+str(project_id)
+    url = options.data_service_host + uri
+
+    response = requests_with_retry("GET",url)
+    if not response.ok and response.status_code != requests.codes["not_found"]:
+        raise Exception('Failed to check dependent task: '+str(response.status_code)+' %s'+response.text)
+    data = json.loads(response.text)
+    return data
+
+def get_task_delta_as_time(delta):
+    uri = "/data_service/task/delta_timestamp?delta="+str(delta)
+    url = options.data_service_host + uri
+
+    response = requests_with_retry("GET",url)
+    if not response.ok:
+        raise Exception('Failed to get timestamp for delta: '+delta+" status: "+str(response.status_code)+' %s'+response.text)
+    return response
+
+def get_task_end_timestamp(delta,frequency, frequency_interval):
+    uri = "/data_service/task/delta_end_timestamp?delta="+str(delta)+"&frequency="+str(frequency)+"&frequency_interval="+frequency_interval
+    url = options.data_service_host + uri
+
+    response = requests_with_retry("GET",url)
+    if not response.ok:
+        raise Exception("Failed to get end timestamp for delta: "+delta+" status: "+str(response.status_code)+' %s'+response.text)
+    return response
+
+def get_pending_delta(job_name, lookback):
+    task_details = get_task_detail(job_name)
+    deltas = get_all_to_be_executed_deltas(task_details["task_id"],lookback)
+    if len(deltas)<1:
+        return task_details,0,False
+
+    return task_details,deltas[len(deltas)-1], True # only process the latest delta
+
+def hubspot_sync(configs):
+    first_sync = configs["first_sync"]
+    sync_info = get_sync_info(first_sync)
 
     project_settings = sync_info.get("project_settings")
     if project_settings == None:
         log.error("Project settings missing on get sync info response")
         sys.exit(1)
-    
+
     last_sync_info = sync_info.get("last_sync_info")
     if last_sync_info == None:
         log.error("Last sync info missing on get sync info response")
         sys.exit(1)
 
-    next_sync_info = get_next_sync_info(project_settings, last_sync_info, options.first_sync)
+    next_sync_info = get_next_sync_info(project_settings, last_sync_info, first_sync)
 
     log.warning("sync_info: "+str(next_sync_info))
     next_sync_failures = []
     next_sync_success = []
+
     for info in next_sync_info:
         log.warning("Current processing sync_info: "+str(info))
         response = sync(info.get("project_id"), info.get("api_key"), 
@@ -798,10 +896,93 @@ if __name__ == "__main__":
             next_sync_failures.append(response)
         else:
             next_sync_success.append(response)
+    
+    sync_status = {
+        "next_sync_failures":next_sync_failures,
+        "next_sync_success": next_sync_success
+    }
 
+    success = len(next_sync_failures)<1
+    return sync_status, success
+
+def task_func(job_name, lookback, f, configs, latest_interval=False):
+    task_details = get_task_detail(job_name)
+    finalStatus = {}
+    if task_details["is_project_enabled"] == True:
+        finalStatus["status"] = "Call ProjectId Enabled Func"
+        return finalStatus
+    task_id = task_details["task_id"]
+
+    deltas  = get_all_to_be_executed_deltas(task_id, 0,lookback)
+    if len(deltas)<1:
+        log.warning("No interval for processing.")
+        return finalStatus
+
+    deltas.sort()
+    if latest_interval == True:
+        deltas = deltas[len(deltas)-1:]
+    log.warning("Deltas to be processed %s", deltas)
+
+    for delta in deltas:
+        finalStatus[str(delta)]={}
+        log.warning("Checking dependency")
+        done = is_dependent_task_done(task_id,0,delta)
+        if done == True:
+            log.warning("Processing delta %s",delta)
+            insert_task_begin_record(task_id,0,delta)
+            configs["start_timestamp"] = get_task_delta_as_time(delta)
+            configs["end_timestamp"]=get_task_end_timestamp(delta,str(task_details["frequency"]), str(task_details["frequency_interval"]))
+            try:
+                status, success = f(configs)
+            except Exception as e:
+                delete_task_end_record(task_id,0, delta)
+                finalStatus[str(delta)]["success"] = False
+                finalStatus[str(delta)]["error"] = str(e)
+                break
+            finalStatus[str(delta)]["status"] = status
+            finalStatus[str(delta)]["success"] = success
+            if success == False:
+                log.warning("Processing failed for delta %s",delta)
+                delete_task_end_record(task_id,0, delta)
+                break
+            log.warning("Processing success for delta %s",delta)
+            insert_task_end_record(task_id,0,delta)
+        else:
+            finalStatus[str(delta)]["error"] = "Dependency not done yet"
+            finalStatus[str(delta)]["success"]=False
+            log.warning("%s - dependency not done yet",delta)
+
+    return finalStatus
+
+
+if __name__ == "__main__":
+    (options, args) = parser.parse_args()
+    configs = {
+        "first_sync":options.first_sync
+    }
+
+    app_name = options.app_name if options.first_sync else APP_NAME
+    status = task_func(app_name,1,hubspot_sync,configs,True)
+    if len(status)<1:
+        sys.exit(0)
+    
     status_msg = ""
-    if len(next_sync_failures) > 0: status_msg = "Failures on sync."
-    else: status_msg = "Successfully synced."
+    err = ""
+    next_sync_failures = []
+    next_sync_success = []
+    for delta in status:
+        delta_status = status[delta]
+
+        if delta_status["success"] == False:
+            status_msg = "Failures on sync."
+            err = delta_status["error"] if "error" in delta_status else ""
+        else:
+            status_msg = "Successfully synced."
+
+        if "status" in delta_status:
+            if "next_sync_failures" in delta_status["status"]: next_sync_failures = delta_status["status"]["next_sync_failures"]
+            if "next_sync_success" in delta_status["status"]: next_sync_success = delta_status["status"]["next_sync_success"]
+
     notification_payload = {
         "status": status_msg, 
         "failures": next_sync_failures, 
@@ -811,6 +992,8 @@ if __name__ == "__main__":
     log.warning("Successfully synced. End of hubspot sync job.")
     try:
         update_sync_status(notification_payload, options.first_sync)
+        if err!="": # append error after processing data
+            next_sync_failures.insert(0,err)
         if options.first_sync == True:
             ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload)
         else:
