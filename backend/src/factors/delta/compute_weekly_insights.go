@@ -38,6 +38,7 @@ type ActualMetrics struct {
 	Key                  string `json:"key"`
 	Value                string `json:"value"`
 	Entity               string `json:"entity"`
+	VoteStatus           string `json:"vote_status"`
 	ActualValues         Base   `json:"actual_values"`
 	ChangeInConversion   Base   `json:"change_in_conversion"`
 	ChangeInPrevalance   Base   `json:"change_in_prevalance"`
@@ -50,6 +51,7 @@ type ValueWithDetails struct {
 	Key                  string            `json:"key"`
 	Value                string            `json:"value"`
 	Entity               string            `json:"entity"`
+	VoteStatus           string            `json:"vote_status"`
 	ActualValues         BaseTargetMetrics `json:"actual_values"`
 	ChangeInConversion   Base              `json:"change_in_conversion"`
 	ChangeInPrevalance   Base              `json:"change_in_prevalance"`
@@ -75,7 +77,15 @@ var Funnel string = "Funnel"
 
 var BlackListedKeys map[string]bool
 var WhiteListedKeys map[string]bool
+var WhiteListedKeysOtherQuery map[string]bool
 var DecreaseBoostKeys map[string]bool
+
+const (
+	Upvoted                = "upvoted"
+	UpvotedForOtherQuery   = "upvoted_other_query"
+	Downvoted              = "downvoted"
+	DownvotedForOtherQuery = "downvoted_other_query"
+)
 
 func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, EventType string) WeeklyInsights {
 	var KeyMapForConversion = make(map[string]bool)
@@ -190,8 +200,13 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.DeltaRatio = file.DeltaRatio[keys][keys2] * temp.W1
 						if WhiteListedKeys[value.Key] {
 							temp.DeltaRatio *= 2 // boosting the sorting factor if upvoted
+							value.VoteStatus = Upvoted
+						} else if WhiteListedKeysOtherQuery[value.Key] {
+							temp.DeltaRatio *= 2
+							value.VoteStatus = UpvotedForOtherQuery
 						} else if DecreaseBoostKeys[value.Key] {
 							temp.DeltaRatio *= 0.5 // reverse
+							value.VoteStatus = DownvotedForOtherQuery
 						}
 					}
 
@@ -261,6 +276,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		tempActualValue.Key = data.Key
 		tempActualValue.Value = data.Value
 		tempActualValue.Entity = data.Entity
+		tempActualValue.VoteStatus = data.VoteStatus
 		tempActualValue.ChangeInConversion = data.ChangeInConversion
 		tempActualValue.ChangeInPrevalance = data.ChangeInPrevalance
 		tempActualValue.Type = data.Type
@@ -319,8 +335,13 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
 						if WhiteListedKeys[val2.Key] {
 							temp.JSDivergence *= 2 // boosting 2X
+							val2.VoteStatus = Upvoted
+						} else if WhiteListedKeysOtherQuery[val2.Key] {
+							temp.JSDivergence *= 2
+							val2.VoteStatus = UpvotedForOtherQuery
 						} else if DecreaseBoostKeys[val2.Key] {
 							temp.JSDivergence *= 0.5
+							val2.VoteStatus = DownvotedForOtherQuery
 						}
 					}
 					val2.ActualValues = temp
@@ -375,8 +396,13 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
 						if WhiteListedKeys[val2.Key] {
 							temp.JSDivergence *= 2
+							val2.VoteStatus = Upvoted
+						} else if WhiteListedKeysOtherQuery[val2.Key] {
+							temp.JSDivergence *= 2
+							val2.VoteStatus = UpvotedForOtherQuery
 						} else if DecreaseBoostKeys[val2.Key] {
 							temp.JSDivergence *= 0.5
+							val2.VoteStatus = DownvotedForOtherQuery
 						}
 					}
 					val2.ActualValues = temp
@@ -428,6 +454,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		tempActualValue.Key = data.Key
 		tempActualValue.Value = data.Value
 		tempActualValue.Entity = data.Entity
+		tempActualValue.VoteStatus = data.VoteStatus
 		tempActualValue.Type = data.Type
 
 		if tempActualValue.ActualValues.IsIncreased && increasedRecords > 0 {
@@ -526,6 +553,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 		"$joinTime":      true,
 	}
 	WhiteListedKeys = make(map[string]bool)
+	WhiteListedKeysOtherQuery = make(map[string]bool)
 	CaptureBlackListedAndWhiteListedKeys(projectId, agentUUID, queryId)
 	insightsObj := GetInsights(insights, numberOfRecords, class, EventType)
 	// adding query groups
@@ -574,8 +602,13 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.DeltaRatio = file.DeltaRatio[property][values] * temp.W1
 							if WhiteListedKeys[property] {
 								temp.DeltaRatio *= 2
+								newData.VoteStatus = Upvoted
+							} else if WhiteListedKeysOtherQuery[property] {
+								temp.DeltaRatio *= 2
+								newData.VoteStatus = UpvotedForOtherQuery
 							} else if DecreaseBoostKeys[property] {
 								temp.DeltaRatio *= 0.5
+								newData.VoteStatus = DownvotedForOtherQuery
 							}
 						}
 
@@ -625,6 +658,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							tempActualValue.Key = data.Key
 							tempActualValue.Value = data.Value
 							tempActualValue.Entity = data.Entity
+							tempActualValue.VoteStatus = data.VoteStatus
 							tempActualValue.ChangeInConversion = data.ChangeInConversion
 							tempActualValue.ChangeInPrevalance = data.ChangeInPrevalance
 							tempActualValue.Type = data.Type
@@ -659,8 +693,13 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.JSDivergence = file.JSDivergence.Target[property][values] * temp.W1
 							if WhiteListedKeys[property] {
 								temp.JSDivergence *= 2
+								newData.VoteStatus = Upvoted
+							} else if WhiteListedKeysOtherQuery[property] {
+								temp.JSDivergence *= 2
+								newData.VoteStatus = UpvotedForOtherQuery
 							} else if DecreaseBoostKeys[property] {
 								temp.JSDivergence *= 0.5
+								newData.VoteStatus = DownvotedForOtherQuery
 							}
 
 						}
@@ -702,8 +741,13 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							temp.JSDivergence = file.JSDivergence.Base[property][values]
 							if WhiteListedKeys[property] {
 								temp.JSDivergence *= 2
+								newData.VoteStatus = Upvoted
+							} else if WhiteListedKeysOtherQuery[property] {
+								temp.JSDivergence *= 2
+								newData.VoteStatus = UpvotedForOtherQuery
 							} else if DecreaseBoostKeys[property] {
 								temp.JSDivergence *= 0.5
+								newData.VoteStatus = DownvotedForOtherQuery
 							}
 
 						}
@@ -745,6 +789,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 				tempActualValue.Key = data.Key
 				tempActualValue.Value = data.Value
 				tempActualValue.Entity = data.Entity
+				tempActualValue.VoteStatus = data.VoteStatus
 				tempActualValue.Type = data.Type
 				ActualMetricsArr = append(ActualMetricsArr, tempActualValue)
 
@@ -810,7 +855,12 @@ func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string, qu
 		var property model.WeeklyInsightsProperty
 		json.Unmarshal(bytes, &property)
 		if record.VoteType == model.VOTE_TYPE_UPVOTE { // upvote
-			WhiteListedKeys[property.Key] = true
+			if property.QueryID == queryID {
+				WhiteListedKeys[property.Key] = true
+			} else {
+				WhiteListedKeysOtherQuery[property.Key] = true
+			}
+
 		} else { // downvote
 			if property.QueryID == queryID {
 				BlackListedKeys[property.Key] = true

@@ -2,10 +2,13 @@ package v1
 
 import (
 	"factors/model/store"
-	"github.com/gin-gonic/gin"
+	TW "factors/task/task_wrapper"
+	"factors/util"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type RegisterTaskParams struct {
@@ -156,45 +159,74 @@ func GetTaskDetailsByNameHandler(c *gin.Context) (interface{}, int, string, stri
 	if status != http.StatusOK {
 		return nil, status, errMsg, "", true
 	}
-	c.JSON(200, taskDetails)
-	response := make(map[string]interface{})
-	response["status"] = "success"
-	return response, http.StatusAccepted, "", "", false
+	return taskDetails, status, "", "", false
 }
+
 func GetAllToBeExecutedDeltasHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	params, err := GetAllParamsWithTaskIdProjectIdLookback(c)
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
 	}
-	endTime := time.Now()
-	deltas, status, errMsg := store.GetStore().GetAllToBeExecutedDeltas(params.TaskId, params.ProjectId, params.Lookback, &endTime)
+
+	deltas, status, errMsg := store.GetStore().GetAllToBeExecutedDeltas(params.TaskId, params.ProjectId, params.Lookback, nil)
 	if status != http.StatusOK {
 		return nil, status, errMsg, err.Error() + "2", true
 	}
-	c.JSON(200, deltas)
-	response := make(map[string]interface{})
-	response["status"] = "success"
-	return response, http.StatusCreated, "", "", false
+	return deltas, status, "", "", false
 }
+
+func GetTaskDeltaAsTimeHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	delta := c.Query("delta")
+
+	parsedDelta, err := util.GetPropertyValueAsFloat64(delta)
+	if err != nil {
+		return nil, http.StatusBadRequest, "Failed to convert delta", err.Error(), true
+	}
+
+	timestamp := TW.GetTaskDeltaAsTime(uint64(parsedDelta))
+	return timestamp, http.StatusOK, "", "", false
+}
+
+func GetTaskEndTimeHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	delta := c.Query("delta")
+	frequency := c.Query("frequency")
+	frequencyInterval := c.Query("frequency_interval")
+
+	parsedDelta, err := util.GetPropertyValueAsFloat64(delta)
+	if err != nil {
+		return nil, http.StatusBadRequest, "Failed to convert delta", err.Error(), true
+	}
+
+	parsedFrequency, err := util.GetPropertyValueAsFloat64(frequency)
+	if err != nil {
+		return nil, http.StatusBadRequest, "Failed to parse task frequency", err.Error(), true
+	}
+
+	parsedFrequencyInterval, err := util.GetPropertyValueAsFloat64(frequencyInterval)
+	if err != nil {
+		return nil, http.StatusBadRequest, "Failed to parse task frequency interval", err.Error(), true
+	}
+
+	timestamp := TW.GetTaskEndTimestamp(uint64(parsedDelta), int(parsedFrequency), int(parsedFrequencyInterval))
+	return timestamp, http.StatusOK, "", "", false
+}
+
 func IsDependentTaskDoneHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	params, err := GetAllParamsWithTaskIdProjectIdDelta(c)
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
 	}
 	isDone := store.GetStore().IsDependentTaskDone(params.TaskId, params.ProjectId, params.Delta)
-	c.JSON(200, isDone)
-	response := make(map[string]interface{})
-	response["status"] = "success"
-	return response, http.StatusCreated, "", "", false
-
+	return isDone, http.StatusOK, "", "", false
 }
-func InsertTaskBeginRecordHandler(c *gin.Context)(interface{}, int, string, string, bool){
+
+func InsertTaskBeginRecordHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	params, err := GetAllParamsWithTaskIdProjectIdDelta(c)
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
 	}
-	status,errMsg:= store.GetStore().InsertTaskBeginRecord(params.TaskId, params.ProjectId, params.Delta)
-	if status!=http.StatusCreated{
+	status, errMsg := store.GetStore().InsertTaskBeginRecord(params.TaskId, params.ProjectId, params.Delta)
+	if status != http.StatusCreated {
 		return nil, status, errMsg, "", true
 	}
 	response := make(map[string]interface{})
@@ -202,13 +234,13 @@ func InsertTaskBeginRecordHandler(c *gin.Context)(interface{}, int, string, stri
 	return response, http.StatusCreated, "", "", false
 
 }
-func InsertTaskEndRecordHandler(c *gin.Context)(interface{}, int, string, string, bool){
+func InsertTaskEndRecordHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	params, err := GetAllParamsWithTaskIdProjectIdDelta(c)
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
 	}
-	status,errMsg:= store.GetStore().InsertTaskEndRecord(params.TaskId, params.ProjectId, params.Delta)
-	if status!=http.StatusCreated{
+	status, errMsg := store.GetStore().InsertTaskEndRecord(params.TaskId, params.ProjectId, params.Delta)
+	if status != http.StatusCreated {
 		return nil, status, errMsg, "", true
 	}
 	response := make(map[string]interface{})
