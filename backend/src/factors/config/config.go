@@ -1009,7 +1009,7 @@ func InitDuplicateQueueClient(redisHost string, redisPort int) error {
 }
 
 // isQueueDuplicationEnabled - Conditions for enabling the queue duplication.
-func isQueueDuplicationEnabled() bool {
+func IsQueueDuplicationEnabled() bool {
 	return configuration.EnableSDKAndIntegrationRequestQueueDuplication
 }
 
@@ -1241,7 +1241,7 @@ func InitSDKService(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initialize queue client on init sdk service.")
 	}
 
-	if isQueueDuplicationEnabled() {
+	if IsQueueDuplicationEnabled() {
 		err := InitDuplicateQueueClient(config.DuplicateQueueRedisHost, config.DuplicateQueueRedisPort)
 		if err != nil {
 			log.WithError(err).Fatal("Failed to initialize duplicate queue client on init sdk service.")
@@ -1273,7 +1273,7 @@ func InitQueueWorker(config *Configuration, concurrency int) error {
 		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
 	}
 
-	if isQueueDuplicationEnabled() {
+	if IsQueueDuplicationEnabled() {
 		err := InitDuplicateQueueClient(config.DuplicateQueueRedisHost, config.DuplicateQueueRedisPort)
 		if err != nil {
 			log.WithError(err).Fatal("Failed to initialize duplicate queue client on init queue worker..")

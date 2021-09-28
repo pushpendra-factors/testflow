@@ -70,7 +70,12 @@ type NodeUsageStats struct {
 	Uptime                      int64   `json:"uptime"`
 }
 
-func (store *MemSQL) MonitorMemSQLDiskUsage() {
+type MemSQLNodeUsageStatsWithErrors struct {
+	ErrorMessage []string         `json:"errors"`
+	UsageStats   []NodeUsageStats `json:"usage_stats"`
+}
+
+func (store *MemSQL) MonitorMemSQLDiskUsage() MemSQLNodeUsageStatsWithErrors {
 	db := C.GetServices().Db
 	queryStr := "select ip_addr, type, state, available_data_disk_mb*100/total_data_disk_mb as available_data_disk_percent, available_data_disk_mb, " +
 		"(max_memory_mb - memory_used_mb)*100/max_memory_mb as available_memory_percent, (max_memory_mb - memory_used_mb) as available_memory_mb, " +
@@ -83,12 +88,9 @@ func (store *MemSQL) MonitorMemSQLDiskUsage() {
 		log.WithError(err).Panic("Failed to get disk usage stats")
 	}
 
-	nodeUsageStatsWithErrors := struct {
-		ErrorMessage []string
-		UsageStats   NodeUsageStats
-	}{}
-	nodeUsageStatsWithErrors.ErrorMessage = make([]string, 0)
-
+	nodeUsageStatsWithErrors := MemSQLNodeUsageStatsWithErrors{}
+	nodeUsageStatsWithErrors.ErrorMessage = make([]string, 0, 0)
+	nodeUsageStatsWithErrors.UsageStats = make([]NodeUsageStats, 0, 0)
 	for rows.Next() {
 		var nodeStats NodeUsageStats
 		if err := db.ScanRows(rows, &nodeStats); err != nil {
@@ -118,12 +120,11 @@ func (store *MemSQL) MonitorMemSQLDiskUsage() {
 			nodeUsageStatsWithErrors.ErrorMessage = append(nodeUsageStatsWithErrors.ErrorMessage, fmt.Sprintf("Node '%s' of type '%s' has been restarted before '%d'",
 				nodeStats.IPAddr, nodeStats.Type, nodeStats.Uptime))
 		}
-		nodeUsageStatsWithErrors.UsageStats = nodeStats
+
+		nodeUsageStatsWithErrors.UsageStats = append(nodeUsageStatsWithErrors.UsageStats, nodeStats)
 	}
 
-	if len(nodeUsageStatsWithErrors.ErrorMessage) != 0 {
-		C.PingHealthcheckForFailure(C.HealthcheckMonitoringJobMemSQLPingID, nodeUsageStatsWithErrors)
-	}
+	return nodeUsageStatsWithErrors
 }
 
 // CollectTableSizes Captures size for major tables as metrics.
