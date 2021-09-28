@@ -595,6 +595,9 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	} else if baseQuery.GetClass() == model.QueryClassEvents {
 		groupQuery := baseQuery.(*model.QueryGroup)
 		result, errCode = store.RunEventsGroupQuery(groupQuery.Queries, projectID)
+	} else if baseQuery.GetClass() == model.QueryClassKPI {
+		groupQuery := baseQuery.(*model.KPIQueryGroup)
+		result, errCode = store.ExecuteKPIQueryGroup(projectID, "", *groupQuery)
 	}
 	if errCode != http.StatusOK {
 		return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg)

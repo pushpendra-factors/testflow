@@ -579,6 +579,9 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 	} else if baseQuery.GetClass() == model.QueryClassEvents {
 		groupQuery := baseQuery.(*model.QueryGroup)
 		result, errCode = pg.RunEventsGroupQuery(groupQuery.Queries, projectID)
+	} else if baseQuery.GetClass() == model.QueryClassKPI {
+		groupQuery := baseQuery.(*model.KPIQueryGroup)
+		result, errCode = pg.ExecuteKPIQueryGroup(projectID, "", *groupQuery)
 	}
 	if errCode != http.StatusOK {
 		logCtx.Info("failed to run the query for dashboard caching")

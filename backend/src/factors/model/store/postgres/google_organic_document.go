@@ -34,18 +34,6 @@ var googleOrganicMetricsToAggregatesInReportsMapping = map[string]string{
 	"position_avg":                     "AVG((value->>'position')::float)",
 	"position_impression_weighted_avg": fmt.Sprintf(weightedMetricsExpressionOfDivisionWithHandleOf0AndNull, "position", "impressions", "impressions", "impressions"),
 }
-
-var mapOfObjectsToPropertiesAndRelatedGoogleOrganic = map[string]map[string]PropertiesAndRelated{
-	"organic_property": {
-		"query":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"page":    PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"country": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"device":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-}
-var selectableMetricsForGoogleOrganic = []string{"impressions", "clicks", model.ClickThroughRate, "position_avg", "position_impression_weighted_avg"}
-var ascendingOrderByMetricsForGoogleOrganic = map[string]bool{
-	"impressions": false, "clicks": false, model.ClickThroughRate: false, "position_avg": true, "position_impression_weighted_avg": true}
 var objectsForGoogleOrganic = []string{"organic_property"}
 
 func isDuplicateGoogleOrganicDocumentError(err error) bool {
@@ -54,7 +42,7 @@ func isDuplicateGoogleOrganicDocumentError(err error) bool {
 
 func (pg *Postgres) buildGoogleOrganicChannelConfig() *model.ChannelConfigResult {
 	googleOrganicObjectsAndProperties := pg.buildObjectAndPropertiesForGoogleOrganic(objectsForGoogleOrganic)
-	selectMetrics := selectableMetricsForGoogleOrganic
+	selectMetrics := model.SelectableMetricsForGoogleOrganic
 	objectsAndProperties := googleOrganicObjectsAndProperties
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectMetrics,
@@ -65,7 +53,7 @@ func (pg *Postgres) buildGoogleOrganicChannelConfig() *model.ChannelConfigResult
 func (pg *Postgres) buildObjectAndPropertiesForGoogleOrganic(objects []string) []model.ChannelObjectAndProperties {
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0)
 	for _, currentObject := range objects {
-		propertiesAndRelated, isPresent := mapOfObjectsToPropertiesAndRelatedGoogleOrganic[currentObject]
+		propertiesAndRelated, isPresent := model.MapOfObjectsToPropertiesAndRelatedGoogleOrganic[currentObject]
 		var currentProperties []model.ChannelProperty
 		if isPresent {
 			currentProperties = buildProperties(propertiesAndRelated)

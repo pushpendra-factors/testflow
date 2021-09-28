@@ -24,36 +24,6 @@ const (
 	metricsExpressionOfDivisionWithHandleOf0AndNull = "SUM((value->>'%s')::float)*%s/(case when sum((value->>'%s')::float) = 0 then 100000 else NULLIF(sum((value->>'%s')::float), 100000) end)"
 )
 
-var mapOfFacebookObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
-	CAFilterCampaign: {
-		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"daily_budget":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"lifetime_budget":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"buying_type":       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-	CAFilterAdGroup: {
-		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"daily_budget":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"lifetime_budget":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-	CAFilterAd: {
-		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-}
-
 var facebookDocumentTypeAlias = map[string]int{
 	"ad_account":        7,
 	"campaign":          1,
@@ -267,7 +237,7 @@ func (pg *Postgres) buildObjectAndPropertiesForFacebook(projectID uint64, object
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0)
 	for _, currentObject := range objects {
 		// to do: check if normal properties present then only smart properties will be there
-		propertiesAndRelated, isPresent := mapOfFacebookObjectsToPropertiesAndRelated[currentObject]
+		propertiesAndRelated, isPresent := model.MapOfFacebookObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
 		var currentPropertiesSmart []model.ChannelProperty
 		if isPresent {
@@ -357,7 +327,7 @@ func getFilterRelatedInformationForFacebook(requestFilterObject string,
 
 // @TODO Kark v1
 func (pg *Postgres) getFacebookFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
-	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
+	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID).WithField("doc_type", docType).WithField("property", property)
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to fetch project setting in facebook filter values.")

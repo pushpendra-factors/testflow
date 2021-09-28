@@ -1,6 +1,7 @@
 package model
 
 import (
+	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -64,6 +65,9 @@ var AdwordsDocumentTypeAlias = map[string]int{
 }
 
 const (
+	Id                     = "id"
+	Name                   = "name"
+	Status                 = "status"
 	ApprovalStatus         = "approval_status"
 	MatchType              = "match_type"
 	FirstPositionCpc       = "first_position_cpc"
@@ -145,6 +149,51 @@ var AdwordsExtToInternal = map[string]string{
 	SearchRankLostAbsoluteTopImpressionShare:   SearchRankLostAbsoluteTopImpressionShare,
 	SearchRankLostImpressionShare:              SearchRankLostImpressionShare,
 	SearchRankLostTopImpressionShare:           SearchRankLostTopImpressionShare,
+}
+
+var MapOfAdwordsObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
+	AdwordsCampaign: {
+		Id:                     PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		Name:                   PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		Status:                 PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		AdvertisingChannelType: PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+	},
+	AdwordsAdGroup: {
+		Id:     PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		Name:   PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		Status: PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+	},
+	AdwordsKeyword: {
+		Id:               PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		Name:             PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		Status:           PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		ApprovalStatus:   PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		MatchType:        PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		FirstPositionCpc: PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		FirstPageCpc:     PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		IsNegative:       PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		TopOfPageCpc:     PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		QualityScore:     PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+	},
+}
+
+// NOTE: Change KPI metrics in kpi_analytics_common when changed.
+var SelectableMetricsForAdwords = []string{
+	Conversion,
+	ClickThroughRate,
+	ConversionRate,
+	CostPerClick,
+	CostPerConversion,
+	SearchImpressionShare,
+	SearchClickShare,
+	SearchTopImpressionShare,
+	SearchAbsoluteTopImpressionShare,
+	SearchBudgetLostAbsoluteTopImpressionShare,
+	SearchBudgetLostImpressionShare,
+	SearchBudgetLostTopImpressionShare,
+	SearchRankLostAbsoluteTopImpressionShare,
+	SearchRankLostImpressionShare,
+	SearchRankLostTopImpressionShare,
 }
 
 var AdwordsInternalPropertiesToJobsInternal = map[string]string{
