@@ -92,20 +92,16 @@ var CAFilters = []string{
 }
 
 // TODO: Move and fetch it from respective channels - allChannels, adwords etc.. because this is error prone.
+// to do change kpi analytics/all channels, linkedin when we change below.
 var selectableMetricsForAllChannels = []string{"impressions", "clicks", "spend"}
 var objectsForAllChannels = []string{CAFilterCampaign, CAFilterAdGroup}
 
-// PropertiesAndRelated - TODO Kark v1
-type PropertiesAndRelated struct {
-	typeOfProperty string // can be categorical or numerical
-}
-
-var allChannelsPropertyToRelated = map[string]PropertiesAndRelated{
-	"name": PropertiesAndRelated{
-		typeOfProperty: U.PropertyTypeCategorical,
+var allChannelsPropertyToRelated = map[string]model.PropertiesAndRelated{
+	"name": model.PropertiesAndRelated{
+		TypeOfProperty: U.PropertyTypeCategorical,
 	},
-	"id": PropertiesAndRelated{
-		typeOfProperty: U.PropertyTypeCategorical,
+	"id": model.PropertiesAndRelated{
+		TypeOfProperty: U.PropertyTypeCategorical,
 	},
 }
 
@@ -188,12 +184,12 @@ func buildObjectsAndProperties(properties []model.ChannelProperty,
 }
 
 // @TODO Kark v1
-func buildProperties(propertiesAndRelated map[string]PropertiesAndRelated) []model.ChannelProperty {
+func buildProperties(PropertiesAndRelated map[string]model.PropertiesAndRelated) []model.ChannelProperty {
 	var properties []model.ChannelProperty
-	for propertyName, propertyRelated := range propertiesAndRelated {
+	for propertyName, propertyRelated := range PropertiesAndRelated {
 		var property model.ChannelProperty
 		property.Name = propertyName
-		property.Type = propertyRelated.typeOfProperty
+		property.Type = propertyRelated.TypeOfProperty
 		properties = append(properties, property)
 	}
 	return properties
@@ -264,7 +260,8 @@ func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, fi
 	finalParams = append(finalParams, linkedinParams...)
 
 	finalQuery := fmt.Sprintf(CAUnionFilterQuery, joinWithWordInBetween("UNION", finalSQLs...))
-	_, resultRows, _ := pg.ExecuteSQL(finalQuery, finalParams, logCtx)
+	_, resultRows, err := pg.ExecuteSQL(finalQuery, finalParams, logCtx)
+	logCtx.Warn(err)
 
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
 }
@@ -608,7 +605,7 @@ func getOrderByClauseForSearchConsole(isGroupByTimestamp bool, selectMetrics []s
 		selectMetricsWithDesc = append(selectMetricsWithDesc, model.AliasDateTime+" ASC")
 	} else {
 		for _, selectMetric := range selectMetrics {
-			if ascendingOrderByMetricsForGoogleOrganic[selectMetric] {
+			if model.AscendingOrderByMetricsForGoogleOrganic[selectMetric] {
 				selectMetricsWithDesc = append(selectMetricsWithDesc, selectMetric+" ASC")
 			} else {
 				selectMetricsWithDesc = append(selectMetricsWithDesc, selectMetric+" DESC")
@@ -638,7 +635,7 @@ func (pg *Postgres) ExecuteSQL(sqlStatement string, params []interface{}, logCtx
 	return columns, resultRows, nil
 }
 
-func (pg *Postgres) GetSmartPropertyAndRelated(projectID uint64, object string, source string) map[string]PropertiesAndRelated {
+func (pg *Postgres) GetSmartPropertyAndRelated(projectID uint64, object string, source string) map[string]model.PropertiesAndRelated {
 	db := C.GetServices().Db
 	var smartPropertyRules []model.SmartPropertyRules
 	object_type, isPresent := model.SmartPropertyRulesTypeAliasToType[object]
@@ -653,7 +650,7 @@ func (pg *Postgres) GetSmartPropertyAndRelated(projectID uint64, object string, 
 	if len(smartPropertyRules) == 0 {
 		return nil
 	}
-	smartPropertyFilterConfig := make(map[string]PropertiesAndRelated)
+	smartPropertyFilterConfig := make(map[string]model.PropertiesAndRelated)
 	for _, smartPropertyRule := range smartPropertyRules {
 		var rules []model.Rule
 		err := U.DecodePostgresJsonbToStructType(smartPropertyRule.Rules, &rules)
@@ -662,7 +659,7 @@ func (pg *Postgres) GetSmartPropertyAndRelated(projectID uint64, object string, 
 		}
 		for _, rule := range rules {
 			if rule.Source == "all" || rule.Source == source {
-				smartPropertyFilterConfig[smartPropertyRule.Name] = PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical}
+				smartPropertyFilterConfig[smartPropertyRule.Name] = model.PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical}
 				break
 			}
 		}

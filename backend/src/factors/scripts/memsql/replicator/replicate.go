@@ -121,9 +121,6 @@ var permanantlyDisabledTables = []string{
 	tableUsers,
 	tableEventNames,
 	tableEvents,
-	tableTaskDetails,
-	tableTaskExecutionDetails,
-	tableTaskExecutionDependencyDetails,
 }
 
 var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
@@ -991,7 +988,7 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 }
 
 func isTableWithoutProjectID(tableName string) bool {
-	return U.StringValueIn(tableName, []string{tableAgents, tableProjects, tableBillingAccounts})
+	return U.StringValueIn(tableName, []string{tableAgents, tableProjects, tableBillingAccounts, tableTaskDetails, tableTaskExecutionDetails, tableTaskExecutionDependencyDetails})
 }
 
 func buildStringList(ids []uint64) string {

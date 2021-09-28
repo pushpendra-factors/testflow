@@ -35,6 +35,9 @@ func main() {
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
 
+	duplicateQueueRedisHost := flag.String("dup_queue_redis_host", "localhost", "")
+	duplicateQueueRedisPort := flag.Int("dup_queue_redis_port", 6379, "")
+
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
@@ -45,6 +48,9 @@ func main() {
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+
+	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
+		false, "Enables SDK and Integration request queue duplication monitoring.")
 
 	flag.Parse()
 	defaultAppName := "monitoring_job"
@@ -83,6 +89,10 @@ func main() {
 		PrimaryDatastore: *primaryDatastore,
 		QueueRedisHost:   *queueRedisHost,
 		QueueRedisPort:   *queueRedisPort,
+
+		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
+		DuplicateQueueRedisHost:                        *duplicateQueueRedisHost,
+		DuplicateQueueRedisPort:                        *duplicateQueueRedisPort,
 	}
 
 	C.InitConf(config)
@@ -97,6 +107,14 @@ func main() {
 	if err != nil {
 		log.WithError(err).Panic("Failed to initalize queue client.")
 	}
+
+	if C.IsQueueDuplicationEnabled() {
+		err := C.InitDuplicateQueueClient(config.DuplicateQueueRedisHost, config.DuplicateQueueRedisPort)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to initialize duplicate queue client.")
+		}
+	}
+
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
@@ -104,21 +122,28 @@ func main() {
 	if err != nil {
 		log.WithError(err).Panic("Failed to run monitoring query.")
 	}
+
+	dbHealthcheckPingID := C.HealthcheckDatabaseHealthPingID
+	if C.UseMemSQLDatabaseStore() {
+		dbHealthcheckPingID = C.HealthcheckDatabaseHealthMemSQLPingID
+	}
+
 	if len(factorsSlowQueries) > *slowQueriesThreshold {
-		dbHealthcheckPingID := C.HealthcheckDatabaseHealthPingID
-		if C.UseMemSQLDatabaseStore() {
-			dbHealthcheckPingID = C.HealthcheckDatabaseHealthMemSQLPingID
-		}
 		C.PingHealthcheckForFailure(dbHealthcheckPingID,
 			fmt.Sprintf("Slow query count %d exceeds threshold of %d", len(factorsSlowQueries), *slowQueriesThreshold))
 	}
 
+	var nodeUsageStatsWithErrors mqlStore.MemSQLNodeUsageStatsWithErrors
 	if C.UseMemSQLDatabaseStore() {
-		mqlStore.GetStore().MonitorMemSQLDiskUsage()
+		nodeUsageStatsWithErrors = mqlStore.GetStore().MonitorMemSQLDiskUsage()
+		if len(nodeUsageStatsWithErrors.ErrorMessage) > 0 {
+			C.PingHealthcheckForFailure(dbHealthcheckPingID, nodeUsageStatsWithErrors.ErrorMessage)
+		}
 	}
 
-	delayedTaskCount, sdkQueueLength, integrationQueueLength, isFailure := MonitorSDKHealth(
-		*delayedTaskThreshold, *sdkQueueThreshold, *integrationQueueThreshold)
+	delayedTaskCount, sdkQueueLength, integrationQueueLength,
+		isQueueDuplicationEnabled, dupDelayedTaskCount, dupSDKQueueLength, dupIntegrationQueueLength,
+		isFailure := MonitorSDKHealth(*delayedTaskThreshold, *sdkQueueThreshold, *integrationQueueThreshold)
 	// Should not proceed with success ping, incase of failure.
 	if isFailure {
 		return
@@ -127,21 +152,31 @@ func main() {
 	tableSizes := store.GetStore().CollectTableSizes()
 
 	monitoringPayload := map[string]interface{}{
-		"factorsSlowQueries":       factorsSlowQueries[:util.MinInt(5, len(factorsSlowQueries))],
-		"sqlAdminSlowQueries":      sqlAdminSlowQueries[:util.MinInt(5, len(sqlAdminSlowQueries))],
-		"factorsSlowQueriesCount":  len(factorsSlowQueries),
-		"sqlAdminSlowQueriesCount": len(sqlAdminSlowQueries),
-		"delayedTaskCount":         delayedTaskCount,
-		"sdkQueueLength":           sdkQueueLength,
-		"integrationQueueLength":   integrationQueueLength,
-		"tableSizes":               tableSizes,
+		"factorsSlowQueries":        factorsSlowQueries[:util.MinInt(5, len(factorsSlowQueries))],
+		"sqlAdminSlowQueries":       sqlAdminSlowQueries[:util.MinInt(5, len(sqlAdminSlowQueries))],
+		"factorsSlowQueriesCount":   len(factorsSlowQueries),
+		"sqlAdminSlowQueriesCount":  len(sqlAdminSlowQueries),
+		"delayedTaskCount":          delayedTaskCount,
+		"sdkQueueLength":            sdkQueueLength,
+		"integrationQueueLength":    integrationQueueLength,
+		"isQueueDuplicationEnabled": isQueueDuplicationEnabled,
+		"dupDelayedTaskCount":       dupDelayedTaskCount,
+		"dupSDKQueueLength":         dupSDKQueueLength,
+		"dupIntegrationQueueLength": dupIntegrationQueueLength,
+		"tableSizes":                tableSizes,
 	}
+	if C.UseMemSQLDatabaseStore() {
+		monitoringPayload["memsqlNodeUsageStats"] = nodeUsageStatsWithErrors
+	}
+
 	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
 }
 
-func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueThreshold int) (int, int, int, bool) {
+func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueThreshold int) (int, int, int, bool, int, int, int, bool) {
 
 	queueClient := C.GetServices().QueueClient
+	duplicateQueueClient := C.GetServices().DuplicateQueueClient
+
 	delayedTaskCount, err := queueClient.GetBroker().GetDelayedTasksCount()
 	if err != nil {
 		log.WithError(err).Panic("Failed to get delayed task count from redis")
@@ -149,6 +184,18 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 	if delayedTaskCount > delayedTaskThreshold {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("Delayed task count %d exceeds threshold of %d", delayedTaskCount, delayedTaskThreshold))
+	}
+
+	var dupDelayedTaskCount int
+	if C.IsQueueDuplicationEnabled() {
+		dupDelayedTaskCount, err = duplicateQueueClient.GetBroker().GetDelayedTasksCount()
+		if err != nil {
+			log.WithError(err).Panic("Failed to get delayed task count from duplicate queue redis.")
+		}
+		if dupDelayedTaskCount > delayedTaskThreshold {
+			C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+				fmt.Sprintf("Duplicate queue delayed task count %d exceeds threshold of %d", dupDelayedTaskCount, delayedTaskThreshold))
+		}
 	}
 
 	sdkQueueLength, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueue)
@@ -159,13 +206,17 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("SDK queue length %d exceeds threshold of %d", sdkQueueLength, sdkQueueThreshold))
 	}
-	sdkQueueLength, err = queueClient.GetBroker().GetQueueLength(sdk.RequestQueueDuplicate)
-	if err != nil {
-		log.WithError(err).Panic("Failed to get duplicate sdk_request_queue length")
-	}
-	if sdkQueueLength > sdkQueueThreshold {
-		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-			fmt.Sprintf("SDK duplicate queue length %d exceeds threshold of %d", sdkQueueLength, sdkQueueThreshold))
+
+	var dupSdkQueueLength int
+	if C.IsQueueDuplicationEnabled() {
+		dupSdkQueueLength, err = duplicateQueueClient.GetBroker().GetQueueLength(sdk.RequestQueueDuplicate)
+		if err != nil {
+			log.WithError(err).Panic("Failed to get duplicate sdk_request_queue length")
+		}
+		if dupSdkQueueLength > sdkQueueThreshold {
+			C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+				fmt.Sprintf("SDK duplicate queue length %d exceeds threshold of %d", dupSdkQueueLength, sdkQueueThreshold))
+		}
 	}
 
 	integrationQueueLength, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueue)
@@ -176,13 +227,17 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("Integration queue length %d exceeds threshold of %d", integrationQueueLength, integrationQueueThreshold))
 	}
-	integrationQueueLength, err = queueClient.GetBroker().GetQueueLength(integration.RequestQueueDuplicate)
-	if err != nil {
-		log.WithError(err).Panic("Failed to get duplicate integration_request_queue length")
-	}
-	if integrationQueueLength > integrationQueueThreshold {
-		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-			fmt.Sprintf("Integration duplicate queue length %d exceeds threshold of %d", integrationQueueLength, integrationQueueThreshold))
+
+	var dupIntegrationQueueLength int
+	if C.IsQueueDuplicationEnabled() {
+		dupIntegrationQueueLength, err = queueClient.GetBroker().GetQueueLength(integration.RequestQueueDuplicate)
+		if err != nil {
+			log.WithError(err).Panic("Failed to get duplicate integration_request_queue length")
+		}
+		if dupIntegrationQueueLength > integrationQueueThreshold {
+			C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+				fmt.Sprintf("Integration duplicate queue length %d exceeds threshold of %d", dupIntegrationQueueLength, integrationQueueThreshold))
+		}
 	}
 
 	res, err := http.Get(C.SDKAssetsURL)
@@ -195,7 +250,9 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 		}
 
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID, message)
-		return delayedTaskCount, sdkQueueLength, integrationQueueLength, true
+		return delayedTaskCount, sdkQueueLength, integrationQueueLength,
+			C.IsQueueDuplicationEnabled(), dupDelayedTaskCount, dupSdkQueueLength, dupIntegrationQueueLength,
+			true
 	}
 
 	sdkBody, err := ioutil.ReadAll(res.Body)
@@ -203,8 +260,12 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 		// Approx file size of 20k. Error out if less than that.
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("Size '%d' of SDK file lesser than expected 20k chars. Content: '%s'", len(sdkBody), string(sdkBody)))
-		return delayedTaskCount, sdkQueueLength, integrationQueueLength, true
+		return delayedTaskCount, sdkQueueLength, integrationQueueLength,
+			C.IsQueueDuplicationEnabled(), dupDelayedTaskCount, dupSdkQueueLength, dupIntegrationQueueLength,
+			true
 	}
 
-	return delayedTaskCount, sdkQueueLength, integrationQueueLength, false
+	return delayedTaskCount, sdkQueueLength, integrationQueueLength,
+		C.IsQueueDuplicationEnabled(), dupDelayedTaskCount, dupSdkQueueLength, dupIntegrationQueueLength,
+		false
 }
