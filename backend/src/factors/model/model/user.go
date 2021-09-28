@@ -63,9 +63,17 @@ type SessionUserProperties struct {
 // indexed hubspot user property.
 const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
 
+// contact delete and merge hubspot user properties
+const UserPropertyHubspotContactDeleted = "$hubspot_contact_deleted"
+const UserPropertyHubspotContactMerged = "$hubspot_contact_merged"
+const UserPropertyHubspotContactPrimaryContact = "$hubspot_contact_primary_contact"
+
 var UserPropertiesToSkipOnMergeByCustomerUserID = []string{
 	UserPropertyHubspotContactLeadGUID,
 	U.UP_META_OBJECT_IDENTIFIER_KEY,
+	UserPropertyHubspotContactDeleted,
+	UserPropertyHubspotContactMerged,
+	UserPropertyHubspotContactPrimaryContact,
 }
 
 var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")

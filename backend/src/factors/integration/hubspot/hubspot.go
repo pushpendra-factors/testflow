@@ -556,7 +556,76 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		projectID).WithField("document_id", document.ID)
 
 	if document.Action == model.HubspotDocumentActionDeleted {
+		contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, []string{document.ID}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+		if status != http.StatusFound {
+			logCtx.Error(
+				"Failed to get hubspot documents by type and action on sync contact, action delete.")
+			return http.StatusInternalServerError
+		}
+		userProperties := make(map[string]interface{})
+		keyDelete := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+			model.HubspotDocumentTypeNameContact, "deleted")
+		userProperties[keyDelete] = true
+		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(&userProperties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to marshal company properties to Jsonb, in sync contact, action delete.")
+			return http.StatusInternalServerError
+		}
+		_, errCode := store.GetStore().UpdateUserProperties(projectID, contactDocuments[0].UserId, userPropertiesJsonb, document.Timestamp)
+		if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
+			logCtx.WithField("UserID", contactDocuments[0].UserId).WithField("userPropertiesJsonb", userPropertiesJsonb).Error("Failed to update user properties for contact delete action")
+			return http.StatusInternalServerError
+		}
+		errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
+			projectID, document.ID, model.HubspotDocumentTypeContact, " ", document.Timestamp, document.Action, contactDocuments[0].UserId)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot contact document as synced, contact deleted document.")
+			return http.StatusInternalServerError
+		}
 		return http.StatusOK
+	} else {
+		value, err := U.DecodePostgresJsonb(document.Value)
+		if err != nil {
+			logCtx.WithField("document.Value", document.Value).Error("Failed to decode hubspot Json document-Value.")
+			return http.StatusInternalServerError
+		}
+
+		_, exists := (*value)["merged-vids"]
+		if exists {
+			var mergedVIDs []string
+			for _, v := range (*value)["merged-vids"].([]interface{}) {
+				mergedVIDs = append(mergedVIDs, fmt.Sprintf("%v", v))
+			}
+
+			if len(mergedVIDs) != 0 {
+				mergeContactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, mergedVIDs, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+				if status != http.StatusFound {
+					logCtx.Error("Failed to get hubspot documents by type and action on sync contact.")
+					return http.StatusInternalServerError
+				}
+				for _, mergedContact := range mergeContactDocuments {
+					if mergedContact.ID != fmt.Sprintf("%v", (*value)["canonical-vid"]) {
+						mergeUserProperties := make(map[string]interface{})
+						keyMerge := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+							model.HubspotDocumentTypeNameContact, "merged")
+						mergeUserProperties[keyMerge] = true
+						keyPrimaryContact := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+							model.HubspotDocumentTypeNameContact, "primary_contact")
+						mergeUserProperties[keyPrimaryContact] = (*value)["canonical-vid"]
+						mergeUserPropertiesJsonb, err := U.EncodeToPostgresJsonb(&mergeUserProperties)
+						if err != nil {
+							logCtx.WithError(err).Error("Failed to marshal company properties to Jsonb, in sync contact.")
+							return http.StatusInternalServerError
+						}
+						_, errCode := store.GetStore().UpdateUserProperties(projectID, mergedContact.UserId, mergeUserPropertiesJsonb, document.Timestamp)
+						if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
+							logCtx.WithField("UserID", mergedContact.UserId).WithField("userPropertiesJsonb", mergeUserPropertiesJsonb).Error("Failed to update user properties")
+							return http.StatusInternalServerError
+						}
+					}
+				}
+			}
+		}
 	}
 
 	enProperties, properties, err := getContactProperties(projectID, document)
