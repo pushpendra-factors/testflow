@@ -159,6 +159,14 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("SDK queue length %d exceeds threshold of %d", sdkQueueLength, sdkQueueThreshold))
 	}
+	sdkQueueLength, err = queueClient.GetBroker().GetQueueLength(sdk.RequestQueueDuplicate)
+	if err != nil {
+		log.WithError(err).Panic("Failed to get duplicate sdk_request_queue length")
+	}
+	if sdkQueueLength > sdkQueueThreshold {
+		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+			fmt.Sprintf("SDK duplicate queue length %d exceeds threshold of %d", sdkQueueLength, sdkQueueThreshold))
+	}
 
 	integrationQueueLength, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueue)
 	if err != nil {
@@ -167,6 +175,14 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 	if integrationQueueLength > integrationQueueThreshold {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("Integration queue length %d exceeds threshold of %d", integrationQueueLength, integrationQueueThreshold))
+	}
+	integrationQueueLength, err = queueClient.GetBroker().GetQueueLength(integration.RequestQueueDuplicate)
+	if err != nil {
+		log.WithError(err).Panic("Failed to get duplicate integration_request_queue length")
+	}
+	if integrationQueueLength > integrationQueueThreshold {
+		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+			fmt.Sprintf("Integration duplicate queue length %d exceeds threshold of %d", integrationQueueLength, integrationQueueThreshold))
 	}
 
 	res, err := http.Get(C.SDKAssetsURL)
