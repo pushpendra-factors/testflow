@@ -20,13 +20,6 @@ type SlowQueries struct {
 	ResourcePool string  `json:"resource_pool"`
 }
 
-type DiskUsageStats struct {
-	IPAddr              string `json:"ip_addr"`
-	Type                string `json:"type"`
-	State               string `json:"state"`
-	AvailableDataDiskMB int64  `json:"available_data_disk_mb"`
-}
-
 func (store *MemSQL) MonitorSlowQueries() ([]interface{}, []interface{}, error) {
 	db := C.GetServices().Db
 	sqlAdminSlowQueries := make([]interface{}, 0, 0)
@@ -63,40 +56,73 @@ func (store *MemSQL) MonitorSlowQueries() ([]interface{}, []interface{}, error) 
 	return sqlAdminSlowQueries, factorsSlowQueries, nil
 }
 
+// Disk and memory limit stats are computed at node level.
+type NodeUsageStats struct {
+	IPAddr                      string  `json:"ip_addr"`
+	Type                        string  `json:"type"`
+	State                       string  `json:"state"`
+	AvailableDataDiskPercent    float64 `json:"available_data_disk_percent"`
+	AvailableDataDiskMB         int64   `json:"available_data_disk_mb"`
+	AvailableMemoryPercent      float64 `json:"available_memory_percent"`
+	AvailableMemoryMB           int64   `json:"available_memory_mb"`
+	AvailableTableMemoryPercent float64 `json:"available_table_memory_percent"`
+	AvailableTableMemoryMB      int64   `json:"available_table_memory_mb"`
+	Uptime                      int64   `json:"uptime"`
+}
+
 func (store *MemSQL) MonitorMemSQLDiskUsage() {
 	db := C.GetServices().Db
-	queryStr := "select ip_addr, type, state, available_data_disk_mb FROM information_schema.mv_nodes"
+	queryStr := "select ip_addr, type, state, available_data_disk_mb*100/total_data_disk_mb as available_data_disk_percent, available_data_disk_mb, " +
+		"(max_memory_mb - memory_used_mb)*100/max_memory_mb as available_memory_percent, (max_memory_mb - memory_used_mb) as available_memory_mb, " +
+		"(max_table_memory_mb - table_memory_used_mb)*100/max_table_memory_mb as available_table_memory_percent, (max_table_memory_mb - table_memory_used_mb) as available_table_memory_mb, " +
+		"uptime " +
+		"FROM information_schema.mv_nodes"
 
 	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
 		log.WithError(err).Panic("Failed to get disk usage stats")
 	}
 
-	diskUsageStats := struct {
-		ErrorMessage   string
-		DiskUsageStats []DiskUsageStats
+	nodeUsageStatsWithErrors := struct {
+		ErrorMessage []string
+		UsageStats   NodeUsageStats
 	}{}
-	diskUsageStats.DiskUsageStats = make([]DiskUsageStats, 0, 0)
+	nodeUsageStatsWithErrors.ErrorMessage = make([]string, 0)
 
 	for rows.Next() {
-		var nodeStats DiskUsageStats
+		var nodeStats NodeUsageStats
 		if err := db.ScanRows(rows, &nodeStats); err != nil {
 			log.WithError(err).Panic("Failed to scan slow queries from db.")
 		}
-		if nodeStats.AvailableDataDiskMB < 20*1024 {
-			// If disk available is less than 20 GB for any node, raise an alert.
-			diskUsageStats.ErrorMessage = fmt.Sprintf("Disk available '%d'MB below threshold on '%s' node '%s'",
-				nodeStats.AvailableDataDiskMB, nodeStats.Type, nodeStats.IPAddr)
+		if nodeStats.AvailableDataDiskPercent < 20 {
+			// If disk available is less than 20 percent for any node, raise an alert.
+			nodeUsageStatsWithErrors.ErrorMessage = append(nodeUsageStatsWithErrors.ErrorMessage, fmt.Sprintf("Disk available '%d'MB '%f' percentage below threshold on '%s' node '%s'",
+				nodeStats.AvailableDataDiskMB, nodeStats.AvailableDataDiskPercent, nodeStats.Type, nodeStats.IPAddr))
+		}
+		if nodeStats.AvailableMemoryPercent < 10 {
+			// If memory available is less than 10 percent for any node, raise an alert.
+			nodeUsageStatsWithErrors.ErrorMessage = append(nodeUsageStatsWithErrors.ErrorMessage, fmt.Sprintf("Memory available '%d'MB '%f' percentage below threshold on '%s' node '%s'",
+				nodeStats.AvailableMemoryMB, nodeStats.AvailableMemoryPercent, nodeStats.Type, nodeStats.IPAddr))
+		}
+		if nodeStats.AvailableTableMemoryPercent < 10 {
+			// If memory available for table is less than 10 percent for any node, raise an alert.
+			nodeUsageStatsWithErrors.ErrorMessage = append(nodeUsageStatsWithErrors.ErrorMessage, fmt.Sprintf("Memory available '%d'MB '%f' percentage below threshold on '%s' node '%s'",
+				nodeStats.AvailableTableMemoryMB, nodeStats.AvailableTableMemoryPercent, nodeStats.Type, nodeStats.IPAddr))
 		}
 		if nodeStats.State != "online" {
-			diskUsageStats.ErrorMessage = fmt.Sprintf("Node '%s' of type '%s' not online with state '%s'",
-				nodeStats.IPAddr, nodeStats.Type, nodeStats.State)
+			nodeUsageStatsWithErrors.ErrorMessage = append(nodeUsageStatsWithErrors.ErrorMessage, fmt.Sprintf("Node '%s' of type '%s' not online with state '%s'",
+				nodeStats.IPAddr, nodeStats.Type, nodeStats.State))
 		}
-		diskUsageStats.DiskUsageStats = append(diskUsageStats.DiskUsageStats, nodeStats)
+		if nodeStats.Uptime <= 15*60 {
+			// If uptime is les than 15 minutes which is equal to current monitoring run time, raise an alert.
+			nodeUsageStatsWithErrors.ErrorMessage = append(nodeUsageStatsWithErrors.ErrorMessage, fmt.Sprintf("Node '%s' of type '%s' has been restarted before '%d'",
+				nodeStats.IPAddr, nodeStats.Type, nodeStats.Uptime))
+		}
+		nodeUsageStatsWithErrors.UsageStats = nodeStats
 	}
 
-	if diskUsageStats.ErrorMessage != "" {
-		C.PingHealthcheckForFailure(C.HealthcheckMonitoringJobMemSQLPingID, diskUsageStats)
+	if len(nodeUsageStatsWithErrors.ErrorMessage) != 0 {
+		C.PingHealthcheckForFailure(C.HealthcheckMonitoringJobMemSQLPingID, nodeUsageStatsWithErrors)
 	}
 }
 

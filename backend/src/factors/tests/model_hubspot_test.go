@@ -827,6 +827,335 @@ func TestHubspotDocumentDelete(t *testing.T) {
 	assert.Equal(t, 0, len(document))
 }
 
+func TestHubspotSyncJobDocumentDeleteAndMerge(t *testing.T) {
+	// Test case to process deleted contact. A new contact is created and the corresponding deletion request is generated.
+	// Later, the request is been processed by sync job. Thereafter, the existence of deleted-user-property
+	// "$hubspot_contact_deleted" is verified.
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	deletionDocumentID := rand.Intn(100)
+	createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	cuid := getRandomEmail()
+	leadguid := U.RandomString(5)
+
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	jsonContact := fmt.Sprintf(jsonContactModel, deletionDocumentID, createdDate, createdDate, createdDate, "lead", cuid, leadguid)
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionCreated,
+		Value:     &contactPJson,
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	createdDate = time.Now().AddDate(0, 0, -1).Unix() * 1000
+	lastmodifieddateHSLayout := time.Now().UTC().Format(model.HubspotDateTimeLayout)
+
+	jsonContactModel = `{
+		"id": %d,
+		"properties": {
+			"createdate": "%d",
+			"email": "test453@test.com",
+			"firstname": "11",
+			"hs_object_id": "451",
+			"lastmodifieddate": "%s",
+			"lastname": "11"
+		},
+		"createdAt": "%s",
+		"updatedAt": "%s", 
+		"archived": true,
+		"archivedAt": "%s"
+	}`
+
+	jsonContact = fmt.Sprintf(jsonContactModel, deletionDocumentID, createdDate, lastmodifieddateHSLayout, createdDate, createdDate, createdDate)
+	var myStoredVariable map[string]interface{}
+	json.Unmarshal([]byte(jsonContact), &myStoredVariable)
+	tempJson := myStoredVariable["properties"].((map[string]interface{}))
+	get_lastmodifieddate := tempJson["lastmodifieddate"].(string)
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionDeleted,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, model.HubspotDocumentActionDeleted, hubspotDocument.Action)
+	tm, err := time.Parse(model.HubspotDateTimeLayout, U.GetPropertyValueAsString(get_lastmodifieddate))
+	if err != nil {
+		log.WithError(err).Error("Error while parsing lastmodifieddate to HubspotDateTimeLayout.")
+	}
+	assert.Equal(t, tm.UnixNano()/int64(time.Millisecond), hubspotDocument.Timestamp)
+	var contact map[string]interface{}
+	err = json.Unmarshal(hubspotDocument.Value.RawMessage, &contact)
+	assert.Nil(t, err)
+	assert.Equal(t, true, reflect.DeepEqual(myStoredVariable, contact))
+
+	// Test case to process contact merge contact. Three new contacts are created. First 2 been the contacts that
+	// needs to be merged, and the third contact being the primary contact. Later, the request is been processed
+	// by sync job. Thereafter, the existence of merge-user-properties "$hubspot_contact_merged" and
+	// "$hubspot_contact_primary_contact" are verified.
+	firstDocumentID := rand.Intn(100) + 100
+	cuid_first := getRandomEmail()
+	leadguid = U.RandomString(5)
+	lastmodifieddate := time.Now().UTC().Unix() * 1000
+
+	jsonContactModel = `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	jsonContact = fmt.Sprintf(jsonContactModel, firstDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid_first, leadguid)
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionCreated,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", firstDocumentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+
+	secondDocumentID := rand.Intn(100) + 200
+	cuid = getRandomEmail()
+	leadguid = U.RandomString(5)
+	lastmodifieddate = time.Now().UTC().Unix() * 1000
+
+	jsonContactModel = `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	jsonContact = fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionCreated,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", secondDocumentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+
+	jsonContactModel = `{
+		"vid": %d,
+		"addedAt": %d,
+		"canonical-vid": %d,
+		"merged-vids": [%d,%d,%d],
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	}`
+
+	primaryDocumentID := rand.Intn(100) + 300
+	cuid = getRandomEmail()
+	leadguid = U.RandomString(5)
+	lastmodifieddate = time.Now().UTC().Unix() * 1000
+	jsonContact = fmt.Sprintf(jsonContactModel, primaryDocumentID, createdDate, primaryDocumentID, primaryDocumentID, firstDocumentID, secondDocumentID, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionCreated,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", primaryDocumentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	json.Unmarshal([]byte(jsonContact), &myStoredVariable)
+	err = json.Unmarshal(hubspotDocument.Value.RawMessage, &contact)
+	assert.Nil(t, err)
+	assert.Equal(t, true, reflect.DeepEqual(myStoredVariable, contact))
+
+	// Test case which creates a random user with same cuid as that of cuid of firstDocumentID. Later, the request
+	// is been processed by sync job. Thereafter, the NON-existence of merge-user-properties "$hubspot_contact_merged"
+	// and "$hubspot_contact_primary_contact" are verified.
+	randomUserDocumentID := rand.Intn(100) + 400
+	leadguid = U.RandomString(5)
+	lastmodifieddate = time.Now().UTC().Unix() * 1000
+
+	jsonContactModel = `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	jsonContact = fmt.Sprintf(jsonContactModel, randomUserDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid_first, leadguid)
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionCreated,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Processing the sync job altogether for all the test cases.
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 3)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// Verification for contact delete test case.
+	deleteDocument, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", deletionDocumentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status := store.GetStore().GetUser(project.ID, deleteDocument[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap := make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, true, properitesMap[model.UserPropertyHubspotContactDeleted])
+
+	// Verification for contact merge test case.
+	firstDocument, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", firstDocumentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, firstDocument[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, true, properitesMap[model.UserPropertyHubspotContactMerged])
+	assert.Equal(t, primaryDocumentID, int(properitesMap[model.UserPropertyHubspotContactPrimaryContact].(float64)))
+
+	secondDocument, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", secondDocumentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, secondDocument[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	assert.Equal(t, true, properitesMap[model.UserPropertyHubspotContactMerged])
+	assert.Equal(t, primaryDocumentID, int(properitesMap[model.UserPropertyHubspotContactPrimaryContact].(float64)))
+
+	// Verification for random user test case with same cuid.
+	randomUserDocument, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", randomUserDocumentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, randomUserDocument[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	_, exists := (properitesMap)[model.UserPropertyHubspotContactMerged]
+	assert.Equal(t, false, exists)
+	_, exists = (properitesMap)[model.UserPropertyHubspotContactPrimaryContact]
+	assert.Equal(t, false, exists)
+}
+
 func TestHubspotPropertyDetails(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
