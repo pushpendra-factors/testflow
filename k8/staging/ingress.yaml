@@ -18,11 +18,11 @@ spec:
       paths:
       - path: /
         backend:
-          serviceName: appserver-service
+          serviceName: appserver-memsql-service
           servicePort: 80
       - path: /mql
         backend:
-          serviceName: appserver-memsql-service
+          serviceName: appserver-service
           servicePort: 80
       - path: /adwords
         backend:
