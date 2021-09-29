@@ -51,7 +51,9 @@ export const formatData = (data) => {
   console.log('semb format data');
   const { headers, rows } = data.metrics;
   const eventNameIndex = headers.findIndex((header) => header === 'event_name');
-  const countIndex = headers.findIndex((header) => header === 'count');
+  const countIndex = headers.findIndex(
+    (header) => header === 'count' || header === 'aggregate'
+  );
 
   const headerSlice = headers.slice(eventNameIndex + 1, countIndex);
   const breakdowns = data.meta.query.gbp ? [...data.meta.query.gbp] : [];
@@ -251,7 +253,9 @@ export const formatDataInStackedAreaFormat = (
   }
   console.log('semb formatDataInStackedAreaFormat');
   const dateIndex = data.headers.findIndex((h) => h === 'datetime');
-  const countIndex = data.headers.findIndex((h) => h === 'count');
+  const countIndex = data.headers.findIndex(
+    (h) => h === 'count' || h === 'aggregate'
+  );
   const eventIndex = data.headers.findIndex((h) => h === 'event_name');
   const breakdownIndex = eventIndex + 1;
   let differentDates = new Set();

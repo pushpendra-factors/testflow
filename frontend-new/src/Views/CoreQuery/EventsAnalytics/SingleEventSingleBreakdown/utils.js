@@ -212,7 +212,7 @@ export const getDateBasedColumns = (
 export const getDateBasedTableData = (
   seriesData,
   searchText,
-  currentSorter,
+  currentSorter
 ) => {
   console.log('sesb getDateBasedTableData');
   const result = seriesData.filter((sd) =>
@@ -241,7 +241,9 @@ export const formatDataInStackedAreaFormat = (
   }
   console.log('sesb formatDataInStackedAreaFormat');
   const dateIndex = data.headers.findIndex((h) => h === 'datetime');
-  const countIndex = data.headers.findIndex((h) => h === 'count');
+  const countIndex = data.headers.findIndex(
+    (h) => h === 'count' || h === 'aggregate'
+  );
   const eventIndex = data.headers.findIndex((h) => h === 'event_name');
   const breakdownIndex = eventIndex + 1;
   let differentDates = new Set();
