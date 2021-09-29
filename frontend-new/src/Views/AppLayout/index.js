@@ -11,7 +11,7 @@ import {
   Switch,
   useHistory,
 } from "react-router-dom";
-import { fetchProjects } from "Reducers/global";
+import { fetchProjects, setActiveProject } from "Reducers/global";
 import { fetchQueries, fetchSmartPropertyRules } from "../../reducers/coreQuery/services";
 import { getUserProperties, getEventProperties, fetchEventNames } from "../../reducers/coreQuery/middleware";
 import { fetchDashboards } from "../../reducers/dashboard/services";
@@ -19,7 +19,7 @@ import PageSuspenseLoader from "../../components/SuspenseLoaders/PageSuspenseLoa
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
-import {fetchWeeklyIngishtsMetaData} from 'Reducers/insights';
+import {fetchWeeklyIngishtsMetaData} from 'Reducers/insights'; 
 
 const CoreQuery = lazyWithRetry(() => import("../CoreQuery"));
 const Dashboard = lazyWithRetry(() => import("../Dashboard"));
@@ -33,7 +33,8 @@ function AppLayout({ fetchProjects,
   fetchEventNames,
   getEventProperties,
   getUserProperties,
-  fetchWeeklyIngishtsMetaData
+  fetchWeeklyIngishtsMetaData,
+  setActiveProject
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const { Content } = Layout;
@@ -41,6 +42,7 @@ function AppLayout({ fetchProjects,
   const agentState = useSelector((state) => state.agent);
   const isAgentLoggedIn = agentState.isLoggedIn;
   const { active_project } = useSelector((state) => state.global);
+  const { projects } = useSelector((state) => state.global);
   const { show_analytics_result } = useSelector((state) => state.coreQuery);
   const dispatch = useDispatch();
 
@@ -57,7 +59,17 @@ function AppLayout({ fetchProjects,
     asyncCallOnLoad();
   }, [asyncCallOnLoad]);
 
-  useEffect(() => {
+  useEffect(() => {  
+    if (projects.length && _.isEmpty(active_project)) {
+      let activeItem = projects?.filter(
+        (item) => item.id == localStorage.getItem('activeProject')
+        );
+        let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0]; 
+      setActiveProject(projectDetails);
+    }
+  }, [projects]);
+
+  useEffect(() => { 
     if (active_project && active_project.id) {
       fetchDashboards(dispatch, active_project.id);
       fetchQueries(dispatch, active_project.id);
@@ -123,7 +135,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchEventNames,
       getEventProperties,
       getUserProperties,
-      fetchWeeklyIngishtsMetaData
+      fetchWeeklyIngishtsMetaData,
+      setActiveProject
     },
     dispatch
   );
