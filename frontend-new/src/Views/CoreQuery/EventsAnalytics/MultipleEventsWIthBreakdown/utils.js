@@ -77,7 +77,9 @@ export const formatData = (data, queries, colors, eventNames) => {
   console.log('mewb formatData');
   const { headers, rows } = data.metrics;
   const event_indexIndex = headers.findIndex((elem) => elem === 'event_index');
-  const countIndex = headers.findIndex((elem) => elem === 'count');
+  const countIndex = headers.findIndex(
+    (elem) => elem === 'count' || elem === 'aggregate'
+  );
   const eventIndex = headers.findIndex((elem) => elem === 'event_name');
 
   const headerSlice = headers.slice(eventIndex + 1, countIndex);
@@ -287,7 +289,9 @@ export const formatDataInStackedAreaFormat = (
   }
   console.log('mewb formatDataInStackedAreaFormat');
   const dateIndex = data.headers.findIndex((h) => h === 'datetime');
-  const countIndex = data.headers.findIndex((h) => h === 'count');
+  const countIndex = data.headers.findIndex(
+    (h) => h === 'count' || h === 'aggregate'
+  );
   const eventIndex = data.headers.findIndex((h) => h === 'event_name');
   let differentDates = new Set();
   data.rows.forEach((row) => {

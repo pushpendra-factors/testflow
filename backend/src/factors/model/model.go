@@ -88,35 +88,6 @@ type Model interface {
 	ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error)
 	GetChannelConfig(projectID uint64, channel string, reqID string) (*model.ChannelConfigResult, int)
 
-	// KPI Related but in different modules
-	GetKPIConfigsForWebsiteSessions(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForPageViews(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForFormSubmissions(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForHubspot(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForSalesforce(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForAdwords(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForGoogleOrganic(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForFacebook(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForLinkedin(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForAllChannels(projectID uint64, reqID string) (map[string]interface{}, int)
-
-	// TODO: As we depricate channels, we can add these methods exposed here. Can separate on basis of channel later.
-	// GetKPIFilterValuesForWebsiteSessions(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForPageViews(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForFormSubmissions(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForHubspot(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForSalesforce(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForAdwords(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForGoogleOrganic(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForFacebook(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForLinkedin(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForAllChannels(projectID uint64, reqID string) (map[string]interface{}, int)
-
-	// ExecuteKPIQueryGroup(kpiQueryGroup model.KPIQueryGroup)
-	ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int)
-	ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
-	ExecuteKPIQueryForChannels(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
-
 	//templates
 	RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
 	GetTemplateConfig(projectID uint64, templateType int) (model.TemplateConfig, int)
@@ -184,7 +155,6 @@ type Model interface {
 	FilterEventNameByEventURL(projectID uint64, eventURL string) (*model.EventName, int)
 	GetEventNameFromEventNameId(eventNameId string, projectID uint64) (*model.EventName, error)
 	GetEventTypeFromDb(projectID uint64, eventNames []string, limit int64) (map[string]string, error)
-	GetMostFrequentlyEventNamesByType(projectID uint64, limit int, lastNDays int, typeOfEvent string) ([]string, error)
 	GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID uint64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
@@ -297,7 +267,6 @@ type Model interface {
 	GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int)
 	GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int)
 	GetFacebookEnabledIDsAndProjectSettings() ([]uint64, []model.FacebookProjectSettings, int)
-	GetFacebookEnabledIDsAndProjectSettingsForProject(projectIDs []uint64) ([]uint64, []model.FacebookProjectSettings, int)
 	GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int)
 	GetLinkedinEnabledProjectSettingsForProjects(projectIDs []string) ([]model.LinkedinProjectSettings, int)
 	GetArchiveEnabledProjectIDs() ([]uint64, int)

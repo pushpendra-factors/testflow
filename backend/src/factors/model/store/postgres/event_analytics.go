@@ -708,13 +708,6 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityEvent)
 	egAnySelect, egAnyParams, egAnyGroupKeys := buildGroupKeys(projectID, eventGroupProps, q.Timezone)
 
-	var aggregatePropertyDetails model.QueryGroupByProperty
-	aggregateKey := model.AliasAggr
-	aggregatePropertyDetails.Property = q.AggregateProperty
-	aggregatePropertyDetails.Entity = q.AggregateEntity
-	var aggregateSelect string
-	var aggregateParams []interface{}
-
 	if q.GetGroupByTimestamp() != "" {
 		selectTimestamp := getSelectTimestampByType(q.GetGroupByTimestamp(), q.Timezone)
 		// select and order by with datetime.
@@ -732,11 +725,6 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 			" as coal_user_id%s, events.user_id as event_user_id"
 	}
 
-	if q.AggregateProperty != "" && q.AggregateProperty != "1" {
-		aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, q.Timezone)
-		commonSelect = commonSelect + ", " + aggregateSelect
-		*qParams = append(*qParams, aggregateParams...)
-	}
 	if len(q.GroupByProperties) > 0 && commonOrderBy == "" {
 		// Using first occurred event_properties after distinct on user_id.
 		commonOrderBy = "coal_user_id%s, events.timestamp ASC"
@@ -816,13 +804,6 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 	var egKeys string
 	var unionStepName string
 
-	var aggregatePropertyDetails model.QueryGroupByProperty
-	aggregateKey := model.AliasAggr
-	aggregatePropertyDetails.Property = query.AggregateProperty
-	aggregatePropertyDetails.Entity = query.AggregateEntity
-	var aggregateSelect string
-	var aggregateParams []interface{}
-
 	if query.EventsCondition == model.EventCondAllGivenEvent {
 		_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys, query.Timezone)
 		unionStepName = "all_users_intersect"
@@ -850,13 +831,6 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	termSelect = appendSelectTimestampColIfRequired(termSelect, isGroupByTimestamp)
 	termStmnt := ""
-
-	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, query.Timezone)
-		termStmnt = termStmnt + ", " + aggregateSelect
-		*qParams = append(*qParams, aggregateParams...)
-	}
-
 	if termSelect != "" {
 		termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.coal_user_id, ", refStep, refStep) + termSelect + " FROM " + refStep
 	} else {
@@ -899,7 +873,7 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 		}
 	}
 
-	aggregateSelect = "SELECT "
+	aggregateSelect := "SELECT "
 	if isGroupByTimestamp {
 		aggregateSelect = aggregateSelect + model.AliasDateTime + ", "
 		aggregateGroupBys = joinWithComma(aggregateGroupBys, model.AliasDateTime)
@@ -909,13 +883,8 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 		aggregateSelect = aggregateSelect + model.AliasEventName + ", "
 		aggregateGroupBys = joinWithComma(model.AliasEventName, aggregateGroupBys)
 	}
-	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(%s) as %s FROM %s",
-			query.AggregateFunction, model.AliasAggr, model.AliasAggr, aggregateFromStepName)
-	} else {
-		aggregateSelect = aggregateSelect + aggregateSelectKeys + query.GetAggregateFunction() + fmt.Sprintf("(DISTINCT(coal_user_id)) AS %s FROM %s",
-			model.AliasAggr, aggregateFromStepName)
-	}
+	aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(DISTINCT(coal_user_id)) AS %s FROM %s",
+		model.AliasAggr, aggregateFromStepName)
 
 	aggregateSelect = appendGroupBy(aggregateSelect, aggregateGroupBys)
 	if aggregateOrderBys != "" {
@@ -956,6 +925,7 @@ WITH
     left join user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id
     group by group_prop1, group_prop2 order by group_prop2;
 */
+
 func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) != 1 {
 		return "", nil, errors.New("invalid no.of events for single event query")
@@ -1613,12 +1583,12 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 		aggregateGroupBys = append(aggregateGroupBys, eventNameSelect)
 		aggregateSelectKeys = eventNameSelect + ", " + aggregateSelectKeys
 		aggregateSelect = aggregateSelect + aggregateSelectKeys
-		aggregateSelect = appendStatement(aggregateSelect, fmt.Sprintf("%s(*) AS %s FROM %s", q.GetAggregateFunction(), strings.ToLower(q.GetAggregateFunction()), bucketedStepName))
+		aggregateSelect = appendStatement(aggregateSelect, fmt.Sprintf("COUNT(*) AS %s FROM %s", model.AliasAggr, bucketedStepName))
 		aggregateSelect = appendGroupByTimestampIfRequired(aggregateSelect, isGroupByTimestamp, strings.Join(aggregateGroupBys, ", "))
 		aggregateSelect = aggregateSelect + fmt.Sprintf(" ORDER BY %s, %s", eventNameSelect, strings.Join(aggregateOrderBys, ", "))
 	} else {
 		aggregateSelect = aggregateSelect + groupKeys
-		aggregateSelect = joinWithComma(aggregateSelect, fmt.Sprintf("%s(*) AS %s FROM %s", q.GetAggregateFunction(), strings.ToLower(q.GetAggregateFunction()), withUsersStepName))
+		aggregateSelect = joinWithComma(aggregateSelect, fmt.Sprintf("COUNT(*) AS %s FROM %s", model.AliasAggr, withUsersStepName))
 		aggregateSelect = appendGroupByTimestampIfRequired(aggregateSelect, isGroupByTimestamp, groupKeys)
 		aggregateSelect = aggregateSelect + fmt.Sprintf(" ORDER BY %s", eventNameSelect)
 	}
@@ -1756,9 +1726,6 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 		if egKeysForStep != "" {
 			selectStr = selectStr + " , " + egKeysForStep
 		}
-		if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-			selectStr = selectStr + ", " + fmt.Sprintf("%s.%s as %s", step, model.AliasAggr, model.AliasAggr)
-		}
 		selectStmnt := fmt.Sprintf("SELECT %s FROM %s", selectStr, step)
 		if i == 0 {
 			unionStmnt = selectStmnt
@@ -1823,26 +1790,12 @@ ORDER BY event_id, _group_key_2, events.timestamp ASC),
 func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string, error) {
 
-	var aggregatePropertyDetails model.QueryGroupByProperty
-	aggregateKey := model.AliasAggr
-	aggregatePropertyDetails.Property = q.AggregateProperty
-	aggregatePropertyDetails.Entity = q.AggregateEntity
-	var aggregateSelect string
-	var aggregateParams []interface{}
-	var commonParams []interface{}
-
 	var commonSelect string
 	var commonOrderBy string
 	stepsToKeysMap := make(map[string][]string)
 
 	commonSelect = model.SelectDefaultEventFilter
 	commonSelect = appendSelectTimestampIfRequired(commonSelect, q.GetGroupByTimestamp(), q.Timezone)
-
-	if q.AggregateProperty != "" && q.AggregateProperty != "1" {
-		aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, q.Timezone)
-		commonSelect = commonSelect + ", " + aggregateSelect
-		commonParams = aggregateParams
-	}
 
 	if len(q.GroupByProperties) > 0 && commonOrderBy == "" {
 		commonOrderBy = "event_id%s, events.timestamp ASC"
@@ -1861,13 +1814,12 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 			&q.EventsWithProperties[i], q.GroupByProperties, i+1, q.Timezone)
 
 		eventSelect := commonSelect
-		stepParams = append(stepParams, commonParams...)
 		eventNameSelect := "'" + strconv.Itoa(i) + "_" + ewp.Name + "'" + "::text" + " AS event_name "
 		eventSelect = joinWithComma(eventSelect, eventNameSelect)
 		if stepGroupSelect != "" {
 			stepSelect = eventSelect + ", " + stepGroupSelect
 			stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
-			stepParams = append(stepParams, stepGroupParams...)
+			stepParams = stepGroupParams
 			stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
 		} else {
 			stepSelect = eventSelect
@@ -1931,7 +1883,6 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 	eventLevelGroupBys, otherGroupBys := separateEventLevelGroupBys(query.GroupByProperties)
 	var egKeys string
 	var unionStepName string
-	var termStmnt string
 
 	_, _, egKeys = buildGroupKeys(projectID, eventLevelGroupBys, query.Timezone)
 	unionStepName = "each_users_union"
@@ -1947,14 +1898,7 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	termSelect = appendSelectTimestampColIfRequired(termSelect, isGroupByTimestamp)
 
-	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateColumnSelect := fmt.Sprintf("%s.%s as %s", refStep, model.AliasAggr, model.AliasAggr)
-		termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.event_id, ", refStep, refStep) + aggregateColumnSelect +
-			", " + termSelect + " FROM " + refStep
-	} else {
-		termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.event_id, ", refStep, refStep) + termSelect +
-			" FROM " + refStep
-	}
+	termStmnt := fmt.Sprintf("SELECT %s.event_user_id, %s.event_id, ", refStep, refStep) + termSelect + " FROM " + refStep
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
@@ -1999,13 +1943,8 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 		aggregateSelect = aggregateSelect + model.AliasEventName + ", "
 		aggregateGroupBys = joinWithComma(model.AliasEventName, aggregateGroupBys)
 	}
-	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(%s::real) as %s FROM %s",
-			query.AggregateFunction, model.AliasAggr, model.AliasAggr, aggregateFromStepName)
-	} else {
-		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(event_id) AS %s FROM %s",
-			model.AliasAggr, aggregateFromStepName)
-	}
+	aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(event_id) AS %s FROM %s",
+		model.AliasAggr, aggregateFromStepName)
 
 	aggregateSelect = appendGroupBy(aggregateSelect, aggregateGroupBys)
 	if aggregateOrderBys != "" {

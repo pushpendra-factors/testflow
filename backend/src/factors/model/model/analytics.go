@@ -22,7 +22,6 @@ const (
 	QueryClassChannelV1   = "channel_v1"
 	QueryClassAttribution = "attribution"
 	QueryClassWeb         = "web"
-	QueryClassKPI         = "kpi"
 
 	PresentationScatterPlot   = "sp"
 	PresentationLine          = "pl"
@@ -75,7 +74,7 @@ const (
 	AliasEventName  = "event_name"
 	AliasEventIndex = "event_index"
 	AliasDateTime   = "datetime"
-	AliasAggr       = "aggregate"
+	AliasAggr       = "count"
 	AliasError      = "error"
 )
 
@@ -192,11 +191,6 @@ type Query struct {
 	OverridePeriod    bool  `json:"ovp"`
 	SessionStartEvent int64 `json:"sse"`
 	SessionEndEvent   int64 `json:"see"`
-
-	// For specific case of KPI - single eventType
-	AggregateFunction string `json:"agFn"`
-	AggregateProperty string `json:"agPr"`
-	AggregateEntity   string `json:"agEn"`
 }
 
 func (q *Query) GetClass() string {
@@ -269,14 +263,6 @@ func (query *Query) GetGroupByTimestamp() string {
 		return gbt
 	default:
 		return ""
-	}
-}
-
-func (query *Query) GetAggregateFunction() string {
-	if query.AggregateFunction == "" {
-		return strings.ToUpper(AliasAggr)
-	} else {
-		return query.AggregateFunction
 	}
 }
 
@@ -580,10 +566,6 @@ func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery
 		baseQuery = &query
 	case QueryClassEvents:
 		var query QueryGroup
-		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
-		baseQuery = &query
-	case QueryClassKPI:
-		var query KPIQueryGroup
 		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
 		baseQuery = &query
 	case QueryClassWeb:

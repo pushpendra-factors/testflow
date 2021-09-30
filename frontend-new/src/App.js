@@ -11,8 +11,7 @@ import * as Sentry from "@sentry/react";
 import LogRocket from "logrocket";
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
-import { ErrorBoundary } from 'react-error-boundary';
-import { setActiveProject } from 'Reducers/global';
+import { ErrorBoundary } from 'react-error-boundary'; 
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
 const ForgotPassword = lazyWithRetry(() => import("./Views/Pages/ForgotPassword"));
@@ -23,7 +22,7 @@ const Templates = lazyWithRetry(() => import("./Views/CoreQuery/Templates/Result
 const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
 const FactorsInsights = lazyWithRetry(() => import("./Views/Factors/FactorsInsights"));
 
-function App({ isAgentLoggedIn, agent_details, active_project, projects, setActiveProject }) {
+function App({ isAgentLoggedIn, agent_details, active_project }) {
 
   useEffect(() => {
 
@@ -35,8 +34,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, projects, setActi
       var searchParams = new URLSearchParams(window.location.search);
       if (searchParams) {
         let code = searchParams.get("code");
-        let state = searchParams.get("state");
-        console.log('code,state', code, state);
+        let state = searchParams.get("state"); 
         localStorage.setItem('Linkedin_code', code);
         localStorage.setItem('Linkedin_state', state);
       }
@@ -119,8 +117,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, projects, setActi
     }
   }, [agent_details]); 
 
-  useEffect(()=>{ 
-    // console.log("active_project",active_project);
+  useEffect(()=>{  
     const tz = active_project?.time_zone;
     const isTzEnabled = active_project?.is_multiple_project_timezone_enabled;
     if(tz && isTzEnabled){ 
@@ -129,18 +126,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, projects, setActi
     else{
       localStorage.setItem('project_timeZone', 'Asia/Kolkata');       
     }
-  });
-
-
-  useEffect(() => {
-    if (projects.length) {
-      let activeItem = projects?.filter(
-        (item) => item.id == localStorage.getItem('activeProject')
-      );
-      let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0];
-      setActiveProject(projectDetails);
-    }
-  }, [projects]);
+  }); 
 
   return (
     <div className="App">
@@ -199,10 +185,9 @@ function App({ isAgentLoggedIn, agent_details, active_project, projects, setActi
 }
 
 const mapStateToProps = (state) => ({
-  isAgentLoggedIn: state.agent.isLoggedIn,
-  projects: state.global.projects,
+  isAgentLoggedIn: state.agent.isLoggedIn, 
   agent_details: state.agent.agent_details,
   active_project: state.global.active_project, 
 });
 
-export default connect(mapStateToProps, { setActiveProject })(App);
+export default connect(mapStateToProps,null)(App);

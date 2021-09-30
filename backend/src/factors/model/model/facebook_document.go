@@ -1,7 +1,6 @@
 package model
 
 import (
-	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -38,7 +37,6 @@ type FacebookLastSyncInfoPayload struct {
 	CustomerAdAccountId string `json:"account_id"`
 }
 
-// NOTE: Change KPI metrics in kpi_analytics_common when changed.
 var SelectableMetricsForFacebook = []string{
 	"video_p50_watched_actions",
 	"video_p25_watched_actions",
@@ -53,36 +51,6 @@ var SelectableMetricsForFacebook = []string{
 	"link_clicks",
 	"frequency",
 	"reach",
-}
-
-var MapOfFacebookObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
-	CAFilterCampaign: {
-		"id":                PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"daily_budget":      PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"lifetime_budget":   PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"objective":         PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"bid_strategy":      PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"buying_type":       PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-	},
-	CAFilterAdGroup: {
-		"id":                PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"daily_budget":      PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"lifetime_budget":   PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"objective":         PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"bid_strategy":      PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-	},
-	CAFilterAd: {
-		"id":                PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
-	},
 }
 
 // To change the below when facebook objectAndPropertyToValueInFacebookReportsMapping or any other changes.

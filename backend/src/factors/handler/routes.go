@@ -72,8 +72,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
 
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
-
-	// Dashboard endpoints
 	authRouteGroup.GET("/:project_id/dashboards", GetDashboardsHandler)
 	authRouteGroup.POST("/:project_id/dashboards", CreateDashboardHandler)
 	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id", UpdateDashboardHandler)
@@ -83,7 +81,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", DeleteDashboardUnitHandler)
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
 		DashboardUnitsWebAnalyticsQueryHandler)
-
 	authRouteGroup.GET("/:project_id/queries", GetQueriesHandler)
 	authRouteGroup.POST("/:project_id/queries", CreateQueryHandler)
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
@@ -109,26 +106,15 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/channels/filter_values", GetChannelFilterValuesHandler)
 	authRouteGroup.POST("/:project_id/attribution/query", responseWrapper(AttributionHandler))
 
-	// v1 API endpoints
+	// /v1 API endpoints
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", responseWrapper(EventsQueryHandler))
-
-	// v1 Dashboard endpoints
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", CreateDashboardUnitForMultiDashboardsHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", CreateDashboardUnitsForMultipleQueriesHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", DeleteMultiDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", DeleteDashboardHandler)
-
-	// v1 Channel endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/config", V1.GetChannelConfigHandler)
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/filter_values", V1.GetChannelFilterValuesHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/channels/query", responseWrapper(V1.ExecuteChannelQueryHandler))
-
-	// v1 KPI endpoints
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/config", responseWrapper(V1.GetKPIConfigHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
-
-	// v1 CRM And Smart Event endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", CreateSmartEventFilterHandler)
 	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", UpdateSmartEventFilterHandler)
@@ -138,8 +124,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", responseWrapper(V1.GetTemplateConfigHandler))
 	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/config", responseWrapper(V1.UpdateTemplateConfigHandler))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/templates/:type/query", responseWrapper(V1.ExecuteTemplateQueryHandler))
-
 	// smart Properties
+
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/config/:object_type", responseWrapper(GetSmartPropertyRulesConfigHandler))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", responseWrapper(CreateSmartPropertyRulesHandler))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", responseWrapper(GetSmartPropertyRulesHandler))
@@ -158,7 +144,6 @@ func InitAppRoutes(r *gin.Engine) {
 
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
-	authRouteGroup.GET("/:project_id/v1/event_names/:type", V1.GetEventNamesByTypeHandler)
 	authRouteGroup.GET("/:project_id/v1/agents", V1.GetProjectAgentsHandler)
 	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1,
 		mid.SetLoggedInAgent(),

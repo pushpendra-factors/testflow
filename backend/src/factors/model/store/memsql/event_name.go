@@ -576,67 +576,10 @@ func aggregateEventsAcrossDate(events []model.CacheEventNamesWithTimestamp) []U.
 	return eventsAggregatedSlice
 }
 
-// Hacked solution - to fetch a type of EventNames.
-func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID uint64, limit int, lastNDays int, typeOfEvent string) ([]string, error) {
-	var mostFrequentEvents []U.NameCountTimestampCategory
-	var eventNameType string
-	var exists bool
-	var eventNames []model.EventName
-	var result []string
-	db := C.GetServices().Db
-	if eventNameType, exists = model.EventTypeToEnameType[typeOfEvent]; !exists {
-		return nil, errors.New("invalid type is provided.")
-	}
-	eventsSorted, err := getEventNamesAggregatedAndSortedAcrossDate(projectID, limit, lastNDays)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, event := range eventsSorted {
-		if event.GroupName == U.FrequentlySeen {
-			mostFrequentEvents = append(mostFrequentEvents, event)
-		}
-	}
-	if limit > 0 {
-		sliceLength := len(mostFrequentEvents)
-		if sliceLength > limit*2 {
-			mostFrequentEvents = mostFrequentEvents[0 : limit*2]
-		}
-	}
-
-	if dbResult := db.Where("type = ? AND name IN ?", eventNameType, mostFrequentEvents).Select("name").Limit(limit).Find(&eventNames); dbResult.Error != nil {
-		return nil, dbResult.Error
-	}
-	for _, eventName := range eventNames {
-		result = append(result, eventName.Name)
-	}
-	return result, nil
-}
-
 // GetEventNamesOrderedByOccurenceAndRecency (Part of event_name and properties caching) This method iterates for last n days to
 // get all the top 'limit' events for the given project. Picks all last 24 hours events and sorts the remaining by
 // occurence and returns top 'limit' events
 func (store *MemSQL) GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error) {
-	eventsSorted, err := getEventNamesAggregatedAndSortedAcrossDate(projectID, limit, lastNDays)
-	if err != nil {
-		return nil, err
-	}
-	if limit > 0 {
-		sliceLength := len(eventsSorted)
-		if sliceLength > limit {
-			eventsSorted = eventsSorted[0:limit]
-		}
-	}
-
-	eventStringWithGroups := make(map[string][]string)
-	for _, event := range eventsSorted {
-		eventStringWithGroups[event.GroupName] = append(eventStringWithGroups[event.GroupName], event.Name)
-	}
-
-	return eventStringWithGroups, nil
-}
-
-func getEventNamesAggregatedAndSortedAcrossDate(projectID uint64, limit int, lastNDays int) ([]U.NameCountTimestampCategory, error) {
 	if projectID == 0 {
 		return nil, errors.New("invalid project on get event names ordered by occurence and recency")
 	}
@@ -654,7 +597,20 @@ func getEventNamesAggregatedAndSortedAcrossDate(projectID uint64, limit int, las
 	eventsAggregated := aggregateEventsAcrossDate(events)
 
 	eventsSorted := U.SortByTimestampAndCount(eventsAggregated)
-	return eventsSorted, nil
+
+	if limit > 0 {
+		sliceLength := len(eventsSorted)
+		if sliceLength > limit {
+			eventsSorted = eventsSorted[0:limit]
+		}
+	}
+
+	eventStringWithGroups := make(map[string][]string)
+	for _, event := range eventsSorted {
+		eventStringWithGroups[event.GroupName] = append(eventStringWithGroups[event.GroupName], event.Name)
+	}
+
+	return eventStringWithGroups, nil
 }
 
 func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string) (model.CacheEventNamesWithTimestamp, error) {

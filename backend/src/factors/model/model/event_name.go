@@ -38,9 +38,6 @@ type CacheEventNamesWithTimestamp struct {
 	EventNames map[string]U.CountTimestampTuple `json:"en"`
 }
 
-// AT is for all page event
-// FE and SE are same
-// UC is for form submit event
 const TYPE_USER_CREATED_EVENT_NAME = "UC"
 const TYPE_AUTO_TRACKED_EVENT_NAME = "AT"
 const TYPE_FILTER_EVENT_NAME = "FE"
@@ -58,26 +55,6 @@ var ALLOWED_TYPES = [...]string{
 	TYPE_INTERNAL_EVENT_NAME,
 	TYPE_CRM_SALESFORCE,
 	TYPE_CRM_HUBSPOT,
-}
-
-var AllowedEventNamesForHubspot = []string{
-	U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
-	U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
-	U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
-}
-
-// NOTE: This is currently being used only in kpi though.
-var AllowedEventNamesForSalesforce = []string{
-	U.EVENT_NAME_SALESFORCE_CONTACT_CREATED,
-	U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
-	U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
-	U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
-	U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
-	U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
-}
-
-var EventTypeToEnameType = map[string]string{
-	PageViewsDisplayCategory: "AT",
 }
 
 const URI_PROPERTY_PREFIX = ":"

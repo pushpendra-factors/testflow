@@ -926,7 +926,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (str
 
 	var qSelect string
 	qSelect = appendSelectTimestampIfRequired(qSelect, q.GetGroupByTimestamp(), q.Timezone)
-	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("%s(*) AS %s", q.GetAggregateFunction(), strings.ToLower(q.GetAggregateFunction())))
+	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", model.AliasAggr))
 
 	addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
 		"", "", qSelect, egSelectParams, "", "", "", q.GlobalUserProperties)
@@ -1926,8 +1926,8 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 		aggregateSelect = aggregateSelect + model.AliasEventName + ", "
 		aggregateGroupBys = joinWithComma(model.AliasEventName, aggregateGroupBys)
 	}
-	aggregateSelect = aggregateSelect + aggregateSelectKeys + query.GetAggregateFunction() + fmt.Sprintf("(event_id) AS %s FROM %s",
-		strings.ToLower(query.GetAggregateFunction()), aggregateFromStepName)
+	aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(event_id) AS %s FROM %s",
+		model.AliasAggr, aggregateFromStepName)
 
 	aggregateSelect = appendGroupBy(aggregateSelect, aggregateGroupBys)
 	if aggregateOrderBys != "" {

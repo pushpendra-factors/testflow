@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jinzhu/gorm"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
 	"factors/model/model"
@@ -125,31 +126,35 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 	return idAsString, nil
 }
 
-func getHubspotDocumentByIdAndType(projectId uint64, id string, docType int) ([]model.HubspotDocument, int) {
+func isExistHubspotDocumentByIDAndType(projectId uint64, id string, docType int) int {
 	argFields := log.Fields{"project_id": projectId, "id": id, "type": docType}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
 
 	logCtx := log.WithFields(argFields)
 
-	var documents []model.HubspotDocument
+	var document model.HubspotDocument
 	if projectId == 0 || id == "" || docType == 0 {
 		logCtx.Error("Failed to get hubspot document by id and type. Invalid project_id or id or type.")
-		return documents, http.StatusBadRequest
+		return http.StatusBadRequest
 	}
 
 	db := C.GetServices().Db
-	err := db.Where("project_id = ? AND id = ? AND type = ?", projectId, id,
-		docType).Find(&documents).Error
+	err := db.Where("project_id = ? AND id = ? AND type = ? AND action = ? ", projectId, id,
+		docType, model.HubspotDocumentActionCreated).Select("id").Limit(1).Find(&document).Error
 	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
 		logCtx.WithError(err).Error("Failed to get hubspot documents.")
-		return documents, http.StatusInternalServerError
+		return http.StatusInternalServerError
 	}
 
-	if len(documents) == 0 {
-		return documents, http.StatusNotFound
+	if document.ID == "" {
+		return http.StatusNotFound
 	}
 
-	return documents, http.StatusFound
+	return http.StatusFound
 }
 
 func (store *MemSQL) GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, docID string) ([]model.HubspotDocument, int) {
@@ -279,7 +284,7 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 
 	logCtx = logCtx.WithField("type", document.Type).WithField("value", document.Value)
 
-	_, errCode := getHubspotDocumentByIdAndType(document.ProjectId,
+	errCode := isExistHubspotDocumentByIDAndType(document.ProjectId,
 		document.ID, document.Type)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 		return errCode
@@ -372,7 +377,7 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 			}
 		}
 	}
-	UpdateCountCacheByDocumentType(projectId,&document.CreatedAt,"hubspot")
+	UpdateCountCacheByDocumentType(projectId, &document.CreatedAt, "hubspot")
 	return http.StatusCreated
 }
 func getHubspotTypeAlias(t int) string {

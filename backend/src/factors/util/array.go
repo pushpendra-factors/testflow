@@ -2,15 +2,6 @@ package util
 
 const DefaultPrecision = 3
 
-func ContainsStringInArray(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
 func AppendNonNullValues(args ...string) []string {
 	result := make([]string, 0, 0)
 
