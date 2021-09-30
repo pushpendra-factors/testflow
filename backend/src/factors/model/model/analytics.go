@@ -33,6 +33,7 @@ const (
 	PresentationStack         = "ps"
 	PresentationArea          = "pa"
 	PresentationHorizontalBar = "ph"
+	HorizontalBar             = "hb"
 )
 
 const (
