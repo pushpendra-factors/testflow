@@ -18,8 +18,8 @@
         "production": [
           "factors-production"
         ],
-        "flash-production": [
-          "flash-production-1"
+        "sloth-production": [
+          "sloth-production-1"
         ]
       }
     }
