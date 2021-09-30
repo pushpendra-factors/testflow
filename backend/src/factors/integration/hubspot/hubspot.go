@@ -16,6 +16,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	SDK "factors/sdk"
+	"factors/util"
 	U "factors/util"
 )
 
@@ -590,8 +591,13 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		_, exists := (*value)["merged-vids"]
 		if exists {
 			var mergedVIDs []string
-			for _, v := range (*value)["merged-vids"].([]interface{}) {
-				mergedVIDs = append(mergedVIDs, fmt.Sprintf("%v", v))
+			for _, vInt := range (*value)["merged-vids"].([]interface{}) {
+				vfloat, err := util.GetPropertyValueAsFloat64(vInt)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to convert contact id to float.")
+					continue
+				}
+				mergedVIDs = append(mergedVIDs, fmt.Sprintf("%v", int64(vfloat)))
 			}
 
 			if len(mergedVIDs) != 0 {
