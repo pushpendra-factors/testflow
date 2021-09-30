@@ -583,7 +583,10 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			return http.StatusInternalServerError
 		}
 		return http.StatusOK
-	} else {
+	}
+
+	// process merged contact only in updated record
+	if document.Action == model.HubspotDocumentActionUpdated {
 		value, err := U.DecodePostgresJsonb(document.Value)
 		if err != nil {
 			logCtx.WithField("document.Value", document.Value).Error("Failed to decode hubspot Json document-Value.")
