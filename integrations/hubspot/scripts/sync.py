@@ -37,6 +37,7 @@ RETRY_LIMIT = 15
 CONTACT_PROPERTY_KEY_LAST_MODIFIED_DATE = "lastmodifieddate"
 COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE = "hs_lastmodifieddate"
 RECORD_PROPERTIES_KEY = "properties"
+REQUEST_TIMEOUT = 5*60 # 5 min
 
 # Todo: Boilerplate, move this to a reusable module.
 def notify(env, source, message):
@@ -153,7 +154,7 @@ def get_with_fallback_retry(project_id, get_url):
     try:
         while True:
             try:
-                r = requests.get(url=get_url, headers = {})
+                r = requests.get(url=get_url, headers = {}, timeout=REQUEST_TIMEOUT)
                 if r.status_code != 429:
                     if not r.ok:
                         if r.status_code== 414:
@@ -365,7 +366,7 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
 
 def get_deleted_contacts(project_id, api_key):
     url = "https://api.hubapi.com/crm/v3/objects/contacts/?"
-    parameter_dict = {'archived': "true", 'hapikey': api_key}
+    parameter_dict = {'archived': "true", 'hapikey': api_key,"limit":100}
     parameters = urllib.parse.urlencode(parameter_dict)
     final_url = url + parameters    
     has_more = True
