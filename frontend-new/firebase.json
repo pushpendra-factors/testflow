@@ -115,7 +115,7 @@
       ]
     },
     {
-      "target": "flash-production",
+      "target": "sloth-production",
       "public": "dist/production",
       "ignore": [
         "firebase.json",

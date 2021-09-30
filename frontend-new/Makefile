@@ -14,7 +14,7 @@ deploy-staging: build-staging
 
 deploy-prod: notify-deployment
 deploy-prod: build-prod
-	firebase use factors-production; firebase deploy --only hosting:production; firebase deploy --only hosting:flash-production; node sdk-monitor.js prod 4
+	firebase use factors-production; firebase deploy --only hosting:production; firebase deploy --only hosting:sloth-production; node sdk-monitor.js prod 4
 
 notify-deployment:
 	$(FACTORS_REPO)/frontend-new/notify_deployment.sh
