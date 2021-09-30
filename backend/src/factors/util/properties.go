@@ -160,6 +160,7 @@ var EP_GCLID string = "$gclid"
 var EP_FBCLID string = "$fbclid"
 var EP_COST string = "$cost"
 var EP_REVENUE string = "$revenue"
+var EP_PAGE_COUNT string = "$page_count"
 var EP_TIMESTAMP string = "$timestamp"
 var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
@@ -2901,6 +2902,7 @@ func FillHourDayAndTimestampEventProperty(properties *postgres.Jsonb, timestamp 
 }
 
 // Moves datetime properties from numerical properties to type datetime.
+// Few Properties, defined in factors are to be classified into right DataType.
 func ClassifyDateTimePropertyKeys(propertiesByType *map[string][]string) map[string][]string {
 	cProperties := make(map[string][]string, 0)
 

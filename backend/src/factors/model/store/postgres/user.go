@@ -929,7 +929,38 @@ func (pg *Postgres) GetRecentUserPropertyValuesWithLimits(projectID uint64, prop
 	return values, U.GetCategoryType(propertyKey, values), nil
 }
 
-//GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project
+// Gets userProperties - sorted by count and time. Update list with required ones.
+func (pg *Postgres) GetRequiredUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map[string][]string, map[string]string, error) {
+	properties, err := pg.GetUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		return properties, make(map[string]string), err
+	}
+
+	// We defined few properties. It needs to be classified into right category.
+	// add mandatory properties And remove unnecessary properties.
+	properties = U.ClassifyDateTimePropertyKeys(&properties)
+	U.FillMandatoryDefaultUserProperties(&properties)
+	U.FilterDisabledCoreUserProperties(&properties)
+
+	// Adding Property To Displayname Hash.
+	resultantPropertyToDisplayName := make(map[string]string)
+
+	_, userPropertiesToDisplayNames := pg.GetDisplayNamesForAllUserProperties(projectID)
+	standardUserPropertiesToDisplayNames := U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES
+	_, crmSpecificPropertiesToDisplayNames := pg.GetDisplayNamesForObjectEntities(projectID)
+	for property, displayName := range userPropertiesToDisplayNames {
+		resultantPropertyToDisplayName[property] = displayName
+	}
+	for property, displayName := range standardUserPropertiesToDisplayNames {
+		resultantPropertyToDisplayName[property] = displayName
+	}
+	for property, displayName := range crmSpecificPropertiesToDisplayNames {
+		resultantPropertyToDisplayName[property] = displayName
+	}
+	return properties, resultantPropertyToDisplayName, nil
+}
+
+// GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project
 // Picks all past 24 hrs seen properties and sorts the remaining by count and returns top 'limit'
 func (pg *Postgres) GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map[string][]string, error) {
 	properties := make(map[string][]string)

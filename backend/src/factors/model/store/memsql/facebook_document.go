@@ -25,36 +25,6 @@ const (
 	metricsExpressionOfDivisionWithHandleOf0AndNull = "SUM(JSON_EXTRACT_STRING(value,'%s'))*%s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
 )
 
-var mapOfFacebookObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
-	CAFilterCampaign: {
-		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"daily_budget":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"lifetime_budget":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"buying_type":       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-	CAFilterAdGroup: {
-		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"daily_budget":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"lifetime_budget":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-	CAFilterAd: {
-		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-}
-
 var facebookDocumentTypeAlias = map[string]int{
 	"ad_account":        7,
 	"campaign":          1,
@@ -322,7 +292,7 @@ func (store *MemSQL) buildObjectAndPropertiesForFacebook(projectID uint64, objec
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 	for _, currentObject := range objects {
 		// to do: check if normal properties present then only smart properties will be there
-		propertiesAndRelated, isPresent := mapOfFacebookObjectsToPropertiesAndRelated[currentObject]
+		propertiesAndRelated, isPresent := model.MapOfFacebookObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
 		var currentPropertiesSmart []model.ChannelProperty
 		if isPresent {

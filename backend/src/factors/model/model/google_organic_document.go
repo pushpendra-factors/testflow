@@ -1,6 +1,7 @@
 package model
 
 import (
+	U "factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -35,3 +36,15 @@ const (
 	CombinedLevelData          = int64(1)
 	PageLevelData              = int64(2)
 )
+
+var MapOfObjectsToPropertiesAndRelatedGoogleOrganic = map[string]map[string]PropertiesAndRelated{
+	"organic_property": {
+		"query":   PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		"page":    PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		"country": PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+		"device":  PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
+	},
+}
+var SelectableMetricsForGoogleOrganic = []string{"impressions", "clicks", ClickThroughRate, "position_avg", "position_impression_weighted_avg"}
+var AscendingOrderByMetricsForGoogleOrganic = map[string]bool{
+	"impressions": false, "clicks": false, ClickThroughRate: false, "position_avg": true, "position_impression_weighted_avg": true}
