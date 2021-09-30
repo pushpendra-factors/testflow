@@ -114,54 +114,9 @@ var templateMetricsToSelectStatementForOverallAnalysis = map[string]string{
 	"click_to_lead_rate":        fmt.Sprintf(higherOrderExpressionsWithMultiply, "conversions", "100", "clicks") + fmt.Sprintf("as %s, ", "click_to_lead_rate") + "sum((value->>'conversions')::float) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
 	model.ConversionRate:        fmt.Sprintf(higherOrderExpressionsWithMultiply, "conversions", "100", "clicks") + fmt.Sprintf("as %s, ", model.ConversionRate) + "sum((value->>'conversions')::float) as conversion, " + fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions") + " as cost_per_lead",
 }
-
-var selectableMetricsForAdwords = []string{
-	model.Conversion,
-	model.ClickThroughRate,
-	model.ConversionRate,
-	model.CostPerClick,
-	model.CostPerConversion,
-	model.SearchImpressionShare,
-	model.SearchClickShare,
-	model.SearchTopImpressionShare,
-	model.SearchAbsoluteTopImpressionShare,
-	model.SearchBudgetLostAbsoluteTopImpressionShare,
-	model.SearchBudgetLostImpressionShare,
-	model.SearchBudgetLostTopImpressionShare,
-	model.SearchRankLostAbsoluteTopImpressionShare,
-	model.SearchRankLostImpressionShare,
-	model.SearchRankLostTopImpressionShare,
-}
-
 var errorEmptyAdwordsDocument = errors.New("empty adwords document")
 
 var objectsForAdwords = []string{model.AdwordsCampaign, model.AdwordsAdGroup, model.AdwordsKeyword}
-
-var mapOfAdwordsObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
-	model.AdwordsCampaign: {
-		"id":                         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":                       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"status":                     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		model.AdvertisingChannelType: PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-	model.AdwordsAdGroup: {
-		"id":     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-	model.AdwordsKeyword: {
-		"id":                   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":                 PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"status":               PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		model.ApprovalStatus:   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		model.MatchType:        PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		model.FirstPositionCpc: PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		model.FirstPageCpc:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		model.IsNegative:       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		model.TopOfPageCpc:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		model.QualityScore:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-}
 
 var propertiesToBeDividedByMillion = map[string]struct{}{
 	model.TopOfPageCpc:     {},
@@ -800,7 +755,7 @@ func (pg *Postgres) PullGCLIDReport(projectID uint64, from, to int64, adwordsAcc
 // @TODO Kark v1
 func (pg *Postgres) buildAdwordsChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	adwordsObjectsAndProperties := pg.buildObjectAndPropertiesForAdwords(projectID, objectsForAdwords)
-	selectMetrics := append(selectableMetricsForAllChannels, selectableMetricsForAdwords...)
+	selectMetrics := append(selectableMetricsForAllChannels, model.SelectableMetricsForAdwords...)
 	objectsAndProperties := adwordsObjectsAndProperties
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectMetrics,
@@ -812,7 +767,7 @@ func (pg *Postgres) buildObjectAndPropertiesForAdwords(projectID uint64, objects
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 	for _, currentObject := range objects {
 		// to do: check if normal properties present then only smart properties will be there
-		propertiesAndRelated, isPresent := mapOfAdwordsObjectsToPropertiesAndRelated[currentObject]
+		propertiesAndRelated, isPresent := model.MapOfAdwordsObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
 		var currentPropertiesSmart []model.ChannelProperty
 		if isPresent {

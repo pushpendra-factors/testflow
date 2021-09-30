@@ -525,6 +525,23 @@ func (pg *Postgres) GetAllHubspotProjectSettings() ([]model.HubspotProjectSettin
 	return hubspotProjectSettings, http.StatusFound
 }
 
+func (pg *Postgres) GetAllHubspotProjectSettingsForProjectID(projectID uint64) ([]model.HubspotProjectSettings, int) {
+	var hubspotProjectSettings []model.HubspotProjectSettings
+
+	db := C.GetServices().Db
+	err := db.Table("project_settings").Where(
+		"int_hubspot='true' AND int_hubspot_api_key IS NOT NULL AND project_id IN (?)", projectID).Select(
+		"project_id, int_hubspot_api_key as api_key, int_hubspot_first_time_synced as is_first_time_synced," +
+			"int_hubspot_sync_info as sync_info").
+		Find(&hubspotProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot project_settings.")
+		return hubspotProjectSettings, http.StatusInternalServerError
+	}
+
+	return hubspotProjectSettings, http.StatusFound
+}
+
 type shopifyInfoStruct struct {
 	apiKey    string
 	projectId uint64
@@ -602,6 +619,24 @@ func (pg *Postgres) GetFacebookEnabledIDsAndProjectSettings() ([]uint64, []model
 	}
 	return facebookIDs, facebookProjectSettings, http.StatusOK
 }
+
+func (pg *Postgres) GetFacebookEnabledIDsAndProjectSettingsForProject(projectIDs []uint64) ([]uint64, []model.FacebookProjectSettings, int) {
+	db := C.GetServices().Db
+
+	facebookProjectSettings := make([]model.FacebookProjectSettings, 0, 0)
+	facebookIDs := make([]uint64, 0, 0)
+
+	err := db.Table("project_settings").Where("int_facebook_access_token IS NOT NULL AND int_facebook_access_token != '' AND project_id IN (?)", projectIDs).Find(&facebookProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
+		return facebookIDs, facebookProjectSettings, http.StatusInternalServerError
+	}
+	for _, facebookProjectSetting := range facebookProjectSettings {
+		facebookIDs = append(facebookIDs, facebookProjectSetting.ProjectId)
+	}
+	return facebookIDs, facebookProjectSettings, http.StatusOK
+}
+
 func (pg *Postgres) GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int) {
 	db := C.GetServices().Db
 
@@ -680,6 +715,22 @@ func (pg *Postgres) GetAllSalesforceProjectSettings() ([]model.SalesforceProject
 	db := C.GetServices().Db
 	err := db.Table("project_settings").Where(
 		"int_salesforce_enabled_agent_uuid != '' AND int_salesforce_enabled_agent_uuid IS NOT NULL ").Joins(" left join agents on project_settings.int_salesforce_enabled_agent_uuid = agents.uuid").Select(
+		"project_id, int_salesforce_refresh_token as refresh_token, int_salesforce_instance_url as instance_url").Find(
+		&salesforceProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get salesforce project_settings.")
+		return salesforceProjectSettings, http.StatusInternalServerError
+	}
+
+	return salesforceProjectSettings, http.StatusFound
+}
+
+func (pg *Postgres) GetAllSalesforceProjectSettingsForProject(projectID uint64) ([]model.SalesforceProjectSettings, int) {
+	var salesforceProjectSettings []model.SalesforceProjectSettings
+
+	db := C.GetServices().Db
+	err := db.Table("project_settings").Where(
+		"int_salesforce_enabled_agent_uuid != '' AND int_salesforce_enabled_agent_uuid IS NOT NULL AND project_id IN (?)", projectID).Joins(" left join agents on project_settings.int_salesforce_enabled_agent_uuid = agents.uuid").Select(
 		"project_id, int_salesforce_refresh_token as refresh_token, int_salesforce_instance_url as instance_url").Find(
 		&salesforceProjectSettings).Error
 	if err != nil {

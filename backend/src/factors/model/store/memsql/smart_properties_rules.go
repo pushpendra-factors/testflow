@@ -21,18 +21,18 @@ var sourceSmartProperty = map[string]bool{
 }
 
 // to do: @ashhar make it similar to channels fields ASAP
-var mapOfObjectAndProperty = map[string]map[string]map[string]PropertiesAndRelated{
+var mapOfObjectAndProperty = map[string]map[string]map[string]model.PropertiesAndRelated{
 	model.AdwordsCampaign: {
 		model.AdwordsCampaign: {
-			"name": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+			"name": model.PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
 		},
 	},
 	model.AdwordsAdGroup: {
 		model.AdwordsCampaign: {
-			"name": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+			"name": model.PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
 		},
 		model.AdwordsAdGroup: {
-			"name": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+			"name": model.PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},
 		},
 	},
 }

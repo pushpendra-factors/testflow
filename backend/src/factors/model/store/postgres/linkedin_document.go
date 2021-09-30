@@ -367,6 +367,7 @@ func getLinkedinMetricsQuery(query *model.ChannelQuery, withBreakdown bool) (str
 }
 
 // v1 Api
+// To change in kpi/linkedin, when we change here.
 func (pg *Postgres) buildLinkedinChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	linkedinObjectsAndProperties := pg.buildObjectAndPropertiesForLinkedin(projectID, objectsForLinkedin)
 	objectsAndProperties := append(linkedinObjectsAndProperties)

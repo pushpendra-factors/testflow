@@ -15,7 +15,6 @@ import (
 	"factors/model/model"
 	U "factors/util"
 
-	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -1080,42 +1079,6 @@ func addQueryToResultMeta(result *model.QueryResult, query model.Query) {
 
 func isValidFunnelQuery(query *model.Query) bool {
 	return len(query.EventsWithProperties) <= 6
-}
-
-// NOTE: TODO to different to queryGroup
-func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (model.BaseQuery, error) {
-	var baseQuery model.BaseQuery
-	var err error
-	switch queryClass {
-	case model.QueryClassFunnel, model.QueryClassInsights:
-		var query model.Query
-		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
-		baseQuery = &query
-	case model.QueryClassAttribution:
-		var query model.AttributionQueryUnit
-		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
-		baseQuery = &query
-	case model.QueryClassChannel:
-		var query model.ChannelQueryUnit
-		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
-		baseQuery = &query
-	case model.QueryClassChannelV1:
-		var query model.ChannelGroupQueryV1
-		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
-		baseQuery = &query
-	case model.QueryClassEvents:
-		var query model.QueryGroup
-		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
-		baseQuery = &query
-	case model.QueryClassWeb:
-		var query model.DashboardUnitsWebAnalyticsQuery
-		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
-		baseQuery = &query
-	default:
-		return baseQuery, fmt.Errorf("query class %s not supported", queryClass)
-	}
-
-	return baseQuery, err
 }
 
 func (store *MemSQL) Analyze(projectId uint64, queryOriginal model.Query) (*model.QueryResult, int, string) {

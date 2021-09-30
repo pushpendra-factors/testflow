@@ -20,6 +20,11 @@ type ChannelProperty struct {
 	Type string `json:"type"`
 }
 
+// PropertiesAndRelated - TODO Kark v1
+type PropertiesAndRelated struct {
+	TypeOfProperty string // can be categorical or numerical
+}
+
 // ChannelQuery - @TODO Kark v0
 type ChannelQuery struct {
 	Channel     string `json:"channel"`
