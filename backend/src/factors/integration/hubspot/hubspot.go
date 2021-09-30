@@ -88,6 +88,12 @@ var syncOrderByType = [...]int{
 	model.HubspotDocumentTypeDeal,
 }
 
+var allowedEventNames = []string{
+	U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+	U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+	U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
+}
+
 func getContactProperties(projectID uint64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 	if document.Type != model.HubspotDocumentTypeContact {
 		return nil, nil, errors.New("invalid type")
@@ -402,10 +408,10 @@ func GetHubspotPropertiesMeta(objectType string, apiKey string) ([]PropertyDetai
 func CreateOrGetHubspotEventName(projectID uint64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
-	for i := range model.AllowedEventNamesForHubspot {
+	for i := range allowedEventNames {
 		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
 			ProjectId: projectID,
-			Name:      model.AllowedEventNamesForHubspot[i],
+			Name:      allowedEventNames[i],
 			Type:      model.TYPE_USER_CREATED_EVENT_NAME,
 		})
 

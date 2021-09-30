@@ -115,7 +115,6 @@ func GetUsersHandler(c *gin.Context) {
 // @Success 200 {string} json "map[string]string"
 // @Router /{project_id}/user_properties [get]
 func GetUserPropertiesHandler(c *gin.Context) {
-	// NOTE: Change in GetRequiredUserPropertiesByProject when this changes.
 	var err error
 	var properties map[string][]string
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -166,9 +165,9 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	properties = U.ClassifyDateTimePropertyKeys(&properties)
 	U.FillMandatoryDefaultUserProperties(&properties)
 	U.FilterDisabledCoreUserProperties(&properties)
-
-	if isDisplayNameEnabled == "true" {
-		_, displayNames := store.GetStore().GetDisplayNamesForAllUserProperties(projectId)
+	
+	if(isDisplayNameEnabled == "true"){
+		_, displayNames :=  store.GetStore().GetDisplayNamesForAllUserProperties(projectId)
 		standardProperties := U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES
 		displayNamesOp := make(map[string]string)
 		for property, displayName := range standardProperties {
@@ -178,7 +177,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 			displayNamesOp[property] = displayName
 		}
 
-		_, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(projectId)
+		_, displayNames =  store.GetStore().GetDisplayNamesForObjectEntities(projectId)
 		for property, displayName := range displayNames {
 			displayNamesOp[property] = displayName
 		}

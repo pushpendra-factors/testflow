@@ -115,6 +115,7 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 		logCtx.WithError(err).Error("Query failed. Json decode failed.")
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
 	}
+	logCtx.Info("query:", queryPayload)
 
 	var commonQueryFrom int64
 	var commonQueryTo int64

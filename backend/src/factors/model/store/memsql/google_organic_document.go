@@ -34,11 +34,22 @@ var googleOrganicMetricsToAggregatesInReportsMapping = map[string]string{
 	"position_impression_weighted_avg": fmt.Sprintf(weightedMetricsExpressionOfDivisionWithHandleOf0AndNull, "position", "impressions", "impressions", "impressions"),
 }
 
+var mapOfObjectsToPropertiesAndRelatedGoogleOrganic = map[string]map[string]PropertiesAndRelated{
+	"organic_property": {
+		"query":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"page":    PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"country": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"device":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	},
+}
+var selectableMetricsForGoogleOrganic = []string{"impressions", "clicks", model.ClickThroughRate, "position_avg", "position_impression_weighted_avg"}
+var ascendingOrderByMetricsForGoogleOrganic = map[string]bool{
+	"impressions": false, "clicks": false, model.ClickThroughRate: false, "position_avg": true, "position_impression_weighted_avg": true}
 var objectsForGoogleOrganic = []string{"organic_property"}
 
 func (store *MemSQL) buildGoogleOrganicChannelConfig() *model.ChannelConfigResult {
 	googleOrganicObjectsAndProperties := store.buildObjectAndPropertiesForGoogleOrganic(objectsForGoogleOrganic)
-	selectMetrics := model.SelectableMetricsForGoogleOrganic
+	selectMetrics := selectableMetricsForGoogleOrganic
 	objectsAndProperties := googleOrganicObjectsAndProperties
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectMetrics,
@@ -49,7 +60,7 @@ func (store *MemSQL) buildGoogleOrganicChannelConfig() *model.ChannelConfigResul
 func (store *MemSQL) buildObjectAndPropertiesForGoogleOrganic(objects []string) []model.ChannelObjectAndProperties {
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0)
 	for _, currentObject := range objects {
-		propertiesAndRelated, isPresent := model.MapOfObjectsToPropertiesAndRelatedGoogleOrganic[currentObject]
+		propertiesAndRelated, isPresent := mapOfObjectsToPropertiesAndRelatedGoogleOrganic[currentObject]
 		var currentProperties []model.ChannelProperty
 		if isPresent {
 			currentProperties = buildProperties(propertiesAndRelated)
