@@ -129,7 +129,6 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 					var pValue string
 					pValue = p.Value
 					if p.Operator == model.ContainsOpStr || p.Operator == model.NotContainsOpStr {
-						pValue = fmt.Sprintf("%%%s%%", p.Value)
 						pStmnt = fmt.Sprintf("JSON_EXTRACT_STRING(%s, ?) %s ?", propertyEntity, propertyOp)
 						rParams = append(rParams, p.Property, pValue)
 					} else if !hasNoneFilter && len(groupedProperties[propertyKey]) == 1 && p.Operator == model.NotEqualOpStr && pValue != model.PropertyValueNone {
