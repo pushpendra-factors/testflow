@@ -39,6 +39,7 @@ var includeTablesMap map[string]bool
 var excludeTablesMap map[string]bool
 
 var modeMigrate bool
+var isReverseReplication bool
 var skipPrimaryKeyDedupeTables []string
 
 const (
@@ -119,7 +120,6 @@ var supportedTables = []string{
 // Disabled tables to avoid accidental replication.
 var permanantlyDisabledTables = []string{
 	tableUsers,
-	tableEventNames,
 	tableEvents,
 }
 
@@ -167,9 +167,9 @@ type TableRecord struct {
 	SyncId string `json:"sync_id"`
 }
 
-type dest_EventName struct {
+type dest_EventName_pg struct {
 	// Composite primary key with projectId.
-	ID   string `gorm:"primary_key:true;" json:"-"` // DISABLED json tag for overriding on programatically.
+	ID   string `gorm:"primary_key:true;" json:"-"`
 	Name string `json:"name"`
 	Type string `gorm:"not null;type:varchar(2)" json:"type"`
 	// Below are the foreign key constraints added in creation script.
@@ -247,6 +247,7 @@ func main() {
 	disableSyncColumnsFlag := flag.Bool("disable_sync_column", false, "To disable sync columns like jobs_metadata, synced etc")
 
 	skipDedupeTables := flag.String("skip_dedupe_tables", "", "Skip primary key deduplication for the tables.")
+	isReverseReplicator := flag.Bool("is_reverse_replication", false, "Is this the primary replicator or reverse replicator")
 
 	flag.Parse()
 
@@ -304,6 +305,7 @@ func main() {
 		excludeTablesMap[tableName] = true
 	}
 
+	isReverseReplication = *isReverseReplicator
 	disableSyncColumns = *disableSyncColumnsFlag
 
 	skipPrimaryKeyDedupeTables = U.CleanSplitByDelimiter(*skipDedupeTables, ",")
@@ -968,7 +970,11 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 	case tableUsers:
 		record = &model.User{}
 	case tableEventNames:
-		record = &model.EventName{}
+		if isReverseReplication {
+			record = &model.EventName{}
+		} else {
+			record = &model.EventName{}
+		}
 
 	// Tables without project_id.
 	case tableAgents:
@@ -1056,11 +1062,22 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 			whereProjectCondition = fmt.Sprintf("id IN (SELECT billing_account_id FROM project_billing_account_mappings WHERE project_id = %s)",
 				anyProjectsCondition,
 			)
+		case tableEventNames:
+			whereProjectCondition = fmt.Sprintf("type IN ('%s', '%s', '%s') AND project_id = %s", "CS", "CH", "FE", anyProjectsCondition)
 		default:
 			whereProjectCondition = fmt.Sprintf("project_id = %s", anyProjectsCondition)
 		}
 
 		query = query + " " + whereProjectCondition
+	} else {
+		switch tableName {
+		case tableEventNames:
+
+			query = query + " " + "WHERE"
+			where = true
+			whereProjectCondition := fmt.Sprintf("type IN ('%s', '%s', '%s')", "CS", "CH", "FE")
+			query = query + " " + whereProjectCondition
+		}
 	}
 
 	var timestampSubQuery string
@@ -1231,20 +1248,30 @@ func convertStruct(sourceRecord, destRecord interface{}) error {
 func convertColumnTypeByTable(tableName string, record interface{}) (interface{}, error) {
 	switch tableName {
 	case tableEventNames:
-		eventName := record.(*model.EventName)
-		var memsqlEventName dest_EventName
-		err := convertStruct(eventName, &memsqlEventName)
-		if err != nil {
-			return record, err
-		}
+		if isReverseReplication {
+			eventName := record.(*model.EventName)
+			var pgEventName dest_EventName_pg
+			err := convertStruct(eventName, &pgEventName)
+			if err != nil {
+				return record, err
+			}
+			return &pgEventName, nil
+		} else {
+			eventName := record.(*model.EventName)
+			var memsqlEventName model.EventName
+			err := convertStruct(eventName, &memsqlEventName)
+			if err != nil {
+				return record, err
+			}
 
-		uuid, err := convertIDToUUIDFromInterface(eventName.ID)
-		if err != nil {
-			log.WithError(err).Error("Failed to convert event to memsql event_name.")
-			return record, err
+			uuid, err := convertIDToUUIDFromInterface(eventName.ID)
+			if err != nil {
+				log.WithError(err).Error("Failed to convert event to memsql event_name.")
+				return record, err
+			}
+			memsqlEventName.ID = uuid
+			return &memsqlEventName, nil
 		}
-		memsqlEventName.ID = uuid
-		return &memsqlEventName, nil
 
 	case tableEvents:
 		event := record.(*model.Event)
