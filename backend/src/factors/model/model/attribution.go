@@ -1424,6 +1424,27 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 	}
 	var missingIDs []MissingCollection
 	for rows.Next() {
+
+		var userIDNull sql.NullString
+		var sessionSpentTimeNull sql.NullFloat64
+		var pageCountNull sql.NullInt64
+		var campaignIDNull sql.NullString
+		var campaignNameNull sql.NullString
+		var adgroupIDNull sql.NullString
+		var adgroupNameNull sql.NullString
+		var keywordNameNull sql.NullString
+		var keywordMatchTypeNull sql.NullString
+		var sourceNameNull sql.NullString
+		var channelGroupNull sql.NullString
+		var attributionIdNull sql.NullString
+		var gclIDNull sql.NullString
+		var timestampNull sql.NullInt64
+
+		if err := rows.Scan(&userIDNull, &sessionSpentTimeNull, &pageCountNull, &campaignIDNull, &campaignNameNull, &adgroupIDNull, &adgroupNameNull, &keywordNameNull, &keywordMatchTypeNull, &sourceNameNull, &channelGroupNull, &attributionIdNull, &gclIDNull, &timestampNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+
 		var userID string
 		var sessionSpentTime float64
 		var pageCount int64
@@ -1438,10 +1459,22 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 		var attributionId string
 		var gclID string
 		var timestamp int64
-		if err := rows.Scan(&userID, &sessionSpentTime, &pageCount, &campaignID, &campaignName, &adgroupID, &adgroupName, &keywordName, &keywordMatchType, &sourceName, &channelGroup, &attributionId, &gclID, &timestamp); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-			continue
-		}
+
+		userID = U.IfThenElse(userIDNull.Valid, userIDNull.String, PropertyValueNone).(string)
+		sessionSpentTime = U.IfThenElse(sessionSpentTimeNull.Valid, sessionSpentTimeNull.Float64, float64(0)).(float64)
+		pageCount = U.IfThenElse(pageCountNull.Valid, pageCountNull.Int64, int64(0)).(int64)
+		campaignID = U.IfThenElse(campaignIDNull.Valid, campaignIDNull.String, PropertyValueNone).(string)
+		campaignName = U.IfThenElse(campaignNameNull.Valid, campaignNameNull.String, PropertyValueNone).(string)
+		adgroupID = U.IfThenElse(adgroupIDNull.Valid, adgroupIDNull.String, PropertyValueNone).(string)
+		adgroupName = U.IfThenElse(adgroupNameNull.Valid, adgroupNameNull.String, PropertyValueNone).(string)
+		keywordName = U.IfThenElse(keywordNameNull.Valid, keywordNameNull.String, PropertyValueNone).(string)
+		keywordMatchType = U.IfThenElse(keywordMatchTypeNull.Valid, keywordMatchTypeNull.String, PropertyValueNone).(string)
+		sourceName = U.IfThenElse(sourceNameNull.Valid, sourceNameNull.String, PropertyValueNone).(string)
+		channelGroup = U.IfThenElse(channelGroupNull.Valid, channelGroupNull.String, PropertyValueNone).(string)
+		attributionId = U.IfThenElse(attributionIdNull.Valid, attributionIdNull.String, PropertyValueNone).(string)
+		gclID = U.IfThenElse(gclIDNull.Valid, gclIDNull.String, PropertyValueNone).(string)
+		timestamp = U.IfThenElse(timestampNull.Valid, timestampNull.Int64, int64(0)).(int64)
+
 		// apply filter at extracting session level itself
 		if !IsValidAttributionKeyValueAND(query.AttributionKey,
 			attributionId, query.AttributionKeyFilter) && !IsValidAttributionKeyValueOR(query.AttributionKey,

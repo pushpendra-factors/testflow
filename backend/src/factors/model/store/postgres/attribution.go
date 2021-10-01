@@ -336,7 +336,6 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
 			return nil, err
 		}
-		defer U.CloseReadQuery(rows, tx)
 		for rows.Next() {
 			var userID string
 			var coalesceID string
@@ -347,6 +346,7 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 			}
 			userIDToCoalUserIDMap[userID] = model.UserInfo{CoalUserID: coalesceID}
 		}
+		U.CloseReadQuery(rows, tx)
 	}
 	return userIDToCoalUserIDMap, nil
 }
@@ -521,7 +521,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 				logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 				return err, nil
 			}
-			defer U.CloseReadQuery(rows, tx)
+
 			for rows.Next() {
 				var userID string
 				var timestamp int64
@@ -539,6 +539,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 					}
 				}
 			}
+			U.CloseReadQuery(rows, tx)
 		}
 
 		// add the filtered users with eventId usersToBeAttributed
