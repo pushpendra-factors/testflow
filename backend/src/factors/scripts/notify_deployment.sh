@@ -87,7 +87,7 @@ deployer_email=`git config --list | grep user.email | cut -d'=' -f2`
 if [ -z "${deployer_email}" ]; then
     deployer_email=`gcloud config list account --format "value(core.account)" 2> /dev/null`
 fi
-branch_name=`git branch --show-current`
+branch_name=`git rev-parse --abbrev-ref HEAD`
 
 # TODO(prateek): Make alert more rich in terms of tagging and blocks.
 echo "Sending alert on slack"
