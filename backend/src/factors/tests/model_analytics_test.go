@@ -2658,7 +2658,7 @@ func TestBaseQueryHashStringConsistency(t *testing.T) {
 
 		for rangeString, rangeFunction := range U.QueryDateRangePresets {
 			from, to, errCode := rangeFunction(U.TimeZoneStringIST)
-			assert.NotNil(t, errCode)
+			assert.Nil(t, errCode)
 			baseQuery.SetQueryDateRange(from, to)
 			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
 

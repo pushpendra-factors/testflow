@@ -86,7 +86,7 @@ func TestAPICreateProject(t *testing.T) {
 		assert.Equal(t, "factors.ai", jsonResponseMap["project_uri"].(string))
 		assert.Equal(t, "HH:mm:ss", jsonResponseMap["time_format"].(string))
 		assert.Equal(t, "yyyy-MM-dd", jsonResponseMap["date_format"].(string))
-		assert.Equal(t, "IST", jsonResponseMap["time_zone"].(string))
+		assert.Equal(t, "Asia/Kolkata", jsonResponseMap["time_zone"].(string))
 		assert.NotEqual(t, 0, len(jsonResponseMap["token"].(string)))         // Todo: should be removed from response.
 		assert.NotEqual(t, 0, len(jsonResponseMap["private_token"].(string))) // Todo: should be removed from response.
 		assert.NotNil(t, jsonResponseMap["created_at"].(string))
@@ -96,7 +96,7 @@ func TestAPICreateProject(t *testing.T) {
 		assert.NotNil(t, jsonResponseMap["interaction_settings"])
 		assert.NotNil(t, jsonResponseMap["salesforce_touch_points"])
 		assert.NotNil(t, jsonResponseMap["hubspot_touch_points"])
-		assert.Equal(t, 15, len(jsonResponseMap))
+		assert.Equal(t, 16, len(jsonResponseMap))
 	})
 }
 
@@ -118,7 +118,7 @@ func TestAPIEditProject(t *testing.T) {
 		assert.Equal(t, "factors.ai", jsonResponseMap["project_uri"].(string))
 		assert.Equal(t, "HH:mm:ss", jsonResponseMap["time_format"].(string))
 		assert.Equal(t, "yyyy-MM-dd", jsonResponseMap["date_format"].(string))
-		assert.Equal(t, "IST", jsonResponseMap["time_zone"].(string))
+		assert.Equal(t, "Asia/Kolkata", jsonResponseMap["time_zone"].(string))
 		assert.NotEqual(t, 0, len(jsonResponseMap["token"].(string)))         // Todo: should be removed from response.
 		assert.NotEqual(t, 0, len(jsonResponseMap["private_token"].(string))) // Todo: should be removed from response.
 		assert.NotNil(t, jsonResponseMap["created_at"].(string))
@@ -128,7 +128,7 @@ func TestAPIEditProject(t *testing.T) {
 		assert.NotNil(t, jsonResponseMap["interaction_settings"])
 		assert.NotNil(t, jsonResponseMap["salesforce_touch_points"])
 		assert.NotNil(t, jsonResponseMap["hubspot_touch_points"])
-		assert.Equal(t, 15, len(jsonResponseMap))
+		assert.Equal(t, 16, len(jsonResponseMap))
 		w = sendEditProjectRequest(r, uint64(jsonResponseMap["id"].(float64)), projectName, agent)
 		assert.Equal(t, http.StatusCreated, w.Code)
 		jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -147,6 +147,6 @@ func TestAPIEditProject(t *testing.T) {
 		assert.NotNil(t, jsonResponseMap["interaction_settings"])
 		assert.NotNil(t, jsonResponseMap["salesforce_touch_points"])
 		assert.NotNil(t, jsonResponseMap["hubspot_touch_points"])
-		assert.Equal(t, 15, len(jsonResponseMap))
+		assert.Equal(t, 16, len(jsonResponseMap))
 	})
 }
