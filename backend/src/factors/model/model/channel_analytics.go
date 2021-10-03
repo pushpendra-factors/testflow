@@ -3,6 +3,13 @@ package model
 import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
+	"strings"
+)
+
+const (
+	CampaignPrefix = "campaign_"
+	AdgroupPrefix  = "ad_group_"
+	KeywordPrefix  = "keyword_"
 )
 
 type ChannelConfigResult struct {
@@ -251,4 +258,20 @@ func BuildErrorResultForChannelsV1(errMsg string) *ChannelQueryResultV1 {
 	rows = append(rows, row)
 	errorResult := &ChannelQueryResultV1{Headers: headers, Rows: rows}
 	return errorResult
+}
+
+// sample format :
+// {campaign_property: property_value, ad_group_property: property_value}
+func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [][]interface{}) []map[string]interface{} {
+	groupByCombinations := make([]map[string]interface{}, 0)
+	for _, resultRow := range resultMetrics {
+		groupByCombination := make(map[string]interface{})
+		for index, column := range columns {
+			if strings.HasPrefix(column, CampaignPrefix) || strings.HasPrefix(column, AdgroupPrefix) || strings.HasPrefix(column, KeywordPrefix) {
+				groupByCombination[column] = resultRow[index]
+			}
+		}
+		groupByCombinations = append(groupByCombinations, groupByCombination)
+	}
+	return groupByCombinations
 }

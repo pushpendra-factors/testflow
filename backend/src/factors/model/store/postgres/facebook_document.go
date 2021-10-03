@@ -356,23 +356,51 @@ func (pg *Postgres) getFacebookFilterValuesByType(projectID uint64, docType int,
 func (pg *Postgres) ExecuteFacebookChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	var fetchSource = false
 	logCtx := log.WithField("xreq_id", reqID)
-	sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForFacebookQueryV1(projectID,
-		query, reqID, fetchSource)
-	if errCode != http.StatusOK {
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+	if query.GroupByTimestamp == "" {
+		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForFacebookQueryV1(projectID,
+			query, reqID, fetchSource, " LIMIT 10000", false, nil)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
+		columns := append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.FacebookSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		return columns, resultMetrics, http.StatusOK
+	} else {
+		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForFacebookQueryV1(
+			projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
+		columns := append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.FacebookSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
+		// log.Fatal(groupByCombinations)
+		sql, params, selectKeys, selectMetrics, errCode = pg.GetSQLQueryAndParametersForFacebookQueryV1(
+			projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err = pg.ExecuteSQL(sql, params, logCtx)
+		columns = append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.FacebookSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		return columns, resultMetrics, http.StatusOK
 	}
-	_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
-	columns := append(selectKeys, selectMetrics...)
-	if err != nil {
-		logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.FacebookSpecificError)
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
-	}
-	return columns, resultMetrics, http.StatusOK
 }
 
 // GetSQLQueryAndParametersForFacebookQueryV1 ...
-func (pg *Postgres) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *model.ChannelQueryV1,
-	reqID string, fetchSource bool) (string, []interface{}, []string, []string, int) {
+func (pg *Postgres) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	var selectMetrics []string
 	var selectKeys []string
 	var sql string
@@ -390,14 +418,14 @@ func (pg *Postgres) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64,
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
 	if isSmartPropertyPresent {
-		sql, params, selectKeys, selectMetrics, err = buildFacebookQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource)
+		sql, params, selectKeys, selectMetrics, err = buildFacebookQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 		}
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
 
-	sql, params, selectKeys, selectMetrics, err = buildFacebookQueryV1(transformedQuery, projectID, customerAccountID, fetchSource)
+	sql, params, selectKeys, selectMetrics, err = buildFacebookQueryV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	if err != nil {
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 	}
@@ -516,27 +544,26 @@ func getFacebookSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 	return resultGroupBys, nil
 }
 
-func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForFacebook(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromFacebookReports(query, projectID, query.From, query.To, customerAccountID, facebookDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForFacebook(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromFacebookReportsWithSmartProperty(query, projectID, query.From, query.To, customerAccountID, facebookDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
 
 func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQueryV1, projectID uint64, from, to int64, facebookAccountIDs string,
-	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	customerAccountIDs := strings.Split(facebookAccountIDs, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
-	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	groupByStatement := ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
 	selectKeys := make([]string, 0, 0)
@@ -607,18 +634,24 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getFacebookFiltersWhereStatementWithSmartProperty(query.Filters, smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
-	filterStatementForSmartPropertyGroupBy := getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
+	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForFacebookWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
-
+	finalParams := make([]interface{}, 0)
+	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
+	finalParams = append(finalParams, staticWhereParams...)
+	if len(groupByCombinationsForGBT) != 0 {
+		whereConditionForGBT, whereParams := buildWhereConditionForGBTForFacebook(groupByCombinationsForGBT)
+		finalFilterStatement += (" AND (" + whereConditionForGBT + ")")
+		finalParams = append(finalParams, whereParams...)
+	}
 	fromStatement := getFacebookFromStatementWithJoins(query.Filters, query.GroupBy)
 	resultSQLStatement := selectQuery + fromStatement + finalFilterStatement
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += " GROUP BY " + groupByStatement
 	}
-	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
-	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
+	resultSQLStatement += " " + orderByQuery + limitString + ";"
 
-	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
 func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
@@ -633,11 +666,10 @@ func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 	return fromStatement
 }
 func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, facebookAccountIDs string,
-	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	customerAccountIDs := strings.Split(facebookAccountIDs, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
-	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	groupByStatement := ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
 	selectKeys := make([]string, 0, 0)
@@ -683,14 +715,21 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getFacebookFiltersWhereStatement(query.Filters)
+	finalParams := make([]interface{}, 0)
+	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
+	finalParams = append(finalParams, staticWhereParams...)
+	if len(groupByCombinationsForGBT) != 0 {
+		whereConditionForGBT, whereParams := buildWhereConditionForGBTForFacebook(groupByCombinationsForGBT)
+		whereConditionForFilters += (" AND (" + whereConditionForGBT + ")")
+		finalParams = append(finalParams, whereParams...)
+	}
 
 	resultSQLStatement := selectQuery + fromFacebookDocuments + staticWhereStatementForFacebook + whereConditionForFilters
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
-	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
-	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
-	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
+	resultSQLStatement += " " + orderByQuery + limitString + ";"
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	resultStatement := ""
@@ -714,6 +753,62 @@ func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 		}
 	}
 	return resultStatement
+}
+func buildWhereConditionForGBTForFacebook(groupByCombinations []map[string]interface{}) (string, []interface{}) {
+	whereConditionForGBT := ""
+	params := make([]interface{}, 0)
+	filterStringFacebook := "facebook_documents"
+	filterStringSmartPropertiesCampaign := "campaign.properties"
+	filterStringSmartPropertiesAdGroup := "ad_group.properties"
+	for _, groupByCombination := range groupByCombinations {
+		whereConditionForEachCombination := ""
+		for dimension, value := range groupByCombination {
+			filterString := ""
+			if strings.HasPrefix(dimension, model.CampaignPrefix) {
+				key := fmt.Sprintf(`%s:%s`, "campaign", strings.TrimPrefix(dimension, model.CampaignPrefix))
+				currentFilterKey, isPresent := objectToValueInFacebookFiltersMapping[key]
+				if isPresent {
+					filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+				} else {
+					filterString = fmt.Sprintf("%s->>'%s'", filterStringSmartPropertiesCampaign, strings.TrimPrefix(dimension, model.CampaignPrefix))
+				}
+			} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
+				key := fmt.Sprintf(`%s:%s`, "ad_set", strings.TrimPrefix(dimension, model.AdgroupPrefix))
+				currentFilterKey, isPresent := objectToValueInFacebookFiltersMapping[key]
+				if isPresent {
+					filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+				} else {
+					filterString = fmt.Sprintf("%s->>'%s'", filterStringSmartPropertiesAdGroup, strings.TrimPrefix(dimension, model.AdgroupPrefix))
+				}
+			} else {
+				key := fmt.Sprintf(`%s:%s`, "ad", strings.TrimPrefix(dimension, model.KeywordPrefix))
+				currentFilterKey := objectToValueInFacebookFiltersMapping[key]
+				filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+			}
+			if whereConditionForEachCombination == "" {
+				if value != nil {
+					whereConditionForEachCombination = fmt.Sprintf("%s = ? ", filterString)
+					params = append(params, value)
+				} else {
+					whereConditionForEachCombination = fmt.Sprintf("%s is null ", filterString)
+				}
+			} else {
+				if value != nil {
+					whereConditionForEachCombination += fmt.Sprintf(" AND %s = ? ", filterString)
+					params = append(params, value)
+				} else {
+					whereConditionForEachCombination += fmt.Sprintf(" AND %s is null ", filterString)
+				}
+			}
+		}
+		if whereConditionForGBT == "" {
+			whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+		} else {
+			whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+		}
+	}
+
+	return whereConditionForGBT, params
 }
 
 func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1, smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {

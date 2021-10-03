@@ -345,7 +345,7 @@ func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query 
 			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.GoogleOrganicSpecificError)
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
 		}
-		groupByCombinations := getGroupByCombinations(columns, resultMetrics)
+		groupByCombinations := getGroupByCombinationsForSearchConsole(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
 		if errCode != http.StatusOK {
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
@@ -359,7 +359,7 @@ func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query 
 		return columns, resultMetrics, http.StatusOK
 	}
 }
-func getGroupByCombinations(columns []string, resultMetrics [][]interface{}) []map[string]interface{} {
+func getGroupByCombinationsForSearchConsole(columns []string, resultMetrics [][]interface{}) []map[string]interface{} {
 	groupByCombinations := make([]map[string]interface{}, 0)
 	for _, resultRow := range resultMetrics {
 		groupByCombination := make(map[string]interface{})
@@ -373,7 +373,7 @@ func getGroupByCombinations(columns []string, resultMetrics [][]interface{}) []m
 	}
 	return groupByCombinations
 }
-func buildWhereConditionForGBT(groupByCombinations []map[string]interface{}) (string, []interface{}) {
+func buildWhereConditionForGBTForSearchConsole(groupByCombinations []map[string]interface{}) (string, []interface{}) {
 	whereConditionForGBT := ""
 	params := make([]interface{}, 0)
 	for _, groupByCombination := range groupByCombinations {
@@ -504,7 +504,7 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, ur
 	resultSQLStatement := selectQuery + fromGoogleOrganicDocuments + staticWhereStatementForGoogleOrganic + whereConditionForFilters
 	whereConditionForGBT, whereParams := "", make([]interface{}, 0)
 	if groupByCombinationsForGBT != nil && len(groupByCombinationsForGBT) != 0 {
-		whereConditionForGBT, whereParams = buildWhereConditionForGBT(groupByCombinationsForGBT)
+		whereConditionForGBT, whereParams = buildWhereConditionForGBTForSearchConsole(groupByCombinationsForGBT)
 		if whereConditionForGBT != "" {
 			resultSQLStatement += (" AND (" + whereConditionForGBT + ") ")
 		}
