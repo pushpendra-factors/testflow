@@ -285,10 +285,10 @@ func (pg *Postgres) RunChannelGroupQuery(projectID uint64, queriesOriginal []mod
 		}
 	}
 	waitGroup.Wait()
-	log.Warn(resultGroup.Results)
+	// log.Warn(resultGroup.Results)
 	for _, result := range resultGroup.Results {
 		if result.Headers[0] == model.AliasError {
-			log.Warn(resultGroup)
+			// log.Warn(resultGroup)
 			return resultGroup, http.StatusPartialContent
 		}
 	}

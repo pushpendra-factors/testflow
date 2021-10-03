@@ -7,14 +7,15 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -236,7 +237,7 @@ func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.Fa
 			"Failed to create an facebook doc. Continued inserting other docs.")
 		return http.StatusInternalServerError
 	}
-	UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"facebook")
+	UpdateCountCacheByDocumentType(projectID, &document.CreatedAt, "facebook")
 	return http.StatusCreated
 }
 func getFacebookHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (string, string, string, error) {
@@ -706,7 +707,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	}
 	resultSQLStatement += " " + orderByQuery + limitString + ";"
 
-	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
 func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
@@ -784,7 +785,7 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
 	resultSQLStatement += " " + orderByQuery + limitString + ";"
-	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	resultStatement := ""

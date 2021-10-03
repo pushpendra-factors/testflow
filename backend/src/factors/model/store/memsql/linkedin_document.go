@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -246,7 +247,7 @@ func (store *MemSQL) CreateLinkedinDocument(projectID uint64, document *model.Li
 			"Failed to create an linkedin doc. Continued inserting other docs.")
 		return http.StatusInternalServerError
 	}
-	UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"linkedin")
+	UpdateCountCacheByDocumentType(projectID, &document.CreatedAt, "linkedin")
 	return http.StatusCreated
 }
 func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (string, string, string, error) {
@@ -887,7 +888,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
 	resultSQLStatement += " " + orderByQuery + limitString + ";"
-	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 func buildWhereConditionForGBTForLinkedin(groupByCombinations []map[string]interface{}) (string, []interface{}) {
 	whereConditionForGBT := ""

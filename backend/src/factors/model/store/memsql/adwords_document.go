@@ -1395,7 +1395,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	fromStatement := getAdwordsFromStatementWithJoins(query.Filters, query.GroupBy)
 	// finalSQL
 	resultantSQLStatement = finalSelectStatement + fromStatement + finalWhereStatement +
-		finalGroupByStatement + finalOrderByStatement + channeAnalyticsLimit
+		finalGroupByStatement + finalOrderByStatement + limitString
 
 	return resultantSQLStatement, finalParams, dimensions.values, metrics.values
 }
@@ -1569,7 +1569,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 
 	// finalSQL
 	resultantSQLStatement = finalSelectStatement + fromAdwordsDocument + finalWhereStatement +
-		finalGroupByStatement + finalOrderByStatement + channeAnalyticsLimit
+		finalGroupByStatement + finalOrderByStatement + limitString
 	return resultantSQLStatement, finalParams, dimensions.values, metrics.values
 }
 
