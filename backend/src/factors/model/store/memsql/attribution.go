@@ -85,6 +85,8 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	// Add additional metrics values
 	model.ComputeAdditionalMetrics(attributionData)
 
+	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
+
 	// Add custom dimensions
 	model.AddCustomDimensions(attributionData, query, marketingReports)
 
@@ -106,7 +108,6 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	// Additional filtering based on AttributionKey.
 	result.Rows = model.FilterRows(result.Rows, query.AttributionKey, model.GetLastKeyValueIndex(result.Headers))
 
-	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// sort the rows by conversionEvent
 	conversionIndex := model.GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
