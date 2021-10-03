@@ -935,26 +935,30 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 			if seenRow[keyIndex+12].(float64) > 0 {
 				seenRow[keyIndex+13] = spend / seenRow[keyIndex+12].(float64) // Conversion - CPC.
 			} else {
+				seenRow[keyIndex+12] = float64(0)
 				seenRow[keyIndex+13] = float64(0) // Conversion - CPC.
 			}
 
-			if seenRow[keyIndex+9] != 0 {
+			if seenRow[keyIndex+9].(int64) > 0 {
 				seenRow[keyIndex+14], _ = U.FloatRoundOffWithPrecision(seenRow[keyIndex+12].(float64)/float64(seenRow[keyIndex+9].(int64))*100, U.DefaultPrecision)
 			} else {
-				seenRow[keyIndex+14] = 0
+				seenRow[keyIndex+9] = int64(0)
+				seenRow[keyIndex+14] = float64(0)
 			}
 
 			// Compare conversion [15, 16, 17] = [Conversion, CPC, Rate]
 			if seenRow[keyIndex+15].(float64) > 0 {
 				seenRow[keyIndex+16], _ = U.FloatRoundOffWithPrecision(spend/seenRow[keyIndex+15].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
 			} else {
+				seenRow[keyIndex+15] = float64(0)
 				seenRow[keyIndex+16] = float64(0) // Compare Conversion - CPC.
 			}
 
-			if seenRow[keyIndex+9] != 0 {
+			if seenRow[keyIndex+9].(int64) > 0 {
 				seenRow[keyIndex+17], _ = U.FloatRoundOffWithPrecision(seenRow[keyIndex+15].(float64)/float64(seenRow[keyIndex+9].(int64))*100, U.DefaultPrecision)
 			} else {
-				seenRow[keyIndex+17] = 0
+				seenRow[keyIndex+9] = int64(0)
+				seenRow[keyIndex+17] = float64(0)
 			}
 
 			// Remaining linked funnel events & CPCs
