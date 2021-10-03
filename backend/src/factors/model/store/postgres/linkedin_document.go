@@ -477,27 +477,73 @@ func (pg *Postgres) GetLinkedinSQLQueryAndParametersForFilterValues(projectID ui
 func (pg *Postgres) ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
-	sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource)
-	if errCode != http.StatusOK {
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+	// sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource)
+	// if errCode != http.StatusOK {
+	// 	return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+	// }
+	// _, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
+	// columns := append(selectKeys, selectMetrics...)
+	// if err != nil {
+	// 	logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.LinkedinSpecificError)
+	// 	return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+	// }
+	// return columns, resultMetrics, http.StatusOK
+	// log.Info("Initial ", query.GroupBy)
+
+	if query.GroupByTimestamp == "" {
+		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID,
+			query, reqID, fetchSource, " LIMIT 10000", false, nil)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
+		columns := append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.LinkedinSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		return columns, resultMetrics, http.StatusOK
+	} else {
+		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForLinkedinQueryV1(
+			projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
+		columns := append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.LinkedinSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
+		sql, params, selectKeys, selectMetrics, errCode = pg.GetSQLQueryAndParametersForLinkedinQueryV1(
+			projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err = pg.ExecuteSQL(sql, params, logCtx)
+		columns = append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.LinkedinSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		return columns, resultMetrics, http.StatusOK
 	}
-	_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
-	columns := append(selectKeys, selectMetrics...)
-	if err != nil {
-		logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.LinkedinSpecificError)
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
-	}
-	return columns, resultMetrics, http.StatusOK
 }
 
 // GetSQLQueryAndParametersForLinkedinQueryV1 ...
-func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, int) {
+func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	var selectMetrics []string
 	var sql string
 	var selectKeys []string
 	var params []interface{}
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	log.Info("Initial", query.GroupBy)
 	transformedQuery, customerAccountID, err := pg.transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID, *query, reqID)
+	// if isGroupByTimestamp {
+	// 	log.Info("Hello123 ", transformedQuery)
+	// }
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.LinkedinSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
@@ -508,14 +554,14 @@ func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64,
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
 	if isSmartPropertyPresent {
-		sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource)
+		sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 		}
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
 
-	sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryV1(transformedQuery, projectID, customerAccountID, fetchSource)
+	sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryV1(transformedQuery, projectID, customerAccountID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	if err != nil {
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 	}
@@ -523,8 +569,7 @@ func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64,
 }
 
 func (pg *Postgres) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
-	query.From = U.GetDateAsStringIn(query.From, U.TimeZoneString(query.Timezone))
-	query.To = U.GetDateAsStringIn(query.To, U.TimeZoneString(query.Timezone))
+	var transformedQuery model.ChannelQueryV1
 	var err error
 	logCtx := log.WithField("req_id", reqID)
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
@@ -535,19 +580,22 @@ func (pg *Postgres) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(proj
 	if customerAccountID == "" || len(customerAccountID) == 0 {
 		return &model.ChannelQueryV1{}, "", errors.New(integrationNotAvailable)
 	}
-	query, err = convertFromRequestToLinkedinSpecificRepresentation(query)
+	log.Info("query_before ", query)
+	transformedQuery, err = convertFromRequestToLinkedinSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
 		return &model.ChannelQueryV1{}, "", err
 	}
-	return &query, customerAccountID, nil
+	log.Info("query_after ", query)
+	return &transformedQuery, customerAccountID, nil
 }
 
 func convertFromRequestToLinkedinSpecificRepresentation(query model.ChannelQueryV1) (model.ChannelQueryV1, error) {
+	var transformedQuery model.ChannelQueryV1
 	var err1, err2, err3 error
-	query.SelectMetrics, err1 = getLinkedinSpecificMetrics(query.SelectMetrics)
-	query.Filters, err2 = getLinkedinSpecificFilters(query.Filters)
-	query.GroupBy, err3 = getLinkedinSpecificGroupBy(query.GroupBy)
+	transformedQuery.SelectMetrics, err1 = getLinkedinSpecificMetrics(query.SelectMetrics)
+	transformedQuery.Filters, err2 = getLinkedinSpecificFilters(query.Filters)
+	transformedQuery.GroupBy, err3 = getLinkedinSpecificGroupBy(query.GroupBy)
 	if err1 != nil {
 		return query, err1
 	}
@@ -557,7 +605,12 @@ func convertFromRequestToLinkedinSpecificRepresentation(query model.ChannelQuery
 	if err3 != nil {
 		return query, err3
 	}
-	return query, nil
+	transformedQuery.From = U.GetDateAsStringIn(query.From, U.TimeZoneString(query.Timezone))
+	transformedQuery.To = U.GetDateAsStringIn(query.To, U.TimeZoneString(query.Timezone))
+	transformedQuery.Timezone = query.Timezone
+	transformedQuery.GroupByTimestamp = query.GroupByTimestamp
+
+	return transformedQuery, nil
 }
 
 // @Kark TODO v1
@@ -575,48 +628,53 @@ func getLinkedinSpecificMetrics(requestSelectMetrics []string) ([]string, error)
 
 // @Kark TODO v1
 func getLinkedinSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model.ChannelFilterV1, error) {
-	for index, requestFilter := range requestFilters {
+	filters := make([]model.ChannelFilterV1, 0)
+	for _, requestFilter := range requestFilters {
 		filterObject, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestFilter.Object]
 		if !isPresent {
 			return make([]model.ChannelFilterV1, 0, 0), errors.New("Invalid filter key found for document type")
+
 		}
-		(&requestFilters[index]).Object = filterObject
+		filters = append(filters, model.ChannelFilterV1{Object: filterObject, Property: requestFilter.Property, Condition: requestFilter.Condition,
+			Value: requestFilter.Condition, LogicalOp: requestFilter.LogicalOp})
 	}
-	return requestFilters, nil
+	return filters, nil
 }
 
 // @Kark TODO v1
 func getLinkedinSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.ChannelGroupBy, error) {
-	for index, requestGroupBy := range requestGroupBys {
+	groupBys := make([]model.ChannelGroupBy, 0)
+	for _, requestGroupBy := range requestGroupBys {
 		groupByObject, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
 			return make([]model.ChannelGroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 		}
-		(&requestGroupBys[index]).Object = groupByObject
+		groupBys = append(groupBys, model.ChannelGroupBy{Object: groupByObject, Property: requestGroupBy.Property})
 	}
-	return requestGroupBys, nil
+	return groupBys, nil
 }
 
-func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinWithSmartPropertyReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string,
-	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
+func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string, docType int,
+	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	customerAccountIDs := strings.Split(linkedinAccountIDs, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
-	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	groupByStatement := ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
 	selectKeys := make([]string, 0, 0)
@@ -687,18 +745,25 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getLinkedinFiltersWhereStatementWithSmartProperty(query.Filters, smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
-	filterStatementForSmartPropertyGroupBy := getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
+	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForLinkedinWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
 
 	fromStatement := getLinkedinFromStatementWithJoins(query.Filters, query.GroupBy)
+	finalParams := make([]interface{}, 0)
+	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
+	finalParams = append(finalParams, staticWhereParams...)
+	if len(groupByCombinationsForGBT) != 0 {
+		whereConditionForGBT, whereParams := buildWhereConditionForGBTForLinkedin(groupByCombinationsForGBT)
+		finalFilterStatement += (" AND (" + whereConditionForGBT + ")")
+		finalParams = append(finalParams, whereParams...)
+	}
 	resultSQLStatement := selectQuery + fromStatement + finalFilterStatement
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += " GROUP BY " + groupByStatement
 	}
 
-	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
-	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
-	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
+	resultSQLStatement += " " + orderByQuery + limitString + ";"
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
 func getLinkedinFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
@@ -713,12 +778,11 @@ func getLinkedinFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 	return fromStatement
 }
 
-func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string,
-	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
+func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string, docType int, fetchSource bool,
+	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	customerAccountIDs := strings.Split(linkedinAccountIDs, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
-	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	groupByStatement := ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
 	selectKeys := make([]string, 0, 0)
@@ -764,14 +828,78 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getLinkedinFiltersWhereStatement(query.Filters)
+	finalFilterStatement := whereConditionForFilters
+	finalParams := make([]interface{}, 0)
+	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
+	finalParams = append(finalParams, staticWhereParams...)
+	if len(groupByCombinationsForGBT) != 0 {
+		whereConditionForGBT, whereParams := buildWhereConditionForGBTForLinkedin(groupByCombinationsForGBT)
+		finalFilterStatement += (" AND (" + whereConditionForGBT + ")")
+		finalParams = append(finalParams, whereParams...)
+	}
 
 	resultSQLStatement := selectQuery + fromLinkedinDocuments + staticWhereStatementForLinkedin + whereConditionForFilters
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
-	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
-	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
-	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
+	resultSQLStatement += " " + orderByQuery + limitString + ";"
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
+}
+func buildWhereConditionForGBTForLinkedin(groupByCombinations []map[string]interface{}) (string, []interface{}) {
+	whereConditionForGBT := ""
+	params := make([]interface{}, 0)
+	filterStringFacebook := "linkedin_documents"
+	filterStringSmartPropertiesCampaign := "campaign.properties"
+	filterStringSmartPropertiesAdGroup := "ad_group.properties"
+	for _, groupByCombination := range groupByCombinations {
+		whereConditionForEachCombination := ""
+		for dimension, value := range groupByCombination {
+			filterString := ""
+			if strings.HasPrefix(dimension, model.CampaignPrefix) {
+				key := fmt.Sprintf(`%s:%s`, "campaign_group", strings.TrimPrefix(dimension, model.CampaignPrefix))
+				currentFilterKey, isPresent := objectToValueInLinkedinFiltersMapping[key]
+				if isPresent {
+					filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+				} else {
+					filterString = fmt.Sprintf("%s->>'%s'", filterStringSmartPropertiesCampaign, strings.TrimPrefix(dimension, model.CampaignPrefix))
+				}
+			} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
+				key := fmt.Sprintf(`%s:%s`, "campaign", strings.TrimPrefix(dimension, model.AdgroupPrefix))
+				currentFilterKey, isPresent := objectToValueInLinkedinFiltersMapping[key]
+				if isPresent {
+					filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+				} else {
+					filterString = fmt.Sprintf("%s->>'%s'", filterStringSmartPropertiesAdGroup, strings.TrimPrefix(dimension, model.AdgroupPrefix))
+				}
+			} else {
+				key := fmt.Sprintf(`%s:%s`, "creative", strings.TrimPrefix(dimension, model.KeywordPrefix))
+				currentFilterKey := objectToValueInLinkedinFiltersMapping[key]
+				filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+			}
+			if whereConditionForEachCombination == "" {
+				if value != nil {
+					whereConditionForEachCombination = fmt.Sprintf("%s = ? ", filterString)
+					params = append(params, value)
+				} else {
+					whereConditionForEachCombination = fmt.Sprintf("%s is null ", filterString)
+				}
+			} else {
+				if value != nil {
+					whereConditionForEachCombination += fmt.Sprintf(" AND %s = ? ", filterString)
+					params = append(params, value)
+				} else {
+					whereConditionForEachCombination += fmt.Sprintf(" AND %s is null ", filterString)
+				}
+			}
+		}
+		if whereConditionForGBT == "" {
+			whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+		} else {
+			whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+		}
+	}
+
+	return whereConditionForGBT, params
 }
 
 func getLinkedinFiltersWhereStatement(filters []model.ChannelFilterV1) string {

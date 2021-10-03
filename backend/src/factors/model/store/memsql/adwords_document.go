@@ -1001,24 +1001,50 @@ func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) int {
 func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
-	sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
-		projectID, query, reqID, fetchSource)
-	if errCode != http.StatusOK {
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+	if query.GroupByTimestamp == "" {
+		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
+			projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err := store.ExecuteSQL(sql, params, logCtx)
+		columns := append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		return columns, resultMetrics, http.StatusOK
+	} else {
+		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
+			projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err := store.ExecuteSQL(sql, params, logCtx)
+		columns := append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
+		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForAdwordsQueryV1(
+			projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
+		if errCode != http.StatusOK {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+		}
+		_, resultMetrics, err = store.ExecuteSQL(sql, params, logCtx)
+		columns = append(selectKeys, selectMetrics...)
+		if err != nil {
+			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		return columns, resultMetrics, http.StatusOK
 	}
-	// to do : remove follwing
-	_, resultMetrics, err := store.ExecuteSQL(sql, params, logCtx)
-	columns := append(selectKeys, selectMetrics...)
-	if err != nil {
-		logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
-	}
-	return columns, resultMetrics, http.StatusOK
 }
 
 // GetSQLQueryAndParametersForAdwordsQueryV1 - @Kark TODO v1
 // TODO Understand null cases.
-func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, int) {
+func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	var selectMetrics []string
 	var selectKeys []string
 	var sql string
@@ -1035,11 +1061,11 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
 	if isSmartPropertyPresent {
-		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
+		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
 
-	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
+	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
@@ -1218,25 +1244,24 @@ AND JSON_EXTRACT_STRING(value, 'campaign_name') RLIKE '%Brand - BLR - New_Aug_De
 ORDER BY impressions DESC, clicks DESC LIMIT 2500 ;
 */
 // - For reference of complex joins, PR which removed older/QueryV1 adwords is 1437.
-func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string) {
+func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource)
+	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 }
 
-func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string) {
+func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-	return getSQLAndParamsForAdwordsWithSmartPropertyV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource)
+	return getSQLAndParamsForAdwordsWithSmartPropertyV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 }
-
 func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
-	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	computeHigherOrderMetricsHere := !fetchSource
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
-	filterPropertiesStatement := ""
-	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	filterPropertiesStatementBasedOnRequestFilters := ""
+	// isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	toFetchImpressionsForHigherOrderMetric := false
 
 	finalParams := make([]interface{}, 0, 0)
@@ -1284,14 +1309,14 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 		dimensions.values = append(dimensions.values, externalValue)
 	}
 	for _, groupBy := range smartPropertyCampaignGroupBys {
-		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s')", groupBy.Property), "campaign_"+groupBy.Property)
+		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s')", groupBy.Property), model.CampaignPrefix+groupBy.Property)
 		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, "campaign_"+groupBy.Property)
+		dimensions.values = append(dimensions.values, model.CampaignPrefix+groupBy.Property)
 	}
 	for _, groupBy := range smartPropertyAdGroupGroupBys {
-		expression := fmt.Sprintf(`%s as "%s"`, fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties, '%s')", groupBy.Property), "ad_group_"+groupBy.Property)
+		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("JSON_EXTRACT_STRING(ad_group.properties, '%s')", groupBy.Property), model.AdgroupPrefix+groupBy.Property)
 		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, "ad_group_"+groupBy.Property)
+		dimensions.values = append(dimensions.values, model.AdgroupPrefix+groupBy.Property)
 	}
 	if isGroupByTimestamp {
 		internalValue := getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone)
@@ -1338,12 +1363,16 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	}
 
 	// Filters
-	filterPropertiesStatement, filterParams := getFilterPropertiesForAdwordsReportsAndSmartProperty(query.Filters)
-	filterStatementForSmartPropertyGroupBy := getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
-	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatement, filterStatementForSmartPropertyGroupBy)
+	filterPropertiesStatementBasedOnRequestFilters, filterParams := getFilterPropertiesForAdwordsReportsAndSmartProperty(query.Filters)
+	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
+	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatementBasedOnRequestFilters, filterStatementForSmartPropertyGroupBy)
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
-
+	if len(groupByCombinationsForGBT) != 0 {
+		whereConditionForGBT, whereParams := buildWhereConditionForGBTForAdwords(groupByCombinationsForGBT)
+		finalWhereStatement += (" AND (" + whereConditionForGBT + ")")
+		finalParams = append(finalParams, whereParams...)
+	}
 	finalGroupByKeys = dimensions.values
 	if len(finalGroupByKeys) != 0 {
 		finalGroupByStatement = " GROUP BY " + joinWithComma(finalGroupByKeys...)
@@ -1370,6 +1399,52 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 
 	return resultantSQLStatement, finalParams, dimensions.values, metrics.values
 }
+func buildWhereConditionForGBTForAdwords(groupByCombinations []map[string]interface{}) (string, []interface{}) {
+	whereConditionForGBT := ""
+	params := make([]interface{}, 0)
+	filterStringAdwords := "adwords_documents.value"
+	filterStringSmartPropertiesCampaign := "campaign.properties"
+	filterStringSmartPropertiesAdGroup := "ad_group.properties"
+	for _, groupByCombination := range groupByCombinations {
+		whereConditionForEachCombination := ""
+		for dimension, value := range groupByCombination {
+			filterKey := ""
+			filterString := ""
+			if strings.HasPrefix(dimension, model.CampaignPrefix) {
+				filterString, filterKey = model.GetFilterStringAndFilterKeyForAdwordsGBT(dimension, model.CampaignPrefix, "campaign", filterStringSmartPropertiesCampaign)
+			} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
+				filterString, filterKey = model.GetFilterStringAndFilterKeyForAdwordsGBT(dimension, model.AdgroupPrefix, "ad_group", filterStringSmartPropertiesAdGroup)
+			} else {
+				key := fmt.Sprintf(`%s:%s`, "keyword", strings.TrimPrefix(dimension, model.KeywordPrefix))
+				filterString = filterStringAdwords
+				currentFilterKey := model.AdwordsInternalPropertiesToReportsInternal[key]
+				filterKey = currentFilterKey
+			}
+			if whereConditionForEachCombination == "" {
+				if value != nil {
+					whereConditionForEachCombination = fmt.Sprintf("JSON_EXTRACT_STRING(%s, '%s') = ? ", filterString, filterKey)
+					params = append(params, value)
+				} else {
+					whereConditionForEachCombination = fmt.Sprintf("JSON_EXTRACT_STRING(%s, '%s') is null ", filterString, filterKey)
+				}
+			} else {
+				if value != nil {
+					whereConditionForEachCombination += fmt.Sprintf(" AND JSON_EXTRACT_STRING(%s, '%s') = ? ", filterString, filterKey)
+					params = append(params, value)
+				} else {
+					whereConditionForEachCombination += fmt.Sprintf(" AND JSON_EXTRACT_STRING(%s, '%s') is null ", filterString, filterKey)
+				}
+			}
+		}
+		if whereConditionForGBT == "" {
+			whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+		} else {
+			whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+		}
+	}
+
+	return whereConditionForGBT, params
+}
 func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
 	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertyWithTypeAndSource(filters, groupBys, "adwords")
 	fromStatement := fromAdwordsDocument
@@ -1383,12 +1458,11 @@ func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 }
 
 func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
-	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
+	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	computeHigherOrderMetricsHere := !fetchSource
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
-	filterPropertiesStatement := ""
-	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	filterPropertiesStatementBasedOnRequestFilters := ""
 	toFetchImpressionsForHigherOrderMetric := false
 
 	finalParams := make([]interface{}, 0, 0)
@@ -1464,10 +1538,15 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	}
 
 	// Filters
-	filterPropertiesStatement, filterParams := getFilterPropertiesForAdwordsReports(query.Filters)
-	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwords, filterPropertiesStatement)
+	filterPropertiesStatementBasedOnRequestFilters, filterParams := getFilterPropertiesForAdwordsReports(query.Filters)
+	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwords, filterPropertiesStatementBasedOnRequestFilters)
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
+	if groupByCombinationsForGBT != nil && len(groupByCombinationsForGBT) != 0 {
+		whereConditionForGBT, whereParams := buildWhereConditionForGBTForAdwords(groupByCombinationsForGBT)
+		finalWhereStatement += (" AND (" + whereConditionForGBT + ")")
+		finalParams = append(finalParams, whereParams...)
+	}
 
 	finalGroupByKeys = dimensions.values
 	if len(finalGroupByKeys) != 0 {
@@ -1590,7 +1669,7 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperty(filters []model.Channe
 
 	return resultStatement + ")", params
 }
-func getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {
+func getNotNullFilterStatementForSmartPropertyGroupBys(smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {
 	resultStatement := ""
 	for _, smartPropertyGroupBy := range smartPropertyCampaignGroupBys {
 		if resultStatement == "" {

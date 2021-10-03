@@ -2,6 +2,8 @@ package model
 
 import (
 	U "factors/util"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -236,4 +238,20 @@ var AdwordsInternalPropertiesToReportsInternal = map[string]string{
 	"keyword:is_negative":               IsNegative,
 	"keyword:top_of_page_cpc":           TopOfPageCpc,
 	"keyword:quality_score":             QualityScore,
+}
+
+func GetFilterStringAndFilterKeyForAdwordsGBT(dimension string, prefix string, dimensionType string, smartPropertiesFilterString string) (string, string) {
+	filterStringAdwords := "adwords_documents.value"
+	filterKey := ""
+	filterString := ""
+	key := fmt.Sprintf(`%s:%s`, dimensionType, strings.TrimPrefix(dimension, prefix))
+	currentFilterKey, isPresent := AdwordsInternalPropertiesToReportsInternal[key]
+	if isPresent {
+		filterString = filterStringAdwords
+		filterKey = currentFilterKey
+	} else {
+		filterString = smartPropertiesFilterString
+		filterKey = strings.TrimPrefix(dimension, prefix)
+	}
+	return filterString, filterKey
 }
