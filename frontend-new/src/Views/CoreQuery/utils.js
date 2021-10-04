@@ -26,6 +26,7 @@ import {
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
   CHART_TYPE_SCATTER_PLOT,
+  CHART_TYPE_HORIZONTAL_BAR_CHART,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 
@@ -56,12 +57,12 @@ const operatorMap = {
   '<=': 'lesserThanOrEqual',
   '>': 'greaterThan',
   '>=': 'greaterThanOrEqual',
-  'between': 'between',
+  between: 'between',
   'not between': 'notInBetween',
   'in the last': 'inLast',
   'not in the last': 'notInLast',
-  'before': 'before',
-  'since': 'since'
+  before: 'before',
+  since: 'since',
 };
 
 const reverseOperatorMap = {
@@ -84,7 +85,7 @@ const reverseDateOperatorMap = {
   notInLast: 'not in the last',
   before: 'before',
   since: 'since',
-}
+};
 
 const getEventsWithProperties = (queries) => {
   const ewps = [];
@@ -520,7 +521,10 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
         filters.push({
-          operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
           values: [pr.va],
         });
@@ -541,7 +545,10 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     requestQuery.gup.forEach((pr) => {
       if (pr.lop === 'AND') {
         globalFilters.push({
-          operator: pr.ty === 'datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
           values: [pr.va],
         });
@@ -768,7 +775,10 @@ export const getAttributionStateFromRequestQuery = (
     if (pr.lop === 'AND') {
       let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
-        operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
+        operator:
+          pr.ty === 'datetime'
+            ? reverseDateOperatorMap[pr.op]
+            : reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
         values: val,
       });
@@ -783,7 +793,10 @@ export const getAttributionStateFromRequestQuery = (
       if (pr.lop === 'AND') {
         let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
         touchPointFilters.push({
-          operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.attribution_key],
           values: val,
         });
@@ -835,7 +848,10 @@ export const getAttributionStateFromRequestQuery = (
         if (pr.lop === 'AND') {
           let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
           linkedFilters.push({
-            operator: pr.ty ==='datetime'? reverseDateOperatorMap[pr.op] : reverseOperatorMap[pr.op],
+            operator:
+              pr.ty === 'datetime'
+                ? reverseDateOperatorMap[pr.op]
+                : reverseOperatorMap[pr.op],
             props: [pr.pr, pr.ty, pr.en],
             values: val,
           });
@@ -965,7 +981,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
     return (
       <>
         <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-          Display Bar Chart
+          Display Columns Chart
         </Radio>
         <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
           Display Scatter Plot Chart
@@ -1000,7 +1016,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
       return (
         <>
           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-            Display Bar Chart
+            Display Columns Chart
           </Radio>
           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
             Display Stacked Area Chart
@@ -1036,10 +1052,16 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
           </>
         );
       } else {
+        const horizontalBarChart =
+          requestQuery[0].gbp.length <= 3 ? (
+            <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
+              Display Bar Chart
+            </Radio>
+          ) : null;
         return (
           <>
             <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-              Display Bar Chart
+              Display Columns Chart
             </Radio>
             <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
               Display Stacked Area Chart
@@ -1048,6 +1070,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
               Display Stacked Bar Chart
             </Radio>
             {commons}
+            {horizontalBarChart}
           </>
         );
       }
@@ -1069,7 +1092,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
       } else {
         return (
           <>
-            <Radio value='pb'>Display Bar Chart</Radio>
+            <Radio value='pb'>Display Columns Chart</Radio>
             {commons}
           </>
         );

@@ -11,6 +11,7 @@ import {
   CHART_TYPE_BARCHART,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DASHBOARD_WIDGET_SECTION,
+  CHART_TYPE_HORIZONTAL_BAR_CHART,
 } from '../../../../utils/constants';
 import { isSeriesChart } from '../../../../utils/dataFormatter';
 
@@ -162,20 +163,20 @@ function SingleEventMultipleBreakdownTable({
     <DataTable
       isWidgetModal={isWidgetModal}
       tableData={
-        chartType === CHART_TYPE_BARCHART ||
-        section === DASHBOARD_WIDGET_SECTION
+        !isSeriesChart(chartType) || section === DASHBOARD_WIDGET_SECTION
           ? tableData
           : dateBasedTableData
       }
       searchText={searchText}
       setSearchText={setSearchText}
       columns={
-        chartType === CHART_TYPE_BARCHART ||
-        section === DASHBOARD_WIDGET_SECTION
+        !isSeriesChart(chartType) || section === DASHBOARD_WIDGET_SECTION
           ? columns
           : dateBasedColumns
       }
-      rowSelection={rowSelection}
+      rowSelection={
+        chartType !== CHART_TYPE_HORIZONTAL_BAR_CHART ? rowSelection : null
+      }
       scroll={{ x: 250 }}
       getCSVData={getCSVData}
     />

@@ -1329,8 +1329,14 @@ func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
 		return http.StatusBadRequest
 	}
 
+	currentPropertiesUpdatedTimestamp, status := store.GetPropertiesUpdatedTimestampOfUser(projectID, id)
+	if status != http.StatusFound {
+		logCtx.WithField("status", status).Error("Failed to get propertiesUpdatedTimestamp for the user.")
+		return http.StatusBadRequest
+	}
+
 	update := map[string]interface{}{"properties": properties}
-	if updateTimestamp > 0 {
+	if updateTimestamp > 0 && updateTimestamp > currentPropertiesUpdatedTimestamp {
 		update["properties_updated_timestamp"] = updateTimestamp
 	}
 
@@ -1343,6 +1349,23 @@ func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
 	}
 
 	return http.StatusAccepted
+}
+
+func (store *MemSQL) GetPropertiesUpdatedTimestampOfUser(projectId uint64, id string) (int64, int) {
+	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": id})
+
+	var user model.User
+	if err := db.Limit(1).Where("project_id = ?", projectId).Where("id = ?", id).
+		Select("properties_updated_timestamp").Find(&user).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+		logCtx.WithError(err).Error("Failed to get properties_updated_timestamp using user_id.")
+		return 0, http.StatusInternalServerError
+	}
+
+	return user.PropertiesUpdatedTimestamp, http.StatusFound
 }
 
 func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint64,

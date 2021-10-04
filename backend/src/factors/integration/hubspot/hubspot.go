@@ -566,7 +566,19 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			logCtx.WithError(err).Error("Failed to marshal company properties to Jsonb, in sync contact, action delete.")
 			return http.StatusInternalServerError
 		}
-		_, errCode := store.GetStore().UpdateUserProperties(projectID, contactDocuments[0].UserId, userPropertiesJsonb, document.Timestamp)
+
+		deleteContactUserID := contactDocuments[0].UserId
+		if deleteContactUserID == "" {
+			event, errCode := store.GetStore().GetEventById(projectID, contactDocuments[0].SyncId, "")
+			if errCode != http.StatusFound {
+				logCtx.WithField("delete_contact", contactDocuments[0].ID).Error(
+					"Failed to get merged contact created event for getting user id.")
+				return http.StatusInternalServerError
+			}
+			deleteContactUserID = event.UserId
+		}
+
+		_, errCode := store.GetStore().UpdateUserProperties(projectID, deleteContactUserID, userPropertiesJsonb, document.Timestamp)
 		if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 			logCtx.WithField("UserID", contactDocuments[0].UserId).WithField("userPropertiesJsonb", userPropertiesJsonb).Error("Failed to update user properties for contact delete action")
 			return http.StatusInternalServerError
@@ -617,10 +629,22 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 						mergeUserProperties[keyPrimaryContact] = (*value)["canonical-vid"]
 						mergeUserPropertiesJsonb, err := U.EncodeToPostgresJsonb(&mergeUserProperties)
 						if err != nil {
-							logCtx.WithError(err).Error("Failed to marshal company properties to Jsonb, in sync contact.")
+							logCtx.WithError(err).Error("Failed to marshal merged contact properties to Jsonb, in sync contact.")
 							return http.StatusInternalServerError
 						}
-						_, errCode := store.GetStore().UpdateUserProperties(projectID, mergedContact.UserId, mergeUserPropertiesJsonb, document.Timestamp)
+
+						mergedContactUserID := mergedContact.UserId
+						if mergedContactUserID == "" {
+							event, errCode := store.GetStore().GetEventById(projectID, mergedContact.SyncId, "")
+							if errCode != http.StatusFound {
+								logCtx.WithField("merged_contact", mergedContact.ID).Error(
+									"Failed to get merged contact created event for getting user id.")
+								continue
+							}
+							mergedContactUserID = event.UserId
+						}
+
+						_, errCode := store.GetStore().UpdateUserProperties(projectID, mergedContactUserID, mergeUserPropertiesJsonb, document.Timestamp)
 						if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 							logCtx.WithField("UserID", mergedContact.UserId).WithField("userPropertiesJsonb", mergeUserPropertiesJsonb).Error("Failed to update user properties")
 							return http.StatusInternalServerError
