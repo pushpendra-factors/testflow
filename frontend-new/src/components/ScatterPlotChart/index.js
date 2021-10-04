@@ -1,14 +1,7 @@
 import React, { useCallback, useEffect, memo } from 'react';
 import styles from './styles.module.scss';
-// import { Text, Number as NumFormat } from '../factorsComponents';
-// import styles from './styles.module.scss';
-// import ReactDOMServer from 'react-dom/server';
-// import moment from 'moment';
 import Highcharts from 'highcharts';
 import { high_charts_scatter_plot_default_spacing } from '../../utils/constants';
-// import LegendsCircle from '../../styles/components/LegendsCircle';
-// import { formatCount, generateColors } from '../../utils/dataFormatter';
-// import TopLegends from '../GroupedBarChart/TopLegends';
 
 function ScatterPlotChart({
   series,
@@ -19,10 +12,7 @@ function ScatterPlotChart({
   chartId = 'areaChartContainer',
   cardSize = 1,
   height = null,
-  // legendsPosition = 'bottom',
-  // showAllLegends = false,
 }) {
-  // const colors = generateColors(data.length);
   const drawChart = useCallback(() => {
     Highcharts.chart(chartId, {
       chart: {
@@ -124,27 +114,7 @@ function ScatterPlotChart({
     drawChart();
   }, [cardSize, drawChart]);
 
-  return (
-    <>
-      {/* {legendsPosition === 'top' ? (
-        <TopLegends
-          cardSize={cardSize}
-          legends={data.map((d) => d.name)}
-          colors={colors}
-          showAllLegends={showAllLegends}
-        />
-      ) : null} */}
-      <div id={chartId} className={styles.scatterPlotChart}></div>
-      {/* {legendsPosition === 'bottom' ? (
-        <TopLegends
-          cardSize={cardSize}
-          legends={data.map((d) => d.name)}
-          colors={colors}
-          showAllLegends={showAllLegends}
-        />
-      ) : null} */}
-    </>
-  );
+  return <div id={chartId} className={styles.scatterPlotChart}></div>;
 }
 
 export default memo(ScatterPlotChart);

@@ -13,6 +13,7 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_SCATTER_PLOT,
   QUERY_TYPE_FUNNEL,
+  CHART_TYPE_HORIZONTAL_BAR_CHART,
 } from './constants';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
 
@@ -211,28 +212,39 @@ export const formatCount = (count, precision) => {
   }
 };
 
-export const getChartTypeMenuItems = (queryType, hasBreakdown) => {
+export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
   let menuItems = [];
   if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) {
-    if (hasBreakdown) {
+    if (breakdownLength) {
       menuItems = [
         {
-          key: 'barchart',
-          name: 'Bars',
+          key: CHART_TYPE_BARCHART,
+          name: 'Columns',
         },
         {
           key: CHART_TYPE_LINECHART,
           name: 'Line Chart',
         },
         {
-          key: 'stackedareachart',
+          key: CHART_TYPE_STACKED_AREA,
           name: 'Stacked Area',
         },
         {
-          key: 'stackedbarchart',
+          key: CHART_TYPE_STACKED_BAR,
           name: 'Stacked Column',
         },
       ];
+      if (
+        events.length === 1 &&
+        queryType === QUERY_TYPE_EVENT &&
+        breakdownLength <= 3
+      ) {
+        // this chart type is only supported when there is atmost one event and there is atleast 1 breakdown and atmost 3 breakdowns
+        menuItems.push({
+          key: CHART_TYPE_HORIZONTAL_BAR_CHART,
+          name: 'Bars',
+        });
+      }
     } else {
       menuItems = [
         {
@@ -258,7 +270,7 @@ export const getChartTypeMenuItems = (queryType, hasBreakdown) => {
       },
     ];
   }
-  if (queryType === QUERY_TYPE_FUNNEL && hasBreakdown) {
+  if (queryType === QUERY_TYPE_FUNNEL && breakdownLength) {
     menuItems = [
       {
         key: CHART_TYPE_BARCHART,
@@ -493,4 +505,30 @@ export const SortResults = (result, currentSorter) => {
     }
   }
   return result;
+};
+
+export const getBreakdownDisplayTitle = (
+  breakdown,
+  userPropNames,
+  eventPropNames
+) => {
+  let displayTitle =
+    breakdown.en === 'user'
+      ? userPropNames[breakdown.pr] || breakdown.pr
+      : breakdown.en === 'event'
+      ? eventPropNames[breakdown.pr] || breakdown.pr
+      : breakdown.pr;
+
+  if (breakdown.eventIndex) {
+    displayTitle = displayTitle + ' (event)';
+  }
+  return displayTitle;
+};
+
+export const Wait = (duration) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, duration);
+  });
 };

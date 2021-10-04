@@ -3,10 +3,12 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
+	"net/http"
+
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 const weeklyInsights string = "weekly_insights"
@@ -19,6 +21,7 @@ func (store *MemSQL) PostFeedback(ProjectID uint64, agentUUID string, Feature st
 	var feedback model.Feedback
 
 	feedback = model.Feedback{
+		ID:        U.GetUUID(),
 		ProjectID: ProjectID,
 		Feature:   Feature,
 		Property:  Property,

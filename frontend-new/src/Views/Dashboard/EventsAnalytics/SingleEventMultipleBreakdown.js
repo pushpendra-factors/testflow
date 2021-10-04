@@ -17,11 +17,14 @@ import {
   CHART_TYPE_STACKED_AREA,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
   CHART_TYPE_STACKED_BAR,
+  CHART_TYPE_LINECHART,
+  CHART_TYPE_HORIZONTAL_BAR_CHART,
 } from '../../../utils/constants';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
 import { DashboardContext } from '../../../contexts/DashboardContext';
 import NoDataChart from '../../../components/NoDataChart';
+import SingleEventMultipleBreakdownHorizontalBarChart from '../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/SingleEventMultipleBreakdownHorizontalBarChart';
 
 function SingleEventMultipleBreakdown({
   resultState,
@@ -159,7 +162,7 @@ function SingleEventMultipleBreakdown({
         chartId={`bar-${unit.id}`}
       />
     );
-  } else {
+  } else if (chartType === CHART_TYPE_LINECHART) {
     chartContent = (
       <LineChart
         frequency={durationObj.frequency}
@@ -169,6 +172,15 @@ function SingleEventMultipleBreakdown({
         legendsPosition='top'
         cardSize={unit.cardSize}
         chartId={`line-${unit.id}`}
+      />
+    );
+  } else if (chartType === CHART_TYPE_HORIZONTAL_BAR_CHART) {
+    chartContent = (
+      <SingleEventMultipleBreakdownHorizontalBarChart
+        aggregateData={aggregateData}
+        breakdown={resultState.data.meta.query.gbp}
+        isDashboardWidget={true}
+        cardSize={unit.cardSize}
       />
     );
   }

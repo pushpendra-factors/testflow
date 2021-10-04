@@ -388,9 +388,13 @@ func buildWhereConditionForGBTForSearchConsole(groupByCombinations []map[string]
 			}
 		}
 		if whereConditionForGBT == "" {
-			whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+			if whereConditionForEachCombination != "" {
+				whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+			}
 		} else {
-			whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+			if whereConditionForEachCombination != "" {
+				whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+			}
 		}
 	}
 
@@ -512,7 +516,7 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, ur
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
-	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
+	resultSQLStatement += " " + orderByQuery + limitString + ";"
 	staticWhereParams := []interface{}{projectID, customerUrlPrefixes, query.From, query.To}
 	finalParams := staticWhereParams
 	if len(whereParams) != 0 {

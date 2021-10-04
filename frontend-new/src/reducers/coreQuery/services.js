@@ -132,6 +132,20 @@ export const saveQuery = (projectId, title, query, type, settings) => {
   return post(null, url, { query, title, type, settings });
 };
 
+// export const deleteQueryTest = async () => {
+//   const promises = SAVED_QUERIES.filter(
+//     (query) => [].indexOf(query.id) === -1
+//   ).map((query) => {
+//     const url = host + 'projects/' + query.project_id + '/queries/' + query.id;
+//     return del(null, url);
+//   });
+//   try {
+//     const response = await Promise.all(promises);
+//   } catch (err) {
+//     console.log(err);
+//   }
+// };
+
 export const deleteQuery = async (dispatch, query) => {
   try {
     dispatch({ type: QUERIES_LOADING });

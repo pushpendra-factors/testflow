@@ -1,0 +1,33 @@
+.horizontalBarChart {
+  .infoText {
+    font-size: 14px;
+    line-height: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: break-spaces;
+  }
+  :global(.highcharts-tick) {
+    display: none;
+  }
+  :global(.highcharts-grid-line) {
+    display: none;
+  }
+  :global(.highcharts-tooltip) {
+    span {
+      &:first-child {
+        width: 175px;
+        padding-left: 8px;
+      }
+    }
+    span {
+      &.number {
+        padding-left: 0px !important;
+        width: unset;
+      }
+      span {
+        padding-left: 0px !important;
+        width: unset;
+      }
+    }
+  }
+}

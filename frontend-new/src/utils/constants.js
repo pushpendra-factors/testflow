@@ -37,6 +37,7 @@ export const ATTRIBUTION_METHODOLOGY = [
   },
 ];
 
+export const CHART_TYPE_HORIZONTAL_BAR_CHART = 'horizontalbarchart';
 export const CHART_TYPE_STACKED_AREA = 'stackedareachart';
 export const CHART_TYPE_STACKED_BAR = 'stackedbarchart';
 export const CHART_TYPE_SPARKLINES = 'sparklines';
@@ -142,6 +143,7 @@ export const presentationObj = {
   pa: CHART_TYPE_STACKED_AREA,
   ps: CHART_TYPE_STACKED_BAR,
   sp: CHART_TYPE_SCATTER_PLOT,
+  hb: CHART_TYPE_HORIZONTAL_BAR_CHART,
 };
 
 export const apiChartAnnotations = {
@@ -152,6 +154,7 @@ export const apiChartAnnotations = {
   [CHART_TYPE_STACKED_AREA]: 'pa',
   [CHART_TYPE_STACKED_BAR]: 'ps',
   [CHART_TYPE_SCATTER_PLOT]: 'sp',
+  [CHART_TYPE_HORIZONTAL_BAR_CHART]: 'hb',
 };
 
 export const MAX_ALLOWED_VISIBLE_PROPERTIES = 10;

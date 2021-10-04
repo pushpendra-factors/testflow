@@ -3,6 +3,8 @@ import moment from 'moment';
 import {
   getClickableTitleSorter,
   SortResults,
+  getBreakdownDisplayTitle,
+  generateColors,
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
@@ -11,6 +13,8 @@ import {
   DATE_FORMATS,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
+import HorizontalBarChartCell from './HorizontalBarChartCell';
+import styles from './index.module.scss';
 
 export const defaultSortProp = () => {
   return {
@@ -301,4 +305,175 @@ export const formatDataInStackedAreaFormat = (
     categories: differentDates,
     data: resultantData,
   };
+};
+
+export const renderHorizontalBarChart = (
+  data,
+  key,
+  cardSize = 1,
+  isDashboardWidget = false,
+  multipleBreakdowns = true
+) => {
+  const series = [
+    {
+      data: [],
+    },
+  ];
+  const colors = generateColors(10);
+  const categories = data.map((elem, index) => {
+    series[0].data.push({
+      y: elem.value,
+      color: colors[index % 10],
+    });
+    return elem[key];
+  });
+
+  if (isDashboardWidget) {
+    series[0].data = series[0].data.slice(0, 3);
+  }
+
+  return (
+    <HorizontalBarChartCell
+      series={series}
+      categories={categories}
+      cardSize={cardSize}
+      isDashboardWidget={isDashboardWidget}
+      width={isDashboardWidget || !multipleBreakdowns ? null : 600}
+    />
+  );
+};
+
+const getBreakdownDataMapperWithUniqueValues = (data, key) => {
+  let values = new Set();
+  const breakdownMapper = {};
+  data.forEach((d) => {
+    const bValue = d[key];
+    if (breakdownMapper[bValue]) {
+      breakdownMapper[bValue].push(d);
+    } else {
+      breakdownMapper[bValue] = [d];
+    }
+    values.add(d[key]);
+  });
+  values = [...values];
+  return {
+    values,
+    breakdownMapper,
+  };
+};
+
+export const getDataInHorizontalBarChartFormat = (
+  aggregateData,
+  breakdown,
+  cardSize = 1,
+  isDashboardWidget = false
+) => {
+  console.log('semb getDataInHorizontalBarChartFormat');
+  const sortedData = SortResults(aggregateData, {
+    key: 'value',
+    order: 'descend',
+  });
+
+  const firstBreakdownKey = `${breakdown[0].pr} - 0`;
+  const secondBreakdownKey = `${breakdown[1].pr} - 1`;
+
+  const {
+    values: uniqueFirstBreakdownValues,
+    breakdownMapper: firstBreakdownMapper,
+  } = getBreakdownDataMapperWithUniqueValues(sortedData, firstBreakdownKey);
+
+  if (breakdown.length === 2) {
+    const result = uniqueFirstBreakdownValues.map((bValue) => {
+      const row = {};
+      row.index = bValue;
+      row[firstBreakdownKey] = { value: bValue };
+      row[secondBreakdownKey] = {
+        value: renderHorizontalBarChart(
+          firstBreakdownMapper[bValue],
+          secondBreakdownKey,
+          cardSize,
+          isDashboardWidget
+        ),
+      };
+      return row;
+    });
+    if (isDashboardWidget && result.length) {
+      return [result[0]];
+    }
+    return result;
+  } else if (breakdown.length === 3) {
+    const thirdBreakdownKey = `${breakdown[2].pr} - 2`;
+    const result = [];
+    uniqueFirstBreakdownValues.forEach((bValue) => {
+      const {
+        values: uniqueSecondBreakdownValues,
+        breakdownMapper: secondBreakdownMapper,
+      } = getBreakdownDataMapperWithUniqueValues(
+        firstBreakdownMapper[bValue],
+        secondBreakdownKey
+      );
+
+      uniqueSecondBreakdownValues.forEach((sbValue, sbIndex) => {
+        const row = {};
+        row.index = bValue + firstBreakdownKey + sbValue + secondBreakdownKey;
+        row[firstBreakdownKey] = {
+          value: bValue,
+          rowSpan: !sbIndex ? uniqueSecondBreakdownValues.length : 0,
+        };
+        row[secondBreakdownKey] = { value: sbValue };
+        row[thirdBreakdownKey] = {
+          value: renderHorizontalBarChart(
+            secondBreakdownMapper[sbValue],
+            thirdBreakdownKey,
+            cardSize,
+            isDashboardWidget
+          ),
+        };
+        result.push(row);
+      });
+    });
+    if (isDashboardWidget && result.length) {
+      return [result[0]];
+    }
+    return result;
+  }
+};
+
+export const getHorizontalBarChartColumns = (
+  breakdown,
+  userPropNames,
+  eventPropNames,
+  cardSize = 1
+) => {
+  console.log('semb getHorizontalBarChartColumns');
+  const result = breakdown.map((e, index) => {
+    const displayTitle = getBreakdownDisplayTitle(
+      e,
+      userPropNames,
+      eventPropNames
+    );
+
+    return {
+      title: displayTitle,
+      dataIndex: `${e.pr} - ${index}`,
+      width: cardSize !== 1 ? 100 : 200,
+      className: styles.horizontalBarTableHeader,
+      render: (d) => {
+        const obj = {
+          children: <div className='h-full p-6'>{d.value}</div>,
+          props: d.hasOwnProperty('rowSpan') ? { rowSpan: d.rowSpan } : {},
+        };
+        return obj;
+      },
+    };
+  });
+  if (cardSize !== 1) {
+    if (cardSize === 0) {
+      return result.slice(result.length - 2);
+    }
+    if (cardSize === 2) {
+      return result.slice(result.length - 1);
+    }
+  }
+  return result;
 };
