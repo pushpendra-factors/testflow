@@ -84,6 +84,30 @@ var objectToValueInFacebookFiltersMapping = map[string]string{
 	"ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
 }
 
+var objectToValueInFacebookFiltersMappingWithFacebookDocuments = map[string]string{
+	"campaign:daily_budget":      "JSON_EXTRACT_STRING(facebook_documents.value,'campaign_daily_budget')",
+	"campaign:lifetime_budget":   "JSON_EXTRACT_STRING(facebook_documents.value,'campaign_lifetime_budget')",
+	"campaign:configured_status": "JSON_EXTRACT_STRING(facebook_documents.value,'campaign_configured_status')",
+	"campaign:effective_status":  "JSON_EXTRACT_STRING(facebook_documents.value,'campaign_effective_status')",
+	"campaign:objective":         "JSON_EXTRACT_STRING(facebook_documents.value,'campaign_objective')",
+	"campaign:buying_type":       "JSON_EXTRACT_STRING(facebook_documents.value,'campaign_buying_type')",
+	"campaign:bid_strategy":      "JSON_EXTRACT_STRING(facebook_documents.value,'campaign_bid_strategy')",
+	"campaign:name":              "JSON_EXTRACT_STRING(facebook_documents.value,'campaign_name')",
+	"campaign:id":                "facebook_documents.campaign_id",
+	"ad_set:daily_budget":        "JSON_EXTRACT_STRING(facebook_documents.value,'ad_set_daily_budget')",
+	"ad_set:lifetime_budget":     "JSON_EXTRACT_STRING(facebook_documents.value,'ad_set_lifetime_budget')",
+	"ad_set:configured_status":   "JSON_EXTRACT_STRING(facebook_documents.value,'ad_set_configured_status')",
+	"ad_set:effective_status":    "JSON_EXTRACT_STRING(facebook_documents.value,'ad_set_effective_status')",
+	"ad_set:objective":           "JSON_EXTRACT_STRING(facebook_documents.value,'ad_set_objective')",
+	"ad_set:bid_strategy":        "JSON_EXTRACT_STRING(facebook_documents.value,'ad_set_bid_strategy')",
+	"ad_set:name":                "JSON_EXTRACT_STRING(facebook_documents.value,'adset_name')",
+	"ad_set:id":                  "facebook_documents.ad_set_id",
+	"ad:id":                      "facebook_documents.ad_id",
+	"ad:name":                    "JSON_EXTRACT_STRING(facebook_documents.value, 'ad_name')",
+	"ad:configured_status":       "JSON_EXTRACT_STRING(facebook_documents.value, 'ad_configured_status')",
+	"ad:effective_status":        "JSON_EXTRACT_STRING(facebook_documents.value, 'ad_effective_status')",
+}
+
 var facebookMetricsToAggregatesInReportsMapping = map[string]string{
 	"impressions":                   "SUM(JSON_EXTRACT_STRING(value,'impressions'))",
 	"clicks":                        "SUM(JSON_EXTRACT_STRING(value,'clicks'))",
@@ -813,7 +837,6 @@ func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 func buildWhereConditionForGBTForFacebook(groupByCombinations []map[string]interface{}) (string, []interface{}) {
 	whereConditionForGBT := ""
 	params := make([]interface{}, 0)
-	filterStringFacebook := "facebook_documents"
 	filterStringSmartPropertiesCampaign := "campaign.properties"
 	filterStringSmartPropertiesAdGroup := "ad_group.properties"
 	for _, groupByCombination := range groupByCombinations {
@@ -822,24 +845,24 @@ func buildWhereConditionForGBTForFacebook(groupByCombinations []map[string]inter
 			filterString := ""
 			if strings.HasPrefix(dimension, model.CampaignPrefix) {
 				key := fmt.Sprintf(`%s:%s`, "campaign", strings.TrimPrefix(dimension, model.CampaignPrefix))
-				currentFilterKey, isPresent := objectToValueInFacebookFiltersMapping[key]
+				currentFilterKey, isPresent := objectToValueInFacebookFiltersMappingWithFacebookDocuments[key]
 				if isPresent {
-					filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+					filterString = currentFilterKey
 				} else {
 					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterStringSmartPropertiesCampaign, strings.TrimPrefix(dimension, model.CampaignPrefix))
 				}
 			} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
 				key := fmt.Sprintf(`%s:%s`, "ad_set", strings.TrimPrefix(dimension, model.AdgroupPrefix))
-				currentFilterKey, isPresent := objectToValueInFacebookFiltersMapping[key]
+				currentFilterKey, isPresent := objectToValueInFacebookFiltersMappingWithFacebookDocuments[key]
 				if isPresent {
-					filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+					filterString = currentFilterKey
 				} else {
 					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s,'%s')", filterStringSmartPropertiesAdGroup, strings.TrimPrefix(dimension, model.AdgroupPrefix))
 				}
 			} else {
 				key := fmt.Sprintf(`%s:%s`, "ad", strings.TrimPrefix(dimension, model.KeywordPrefix))
-				currentFilterKey := objectToValueInFacebookFiltersMapping[key]
-				filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+				currentFilterKey := objectToValueInFacebookFiltersMappingWithFacebookDocuments[key]
+				filterString = currentFilterKey
 			}
 			if whereConditionForEachCombination == "" {
 				if value != nil {
