@@ -146,7 +146,7 @@ function SparkLineChart({
             frequency={frequency}
             page={page}
             event={
-              arrayMapper.find((elem) => elem.eventName === queries[0]).mapper
+              arrayMapper.find((elem) => elem.displayName === queries[0]).mapper
             }
             chartData={chartsData}
             chartColor="#4D7DB4"

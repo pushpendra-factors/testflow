@@ -61,7 +61,7 @@ function CardContent({ unit, resultState, durationObj }) {
 
   const events = useMemo(() => {
     if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
-      return equivalentQuery.events.map((elem) => elem.alias? elem.alias : elem.label);
+      return equivalentQuery.events.map((elem) => elem.alias? elem.alias : eventNames[elem.label] || elem.label);
     }
   }, [equivalentQuery.events, queryType]);
 
