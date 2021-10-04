@@ -379,6 +379,43 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	assert.Equal(t, "value1", propertiesMap["prop1"])
 }
 
+func TestPropertiesUpdatedTimestamp(t *testing.T) {
+	// Intialize the project and the user. Also capture old timestamp in old_time.
+	oldTimestamp := time.Now().Unix() - 1000
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+	assert.NotEmpty(t, user.Properties)
+	storedUser, errCode := store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	storedTimestamp := storedUser.PropertiesUpdatedTimestamp
+
+	// Update user properties using the older timestamp. The PropertiesUpdatedTimestamp
+	// should not get updated.
+	newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+		`{"country": "india", "age": 30.1, "paid": true, "$hubspot_contact_lead_guid": "lead-guid1"}`))}
+	_, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
+		newProperties, oldTimestamp)
+	assert.Equal(t, http.StatusAccepted, status)
+	storedUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEqual(t, oldTimestamp, storedUser.PropertiesUpdatedTimestamp)
+	assert.Equal(t, storedTimestamp, storedUser.PropertiesUpdatedTimestamp)
+
+	// Update user properties using the current timestamp. The PropertiesUpdatedTimestamp
+	// should get updated with the current timestamp.
+	current_time := time.Now().Unix()
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+		`{"device": "android"}`))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+		newProperties, current_time)
+	assert.Equal(t, http.StatusAccepted, status)
+	storedUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, current_time, storedUser.PropertiesUpdatedTimestamp)
+}
+
 func TestDBFillUserDefaultProperties(t *testing.T) {
 	propertiesMap := U.PropertiesMap{"prop_1": "value_1"}
 	err := model.FillLocationUserProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
