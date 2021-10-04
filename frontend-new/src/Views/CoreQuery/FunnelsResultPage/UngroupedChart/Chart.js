@@ -234,7 +234,7 @@ function Chart({
         .call(
           d3.axisBottom(x).tickFormat((d) => {
             const label = arrayMapper.find((elem) => elem.mapper === d)
-              .eventName;
+              .displayName;
             if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
               return (
                 label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + '...'
