@@ -1,5 +1,4 @@
-import React, { memo, useMemo, useState, useEffect, useCallback } from 'react';
-import LazyLoad from 'react-lazyload';
+import React, { memo, useState, useEffect, useCallback } from 'react';
 import {
   getDataInHorizontalBarChartFormat,
   getHorizontalBarChartColumns,
@@ -7,7 +6,6 @@ import {
 import { useSelector } from 'react-redux';
 import DataTable from '../../../../components/DataTable';
 import { Spin } from 'antd';
-import { delay } from 'lodash';
 import { Wait } from '../../../../utils/dataFormatter';
 
 const SingleEventMultipleBreakdownHorizontalBarChart = ({

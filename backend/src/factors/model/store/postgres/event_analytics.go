@@ -1613,12 +1613,12 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 		aggregateGroupBys = append(aggregateGroupBys, eventNameSelect)
 		aggregateSelectKeys = eventNameSelect + ", " + aggregateSelectKeys
 		aggregateSelect = aggregateSelect + aggregateSelectKeys
-		aggregateSelect = appendStatement(aggregateSelect, fmt.Sprintf("%s(*) AS %s FROM %s", q.GetAggregateFunction(), strings.ToLower(q.GetAggregateFunction()), bucketedStepName))
+		aggregateSelect = appendStatement(aggregateSelect, fmt.Sprintf("COUNT(*) AS %s FROM %s", model.AliasAggr, bucketedStepName))
 		aggregateSelect = appendGroupByTimestampIfRequired(aggregateSelect, isGroupByTimestamp, strings.Join(aggregateGroupBys, ", "))
 		aggregateSelect = aggregateSelect + fmt.Sprintf(" ORDER BY %s, %s", eventNameSelect, strings.Join(aggregateOrderBys, ", "))
 	} else {
 		aggregateSelect = aggregateSelect + groupKeys
-		aggregateSelect = joinWithComma(aggregateSelect, fmt.Sprintf("%s(*) AS %s FROM %s", q.GetAggregateFunction(), strings.ToLower(q.GetAggregateFunction()), withUsersStepName))
+		aggregateSelect = joinWithComma(aggregateSelect, fmt.Sprintf("COUNT(*) AS %s FROM %s", model.AliasAggr, withUsersStepName))
 		aggregateSelect = appendGroupByTimestampIfRequired(aggregateSelect, isGroupByTimestamp, groupKeys)
 		aggregateSelect = aggregateSelect + fmt.Sprintf(" ORDER BY %s", eventNameSelect)
 	}
