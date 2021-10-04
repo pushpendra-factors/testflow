@@ -22,10 +22,12 @@ import {
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_BARCHART,
   CHART_TYPE_STACKED_BAR,
+  CHART_TYPE_LINECHART,
 } from '../../../../utils/constants';
 import StackedAreaChart from '../../../../components/StackedAreaChart';
 import StackedBarChart from '../../../../components/StackedBarChart';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
+import SingleEventMultipleBreakdownHorizontalBarChart from './SingleEventMultipleBreakdownHorizontalBarChart';
 
 const SingleEventMultipleBreakdown = forwardRef(
   (
@@ -153,7 +155,7 @@ const SingleEventMultipleBreakdown = forwardRef(
           />
         </div>
       );
-    } else {
+    } else if (chartType === CHART_TYPE_LINECHART) {
       chart = (
         <div className='w-full'>
           <LineChart
@@ -161,6 +163,15 @@ const SingleEventMultipleBreakdown = forwardRef(
             categories={categories}
             data={visibleSeriesData}
             showAllLegends={true}
+          />
+        </div>
+      );
+    } else {
+      chart = (
+        <div className='w-full'>
+          <SingleEventMultipleBreakdownHorizontalBarChart
+            aggregateData={aggregateData}
+            breakdown={resultState.data.meta.query.gbp}
           />
         </div>
       );

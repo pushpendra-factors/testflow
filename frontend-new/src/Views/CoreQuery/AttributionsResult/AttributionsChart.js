@@ -103,7 +103,9 @@ const AttributionsChart = forwardRef(
             }
             return metric;
           });
-          const enabledOptions = newState.filter((metric) => metric.enabled);
+          const enabledOptions = newState.filter(
+            (metric) => metric.enabled && !metric.isEventMetric
+          );
           if (!enabledOptions.length) {
             return curMetrics;
           } else {

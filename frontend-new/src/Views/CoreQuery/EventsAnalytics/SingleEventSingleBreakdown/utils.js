@@ -4,12 +4,15 @@ import { labelsObj } from '../../utils';
 import {
   getClickableTitleSorter,
   SortResults,
+  getBreakdownDisplayTitle,
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   DATE_FORMATS,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
+import { renderHorizontalBarChart } from '../SingleEventMultipleBreakdown/utils';
+import styles from '../SingleEventMultipleBreakdown/index.module.scss';
 
 export const defaultSortProp = () => {
   return {
@@ -288,4 +291,59 @@ export const formatDataInStackedAreaFormat = (
     categories: differentDates,
     data: resultantData,
   };
+};
+
+export const getDataInHorizontalBarChartFormat = (
+  aggregateData,
+  breakdown,
+  cardSize = 1,
+  isDashboardWidget = false
+) => {
+  const sortedData = SortResults(aggregateData, {
+    key: 'value',
+    order: 'descend',
+  });
+
+  const firstBreakdownKey = breakdown[0].pr;
+  const row = {};
+
+  row.index = 0;
+
+  row[firstBreakdownKey] = renderHorizontalBarChart(
+    sortedData,
+    firstBreakdownKey,
+    cardSize,
+    isDashboardWidget,
+    false
+  );
+
+  const result = [row];
+  return result;
+};
+
+export const getHorizontalBarChartColumns = (
+  breakdown,
+  userPropNames,
+  eventPropNames
+) => {
+  const result = breakdown.map((e) => {
+    const displayTitle = getBreakdownDisplayTitle(
+      e,
+      userPropNames,
+      eventPropNames
+    );
+
+    return {
+      title: displayTitle,
+      dataIndex: e.pr,
+      className: styles.horizontalBarTableHeader,
+      render: (d) => {
+        const obj = {
+          children: <div className='h-full p-6'>{d}</div>,
+        };
+        return obj;
+      },
+    };
+  });
+  return result;
 };

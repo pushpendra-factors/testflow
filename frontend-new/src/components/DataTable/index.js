@@ -15,6 +15,8 @@ function DataTable({
   isWidgetModal,
   getCSVData,
   ignoreDocumentClick,
+  renderSearch = true,
+  isPaginationEnabled = true,
 }) {
   const componentRef = useRef(null);
   const downloadBtnRef = useRef(null);
@@ -72,7 +74,7 @@ function DataTable({
 
   return (
     <div ref={componentRef} className='data-table'>
-      {!isDashboardWidget ? (
+      {!isDashboardWidget && renderSearch ? (
         <SearchBar
           searchText={searchText}
           handleSearchTextChange={handleSearchTextChange}
@@ -83,7 +85,7 @@ function DataTable({
       ) : null}
       <Table
         pagination={
-          !isDashboardWidget
+          !isDashboardWidget && isPaginationEnabled
             ? {
                 pageSize,
                 onShowSizeChange: handlePageSizeChange,

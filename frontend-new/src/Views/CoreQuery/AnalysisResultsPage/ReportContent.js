@@ -14,6 +14,7 @@ import {
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
+  CHART_TYPE_HORIZONTAL_BAR_CHART,
 } from '../../../utils/constants';
 import { Spin } from 'antd';
 import FunnelsResultPage from '../FunnelsResultPage';
@@ -60,8 +61,18 @@ function ReportContent({
 
   const chartType = useMemo(() => {
     let key;
-    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+    if (queryType === QUERY_TYPE_FUNNEL) {
       key = breakdown.length ? 'breakdown' : 'no_breakdown';
+      return chartTypes[queryType][key];
+    }
+    if (queryType === QUERY_TYPE_EVENT) {
+      key = breakdown.length ? 'breakdown' : 'no_breakdown';
+      if (
+        breakdown.length > 3 &&
+        chartTypes[queryType][key] === CHART_TYPE_HORIZONTAL_BAR_CHART
+      ) {
+        return CHART_TYPE_BARCHART;
+      }
       return chartTypes[queryType][key];
     }
     if (queryType === QUERY_TYPE_CAMPAIGN) {
@@ -124,23 +135,20 @@ function ReportContent({
   useEffect(() => {
     let items = [];
     if (queryType === QUERY_TYPE_CAMPAIGN) {
-      items = getChartTypeMenuItems(
-        queryType,
-        campaignState.group_by.length > 0
-      );
+      items = getChartTypeMenuItems(queryType, campaignState.group_by.length);
     }
     if (
       (queryType === QUERY_TYPE_EVENT && breakdownType === EACH_USER_TYPE) ||
       queryType === QUERY_TYPE_FUNNEL
     ) {
-      items = getChartTypeMenuItems(queryType, breakdown.length > 0);
+      items = getChartTypeMenuItems(queryType, breakdown.length, queries);
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       items = getChartTypeMenuItems(queryType);
     }
     setChartTypeMenuItems(items);
-  }, [queryType, campaignState.group_by, breakdown, breakdownType]);
+  }, [queryType, campaignState.group_by, breakdown, breakdownType, queries]);
 
   if (resultState.loading) {
     content = (
@@ -293,7 +301,7 @@ function ReportContent({
   return (
     <>
       <>
-        {((queryType === QUERY_TYPE_CAMPAIGN) || (queryType === QUERY_TYPE_WEB)) ?
+        {queryType === QUERY_TYPE_CAMPAIGN || queryType === QUERY_TYPE_WEB ? (
           <ReportTitle
             setDrawerVisible={setDrawerVisible}
             title={queryTitle}
@@ -303,8 +311,7 @@ function ReportContent({
             queryType={queryType}
             apiCallStatus={resultState.apiCallStatus}
           />
-          : null
-        }
+        ) : null}
         <div className='mt-6'>
           <CalendarRow
             queryType={queryType}
@@ -318,7 +325,8 @@ function ReportContent({
             handleGranularityChange={handleGranularityChange}
             section={section}
           />
-        </div> </>
+        </div>{' '}
+      </>
 
       <div className='mt-12'>{content}</div>
     </>
