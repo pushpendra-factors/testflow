@@ -394,9 +394,13 @@ func buildWhereConditionForGBTForSearchConsole(groupByCombinations []map[string]
 			}
 		}
 		if whereConditionForGBT == "" {
-			whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+			if whereConditionForEachCombination != "" {
+				whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+			}
 		} else {
-			whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+			if whereConditionForEachCombination != "" {
+				whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+			}
 		}
 	}
 
