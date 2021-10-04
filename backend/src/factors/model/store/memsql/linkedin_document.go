@@ -53,6 +53,13 @@ var objectToValueInLinkedinFiltersMapping = map[string]string{
 	"campaign_group:id":   "campaign_group_id",
 	"creative:id":         "creative_id",
 }
+var objectToValueInLinkedinFiltersMappingWithLinkedinDocuments = map[string]string{
+	"campaign:name":       "JSON_EXTRACT_STRING(linkedin_documents.value, 'campaign_name')",
+	"campaign_group:name": "JSON_EXTRACT_STRING(linkedin_documents.value, 'campaign_group_name')",
+	"campaign:id":         "linkedin_documents.campaign_id",
+	"campaign_group:id":   "linkedin_documents.campaign_group_id",
+	"creative:id":         "linkedin_documents.creative_id",
+}
 var linkedinMetricsToOperation = map[string]string{
 	"impressions": "sum",
 	"clicks":      "sum",
@@ -893,7 +900,6 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 func buildWhereConditionForGBTForLinkedin(groupByCombinations []map[string]interface{}) (string, []interface{}) {
 	whereConditionForGBT := ""
 	params := make([]interface{}, 0)
-	filterStringFacebook := "linkedin_documents"
 	filterStringSmartPropertiesCampaign := "campaign.properties"
 	filterStringSmartPropertiesAdGroup := "ad_group.properties"
 	for _, groupByCombination := range groupByCombinations {
@@ -902,24 +908,24 @@ func buildWhereConditionForGBTForLinkedin(groupByCombinations []map[string]inter
 			filterString := ""
 			if strings.HasPrefix(dimension, model.CampaignPrefix) {
 				key := fmt.Sprintf(`%s:%s`, "campaign_group", strings.TrimPrefix(dimension, model.CampaignPrefix))
-				currentFilterKey, isPresent := objectToValueInLinkedinFiltersMapping[key]
+				currentFilterKey, isPresent := objectToValueInLinkedinFiltersMappingWithLinkedinDocuments[key]
 				if isPresent {
-					filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+					filterString = currentFilterKey
 				} else {
 					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s, '%s')", filterStringSmartPropertiesCampaign, strings.TrimPrefix(dimension, model.CampaignPrefix))
 				}
 			} else if strings.HasPrefix(dimension, model.AdgroupPrefix) {
 				key := fmt.Sprintf(`%s:%s`, "campaign", strings.TrimPrefix(dimension, model.AdgroupPrefix))
-				currentFilterKey, isPresent := objectToValueInLinkedinFiltersMapping[key]
+				currentFilterKey, isPresent := objectToValueInLinkedinFiltersMappingWithLinkedinDocuments[key]
 				if isPresent {
-					filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+					filterString = currentFilterKey
 				} else {
 					filterString = fmt.Sprintf("JSON_EXTRACT_STRING(%s, '%s')", filterStringSmartPropertiesAdGroup, strings.TrimPrefix(dimension, model.AdgroupPrefix))
 				}
 			} else {
 				key := fmt.Sprintf(`%s:%s`, "creative", strings.TrimPrefix(dimension, model.KeywordPrefix))
-				currentFilterKey := objectToValueInLinkedinFiltersMapping[key]
-				filterString = fmt.Sprintf("%s.%s", filterStringFacebook, currentFilterKey)
+				currentFilterKey := objectToValueInLinkedinFiltersMappingWithLinkedinDocuments[key]
+				filterString = currentFilterKey
 			}
 			if whereConditionForEachCombination == "" {
 				if value != nil {
