@@ -41,7 +41,7 @@ const LinkedEventsBlock = ({
         }
         assignFilterProps.user = userProperties;
         setFilterProperties(assignFilterProps);
-    }, [userProperties, eventProperties]);
+    }, [userProperties, eventProperties, linkEvent]);
 
     const toggleEventSelect = () => {
         setSelectVisible(!selectVisible);

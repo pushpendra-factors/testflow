@@ -26,7 +26,7 @@ const EventGroupBlock = ({
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'Event Properties',
-      icon: 'mouseclick',
+      icon: 'event',
       values: [],
     },
     {
@@ -153,7 +153,7 @@ const EventGroupBlock = ({
 
     return (
       <>
-        <Button type={'link'} className={'ml-2'}>
+        <Button icon={<SVG name={groupByEvent.prop_category} size={16} color={'purple'} />} type={'link'} className={'ml-2'}>
           {propName}
         </Button>
         {renderGroupPropertyOptions(groupByEvent)}

@@ -194,7 +194,7 @@ const UserplusSVG = ({ size = 16, color, extraClass }) => {
   );
 };
 
-const MouseclickSVG = ({ size = 16, color, extraClass }) => {
+const EventSVG = ({ size = 16, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M9.00938 5.97325L6.9889 1.36475C6.85421 1.05752 6.49263 0.916356 6.18539 1.05105C5.87816 1.18575 5.73699 1.54733 5.87169 1.85457L7.89217 6.46307C8.02687 6.7703 8.38845 6.91147 8.69568 6.77677C9.00291 6.64207 9.14408 6.28049 9.00938 5.97325Z" fill={color} />
@@ -1586,6 +1586,18 @@ const ClearbitLogoSVG = ({ size = 24, extraClass }) => {
   );
 };
 
+const DashboardSVG = ({ size = 20, color, extraClass }) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M6 6V9.96927H9V6H6ZM5 4C4.44772 4 4 4.44772 4 5V10.9693C4 11.5216 4.44772 11.9693 5 11.9693H10C10.5523 11.9693 11 11.5216 11 10.9693V5C11 4.44772 10.5523 4 10 4H5Z" fill={color} />
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M6 15.9693V17.9693H9V15.9693H6ZM5 13.9693C4.44772 13.9693 4 14.417 4 14.9693V18.9693C4 19.5216 4.44772 19.9693 5 19.9693H10C10.5523 19.9693 11 19.5216 11 18.9693V14.9693C11 14.417 10.5523 13.9693 10 13.9693H5Z" fill={color} />
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M15.093 6V7.96927H18V6H15.093ZM14.093 4C13.5407 4 13.093 4.44772 13.093 5V8.96927C13.093 9.52155 13.5407 9.96927 14.093 9.96927H19C19.5523 9.96927 20 9.52155 20 8.96927V5C20 4.44772 19.5523 4 19 4H14.093Z" fill={color} />
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M15.093 13.9693V17.9693H18V13.9693H15.093ZM14.093 11.9693C13.5407 11.9693 13.093 12.417 13.093 12.9693V18.9693C13.093 19.5216 13.5407 19.9693 14.093 19.9693H19C19.5523 19.9693 20 19.5216 20 18.9693V12.9693C20 12.417 19.5523 11.9693 19 11.9693H14.093Z" fill={color} />
+    </svg>
+
+  )
+}
+
 const ScatterplotchartSVG = ({ size = 20, color = '#8692A3', extraClass }) => {
   return (
     <svg
@@ -1674,7 +1686,7 @@ export {
   LockSVG,
   GlobeSVG,
   UserplusSVG,
-  MouseclickSVG,
+  EventSVG,
   SaveSVG,
   BreadcrumbSVG,
   SpikeupSVG,
@@ -1734,6 +1746,7 @@ export {
   Most_recentSVG,
   OthersSVG,
   ClearbitLogoSVG,
+  DashboardSVG,
   ScatterplotchartSVG,
   ThumbsUpSVG,
   ThumbsDownSVG,

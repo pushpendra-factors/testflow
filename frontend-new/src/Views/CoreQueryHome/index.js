@@ -101,6 +101,7 @@ const columns = [
   {
     title: 'Created By',
     dataIndex: 'author',
+    width: 240,
     key: 'author',
     render: (text) => (
       <div className='flex items-center'>
@@ -112,6 +113,7 @@ const columns = [
   {
     title: 'Date',
     dataIndex: 'date',
+    width: 240,
     key: 'date',
   },
 ];
@@ -356,18 +358,18 @@ function CoreQuery({
   const getMenu = (row) => {
     return (
       <Menu>
-        <Menu.Item key='0'>
-          <a onClick={handleViewResult.bind(this, row)} href='#!'>
+        <Menu.Item key="0">
+          <a onClick={handleViewResult.bind(this, row)} href="#!">
             View Report
           </a>
         </Menu.Item>
-        <Menu.Item key='1'>
-          <a onClick={(e) => e.stopPropagation()} href='#!'>
+        <Menu.Item key="1">
+          {/* <a onClick={(e) => e.stopPropagation()} href="#!">
             Copy Link
           </a>
         </Menu.Item>
-        <Menu.Item key='2'>
-          <a onClick={handleDelete.bind(this, row)} href='#!'>
+        <Menu.Item key="2"> */}
+          <a onClick={handleDelete.bind(this, row)} href="#!">
             Delete Report
           </a>
         </Menu.Item>
@@ -578,7 +580,7 @@ function CoreQuery({
                 className='fa-table--basic'
                 columns={columns}
                 dataSource={data}
-                pagination={process.env.NODE_ENV === 'development'}
+                pagination={true}
                 rowClassName='cursor-pointer'
               />
             </Col>
