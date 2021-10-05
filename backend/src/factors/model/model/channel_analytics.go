@@ -271,7 +271,9 @@ func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [
 				groupByCombination[column] = resultRow[index]
 			}
 		}
-		groupByCombinations = append(groupByCombinations, groupByCombination)
+		if len(groupByCombination) != 0 {
+			groupByCombinations = append(groupByCombinations, groupByCombination)
+		}
 	}
 	return groupByCombinations
 }
