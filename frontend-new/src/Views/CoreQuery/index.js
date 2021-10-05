@@ -825,7 +825,7 @@ function CoreQuery({
         eventName: q,
         index,
         mapper: `event${index + 1}`,
-        displayName: eventNames[q],
+        displayName: eventNames[q]? eventNames[q] : q,
       };
     });
   }, [appliedQueries, eventNames]);

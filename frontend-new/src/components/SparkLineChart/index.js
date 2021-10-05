@@ -35,7 +35,7 @@ function SparkLineChart({
             arrayMapper={arrayMapper}
             cardSize={cardSize}
             colors={colors}
-            legends={queries}
+            legends={queries.map((q) => arrayMapper.find((elem) => elem.eventName === q)?.displayName)}
           />
         ) : null}
         {queries.slice(0, count).map((q, index) => {
@@ -91,7 +91,7 @@ function SparkLineChart({
                 <div className="flex flex-col">
                   <ChartHeader
                     total={total}
-                    query={q}
+                    query={arrayMapper.find((elem) => elem.eventName === q)?.displayName}
                     bgColor={appliedColors[index]}
                   />
                   <div className="mt-8">
@@ -118,7 +118,7 @@ function SparkLineChart({
                 <div className="flex flex-col">
                   <ChartHeader
                     total={total}
-                    query={q}
+                    query={arrayMapper.find((elem) => elem.eventName === q).displayName}
                     bgColor={appliedColors[index]}
                     smallFont={true}
                   />

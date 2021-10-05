@@ -881,9 +881,13 @@ func buildWhereConditionForGBTForFacebook(groupByCombinations []map[string]inter
 			}
 		}
 		if whereConditionForGBT == "" {
-			whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+			if whereConditionForEachCombination != "" {
+				whereConditionForGBT = "(" + whereConditionForEachCombination + ")"
+			}
 		} else {
-			whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+			if whereConditionForEachCombination != "" {
+				whereConditionForGBT += (" OR (" + whereConditionForEachCombination + ")")
+			}
 		}
 	}
 

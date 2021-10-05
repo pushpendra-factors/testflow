@@ -54,3 +54,23 @@
     }
   }
 }
+
+.expand_icon {
+  visibility: hidden;
+}
+
+.widgetCard {
+  border-bottom: 2px solid rgb(231,233,237);
+  &_text:hover {
+    text-decoration: underline;
+    .expand_icon {
+      visibility: visible;
+    }
+  }
+}
+
+.operations {
+  position: absolute;
+  top:0;
+  right: 42px;
+}

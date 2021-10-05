@@ -14,6 +14,8 @@ import styles from "./index.module.scss";
 import NoDataChart from '../../components/NoDataChart';
 import { SVG, FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
+// import InfoCard from '../../components/InfoCard';
+// import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 
 const { TabPane } = Tabs;
 
@@ -169,7 +171,7 @@ function ProjectTabs({
 
   const operations = (
     <>
-      <Button type="text"  onClick={() => setaddDashboardModal(true)}  icon={<SVG name="plus" size={16} color={'grey'} />}/>
+      <Button className={styles.operations} type="text" onClick={() => setaddDashboardModal(true)}  icon={<SVG name="plus" size={16} color={'grey'} />}/>
       {/* <Button type="text" icon={<SVG name="edit" size={16} color={'grey'} />} /> */}
     </>
   );
@@ -188,8 +190,16 @@ function ProjectTabs({
         <NoDataChart />
       </div>
     );
-  } 
-  
+  }
+
+  // const Footer = (type) => {
+  //   if (type === 'pr') {
+  //     return (<div className={''}> <LockOutlined/> Private </div>);
+  //   } if (type === 'pv') {
+  //     return (<div className={''}> <UnlockOutlined/> Public </div>);
+  //   }
+  // };
+
   if (dashboards.data.length) {
     return (
       <>

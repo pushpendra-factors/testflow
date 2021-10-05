@@ -23,7 +23,7 @@ function ChartLegends({
     <div className={parentClassName}>
       {legends.slice(0, itemsCount).map((legend, index) => {
         let label = arrayMapper.find((elem) => elem.mapper === legend)
-          .eventName;
+          .displayName;
         if (
           label.length > charts_legend_length[cardSize] &&
           section === DASHBOARD_WIDGET_SECTION

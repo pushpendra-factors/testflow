@@ -235,8 +235,8 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
         },
       ];
       if (
-        events.length === 1 &&
         queryType === QUERY_TYPE_EVENT &&
+        events.length === 1 &&
         breakdownLength <= 3
       ) {
         // this chart type is only supported when there is atmost one event and there is atleast 1 breakdown and atmost 3 breakdowns

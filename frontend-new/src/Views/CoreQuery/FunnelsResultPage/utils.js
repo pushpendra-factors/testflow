@@ -158,7 +158,7 @@ export const formatData = (response, arrayMapper) => {
 
       const percent = calculatePercentage(row[eventIdx], row[firstEventIdx]);
 
-      groupEventData[`${am.eventName}-${idx}`] = {
+      groupEventData[`${am.displayName}-${idx}`] = {
         percentage: percent,
         value: row[eventIdx],
       };
@@ -410,17 +410,17 @@ export const generateTableColumns = (
     eventColumns.push({
       title: isBreakdownApplied
         ? getClickableTitleSorter(
-            arrayMapper[index].eventName,
+            arrayMapper[index].displayName,
             {
-              key: `${arrayMapper[index].eventName}-${index}`,
+              key: `${arrayMapper[index].displayName}-${index}`,
               type: 'numerical',
               subtype: null,
             },
             currentSorter,
             handleSorting
           )
-        : arrayMapper[index].eventName,
-      dataIndex: `${arrayMapper[index].eventName}-${index}`,
+        : arrayMapper[index].displayName,
+      dataIndex: `${arrayMapper[index].displayName}-${index}`,
       width: 200,
       render: (d) => RenderEventData(d, breakdown, isComparisonApplied),
     });
@@ -483,7 +483,7 @@ export const generateTableData = (
       comparisonChartDurations
     );
     queries.forEach((_, index) => {
-      queryData[`${arrayMapper[index].eventName}-${index}`] = {
+      queryData[`${arrayMapper[index].displayName}-${index}`] = {
         percentage: data[index].value,
         value: data[index].netCount,
         compare_percent:
@@ -687,9 +687,9 @@ export const getAxisMetricOptions = (arrayMapper) => {
   for (let i = 0; i < arrayMapper.length; i++) {
     result.push({
       title: `${
-        arrayMapper[i].eventName || arrayMapper[i].eventName
+        arrayMapper[i].displayName || arrayMapper[i].displayName
       } (Event ${i + 1})`,
-      value: `${arrayMapper[i].eventName || arrayMapper[i].eventName}-${i}`,
+      value: `${arrayMapper[i].displayName || arrayMapper[i].displayName}-${i}`,
     });
     if (i < arrayMapper.length - 1) {
       result.push({

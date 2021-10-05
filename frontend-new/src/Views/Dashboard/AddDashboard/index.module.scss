@@ -19,6 +19,13 @@
     font-weight: 500 !important;
 }
 
+.searchBar {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    z-index: 1;
+}
+
 .searchInput {
     border: none;
     box-shadow: none;
