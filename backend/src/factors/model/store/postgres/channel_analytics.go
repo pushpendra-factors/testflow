@@ -429,9 +429,10 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 }
 
 func (pg *Postgres) getIndividualChannelsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, int) {
-	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := pg.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
-	facebookSQL, facebookParams, facebookSelectKeys, facebookMetrics, facebookErr := pg.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
-	linkedinSQL, linkedinParams, linkedinSelectKeys, linkedinMetrics, linkedinErr := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
+	isGroupBytimestamp := query.GetGroupByTimestamp() != ""
+	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := pg.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
+	facebookSQL, facebookParams, facebookSelectKeys, facebookMetrics, facebookErr := pg.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
+	linkedinSQL, linkedinParams, linkedinSelectKeys, linkedinMetrics, linkedinErr := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
 	finalKeys := make([]string, 0, 0)
 	finalMetrics := make([]string, 0, 0)
 

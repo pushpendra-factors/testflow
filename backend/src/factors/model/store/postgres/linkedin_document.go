@@ -478,18 +478,6 @@ func (pg *Postgres) GetLinkedinSQLQueryAndParametersForFilterValues(projectID ui
 func (pg *Postgres) ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
-	// sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource)
-	// if errCode != http.StatusOK {
-	// 	return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
-	// }
-	// _, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
-	// columns := append(selectKeys, selectMetrics...)
-	// if err != nil {
-	// 	logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.LinkedinSpecificError)
-	// 	return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
-	// }
-	// return columns, resultMetrics, http.StatusOK
-	// log.Info("Initial ", query.GroupBy)
 
 	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID,
@@ -540,11 +528,8 @@ func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64,
 	var selectKeys []string
 	var params []interface{}
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
-	log.Info("Initial", query.GroupBy)
 	transformedQuery, customerAccountID, err := pg.transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID, *query, reqID)
-	// if isGroupByTimestamp {
-	// 	log.Info("Hello123 ", transformedQuery)
-	// }
+
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.LinkedinSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
@@ -581,13 +566,11 @@ func (pg *Postgres) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(proj
 	if customerAccountID == "" || len(customerAccountID) == 0 {
 		return &model.ChannelQueryV1{}, "", errors.New(integrationNotAvailable)
 	}
-	log.Info("query_before ", query)
 	transformedQuery, err = convertFromRequestToLinkedinSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
 		return &model.ChannelQueryV1{}, "", err
 	}
-	log.Info("query_after ", query)
 	return &transformedQuery, customerAccountID, nil
 }
 
@@ -637,7 +620,7 @@ func getLinkedinSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model
 
 		}
 		filters = append(filters, model.ChannelFilterV1{Object: filterObject, Property: requestFilter.Property, Condition: requestFilter.Condition,
-			Value: requestFilter.Condition, LogicalOp: requestFilter.LogicalOp})
+			Value: requestFilter.Value, LogicalOp: requestFilter.LogicalOp})
 	}
 	return filters, nil
 }
