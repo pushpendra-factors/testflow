@@ -507,6 +507,38 @@ export const SortResults = (result, currentSorter) => {
   return result;
 };
 
+
+export const formatFilterDate = (selectedDates) => {
+  const parsedVal = JSON.parse(selectedDates);
+  const fromDateKey = parsedVal.fr ? 'fr' : 'from';
+  const toDateKey = 'to';
+  const fromDate = parsedVal[fromDateKey];
+  const toDate = parsedVal[toDateKey];
+  const convertedKeys = {};
+  if (fromDate) {
+    const fr = isDateInMilliSeconds(fromDate)
+      ? moment(fromDate).utc().unix()
+      : fromDate;
+    convertedKeys[fromDateKey] = fr;
+  }
+  if (toDate) {
+    const to = isDateInMilliSeconds(toDate)
+      ? moment(toDate).utc().unix()
+      : toDate;
+    convertedKeys[toDateKey] = to;
+  }
+
+  const convertedVal = {
+    ...parsedVal,
+    ...convertedKeys,
+  };
+  return JSON.stringify(convertedVal);
+};
+
+function isDateInMilliSeconds(date) {
+  return date.toString().length === 13;
+}
+
 export const getBreakdownDisplayTitle = (
   breakdown,
   userPropNames,
@@ -532,3 +564,4 @@ export const Wait = (duration) => {
     }, duration);
   });
 };
+

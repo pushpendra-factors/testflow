@@ -16,11 +16,24 @@ import {
 import {
   getItemFromLocalStorage,
   setItemToLocalStorage,
+  formatFilterDate,
 } from '../../utils/dataFormatter';
 import {
   DashboardDefaultDateRangeFormat,
   DefaultDateRangeFormat,
 } from '../CoreQuery/utils';
+
+const formatFilters = (pr) => {
+  return pr.map((p) => {
+    if (p.ty === 'datetime') {
+      return {
+        ...p,
+        va: formatFilterDate(p.va),
+      };
+    }
+    return p;
+  });
+};
 
 export const getDataFromServer = (
   query,
@@ -36,7 +49,7 @@ export const getDataFromServer = (
     let queryGroup = query.query.query_group;
     if (durationObj.from && durationObj.to) {
       queryGroup = queryGroup.map((elem) => {
-        return {
+        const obj = {
           ...elem,
           fr: MomentTz(durationObj.from).startOf('day').utc().unix(),
           to: MomentTz(durationObj.to).endOf('day').utc().unix(),
@@ -46,10 +59,21 @@ export const getDataFromServer = (
               : durationObj.frequency
             : '',
         };
+        if (!isCampaignQuery) {
+          obj.ewp = obj.ewp.map((e) => {
+            const pr = formatFilters(e.pr);
+            return {
+              ...e,
+              pr,
+            };
+          });
+          obj.gup = formatFilters(obj.gup);
+        }
+        return obj;
       });
     } else {
       queryGroup = queryGroup.map((elem) => {
-        return {
+        const obj = {
           ...elem,
           fr: MomentTz().startOf('week').utc().unix(),
           to:
@@ -62,6 +86,17 @@ export const getDataFromServer = (
               : durationObj.frequency
             : '',
         };
+        if (!isCampaignQuery) {
+          obj.ewp = obj.ewp.map((e) => {
+            const pr = formatFilters(e.pr);
+            return {
+              ...e,
+              pr,
+            };
+          });
+          obj.gup = formatFilters(obj.gup);
+        }
+        return obj;
       });
     }
     if (isCampaignQuery) {
@@ -127,6 +162,14 @@ export const getDataFromServer = (
             ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
             : MomentTz().utc().unix(),
       };
+      funnelQuery.ewp = funnelQuery.ewp.map((e) => {
+        const pr = formatFilters(e.pr);
+        return {
+          ...e,
+          pr,
+        };
+      });
+      funnelQuery.gup = formatFilters(funnelQuery.gup);
     }
     return getFunnelData(activeProjectId, funnelQuery, {
       refresh,
