@@ -61,13 +61,13 @@ export const getDataFromServer = (
         };
         if (!isCampaignQuery) {
           obj.ewp = obj.ewp.map((e) => {
-            const pr = formatFilters(e.pr);
+            const pr = formatFilters(e.pr || []);
             return {
               ...e,
               pr,
             };
           });
-          obj.gup = formatFilters(obj.gup);
+          obj.gup = formatFilters(obj.gup || []);
         }
         return obj;
       });
@@ -88,13 +88,13 @@ export const getDataFromServer = (
         };
         if (!isCampaignQuery) {
           obj.ewp = obj.ewp.map((e) => {
-            const pr = formatFilters(e.pr);
+            const pr = formatFilters(e.pr || []);
             return {
               ...e,
               pr,
             };
           });
-          obj.gup = formatFilters(obj.gup);
+          obj.gup = formatFilters(obj.gup || []);
         }
         return obj;
       });
@@ -163,13 +163,13 @@ export const getDataFromServer = (
             : MomentTz().utc().unix(),
       };
       funnelQuery.ewp = funnelQuery.ewp.map((e) => {
-        const pr = formatFilters(e.pr);
+        const pr = formatFilters(e.pr || []);
         return {
           ...e,
           pr,
         };
       });
-      funnelQuery.gup = formatFilters(funnelQuery.gup);
+      funnelQuery.gup = formatFilters(funnelQuery.gup || []);
     }
     return getFunnelData(activeProjectId, funnelQuery, {
       refresh,
