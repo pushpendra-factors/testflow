@@ -68,9 +68,7 @@ function DashboardSubMenu({
         </Text>
         <FaDatepicker
           nowPicker={dashboard?.name === 'Website Analytics' ? true : false}
-          customPicker
           presetRange
-          monthPicker
           range={{
             startDate: durationObj.from,
             endDate: durationObj.to,
