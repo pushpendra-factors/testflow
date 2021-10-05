@@ -504,6 +504,10 @@ func SanitizeQueryResult(result *model.QueryResult, query *model.Query) error {
 	if isGroupByTypeWithBuckets(query.GroupByProperties) {
 		sanitizeNumericalBucketRanges(result, query)
 	}
+
+	if model.HasGroupByDateTypeProperties(query.GroupByProperties) {
+		model.SanitizeDateTypeRows(result, query)
+	}
 	return nil
 }
 

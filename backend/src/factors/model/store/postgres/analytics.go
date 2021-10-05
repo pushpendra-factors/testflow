@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -340,15 +339,6 @@ func isGroupByTypeWithBuckets(groupProps []model.QueryGroupByProperty) bool {
 				// Empty condition for backward compatibility as existing queries will not have GroupByType.
 				return true
 			}
-		}
-	}
-	return false
-}
-
-func hasGroupByDateTypeProperties(groupProps []model.QueryGroupByProperty) bool {
-	for _, groupByProp := range groupProps {
-		if groupByProp.Type == U.PropertyTypeDateTime {
-			return true
 		}
 	}
 	return false
@@ -1036,42 +1026,6 @@ func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query
 			}
 			sanitizedProperties[gbp.Property] = true
 		}
-	}
-}
-
-// Adds timezone offset to dateType row value for dateType row.
-func sanitizeDateTypeRows(result *model.QueryResult, query *model.Query) {
-	headerIndexMap := make(map[string][]int)
-	for index, header := range result.Headers {
-		// If same group by is added twice, it will appear twice in headers.
-		// Keep as a list to sanitize both indexes.
-		headerIndexMap[header] = append(headerIndexMap[header], index)
-	}
-
-	alreadySanitizedProperties := make(map[string]bool)
-	for _, gbp := range query.GroupByProperties {
-		if gbp.Type == U.PropertyTypeDateTime {
-			if _, sanitizedAlready := alreadySanitizedProperties[gbp.Property]; sanitizedAlready {
-				continue
-			}
-			indexesToSanitize := headerIndexMap[gbp.Property]
-			for _, indexToSanitize := range indexesToSanitize {
-				sanitizeDateTypeForSpecificIndex(query, result.Rows, indexToSanitize)
-			}
-			alreadySanitizedProperties[gbp.Property] = true
-		}
-	}
-}
-
-func sanitizeDateTypeForSpecificIndex(query *model.Query, rows [][]interface{}, indexToSanitize int) {
-
-	for index, row := range rows {
-		if (query.Class == model.QueryClassFunnel && index == 0) || row[indexToSanitize].(string) == "" {
-			// For funnel queries, first row is $no_group query. Skip sanitization.
-			continue
-		}
-		currentValueInTimeFormat, _ := time.Parse(U.DATETIME_FORMAT_DB, row[indexToSanitize].(string))
-		row[indexToSanitize] = U.GetTimestampAsStrWithTimezone(currentValueInTimeFormat, query.Timezone)
 	}
 }
 

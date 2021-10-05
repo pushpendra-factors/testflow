@@ -199,9 +199,12 @@ func GetDateFilter(qP model.QueryProperty, propertyEntity string, property strin
 		log.WithError(err).Error("Failed reading timestamp on user join query.")
 		return "", nil, err
 	}
-	if qP.Operator == model.BeforeStr || qP.Operator == model.NotInLastStr {
+	if qP.Operator == model.BeforeStr {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) < ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.To)
+	} else if qP.Operator == model.NotInLastStr {
+		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) < ?)", propertyEntity)
+		resultParams = append(resultParams, property, dateTimeValue.From)
 	} else if qP.Operator == model.SinceStr || qP.Operator == model.InLastStr {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) >= ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From)
