@@ -165,7 +165,7 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
   });
   const eventIndices = [];
   const resultantData = arrayMapper.map((m) => {
-    eventIndices.push(headers.findIndex((header) => m.displayName === header));
+    eventIndices.push(headers.findIndex((header) => m.displayName === (eventNames[header]? eventNames[header] : header)));
     return {
       name: m.displayName? m.displayName : eventNames[m.eventName] || m.eventName,
       data: [...initializedDatesData],
