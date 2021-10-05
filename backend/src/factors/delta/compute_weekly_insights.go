@@ -93,6 +93,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 	propertyMap = make(map[string]bool)
 	var insights WeeklyInsights
 	insights.Insights = make([]ActualMetrics, 0)
+	ZeroFlag:= true // flag to check if overall W1||W2 is 0.
 	if EventType == Funnel || EventType == WebsiteEvent {
 		insights.InsightsType = "ConvAndDist"
 		if EventType == WebsiteEvent {
@@ -162,6 +163,9 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		}
 	}
 	var valWithDetailsArr []ValueWithDetails
+	if insights.Goal.W1 == float64(0) || insights.Goal.W2 == float64(0) {
+		ZeroFlag = false
+	}
 	// for conversion
 	if EventType == Funnel || EventType == WebsiteEvent {
 		for keys := range file.BaseAndTarget.FeatureMetrics {
@@ -185,13 +189,19 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if file.BaseAndTarget.FeatureMetrics[keys][keys2].First != nil {
 						temp.W1 = file.BaseAndTarget.FeatureMetrics[keys][keys2].First.(float64)
+						if temp.W1 == float64(0) && ZeroFlag {
+							continue
+						}
 					} else {
-						temp.W1 = 0
+						continue
 					}
 					if file.BaseAndTarget.FeatureMetrics[keys][keys2].Second != nil {
 						temp.W2 = file.BaseAndTarget.FeatureMetrics[keys][keys2].Second.(float64)
+						if temp.W2 == float64(0) && ZeroFlag {
+							continue
+						}
 					} else {
-						temp.W2 = 0
+						continue
 					}
 					if _, exists := file.BaseAndTarget.FeatureMetrics[keys][keys2]; exists {
 						temp.Per = file.BaseAndTarget.FeatureMetrics[keys][keys2].PercentChange
@@ -320,13 +330,19 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if file.Target.FeatureMetrics[keys][keys2].First != nil {
 						temp.W1 = file.Target.FeatureMetrics[keys][keys2].First.(float64)
+						if temp.W1 == float64(0) && ZeroFlag {
+							continue
+						}
 					} else {
-						temp.W1 = 0
+						continue
 					}
 					if file.Target.FeatureMetrics[keys][keys2].Second != nil {
 						temp.W2 = file.Target.FeatureMetrics[keys][keys2].Second.(float64)
+						if temp.W2 == float64(0) && ZeroFlag {
+							continue
+						}
 					} else {
-						temp.W2 = 0
+						continue
 					}
 					if _, exists := file.Target.FeatureMetrics[keys][keys2]; exists {
 						temp.Per = file.Target.FeatureMetrics[keys][keys2].PercentChange
@@ -381,13 +397,19 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if file.BaseAndTarget.FeatureMetrics[keys][keys2].First != nil {
 						temp.W1 = file.BaseAndTarget.FeatureMetrics[keys][keys2].First.(float64)
+						if temp.W1 == float64(0) && ZeroFlag {
+							continue
+						}
 					} else {
-						temp.W1 = 0
+						continue
 					}
 					if file.BaseAndTarget.FeatureMetrics[keys][keys2].Second != nil {
 						temp.W2 = file.BaseAndTarget.FeatureMetrics[keys][keys2].Second.(float64)
+						if temp.W2 == float64(0) && ZeroFlag {
+							continue
+						}
 					} else {
-						temp.W2 = 0
+						continue
 					}
 					if _, exists := file.BaseAndTarget.FeatureMetrics[keys][keys2]; exists {
 						temp.Per = file.BaseAndTarget.FeatureMetrics[keys][keys2].PercentChange
@@ -541,16 +563,28 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 		"$day_of_week":                 true,
 		"$page_raw_url":                true,
 		"$initial_page_domain":         true,
-		"$latest_page_domain":          true,
 		"$timestamp":                   true,
 		"$initial_page_raw_url":        true,
-		"$latest_page_raw_url":         true,
 		"$session_latest_page_raw_url": true,
+		"$session_latest_page_url":     true,
 		"$gclid":                       true,
 		"$hubspot_contact_hs_calculated_form_submissions": true,
-		"$latest_gclid":  true,
-		"$initial_gclid": true,
-		"$joinTime":      true,
+		"$latest_gclid":               true,
+		"$initial_gclid":              true,
+		"$joinTime":                   true,
+		"$ip":                         true,
+		"$latest_referrer":            true,
+		"$latest_referrer_url":        true,
+		"$initial_referrer":           true,
+		"$initial_referrer_url":       true,
+		"$referrer":                   true,
+		"$referrer_url":               true,
+		"$latest_page_url":            true,
+		"$latest_page_domain":         true,
+		"$latest_page_raw_url":        true,
+		"$latest_page_load_time":      true,
+		"$latest_page_spent_time":     true,
+		"$latest_page_scroll_percent": true,
 	}
 	WhiteListedKeys = make(map[string]bool)
 	WhiteListedKeysOtherQuery = make(map[string]bool)
@@ -567,6 +601,10 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 
 func addGroupByProperties(query model.Query, EventType string, file CrossPeriodInsights, insights WeeklyInsights) []ActualMetrics {
 	ActualMetricsArr := make([]ActualMetrics, 0)
+	ZeroFlag:= true
+	if insights.Goal.W1 == float64(0) || insights.Goal.W2 == float64(0) {
+		ZeroFlag = false
+	}
 	for _, gbp := range query.GroupByProperties {
 		var properties []string
 		if gbp.Entity == model.PropertyEntityUser {
@@ -591,9 +629,19 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if file.BaseAndTarget.FeatureMetrics[property][values].First != nil {
 							temp.W1 = file.BaseAndTarget.FeatureMetrics[property][values].First.(float64)
+							if temp.W1 == float64(0) && ZeroFlag {
+								continue
+							}
+						} else {
+							continue
 						}
 						if file.BaseAndTarget.FeatureMetrics[property][values].Second != nil {
 							temp.W2 = file.BaseAndTarget.FeatureMetrics[property][values].Second.(float64)
+							if temp.W2 == float64(0) && ZeroFlag {
+								continue
+							}
+						} else {
+							continue
 						}
 						if _, exists := file.BaseAndTarget.FeatureMetrics[property][values]; exists {
 							temp.Per = file.BaseAndTarget.FeatureMetrics[property][values].PercentChange
@@ -682,9 +730,19 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if file.Target.FeatureMetrics[property][values].First != nil {
 							temp.W1 = file.Target.FeatureMetrics[property][values].First.(float64)
+							if temp.W1 == float64(0) && ZeroFlag {
+								continue
+							}
+						} else {
+							continue
 						}
 						if file.Target.FeatureMetrics[property][values].Second != nil {
 							temp.W2 = file.Target.FeatureMetrics[property][values].Second.(float64)
+							if temp.W2 == float64(0) && ZeroFlag {
+								continue
+							}
+						} else {
+							continue
 						}
 						if _, exists := file.Target.FeatureMetrics[property][values]; exists {
 							temp.Per = file.Target.FeatureMetrics[property][values].PercentChange
@@ -730,9 +788,19 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if file.BaseAndTarget.FeatureMetrics[property][values].First != nil {
 							temp.W1 = file.BaseAndTarget.FeatureMetrics[property][values].First.(float64)
+							if temp.W1 == float64(0) && ZeroFlag {
+								continue
+							}
+						} else {
+							continue
 						}
 						if file.BaseAndTarget.FeatureMetrics[property][values].Second != nil {
 							temp.W2 = file.BaseAndTarget.FeatureMetrics[property][values].Second.(float64)
+							if temp.W2 == float64(0) && ZeroFlag {
+								continue
+							}
+						} else {
+							continue
 						}
 						if _, exists := file.BaseAndTarget.FeatureMetrics[property][values]; exists {
 							temp.Per = file.BaseAndTarget.FeatureMetrics[property][values].PercentChange
