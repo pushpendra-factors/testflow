@@ -85,6 +85,10 @@ func (dd *DiskDriver) GetProjectEventFileDir(projectId uint64, startTimestamp in
 	return fmt.Sprintf("%s/projects/%d/events/%s/%s/", dd.baseDir, projectId, modelType, dateFormatted)
 }
 
+func (dd *DiskDriver) GetProjectDir(projectId uint64) string {
+	return fmt.Sprintf("%s/projects/%d/", dd.baseDir, projectId)
+}
+
 func (dd *DiskDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := dd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
@@ -93,6 +97,23 @@ func (dd *DiskDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint64
 func (dd *DiskDriver) GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
 	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, fmt.Sprintf("events.txt")
+}
+
+func (dd *DiskDriver) GetModelEventsBucketingFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, fmt.Sprintf("events_bucketed.txt")
+}
+
+// If we have two different files for last week and this week, we might end up having non-overlapping ranges.
+// So keeping one for this week and other as master. If it exists in master pick that else this week, or compute now
+func (dd *DiskDriver) GetMasterNumericalBucketsFile(projectId uint64) (string, string) {
+	path := dd.GetProjectDir(projectId)
+	return path, fmt.Sprintf("numerical_buckets_master.txt")
+}
+
+func (dd *DiskDriver) GetModelEventsNumericalBucketsFile(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, fmt.Sprintf("numerical_buckets.txt")
 }
 
 func (dd *DiskDriver) GetPatternChunksDir(projectId, modelId uint64) string {

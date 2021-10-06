@@ -378,3 +378,11 @@ pack-weekly-insights:
 upload-weekly-insights: export IMAGE_NAME=weekly-insights-job
 upload-weekly-insights: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/weekly-insights-job:$(TAG)
+
+
+pack-numerical-bucketing:
+	docker build -t us.gcr.io/factors-$(ENV)/numerical-bucketing-job:$(TAG) -f Dockerfile.numerical_bucketing_job .
+
+upload-numerical-bucketing: export IMAGE_NAME=numerical-bucketing-job
+upload-numerical-bucketing: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/numerical-bucketing-job:$(TAG)

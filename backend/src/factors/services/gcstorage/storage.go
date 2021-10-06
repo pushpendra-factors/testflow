@@ -78,6 +78,10 @@ func (gcsd *GCSDriver) GetProjectEventFileDir(projectId uint64, startTimestamp i
 	return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
 }
 
+func (gcsd *GCSDriver) GetProjectDir(projectId uint64) string {
+	return fmt.Sprintf("projects/%d/events/", projectId)
+}
+
 func (gcsd *GCSDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
@@ -86,6 +90,21 @@ func (gcsd *GCSDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint6
 func (gcsd *GCSDriver) GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
 	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, fmt.Sprintf("events.txt")
+}
+
+func (gcsd *GCSDriver) GetModelEventsBucketingFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, fmt.Sprintf("events_bucketed.txt")
+}
+
+func (gcsd *GCSDriver) GetMasterNumericalBucketsFile(projectId uint64) (string, string) {
+	path := gcsd.GetProjectDir(projectId)
+	return path, fmt.Sprintf("numerical_buckets_master.txt")
+}
+
+func (gcsd *GCSDriver) GetModelEventsNumericalBucketsFile(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, fmt.Sprintf("numerical_buckets.txt")
 }
 
 func (gcsd *GCSDriver) GetPatternChunksDir(projectId, modelId uint64) string {
