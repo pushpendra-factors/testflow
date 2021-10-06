@@ -1258,6 +1258,8 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	CLR_COMPANY_CATEGORY_SICCODE:                 "Clearbit Company Category Sic Code",
 	CLR_COMPANY_CATEGORY_NAICSCODE:               "Clearbit Company Category Naics Code",
 	CLR_COMPANY_PARENT_DOMAIN:                    "Clearbit Company Parent Domain",
+	UP_POSTAL_CODE:                               "Postal Code",
+	UP_CONTINENT:                                 "Continent",
 }
 
 var STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES = map[string]string{
@@ -1350,6 +1352,21 @@ var USER_PROPERTIES_MERGE_TYPE_ADD = [...]string{
 }
 
 var CUSTOM_BLACKLIST_DELTA = []string{
+	"$latest_referrer",
+	"$latest_referrer_url",
+	"$initial_referrer",
+	"$initial_referrer_url",
+	"$referrer",
+	"$referrer_url",
+	"$latest_page_url",
+	"$latest_page_domain",
+	"$latest_page_raw_url",
+	"$latest_page_load_time",
+	"$latest_page_spent_time",
+	"$latest_page_scroll_percent",
+	"$ip",
+	"$timestamp",
+	"$session_latest_page_url",
 	"$browser_version",
 	"$browser_with_version",
 	"$day_of_first_event",

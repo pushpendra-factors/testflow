@@ -29,6 +29,7 @@ import {
   CHART_TYPE_HORIZONTAL_BAR_CHART,
 } from '../../utils/constants';
 import { Radio } from 'antd';
+import { formatFilterDate } from '../../utils/dataFormatter';
 
 export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
@@ -100,7 +101,7 @@ const getEventsWithProperties = (queries) => {
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
-            va: val,
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
           });
         });
       } else {
@@ -110,7 +111,10 @@ const getEventsWithProperties = (queries) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.values,
+          va:
+            fil.props[1] === 'datetime'
+              ? formatFilterDate(fil.values)
+              : fil.values,
         });
       }
     });
@@ -134,7 +138,7 @@ const getGlobalFilters = (globalFilters = []) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: val,
+          va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
         });
       });
     } else {
@@ -144,7 +148,10 @@ const getGlobalFilters = (globalFilters = []) => {
         op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
-        va: fil.values,
+        va:
+          fil.props[1] === 'datetime'
+            ? formatFilterDate(fil.values)
+            : fil.values,
       });
     }
   });
@@ -669,7 +676,10 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
-        va: filter.values,
+        va:
+          filter.props[1] === 'datetime'
+            ? formatFilterDate(filter.values)
+            : filter.values,
       });
     }
 
