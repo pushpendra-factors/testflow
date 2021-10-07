@@ -371,6 +371,24 @@ go run run_build_seq.go --project_ids=1,2 --model_type=all --look_back_days=30 -
 
 * Verify factors in action on Frontend.
 
+### Weekly insights
+ ```bash
+go run run_weekly_insights.go --weekly_enabled --project_ids=34339 --k=1 --lookback=10
+```
+
+* Whatever project_id is supplied, create /projects/<id>/events/w/<date in yyyymmdd format>/events.txt in the following location /usr/local/var/factors/cloud_storage
+* <id> - whatever projectid you are running the job with 
+* date - create for past 2 sundays since WI always looks for 2 weeks
+* events.txt - you can download from the cloudstorage in staging
+* Whatever project you are running against, make sure that exist in your local db and there are some events/funnel queries. IF not, run some tests that creates queries and use that project for running WI
+* Check output in /usr/local/var/factors/cloud_storage/projects/<id>/weeklyinsights/
+
+### Numerical bucketing
+ ```bash
+go run run_numerical_bucketing.go --weekly_enabled --project_ids=34339 -lookback=10
+```
+* Same as weekly insights. Having a week's data is sufficient. Need not have queries/project
+
 ### Enabling BigQuery for a project (Optional)
 * Make sure to have a project_id with some events. Refer above steps to ingest events data using `ingest_localytics_events.go` script if required.
 * Enable archival and bigquery in project_settings for the project.
