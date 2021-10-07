@@ -47,6 +47,15 @@ CREATE TABLE IF NOT EXISTS users (
     properties JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     properties_updated_timestamp bigint,
     join_timestamp bigint,
+    is_group_user boolean,
+    group_1_id text,
+    group_1_user_id text,
+    group_2_id text,
+    group_2_user_id text,
+    group_3_id text,
+    group_3_user_id text,
+    group_4_id text,
+    group_4_user_id text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
@@ -730,6 +739,17 @@ CREATE TABLE IF NOT EXISTS feedbacks(
     PRIMARY KEY (id,project_id),
     SHARD KEY (project_id)
     
+);
+
+CREATE ROWSTORE TABLE IF NOT EXISTS groups(
+    project_id bigint NOT NULL,
+    id int NOT NULL,
+    name text NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id),
+    PRIMARY KEY (project_id, name),
+    UNIQUE KEY (project_id,id)
 );
 -- DOWN
 

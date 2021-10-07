@@ -185,6 +185,7 @@ type Configuration struct {
 	SegmentExcludedCustomerIDByProject   map[uint64]string // map[project_id]customer_user_id
 	AttributionDebug                     int
 	DisableDashboardQueryDBExecution     bool
+	AllowedHubspotGroupsByProjectIDs     string
 }
 
 type Services struct {
@@ -322,6 +323,26 @@ func IsAllowedCampaignEnrichementByProjectID(projectID uint64) bool {
 
 	return false
 
+}
+
+func IsAllowedHubspotGroupsByProjectID(projectID uint64) bool {
+	if configuration.AllowedHubspotGroupsByProjectIDs == "" {
+		return false
+	}
+
+	if configuration.AllowedHubspotGroupsByProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowedHubspotGroupsByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetPropertiesTypeCache returns PropertiesTypeCache instance

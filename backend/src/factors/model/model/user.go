@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -29,7 +30,16 @@ type User struct {
 	Properties                 postgres.Jsonb `json:"properties"`
 	PropertiesUpdatedTimestamp int64          `json:"properties_updated_timestamp"`
 	SegmentAnonymousId         string         `gorm:"type:varchar(200);default:null" json:"seg_aid"`
-	AMPUserId                  string         `gorm:"default:null";json:"amp_user_id"`
+	AMPUserId                  string         `gorm:"default:null" json:"amp_user_id"`
+	IsGroupUser                *bool          `gorm:"default:null" json:"is_group_user"`
+	Group1ID                   string         `gorm:"default:null;column:group_1_id" json:"group_1_id"`
+	Group1UserID               string         `gorm:"default:null;column:group_1_user_id" json:"group_1_user_id"`
+	Group2ID                   string         `gorm:"default:null;column:group_2_id" json:"group_2_id"`
+	Group2UserID               string         `gorm:"default:null;column:group_2_user_id" json:"group_2_user_id"`
+	Group3ID                   string         `gorm:"default:null;column:group_3_id" json:"group_3_id"`
+	Group3UserID               string         `gorm:"default:null;column:group_3_user_id" json:"group_3_user_id"`
+	Group4ID                   string         `gorm:"default:null;column:group_4_id" json:"group_4_id"`
+	Group4UserID               string         `gorm:"default:null;column:group_4_user_id" json:"group_4_user_id"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
 	CustomerUserId string `gorm:"type:varchar(255);default:null" json:"c_uid"`
@@ -635,4 +645,62 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
 
 	return &mergedUserProperties, http.StatusOK
+}
+
+// SetUserGroupFieldByColumnName update user struct field by gorm column name. If value already set then it won't update the value
+func SetUserGroupFieldByColumnName(user *User, columnName, value string) (bool, bool, error) {
+
+	if user == nil || columnName == "" || value == "" {
+		return false, false, errors.New("invalid parameters")
+	}
+
+	if !strings.HasPrefix(columnName, "group_") {
+		return false, false, errors.New("not a group field")
+	}
+
+	refUserVal := reflect.ValueOf(user)
+	refUserTyp := refUserVal.Elem().Type()
+
+	processed := false
+	updated := false
+	for i := 0; i < refUserVal.Elem().NumField(); i++ {
+		refField := refUserTyp.Field(i)
+		if tagName := refField.Tag.Get("gorm"); tagName != "" {
+
+			// refer parseTagSetting in backend/src/factors/vendor/github.com/jinzhu/gorm/model_struct.go
+			tags := strings.Split(tagName, ";")
+			tagColumnName := ""
+			for _, value := range tags {
+				v := strings.Split(value, ":")
+				if len(v) == 2 && v[0] == "column" { // `gorm:"default:null;column:group_1_user_id" json:"group_1_user_id"`
+					tagColumnName = v[1]
+				}
+			}
+
+			field := refUserVal.Elem().Field(i)
+			currValue := field.String()
+			if tagColumnName == columnName {
+				if processed {
+					return false, false, errors.New("duplicate tag found")
+				}
+
+				if currValue == "" { // don't overwrite if already set
+
+					if !field.CanSet() {
+						return false, false, errors.New("cannot update field")
+					}
+
+					refUserVal.Elem().Field(i).SetString(value)
+					updated = true
+				}
+				processed = true
+			}
+		}
+	}
+
+	if !processed {
+		return false, false, errors.New("Failed to update user by tag")
+	}
+
+	return processed, updated, nil
 }

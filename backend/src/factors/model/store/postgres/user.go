@@ -7,6 +7,7 @@ import (
 	C "factors/config"
 	"factors/metrics"
 	"factors/model/model"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -1671,4 +1672,177 @@ func (pg *Postgres) UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, 
 
 	(*metaObj)[customerUserID] = *customerUserIDMeta
 	return model.UpdateUserPropertiesIdentifierMetaObject(userProperties, metaObj)
+}
+
+func (pg *Postgres) CreateGroupUser(user *model.User, groupName, groupID string) (string, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": user.ProjectId, "group_name": groupName, "group_id": groupID})
+	if user == nil || groupName == "" {
+		logCtx.Error("Invalid parameter")
+		return "", http.StatusBadRequest
+	}
+
+	group, status := pg.GetGroup(user.ProjectId, groupName)
+	if status != http.StatusFound {
+		if status == http.StatusNotFound {
+			logCtx.Error("Group is missing for CreateGroupUser.")
+			return "", http.StatusBadRequest
+		}
+
+		logCtx.Error("Failed to get group.")
+		return "", http.StatusInternalServerError
+	}
+
+	groupIndex := fmt.Sprintf("group_%d_id", group.ID)
+
+	isGroupUser := true
+	groupUser := &model.User{
+		ProjectId:                  user.ProjectId,
+		IsGroupUser:                &isGroupUser,
+		Properties:                 user.Properties,
+		PropertiesUpdatedTimestamp: user.PropertiesUpdatedTimestamp,
+		JoinTimestamp:              user.JoinTimestamp,
+	}
+
+	processed, _, err := model.SetUserGroupFieldByColumnName(groupUser, groupIndex, groupID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed process group id on group user.")
+		return "", http.StatusInternalServerError
+	}
+
+	if !processed {
+		logCtx.WithError(err).Error("Failed to process group_id on group user.")
+		return "", http.StatusInternalServerError
+
+	}
+
+	return pg.CreateUser(groupUser)
+}
+
+func (pg *Postgres) UpdateUserGroup(projectID uint64, userID, groupName, groupID, groupUserID string) (*model.User, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName, "group_id": groupID})
+	group, status := pg.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		if status == http.StatusNotFound {
+			logCtx.Error("Group is missing.")
+			return nil, http.StatusBadRequest
+		}
+
+		logCtx.Error("Failed to get group.")
+		return nil, http.StatusInternalServerError
+	}
+
+	groupIndex := fmt.Sprintf("group_%d_id", group.ID)
+	groupUserIndex := fmt.Sprintf("group_%d_user_id", group.ID)
+
+	user, status := pg.GetUser(projectID, userID)
+	if status != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	if user.IsGroupUser != nil && *user.IsGroupUser {
+		logCtx.Error("Cannot update group user.")
+		return nil, http.StatusBadRequest
+	}
+
+	isGroupUser := false
+	user.IsGroupUser = &isGroupUser
+	processed, IDUpdated, err := model.SetUserGroupFieldByColumnName(user, groupIndex, groupID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update user by group id.")
+		return nil, http.StatusInternalServerError
+	}
+	if !processed {
+		logCtx.Error("Missing tag in struct for group id.")
+		return nil, http.StatusInternalServerError
+	}
+
+	processed, userIDUpdated, err := model.SetUserGroupFieldByColumnName(user, groupUserIndex, groupUserID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update user by group id.")
+		return nil, http.StatusInternalServerError
+	}
+	if !processed {
+		logCtx.Error("Missing tag in struct for group id.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if !IDUpdated && !userIDUpdated {
+		return nil, http.StatusNotModified
+	}
+
+	user.ProjectId = 0
+	user.ID = ""
+	return pg.UpdateUser(projectID, userID, user, user.PropertiesUpdatedTimestamp)
+}
+
+func (pg *Postgres) UpdateUserGroupProperties(projectID uint64, userID string,
+	newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID,
+		"new_user_properties": newProperties, "update_timestamp": updateTimestamp})
+
+	if projectID == 0 || userID == "" || newProperties == nil {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	user, errCode := pg.GetUser(projectID, userID)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get user on UpdateUserGroupProperties.")
+		return nil, http.StatusInternalServerError
+	}
+
+	incomingProperties, err := util.DecodePostgresJsonb(newProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to decode user properties on UpdateUserGroupProperties.")
+		return nil, http.StatusInternalServerError
+	}
+
+	existingProperties, err := util.DecodePostgresJsonb(&user.Properties)
+	if err != nil {
+		logCtx.WithField("exsting_user_properties", user.Properties).WithError(err).Error("Failed to decode user properties on UpdateUserGroupProperties.")
+		return nil, http.StatusInternalServerError
+	}
+
+	overWrite := updateTimestamp >= user.PropertiesUpdatedTimestamp
+
+	mergedProperties := make(map[string]interface{})
+	for key, value := range *existingProperties {
+		mergedProperties[key] = value
+	}
+
+	for key, value := range *incomingProperties {
+		if value == nil {
+			continue
+		}
+
+		if _, exist := mergedProperties[key]; exist {
+			if overWrite {
+				mergedProperties[key] = value
+			}
+			continue
+		}
+		mergedProperties[key] = value
+	}
+
+	mergedPropertiesJSON, err := U.EncodeToPostgresJsonb(&mergedProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to marshal group user properties.")
+		return nil, http.StatusInternalServerError
+	}
+
+	var newUpdateTimestamp int64
+	if overWrite {
+		newUpdateTimestamp = updateTimestamp
+	} else {
+		newUpdateTimestamp = user.PropertiesUpdatedTimestamp
+	}
+
+	errCode = pg.OverwriteUserPropertiesByID(projectID, user.ID, mergedPropertiesJSON, true, newUpdateTimestamp)
+	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+		logCtx.WithField("err_code", errCode).WithField("user_id", user.ID).Error("Failed to update user properties on group user.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return mergedPropertiesJSON, http.StatusAccepted
 }

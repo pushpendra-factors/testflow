@@ -79,6 +79,7 @@ func TestMain(m *testing.M) {
 		// So kept on-table user_properties as primary.
 		AllowedCampaignEnrichmentByProjectID: *allowedCampaignEnrichmentByProjectID,
 		UseOpportunityAssociationByProjectID: "*",
+		AllowedHubspotGroupsByProjectIDs:     "*",
 	}
 	C.InitConf(config)
 

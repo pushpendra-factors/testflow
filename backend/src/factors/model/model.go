@@ -410,6 +410,9 @@ type Model interface {
 	GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID uint64, userID string, formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int)
 	UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
 	GetSelectedUsersByCustomerUserID(projectID uint64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int)
+	CreateGroupUser(user *model.User, groupName, groupID string) (string, int)
+	UpdateUserGroup(projectID uint64, userID, groupName, groupID, groupUserID string) (*model.User, int)
+	UpdateUserGroupProperties(projectID uint64, userID string, newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	GetPropertiesUpdatedTimestampOfUser(projectId uint64, id string) (int64, int)
 
 	// web_analytics
@@ -509,4 +512,8 @@ type Model interface {
 	// feedback
 	PostFeedback(ProjectID uint64, agentUUID string, Feature string, Property *postgres.Jsonb, VoteType int) (int, string)
 	GetRecordsFromFeedback(projectID uint64, agentUUID string) ([]model.Feedback, error)
+
+	//Group
+	CreateGroup(projectID uint64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
+	GetGroup(projectID uint64, groupName string) (*model.Group, int)
 }

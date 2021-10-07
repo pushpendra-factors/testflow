@@ -57,6 +57,7 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	taskManagementLookback := flag.Int("task_management_lookback", 1, "")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
+	enableHubspotGroupsByProjectID := flag.String("enable_hubspot_groups_by_project_id", "", "Enable hubspot groups for projects.")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -94,15 +95,16 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		SentryDSN:           *sentryDSN,
-		DryRunCRMSmartEvent: *dryRunSmartEvent,
-		CacheSortedSet:      *cacheSortedSet,
-		DisableRedisWrites:  disableRedisWrites,
+		PrimaryDatastore:                 *primaryDatastore,
+		RedisHost:                        *redisHost,
+		RedisPort:                        *redisPort,
+		RedisHostPersistent:              *redisHostPersistent,
+		RedisPortPersistent:              *redisPortPersistent,
+		SentryDSN:                        *sentryDSN,
+		DryRunCRMSmartEvent:              *dryRunSmartEvent,
+		CacheSortedSet:                   *cacheSortedSet,
+		DisableRedisWrites:               disableRedisWrites,
+		AllowedHubspotGroupsByProjectIDs: *enableHubspotGroupsByProjectID,
 	}
 
 	C.InitConf(config)
