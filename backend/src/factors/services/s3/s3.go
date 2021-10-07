@@ -68,6 +68,10 @@ func (sd *S3Driver) GetProjectEventFileDir(projectId uint64, startTimestamp int6
 	return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
 }
 
+func (sd *S3Driver) GetProjectDir(projectId uint64) string {
+	return fmt.Sprintf("projects/%d/events/", projectId)
+}
+
 func (sd *S3Driver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := sd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
@@ -76,6 +80,21 @@ func (sd *S3Driver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) 
 func (sd *S3Driver) GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
 	return path, fmt.Sprintf("events.txt")
+}
+
+func (sd *S3Driver) GetModelEventsBucketingFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, fmt.Sprintf("events_bucketed.txt")
+}
+
+func (sd *S3Driver) GetMasterNumericalBucketsFile(projectId uint64) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId)
+	return path, fmt.Sprintf("numerical_buckets_master.txt")
+}
+
+func (sd *S3Driver) GetModelEventsNumericalBucketsFile(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, fmt.Sprintf("numerical_buckets.txt")
 }
 
 func (sd *S3Driver) GetPatternChunksDir(projectId, modelId uint64) string {
