@@ -1041,9 +1041,7 @@ func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*s
 	stmnt = model.TransformQueryPlaceholdersForContext(stmnt)
 
 	rows, err := db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)
-	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST || err != nil {
-		log.WithField("Query", debugQuery).Info("Exec query with context")
-	}
+	log.WithField("Query", debugQuery).Info("Exec query with context")
 	return rows, nil, err
 }
 
