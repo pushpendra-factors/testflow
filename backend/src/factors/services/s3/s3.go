@@ -59,6 +59,16 @@ func (sd *S3Driver) Get(dir, fileName string) (io.ReadCloser, error) {
 	return op.Body, err
 }
 
+func (sd *S3Driver) GetObjectSize(dir, fileName string) (int64, error) {
+	input := s3.GetObjectInput{
+		Bucket: aws.String(sd.BucketName),
+		Key:    aws.String(dir + separator + fileName),
+	}
+	op, err := sd.s3.GetObject(&input)
+	objSize := op.ContentLength
+	return *objSize, err
+}
+
 func (sd *S3Driver) GetProjectModelDir(projectId, modelId uint64) string {
 	return fmt.Sprintf("projects/%d/models/%d/", projectId, modelId)
 }

@@ -143,7 +143,7 @@ func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]mo
 	db := C.GetServices().Db
 
 	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = %d LIMIT %d) "+
-		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names "+
+		"SELECT tracked_events.*, event_names.name FROM tracked_events INNER JOIN event_names "+
 		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = %d;", ProjectID, 10000, ProjectID)
 	trackedEvents := make([]model.FactorsTrackedEventInfo, 0)
 	rows, err := db.Raw(queryStr).Rows()
@@ -168,7 +168,7 @@ func (store *MemSQL) GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64)
 	db := C.GetServices().Db
 
 	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = %d AND is_active = true LIMIT %d) "+
-		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names "+
+		"SELECT tracked_events.*, event_names.name FROM tracked_events INNER JOIN event_names "+
 		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = %d;", ProjectID, 10000, ProjectID)
 	trackedEvents := make([]model.FactorsTrackedEventInfo, 0)
 	rows, err := db.Raw(queryStr).Rows()

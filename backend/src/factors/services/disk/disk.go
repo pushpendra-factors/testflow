@@ -76,6 +76,20 @@ func (dd *DiskDriver) GetBucketName() string {
 	return dd.baseDir
 }
 
+func (dd *DiskDriver) GetObjectSize(path, fileName string) (int64, error) {
+	if !strings.HasSuffix(path, "/") {
+		// Append / to the end if not present.
+		path = path + "/"
+	}
+	var objInfo os.FileInfo
+	var err error
+	if objInfo, err = os.Stat(path + fileName); err != nil {
+		return 0, err
+	}
+	objSize := objInfo.Size()
+	return objSize, err
+}
+
 func (dd *DiskDriver) GetProjectModelDir(projectId, modelId uint64) string {
 	return fmt.Sprintf("%s/projects/%d/models/%d/", dd.baseDir, projectId, modelId)
 }

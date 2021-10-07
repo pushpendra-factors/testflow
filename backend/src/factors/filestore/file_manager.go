@@ -7,6 +7,7 @@ import (
 type FileManager interface {
 	Create(dir, fileName string, reader io.Reader) error
 	Get(path, fileName string) (io.ReadCloser, error)
+	GetObjectSize(dir, fileName string) (int64, error)
 	// Del(dir, filename string)error
 	GetBucketName() string
 	GetProjectModelDir(projectId, modelId uint64) string
