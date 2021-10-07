@@ -79,24 +79,23 @@ func (store *MemSQL) ExecuteForSingleKPIMetric(projectID uint64, query model.Que
 	transformations := model.TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
 	currentQuery := model.BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
 	currentQueries := model.SplitKPIQueryToInternalKPIQueries(currentQuery, kpiQuery, kpiMetric, transformations)
-	finalResult := store.executeForResults(projectID, currentQueries, kpiQuery, kpiMetric)
-	result = &finalResult
+	finalResult := store.executeForResults(projectID, currentQueries, kpiQuery, transformations)
+	*result = finalResult
 	return
 }
 
-func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, kpiQuery model.KPIQuery, kpiMetric string) model.QueryResult {
+func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, kpiQuery model.KPIQuery, transformations []model.TransformQueryi) model.QueryResult {
 	results := make([]*model.QueryResult, len(queries))
 	hasGroupByTimestamp := false
 	var finalResult model.QueryResult
 	if kpiQuery.GroupByTimestamp != "" {
 		hasGroupByTimestamp = true
 	}
-	transformations := model.TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
 	if len(queries) == 1 {
 		hasAnyGroupBy := len(queries[0].GroupByProperties) == 0
 		results[0], _, _ = store.RunInsightsQuery(projectID, queries[0])
-		finalResult = *results[0]
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy)
+		finalResult = *results[0]
 	} else {
 		for i, query := range queries {
 			results[i], _, _ = store.RunInsightsQuery(projectID, query)
