@@ -7,6 +7,7 @@ import (
 	"factors/model/store"
 	"factors/sdk"
 	SDK "factors/sdk"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"math"
@@ -1165,4 +1166,184 @@ func TestUserIntialPropertiesOnOldTimestamp(t *testing.T) {
 
 	assert.Equal(t, float64(u1JointTimestamp.Unix()), (*userproperties)["$joinTime"])
 	assert.Equal(t, "B", (*userproperties)["city"])
+}
+
+func TestUserPropertiesUpdateByGroupColumnName(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	userProperties, err := json.Marshal(`{"a":"b"}`)
+	assert.Nil(t, err)
+	timestamp := time.Now().Unix()
+	segmentAnonymousId := getRandomEmail()
+	ampUserID := getRandomEmail()
+	testUser := model.User{
+		ProjectId:                  project.ID,
+		ID:                         user.ID,
+		CustomerUserId:             getRandomEmail(),
+		Properties:                 postgres.Jsonb{userProperties},
+		PropertiesUpdatedTimestamp: timestamp,
+		SegmentAnonymousId:         segmentAnonymousId,
+		AMPUserId:                  ampUserID,
+		JoinTimestamp:              timestamp,
+		CreatedAt:                  time.Now(),
+		UpdatedAt:                  time.Now(),
+	}
+
+	/*
+		Test update by group column name should not affect other fileds
+	*/
+	testUserCopy := testUser
+	assert.Equal(t, "", testUserCopy.Group1ID)
+	processed, updated, err := model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_id", "g1")
+	assert.Nil(t, err)
+	assert.Equal(t, true, processed)
+	assert.Equal(t, true, updated)
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user")
+	assert.Nil(t, err)
+	assert.Equal(t, true, processed)
+	assert.Equal(t, true, updated)
+	// assert values are assigned
+	assert.Equal(t, "g1", testUserCopy.Group1ID)
+	assert.Equal(t, "g1user", testUserCopy.Group1UserID)
+
+	assert.NotEqual(t, testUser, testUserCopy)
+	// remove field property for equality check
+	testUserCopy.Group1ID = ""
+	testUserCopy.Group1UserID = ""
+	assert.Equal(t, testUser, testUserCopy)
+
+	/*
+	 Test Multipele group column updates
+	*/
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_id", "g1")
+	assert.Nil(t, err)
+	assert.Equal(t, true, processed)
+	assert.Equal(t, true, updated)
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_2_id", "g2")
+	assert.Nil(t, err)
+	assert.Equal(t, true, processed)
+	assert.Equal(t, true, updated)
+
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user")
+	assert.Nil(t, err)
+	assert.Equal(t, true, processed)
+	assert.Equal(t, true, updated)
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_2_user_id", "g2user")
+	assert.Nil(t, err)
+	assert.Equal(t, true, processed)
+	assert.Equal(t, true, updated)
+
+	assert.Equal(t, "g1", testUserCopy.Group1ID)
+	assert.Equal(t, "g1user", testUserCopy.Group1UserID)
+	assert.Equal(t, "g2", testUserCopy.Group2ID)
+	assert.Equal(t, "g2user", testUserCopy.Group2UserID)
+
+	assert.NotEqual(t, testUser, testUserCopy)
+	testUserCopy.Group1ID = ""
+	testUserCopy.Group1UserID = ""
+	testUserCopy.Group2ID = ""
+	testUserCopy.Group2UserID = ""
+	assert.Equal(t, testUser, testUserCopy)
+
+	/*
+	 Test update not allowed for already set value
+	*/
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user")
+	assert.Nil(t, err)
+	assert.Equal(t, true, processed)
+	assert.Equal(t, true, updated)
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_1_user_id", "g1user2")
+	assert.Nil(t, err)
+	// got processed but didn't allow update
+	assert.Equal(t, true, processed)
+	assert.Equal(t, false, updated)
+	assert.Equal(t, "g1user", testUserCopy.Group1UserID)
+	testUserCopy.Group1UserID = ""
+	assert.Equal(t, testUser, testUserCopy)
+
+	/*
+		Test invalid column name
+	*/
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "group_5_user_id", "g1user")
+	assert.NotNil(t, err)
+	assert.Equal(t, false, processed) // didn't find field
+	assert.Equal(t, false, updated)
+	assert.Equal(t, testUser, testUserCopy)
+
+	/*
+		Test update non group column
+	*/
+	processed, updated, err = model.SetUserGroupFieldByColumnName(&testUserCopy, "amp_user_id", "g1user")
+	assert.NotNil(t, err)
+	assert.Equal(t, false, processed)
+	assert.Equal(t, false, updated)
+	assert.Equal(t, testUser, testUserCopy)
+}
+
+func TestUserGroupsPropertiesUpdate(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	groupName := "g1"
+	groupID := "g1ID"
+	allowedGroupsMap := map[string]bool{groupName: true}
+	group, status := store.GetStore().CreateGroup(project.ID, groupName, allowedGroupsMap)
+	assert.Equal(t, http.StatusCreated, status, fmt.Sprintf("failed creating group %s", groupName))
+	assert.Equal(t, 1, group.ID)
+	timestamp := time.Now().AddDate(0, 0, -1)
+
+	groupUserID, status := store.GetStore().CreateGroupUser(&model.User{
+		ProjectId: project.ID, JoinTimestamp: timestamp.Unix() - 10,
+	}, groupName, groupID)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().UpdateUserGroupProperties(project.ID, groupUserID, &postgres.Jsonb{json.RawMessage([]byte(`{"hour":1,"count":2,"city":"Bengalore"}`))}, timestamp.Unix())
+	assert.Equal(t, http.StatusAccepted, status)
+	user, status := store.GetStore().GetUser(project.ID, groupUserID)
+	assert.Equal(t, http.StatusFound, status)
+	userPropertiesMap, err := util.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, user.IsGroupUser)
+	assert.Equal(t, true, *user.IsGroupUser)
+	assert.Equal(t, float64(1), (*userPropertiesMap)["hour"])
+	assert.Equal(t, float64(2), (*userPropertiesMap)["count"])
+	assert.Equal(t, "Bengalore", (*userPropertiesMap)["city"])
+
+	_, status = store.GetStore().UpdateUserGroupProperties(project.ID, groupUserID, &postgres.Jsonb{json.RawMessage([]byte(`{"city":"Delhi"}`))}, timestamp.Unix()-10)
+	assert.Equal(t, http.StatusAccepted, status)
+	user, status = store.GetStore().GetUser(project.ID, groupUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, user.IsGroupUser)
+	assert.Equal(t, true, *user.IsGroupUser)
+	assert.Equal(t, timestamp.Unix(), user.PropertiesUpdatedTimestamp)
+	userPropertiesMap, err = util.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), (*userPropertiesMap)["hour"])
+	assert.Equal(t, float64(2), (*userPropertiesMap)["count"])
+	assert.Equal(t, "Bengalore", (*userPropertiesMap)["city"])
+
+	_, status = store.GetStore().UpdateUserGroupProperties(project.ID, groupUserID, &postgres.Jsonb{json.RawMessage([]byte(`{"city":"Delhi"}`))}, timestamp.Unix()+10)
+	assert.Equal(t, http.StatusAccepted, status)
+	user, status = store.GetStore().GetUser(project.ID, groupUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, user.IsGroupUser)
+	assert.Equal(t, true, *user.IsGroupUser)
+	assert.Equal(t, timestamp.Unix()+10, user.PropertiesUpdatedTimestamp)
+	userPropertiesMap, err = util.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), (*userPropertiesMap)["hour"])
+	assert.Equal(t, float64(2), (*userPropertiesMap)["count"])
+	assert.Equal(t, "Delhi", (*userPropertiesMap)["city"])
+
+	// test isGroupUser property value
+	docID := "1"
+	userID, status := store.GetStore().CreateUser(&model.User{
+		ProjectId: project.ID,
+	})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().UpdateUserGroup(project.ID, userID, groupName, docID, groupUserID)
+	assert.Equal(t, http.StatusAccepted, status)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotNil(t, user.IsGroupUser)
+	assert.Equal(t, false, *user.IsGroupUser)
 }

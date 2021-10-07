@@ -77,6 +77,7 @@ const (
 	tableWeekyInsightsMetadata          = "weekly_insights_metadata"
 	tableTemplates                      = "templates"
 	tableFeedback                       = "feedbacks"
+	tableGroups                         = "groups"
 	healthcheckPingID                   = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
 
@@ -115,12 +116,17 @@ var supportedTables = []string{
 	tableWeekyInsightsMetadata,
 	tableTemplates,
 	tableFeedback,
+	tableGroups,
 }
 
 // Disabled tables to avoid accidental replication.
 var permanantlyDisabledTables = []string{
 	tableUsers,
 	tableEvents,
+	tableTaskDetails,
+	tableTaskExecutionDetails,
+	tableTaskExecutionDependencyDetails,
+	tableGroups,
 }
 
 var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
@@ -963,7 +969,8 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.TaskExecutionDependencyDetails{}
 	case tableWeekyInsightsMetadata:
 		record = &model.WeeklyInsightsMetadata{}
-
+	case tableGroups:
+		record = &model.Group{}
 	// Tables related to analytics.
 	case tableEvents:
 		record = &model.Event{}

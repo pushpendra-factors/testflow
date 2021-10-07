@@ -64,6 +64,8 @@ var AllowedEventNamesForHubspot = []string{
 	U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
 	U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
 	U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
+	U.EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+	U.EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
 }
 
 // NOTE: This is currently being used only in kpi though.
@@ -770,10 +772,11 @@ func EventsCountAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
 	prefix := "SS:A:EC"
 	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s", prefix, dateKey))
 }
-func EventCountKeyByDocumentType(documentType string, dateKey string)(*cacheRedis.Key,error){
-	prefix:= "SS:A:CK"
+func EventCountKeyByDocumentType(documentType string, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "SS:A:CK"
 	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s:%s", prefix, documentType, dateKey))
 }
+
 // FillEventPropertiesByFilterExpr - Parses and fills event properties
 // from tokenized_event_uri using tokenized_filter_expr.
 func FillEventPropertiesByFilterExpr(eventProperties *U.PropertiesMap,

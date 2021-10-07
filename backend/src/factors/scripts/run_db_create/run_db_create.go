@@ -749,4 +749,11 @@ func main() {
 	} else {
 		log.Info("Added foreign key constraint to event_names")
 	}
+
+	// Create Groups Table
+	if err := db.CreateTable(&model.Group{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Group table creation failed.")
+	} else {
+		log.Info("Created Groups table.")
+	}
 }
