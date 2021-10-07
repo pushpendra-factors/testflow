@@ -15,6 +15,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -61,41 +62,41 @@ func InitConfBeam(config *C.Configuration) {
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 }
 
-func readPatternFromFile(partFilesDir string, cloudManager *filestore.FileManager, projectId, modelId uint64) ([]*P.Pattern, error) {
-	mineLog.Infof("Reading from part files Directory : %s", partFilesDir)
-	listFiles := (*cloudManager).ListFiles(partFilesDir)
-	patterns := make([]*P.Pattern, 0)
-	for _, partFileFullName := range listFiles {
-		partFNamelist := strings.Split(partFileFullName, "/")
-		partFileName := partFNamelist[len(partFNamelist)-1]
-		mineLog.Infof("Reading part file : %s", partFileName)
-		file, err := (*cloudManager).Get(partFilesDir, partFileName)
-		if err != nil {
-			return nil, err
-		}
+// func readPatternFromFile(partFilesDir string, cloudManager *filestore.FileManager, projectId, modelId uint64) ([]*P.Pattern, error) {
+// 	mineLog.Infof("Reading from part files Directory : %s", partFilesDir)
+// 	listFiles := (*cloudManager).ListFiles(partFilesDir)
+// 	patterns := make([]*P.Pattern, 0)
+// 	for _, partFileFullName := range listFiles {
+// 		partFNamelist := strings.Split(partFileFullName, "/")
+// 		partFileName := partFNamelist[len(partFNamelist)-1]
+// 		mineLog.Infof("Reading part file : %s", partFileName)
+// 		file, err := (*cloudManager).Get(partFilesDir, partFileName)
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		scanner := bufio.NewScanner(file)
-		const maxCapacity = 10 * 1024 * 1024
-		buf := make([]byte, maxCapacity)
-		scanner.Buffer(buf, maxCapacity)
-		for scanner.Scan() {
-			line := scanner.Text()
-			var pattern P.Pattern
-			if err := json.Unmarshal([]byte(line), &pattern); err != nil {
-				log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
-				return nil, err
-			}
-			patterns = append(patterns, &pattern)
-		}
+// 		scanner := bufio.NewScanner(file)
+// 		const maxCapacity = 10 * 1024 * 1024
+// 		buf := make([]byte, maxCapacity)
+// 		scanner.Buffer(buf, maxCapacity)
+// 		for scanner.Scan() {
+// 			line := scanner.Text()
+// 			var pattern P.Pattern
+// 			if err := json.Unmarshal([]byte(line), &pattern); err != nil {
+// 				log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
+// 				return nil, err
+// 			}
+// 			patterns = append(patterns, &pattern)
+// 		}
 
-		if err := file.Close(); err != nil {
-			log.WithFields(log.Fields{"err": err}).Fatal("Error closing file")
-		}
+// 		if err := file.Close(); err != nil {
+// 			log.WithFields(log.Fields{"err": err}).Fatal("Error closing file")
+// 		}
 
-	}
-	mineLog.Infof("Total number of patterns mined : %d", len(patterns))
-	return patterns, nil
-}
+// 	}
+// 	mineLog.Infof("Total number of patterns mined : %d", len(patterns))
+// 	return patterns, nil
+// }
 
 func countPatternsWorkerBeam(ctx context.Context, projectID uint64, filepath string,
 	patterns []*P.Pattern, countOccurence bool) {
@@ -119,10 +120,12 @@ func writeFileToGCP(projectId, modelId uint64, name string, fpath string,
 
 	path := (*cloudManager).GetProjectModelDir(projectId, modelId)
 	mineLog.Infof("Reading file from (toGCP)   : %s ", fpath)
-	r, err := os.OpenFile(fpath, os.O_RDWR, 0666)
+	f, err := os.OpenFile(fpath, os.O_RDWR, 0666)
 	if err != nil {
 		return fmt.Errorf("unable to open file : %s :%v", fpath, err)
 	}
+	defer f.Close()
+	r := bufio.NewReader(f)
 	mineLog.Infof("Writing file to GCP : %s , %s ", path, name)
 	err = (*cloudManager).Create(path, name, r)
 	if err != nil {
@@ -337,7 +340,7 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 	envFlag := cp.Env
 	log.Infof("Project Id : %d  ", projectID)
 	log.Infof("Model Id : %d  ", modelId)
-	log.Infof("BucketName: %d  ", bucketName)
+	log.Infof("BucketName: %s  ", bucketName)
 
 	// enable client for GCP
 	var cloudManager filestore.FileManager
@@ -536,4 +539,209 @@ func readFn(ctx context.Context, filename string, emit func(string)) error {
 		emit(scanner.Text())
 	}
 	return scanner.Err()
+}
+
+func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *filestore.FileManager, maxTotalBytes int64, totalConsumedBytes int64, currentPatternsLength int, maxPatternsLength int) ([]*P.Pattern, int64, error) { //, cloudManager *filestore.FileManager
+
+	if currentPatternsLength > maxPatternsLength {
+		errorString := fmt.Sprintf(
+			"Current pattern length greater than max length. currentPatternsLength:%d, maxPatternsLength: %d",
+			currentPatternsLength, maxPatternsLength)
+		mineLog.Error(errorString)
+		return []*P.Pattern{}, 0, fmt.Errorf(errorString)
+	}
+	if totalConsumedBytes >= maxTotalBytes {
+		mineLog.Info(fmt.Sprintf("No quota. totalConsumedBytes: %d, maxTotalBytes: %d",
+			totalConsumedBytes, maxTotalBytes))
+		return []*P.Pattern{}, 0, nil
+	}
+
+	mineLog.Infof("Reading from part files Directory : %s", partFilesDir)
+	listFiles := (*cloudManager).ListFiles(partFilesDir)
+	patterns := make([]*P.Pattern, 0)
+	trim_stage := 0
+	var patternsBytes int64
+	var cumulativeBytes int64
+	for _, partFileFullName := range listFiles {
+		partFNamelist := strings.Split(partFileFullName, "/")
+		partFileName := partFNamelist[len(partFNamelist)-1]
+		mineLog.Infof("Reading part file : %s", partFileName)
+		file, err := (*cloudManager).Get(partFilesDir, partFileName)
+		if err != nil {
+			return nil, 0, err
+		}
+		fileSize, err := (*cloudManager).GetObjectSize(partFilesDir, partFileName)
+		if err != nil {
+			log.WithFields(log.Fields{"fileSize": fileSize, "err": err}).Fatal("Couldn't get part file size")
+		}
+		mineLog.Infof("fileSize : %d", fileSize)
+		scanner := bufio.NewScanner(file)
+		const maxCapacity = 10 * 1024 * 1024
+		buf := make([]byte, maxCapacity)
+		scanner.Buffer(buf, maxCapacity)
+		var readBytes int64
+		trimMap := make(map[int]int64)
+
+		for scanner.Scan() {
+
+			line := scanner.Text()
+			var pattern P.Pattern
+			if err := json.Unmarshal([]byte(line), &pattern); err != nil {
+				log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
+				return nil, 0, err
+			}
+
+			// If pattern has positive count
+			if pattern.PerUserCount > 0 {
+
+				// if size exceeds and further trimming possible, trim
+				if trim_stage < 3 && (totalConsumedBytes+patternsBytes) > maxTotalBytes {
+					trim_stage++
+					totalPatternsSize := fileSize * patternsBytes / readBytes // estimating size of ALL +ve count patterns compressed to trim_stage-1
+					trimMap[trim_stage] = totalPatternsSize
+					log.WithFields(log.Fields{"patternsBytes": patternsBytes, "trim_stage": trim_stage}).Info("BEFORE")
+					patterns, patternsBytes, err = compressPatternsList(patterns, maxTotalBytes, trimMap, trim_stage) //compress the patterns got uptil now
+					if err != nil {
+						return []*P.Pattern{}, 0, err
+					}
+					log.WithFields(log.Fields{"patternsBytes": patternsBytes, "trim_stage": trim_stage}).Info("AFTER")
+				}
+				pattern, pbytes, err := cumulativeCompressPattern(&pattern, maxTotalBytes, trimMap, trim_stage) //compress the new pattern to be added
+				if err != nil {
+					return []*P.Pattern{}, 0, err
+				}
+				patterns = append(patterns, pattern)
+				patternsBytes += pbytes
+			}
+			readBytes += int64(len([]byte(line)))
+		}
+	}
+
+	if (totalConsumedBytes + patternsBytes) <= maxTotalBytes {
+		mineLog.WithFields(log.Fields{
+			"trim_stage":           trim_stage,
+			"numPatterns":          len(patterns),
+			"maxTotalBytes":        maxTotalBytes,
+			"totalConsumedBytes":   totalConsumedBytes,
+			"currentPatternsBytes": patternsBytes,
+		}).Info("Returning compressed patterns")
+		return patterns, patternsBytes, nil
+	}
+
+	// Patterns are added only till it does not go over maxTotalBytes, in
+	// decreasing order of count.
+	// Sort the patterns in descending order.
+	sort.Slice(patterns,
+		func(i, j int) bool {
+			return patterns[i].PerUserCount > patterns[j].PerUserCount
+		})
+	cumulativeBytes = 0
+	for i, pattern := range patterns {
+		pBytes, err := getPatternSize(pattern)
+		if err != nil {
+			return []*P.Pattern{}, 0, err
+		}
+		if totalConsumedBytes+cumulativeBytes+pBytes > maxTotalBytes {
+			mineLog.WithFields(log.Fields{
+				"trim_stage":           trim_stage,
+				"numPatterns":          i,
+				"numDroppedPatterns":   len(patterns) - i,
+				"maxTotalBytes":        maxTotalBytes,
+				"totalConsumedBytes":   totalConsumedBytes,
+				"currentPatternsBytes": cumulativeBytes,
+			}).Info("Dropping patterns")
+			patterns = patterns[:i]
+			break
+		}
+		cumulativeBytes += pBytes
+	}
+
+	mineLog.Infof("Total number of patterns mined : %d", len(patterns))
+	return patterns, cumulativeBytes, nil
+}
+
+func compressPattern(pattern *P.Pattern, maxBytesSize int64, trimMap map[int]int64, trim_stage int) (*P.Pattern, int64, error) {
+
+	TRIM_MULTIPLIER := 0.8
+	trimFraction := float64(maxBytesSize) * TRIM_MULTIPLIER / float64(trimMap[trim_stage])
+	switch trim_stage {
+	case 1:
+		if pattern.PerUserUserCategoricalProperties != nil && pattern.PerUserEventCategoricalProperties != nil {
+			(*pattern.PerUserEventCategoricalProperties).TrimByFmapSize(trimFraction)
+			(*pattern.PerUserUserCategoricalProperties).TrimByFmapSize(trimFraction)
+			(*pattern.PerOccurrenceEventCategoricalProperties).TrimByFmapSize(trimFraction)
+			(*pattern.PerOccurrenceUserCategoricalProperties).TrimByFmapSize(trimFraction)
+		}
+	case 2:
+		if pattern.PerUserUserNumericProperties != nil && pattern.PerUserEventNumericProperties != nil {
+			(*pattern.PerUserEventNumericProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerUserUserNumericProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerOccurrenceEventNumericProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerOccurrenceUserNumericProperties).TrimByBinSize(trimFraction)
+		}
+	case 3:
+		if pattern.PerUserEventCategoricalProperties != nil && pattern.PerUserUserCategoricalProperties != nil {
+			(*pattern.PerUserEventCategoricalProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerUserUserCategoricalProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerOccurrenceEventCategoricalProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerOccurrenceUserCategoricalProperties).TrimByBinSize(trimFraction)
+		}
+	default:
+
+	}
+	b, err := json.Marshal(pattern)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
+		return nil, 0, err
+	}
+	pString := string(b)
+	patternTrimBytes := int64(len([]byte(pString)))
+	return pattern, patternTrimBytes, nil
+}
+
+func compressPatternsList(patterns []*P.Pattern, maxBytesSize int64, trimMap map[int]int64, trim_size int) ([]*P.Pattern, int64, error) {
+	var totalBytes int64
+	for _, pattern := range patterns {
+		if _, pbytes, err := compressPattern(pattern, maxBytesSize, trimMap, trim_size); err != nil {
+			return nil, 0, err
+		} else {
+			totalBytes += pbytes
+		}
+	}
+	return patterns, totalBytes, nil
+}
+
+// func cumulativeCompressPatterns(patterns []*P.Pattern, maxBytesSize int64, trimMap map[int]int64, trim_stage int) ([]*P.Pattern, int64, error) {
+// 	var totalBytes int64
+// 	for _, pattern := range patterns {
+// 		if _, pbytes, err := cumulativeCompressPattern(pattern, maxBytesSize, trimMap, trim_stage); err != nil {
+// 			return nil, 0, err
+// 		} else {
+// 			totalBytes += pbytes
+// 		}
+// 	}
+// 	return patterns, totalBytes, nil
+// }
+
+func cumulativeCompressPattern(pattern *P.Pattern, maxBytesSize int64, trimMap map[int]int64, trim_stage int) (*P.Pattern, int64, error) {
+	var pBytes int64
+	for i := 0; i <= trim_stage; i++ {
+		_, pbytes, err := compressPattern(pattern, maxBytesSize, trimMap, trim_stage)
+		if err != nil {
+			return nil, 0, err
+		}
+		pBytes = pbytes
+	}
+	return pattern, pBytes, nil
+}
+
+func getPatternSize(pattern *P.Pattern) (int64, error) {
+	b, err := json.Marshal(pattern)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
+		return 0, err
+	}
+	pString := string(b)
+	pBytes := int64(len([]byte(pString)))
+	return pBytes, nil
 }

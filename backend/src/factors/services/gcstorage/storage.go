@@ -44,12 +44,12 @@ func (gcsd *GCSDriver) Create(dir, fileName string, reader io.Reader) error {
 		// Append / to the end if not present.
 		dir = dir + "/"
 	}
-
 	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
 	w := obj.NewWriter(ctx)
 	if _, err := io.Copy(w, reader); err != nil {
 		return err
 	}
+
 	err := w.Close()
 	return err
 }
@@ -62,7 +62,24 @@ func (gcsd *GCSDriver) Get(dir, fileName string) (io.ReadCloser, error) {
 	}
 	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
 	rc, err := obj.NewReader(ctx)
+
 	return rc, err
+}
+
+func (gcsd *GCSDriver) GetObjectSize(dir, fileName string) (int64, error) {
+	ctx := context.Background()
+	if !strings.HasSuffix(dir, "/") {
+		// Append / to the end if not present.
+		dir = dir + "/"
+	}
+	var objSize int64
+	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
+	if objAttrs, err := obj.Attrs(ctx); err != nil {
+		return 0, err
+	} else {
+		objSize = objAttrs.Size
+		return objSize, err
+	}
 }
 
 func (gcsd *GCSDriver) GetBucketName() string {

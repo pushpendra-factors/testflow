@@ -433,7 +433,7 @@ func InitCampaignAnalyticsPatterns(smartEvents CampaignEventLists) ([]*P.Pattern
 	for _, eventName := range smartEvents.MediumList {
 		p, err := P.NewPattern([]string{eventName}, nil)
 		if err != nil {
-			return []*P.Pattern{}, fmt.Errorf("Medium Pattern initialization failed")
+			return []*P.Pattern{}, fmt.Errorf("medium pattern initialization failed")
 		}
 		lenOnePatterns = append(lenOnePatterns, p)
 	}
@@ -441,7 +441,7 @@ func InitCampaignAnalyticsPatterns(smartEvents CampaignEventLists) ([]*P.Pattern
 	for _, eventName := range smartEvents.ReferrerList {
 		p, err := P.NewPattern([]string{eventName}, nil)
 		if err != nil {
-			return []*P.Pattern{}, fmt.Errorf("Referrer Pattern initialization failed")
+			return []*P.Pattern{}, fmt.Errorf("referrer pattern initialization failed")
 		}
 		lenOnePatterns = append(lenOnePatterns, p)
 	}
@@ -449,7 +449,7 @@ func InitCampaignAnalyticsPatterns(smartEvents CampaignEventLists) ([]*P.Pattern
 	for _, eventName := range smartEvents.SourceList {
 		p, err := P.NewPattern([]string{eventName}, nil)
 		if err != nil {
-			return []*P.Pattern{}, fmt.Errorf("Source Pattern initialization failed")
+			return []*P.Pattern{}, fmt.Errorf("source pattern initialization failed")
 		}
 		lenOnePatterns = append(lenOnePatterns, p)
 	}
@@ -475,7 +475,7 @@ func mineAndWriteLenOnePatterns(projectID uint64, modelId uint64, cloudManager *
 	[]*P.Pattern, int64, error) {
 	var lenOnePatterns []*P.Pattern
 	var filteredLenOnePatterns []*P.Pattern
-	var patternSize int64
+	var patternsSize int64
 	var err error
 
 	for _, eventName := range eventNames {
@@ -489,8 +489,14 @@ func mineAndWriteLenOnePatterns(projectID uint64, modelId uint64, cloudManager *
 	lenOnePatterns = append(lenOnePatterns, lenOnePatternsCampigns...)
 	// countPatterns(projectID, filepath, lenOnePatterns, numRoutines, countOccurence)
 
-	if beamConfig.RunOnBeam == false {
+	if !beamConfig.RunOnBeam {
 		countPatterns(projectID, filepathString, lenOnePatterns, numRoutines, countOccurence)
+		filteredLenOnePatterns, patternsSize, err = filterAndCompressPatterns(
+			lenOnePatterns, maxModelSize, cumulativePatternsSize, 1, max_PATTERN_LENGTH)
+
+		if err != nil {
+			return []*P.Pattern{}, 0, err
+		}
 	} else {
 		//call beam
 		scopeName := "Count_len_one"
@@ -502,18 +508,15 @@ func mineAndWriteLenOnePatterns(projectID uint64, modelId uint64, cloudManager *
 			return nil, 0, err
 		}
 		mineLog.Info("Reading from file")
-		lenOnePatterns, _ = readPatternFromFile(patternsFpath, cloudManager,
-			projectID, modelId)
+		filteredLenOnePatterns, patternsSize, err = ReadFilterAndCompressPatternsFromFile(
+			patternsFpath, cloudManager, maxModelSize, cumulativePatternsSize, 1, max_PATTERN_LENGTH)
+		if err != nil {
+			return []*P.Pattern{}, 0, err
+		}
 		mineLog.Infof("Beam number of len one patterns : %d , ", len(lenOnePatterns))
 	}
 
-	filteredLenOnePatterns, patternsSize, err := filterAndCompressPatterns(
-		lenOnePatterns, maxModelSize, cumulativePatternsSize, 1, max_PATTERN_LENGTH)
-	mineLog.Infof("patternSize : %d , ", patternSize)
-
-	if err != nil {
-		return []*P.Pattern{}, 0, err
-	}
+	mineLog.Infof("patternSize : %d , ", patternsSize)
 
 	if err := writePatternsAsChunks(filteredLenOnePatterns, chunkDir); err != nil {
 		return []*P.Pattern{}, 0, err
@@ -523,7 +526,7 @@ func mineAndWriteLenOnePatterns(projectID uint64, modelId uint64, cloudManager *
 
 //FilterCombinationPatterns filter all start events based on topK logic for URL's,UDE,standardEvents,CampAnalytics
 func FilterCombinationPatterns(combinationGoalPatterns, goalPatterns []*P.Pattern, eventNamesWithType map[string]string) []*P.Pattern {
-	combinationPatternsMap := make(map[string][]*P.Pattern, 0)
+	combinationPatternsMap := make(map[string][]*P.Pattern)
 	allPatterns := make([]*P.Pattern, 0)
 
 	//get all patterns ending in goals
@@ -557,6 +560,7 @@ func mineAndWriteLenTwoPatterns(projectId uint64, modelId uint64,
 	beamConfig *RunBeamConfig, efTmpPath string) (
 	[]*P.Pattern, int64, error) {
 
+	var patternsSize int64
 	var filteredLenTwoPatterns []*P.Pattern
 	var err error
 	var patternsFpath string
@@ -567,6 +571,11 @@ func mineAndWriteLenTwoPatterns(projectId uint64, modelId uint64,
 
 	if !beamConfig.RunOnBeam {
 		countPatterns(projectId, filepathString, combinationGoalPatterns, numRoutines, countOccurence)
+		filteredLenTwoPatterns, patternsSize, err = filterAndCompressPatterns(
+			combinationGoalPatterns, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
+		if err != nil {
+			return []*P.Pattern{}, 0, err
+		}
 	} else {
 
 		//call beam
@@ -578,9 +587,10 @@ func mineAndWriteLenTwoPatterns(projectId uint64, modelId uint64,
 			return nil, 0, fmt.Errorf("error in counting len two patterns in beam :%v", err)
 		}
 		mineLog.Info("Reading from file")
-		combinationGoalPatterns, err = readPatternFromFile(patternsFpath, cloudManager, projectId, modelId)
+		filteredLenTwoPatterns, patternsSize, err = ReadFilterAndCompressPatternsFromFile(
+			patternsFpath, cloudManager, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
 		if err != nil {
-			return nil, 0, err
+			return []*P.Pattern{}, 0, err
 		}
 		mineLog.Infof("number len Two patterns from beam: %d , ", len(combinationGoalPatterns))
 
@@ -589,18 +599,13 @@ func mineAndWriteLenTwoPatterns(projectId uint64, modelId uint64,
 	// filter all combinationGoalPatterns based on start event.
 	// for each goal event based on quota logic filter patterns.
 	// based on the quota  startevent filter url, sme, campaign events etc.
-	goalFilteredLenTwo := FilterCombinationPatterns(combinationGoalPatterns, goalPatterns, eventNamesWithType)
-	filteredLenTwoPatterns, patternsSize, err := filterAndCompressPatterns(
-		goalFilteredLenTwo, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
-	if err != nil {
-		return []*P.Pattern{}, 0, err
-	}
+	goalFilteredLenTwoPatterns := FilterCombinationPatterns(filteredLenTwoPatterns, goalPatterns, eventNamesWithType)
 
-	if err := writePatternsAsChunks(filteredLenTwoPatterns, chunkDir); err != nil {
+	if err := writePatternsAsChunks(goalFilteredLenTwoPatterns, chunkDir); err != nil {
 		return []*P.Pattern{}, 0, err
 	}
-	mineLog.Info("Total Numnber of Len Two Patterns :", len(filteredLenTwoPatterns))
-	return filteredLenTwoPatterns, patternsSize, nil
+	mineLog.Info("Total Numnber of Len Two Patterns :", len(goalFilteredLenTwoPatterns))
+	return goalFilteredLenTwoPatterns, patternsSize, nil
 }
 
 // GetGoalPatterns get all goalPatterns from DB
@@ -612,7 +617,7 @@ func GetGoalPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNames
 		mineLog.Info("Failure on Get goal patterns.")
 	}
 	var goalPatterns []*P.Pattern
-	if goalPatternsFromDB != nil && len(goalPatternsFromDB) > 0 {
+	if len(goalPatternsFromDB) > 0 {
 
 		mineLog.Info(fmt.Sprintf("Number of Goals from DB:%d", len(goalPatternsFromDB)))
 
@@ -674,7 +679,7 @@ func GenMissingJourneyPatterns(goal, journey []*P.Pattern, userAndEventsInfo *P.
 		return nil, fmt.Errorf("len of Journey is greater than goal")
 	}
 
-	journeyPatt := make(map[string]*P.Pattern, 0)
+	journeyPatt := make(map[string]*P.Pattern)
 	missingPatt := make([]*P.Pattern, 0)
 	sep := "_"
 	for _, v := range journey {
@@ -697,10 +702,10 @@ func GenMissingJourneyPatterns(goal, journey []*P.Pattern, userAndEventsInfo *P.
 	mineLog.Info("Number of missing patterns before filtering :", len(missingPatt))
 
 	allMissingPatt := make([]*P.Pattern, 0)
-	tmpMissingMap := make(map[string]bool, 0)
+	tmpMissingMap := make(map[string]bool)
 	// add dedupe logic
 	for _, v := range missingPatt {
-		if tmpMissingMap[strings.Join(v.EventNames, "_")] == false {
+		if !tmpMissingMap[strings.Join(v.EventNames, "_")] {
 			allMissingPatt = append(allMissingPatt, v)
 			tmpMissingMap[strings.Join(v.EventNames, "_")] = true
 		}
@@ -763,11 +768,11 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 
 	generatedThreePatterns, err := GenInterMediateCombinations(filteredTwoPatterns, userAndEventsInfo)
 	if err != nil {
-		return fmt.Errorf("Error to creating intermediate Patterns", err)
+		return fmt.Errorf("error to creating intermediate Patterns %v", err)
 	}
 	generatedThreeRepeatedPatterns, err := GenRepeatedCombinations(filteredTwoPatterns, userAndEventsInfo, repeatedEvents)
 	if err != nil {
-		return fmt.Errorf("Error to creating Repeated intermediate Patterns", err)
+		return fmt.Errorf("error to creating Repeated intermediate Patterns %v", err)
 	}
 
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
@@ -800,8 +805,15 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 		lenThreePatterns = MergePatterns(lenThreePatterns, generatedThreeRepeatedPatterns)
 		lenThreePatterns = MergePatterns(lenThreePatterns, lenThreeCampaign)
 
+		var filteredThreePatterns []*P.Pattern
 		if !beamConfig.RunOnBeam {
 			countPatterns(projectId, filepath, lenThreePatterns, numRoutines, countOccurence)
+			filteredThreePatterns, patternsSize, err = filterAndCompressPatterns(
+				lenThreePatterns, maxModelSize, cumulativePatternsSize,
+				patternLen, max_PATTERN_LENGTH)
+			if err != nil {
+				return err
+			}
 		} else {
 			//call beam
 			var patternsFpath string
@@ -813,20 +825,16 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 				return fmt.Errorf("unable to count three len patterns :%v", err)
 			}
 			mineLog.Info("Reading from file")
-			lenThreePatterns, err = readPatternFromFile(patternsFpath, cloudManager, projectId, modelId)
+			filteredThreePatterns, patternsSize, err = ReadFilterAndCompressPatternsFromFile(
+				patternsFpath, cloudManager, maxModelSize, cumulativePatternsSize,
+				patternLen, max_PATTERN_LENGTH)
 			if err != nil {
 				return err
 			}
-			mineLog.Infof("number len Two patterns from beam: %d , ", len(lenThreePatterns))
+			mineLog.Infof("number len Three patterns from beam: %d , ", len(lenThreePatterns))
 
 		}
 
-		filteredThreePatterns, patternsSize, err := filterAndCompressPatterns(
-			lenThreePatterns, maxModelSize, cumulativePatternsSize,
-			patternLen, max_PATTERN_LENGTH)
-		if err != nil {
-			return err
-		}
 		cumulativePatternsSize += patternsSize
 		if err := writePatternsAsChunks(filteredThreePatterns, chunkDir); err != nil {
 			return err
@@ -841,8 +849,15 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 		}
 
 		// count  - two len missing
+		var filteredMissingPatterns []*P.Pattern
 		if !beamConfig.RunOnBeam {
 			countPatterns(projectId, filepath, missingPatternsTwo, numRoutines, countOccurence)
+			filteredMissingPatterns, patternsSize, err = filterAndCompressPatterns(
+				lenThreePatterns, maxModelSize, cumulativePatternsSize,
+				patternLen, max_PATTERN_LENGTH)
+			if err != nil {
+				return err
+			}
 		} else {
 			//call beam
 			var patternsFpath string
@@ -855,19 +870,13 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 				return fmt.Errorf("unable to count len two missing :%v", err)
 			}
 			mineLog.Infof("Reading from part Directory : %s", scopeName)
-			missingPatternsTwo, err = readPatternFromFile(patternsFpath, cloudManager, projectId, modelId)
+			filteredMissingPatterns, patternsSize, err = ReadFilterAndCompressPatternsFromFile(patternsFpath, cloudManager, maxModelSize, cumulativePatternsSize, patternLen, max_PATTERN_LENGTH)
 			if err != nil {
 				return err
 			}
-			mineLog.Infof("number len Two patterns from beam: %d , ", len(lenThreePatterns))
+			mineLog.Infof("number len Two missing patterns from beam: %d , ", len(missingPatternsTwo))
 		}
 
-		filteredMissingPatterns, patternsSize, err := filterAndCompressPatterns(
-			missingPatternsTwo, maxModelSize, cumulativePatternsSize,
-			patternLen, max_PATTERN_LENGTH)
-		if err != nil {
-			return err
-		}
 		cumulativePatternsSize += patternsSize
 		if err := writePatternsAsChunks(filteredMissingPatterns, chunkDir); err != nil {
 			return err
@@ -1258,7 +1267,7 @@ func writeEncodedEvent(eventName string, property string, propertyName string, p
 		var tmpEvent P.CounterEventFormat
 		tmpEventId, ok := eventDetails.EventProperties[property].(string)
 
-		if ok == false {
+		if !ok {
 			mineLog.Info("Error in converting string : ", " ", strings.ToUpper(propertyName), " ", eventDetails.EventProperties[property])
 		}
 
@@ -1335,7 +1344,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 		return nil, nil
 	}
 
-	if userPropertiesList != nil && len(userPropertiesList) > 0 {
+	if len(userPropertiesList) > 0 {
 		mineLog.WithFields(log.Fields{"user properties": userPropertiesList}).Info("Number of User properties from db :", len(userPropertiesList))
 
 		for _, v := range userPropertiesList {
@@ -1352,7 +1361,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 		upSortedList := U.RankByWordCount(userPropertiesMap)
 		var userPropertiesCount = 0
 		for _, u := range upSortedList {
-			if upFilteredMap[u.Key] != true {
+			if !upFilteredMap[u.Key] {
 				upFilteredMap[u.Key] = true
 				userPropertiesCount++
 			}
@@ -1360,7 +1369,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 
 		// delete keys based on disabled_Properties
 		for _, Uprop := range U.DISABLED_FACTORS_USER_PROPERTIES {
-			if upFilteredMap[Uprop] == true {
+			if upFilteredMap[Uprop] {
 				delete(upFilteredMap, Uprop)
 
 			}
@@ -1381,7 +1390,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 	epSortedList := U.RankByWordCount(eventPropertiesMap)
 	var eventCountLocal = 0
 	for _, u := range epSortedList {
-		if epFilteredMap[u.Key] == false {
+		if !epFilteredMap[u.Key] {
 			epFilteredMap[u.Key] = true
 			eventCountLocal++
 		}
@@ -1405,7 +1414,7 @@ func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efT
 		mineLog.WithFields(log.Fields{"err": err, "tmpEventsFilePath": tmpEventsFilePath}).Error("Failed to filter disabled properties")
 		return CampaignEventLists{}, err
 	}
-	r, err := os.Open(efPath)
+	r, _ := os.Open(efPath)
 	err = diskManager.Create(efTmpPath, efTmpName, r)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efTmpPath,
@@ -1711,7 +1720,7 @@ func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType m
 	exists := make(map[string]bool)
 
 	for _, pt := range allPatternsFiltered {
-		if exists[pt.pattern.EventNames[0]] == false {
+		if !exists[pt.pattern.EventNames[0]] {
 			allPatternsTopk = append(allPatternsTopk, pt.pattern)
 			exists[pt.pattern.EventNames[0]] = true
 		}
@@ -1742,7 +1751,7 @@ func takeCampaignEvents(allPatterns []patternProperties, campaignEventsType Camp
 
 	for _, pt := range allPatterns {
 
-		if exists[pt.pattern.EventNames[0]] == true {
+		if exists[pt.pattern.EventNames[0]] {
 			allPatternsType = append(allPatternsType, pt)
 		}
 	}
@@ -1759,7 +1768,7 @@ func GetAllRepeatedEvents(eventNames []string, campaignAnalyticsList CampaignEve
 	for _, v := range eventNames {
 
 		if strings.HasPrefix(v, "$") {
-			if eventSet[v] == false {
+			if !eventSet[v] {
 				CyclicEvents = append(CyclicEvents, v)
 				eventSet[v] = true
 			}
@@ -1767,27 +1776,27 @@ func GetAllRepeatedEvents(eventNames []string, campaignAnalyticsList CampaignEve
 	}
 
 	for _, ce := range campaignAnalyticsList.CampaignList {
-		if eventSet[ce] == false {
+		if !eventSet[ce] {
 			CyclicEvents = append(CyclicEvents, ce)
 			eventSet[ce] = true
 		}
 	}
 
 	for _, ce := range campaignAnalyticsList.MediumList {
-		if eventSet[ce] == false {
+		if !eventSet[ce] {
 			CyclicEvents = append(CyclicEvents, ce)
 			eventSet[ce] = true
 		}
 	}
 
 	for _, ce := range campaignAnalyticsList.ReferrerList {
-		if eventSet[ce] == false {
+		if !eventSet[ce] {
 			CyclicEvents = append(CyclicEvents, ce)
 			eventSet[ce] = true
 		}
 	}
 	for _, ce := range campaignAnalyticsList.SourceList {
-		if eventSet[ce] == false {
+		if !eventSet[ce] {
 			CyclicEvents = append(CyclicEvents, ce)
 			eventSet[ce] = true
 		}
@@ -1805,7 +1814,7 @@ func getAllRepeatedEventPatterns(allPatterns []*P.Pattern, standardEventsList []
 	}
 
 	for _, v := range allPatterns {
-		if standardEventsMap[v.EventNames[0]] == true {
+		if standardEventsMap[v.EventNames[0]] {
 			filteredPatterns = append(filteredPatterns, v)
 
 		}
@@ -1862,7 +1871,7 @@ func GetTopURLs(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
 
 	for _, v := range allPatterns {
 
-		if U.IsValidUrl(v.EventNames[0]) == true {
+		if U.IsValidUrl(v.EventNames[0]) {
 			allUrls = append(allUrls, v)
 		}
 	}
@@ -1878,16 +1887,16 @@ func FilterEventsInfo(userAndEventsInfo *P.UserAndEventsInfo, userProp, eventPro
 	eventPropertiesInfo := *userAndEventsInfo.EventPropertiesInfoMap
 
 	//delete both categorical and numerical properties for users
-	for propertyName, _ := range userPropertiesInfo.CategoricalPropertyKeyValues {
+	for propertyName := range userPropertiesInfo.CategoricalPropertyKeyValues {
 
-		if userProp[propertyName] == false {
+		if !userProp[propertyName] {
 			delete(userPropertiesInfo.CategoricalPropertyKeyValues, propertyName)
 		}
 	}
 
-	for propertyName, _ := range userPropertiesInfo.NumericPropertyKeys {
+	for propertyName := range userPropertiesInfo.NumericPropertyKeys {
 
-		if userProp[propertyName] == false {
+		if !userProp[propertyName] {
 			delete(userPropertiesInfo.NumericPropertyKeys, propertyName)
 		}
 	}
@@ -1895,16 +1904,16 @@ func FilterEventsInfo(userAndEventsInfo *P.UserAndEventsInfo, userProp, eventPro
 	//delete both categorical and numerical properties for events
 	for _, property := range eventPropertiesInfo {
 
-		for k, _ := range property.CategoricalPropertyKeyValues {
+		for k := range property.CategoricalPropertyKeyValues {
 
-			if eventProp[k] == false {
+			if !eventProp[k] {
 				delete(property.CategoricalPropertyKeyValues, k)
 			}
 		}
 
-		for k, _ := range property.NumericPropertyKeys {
+		for k := range property.NumericPropertyKeys {
 
-			if eventProp[k] == false {
+			if !eventProp[k] {
 				delete(property.NumericPropertyKeys, k)
 			}
 		}
@@ -1952,7 +1961,7 @@ func GetTopStandardPatterns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
 
 	for _, v := range allPatterns {
 
-		if strings.HasPrefix(v.EventNames[0], "$") && U.IsCampaignAnalytics(v.EventNames[0]) == false {
+		if strings.HasPrefix(v.EventNames[0], "$") && !U.IsCampaignAnalytics(v.EventNames[0]) {
 			allStandardPatterns = append(allStandardPatterns, v)
 		}
 	}
@@ -2098,7 +2107,7 @@ func GenInterMediateCombinations(lenTwoPatt []*P.Pattern, userAndEventsInfo *P.U
 	allPatterns := make([]*P.Pattern, 0)
 	for i := 0; i < len(lenTwoPatt); i++ {
 		for j := i + 1; j < len(lenTwoPatt); j++ {
-			if reflect.DeepEqual(lenTwoPatt[i].EventNames, lenTwoPatt[j].EventNames) == false {
+			if !reflect.DeepEqual(lenTwoPatt[i].EventNames, lenTwoPatt[j].EventNames) {
 				tmpPatt, err := P.GenCandidatesForGoals(lenTwoPatt[i], lenTwoPatt[j], userAndEventsInfo)
 				if err != nil {
 					return nil, fmt.Errorf("unable to create intermediate combinations")
@@ -2126,7 +2135,7 @@ func GenRepeatedCombinations(lenTwoPatt []*P.Pattern, userAndEventsInfo *P.UserA
 		}
 	}
 
-	repeatedEventsMap := make(map[string]bool, 0)
+	repeatedEventsMap := make(map[string]bool)
 	for _, v := range repeatedEvents {
 		repeatedEventsMap[v] = true
 	}
@@ -2135,7 +2144,7 @@ func GenRepeatedCombinations(lenTwoPatt []*P.Pattern, userAndEventsInfo *P.UserA
 	var allPatterns []*P.Pattern
 
 	for _, v := range lenTwoPatt {
-		if repeatedEventsMap[v.EventNames[0]] == true {
+		if repeatedEventsMap[v.EventNames[0]] {
 			allStrings = append(allStrings, []string{v.EventNames[0], v.EventNames[0], v.EventNames[1]})
 		}
 	}
