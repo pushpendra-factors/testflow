@@ -100,15 +100,7 @@ function AddDashboard({
 
   const getUnitsAssignRequestBody = useCallback(() => {
     const reqBody = selectedQueries.map((sq) => {
-      const settings = {};
-      if (sq.query.query_group) {
-        settings.chart = "pl";
-      } else {
-        settings.chart = "pb";
-      }
       return {
-        settings,
-        title: sq.title,
         description: sq.description,
         query_id: sq.query_id,
       };
@@ -155,15 +147,7 @@ function AddDashboard({
       );
       if (newAddedUnits.length) {
         const reqBody = newAddedUnits.map((unit) => {
-          const settings = {};
-          if (unit.query.query_group) {
-            settings.chart = "pl";
-          } else {
-            settings.chart = "pb";
-          }
           return {
-            settings,
-            title: unit.title,
             description: unit.description,
             query_id: unit.query_id,
           };
