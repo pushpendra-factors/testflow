@@ -102,7 +102,7 @@ function CoreQuery({
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [resultState, setResultState] = useState(initialState);
   const [requestQuery, updateRequestQuery] = useState(null);
-  const [rowClicked, setRowClicked] = useState(false);
+  const [clickedSavedReport, setClickedSavedReport] = useState(false);
   const [querySaved, setQuerySaved] = useState(false);
   const [breakdownType, setBreakdownType] = useState(EACH_USER_TYPE);
   const [queries, setQueries] = useState([]);
@@ -239,7 +239,9 @@ function CoreQuery({
         payload: isComparisonEnabled(queryType, queries, groupBy, models),
       });
       if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
-        setAppliedQueries(queries.map((elem) => elem.alias? elem.alias : elem.label));
+        setAppliedQueries(
+          queries.map((elem) => (elem.alias ? elem.alias : elem.label))
+        );
         updateAppliedBreakdown();
       }
     },
@@ -698,20 +700,32 @@ function CoreQuery({
   );
 
   useEffect(() => {
-    if (rowClicked) {
-      if (rowClicked.queryType === QUERY_TYPE_FUNNEL) {
-        runFunnelQuery(rowClicked.queryName);
-      } else if (rowClicked.queryType === QUERY_TYPE_ATTRIBUTION) {
-        runAttributionQuery(rowClicked.queryName);
-      } else if (rowClicked.queryType === QUERY_TYPE_CAMPAIGN) {
-        runCampaignsQuery(rowClicked.queryName);
+    if (clickedSavedReport) {
+      if (clickedSavedReport.queryType === QUERY_TYPE_FUNNEL) {
+        runFunnelQuery({
+          id: clickedSavedReport.query_id,
+          name: clickedSavedReport.queryName,
+        });
+      } else if (clickedSavedReport.queryType === QUERY_TYPE_ATTRIBUTION) {
+        runAttributionQuery({
+          id: clickedSavedReport.query_id,
+          name: clickedSavedReport.queryName,
+        });
+      } else if (clickedSavedReport.queryType === QUERY_TYPE_CAMPAIGN) {
+        runCampaignsQuery({
+          id: clickedSavedReport.query_id,
+          name: clickedSavedReport.queryName,
+        });
       } else {
-        runQuery(rowClicked.queryName);
+        runQuery({
+          id: clickedSavedReport.query_id,
+          name: clickedSavedReport.queryName,
+        });
       }
-      setRowClicked(false);
+      setClickedSavedReport(false);
     }
   }, [
-    rowClicked,
+    clickedSavedReport,
     runFunnelQuery,
     runQuery,
     runAttributionQuery,
@@ -825,7 +839,7 @@ function CoreQuery({
         eventName: q,
         index,
         mapper: `event${index + 1}`,
-        displayName: eventNames[q]? eventNames[q] : q,
+        displayName: eventNames[q] ? eventNames[q] : q,
       };
     });
   }, [appliedQueries, eventNames]);
@@ -867,46 +881,6 @@ function CoreQuery({
     }
   };
 
-  // const renderQueryHeader = () => {
-  //   if (true) return null;
-
-  //   let eventList = [];
-  //   if (requestQuery.cl === 'attribution') {
-  //     eventList = [requestQuery.query.ce];
-  //   } else {
-  //     eventList = isArray(requestQuery)
-  //       ? requestQuery[0].ewp
-  //       : requestQuery.ewp;
-  //   }
-  //   return (
-  //     <div className={`${styles.query_header} flex flex-col fa-act-header`}>
-  //       <span className={`${styles.query_header__link}`}>
-  //         {queryType} Analysis
-  //       </span>
-  //       <div className={`${styles.query_header__content}`}>
-  //         {requestQuery &&
-  //           eventList?.map((ev, index) => {
-  //             return (
-  //               <>
-  //                 <Text
-  //                   level={6}
-  //                   type={'title'}
-  //                   extraClass={'m-0'}
-  //                   weight={'bold'}
-  //                 >
-  //                   {ev?.na}
-  //                 </Text>
-  //                 <span className={`${styles.query_header__content__trail}`}>
-  //                   ...
-  //                 </span>
-  //               </>
-  //             );
-  //           })}
-  //       </div>
-  //     </div>
-  //   );
-  // };
-
   const renderQueryComposerNew = () => {
     if (
       queryType === QUERY_TYPE_FUNNEL ||
@@ -921,17 +895,6 @@ function CoreQuery({
           {renderQueryComposer()}
         </div>
       );
-
-      // return (
-      //   <Collapse activeKey={true? ["1"] : ["0"]} onChange={() => setQueryOpen(!queryOpen)} className={`fa-query-edit ${queryOpen? 'query-open': ''}`} expandIcon={() =>
-      //     <SVG  name={`sliders`} extraClass={`query_header_icon`}></SVG>}>
-      //     <Panel id={true? 'query_header' : ''} header={renderQueryHeader()} key="1">
-      //       <div>
-      //         {renderQueryComposer()}
-      //       </div>
-      //     </Panel>
-      //   </Collapse>
-      // )
     }
     return null;
   };
@@ -967,12 +930,12 @@ function CoreQuery({
               requestQuery={requestQuery}
               onBreadCrumbClick={handleBreadCrumbClick}
               queryType={queryType}
-              queryTitle={querySaved}
+              queryTitle={querySaved ? querySaved.name : null}
               setQuerySaved={setQuerySaved}
               breakdownType={breakdownType}
               changeTab={changeTab}
               activeTab={activeTab}
-              getCurrentSorter={() => {}}
+              savedQueryId={querySaved ? querySaved.id : null}
             />
           }
           visible={drawerVisible}
@@ -983,7 +946,6 @@ function CoreQuery({
           closable={false}
           className={'fa-modal--full-width'}
         >
-
           <div className='mt-8 px-20'>
             <ErrorBoundary
               fallback={
@@ -1065,7 +1027,7 @@ function CoreQuery({
                 setDrawerVisible={closeResultPage}
                 setQueries={setQueries}
                 setQueryOptions={setExtraOptions}
-                setRowClicked={setRowClicked}
+                setClickedSavedReport={setClickedSavedReport}
                 location={location}
                 setActiveKey={setActiveKey}
                 setBreakdownType={setBreakdownType}
@@ -1096,7 +1058,8 @@ function CoreQuery({
                 setShowResult(false);
                 updateRequestQuery(false);
               }}
-              querySaved={querySaved}
+              queryTitle={querySaved ? querySaved.name : null}
+              savedQueryId={querySaved ? querySaved.id : null}
               setQuerySaved={setQuerySaved}
               durationObj={queryOptions.date_range}
               handleDurationChange={handleDurationChange}

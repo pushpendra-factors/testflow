@@ -61,7 +61,9 @@ function CardContent({ unit, resultState, durationObj }) {
 
   const events = useMemo(() => {
     if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
-      return equivalentQuery.events.map((elem) => elem.alias? elem.alias : eventNames[elem.label] || elem.label);
+      return equivalentQuery.events.map((elem) =>
+        elem.alias ? elem.alias : eventNames[elem.label] || elem.label
+      );
     }
   }, [equivalentQuery.events, queryType]);
 
@@ -79,10 +81,10 @@ function CardContent({ unit, resultState, durationObj }) {
       const am = [];
       equivalentQuery.events.forEach((q, index) => {
         am.push({
-          eventName: q.alias? q.alias : eventNames[q.label] || q.label,
+          eventName: q.alias ? q.alias : eventNames[q.label] || q.label,
           index,
           mapper: `event${index + 1}`,
-          displayName: q.alias? q.alias : eventNames[q.label] || q.label,
+          displayName: q.alias ? q.alias : eventNames[q.label] || q.label,
         });
       });
       return am;
@@ -153,7 +155,9 @@ function CardContent({ unit, resultState, durationObj }) {
 
   if (resultState.data) {
     const dashboardPresentation =
-      unit.settings && unit.settings.chart ? unit.settings.chart : 'pl';
+      unit.query && unit.query.settings && unit.query.settings.chart
+        ? unit.query.settings.chart
+        : 'pt';
 
     if (queryType === QUERY_TYPE_FUNNEL) {
       content = (

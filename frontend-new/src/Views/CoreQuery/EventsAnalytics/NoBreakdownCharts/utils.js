@@ -165,9 +165,16 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
   });
   const eventIndices = [];
   const resultantData = arrayMapper.map((m) => {
-    eventIndices.push(headers.findIndex((header) => m.displayName === (eventNames[header]? eventNames[header] : header)));
+    eventIndices.push(
+      headers.findIndex(
+        (header) =>
+          m.displayName === (eventNames[header] ? eventNames[header] : header)
+      )
+    );
     return {
-      name: m.displayName? m.displayName : eventNames[m.eventName] || m.eventName,
+      name: m.displayName
+        ? m.displayName
+        : eventNames[m.eventName] || m.eventName,
       data: [...initializedDatesData],
       index: m.index,
       marker: {
@@ -276,7 +283,9 @@ export const getNoGroupingTablularDatesBasedData = (
       Array.isArray(metrics.rows) &&
       metrics.rows.length
     ) {
-      const countIdx = metrics.headers.findIndex((h) => h === 'count');
+      const countIdx = metrics.headers.findIndex(
+        (h) => h === 'count' || h === 'aggregate'
+      );
       const event_indexIdx = metrics.headers.findIndex(
         (h) => h === 'event_index'
       );

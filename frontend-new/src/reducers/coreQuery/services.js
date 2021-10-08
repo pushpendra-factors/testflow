@@ -1,4 +1,4 @@
-import { get, getHostUrl, post, del } from '../../utils/request';
+import { get, getHostUrl, post, del, put } from '../../utils/request';
 import {
   QUERIES_LOADING,
   QUERIES_LOADED,
@@ -9,6 +9,7 @@ import {
 } from '../types';
 import { notification } from 'antd';
 import { getErrorMessage } from '../../utils/dataFormatter';
+// import { SAVED_QUERIES } from '../../utils/SampleResponse';
 import {
   MARKETING_TOUCHPOINTS_ALIAS,
   KEY_TOUCH_POINT_DIMENSIONS,
@@ -163,16 +164,18 @@ export const deleteQuery = async (dispatch, query) => {
   }
 };
 
-export const fetchQueries = async (dispatch, projectId) => {
-  try {
-    dispatch({ type: QUERIES_LOADING });
-    const url = host + 'projects/' + projectId + '/queries';
-    const res = await get(null, url);
-    dispatch({ type: QUERIES_LOADED, payload: res.data });
-  } catch (err) {
-    console.log(err);
-    dispatch({ type: QUERIES_LOADING_FAILED });
-  }
+export const fetchQueries = (projectId) => {
+  return async (dispatch) => {
+    try {
+      dispatch({ type: QUERIES_LOADING });
+      const url = host + 'projects/' + projectId + '/queries';
+      const res = await get(null, url);
+      dispatch({ type: QUERIES_LOADED, payload: res.data });
+    } catch (err) {
+      console.log(err);
+      dispatch({ type: QUERIES_LOADING_FAILED });
+    }
+  };
 };
 
 export const getAttributionsData = (projectId, reqBody, dashboard) => {
@@ -225,26 +228,33 @@ export const getWebAnalyticsData = (
   return post(null, url, reqBody);
 };
 
-export const fetchSmartPropertyRules = async (dispatch, projectId) => {
-  try {
-    const url = host + 'projects/' + projectId + '/v1/smart_properties/rules';
-    const res = await get(null, url);
-    const customDimensions = res.data.map((elem) => {
-      return {
-        title: elem.name,
-        header: elem.name,
-        responseHeader: elem.name,
-        enabled: false,
-        type: 'custom',
-        touchPoint: MARKETING_TOUCHPOINTS_ALIAS[elem.type_alias],
-        defaultValue: false,
-      };
-    });
-    dispatch({
-      type: INITIALIZE_TOUCHPOINT_DIMENSIONS,
-      payload: [...KEY_TOUCH_POINT_DIMENSIONS, ...customDimensions],
-    });
-  } catch (err) {
-    console.log(err);
-  }
+export const fetchSmartPropertyRules = (projectId) => {
+  return async function (dispatch) {
+    try {
+      const url = host + 'projects/' + projectId + '/v1/smart_properties/rules';
+      const res = await get(null, url);
+      const customDimensions = res.data.map((elem) => {
+        return {
+          title: elem.name,
+          header: elem.name,
+          responseHeader: elem.name,
+          enabled: false,
+          type: 'custom',
+          touchPoint: MARKETING_TOUCHPOINTS_ALIAS[elem.type_alias],
+          defaultValue: false,
+        };
+      });
+      dispatch({
+        type: INITIALIZE_TOUCHPOINT_DIMENSIONS,
+        payload: [...KEY_TOUCH_POINT_DIMENSIONS, ...customDimensions],
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+};
+
+export const updateQuery = (projectId, savedQueryId, reqBody) => {
+  const url = host + 'projects/' + projectId + '/queries/' + savedQueryId;
+  return put(null, url, reqBody);
 };

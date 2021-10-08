@@ -11,9 +11,9 @@ import {
 } from 'antd';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
-import { saveQuery } from '../../reducers/coreQuery/services';
+import { saveQuery, updateQuery } from '../../reducers/coreQuery/services';
 import { useSelector, useDispatch, connect } from 'react-redux';
-import { QUERY_CREATED } from '../../reducers/types';
+import { QUERY_CREATED, QUERY_UPDATED } from '../../reducers/types';
 import { saveQueryToDashboard } from '../../reducers/dashboard/services';
 import {
   QUERY_TYPE_EVENT,
@@ -36,6 +36,7 @@ function SaveQuery({
   setQuerySaved,
   fetchWeeklyIngishtsMetaData,
   getCurrentSorter,
+  savedQueryId,
 }) {
   const [title, setTitle] = useState('');
   const [addToDashboard, setAddToDashboard] = useState(false);
@@ -49,8 +50,8 @@ function SaveQuery({
   const { dashboards } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
 
-  const startOfWeek =  MomentTz().startOf('week').utc().unix();
-  const todayNow =  MomentTz().utc().unix();
+  const startOfWeek = MomentTz().startOf('week').utc().unix();
+  const todayNow = MomentTz().utc().unix();
 
   const handleTitleChange = useCallback((e) => {
     setTitle(e.target.value);
@@ -118,7 +119,10 @@ function SaveQuery({
     try {
       setApisCalled(true);
       let query;
-      const querySettings = getCurrentSorter();
+      const querySettings = {
+        ...getCurrentSorter(),
+        chart: dashboardPresentation,
+      };
       if (queryType === QUERY_TYPE_FUNNEL) {
         query = {
           ...requestQuery,
@@ -134,6 +138,7 @@ function SaveQuery({
             to: todayNow,
           },
         };
+        querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
       } else if (queryType === QUERY_TYPE_EVENT) {
         query = {
           query_group: requestQuery.map((q) => {
@@ -158,24 +163,41 @@ function SaveQuery({
           }),
         };
       }
-      const type = addToDashboard ? 1 : 2;
-      const res = await saveQuery(
-        active_project.id,
-        title,
-        query,
-        type,
-        querySettings
-      );
-      if (addToDashboard) {
-        const settings = {
-          chart: dashboardPresentation,
-          attributionMetrics: JSON.stringify(attributionMetrics),
-        };
-        const reqBody = {
-          settings,
-          description: '',
+      let res;
+      if (!savedQueryId) {
+        const type = addToDashboard ? 1 : 2;
+        res = await saveQuery(
+          active_project.id,
           title,
-          query_id: res.data.id,
+          query,
+          type,
+          querySettings
+        );
+        dispatch({ type: QUERY_CREATED, payload: res.data });
+        setQuerySaved({ name: title, id: res.data.id });
+      } else {
+        const reqBody = {
+          title,
+          settings: querySettings,
+        };
+        if (addToDashboard) {
+          reqBody.type = 1;
+        }
+        res = await updateQuery(active_project.id, savedQueryId, reqBody);
+        dispatch({
+          type: QUERY_UPDATED,
+          queryId: savedQueryId,
+          payload: {
+            title,
+            settings: querySettings,
+          },
+        });
+        setQuerySaved({ name: title, id: savedQueryId });
+      }
+
+      if (addToDashboard) {
+        const reqBody = {
+          query_id: savedQueryId ? savedQueryId : res.data.id,
         };
         await saveQueryToDashboard(
           active_project.id,
@@ -187,8 +209,7 @@ function SaveQuery({
         message: 'Report Saved Successfully',
         duration: 5,
       });
-      dispatch({ type: QUERY_CREATED, payload: res.data });
-      setQuerySaved(title);
+
       setApisCalled(false);
       fetchWeeklyIngishtsMetaData(active_project.id);
       resetModalState();
@@ -215,47 +236,48 @@ function SaveQuery({
     setQuerySaved,
     attributionMetrics,
     fetchWeeklyIngishtsMetaData,
-    getCurrentSorter
+    getCurrentSorter,
+    savedQueryId,
   ]);
 
   let dashboardHelpText = 'Create a dashboard widget for regular monitoring';
-  let dashboardOptions = null;
+  const chartOptions = (
+    <div className='mt-4'>
+      <Radio.Group
+        value={dashboardPresentation}
+        onChange={handlePresentationChange}
+        className={styles.radioGroup}
+      >
+        {getSaveChartOptions(queryType, requestQuery)}
+      </Radio.Group>
+    </div>
+  );
+
+  let dashboardList;
 
   if (addToDashboard) {
     dashboardHelpText = 'This widget will appear on the following dashboards:';
-
-    dashboardOptions = (
-      <>
-        <div className='mt-5'>
-          <Select
-            mode='multiple'
-            style={{ width: '100%' }}
-            placeholder={'Please Select'}
-            onChange={handleSelectChange}
-            className={styles.multiSelectStyles}
-            value={getSelectedDashboards()}
-          >
-            {dashboards.data
-              .filter((d) => d.class === DASHBOARD_TYPES.USER_CREATED)
-              .map((d) => {
-                return (
-                  <Select.Option value={d.name} key={d.id}>
-                    {d.name}
-                  </Select.Option>
-                );
-              })}
-          </Select>
-        </div>
-        <div className='mt-2'>
-          <Radio.Group
-            value={dashboardPresentation}
-            onChange={handlePresentationChange}
-            className={styles.radioGroup}
-          >
-            {getSaveChartOptions(queryType, requestQuery)}
-          </Radio.Group>
-        </div>
-      </>
+    dashboardList = (
+      <div className='mt-5'>
+        <Select
+          mode='multiple'
+          style={{ width: '100%' }}
+          placeholder={'Please Select'}
+          onChange={handleSelectChange}
+          className={styles.multiSelectStyles}
+          value={getSelectedDashboards()}
+        >
+          {dashboards.data
+            .filter((d) => d.class === DASHBOARD_TYPES.USER_CREATED)
+            .map((d) => {
+              return (
+                <Select.Option value={d.name} key={d.id}>
+                  {d.name}
+                </Select.Option>
+              );
+            })}
+        </Select>
+      </div>
     );
   }
 
@@ -267,7 +289,7 @@ function SaveQuery({
         size={'large'}
         icon={<SVG name={'save'} size={20} color={'white'} />}
       >
-        Save
+        {savedQueryId ? 'Edit' : 'Save'}
       </Button>
 
       <Modal
@@ -286,7 +308,7 @@ function SaveQuery({
       >
         <div className='p-4'>
           <Text extraClass='m-0' type={'title'} level={3} weight={'bold'}>
-            Create New Report
+            {savedQueryId ? 'Edit Report' : 'Create New Report'}
           </Text>
           <div className='pt-6'>
             <Text
@@ -303,23 +325,30 @@ function SaveQuery({
               size={'large'}
             />
           </div>
+          {chartOptions}
           {/* <div className={`pt-2 ${styles.linkText}`}>Help others to find this query easily?</div> */}
-          <div className={'pt-6 flex items-center'}>
-            <Switch
-              onChange={toggleAddToDashboard}
-              checked={addToDashboard}
-              className={styles.switchBtn}
-              checkedChildren='On'
-              unCheckedChildren='Off'
-            />
-            <Text extraClass='m-0' type='title' level={6} weight='bold'>
-              Add to Dashboard
+          <React.Fragment>
+            <div className={'pt-6 flex items-center'}>
+              <Switch
+                onChange={toggleAddToDashboard}
+                checked={addToDashboard}
+                className={styles.switchBtn}
+                checkedChildren='On'
+                unCheckedChildren='Off'
+              />
+              <Text extraClass='m-0' type='title' level={6} weight='bold'>
+                Add to Dashboard
+              </Text>
+            </div>
+            <Text
+              extraClass={`pt-1 ${styles.noteText}`}
+              mini
+              type={'paragraph'}
+            >
+              {dashboardHelpText}
             </Text>
-          </div>
-          <Text extraClass={`pt-1 ${styles.noteText}`} mini type={'paragraph'}>
-            {dashboardHelpText}
-          </Text>
-          {dashboardOptions}
+            {dashboardList}
+          </React.Fragment>
         </div>
       </Modal>
     </>

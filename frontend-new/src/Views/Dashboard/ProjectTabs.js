@@ -1,19 +1,23 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Tabs, Button, Spin, Select } from "antd"; 
-import { useSelector, useDispatch } from "react-redux";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Tabs, Button, Spin, Select } from 'antd';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchActiveDashboardUnits,
   DeleteUnitFromDashboard,
-} from "../../reducers/dashboard/services";
-import { ACTIVE_DASHBOARD_CHANGE, WIDGET_DELETED } from "../../reducers/types";
-import SortableCards from "./SortableCards";
-import DashboardSubMenu from "./DashboardSubMenu";
-import ExpandableView from "./ExpandableView";
-import ConfirmationModal from "../../components/ConfirmationModal";
-import styles from "./index.module.scss";
+} from '../../reducers/dashboard/services';
+import { ACTIVE_DASHBOARD_CHANGE, WIDGET_DELETED } from '../../reducers/types';
+import SortableCards from './SortableCards';
+import DashboardSubMenu from './DashboardSubMenu';
+import ExpandableView from './ExpandableView';
+import ConfirmationModal from '../../components/ConfirmationModal';
+import styles from './index.module.scss';
 import NoDataChart from '../../components/NoDataChart';
-import { SVG, FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
-import {ErrorBoundary} from 'react-error-boundary';
+import {
+  SVG,
+  FaErrorComp,
+  FaErrorLog,
+} from '../../components/factorsComponents';
+import { ErrorBoundary } from 'react-error-boundary';
 // import InfoCard from '../../components/InfoCard';
 // import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 
@@ -71,10 +75,8 @@ function ProjectTabs({
 
   const fetchUnits = useCallback(() => {
     if (active_project.id && activeDashboard.id) {
-      fetchActiveDashboardUnits(
-        dispatch,
-        active_project.id,
-        activeDashboard.id
+      dispatch(
+        fetchActiveDashboardUnits(active_project.id, activeDashboard.id)
       );
     }
   }, [active_project.id, activeDashboard.id, dispatch]);
@@ -171,22 +173,27 @@ function ProjectTabs({
 
   const operations = (
     <>
-      <Button className={styles.operations} type="text" onClick={() => setaddDashboardModal(true)}  icon={<SVG name="plus" size={16} color={'grey'} />}/>
+      <Button
+        className={styles.operations}
+        type='text'
+        onClick={() => setaddDashboardModal(true)}
+        icon={<SVG name='plus' size={16} color={'grey'} />}
+      />
       {/* <Button type="text" icon={<SVG name="edit" size={16} color={'grey'} />} /> */}
     </>
   );
 
   if (dashboards.loading || activeDashboardUnits.loading) {
     return (
-      <div className="flex justify-center items-center w-full h-64">
-        <Spin size="large" />
+      <div className='flex justify-center items-center w-full h-64'>
+        <Spin size='large' />
       </div>
     );
   }
 
   if (dashboards.error || activeDashboardUnits.error) {
     return (
-      <div className="flex justify-center items-center w-full h-64">
+      <div className='flex justify-center items-center w-full h-64'>
         <NoDataChart />
       </div>
     );
@@ -203,59 +210,80 @@ function ProjectTabs({
   if (dashboards.data.length) {
     return (
       <>
-       <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Dashboard Error'} subtitle={'We are facing trouble loading dashboards. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-        <Tabs
-          onChange={handleTabChange}
-          activeKey={getActiveKey()}
-          className={"fa-tabs--dashboard"}
-          tabBarExtraContent={operations}
-        > 
-          {dashboards.data.map((d, index) => {
-            return (
-              <TabPane tab={getTabName(d, index)} key={d.id}>
-                <div className={"fa-container mt-4 min-h-screen"}>
-                  <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Dashboard Widget Error'} subtitle={'We are facing trouble loading dashboard widgets. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-                  <DashboardSubMenu
-                    durationObj={durationObj}
-                    handleDurationChange={handleDurationChange}
-                    dashboard={activeDashboard}
-                    handleEditClick={handleEditClick}
-                    refreshClicked={refreshClicked}
-                    setRefreshClicked={setRefreshClicked}
-                  />
-                  <SortableCards
-                    durationObj={durationObj}
-                    setwidgetModal={handleToggleWidgetModal}
-                    showDeleteWidgetModal={showDeleteWidgetModal}
-                    refreshClicked={refreshClicked}
-                    setRefreshClicked={setRefreshClicked}
-                  />
-                  </ErrorBoundary>
-                </div>
-              </TabPane>
-            );
-          })}
-        </Tabs>
+        <ErrorBoundary
+          fallback={
+            <FaErrorComp
+              size={'medium'}
+              title={'Dashboard Error'}
+              subtitle={
+                'We are facing trouble loading dashboards. Drop us a message on the in-app chat.'
+              }
+            />
+          }
+          onError={FaErrorLog}
+        >
+          <Tabs
+            onChange={handleTabChange}
+            activeKey={getActiveKey()}
+            className={'fa-tabs--dashboard'}
+            tabBarExtraContent={operations}
+          >
+            {dashboards.data.map((d, index) => {
+              return (
+                <TabPane tab={getTabName(d, index)} key={d.id}>
+                  <div className={'fa-container mt-4 min-h-screen'}>
+                    <ErrorBoundary
+                      fallback={
+                        <FaErrorComp
+                          size={'medium'}
+                          title={'Dashboard Widget Error'}
+                          subtitle={
+                            'We are facing trouble loading dashboard widgets. Drop us a message on the in-app chat.'
+                          }
+                        />
+                      }
+                      onError={FaErrorLog}
+                    >
+                      <DashboardSubMenu
+                        durationObj={durationObj}
+                        handleDurationChange={handleDurationChange}
+                        dashboard={activeDashboard}
+                        handleEditClick={handleEditClick}
+                        refreshClicked={refreshClicked}
+                        setRefreshClicked={setRefreshClicked}
+                      />
+                      <SortableCards
+                        durationObj={durationObj}
+                        setwidgetModal={handleToggleWidgetModal}
+                        showDeleteWidgetModal={showDeleteWidgetModal}
+                        refreshClicked={refreshClicked}
+                        setRefreshClicked={setRefreshClicked}
+                      />
+                    </ErrorBoundary>
+                  </div>
+                </TabPane>
+              );
+            })}
+          </Tabs>
 
-        <ExpandableView
-          widgetModalLoading={widgetModalLoading}
-          widgetModal={widgetModal}
-          setwidgetModal={setwidgetModal}
-          durationObj={durationObj}
-        />
+          <ExpandableView
+            widgetModalLoading={widgetModalLoading}
+            widgetModal={widgetModal}
+            setwidgetModal={setwidgetModal}
+            durationObj={durationObj}
+          />
 
-        <ConfirmationModal
-          visible={deleteWidgetModal ? true : false}
-          confirmationText="Are you sure you want to delete this widget?"
-          onOk={confirmDelete}
-          onCancel={showDeleteWidgetModal.bind(this, false)}
-          title="Delete Widget"
-          okText="Confirm"
-          cancelText="Cancel"
-          confirmLoading={deleteApiCalled}
-        />
-
-      </ErrorBoundary>
+          <ConfirmationModal
+            visible={deleteWidgetModal ? true : false}
+            confirmationText='Are you sure you want to delete this widget?'
+            onOk={confirmDelete}
+            onCancel={showDeleteWidgetModal.bind(this, false)}
+            title='Delete Widget'
+            okText='Confirm'
+            cancelText='Cancel'
+            confirmLoading={deleteApiCalled}
+          />
+        </ErrorBoundary>
       </>
     );
   }
