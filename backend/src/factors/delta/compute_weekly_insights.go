@@ -79,6 +79,8 @@ var BlackListedKeys map[string]bool
 var WhiteListedKeys map[string]bool
 var WhiteListedKeysOtherQuery map[string]bool
 var DecreaseBoostKeys map[string]bool
+var PriorityKeysConversion map[string]float64
+var PriorityKeysDistribution map[string]float64
 
 const (
 	Upvoted                = "upvoted"
@@ -87,13 +89,15 @@ const (
 	DownvotedForOtherQuery = "downvoted_other_query"
 )
 
+const DistributionChangePer float64 = 5 // x of overall to be comapared with distrubution W1
+
 func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, EventType string) WeeklyInsights {
 	var KeyMapForConversion = make(map[string]bool)
 	var KeyMapForDistribution = make(map[string]bool)
 	propertyMap = make(map[string]bool)
 	var insights WeeklyInsights
 	insights.Insights = make([]ActualMetrics, 0)
-	ZeroFlag:= true // flag to check if overall W1||W2 is 0.
+	ZeroFlag := true // flag to check if overall W1||W2 is 0.
 	if EventType == Funnel || EventType == WebsiteEvent {
 		insights.InsightsType = "ConvAndDist"
 		if EventType == WebsiteEvent {
@@ -208,16 +212,21 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if _, exists := file.DeltaRatio[keys][keys2]; exists {
 						temp.DeltaRatio = file.DeltaRatio[keys][keys2] * temp.W1
-						if WhiteListedKeys[value.Key] {
-							temp.DeltaRatio *= 2 // boosting the sorting factor if upvoted
-							value.VoteStatus = Upvoted
-						} else if WhiteListedKeysOtherQuery[value.Key] {
-							temp.DeltaRatio *= 2
-							value.VoteStatus = UpvotedForOtherQuery
-						} else if DecreaseBoostKeys[value.Key] {
-							temp.DeltaRatio *= 0.5 // reverse
-							value.VoteStatus = DownvotedForOtherQuery
+						if factor, exists := PriorityKeysConversion[value.Key]; exists {
+							temp.DeltaRatio *= factor
+						} else {
+							if WhiteListedKeys[value.Key] {
+								temp.DeltaRatio *= 2 // boosting the sorting factor if upvoted
+								value.VoteStatus = Upvoted
+							} else if WhiteListedKeysOtherQuery[value.Key] {
+								temp.DeltaRatio *= 2
+								value.VoteStatus = UpvotedForOtherQuery
+							} else if DecreaseBoostKeys[value.Key] {
+								temp.DeltaRatio *= 0.5 // reverse
+								value.VoteStatus = DownvotedForOtherQuery
+							}
 						}
+
 					}
 
 					value.ActualValues = temp
@@ -330,7 +339,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if file.Target.FeatureMetrics[keys][keys2].First != nil {
 						temp.W1 = file.Target.FeatureMetrics[keys][keys2].First.(float64)
-						if temp.W1 == float64(0) && ZeroFlag {
+						if (temp.W1 == float64(0) && ZeroFlag) || CheckPercentageChange(insights.Goal.W1, temp.W1) {
 							continue
 						}
 					} else {
@@ -349,16 +358,21 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if _, exists := file.JSDivergence.Target[keys][keys2]; exists {
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
-						if WhiteListedKeys[val2.Key] {
-							temp.JSDivergence *= 2 // boosting 2X
-							val2.VoteStatus = Upvoted
-						} else if WhiteListedKeysOtherQuery[val2.Key] {
-							temp.JSDivergence *= 2
-							val2.VoteStatus = UpvotedForOtherQuery
-						} else if DecreaseBoostKeys[val2.Key] {
-							temp.JSDivergence *= 0.5
-							val2.VoteStatus = DownvotedForOtherQuery
+						if factor, exists := PriorityKeysDistribution[val2.Key]; exists {
+							temp.JSDivergence *= factor
+						} else {
+							if WhiteListedKeys[val2.Key] {
+								temp.JSDivergence *= 2 // boosting 2X
+								val2.VoteStatus = Upvoted
+							} else if WhiteListedKeysOtherQuery[val2.Key] {
+								temp.JSDivergence *= 2
+								val2.VoteStatus = UpvotedForOtherQuery
+							} else if DecreaseBoostKeys[val2.Key] {
+								temp.JSDivergence *= 0.5
+								val2.VoteStatus = DownvotedForOtherQuery
+							}
 						}
+
 					}
 					val2.ActualValues = temp
 					if insights.Goal.W1 != float64(0) {
@@ -397,7 +411,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if file.BaseAndTarget.FeatureMetrics[keys][keys2].First != nil {
 						temp.W1 = file.BaseAndTarget.FeatureMetrics[keys][keys2].First.(float64)
-						if temp.W1 == float64(0) && ZeroFlag {
+						if (temp.W1 == float64(0) && ZeroFlag) || CheckPercentageChange(insights.Goal.W1, temp.W1) {
 							continue
 						}
 					} else {
@@ -416,16 +430,21 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 					}
 					if _, exists := file.JSDivergence.Target[keys][keys2]; exists {
 						temp.JSDivergence = file.JSDivergence.Target[keys][keys2] * temp.W1
-						if WhiteListedKeys[val2.Key] {
-							temp.JSDivergence *= 2
-							val2.VoteStatus = Upvoted
-						} else if WhiteListedKeysOtherQuery[val2.Key] {
-							temp.JSDivergence *= 2
-							val2.VoteStatus = UpvotedForOtherQuery
-						} else if DecreaseBoostKeys[val2.Key] {
-							temp.JSDivergence *= 0.5
-							val2.VoteStatus = DownvotedForOtherQuery
+						if factor, exists := PriorityKeysDistribution[val2.Key]; exists {
+							temp.JSDivergence *= factor
+						} else {
+							if WhiteListedKeys[val2.Key] {
+								temp.JSDivergence *= 2
+								val2.VoteStatus = Upvoted
+							} else if WhiteListedKeysOtherQuery[val2.Key] {
+								temp.JSDivergence *= 2
+								val2.VoteStatus = UpvotedForOtherQuery
+							} else if DecreaseBoostKeys[val2.Key] {
+								temp.JSDivergence *= 0.5
+								val2.VoteStatus = DownvotedForOtherQuery
+							}
 						}
+
 					}
 					val2.ActualValues = temp
 					if insights.Goal.W1 != float64(0) {
@@ -559,33 +578,9 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	if isEventOccurence {
 		EventType = CRM
 	}
-	BlackListedKeys = map[string]bool{
-		"$day_of_week":                 true,
-		"$page_raw_url":                true,
-		"$initial_page_domain":         true,
-		"$timestamp":                   true,
-		"$initial_page_raw_url":        true,
-		"$session_latest_page_raw_url": true,
-		"$session_latest_page_url":     true,
-		"$gclid":                       true,
-		"$hubspot_contact_hs_calculated_form_submissions": true,
-		"$latest_gclid":               true,
-		"$initial_gclid":              true,
-		"$joinTime":                   true,
-		"$ip":                         true,
-		"$latest_referrer":            true,
-		"$latest_referrer_url":        true,
-		"$initial_referrer":           true,
-		"$initial_referrer_url":       true,
-		"$referrer":                   true,
-		"$referrer_url":               true,
-		"$latest_page_url":            true,
-		"$latest_page_domain":         true,
-		"$latest_page_raw_url":        true,
-		"$latest_page_load_time":      true,
-		"$latest_page_spent_time":     true,
-		"$latest_page_scroll_percent": true,
-	}
+	BlackListedKeys = GetBlackListedKeys()
+	PriorityKeysConversion = GetPriorityKeysMapConversion()
+	PriorityKeysDistribution = GetPriorityKeysMapDistribution()
 	WhiteListedKeys = make(map[string]bool)
 	WhiteListedKeysOtherQuery = make(map[string]bool)
 	CaptureBlackListedAndWhiteListedKeys(projectId, agentUUID, queryId)
@@ -601,7 +596,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 
 func addGroupByProperties(query model.Query, EventType string, file CrossPeriodInsights, insights WeeklyInsights) []ActualMetrics {
 	ActualMetricsArr := make([]ActualMetrics, 0)
-	ZeroFlag:= true
+	ZeroFlag := true
 	if insights.Goal.W1 == float64(0) || insights.Goal.W2 == float64(0) {
 		ZeroFlag = false
 	}
@@ -648,16 +643,21 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if _, exists := file.DeltaRatio[property][values]; exists {
 							temp.DeltaRatio = file.DeltaRatio[property][values] * temp.W1
-							if WhiteListedKeys[property] {
-								temp.DeltaRatio *= 2
-								newData.VoteStatus = Upvoted
-							} else if WhiteListedKeysOtherQuery[property] {
-								temp.DeltaRatio *= 2
-								newData.VoteStatus = UpvotedForOtherQuery
-							} else if DecreaseBoostKeys[property] {
-								temp.DeltaRatio *= 0.5
-								newData.VoteStatus = DownvotedForOtherQuery
+							if factor, exists := PriorityKeysConversion[property]; exists {
+								temp.DeltaRatio *= factor
+							} else {
+								if WhiteListedKeys[property] {
+									temp.DeltaRatio *= 2
+									newData.VoteStatus = Upvoted
+								} else if WhiteListedKeysOtherQuery[property] {
+									temp.DeltaRatio *= 2
+									newData.VoteStatus = UpvotedForOtherQuery
+								} else if DecreaseBoostKeys[property] {
+									temp.DeltaRatio *= 0.5
+									newData.VoteStatus = DownvotedForOtherQuery
+								}
 							}
+
 						}
 
 						if file.Base.FeatureMetrics[property][values].First != nil {
@@ -730,7 +730,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if file.Target.FeatureMetrics[property][values].First != nil {
 							temp.W1 = file.Target.FeatureMetrics[property][values].First.(float64)
-							if temp.W1 == float64(0) && ZeroFlag {
+							if (temp.W1 == float64(0) && ZeroFlag) || CheckPercentageChange(insights.Goal.W1, temp.W1) {
 								continue
 							}
 						} else {
@@ -749,15 +749,19 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if _, exists := file.JSDivergence.Target[property][values]; exists {
 							temp.JSDivergence = file.JSDivergence.Target[property][values] * temp.W1
-							if WhiteListedKeys[property] {
-								temp.JSDivergence *= 2
-								newData.VoteStatus = Upvoted
-							} else if WhiteListedKeysOtherQuery[property] {
-								temp.JSDivergence *= 2
-								newData.VoteStatus = UpvotedForOtherQuery
-							} else if DecreaseBoostKeys[property] {
-								temp.JSDivergence *= 0.5
-								newData.VoteStatus = DownvotedForOtherQuery
+							if factor, exists := PriorityKeysDistribution[property]; exists {
+								temp.JSDivergence *= factor
+							} else {
+								if WhiteListedKeys[property] {
+									temp.JSDivergence *= 2
+									newData.VoteStatus = Upvoted
+								} else if WhiteListedKeysOtherQuery[property] {
+									temp.JSDivergence *= 2
+									newData.VoteStatus = UpvotedForOtherQuery
+								} else if DecreaseBoostKeys[property] {
+									temp.JSDivergence *= 0.5
+									newData.VoteStatus = DownvotedForOtherQuery
+								}
 							}
 
 						}
@@ -788,7 +792,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if file.BaseAndTarget.FeatureMetrics[property][values].First != nil {
 							temp.W1 = file.BaseAndTarget.FeatureMetrics[property][values].First.(float64)
-							if temp.W1 == float64(0) && ZeroFlag {
+							if (temp.W1 == float64(0) && ZeroFlag) || CheckPercentageChange(insights.Goal.W1, temp.W1) {
 								continue
 							}
 						} else {
@@ -807,15 +811,19 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 						}
 						if _, exists := file.JSDivergence.Base[property][values]; exists {
 							temp.JSDivergence = file.JSDivergence.Base[property][values]
-							if WhiteListedKeys[property] {
-								temp.JSDivergence *= 2
-								newData.VoteStatus = Upvoted
-							} else if WhiteListedKeysOtherQuery[property] {
-								temp.JSDivergence *= 2
-								newData.VoteStatus = UpvotedForOtherQuery
-							} else if DecreaseBoostKeys[property] {
-								temp.JSDivergence *= 0.5
-								newData.VoteStatus = DownvotedForOtherQuery
+							if factor, exists := PriorityKeysDistribution[property]; exists {
+								temp.JSDivergence *= factor
+							} else {
+								if WhiteListedKeys[property] {
+									temp.JSDivergence *= 2
+									newData.VoteStatus = Upvoted
+								} else if WhiteListedKeysOtherQuery[property] {
+									temp.JSDivergence *= 2
+									newData.VoteStatus = UpvotedForOtherQuery
+								} else if DecreaseBoostKeys[property] {
+									temp.JSDivergence *= 0.5
+									newData.VoteStatus = DownvotedForOtherQuery
+								}
 							}
 
 						}
@@ -938,4 +946,12 @@ func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string, qu
 		}
 
 	}
+}
+func CheckPercentageChange(overall, week float64) bool {
+	//filtering  if week1 data is less than x % of overall w1 data
+	actual := (DistributionChangePer / 100 * overall)
+	if week < actual {
+		return true
+	}
+	return false
 }
