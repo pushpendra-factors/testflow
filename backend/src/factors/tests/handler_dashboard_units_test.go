@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"encoding/json"
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
@@ -14,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 func sendCreateDashboardUnitReq(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardId uint64, dashboardUnit *model.DashboardUnitRequestPayload) *httptest.ResponseRecorder {
@@ -132,45 +131,16 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, rName, dashboard.Name)
 
-	t.Run("CreateDashboardUnit:WithValidQuery", func(t *testing.T) {
-		rTitle := U.RandomString(5)
-		query := model.Query{
-			EventsCondition: model.EventCondAnyGivenEvent,
-			From:            1556602834,
-			To:              1557207634,
-			Type:            model.QueryTypeEventsOccurrence,
-			EventsWithProperties: []model.QueryEventWithProperties{
-				model.QueryEventWithProperties{
-					Name: "event1",
-				},
-			},
-			OverridePeriod: true,
-		}
+	t.Run("CreateDashboardUnit:WithNoQuery", func(t *testing.T) {
 
-		queryJson, err := json.Marshal(query)
-		assert.Nil(t, err)
-
-		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Title: rTitle,
-			Query: &postgres.Jsonb{queryJson}, Presentation: model.PresentationLine})
-		assert.Equal(t, http.StatusCreated, w.Code)
+		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine})
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
-	t.Run("CreateDashboardUnit:WithNoEventsQuery", func(t *testing.T) {
-		rTitle := U.RandomString(5)
-		query := model.Query{
-			EventsCondition:      model.EventCondAnyGivenEvent,
-			From:                 1556602834,
-			To:                   1557207634,
-			Type:                 model.QueryTypeEventsOccurrence,
-			EventsWithProperties: []model.QueryEventWithProperties{}, // invalid, no events.
-			OverridePeriod:       true,
-		}
-		queryJson, err := json.Marshal(query)
-		assert.Nil(t, err)
+	t.Run("CreateDashboardUnit:WithNoQuery", func(t *testing.T) {
 
-		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Title: rTitle,
-			Query: &postgres.Jsonb{queryJson}, Presentation: model.PresentationLine})
+		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine})
 
-		assert.Equal(t, http.StatusCreated, w.Code)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }

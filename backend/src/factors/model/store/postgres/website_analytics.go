@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -182,7 +181,7 @@ func (pg *Postgres) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (
 		queryType := queryTypeInf.(string)
 		if queryType == QueryTypeNamed {
 			var query model.NamedQueryUnit
-			if err := U.DecodePostgresJsonbToStructType(&dunit.Query, &query); err != nil {
+			if err := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &query); err != nil {
 				logCtx.WithError(err).
 					Error("Failed to decode named query from dashboard unit.")
 				continue
@@ -191,7 +190,7 @@ func (pg *Postgres) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (
 
 		} else if queryType == QueryTypeWebAnalyticsCustomGroupQuery {
 			var query model.WebAnalyticsCustomGroupQuery
-			if err := U.DecodePostgresJsonbToStructType(&dunit.Query, &query); err != nil {
+			if err := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &query); err != nil {
 				logCtx.WithError(err).
 					Error("Failed to decode custom group query from dashboard unit.")
 				continue
@@ -270,11 +269,9 @@ func (pg *Postgres) addWebAnalyticsDefaultDashboardUnits(projectId uint64,
 		_, errCode, errMsg = pg.CreateDashboardUnitForDashboardClass(projectId, agentUUID,
 			&model.DashboardUnit{
 				DashboardId:  dashboardId,
-				Title:        U.GetSnakeCaseToTitleString(queryName),
-				Query:        postgres.Jsonb{json.RawMessage(`{}`)},
 				Presentation: presentation,
 				QueryId:      query.ID,
-			}, model.DashboardUnitForNoQueryID, model.DashboardClassWebsiteAnalytics)
+			}, model.DashboardClassWebsiteAnalytics)
 
 		if errCode != http.StatusCreated {
 			logCtx.WithField("err_msg", errMsg).WithField("query_name", queryName).

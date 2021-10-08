@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/jinzhu/gorm"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -41,12 +40,9 @@ func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []uin
 			&model.DashboardUnit{
 				DashboardId:  dashboardId,
 				Description:  unitPayload.Description,
-				Query:        postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
-				Title:        unitPayload.Title,
 				Presentation: unitPayload.Presentation,
 				QueryId:      unitPayload.QueryId,
-				Settings:     *unitPayload.Settings,
-			}, model.DashboardUnitWithQueryID)
+			})
 		if errCode != http.StatusCreated {
 			return nil, errCode, errMsg
 		}
@@ -69,12 +65,9 @@ func (store *MemSQL) CreateMultipleDashboardUnits(requestPayload []model.Dashboa
 			&model.DashboardUnit{
 				DashboardId:  dashboardId,
 				Description:  payload.Description,
-				Query:        postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
-				Title:        payload.Title,
 				Presentation: payload.Presentation,
 				QueryId:      payload.QueryId,
-				Settings:     *payload.Settings,
-			}, model.DashboardUnitWithQueryID)
+			})
 		if errCode != http.StatusCreated {
 			return nil, errCode, errMsg
 		}
@@ -83,13 +76,12 @@ func (store *MemSQL) CreateMultipleDashboardUnits(requestPayload []model.Dashboa
 	return dashboardUnits, http.StatusCreated, ""
 }
 
-func (store *MemSQL) CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *model.DashboardUnit,
-	queryType string) (*model.DashboardUnit, int, string) {
-	return store.CreateDashboardUnitForDashboardClass(projectId, agentUUID, dashboardUnit, queryType, model.DashboardClassUserCreated)
+func (store *MemSQL) CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *model.DashboardUnit) (*model.DashboardUnit, int, string) {
+	return store.CreateDashboardUnitForDashboardClass(projectId, agentUUID, dashboardUnit, model.DashboardClassUserCreated)
 }
 
 func (store *MemSQL) CreateDashboardUnitForDashboardClass(projectId uint64, agentUUID string, dashboardUnit *model.DashboardUnit,
-	queryType, dashboardClass string) (*model.DashboardUnit, int, string) {
+	dashboardClass string) (*model.DashboardUnit, int, string) {
 	db := C.GetServices().Db
 
 	logCtx := log.WithFields(log.Fields{"dashboard_unit": dashboardUnit, "project_id": projectId})
@@ -97,7 +89,7 @@ func (store *MemSQL) CreateDashboardUnitForDashboardClass(projectId uint64, agen
 		return nil, http.StatusBadRequest, "Invalid request"
 	}
 
-	updateDashboardUnitSettingsAndPresentation(dashboardUnit)
+	store.updateDashboardUnitPresentation(dashboardUnit)
 
 	valid, errMsg := model.IsValidDashboardUnit(dashboardUnit)
 	if !valid {
@@ -113,83 +105,35 @@ func (store *MemSQL) CreateDashboardUnitForDashboardClass(projectId uint64, agen
 		return nil, http.StatusForbidden, fmt.Sprintf("Restricted access to dashboard class '%s'", dashboard.Class)
 	}
 
-	// Todo (Anil) remove this query creation after we move to new UI completely.
-	if dashboardUnit.QueryId == 0 {
-		query, errCode, errMsg := store.CreateQuery(projectId,
-			&model.Queries{
-				Query: dashboardUnit.Query,
-				Title: dashboardUnit.Title,
-				Type:  model.QueryTypeDashboardQuery,
-			})
-		if errCode != http.StatusCreated {
-			logCtx.Error(errMsg)
-			return nil, errCode, errMsg
-		}
-		dashboardUnit.QueryId = query.ID
-	} else {
-		// Todo (Anil) for new UI requests, fill up Query using queryId for backward compatibility
-		query, errCode := store.GetQueryWithQueryId(projectId, dashboardUnit.QueryId)
-		// skip if error exists
-		if errCode == http.StatusFound {
-			queryJsonb, err := U.EncodeStructTypeToPostgresJsonb((*query).Query)
-			if err == nil {
-				dashboardUnit.Query = *queryJsonb
-			}
-		} else {
-			errMsg = fmt.Sprintf("Failed to get query with id %d", dashboardUnit.QueryId)
-			logCtx.Error(errMsg)
-			return nil, errCode, errMsg
-		}
-	}
 	dashboardUnit.ProjectID = projectId
 	if err := db.Create(dashboardUnit).Error; err != nil {
 		errMsg := "Failed to create dashboard unit."
-		log.WithFields(log.Fields{"dashboard_unit": dashboardUnit,
-			"project_id": projectId}).WithError(err).Error(errMsg)
+		logCtx.WithError(err).Error(errMsg)
 		return nil, http.StatusInternalServerError, errMsg
 	}
 
-	// Todo (Anil) remove this DashboardUnitForNoQueryID based UnitPosition updating
-	// ... after we move to new UI completely. todo
-	if queryType == model.DashboardUnitForNoQueryID {
-		errCode := store.addUnitPositionOnDashboard(projectId, agentUUID, dashboardUnit.DashboardId,
-			dashboardUnit.ID, model.GetUnitType(dashboardUnit.Presentation), dashboard.UnitsPosition)
-		if errCode != http.StatusAccepted {
-			errMsg := "Failed add position for new dashboard unit."
-			log.WithFields(log.Fields{"project_id": projectId,
-				"dashboardUnitId": dashboardUnit.ID}).Error(errMsg)
-			return nil, http.StatusInternalServerError, ""
-		}
-	}
 	return dashboardUnit, http.StatusCreated, ""
 }
 
-// updateDashboardUnitSettingsAndPresentation updates Settings or Presentation for
-// dashboard Unit using the other's value.
-func updateDashboardUnitSettingsAndPresentation(unit *model.DashboardUnit) {
-
-	if unit.Presentation != "" {
-		// request is received from old UI updating Settings
-		s := make(map[string]string)
-		s["chart"] = unit.Presentation
-		settings, err := json.Marshal(s)
-		if err != nil {
-			log.WithFields(log.Fields{"project_id": unit.ProjectID,
-				"dashboardUnitId": unit.ID}).Error("failed to update settings for given presentation")
-			return
-		}
-		unit.Settings = postgres.Jsonb{RawMessage: settings}
-	} else {
-		// request is received from new UI updating Presentation
-		settings := make(map[string]string)
-		err := json.Unmarshal(unit.Settings.RawMessage, &settings)
-		if err != nil {
-			log.WithFields(log.Fields{"project_id": unit.ProjectID,
-				"dashboardUnitId": unit.ID}).Error("failed to update presentation for given settings")
-			return
-		}
-		unit.Presentation = settings["chart"]
+// updateDashboardUnitPresentation updates Presentation for dashboard Unit using corresponding query settings
+func (store *MemSQL) updateDashboardUnitPresentation(unit *model.DashboardUnit) {
+	logCtx := log.WithFields(log.Fields{
+		"Method":    "CacheDashboardUnit",
+		"ProjectID": unit.ProjectID,
+	})
+	queryInfo, errC := store.GetQueryWithQueryId(unit.ProjectID, unit.QueryId)
+	if errC != http.StatusFound {
+		logCtx.Errorf("Failed to fetch query from query_id %d", unit.QueryId)
 	}
+	// request is received from new UI updating Presentation
+	settings := make(map[string]string)
+	err := json.Unmarshal(queryInfo.Settings.RawMessage, &settings)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": unit.ProjectID,
+			"dashboardUnitId": unit.ID}).Error("failed to update presentation for given settings")
+		return
+	}
+	unit.Presentation = settings["chart"]
 }
 
 // GetDashboardUnitsForProjectID Returns all dashboard units for the given projectID.
@@ -206,25 +150,7 @@ func (store *MemSQL) GetDashboardUnitsForProjectID(projectID uint64) ([]model.Da
 		return dashboardUnits, http.StatusInternalServerError
 	}
 
-	dashboardUnits = store.fillQueryInDashboardUnits(dashboardUnits)
-
 	return dashboardUnits, http.StatusFound
-}
-
-// Todo (Anil) Remove: Adding query using queryId for units from new UI
-// fillQueryInDashboardUnits updates unit.Query by fetching query using queryId
-func (store *MemSQL) fillQueryInDashboardUnits(units []model.DashboardUnit) []model.DashboardUnit {
-
-	for i, unit := range units {
-		query, errCode := store.GetQueryWithQueryId(unit.ProjectID, unit.QueryId)
-		if errCode == http.StatusFound {
-			queryJsonb, err := U.EncodeStructTypeToPostgresJsonb((*query).Query)
-			if err == nil {
-				units[i].Query = *queryJsonb
-			}
-		}
-	}
-	return units
 }
 
 func (store *MemSQL) GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) ([]model.DashboardUnit, int) {
@@ -246,8 +172,6 @@ func (store *MemSQL) GetDashboardUnits(projectId uint64, agentUUID string, dashb
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboard units.")
 		return dashboardUnits, http.StatusInternalServerError
 	}
-
-	dashboardUnits = store.fillQueryInDashboardUnits(dashboardUnits)
 
 	return dashboardUnits, http.StatusFound
 }
@@ -285,8 +209,6 @@ func (store *MemSQL) GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectI
 	if len(dashboardUnits) == 0 {
 		return dashboardUnits, http.StatusNotFound
 	}
-
-	dashboardUnits = store.fillQueryInDashboardUnits(dashboardUnits)
 
 	return dashboardUnits, http.StatusFound
 }
@@ -362,17 +284,11 @@ func (store *MemSQL) UpdateDashboardUnit(projectId uint64, agentUUID string,
 
 	// update allowed fields.
 	updateFields := make(map[string]interface{}, 0)
-	if unit.Title != "" {
-		updateFields["title"] = unit.Title
-	}
 	if unit.Description != "" {
 		updateFields["description"] = unit.Description
 	}
 	if unit.Presentation != "" {
 		updateFields["presentation"] = unit.Presentation
-	}
-	if !U.IsEmptyPostgresJsonb(&unit.Settings) {
-		updateFields["settings"] = unit.Settings
 	}
 
 	// nothing to update.
@@ -388,16 +304,6 @@ func (store *MemSQL) UpdateDashboardUnit(projectId uint64, agentUUID string,
 		logCtx.WithError(err).Error("updatedDashboardUnitFields failed at UpdateDashboardUnit in dashboard_unit.go")
 		return nil, http.StatusInternalServerError
 	}
-	// update query table
-	var dashboardUnit model.DashboardUnit
-	err = db.Model(&model.DashboardUnit{}).Where("id = ? AND project_id = ? AND dashboard_id = ? AND is_deleted = ?",
-		id, projectId, dashboardId, false).Find(&dashboardUnit).Error
-	_, errCode := store.UpdateSavedQuery(projectId, dashboardUnit.QueryId, &model.Queries{Title: unit.Title, Type: model.QueryTypeDashboardQuery})
-	if errCode != http.StatusAccepted {
-		logCtx.WithError(err).Error("updatedDashboardUnitFields failed at UpdateSavedQuery in queries.go")
-		return nil, errCode
-	}
-
 	// returns only updated fields, avoid using it on model.DashboardUnit API.
 	return &updatedDashboardUnitFields, http.StatusAccepted
 }
@@ -447,30 +353,18 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, numRoutin
 	return len(dashboardUnits)
 }
 
-// GetQueryAndClassFromDashboardUnit Fill query and returns query class of dashboard unit.
-func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string) {
+// GetQueryClassFromDashboardUnit returns query class of dashboard unit.
+func (store *MemSQL) GetQueryClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string) {
 	projectID := dashboardUnit.ProjectID
 	savedQuery, errCode := store.GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
 		errMsg = fmt.Sprintf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
 		return
 	}
-	dashboardUnit.Query = savedQuery.Query
-
-	var query model.Query
-	var queryGroup model.QueryGroup
-	// try decoding for Query
-	U.DecodePostgresJsonbToStructType(&savedQuery.Query, &query)
-	if query.Class == "" {
-		// if fails, try decoding for QueryGroup
-		err1 := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &queryGroup)
-		if err1 != nil {
-			errMsg = fmt.Sprintf("Failed to decode jsonb query, query_id %d", dashboardUnit.QueryId)
-			return
-		}
-		queryClass = queryGroup.GetClass()
-	} else {
-		queryClass = query.Class
+	queryClass, errMsg = store.GetQueryClassFromQueries(*savedQuery)
+	if errMsg != "" {
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
 	}
 	return
 }
@@ -495,8 +389,12 @@ func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, 
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
+	logCtx := log.WithFields(log.Fields{
+		"Method":    "CacheDashboardUnit",
+		"ProjectID": dashboardUnit.ProjectID,
+	})
 	defer waitGroup.Done()
-	queryClass, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+	queryClass, errMsg := store.GetQueryClassFromDashboardUnit(&dashboardUnit)
 	if errMsg != "" {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
@@ -522,8 +420,15 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitG
 			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 			return
 		}
+
+		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+		if errC != http.StatusFound {
+			logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+			continue
+		}
+
 		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
-		baseQuery, err := model.DecodeQueryForClass(dashboardUnit.Query, queryClass)
+		baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
 		if err != nil {
 			errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
 			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
@@ -638,8 +543,13 @@ func (store *MemSQL) cacheDashboardUnitForDateRange(cachePayload model.Dashboard
 
 // CacheDashboardsForMonthlyRange To cache monthly dashboards for the project id.
 func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int) {
+
 	projectIDsToRun := store.GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDsToRun {
+		logCtx := log.WithFields(log.Fields{
+			"Method":    "CacheDashboardUnit",
+			"ProjectID": projectID,
+		})
 		timezoneString, statusCode := store.GetTimezoneForProject(projectID)
 		if statusCode != http.StatusFound {
 			errMsg := fmt.Sprintf("Failed to get project Timezone for %d", projectID)
@@ -653,10 +563,17 @@ func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectID
 		}
 
 		for _, dashboardUnit := range dashboardUnits {
-			queryClass, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+
+			queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+			if errC != http.StatusFound {
+				logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+				continue
+			}
+
+			queryClass, errMsg := store.GetQueryClassFromQueries(*queryInfo)
 			if errMsg != "" {
 				C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
-				continue
+				return
 			}
 
 			// excluding 'Web' class dashboard units
@@ -671,7 +588,7 @@ func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectID
 				count++
 				from, to := monthlyRange.First, monthlyRange.Second
 				// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
-				baseQuery, err := model.DecodeQueryForClass(dashboardUnit.Query, queryClass)
+				baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
 				if err != nil {
 					errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
 					C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)

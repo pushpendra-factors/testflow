@@ -242,18 +242,9 @@ func TestGetDashboardResultFromCache(t *testing.T) {
 		OverridePeriod: true,
 	}
 
-	query1Json, err := json.Marshal(query1)
-	assert.Nil(t, err)
-	query2Json, err := json.Marshal(query2)
-	assert.Nil(t, err)
-
-	rTitle := U.RandomString(5)
-	w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Title: rTitle,
-		Query: &postgres.Jsonb{query1Json}, Presentation: model.PresentationLine})
+	w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine})
 	assert.Equal(t, http.StatusCreated, w.Code)
-	rTitle = U.RandomString(5)
-	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Title: rTitle,
-		Query: &postgres.Jsonb{query2Json}, Presentation: model.PresentationLine})
+	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	//For Channel query
@@ -278,14 +269,8 @@ func TestGetDashboardResultFromCache(t *testing.T) {
 		Timezone:    string(U.TimeZoneStringIST),
 	}
 
-	rTitle = U.RandomString(5)
-	query3Json, err := json.Marshal(query3)
-	assert.Nil(t, err)
-
 	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
 		Presentation: "pc",
-		Query:        &postgres.Jsonb{query3Json},
-		Title:        rTitle,
 	})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
@@ -374,9 +359,8 @@ func TestDeleteDashboard(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	dashboardUnit, errCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
-		&model.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: model.PresentationLine,
-			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{json.RawMessage(`{}`)}},
-		model.DashboardUnitWithQueryID)
+		&model.DashboardUnit{DashboardId: dashboard.ID, Presentation: model.PresentationLine,
+			QueryId: dashboardQuery.ID})
 	assert.NotEmpty(t, dashboardUnit)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
@@ -413,9 +397,8 @@ func TestShouldRefreshDashboardUnit(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	dashboardUnit, errCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
-		&model.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: model.PresentationLine,
-			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}},
-		model.DashboardUnitWithQueryID)
+		&model.DashboardUnit{DashboardId: dashboard.ID, Presentation: model.PresentationLine,
+			QueryId: dashboardQuery.ID})
 	assert.NotEmpty(t, dashboardUnit)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)

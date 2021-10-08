@@ -293,10 +293,19 @@ func writeCpiPath(projectId uint64, periodCode Period, queryId uint64, k int, ev
 
 func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnelQuery, bool, bool, bool) {
 	var deltaQuery Query
-	queryClass, _ := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+	queryInfo, status := store.GetStore().GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+	if status != http.StatusFound {
+		log.Error("query not found")
+	}
+
+	queryClass, errMsg := store.GetStore().GetQueryClassFromQueries(*queryInfo)
+	if errMsg != "" {
+		return Query{}, MultiFunnelQuery{}, false, false, false
+	}
+
 	if queryClass == model.QueryClassEvents {
 		var queryGroup M.QueryGroup
-		U.DecodePostgresJsonbToStructType(&dashboardUnit.Query, &queryGroup)
+		U.DecodePostgresJsonbToStructType(&queryInfo.Query, &queryGroup)
 		query := queryGroup.Queries[0]
 		if query.Type == model.QueryTypeUniqueUsers || query.Type == model.QueryTypeEventsOccurrence {
 			isEventOccurence := query.Type == model.QueryTypeEventsOccurrence
@@ -344,7 +353,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 	}
 	if queryClass == model.QueryClassFunnel {
 		var query M.Query
-		U.DecodePostgresJsonbToStructType(&dashboardUnit.Query, &query)
+		U.DecodePostgresJsonbToStructType(&queryInfo.Query, &query)
 		if query.Type == model.QueryTypeUniqueUsers {
 			if query.EventsCondition == model.EventCondAnyGivenEvent {
 				if len(query.EventsWithProperties) == 2 {
