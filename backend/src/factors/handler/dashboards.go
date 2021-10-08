@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm/dialects/postgres"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -255,30 +253,17 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
-	if requestPayload.Query == nil && requestPayload.QueryId == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid query. empty query. no queryId."})
+	if requestPayload.QueryId == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "no queryId."})
 		return
-	}
-
-	// to support V1 Api with QueryId & settings
-	if requestPayload.Query == nil {
-		requestPayload.Query = &postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
-	}
-
-	// to support V1 Api with QueryId & settings
-	if requestPayload.Settings == nil {
-		requestPayload.Settings = &postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
 	}
 
 	dashboardUnit, errCode, errMsg := store.GetStore().CreateDashboardUnit(projectId, agentUUID,
 		&model.DashboardUnit{
 			DashboardId:  dashboardId,
-			Query:        *requestPayload.Query,
-			Title:        requestPayload.Title,
 			Presentation: requestPayload.Presentation,
 			QueryId:      requestPayload.QueryId,
-			Settings:     *requestPayload.Settings,
-		}, model.DashboardUnitForNoQueryID)
+		})
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, errMsg)
 		return
@@ -438,17 +423,11 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 	}
 
 	unit := model.DashboardUnit{}
-	if requestPayload.Title != "" {
-		unit.Title = requestPayload.Title
-	}
 	if requestPayload.Description != "" {
 		unit.Description = requestPayload.Description
 	}
 	if requestPayload.Presentation != "" {
 		unit.Presentation = requestPayload.Presentation
-	}
-	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
-		unit.Settings = *requestPayload.Settings
 	}
 
 	_, errCode := store.GetStore().UpdateDashboardUnit(projectId, agentUUID, dashboardId,

@@ -123,8 +123,8 @@ type Model interface {
 	UpdateTemplateConfig(projectID uint64, templateType int, thresholds []model.TemplateThreshold) ([]model.TemplateThreshold, string)
 
 	// dashboard_unit
-	CreateDashboardUnit(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit, queryType string) (*model.DashboardUnit, int, string)
-	CreateDashboardUnitForDashboardClass(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit, queryType, dashboardClass string) (*model.DashboardUnit, int, string)
+	CreateDashboardUnit(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit) (*model.DashboardUnit, int, string)
+	CreateDashboardUnitForDashboardClass(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit, dashboardClass string) (*model.DashboardUnit, int, string)
 	CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64, agentUUID string, unitPayload model.DashboardUnitRequestPayload) ([]*model.DashboardUnit, int, string)
 	CreateMultipleDashboardUnits(requestPayload []model.DashboardUnitRequestPayload, projectId uint64, agentUUID string, dashboardId uint64) ([]*model.DashboardUnit, int, string)
 	GetDashboardUnitsForProjectID(projectID uint64) ([]model.DashboardUnit, int)
@@ -137,7 +137,7 @@ type Model interface {
 	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int)
 	CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup)
-	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string)
+	GetQueryClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string)
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string)
 	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int)

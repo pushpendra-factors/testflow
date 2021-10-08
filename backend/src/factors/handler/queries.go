@@ -26,6 +26,7 @@ type SavedQueryRequestPayload struct {
 type SavedQueryUpdatePayload struct {
 	Title    string          `json:"title"`
 	Settings *postgres.Jsonb `json:"settings"`
+	Type     int             `json:"type"`
 }
 
 // GetQueriesHandler godoc
@@ -154,6 +155,11 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
+	if requestPayload.Type != 0 && requestPayload.Type != model.QueryTypeDashboardQuery && requestPayload.Type != model.QueryTypeSavedQuery {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid type"})
+		return
+	}
+
 	queryID, err := strconv.ParseUint(c.Params.ByName("query_id"), 10, 64)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid query id."})
@@ -164,11 +170,16 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 	if requestPayload.Title != "" {
 		query.Title = requestPayload.Title
 	}
+
 	query.Type = model.QueryTypeSavedQuery
+	if requestPayload.Type == model.QueryTypeDashboardQuery {
+		query.Type = requestPayload.Type
+	}
 
 	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
 		query.Settings = *requestPayload.Settings
 	}
+
 	_, errCode := store.GetStore().UpdateSavedQuery(projectID, queryID,
 		&query)
 	if errCode != http.StatusAccepted {

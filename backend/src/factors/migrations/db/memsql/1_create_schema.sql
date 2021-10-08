@@ -192,12 +192,9 @@ CREATE TABLE IF NOT EXISTS dashboard_units (
     id bigint AUTO_INCREMENT,
     project_id bigint,
     dashboard_id bigint,
-    title text,
     description text,
     presentation varchar(5),
-    query json,
     query_id bigint,
-    settings json,
     is_deleted boolean NOT NULL DEFAULT FALSE,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
@@ -751,6 +748,10 @@ CREATE ROWSTORE TABLE IF NOT EXISTS groups(
     PRIMARY KEY (project_id, name),
     UNIQUE KEY (project_id,id)
 );
+
+
+
+
 -- DOWN
 
 -- DROP DATABASE factors;

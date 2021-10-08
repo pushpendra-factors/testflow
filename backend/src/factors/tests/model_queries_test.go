@@ -182,15 +182,13 @@ func TestDeleteQueryWithDashboardUnit(t *testing.T) {
 
 	// Two Dashboard units with query type QueryTypeDashboardUnit.
 	dashboardUnit1, errCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
-		&model.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: model.PresentationLine,
-			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}},
-		model.DashboardUnitWithQueryID)
+		&model.DashboardUnit{DashboardId: dashboard.ID, Presentation: model.PresentationLine,
+			QueryId: dashboardQuery.ID})
 	assert.NotEmpty(t, dashboardUnit1)
 
 	dashboardUnit2, errCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
-		&model.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: model.PresentationLine,
-			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}},
-		model.DashboardUnitWithQueryID)
+		&model.DashboardUnit{DashboardId: dashboard.ID, Presentation: model.PresentationLine,
+			QueryId: dashboardQuery.ID})
 	assert.NotEmpty(t, dashboardUnit2)
 
 	// Should not allow direct delete since units exists.

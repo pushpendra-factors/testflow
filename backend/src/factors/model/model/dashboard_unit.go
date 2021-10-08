@@ -15,26 +15,18 @@ type DashboardUnit struct {
 	// Foreign key dashboard_units(project_id) ref projects(id).
 	ProjectID    uint64    `gorm:"primary_key:true" json:"project_id"`
 	DashboardId  uint64    `gorm:"primary_key:true" json:"dashboard_id"`
-	Title        string    `gorm:"not null" json:"title"`
 	Description  string    `json:"description"`
 	Presentation string    `gorm:"type:varchar(5);not null" json:"presentation"`
 	IsDeleted    bool      `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
-	// TODO (Anil) remove this field once we move to saved queries
-	Query    postgres.Jsonb `gorm:"not null" json:"query"`
-	QueryId  uint64         `gorm:"not null" json:"query_id"`
-	Settings postgres.Jsonb `json:"settings"`
+	QueryId      uint64    `gorm:"not null" json:"query_id"`
 }
 
 type DashboardUnitRequestPayload struct {
-	Title        string `json:"title"`
 	Description  string `json:"description"`
 	Presentation string `json:"presentation"`
-	// TODO (Anil) remove this field once we move to saved queries
-	Query    *postgres.Jsonb `json:"query"`
-	QueryId  uint64          `json:"query_id"`
-	Settings *postgres.Jsonb `json:"settings"`
+	QueryId      uint64 `json:"query_id"`
 }
 
 // DashboardUnitCachePayload Payload for dashboard caching method.
@@ -62,11 +54,6 @@ func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, 
 	}
 	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
-
-const (
-	DashboardUnitForNoQueryID = "NoQueryID"
-	DashboardUnitWithQueryID  = "WithQueryID"
-)
 
 var DashboardUnitPresentations = [...]string{
 	HorizontalBar,
@@ -100,21 +87,20 @@ func IsValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 	if dashboardUnit.DashboardId == 0 {
 		return false, "Invalid dashboard"
 	}
-
-	if dashboardUnit.Title == "" {
-		return false, "Invalid title"
-	}
-
-	validPresentation := false
-	for _, p := range DashboardUnitPresentations {
-		if p == dashboardUnit.Presentation {
-			validPresentation = true
-			break
+	if dashboardUnit.Presentation != "" {
+		validPresentation := false
+		for _, p := range DashboardUnitPresentations {
+			if p == dashboardUnit.Presentation {
+				validPresentation = true
+				break
+			}
 		}
+		if !validPresentation {
+			return false, "Invalid presentation"
+		}
+
 	}
-	if !validPresentation {
-		return false, "Invalid presentation"
-	}
+
 	// Todo(Dinesh): Validate query based on query class here.
 	return true, ""
 }

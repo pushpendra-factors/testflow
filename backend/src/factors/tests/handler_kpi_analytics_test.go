@@ -1,14 +1,14 @@
 package tests
 
 import (
-	Const "factors/constants"
 	C "factors/config"
+	Const "factors/constants"
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/model/model"
+	M "factors/model/model"
 	"factors/model/store"
 	U "factors/util"
-	M "factors/model/model"
 	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -122,10 +122,10 @@ func TestKpiAnalytics(t *testing.T) {
 			DisplayCategory: "page_views",
 			PageUrl:         "s0",
 			//Metrics:         []string{"page_views", "unique_users"},
-			Metrics: []string{"page_views"},
-			Filters: nil,
-			From:    startTimestamp,
-			To:      startTimestamp + 40,
+			Metrics:  []string{"page_views"},
+			Filters:  nil,
+			From:     startTimestamp,
+			To:       startTimestamp + 40,
 			Timezone: "Asia/Kolkata",
 			//GroupByTimestamp: "date",
 		}
@@ -157,10 +157,10 @@ func TestKpiAnalytics(t *testing.T) {
 
 			Category:        "events",
 			DisplayCategory: "website_session",
-			Metrics: []string{"average_initial_page_load_time"},
-			Filters: nil,
-			From:    startTimestamp,
-			To:      startTimestamp + 40,
+			Metrics:         []string{"average_initial_page_load_time"},
+			Filters:         nil,
+			From:            startTimestamp,
+			To:              startTimestamp + 40,
 		}
 
 		kpiQueryGroup := model.KPIQueryGroup{
@@ -190,18 +190,17 @@ func TestKpiAnalytics(t *testing.T) {
 
 			Category:        "channels",
 			DisplayCategory: "adwords_metrics",
-			Metrics: []string{"impressions"},
-			Filters: nil,
-			From:    startTimestamp,
-			To:      startTimestamp + 40,
+			Metrics:         []string{"impressions"},
+			Filters:         nil,
+			From:            startTimestamp,
+			To:              startTimestamp + 40,
 		}
 
 		kpiQueryGroup := model.KPIQueryGroup{
 			Class:         "kpi",
 			Queries:       []model.KPIQuery{query},
 			GlobalFilters: []model.KPIFilter{},
-			GlobalGroupBy: []model.KPIGroupBy{
-			},
+			GlobalGroupBy: []model.KPIGroupBy{},
 		}
 
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
@@ -224,18 +223,17 @@ func TestKpiAnalyticsHandler(t *testing.T) {
 		Category:        "events",
 		DisplayCategory: "page_views",
 		PageUrl:         "s0",
-		Metrics: []string{"page_views"},
-		GroupBy: []M.KPIGroupBy{},
-		From:    20210801,
-		To:      20210801 + 40,
+		Metrics:         []string{"page_views"},
+		GroupBy:         []M.KPIGroupBy{},
+		From:            20210801,
+		To:              20210801 + 40,
 	}
 
 	kpiQueryGroup := model.KPIQueryGroup{
 		Class:         "kpi",
 		Queries:       []model.KPIQuery{query},
 		GlobalFilters: []model.KPIFilter{},
-		GlobalGroupBy: []model.KPIGroupBy{
-		},
+		GlobalGroupBy: []model.KPIGroupBy{},
 	}
 
 	sendKPIAnalyticsQueryReq(a, project.ID, agent, kpiQueryGroup)
