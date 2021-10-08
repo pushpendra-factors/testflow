@@ -123,9 +123,6 @@ var supportedTables = []string{
 var permanantlyDisabledTables = []string{
 	tableUsers,
 	tableEvents,
-	tableTaskDetails,
-	tableTaskExecutionDetails,
-	tableTaskExecutionDependencyDetails,
 	tableGroups,
 }
 
