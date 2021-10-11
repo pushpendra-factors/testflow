@@ -121,12 +121,10 @@ const columns = [
 function CoreQuery({
   setDrawerVisible,
   setQueryType,
-  setActiveKey,
   setQueries,
-  setRowClicked,
+  setClickedSavedReport,
   setQueryOptions,
   location,
-  setBreakdownType,
   setNavigatedFromDashboard,
   fetchWeeklyIngishts,
   activeProject,
@@ -343,10 +341,11 @@ function CoreQuery({
         }
         updateSavedQuerySettings(record.settings || {});
         setQueryType(equivalentQuery.queryType);
-        setRowClicked({
+        setClickedSavedReport({
           queryType: equivalentQuery.queryType,
           queryName: record.title,
           settings: record.settings,
+          query_id: record.key || record.id,
         });
       } catch (err) {
         console.log(err);
@@ -358,18 +357,18 @@ function CoreQuery({
   const getMenu = (row) => {
     return (
       <Menu>
-        <Menu.Item key="0">
-          <a onClick={handleViewResult.bind(this, row)} href="#!">
+        <Menu.Item key='0'>
+          <a onClick={handleViewResult.bind(this, row)} href='#!'>
             View Report
           </a>
         </Menu.Item>
-        <Menu.Item key="1">
+        <Menu.Item key='1'>
           {/* <a onClick={(e) => e.stopPropagation()} href="#!">
             Copy Link
           </a>
         </Menu.Item>
         <Menu.Item key="2"> */}
-          <a onClick={handleDelete.bind(this, row)} href="#!">
+          <a onClick={handleDelete.bind(this, row)} href='#!'>
             Delete Report
           </a>
         </Menu.Item>

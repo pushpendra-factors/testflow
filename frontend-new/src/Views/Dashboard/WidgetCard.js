@@ -236,12 +236,18 @@ function WidgetCard({
   }, [refreshClicked, getData]);
 
   useEffect(() => {
-    if (unit.settings && unit.settings.attributionMetrics) {
+    if (
+      unit.query &&
+      unit.query.settings &&
+      unit.query.settings.attributionMetrics
+    ) {
       setAttributionMetrics(
-        getSavedAttributionMetrics(JSON.parse(unit.settings.attributionMetrics))
+        getSavedAttributionMetrics(
+          JSON.parse(unit.query.settings.attributionMetrics)
+        )
       );
     }
-  }, [unit.settings]);
+  }, [unit.query.settings]);
 
   const handleDelete = useCallback(() => {
     showDeleteWidgetModal(unit);
@@ -283,25 +289,28 @@ function WidgetCard({
     if (metadata?.DashboardUnitWiseResult) {
       const insightsItem = metadata?.DashboardUnitWiseResult[unit.id];
       if (insightsItem) {
-        dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: { 
-          id: unit?.id,
-          isDashboard: true,
-          ...insightsItem
-        } 
-      });
+        dispatch({
+          type: 'SET_ACTIVE_INSIGHT',
+          payload: {
+            id: unit?.id,
+            isDashboard: true,
+            ...insightsItem,
+          },
+        });
       } else {
         dispatch({ type: 'SET_ACTIVE_INSIGHT', payload: false });
       }
 
       if (insightsItem?.Enabled) {
         if (!_.isEmpty(insightsItem?.InsightsRange)) {
-          let insightsLen =  Object.keys(insightsItem?.InsightsRange)?.length || 0; 
+          let insightsLen =
+            Object.keys(insightsItem?.InsightsRange)?.length || 0;
           fetchWeeklyIngishts(
             active_project.id,
             unit.id,
-            Object.keys(insightsItem.InsightsRange)[insightsLen-1],
+            Object.keys(insightsItem.InsightsRange)[insightsLen - 1],
             insightsItem.InsightsRange[
-              Object.keys(insightsItem.InsightsRange)[insightsLen-1]
+              Object.keys(insightsItem.InsightsRange)[insightsLen - 1]
             ][0]
           ).catch((e) => {
             console.log('weekly-ingishts fetch error', e);
@@ -317,7 +326,7 @@ function WidgetCard({
     history.push({
       pathname: '/analyse',
       state: {
-        query: { ...unit.query, settings: unit.settings },
+        query: { ...unit.query, settings: unit.query.settings },
         global_search: true,
         navigatedFromDashboard: unit,
       },
@@ -333,7 +342,7 @@ function WidgetCard({
 
   return (
     <div
-      className={`${unit?.title?.split(' ').join('-')} ${
+      className={`${unit?.query?.title.split(' ').join('-')} ${
         unit.className
       } py-3 flex widget-card-top-div`}
     >
@@ -347,7 +356,7 @@ function WidgetCard({
             <div
               className={`${styles.widgetCard} flex items-center justify-between px-6 pb-4`}
             >
-              <Tooltip title={unit.title} mouseEnterDelay={0.2}>
+              <Tooltip title={unit?.query?.title} mouseEnterDelay={0.2}>
                 <div className='flex flex-col truncate'>
                   <div
                     className='flex cursor-pointer items-center'
@@ -360,8 +369,12 @@ function WidgetCard({
                       weight={'bold'}
                       extraClass={`${styles.widgetCard_text} m-0 mr-1 flex`}
                     >
-                      {unit.title} 
-                      <SVG extraClass={`${styles.expand_icon} ml-1`} size={20} name="expand" />
+                      {unit?.query?.title}
+                      <SVG
+                        extraClass={`${styles.expand_icon} ml-1`}
+                        size={20}
+                        name='expand'
+                      />
                     </Text>
                   </div>
                   {/* <div className="description">

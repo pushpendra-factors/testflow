@@ -1,13 +1,13 @@
-import React, { useCallback, useRef, useMemo } from "react";
-import { ReactSortable } from "react-sortablejs";
-import WidgetCard from "./WidgetCard";
-import { useSelector, useDispatch } from "react-redux";
-import { UNITS_ORDER_CHANGED } from "../../reducers/types";
-import { updateDashboard } from "../../reducers/dashboard/services";
-import { getRequestForNewState } from "../../reducers/dashboard/utils";
-import { QUERY_TYPE_WEB } from "../../utils/constants";
-import WebsiteAnalytics from "./WebsiteAnalytics";
-import { Text } from "../../components/factorsComponents";
+import React, { useCallback, useRef, useMemo } from 'react';
+import { ReactSortable } from 'react-sortablejs';
+import WidgetCard from './WidgetCard';
+import { useSelector, useDispatch } from 'react-redux';
+import { UNITS_ORDER_CHANGED } from '../../reducers/types';
+import { updateDashboard } from '../../reducers/dashboard/services';
+import { getRequestForNewState } from '../../reducers/dashboard/utils';
+import { QUERY_TYPE_WEB } from '../../utils/constants';
+import WebsiteAnalytics from './WebsiteAnalytics';
+import { Text } from '../../components/factorsComponents';
 
 function SortableCards({
   setwidgetModal,
@@ -29,14 +29,14 @@ function SortableCards({
     return (
       <div
         className={
-          "flex flex-col justify-center fa-dashboard--no-data-container items-center"
+          'flex flex-col justify-center fa-dashboard--no-data-container items-center'
         }
       >
-        <img alt="no-data" src="assets/images/no-data.png" className={"mb-8"} />
-        <Text type={"title"} level={5} weight={"bold"} extraClass={"m-0"}>
+        <img alt='no-data' src='assets/images/no-data.png' className={'mb-8'} />
+        <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
           Add widgets to start monitoring.
         </Text>
-        <Text type={"title"} level={7} color={"grey"} extraClass={"m-0"}>
+        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
           You can select any of the saved reports and add them to dashboard as
           widgets to monitor your metrics.
         </Text>
@@ -61,28 +61,41 @@ function SortableCards({
     [activeDashboard.id, active_project.id, dispatch]
   );
 
-  const activeUnits = useMemo(() =>
-    activeDashboardUnits.data.filter(
-      (elem) =>
-        savedQueries.findIndex(
-          (sq) => sq.id === elem.query_id && sq.query.cl !== QUERY_TYPE_WEB
-        ) > -1
-    ), [activeDashboardUnits, savedQueries]
+  const activeUnits = useMemo(
+    () =>
+      activeDashboardUnits.data.filter(
+        (elem) =>
+          savedQueries.findIndex(
+            (sq) => sq.id === elem.query_id && sq.query.cl !== QUERY_TYPE_WEB
+          ) > -1
+      ),
+    [activeDashboardUnits, savedQueries]
   );
 
-  const webAnalyticsUnits = useMemo(() =>
-    activeDashboardUnits.data.filter(
-      (elem) =>
-        savedQueries.findIndex(
-          (sq) => sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_WEB
-        ) > -1
-    ), [activeDashboardUnits, savedQueries]
+  const webAnalyticsUnits = useMemo(
+    () =>
+      activeDashboardUnits.data
+        .filter(
+          (elem) =>
+            savedQueries.findIndex(
+              (sq) => sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_WEB
+            ) > -1
+        )
+        .map((elem) => {
+          const query = savedQueries.find((sq) => sq.id === elem.query_id);
+          return {
+            ...elem,
+            title: query.title,
+            query: { ...query.query },
+          };
+        }),
+    [activeDashboardUnits, savedQueries]
   );
 
   if (activeUnits.length) {
     return (
       <ReactSortable
-        className="flex flex-wrap"
+        className='flex flex-wrap'
         list={activeUnits}
         setList={onDrop}
       >

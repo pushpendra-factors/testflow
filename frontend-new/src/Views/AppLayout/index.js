@@ -71,11 +71,11 @@ function AppLayout({ fetchProjects,
 
   useEffect(() => { 
     if (active_project && active_project.id) {
-      fetchDashboards(dispatch, active_project.id);
-      fetchQueries(dispatch, active_project.id);
+      dispatch(fetchDashboards(active_project.id));
+      dispatch(fetchQueries(active_project.id));
       fetchEventNames(active_project.id);
       getUserProperties(active_project.id);
-      fetchSmartPropertyRules(dispatch, active_project.id);
+      dispatch(fetchSmartPropertyRules(active_project.id));
       fetchWeeklyIngishtsMetaData(active_project.id);
     }
   }, [dispatch, active_project]);

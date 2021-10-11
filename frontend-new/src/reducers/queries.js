@@ -5,7 +5,8 @@ import {
   QUERY_CREATED,
   QUERY_DELETED,
   QUERIES_LOADING_STOPPED,
-} from "./types";
+  QUERY_UPDATED,
+} from './types';
 
 const inititalState = {
   loading: false,
@@ -31,6 +32,21 @@ export default function (state = inititalState, action) {
       };
     case QUERIES_LOADING_STOPPED:
       return { ...state, loading: false };
+    case QUERY_UPDATED:
+      const updatedQueryIndex = state.data.findIndex(
+        (d) => d.id === action.queryId
+      );
+      if (updatedQueryIndex > -1) {
+        return {
+          ...state,
+          data: [
+            ...state.data.slice(0, updatedQueryIndex),
+            { ...state.data[updatedQueryIndex], ...action.payload },
+            ...state.data.slice(updatedQueryIndex + 1),
+          ],
+        };
+      }
+      return state;
     default:
       return state;
   }
