@@ -353,8 +353,8 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, numRoutin
 	return len(dashboardUnits)
 }
 
-// GetQueryClassFromDashboardUnit returns query class of dashboard unit.
-func (store *MemSQL) GetQueryClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string) {
+// GetQueryAndClassFromDashboardUnit returns query and query-class of dashboard unit.
+func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string) {
 	projectID := dashboardUnit.ProjectID
 	savedQuery, errCode := store.GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
@@ -389,12 +389,8 @@ func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, 
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
-	logCtx := log.WithFields(log.Fields{
-		"Method":    "CacheDashboardUnit",
-		"ProjectID": dashboardUnit.ProjectID,
-	})
 	defer waitGroup.Done()
-	queryClass, errMsg := store.GetQueryClassFromDashboardUnit(&dashboardUnit)
+	queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 	if errMsg != "" {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
@@ -419,12 +415,6 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitG
 			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
 			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 			return
-		}
-
-		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
-		if errC != http.StatusFound {
-			logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
-			continue
 		}
 
 		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.

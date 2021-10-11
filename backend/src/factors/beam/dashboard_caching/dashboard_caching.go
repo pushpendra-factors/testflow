@@ -185,9 +185,8 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 		if errCode != http.StatusFound {
 			continue
 		}
-
 		for _, dashboardUnit := range dashboardUnits {
-			queryClass, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+			queryClass, queryInfo, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 			if errMsg == "" && queryClass != model.QueryClassWeb {
 				for preset, rangeFunction := range U.QueryDateRangePresets {
 					fr, t, errCode := rangeFunction(timezoneString)
@@ -203,7 +202,7 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 					cachePayload := model.BeamDashboardUnitCachePayload{
 						DashboardUnit: dashboardUnit,
 						QueryClass:    queryClass,
-						Query:         dashboardUnit.Query,
+						Query:         queryInfo.Query,
 						From:          from,
 						To:            to,
 						TimeZone:      timezoneString,
