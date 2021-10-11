@@ -340,8 +340,8 @@ func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, numRoutine
 	return len(dashboardUnits)
 }
 
-// GetQueryClassFromDashboardUnit Fill query and returns query class of dashboard unit.
-func (pg *Postgres) GetQueryClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string) {
+// GetQueryAndClassFromDashboardUnit returns query and query-class of dashboard unit.
+func (pg *Postgres) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string) {
 	projectID := dashboardUnit.ProjectID
 	savedQuery, errCode := pg.GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
@@ -377,12 +377,8 @@ func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, e
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
-	logCtx := log.WithFields(log.Fields{
-		"Method":    "CacheDashboardUnit",
-		"ProjectID": dashboardUnit.ProjectID,
-	})
 	defer waitGroup.Done()
-	queryClass, errMsg := pg.GetQueryClassFromDashboardUnit(&dashboardUnit)
+	queryClass, queryInfo, errMsg := pg.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 	if errMsg != "" {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
@@ -405,11 +401,6 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
 			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 			return
-		}
-		queryInfo, errC := pg.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
-		if errC != http.StatusFound {
-			logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
-			continue
 		}
 		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
 		baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)

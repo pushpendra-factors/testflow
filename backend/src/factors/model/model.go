@@ -137,7 +137,7 @@ type Model interface {
 	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int)
 	CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup)
-	GetQueryClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string)
+	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string)
 	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int)

@@ -293,12 +293,7 @@ func writeCpiPath(projectId uint64, periodCode Period, queryId uint64, k int, ev
 
 func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnelQuery, bool, bool, bool) {
 	var deltaQuery Query
-	queryInfo, status := store.GetStore().GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
-	if status != http.StatusFound {
-		log.Error("query not found")
-	}
-
-	queryClass, errMsg := store.GetStore().GetQueryClassFromQueries(*queryInfo)
+	queryClass, queryInfo, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 	if errMsg != "" {
 		return Query{}, MultiFunnelQuery{}, false, false, false
 	}
