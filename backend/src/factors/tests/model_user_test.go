@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -1166,6 +1167,20 @@ func TestUserIntialPropertiesOnOldTimestamp(t *testing.T) {
 
 	assert.Equal(t, float64(u1JointTimestamp.Unix()), (*userproperties)["$joinTime"])
 	assert.Equal(t, "B", (*userproperties)["city"])
+}
+
+func TestUserSelectColumns(t *testing.T) {
+	assert.Contains(t, model.User{}.SelectColumns(), "id")
+	assert.Contains(t, model.User{}.SelectColumns(), "project_id")
+	// Excluded column.
+	assert.NotContains(t, model.User{}.SelectColumns(), "properties_ro")
+	// Column name should be same as given on struct tag.
+	assert.Contains(t, model.User{}.SelectColumns(), "group_1_id")
+	assert.Contains(t, model.User{}.SelectColumns(), "group_1_user_id")
+	assert.Contains(t, model.User{}.SelectColumns(), "group_2_id")
+	assert.Contains(t, model.User{}.SelectColumns(), "group_2_user_id")
+	// No.of columns on users struct excluding properties_ro.
+	assert.Len(t, strings.Split(model.User{}.SelectColumns(), ","), 19)
 }
 
 func TestUserPropertiesUpdateByGroupColumnName(t *testing.T) {
