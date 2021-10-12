@@ -13,5 +13,8 @@ func (store *MemSQL) GetKPIConfigsForFacebook(projectID uint64, reqID string) (m
 	if len(settings) == 0 {
 		return nil, http.StatusOK
 	}
-	return model.GetKPIConfigsForLinkedin(), http.StatusOK
+	config := model.GetKPIConfigsForFacebook()
+	facebookObjectsAndProperties := store.buildObjectAndPropertiesForFacebook(projectID, model.ObjectsForFacebook)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(facebookObjectsAndProperties)
+	return config, http.StatusOK
 }

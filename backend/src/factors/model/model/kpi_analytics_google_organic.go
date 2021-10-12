@@ -9,6 +9,5 @@ func GetKPIConfigsForGoogleOrganic() map[string]interface{} {
 		"category":         ChannelCategory,
 		"display_category": GoogleOrganicDisplayCategory,
 		"metrics":          SelectableMetricsForAdwords,
-		"properties":       tranformChannelConfigStructToKPISpecificConfig(MapOfObjectsToPropertiesAndRelatedGoogleOrganic),
 	}
 }

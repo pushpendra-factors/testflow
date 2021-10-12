@@ -66,6 +66,8 @@ var AdwordsDocumentTypeAlias = map[string]int{
 	AdGroupPerformanceReport:      10,
 }
 
+var ObjectsForAdwords = []string{AdwordsCampaign, AdwordsAdGroup, AdwordsKeyword}
+
 const (
 	Id                     = "id"
 	Name                   = "name"

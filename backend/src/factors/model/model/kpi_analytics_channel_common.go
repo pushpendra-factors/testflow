@@ -3,18 +3,17 @@ package model
 import "errors"
 
 // Common/Util methods - to both adwords, facebook and all channels.
-func tranformChannelConfigStructToKPISpecificConfig(channelConfig map[string]map[string]PropertiesAndRelated) []map[string]string {
+func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperties []ChannelObjectAndProperties) []map[string]string {
 	var resultantPropertiesConfig []map[string]string
 	var tempPropertyConfig map[string]string
 
-	// transforming properties.
-	for objectType, mapOfPropertyToData := range channelConfig {
-		for property, data := range mapOfPropertyToData {
+	for _, channelAndProperties := range channelsWithProperties {
+		for _, property := range channelAndProperties.Properties {
 			tempPropertyConfig = map[string]string{
-				"name":         property,
-				"display_name": property,
-				"data_type":    data.TypeOfProperty,
-				"object_type":  objectType,
+				"name":         property.Name,
+				"display_name": property.Name,
+				"data_type":    property.Type,
+				"object_type":  channelAndProperties.Name,
 				"entity":       EventEntity,
 			}
 			resultantPropertiesConfig = append(resultantPropertiesConfig, tempPropertyConfig)

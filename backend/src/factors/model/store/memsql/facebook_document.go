@@ -153,8 +153,6 @@ const facebookCampaignMetadataFetchQueryStr = "select campaign_id, JSON_EXTRACT_
 	"in (select campaign_id, max(timestamp) from facebook_documents where type = ? " +
 	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_id)"
 
-var objectsForFacebook = []string{CAFilterCampaign, CAFilterAdGroup, CAFilterAd}
-
 func (store *MemSQL) satisfiesFacebookDocumentForeignConstraints(facebookDocument model.FacebookDocument) int {
 	_, errCode := store.GetProject(facebookDocument.ProjectID)
 	if errCode != http.StatusFound {

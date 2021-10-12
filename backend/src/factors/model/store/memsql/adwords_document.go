@@ -120,8 +120,6 @@ var templateMetricsToSelectStatementForOverallAnalysis = map[string]string{
 
 var errorEmptyAdwordsDocument = errors.New("empty adwords document")
 
-var objectsForAdwords = []string{model.AdwordsCampaign, model.AdwordsAdGroup, model.AdwordsKeyword}
-
 var propertiesToBeDividedByMillion = map[string]struct{}{
 	model.TopOfPageCpc:     {},
 	model.FirstPositionCpc: {},
@@ -812,7 +810,7 @@ func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAc
 
 // @TODO Kark v1
 func (store *MemSQL) buildAdwordsChannelConfig(projectID uint64) *model.ChannelConfigResult {
-	adwordsObjectsAndProperties := store.buildObjectAndPropertiesForAdwords(projectID, objectsForAdwords)
+	adwordsObjectsAndProperties := store.buildObjectAndPropertiesForAdwords(projectID, model.ObjectsForAdwords)
 	selectMetrics := append(selectableMetricsForAllChannels, model.SelectableMetricsForAdwords...)
 	objectsAndProperties := adwordsObjectsAndProperties
 	return &model.ChannelConfigResult{

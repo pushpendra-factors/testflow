@@ -35,13 +35,20 @@ func (req *KPIFilterValuesRequest) isValid() bool {
 	return true
 }
 
-// TODO: Add memsql support.
 func getReqIDAndProjectID(c *gin.Context) (string, uint64) {
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	return reqID, projectID
 }
 
+// GetKPIConfigHandler godoc
+// @Summary To get config for the required kpi.
+// @Tags KPIQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {string} json "{"result": map[string]interface{}"
+// @Router /{project_id}/v1/kpi/config [get]
 func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	reqID, projectID := getReqIDAndProjectID(c)
 	if projectID == 0 {
@@ -51,7 +58,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 	configFunctions := []func(uint64, string) (map[string]interface{}, int){
 		storeSelected.GetKPIConfigsForWebsiteSessions,
 		storeSelected.GetKPIConfigsForPageViews,
-		// storeSelected.GetKPIConfigsForFormSubmissions,
+		storeSelected.GetKPIConfigsForFormSubmissions,
 		storeSelected.GetKPIConfigsForHubspot, storeSelected.GetKPIConfigsForSalesforce,
 		storeSelected.GetKPIConfigsForAdwords, storeSelected.GetKPIConfigsForGoogleOrganic,
 		storeSelected.GetKPIConfigsForFacebook, storeSelected.GetKPIConfigsForLinkedin,
@@ -70,6 +77,15 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 	return resultantResultConfigs, http.StatusOK, "", "", false
 }
 
+// GetKPIFilterValuesHandler godoc
+// @Summary To filter on values for kpi query.
+// @Tags KPIanalytics, KPIQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param query body model.KPIFilterValuesRequest true "Filter Values payload"
+// @Success 200 {string} json "{"result": interface{}}"
+// @Router /{project_id}/v1/channels/filter_values [get]
 func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	reqID, projectID := getReqIDAndProjectID(c)
 	storeSelected := store.GetStore()
@@ -96,26 +112,35 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
 		}
 		resultantFilterValuesResponse = channelsFilterValues.FilterValues
-	} else {
-		if request.Entity == model.EventEntity {
-			eventsFilterValues, err := storeSelected.GetPropertyValuesByEventProperty(projectID, request.ObjectType, request.PropertyName, 2500, C.GetLookbackWindowForEventUserCache())
-			if err != nil {
-				logCtx.Warn(err)
-				return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
-			}
-			resultantFilterValuesResponse = eventsFilterValues
-		} else {
-			userFilterValues, err := storeSelected.GetPropertyValuesByUserProperty(projectID, request.PropertyName, 2500, C.GetLookbackWindowForEventUserCache())
-			if err != nil {
-				logCtx.Warn(err)
-				return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
-			}
-			resultantFilterValuesResponse = userFilterValues
+	} else if request.Category == model.EventCategory && request.Entity == model.EventEntity {
+		eventsFilterValues, err := storeSelected.GetPropertyValuesByEventProperty(projectID, request.ObjectType, request.PropertyName, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache())
+		if err != nil {
+			logCtx.Warn(err)
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
 		}
+		resultantFilterValuesResponse = eventsFilterValues
+	} else {
+		userFilterValues, err := storeSelected.GetPropertyValuesByUserProperty(projectID, request.PropertyName, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache())
+		if err != nil {
+			logCtx.Warn(err)
+			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
+		}
+		resultantFilterValuesResponse = userFilterValues
 	}
 	return resultantFilterValuesResponse, http.StatusOK, "", "", false
 }
 
+// ExecuteKPIQueryHandler godoc
+// @Summary To run a channel query.
+// @Tags KPIanalytics, KPIQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id query integer false "Dashboard ID"
+// @Param dashboard_unit_id query integer false "Dashboard Unit ID"
+// @Param query body model.KPIQueryGroup true "Query payload"
+// @Success 200 {string} json "{result:[]model.QueryResult}"
+// @Router /{project_id}/v1/channels/query [post]
 func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	reqID, projectID := getReqIDAndProjectID(c)
 	logCtx := log.WithField("reqId", reqID)
@@ -154,9 +179,19 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	}
 
 	request.SetTimeZone(timezoneString)
+	err = request.TransformDateTypeFilters()
+	if err != nil {
+		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
+	}
+
 	data, statusCode, errorCode, errMsg, isErr := getResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx)
 	if statusCode != http.StatusProcessing {
 		return data, statusCode, errorCode, errMsg, isErr
+	}
+
+	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() {
+		logCtx.WithField("request_payload", request).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
+		return nil, statusCode, PROCESSING_FAILED, "Not found in cache. Execution suspended temporarily.", true
 	}
 
 	model.SetQueryCachePlaceholder(projectID, &request)

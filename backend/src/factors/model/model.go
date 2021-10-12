@@ -100,18 +100,6 @@ type Model interface {
 	GetKPIConfigsForLinkedin(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForAllChannels(projectID uint64, reqID string) (map[string]interface{}, int)
 
-	// TODO: As we depricate channels, we can add these methods exposed here. Can separate on basis of channel later.
-	// GetKPIFilterValuesForWebsiteSessions(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForPageViews(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForFormSubmissions(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForHubspot(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForSalesforce(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForAdwords(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForGoogleOrganic(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForFacebook(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForLinkedin(projectID uint64, reqID string) (map[string]interface{}, int)
-	// GetKPIFilterValuesForAllChannels(projectID uint64, reqID string) (map[string]interface{}, int)
-
 	// ExecuteKPIQueryGroup(kpiQueryGroup model.KPIQueryGroup)
 	ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int)
 	ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)

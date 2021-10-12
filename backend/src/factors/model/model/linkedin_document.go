@@ -41,6 +41,8 @@ const (
 	LinkedinStringColumn  = "linkedin"
 )
 
+var ObjectsForLinkedin = []string{AdwordsCampaign, AdwordsAdGroup}
+
 var ObjectToValueInLinkedinJobsMapping = map[string]string{
 	"campaign_group:name": "campaign_group_name",
 	"campaign:name":       "campaign_group_name",

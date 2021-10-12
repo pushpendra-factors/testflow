@@ -2,6 +2,7 @@ package v1
 
 import (
 	mid "factors/middleware"
+	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
@@ -121,7 +122,7 @@ func GetEventNamesByTypeHandler(c *gin.Context) {
 		return
 	}
 
-	eventNames, err := store.GetStore().GetMostFrequentlyEventNamesByType(projectId, 2500, C.GetLookbackWindowForEventUserCache(), eventType)
+	eventNames, err := store.GetStore().GetMostFrequentlyEventNamesByType(projectId, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache(), eventType)
 	if err != nil {
 		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
 		c.AbortWithStatus(http.StatusInternalServerError)

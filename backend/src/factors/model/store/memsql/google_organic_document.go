@@ -34,10 +34,8 @@ var googleOrganicMetricsToAggregatesInReportsMapping = map[string]string{
 	"position_impression_weighted_avg": fmt.Sprintf(weightedMetricsExpressionOfDivisionWithHandleOf0AndNull, "position", "impressions", "impressions", "impressions"),
 }
 
-var objectsForGoogleOrganic = []string{"organic_property"}
-
 func (store *MemSQL) buildGoogleOrganicChannelConfig() *model.ChannelConfigResult {
-	googleOrganicObjectsAndProperties := store.buildObjectAndPropertiesForGoogleOrganic(objectsForGoogleOrganic)
+	googleOrganicObjectsAndProperties := store.buildObjectAndPropertiesForGoogleOrganic(model.ObjectsForGoogleOrganic)
 	selectMetrics := model.SelectableMetricsForGoogleOrganic
 	objectsAndProperties := googleOrganicObjectsAndProperties
 	return &model.ChannelConfigResult{
