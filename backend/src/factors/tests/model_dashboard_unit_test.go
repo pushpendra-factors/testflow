@@ -1236,13 +1236,22 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 	}
 
 	queryJson, _ := json.Marshal(query1)
+	dashboardQuery, _, _ := store.GetStore().CreateQuery(project.ID, &model.Queries{
+		ProjectID: project.ID,
+		Type:      model.QueryTypeDashboardQuery,
+		Query:     postgres.Jsonb{queryJson},
+		Title:     "title_xyz",
+		Settings:  postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 100}`)},
+	})
 
-	dashboardUnit, _, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
+
+	dashboardUnit, _, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
+		&model.DashboardUnit{
 		DashboardId:  dashboard.ID,
-		Title:        U.RandomString(5),
-		Query:        postgres.Jsonb{queryJson},
+		Description:        U.RandomString(5),
+		QueryId: dashboardQuery.ID,
 		Presentation: model.PresentationCard,
-	}, model.DashboardUnitForNoQueryID)
+	})
 	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
 	dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
 	dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = query1.GetClass()

@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
@@ -308,15 +309,23 @@ type QueryProperty struct {
 // Duplicate code present between QueryProperty and KPIFilter
 func (qp *QueryProperty) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
 	var dateTimeValue *DateTimePropertyValue
-
+	var err error
 	if qp.Type == U.PropertyTypeDateTime {
-		dateTimeValue, err := DecodeDateTimePropertyValue(qp.Value)
+		dateTimeValue, err = DecodeDateTimePropertyValue(qp.Value)
 		if err != nil {
 			log.WithError(err).Error("Failed reading dateTimeValue.")
 			return err
 		}
-		dateTimeValue.From = getEpochInSecondsFromMilliseconds(dateTimeValue.From)
-		dateTimeValue.To = getEpochInSecondsFromMilliseconds(dateTimeValue.To)
+		transformedFrom, err := getEpochInSecondsFromMilliseconds(dateTimeValue.From)
+		if err != nil {
+			return err
+		}
+		transformedTo, err := getEpochInSecondsFromMilliseconds(dateTimeValue.To)
+		if err != nil {
+			return err
+		}
+		dateTimeValue.From = transformedFrom
+		dateTimeValue.To = transformedTo
 	}
 	if qp.Type == U.PropertyTypeDateTime && (qp.Operator == InLastStr || qp.Operator == NotInLastStr) {
 		lastXthDay := U.GetDateBeforeXPeriod(dateTimeValue.Number, dateTimeValue.Granularity, timezoneString)
@@ -327,12 +336,18 @@ func (qp *QueryProperty) TransformDateTypeFilters(timezoneString U.TimeZoneStrin
 	return nil
 }
 
-func getEpochInSecondsFromMilliseconds(epoch int64) int64 {
+func getEpochInSecondsFromMilliseconds(epoch int64) (int64, error) {
 	if epoch == 0 {
-		return epoch
+		return epoch, nil
 	}
-	oldTime := time.Unix(epoch, 0)
-	return time.Date(oldTime.Year(), oldTime.Month(), oldTime.Day(), oldTime.Hour(), oldTime.Minute(), oldTime.Second(), 0, oldTime.Location()).Unix()
+	countOfDigits := U.GetNumberOfDigits(epoch)
+	if countOfDigits == 10 {
+		return epoch, nil
+	} else if countOfDigits == 13 {
+		return epoch / 1000, nil
+	} else {
+		return epoch, errors.New("Wrong date type filter range is given.")
+	}
 }
 
 type QueryGroupByProperty struct {
