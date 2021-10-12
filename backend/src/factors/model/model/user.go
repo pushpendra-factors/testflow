@@ -26,8 +26,11 @@ type User struct {
 	ID string `gorm:"primary_key:true;uuid;default:uuid_generate_v4()" json:"id"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
-	ProjectId                  uint64         `gorm:"primary_key:true;" json:"project_id"`
-	Properties                 postgres.Jsonb `json:"properties"`
+	ProjectId  uint64         `gorm:"primary_key:true;" json:"project_id"`
+	Properties postgres.Jsonb `json:"properties"`
+	// properties_ro is intentinally excluded on all create/update
+	// and select queries using SelectColumns().
+	PropertiesRO               postgres.Jsonb `gorm:"-" json:"-"`
 	PropertiesUpdatedTimestamp int64          `json:"properties_updated_timestamp"`
 	SegmentAnonymousId         string         `gorm:"type:varchar(200);default:null" json:"seg_aid"`
 	AMPUserId                  string         `gorm:"default:null" json:"amp_user_id"`
@@ -47,6 +50,10 @@ type User struct {
 	JoinTimestamp int64     `json:"join_timestamp"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+func (u User) SelectColumns() string {
+	return BuildSelectColumns(u, []string{"properties_ro"})
 }
 
 type LatestUserPropertiesFromSession struct {
