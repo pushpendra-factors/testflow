@@ -326,10 +326,10 @@ func (qp *QueryProperty) TransformDateTypeFilters(timezoneString U.TimeZoneStrin
 		}
 		dateTimeValue.From = transformedFrom
 		dateTimeValue.To = transformedTo
-	}
-	if qp.Type == U.PropertyTypeDateTime && (qp.Operator == InLastStr || qp.Operator == NotInLastStr) {
-		lastXthDay := U.GetDateBeforeXPeriod(dateTimeValue.Number, dateTimeValue.Granularity, timezoneString)
-		dateTimeValue.From = lastXthDay
+		if qp.Operator == InLastStr || qp.Operator == NotInLastStr {
+			lastXthDay := U.GetDateBeforeXPeriod(dateTimeValue.Number, dateTimeValue.Granularity, timezoneString)
+			dateTimeValue.From = lastXthDay
+		}
 		transformedValue, _ := json.Marshal(dateTimeValue)
 		qp.Value = string(transformedValue)
 	}

@@ -265,29 +265,3 @@ func sendKPIAnalyticsQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent, k
 	log.Warn(jsonResponse)
 	return w
 }
-
-func sendKPIAnalyticsQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent, kpiqueryGroup model.KPIQueryGroup) *httptest.ResponseRecorder {
-	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
-	if err != nil {
-		log.WithError(err).Error("Error creating cookie data.")
-	}
-
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/kpi/query", projectId)).
-		WithPostParams(kpiqueryGroup).
-		WithCookie(&http.Cookie{
-			Name:   C.GetFactorsCookieName(),
-			Value:  cookieData,
-			MaxAge: 1000,
-		})
-
-	req, err := rb.Build()
-	if err != nil {
-		log.WithError(err).Error("Error creating create dashboard_unit req.")
-	}
-
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	log.Warn(jsonResponse)
-	return w
-}
