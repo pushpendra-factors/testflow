@@ -359,15 +359,17 @@ func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dash
 	savedQuery, errCode := store.GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
 		errMsg = fmt.Sprintf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
-		return
+		return "", nil, errMsg
 	}
+
 	queryClass, errMsg = store.GetQueryClassFromQueries(*savedQuery)
 	if errMsg != "" {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
-		return
+		return "", nil, errMsg
 	}
-	return
+	return queryClass, savedQuery, ""
 }
+
 func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string) {
 	var temp_query model.Query
 	var queryGroup model.QueryGroup
@@ -378,19 +380,25 @@ func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, 
 		err1 := U.DecodePostgresJsonbToStructType(&query.Query, &queryGroup)
 		if err1 != nil {
 			errMsg = fmt.Sprintf("Failed to decode jsonb query")
-			return
+			return "", errMsg
 		}
 		queryClass = queryGroup.GetClass()
 	} else {
 		queryClass = temp_query.Class
 	}
-	return
+	return queryClass, ""
 }
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
+
+	logCtx := log.WithFields(log.Fields{
+		"ProjectID":       dashboardUnit.ProjectID,
+		"DashboardID":     dashboardUnit.DashboardId,
+		"DashboardUnitID": dashboardUnit.ID,
+	})
 	defer waitGroup.Done()
-	queryClass, queryInfo, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+	queryClass, _, errMsg := store.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 	if errMsg != "" {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
@@ -415,6 +423,12 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitG
 			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
 			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 			return
+		}
+
+		queryInfo, errC := store.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+		if errC != http.StatusFound {
+			logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+			continue
 		}
 
 		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
