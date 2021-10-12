@@ -42,8 +42,8 @@ func (store *MemSQL) GetPropertyTypeFromDB(projectID uint64, eventName, property
 
 	if !isUserProperty {
 		eventNameDetails, status := store.GetEventName(eventName, projectID)
-		if status == http.StatusNotFound {
-			return http.StatusBadRequest, nil
+		if status != http.StatusFound {
+			return status, nil
 		}
 		propertyDetail.EventNameID = &eventNameDetails.ID
 	}
