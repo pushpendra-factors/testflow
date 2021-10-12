@@ -1266,3 +1266,15 @@ func GetFilteredMapBySkipList(sourceMap *map[string]interface{}, propertySkipLis
 
 	return &filteredMap
 }
+
+func GetNumberOfDigits(input int64) int {
+	if input == 0 {
+		return 1
+	}
+	count := 0
+	for input > 0 {
+		input = input/10
+		count = count + 1
+	}
+	return count
+}
