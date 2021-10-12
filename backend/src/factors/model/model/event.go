@@ -168,5 +168,5 @@ func GetChannelGroup(project Project, sessionPropertiesMap U.PropertiesMap) (str
 		channelGroupRules = DefaultChannelPropertyRules
 	}
 
-	return EvaluateChannelPropertyRules(channelGroupRules, sessionPropertiesMap), ""
+	return EvaluateChannelPropertyRules(channelGroupRules, sessionPropertiesMap, project.ID), ""
 }
