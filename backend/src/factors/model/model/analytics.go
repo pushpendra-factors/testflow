@@ -305,18 +305,32 @@ type QueryProperty struct {
 }
 
 func (qp *QueryProperty) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
-	if qp.Type == U.PropertyTypeDateTime && (qp.Operator == InLastStr || qp.Operator == NotInLastStr) {
+	var dateTimeValue *DateTimePropertyValue
+
+	if qp.Type == U.PropertyTypeDateTime {
 		dateTimeValue, err := DecodeDateTimePropertyValue(qp.Value)
 		if err != nil {
-			log.WithError(err).Error("Failed reading timestamp on user join query.")
+			log.WithError(err).Error("Failed reading dateTimeValue.")
 			return err
 		}
+		dateTimeValue.From = getEpochInSecondsFromMilliseconds(dateTimeValue.From)
+		dateTimeValue.To = getEpochInSecondsFromMilliseconds(dateTimeValue.To)
+	}
+	if qp.Type == U.PropertyTypeDateTime && (qp.Operator == InLastStr || qp.Operator == NotInLastStr) {
 		lastXthDay := U.GetDateBeforeXPeriod(dateTimeValue.Number, dateTimeValue.Granularity, timezoneString)
 		dateTimeValue.From = lastXthDay
 		transformedValue, _ := json.Marshal(dateTimeValue)
 		qp.Value = string(transformedValue)
 	}
 	return nil
+}
+
+func getEpochInSecondsFromMilliseconds(epoch int64) int64 {
+	if epoch == 0 {
+		return epoch
+	}
+	oldTime := time.Unix(epoch, 0)
+	return time.Date(oldTime.Year(), oldTime.Month(), oldTime.Day(), oldTime.Hour(), oldTime.Minute(), oldTime.Second(), 0, oldTime.Location()).Unix()
 }
 
 type QueryGroupByProperty struct {

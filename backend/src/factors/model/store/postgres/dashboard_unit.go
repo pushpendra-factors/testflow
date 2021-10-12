@@ -346,16 +346,17 @@ func (pg *Postgres) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dashb
 	savedQuery, errCode := pg.GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
 		errMsg = fmt.Sprintf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
-		return
+		return "", nil, errMsg
 	}
 
 	queryClass, errMsg = pg.GetQueryClassFromQueries(*savedQuery)
 	if errMsg != "" {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
-		return
+		return "", nil, errMsg
 	}
-	return
+	return queryClass, savedQuery, ""
 }
+
 func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string) {
 	var tempQuery model.Query
 	var queryGroup model.QueryGroup
@@ -366,19 +367,25 @@ func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, e
 		err1 := U.DecodePostgresJsonbToStructType(&query.Query, &queryGroup)
 		if err1 != nil {
 			errMsg = fmt.Sprintf("Failed to decode jsonb query")
-			return
+			return "", errMsg
 		}
 		queryClass = queryGroup.GetClass()
 	} else {
 		queryClass = tempQuery.Class
 	}
-	return
+	return queryClass, ""
 }
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
+
+	logCtx := log.WithFields(log.Fields{
+		"ProjectID":       dashboardUnit.ProjectID,
+		"DashboardID":     dashboardUnit.DashboardId,
+		"DashboardUnitID": dashboardUnit.ID,
+	})
 	defer waitGroup.Done()
-	queryClass, queryInfo, errMsg := pg.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+	queryClass, _, errMsg := pg.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 	if errMsg != "" {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
@@ -402,6 +409,13 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 			return
 		}
+
+		queryInfo, errC := pg.GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+		if errC != http.StatusFound {
+			logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+			continue
+		}
+
 		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
 		baseQuery, err := model.DecodeQueryForClass(queryInfo.Query, queryClass)
 		if err != nil {
