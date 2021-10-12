@@ -15,7 +15,10 @@ func (store *MemSQL) GetKPIConfigsForAdwords(projectID uint64, reqID string) (ma
 	if len(adwordsSettings) == 0 {
 		return nil, http.StatusOK
 	}
-	return model.GetKPIConfigsForAdwords(), http.StatusOK
+	config := model.GetKPIConfigsForAdwords()
+	adwordsObjectsAndProperties := store.buildObjectAndPropertiesForAdwords(projectID, model.ObjectsForAdwords)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(adwordsObjectsAndProperties)
+	return config, http.StatusOK
 }
 
 func (store *MemSQL) ExecuteKPIQueryForChannels(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {

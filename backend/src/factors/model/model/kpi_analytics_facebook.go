@@ -9,7 +9,6 @@ func GetKPIConfigsForFacebook() map[string]interface{} {
 		"category":         ChannelCategory,
 		"display_category": FacebookDisplayCategory,
 		"metrics":          SelectableMetricsForFacebook,
-		"properties":       tranformChannelConfigStructToKPISpecificConfig(MapOfFacebookObjectsToPropertiesAndRelated),
 	}
 	allChannelMetrics := GetMetricsForDisplayCategory(AllChannelsDisplayCategory)
 	config["metrics"] = append(allChannelMetrics, GetMetricsForDisplayCategory(FacebookDisplayCategory)...)

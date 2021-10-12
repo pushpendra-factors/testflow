@@ -13,5 +13,8 @@ func (pg *Postgres) GetKPIConfigsForGoogleOrganic(projectID uint64, reqID string
 	if len(settings) == 0 {
 		return nil, http.StatusOK
 	}
-	return model.GetKPIConfigsForGoogleOrganic(), http.StatusOK
+	config := model.GetKPIConfigsForGoogleOrganic()
+	organicObjectsAndProperties := pg.buildObjectAndPropertiesForGoogleOrganic(model.ObjectsForGoogleOrganic)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(organicObjectsAndProperties)
+	return config, http.StatusOK
 }

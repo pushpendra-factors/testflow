@@ -91,8 +91,6 @@ const linkedinCampaignMetadataFetchQueryStr = "select campaign_group_id as campa
 	"(campaign_group_id, timestamp) in (select campaign_group_id, max(timestamp) from linkedin_documents where type = ? " +
 	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_group_id)"
 
-var objectsForLinkedin = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
-
 func getLinkedinDocumentTypeAliasByType() map[int]string {
 	documentTypeMap := make(map[int]string, 0)
 	for alias, typ := range linkedinDocumentTypeAlias {
@@ -370,7 +368,7 @@ func getLinkedinMetricsQuery(query *model.ChannelQuery, withBreakdown bool) (str
 // v1 Api
 // To change in kpi/linkedin, when we change here.
 func (pg *Postgres) buildLinkedinChannelConfig(projectID uint64) *model.ChannelConfigResult {
-	linkedinObjectsAndProperties := pg.buildObjectAndPropertiesForLinkedin(projectID, objectsForLinkedin)
+	linkedinObjectsAndProperties := pg.buildObjectAndPropertiesForLinkedin(projectID, model.ObjectsForLinkedin)
 	objectsAndProperties := append(linkedinObjectsAndProperties)
 
 	return &model.ChannelConfigResult{

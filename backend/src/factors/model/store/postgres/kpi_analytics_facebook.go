@@ -13,5 +13,8 @@ func (pg *Postgres) GetKPIConfigsForFacebook(projectID uint64, reqID string) (ma
 	if len(settings) == 0 {
 		return nil, http.StatusOK
 	}
-	return model.GetKPIConfigsForLinkedin(), http.StatusOK
+	config := model.GetKPIConfigsForFacebook()
+	facebookObjectsAndProperties := pg.buildObjectAndPropertiesForFacebook(projectID, model.ObjectsForFacebook)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(facebookObjectsAndProperties)
+	return config, http.StatusOK
 }

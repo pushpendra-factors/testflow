@@ -15,7 +15,10 @@ func (pg *Postgres) GetKPIConfigsForAdwords(projectID uint64, reqID string) (map
 	if len(adwordsSettings) == 0 {
 		return nil, http.StatusOK
 	}
-	return model.GetKPIConfigsForAdwords(), http.StatusOK
+	config := model.GetKPIConfigsForAdwords()
+	adwordsObjectsAndProperties := pg.buildObjectAndPropertiesForAdwords(projectID, model.ObjectsForAdwords)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(adwordsObjectsAndProperties)
+	return config, http.StatusOK
 }
 
 func (pg *Postgres) ExecuteKPIQueryForChannels(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {

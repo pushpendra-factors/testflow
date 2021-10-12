@@ -37,6 +37,8 @@ const (
 	PageLevelData              = int64(2)
 )
 
+var ObjectsForGoogleOrganic = []string{"organic_property"}
+
 var MapOfObjectsToPropertiesAndRelatedGoogleOrganic = map[string]map[string]PropertiesAndRelated{
 	"organic_property": {
 		"query":   PropertiesAndRelated{TypeOfProperty: U.PropertyTypeCategorical},

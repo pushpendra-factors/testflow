@@ -1,8 +1,11 @@
 package model
 
 import (
+	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -135,6 +138,27 @@ func (q *KPIQueryGroup) GetGroupByTimestamp() string {
 }
 
 func (q *KPIQueryGroup) TransformDateTypeFilters() error {
+	timezoneString := q.GetTimeZone()
+	err := transformDateTypeFiltersForKPIFilters(q.GlobalFilters, timezoneString)
+	if err != nil {
+		return err
+	}
+	for _, query := range q.Queries {
+		err := transformDateTypeFiltersForKPIFilters(query.Filters, timezoneString)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func transformDateTypeFiltersForKPIFilters(filters []KPIFilter, timezoneString U.TimeZoneString) error {
+	for i := range filters {
+		err := filters[i].TransformDateTypeFilters(timezoneString)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -159,6 +183,23 @@ type KPIFilter struct {
 	Condition        string `json:"co"`
 	Value            string `json:"va"`
 	LogicalOp        string `json:"lOp"`
+}
+
+// TODO: Change from milliseconds to seconds.
+// Duplicate code present between QueryProperty and KPIFilter
+func (qp *KPIFilter) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
+	if qp.PropertyDataType == U.PropertyTypeDateTime && (qp.Condition == InLastStr || qp.Condition == NotInLastStr) {
+		dateTimeValue, err := DecodeDateTimePropertyValue(qp.Value)
+		if err != nil {
+			log.WithError(err).Error("Failed reading timestamp on user join query.")
+			return err
+		}
+		lastXthDay := U.GetDateBeforeXPeriod(dateTimeValue.Number, dateTimeValue.Granularity, timezoneString)
+		dateTimeValue.From = lastXthDay
+		transformedValue, _ := json.Marshal(dateTimeValue)
+		qp.Value = string(transformedValue)
+	}
+	return nil
 }
 
 type KPIGroupBy struct {

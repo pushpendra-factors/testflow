@@ -8,7 +8,6 @@ func GetKPIConfigsForAdwords() map[string]interface{} {
 	config := map[string]interface{}{
 		"category":         ChannelCategory,
 		"display_category": AdwordsDisplayCategory,
-		"properties":       tranformChannelConfigStructToKPISpecificConfig(MapOfAdwordsObjectsToPropertiesAndRelated),
 	}
 	allChannelMetrics := GetMetricsForDisplayCategory(AllChannelsDisplayCategory)
 	config["metrics"] = append(allChannelMetrics, GetMetricsForDisplayCategory(AdwordsDisplayCategory)...)

@@ -962,7 +962,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (str
 
 	var qSelect string
 	qSelect = appendSelectTimestampIfRequired(qSelect, q.GetGroupByTimestamp(), q.Timezone)
-	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("%s(*) AS %s", q.GetAggregateFunction(), strings.ToLower(q.GetAggregateFunction())))
+	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", model.AliasAggr))
 
 	addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
 		"", "", qSelect, egSelectParams, "", "", "", q.GlobalUserProperties)

@@ -97,8 +97,6 @@ const linkedinCampaignMetadataFetchQueryStr = "select campaign_group_id as campa
 	"(campaign_group_id, timestamp) in (select campaign_group_id, max(timestamp) from linkedin_documents where type = ? " +
 	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_group_id)"
 
-var objectsForLinkedin = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
-
 func (store *MemSQL) satisfiesLinkedinDocumentForeignConstraints(linkedinDocument model.LinkedinDocument) int {
 	_, errCode := store.GetProject(linkedinDocument.ProjectID)
 	if errCode != http.StatusFound {
@@ -433,7 +431,7 @@ func getLinkedinMetricsQuery(query *model.ChannelQuery, withBreakdown bool) (str
 
 // v1 Api
 func (store *MemSQL) buildLinkedinChannelConfig(projectID uint64) *model.ChannelConfigResult {
-	linkedinObjectsAndProperties := store.buildObjectAndPropertiesForLinkedin(projectID, objectsForLinkedin)
+	linkedinObjectsAndProperties := store.buildObjectAndPropertiesForLinkedin(projectID, model.ObjectsForLinkedin)
 	objectsAndProperties := append(linkedinObjectsAndProperties)
 
 	return &model.ChannelConfigResult{

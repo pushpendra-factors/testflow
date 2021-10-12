@@ -900,6 +900,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		model.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
 		model.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
 		model.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
+		model.QueryClassKPI:         `{"cl":"kpi","qG":[{"ca":"events","pgUrl":"www.acme.com/pricing","dc":"page_views","me":["page_views"],"gBy":[],"fil":[],"gbt":"","fr":1633233600,"to":1633579199}],"gFil":[],"gGBy":[]}`,
 	}
 	for queryClass, queryString := range dashboardQueriesStr {
 		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
@@ -1395,6 +1396,10 @@ func getAnalyticsQueryUrlAandPayload(queryClass string, baseQuery model.BaseQuer
 		queryPayload = query
 	} else if queryClass == model.QueryClassWeb {
 		query := baseQuery.(*model.DashboardUnitsWebAnalyticsQuery)
+		queryPayload = query
+	} else if queryClass == model.QueryClassKPI {
+		queryURL = "v1/kpi/query"
+		query := baseQuery.(*model.KPIQueryGroup)
 		queryPayload = query
 	} else {
 		queryURL = "attribution/query"

@@ -85,8 +85,9 @@ const (
 const DefaultTimezone = "UTC"
 
 const (
-	ResultsLimit    = 10000
-	MaxResultsLimit = 100000
+	ResultsLimit                  = 10000
+	FilterValuesOrEventNamesLimit = 2500
+	MaxResultsLimit               = 100000
 )
 
 const (
@@ -304,6 +305,7 @@ type QueryProperty struct {
 	LogicalOp string `json:"lop"`
 }
 
+// Duplicate code present between QueryProperty and KPIFilter
 func (qp *QueryProperty) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
 	var dateTimeValue *DateTimePropertyValue
 
@@ -353,7 +355,7 @@ type QueryEventWithProperties struct {
 }
 
 func (ewp *QueryEventWithProperties) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
-	for i, _ := range ewp.Properties {
+	for i := range ewp.Properties {
 		err := ewp.Properties[i].TransformDateTypeFilters(timezoneString)
 		if err != nil {
 			return err

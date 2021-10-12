@@ -34,14 +34,13 @@ var googleOrganicMetricsToAggregatesInReportsMapping = map[string]string{
 	"position_avg":                     "AVG((value->>'position')::float)",
 	"position_impression_weighted_avg": fmt.Sprintf(weightedMetricsExpressionOfDivisionWithHandleOf0AndNull, "position", "impressions", "impressions", "impressions"),
 }
-var objectsForGoogleOrganic = []string{"organic_property"}
 
 func isDuplicateGoogleOrganicDocumentError(err error) bool {
 	return err.Error() == errorDuplicateGoogleOrganicDocument
 }
 
 func (pg *Postgres) buildGoogleOrganicChannelConfig() *model.ChannelConfigResult {
-	googleOrganicObjectsAndProperties := pg.buildObjectAndPropertiesForGoogleOrganic(objectsForGoogleOrganic)
+	googleOrganicObjectsAndProperties := pg.buildObjectAndPropertiesForGoogleOrganic(model.ObjectsForGoogleOrganic)
 	selectMetrics := model.SelectableMetricsForGoogleOrganic
 	objectsAndProperties := googleOrganicObjectsAndProperties
 	return &model.ChannelConfigResult{
