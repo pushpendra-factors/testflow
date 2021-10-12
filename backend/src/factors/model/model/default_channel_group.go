@@ -4,6 +4,8 @@ import (
 	U "factors/util"
 	"fmt"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type ChannelPropertyFilter struct {
@@ -460,7 +462,7 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 			{
 				Property:  U.SP_INITIAL_REFERRER_DOMAIN,
 				Condition: ContainsOpStr,
-				Value:     "imstagram.",
+				Value:     "instagram.",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 		},
@@ -620,7 +622,7 @@ func groupConditionsBasedOnProperty(conditions []ChannelPropertyFilter) map[stri
 	}
 	return groupedConditions
 }
-func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessionPropertiesMap U.PropertiesMap) string {
+func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessionPropertiesMap U.PropertiesMap, projectID uint64) string {
 	for _, rule := range channelGroupRules {
 		groupedConditions := groupConditionsBasedOnProperty(rule.Conditions)
 		checkCondition := true
@@ -638,6 +640,9 @@ func EvaluateChannelPropertyRules(channelGroupRules []ChannelPropertyRule, sessi
 				}
 			}
 			checkCondition = checkCondition && checkConditionForProperty
+		}
+		if projectID == 641 || projectID == 645 {
+			log.WithFields(log.Fields{"project_id": projectID, "rule": rule, "check_condition": checkCondition, "sessionPropertiesMap": sessionPropertiesMap}).Info("Debug Add Session")
 		}
 		if checkCondition {
 			return rule.Channel
