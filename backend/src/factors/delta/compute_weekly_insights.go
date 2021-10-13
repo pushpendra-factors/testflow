@@ -91,7 +91,7 @@ const (
 
 const DistributionChangePer float64 = 5 // x of overall to be comapared with distrubution W1
 
-func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, EventType string, isFunnelWebsite bool) WeeklyInsights {
+func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, EventType string, isEventWebsite bool) WeeklyInsights {
 	var KeyMapForConversion = make(map[string]bool)
 	var KeyMapForDistribution = make(map[string]bool)
 	propertyMap = make(map[string]bool)
@@ -228,7 +228,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 						}
 
 					}
-					if EventType == Funnel && isFunnelWebsite {
+					if isEventWebsite {
 						if value.Entity == "ep" && !(strings.Contains(value.Key, "hubspot") || strings.Contains(value.Key, "salesforce")) {
 							temp.DeltaRatio *= 2
 						} else if value.Entity == "up" && !(strings.Contains(value.Key, "hubspot") || strings.Contains(value.Key, "salesforce")) {
@@ -584,11 +584,11 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 		isEventOccurence = (query.Type == model.QueryTypeEventsOccurrence)
 	}
 	EventType := getEventType(&query, class, projectId)
-	var isFunnelWebsite bool
-	if EventType == Funnel {
-		FunnelEventType := GetEventTypeForFunnel(&query, projectId)
-		if FunnelEventType == WebsiteEvent {
-			isFunnelWebsite = true
+	var isEventWebsite bool
+	if EventType == Funnel || EventType == WebsiteEvent {
+		NewEventType := GetEventTypeForFunnelOrWebsite(&query, projectId)
+		if NewEventType == WebsiteEvent {
+			isEventWebsite = true
 		}
 	}
 	if isEventOccurence {
@@ -600,9 +600,9 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	WhiteListedKeys = make(map[string]bool)
 	WhiteListedKeysOtherQuery = make(map[string]bool)
 	CaptureBlackListedAndWhiteListedKeys(projectId, agentUUID, queryId)
-	insightsObj := GetInsights(insights, numberOfRecords, class, EventType, isFunnelWebsite)
+	insightsObj := GetInsights(insights, numberOfRecords, class, EventType, isEventWebsite)
 	// adding query groups
-	gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj, isFunnelWebsite)
+	gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj, isEventWebsite)
 	// appending at top
 	insightsObj.Insights = append(gbpInsights, insightsObj.Insights...)
 	removeNegativePercentageFromInsights(&insightsObj)
@@ -610,7 +610,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	return insightsObj, nil
 }
 
-func addGroupByProperties(query model.Query, EventType string, file CrossPeriodInsights, insights WeeklyInsights, isFunnelWebsite bool) []ActualMetrics {
+func addGroupByProperties(query model.Query, EventType string, file CrossPeriodInsights, insights WeeklyInsights, isEventWebsite bool) []ActualMetrics {
 	ActualMetricsArr := make([]ActualMetrics, 0)
 	ZeroFlag := true
 	if insights.Goal.W1 == float64(0) || insights.Goal.W2 == float64(0) {
@@ -675,7 +675,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							}
 
 						}
-						if EventType == Funnel && isFunnelWebsite {
+						if isEventWebsite {
 							if newData.Entity == model.PropertyEntityEvent && !(strings.Contains(newData.Key, "hubspot") || strings.Contains(newData.Key, "salesforce")) {
 								temp.DeltaRatio *= 2
 							} else if newData.Entity == model.PropertyEntityUser && !(strings.Contains(newData.Key, "hubspot") || strings.Contains(newData.Key, "salesforce")) {
@@ -927,7 +927,7 @@ func getEventType(query *model.Query, QueryClass string, project_id uint64) stri
 	return EventType
 
 }
-func GetEventTypeForFunnel(query *model.Query, project_id uint64) string {
+func GetEventTypeForFunnelOrWebsite(query *model.Query, project_id uint64) string {
 	EventType := ""
 	ewp := query.EventsWithProperties
 	for _, data := range ewp {
