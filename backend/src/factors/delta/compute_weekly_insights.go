@@ -91,7 +91,7 @@ const (
 
 const DistributionChangePer float64 = 5 // x of overall to be comapared with distrubution W1
 
-func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, EventType string) WeeklyInsights {
+func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, EventType string, isFunnelWebsite bool) WeeklyInsights {
 	var KeyMapForConversion = make(map[string]bool)
 	var KeyMapForDistribution = make(map[string]bool)
 	propertyMap = make(map[string]bool)
@@ -227,6 +227,15 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 							}
 						}
 
+					}
+					if EventType == Funnel && isFunnelWebsite {
+						if value.Entity == "ep" && !(strings.Contains(value.Key, "hubspot") || strings.Contains(value.Key, "salesforce")) {
+							temp.DeltaRatio *= 2
+						} else if value.Entity == "up" && !(strings.Contains(value.Key, "hubspot") || strings.Contains(value.Key, "salesforce")) {
+							temp.DeltaRatio *= 1.1
+						} else {
+							temp.DeltaRatio *= 0.8
+						}
 					}
 
 					value.ActualValues = temp
@@ -575,6 +584,13 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 		isEventOccurence = (query.Type == model.QueryTypeEventsOccurrence)
 	}
 	EventType := getEventType(&query, class, projectId)
+	var isFunnelWebsite bool
+	if EventType == Funnel {
+		FunnelEventType := GetEventTypeForFunnel(&query, projectId)
+		if FunnelEventType == WebsiteEvent {
+			isFunnelWebsite = true
+		}
+	}
 	if isEventOccurence {
 		EventType = CRM
 	}
@@ -584,9 +600,9 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	WhiteListedKeys = make(map[string]bool)
 	WhiteListedKeysOtherQuery = make(map[string]bool)
 	CaptureBlackListedAndWhiteListedKeys(projectId, agentUUID, queryId)
-	insightsObj := GetInsights(insights, numberOfRecords, class, EventType)
+	insightsObj := GetInsights(insights, numberOfRecords, class, EventType, isFunnelWebsite)
 	// adding query groups
-	gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj)
+	gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj, isFunnelWebsite)
 	// appending at top
 	insightsObj.Insights = append(gbpInsights, insightsObj.Insights...)
 	removeNegativePercentageFromInsights(&insightsObj)
@@ -594,7 +610,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	return insightsObj, nil
 }
 
-func addGroupByProperties(query model.Query, EventType string, file CrossPeriodInsights, insights WeeklyInsights) []ActualMetrics {
+func addGroupByProperties(query model.Query, EventType string, file CrossPeriodInsights, insights WeeklyInsights, isFunnelWebsite bool) []ActualMetrics {
 	ActualMetricsArr := make([]ActualMetrics, 0)
 	ZeroFlag := true
 	if insights.Goal.W1 == float64(0) || insights.Goal.W2 == float64(0) {
@@ -658,6 +674,15 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 								}
 							}
 
+						}
+						if EventType == Funnel && isFunnelWebsite {
+							if newData.Entity == model.PropertyEntityEvent && !(strings.Contains(newData.Key, "hubspot") || strings.Contains(newData.Key, "salesforce")) {
+								temp.DeltaRatio *= 2
+							} else if newData.Entity == model.PropertyEntityUser && !(strings.Contains(newData.Key, "hubspot") || strings.Contains(newData.Key, "salesforce")) {
+								temp.DeltaRatio *= 1.1
+							} else {
+								temp.DeltaRatio *= 0.8
+							}
 						}
 
 						if file.Base.FeatureMetrics[property][values].First != nil {
@@ -901,6 +926,25 @@ func getEventType(query *model.Query, QueryClass string, project_id uint64) stri
 	}
 	return EventType
 
+}
+func GetEventTypeForFunnel(query *model.Query, project_id uint64) string {
+	EventType := ""
+	ewp := query.EventsWithProperties
+	for _, data := range ewp {
+		name := data.Name
+		eventNameObj, status := store.GetStore().GetEventName(name, project_id)
+		if status != http.StatusFound {
+			log.Error("Not found "+name+" ", project_id)
+			continue
+		}
+		if eventNameObj.Type == model.EVENT_NAME_TYPE_SMART_EVENT || eventNameObj.Type == model.TYPE_CRM_SALESFORCE || eventNameObj.Type == model.TYPE_CRM_HUBSPOT || strings.HasPrefix(eventNameObj.Name, "$hubspot") || strings.HasPrefix(eventNameObj.Name, "$sf") || strings.HasPrefix(eventNameObj.Name, "$session") {
+			EventType = CRM
+			break
+		} else {
+			EventType = WebsiteEvent
+		}
+	}
+	return EventType
 }
 func removeNegativePercentageFromInsights(insightsObj *WeeklyInsights) {
 	insightsObj.Base.Percentage = math.Abs(insightsObj.Base.Percentage)
