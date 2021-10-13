@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"errors"
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -65,6 +66,7 @@ func (pg *Postgres) runSingleEventsQuery(projectId uint64, query model.Query,
 }
 
 func (pg *Postgres) ExecuteEventsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	if valid, errMsg := IsValidEventsQuery(&query); !valid {
 		return nil, http.StatusBadRequest, errMsg

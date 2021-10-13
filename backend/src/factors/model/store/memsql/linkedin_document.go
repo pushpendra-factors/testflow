@@ -273,6 +273,8 @@ func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 }
 
 func (store *MemSQL) ExecuteLinkedinChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+
 	logCtx := log.WithField("project_id", projectID).WithField("query", query)
 
 	if projectID == 0 || query == nil {
@@ -536,6 +538,7 @@ func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID u
 }
 
 func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
 	if query.GroupByTimestamp == "" {

@@ -78,7 +78,8 @@ func NotifyOnPanicWithError(env, appName string) {
 		runtime.Stack(buf, false)
 
 		msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", r, string(buf))
-		log.Errorf("Recovering from panic: %v", msg)
+		details := fmt.Sprintf("Debug stack: %s", string(debug.Stack()))
+		log.Errorf("Recovering from panic: %v, details: %v", msg, details)
 
 		err := NotifyThroughSNS(appName, env, msg)
 		if err != nil {

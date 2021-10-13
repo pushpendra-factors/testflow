@@ -299,10 +299,7 @@ func (pg *Postgres) RunChannelGroupQuery(projectID uint64, queriesOriginal []mod
 // TODO Handling errorcase.
 func (pg *Postgres) runSingleChannelQuery(projectID uint64, query model.ChannelQueryV1,
 	resultHolder *model.ChannelQueryResultV1, waitGroup *sync.WaitGroup, reqID string) {
-
-	environment := C.GetConfig().Env
 	defer waitGroup.Done()
-	defer U.NotifyOnPanicWithError(environment, "app_server")
 	tempResultHolder, _ := pg.ExecuteChannelQueryV1(projectID, &query, reqID)
 	resultHolder.Headers = tempResultHolder.Headers
 	resultHolder.Rows = tempResultHolder.Rows
@@ -312,6 +309,7 @@ func (pg *Postgres) runSingleChannelQuery(projectID uint64, query model.ChannelQ
 // TODO error handling.
 func (pg *Postgres) ExecuteChannelQueryV1(projectID uint64, query *model.ChannelQueryV1,
 	reqID string) (*model.ChannelQueryResultV1, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	logCtx := log.WithField("req_id", reqID)
 	queryResult := &model.ChannelQueryResultV1{}
@@ -487,7 +485,7 @@ func (pg *Postgres) GetChannelFilterValues(projectID uint64, channel, filter str
 // ExecuteChannelQuery - @Kark TODO v0
 func (pg *Postgres) ExecuteChannelQuery(projectID uint64,
 	queryOriginal *model.ChannelQuery) (*model.ChannelQueryResult, int) {
-
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	var query *model.ChannelQuery
 	U.DeepCopy(queryOriginal, &query)
 

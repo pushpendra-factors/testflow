@@ -432,6 +432,7 @@ func (store *MemSQL) getFacebookFilterValuesByType(projectID uint64, docType int
 // In this flow, Job represents the meta data associated with particular object type. Reports represent data with metrics and few filters.
 // TODO - Duplicate code/flow in facebook and adwords.
 func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	var fetchSource = false
 	logCtx := log.WithField("xreq_id", reqID)
 	if query.GroupByTimestamp == "" {
@@ -1023,6 +1024,8 @@ func (store *MemSQL) GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccount
 // ExecuteFacebookChannelQuery - @TODO Kark v0
 func (store *MemSQL) ExecuteFacebookChannelQuery(projectID uint64,
 	query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+
 	logCtx := log.WithField("project_id", projectID).WithField("query", query)
 
 	if projectID == 0 || query == nil {

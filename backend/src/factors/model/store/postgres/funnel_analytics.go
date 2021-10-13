@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"errors"
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -17,6 +18,8 @@ const (
 )
 
 func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	if !isValidFunnelQuery(&query) {
 		return nil, http.StatusBadRequest, model.ErrMsgMaxFunnelStepsExceeded
 	}

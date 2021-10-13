@@ -209,6 +209,7 @@ func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 }
 
 func (pg *Postgres) ExecuteLinkedinChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	logCtx := log.WithField("project_id", projectID).WithField("query", query)
 
 	if projectID == 0 || query == nil {

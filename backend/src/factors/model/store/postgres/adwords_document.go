@@ -940,6 +940,7 @@ func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) int {
 // TODO - Duplicate code/flow in facebook and adwords.
 // else condition used when there is groupby timestamp, used to extract top 100 values and use them to get data with date.
 func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
 	if query.GroupByTimestamp == "" {
@@ -1675,8 +1676,9 @@ func (pg *Postgres) GetAdwordsChannelResultMeta(projectID uint64, customerAccoun
 
 // ExecuteAdwordsChannelQuery - @TODO Kark v0
 func (pg *Postgres) ExecuteAdwordsChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
-	logCtx := log.WithField("project_id", projectID).WithField("query", query)
 
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	logCtx := log.WithField("project_id", projectID).WithField("query", query)
 	if projectID == 0 || query == nil {
 		logCtx.Error("Invalid project_id or query on execute adwords channel query.")
 		return nil, http.StatusInternalServerError
