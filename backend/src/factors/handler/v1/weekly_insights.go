@@ -64,15 +64,19 @@ func GetWeeklyInsightsParams(c *gin.Context) (*WeeklyInsightsParams, error) {
 	CompStartTime := time.Unix(CompStartTimeTemp, 0)
 
 	insightsType := c.Query("insights_type")
-	n, err := strconv.ParseInt(c.Query("number_of_records"), 10, 64)
-	NumberOfRecords := int(n)
-
+	n := c.Query("number_of_records")
+	var NumberOfRecords int64
+	if n != "" {
+		NumberOfRecords, _ = strconv.ParseInt(n, 10, 64)
+	} else {
+		NumberOfRecords = 20 // default
+	}
 	params.ProjectID = projectID
 	params.QueryId = QueryId
 	params.BaseStartTime = BaseStartTime
 	params.CompStartTime = CompStartTime
 	params.InsightsType = insightsType
-	params.NumberOfRecords = NumberOfRecords
+	params.NumberOfRecords = int(NumberOfRecords)
 
 	return &params, nil
 

@@ -297,9 +297,7 @@ func (store *MemSQL) RunChannelGroupQuery(projectID uint64, queriesOriginal []mo
 func (store *MemSQL) runSingleChannelQuery(projectID uint64, query model.ChannelQueryV1,
 	resultHolder *model.ChannelQueryResultV1, waitGroup *sync.WaitGroup, reqID string) {
 
-	environment := C.GetConfig().Env
 	defer waitGroup.Done()
-	defer U.NotifyOnPanicWithError(environment, "app_server")
 	tempResultHolder, _ := store.ExecuteChannelQueryV1(projectID, &query, reqID)
 	resultHolder.Headers = tempResultHolder.Headers
 	resultHolder.Rows = tempResultHolder.Rows
@@ -309,6 +307,7 @@ func (store *MemSQL) runSingleChannelQuery(projectID uint64, query model.Channel
 // TODO error handling.
 func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.ChannelQueryV1,
 	reqID string) (*model.ChannelQueryResultV1, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	logCtx := log.WithField("req_id", reqID)
 	queryResult := &model.ChannelQueryResultV1{}

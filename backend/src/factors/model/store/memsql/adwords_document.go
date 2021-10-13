@@ -1730,6 +1730,7 @@ func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccou
 
 // ExecuteAdwordsChannelQuery - @TODO Kark v0
 func (store *MemSQL) ExecuteAdwordsChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	logCtx := log.WithField("project_id", projectID).WithField("query", query)
 
 	if projectID == 0 || query == nil {

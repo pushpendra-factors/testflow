@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"errors"
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 //	5. Add performance data by attributionId
 func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *model.AttributionQuery) (*model.QueryResult, error) {
 
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
 

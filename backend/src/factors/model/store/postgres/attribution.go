@@ -22,6 +22,7 @@ import (
 //	5. Add performance data by attributionId
 func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *model.AttributionQuery) (*model.QueryResult, error) {
 
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
 	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
