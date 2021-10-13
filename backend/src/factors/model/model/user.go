@@ -13,6 +13,7 @@ import (
 
 	cacheRedis "factors/cache/redis"
 	"factors/config"
+	C "factors/config"
 	"factors/util"
 	U "factors/util"
 
@@ -28,9 +29,9 @@ type User struct {
 	// project_id -> projects(id)
 	ProjectId  uint64         `gorm:"primary_key:true;" json:"project_id"`
 	Properties postgres.Jsonb `json:"properties"`
-	// properties_ro is intentinally excluded on all create/update
+	// properties_json is intentinally excluded on all create/update
 	// and select queries using SelectColumns().
-	PropertiesRO               postgres.Jsonb `gorm:"-" json:"-"`
+	PropertiesJSON             postgres.Jsonb `gorm:"-" json:"-"`
 	PropertiesUpdatedTimestamp int64          `json:"properties_updated_timestamp"`
 	SegmentAnonymousId         string         `gorm:"type:varchar(200);default:null" json:"seg_aid"`
 	AMPUserId                  string         `gorm:"default:null" json:"amp_user_id"`
@@ -52,8 +53,19 @@ type User struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
+const propertiesFilterColumnForMemSQL = "properties_json"
+const propertiesFilterColumnForPostgres = "properties"
+
 func (u User) SelectColumns() string {
-	return BuildSelectColumns(u, []string{"properties_ro"})
+	return BuildSelectColumns(u, []string{propertiesFilterColumnForMemSQL})
+}
+
+func (u User) GetPropertiesJSONColumn() string {
+	if C.GetPrimaryDatastore() == C.DatastoreTypeMemSQL {
+		return propertiesFilterColumnForMemSQL
+	}
+
+	return propertiesFilterColumnForPostgres
 }
 
 type LatestUserPropertiesFromSession struct {
