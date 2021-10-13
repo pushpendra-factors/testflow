@@ -55,7 +55,7 @@ func getPropertyEntityField(projectID uint64, groupProp model.QueryGroupByProper
 			return "events.user_properties"
 		}
 
-		return "users." + model.User{}.GetPropertiesJSONColumn()
+		return "users.properties"
 	} else if groupProp.Entity == model.PropertyEntityEvent {
 		return "events.properties"
 	}
