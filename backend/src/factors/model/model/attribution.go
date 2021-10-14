@@ -317,6 +317,8 @@ const (
 	SecsInADay             = int64(86400)
 	LookbackCapInDays      = 180
 	UserBatchSize          = 3000
+	QueryRangeLimit        = 90
+	LookBackWindowLimit    = 90
 )
 
 // LookbackAdjustedFrom Returns the effective From timestamp considering lookback days

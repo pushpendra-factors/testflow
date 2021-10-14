@@ -53,7 +53,6 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	var unitId uint64
 	var timezoneString U.TimeZoneString
 	var statusCode int
-
 	hardRefresh := false
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
@@ -96,7 +95,16 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
 	}
+	queryRange := float64(requestPayload.Query.To-requestPayload.Query.From) / float64(model.SecsInADay)
+	if queryRange > model.QueryRangeLimit {
+		logCtx.Error("Query failed. Query range is out of limit.")
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Query range is out of limit.", true
+	}
 
+	if requestPayload.Query.LookbackDays > model.LookBackWindowLimit {
+		logCtx.Error("Query failed. LookbackDays exceeded the limit.")
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. LookbackDays exceeded the limit.", true
+	}
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 
