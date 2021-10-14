@@ -292,6 +292,12 @@ func (query *Query) TransformDateTypeFilters() error {
 			return err
 		}
 	}
+	for i := range query.GlobalUserProperties {
+		err := query.GlobalUserProperties[i].TransformDateTypeFilters(query.GetTimeZone())
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
