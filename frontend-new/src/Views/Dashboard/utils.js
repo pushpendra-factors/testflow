@@ -28,7 +28,7 @@ const formatFilters = (pr) => {
     if (p.ty === 'datetime') {
       return {
         ...p,
-        va: formatFilterDate(p.va),
+        va: p.va,
       };
     }
     return p;

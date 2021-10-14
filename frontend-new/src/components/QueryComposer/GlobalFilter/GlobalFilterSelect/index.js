@@ -313,7 +313,7 @@ const GlobalFilterSelect = ({
             const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
             selectorComponent = (<DatePicker
                 disabledDate={(d) => !d || d.isAfter(MomentTz())}
-                autoFocus={true}
+                autoFocus={false}
                 className={`fa-date-picker`}
                 open={showDatePicker}
                 onOpenChange={()=>{
