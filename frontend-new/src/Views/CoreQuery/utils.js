@@ -101,7 +101,7 @@ const getEventsWithProperties = (queries) => {
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
-            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+            va: fil.props[1] === 'datetime' ? val : val,
           });
         });
       } else {
@@ -113,7 +113,7 @@ const getEventsWithProperties = (queries) => {
           ty: fil.props[1],
           va:
             fil.props[1] === 'datetime'
-              ? formatFilterDate(fil.values)
+              ? fil.values
               : fil.values,
         });
       }
@@ -138,7 +138,7 @@ const getGlobalFilters = (globalFilters = []) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+          va: fil.props[1] === 'datetime' ? val : val,
         });
       });
     } else {
@@ -150,7 +150,7 @@ const getGlobalFilters = (globalFilters = []) => {
         ty: fil.props[1],
         va:
           fil.props[1] === 'datetime'
-            ? formatFilterDate(fil.values)
+            ? fil.values
             : fil.values,
       });
     }
@@ -678,7 +678,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
         ty: filter.props[1],
         va:
           filter.props[1] === 'datetime'
-            ? formatFilterDate(filter.values)
+            ? filter.values
             : filter.values,
       });
     }
