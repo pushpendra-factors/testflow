@@ -339,6 +339,7 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUse
 	db := C.GetServices().Db
 	if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
 		Where("customer_user_id = ?", customerUserId).
+		Select(model.User{}.SelectColumns()).
 		First(&user).Error; err != nil {
 
 		if gorm.IsRecordNotFoundError(err) {
