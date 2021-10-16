@@ -754,7 +754,7 @@ func GetPropertyEntityFieldForFilter(entityName string) string {
 	} else if entityName == PropertyEntityEvent {
 		return "events.properties"
 	} else if entityName == PropertyEntityUserGlobal {
-		return "users.properties"
+		return "users." + User{}.GetPropertiesJSONColumn()
 	}
 	return ""
 }
