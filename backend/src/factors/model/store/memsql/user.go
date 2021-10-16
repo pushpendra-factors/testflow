@@ -24,7 +24,6 @@ import (
 )
 
 const usersLimitForProperties = 50000
-
 const constraintViolationError = "constraint violation"
 
 func isConstraintViolationError(err error) bool {
@@ -1045,7 +1044,7 @@ func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
 	// $$$ is a gorm alias for ? jsonb operator.
 	db := C.GetServices().Db
 	err := db.Limit(1).Where("project_id=?", projectID).
-		Where("JSON_EXTRACT_STRING(properties, ?) = ?", key, value).
+		Where("JSON_EXTRACT_STRING("+model.User{}.GetPropertiesJSONColumn()+", ?) = ?", key, value).
 		Select(model.User{}.SelectColumns()).
 		Find(&user).Error
 	if err != nil {
