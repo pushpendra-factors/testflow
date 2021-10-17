@@ -53,7 +53,6 @@ class ReportsFetch(BaseJob):
         if ('rows' not in response) or (len(response['rows']) == 0):
             log.warning("search_console: response: "+str(response) + " project_id: " + str(self._project_id) +" siteUrl: " + self._url_prefix + " request: " + str(request))
 
-
         # pagination 
         while 'rows' in response:
             response_rows= response_rows + response['rows']

@@ -65,7 +65,6 @@ if __name__ == "__main__":
 
 
     final_last_sync_infos = get_last_sync_infos(input_project_ids, input_exclude_project_ids, input_document_type)
-
     for last_sync in final_last_sync_infos:
         next_sync_infos = SyncUtil.get_gsc_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp)
         if next_sync_infos is None:
