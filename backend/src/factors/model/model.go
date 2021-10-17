@@ -145,6 +145,9 @@ type Model interface {
 	RunInsightsQuery(projectID uint64, query model.Query) (*model.QueryResult, int, string)
 	BuildInsightsQuery(projectID uint64, query model.Query) (string, []interface{}, error)
 
+	// Profile
+	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID uint64) (model.ResultGroup, int)
+
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
 	CreateOrGetUserCreatedEventName(eventName *model.EventName) (*model.EventName, int)

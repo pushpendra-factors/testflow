@@ -25,6 +25,7 @@ const (
 	QueryClassAttribution = "attribution"
 	QueryClassWeb         = "web"
 	QueryClassKPI         = "kpi"
+	QueryClassProfiles    = "profiles"
 
 	PresentationScatterPlot   = "sp"
 	PresentationLine          = "pl"
@@ -754,7 +755,7 @@ func GetPropertyEntityFieldForFilter(entityName string) string {
 	} else if entityName == PropertyEntityEvent {
 		return "events.properties"
 	} else if entityName == PropertyEntityUserGlobal {
-		return "users." + User{}.GetPropertiesJSONColumn()
+		return "users.properties"
 	}
 	return ""
 }
