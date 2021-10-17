@@ -30,5 +30,5 @@ class FetchService:
         credentials = AccessTokenCredentials(access_token=access_token, user_agent=GSC_CLIENT_USER_AGENT)
         http = httplib2.Http()
         http = credentials.authorize(http)
-        return build('webmasters', 'v3', http=http)
+        return build('searchconsole', 'v1', http=http)
     

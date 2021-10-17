@@ -70,7 +70,6 @@ class TimeUtil:
         while start_timestamp <= to_timestamp:
             date_range.append(start_timestamp)
             start_timestamp = TimeUtil.get_next_day_timestamp(start_timestamp)
-        
         return date_range
 
     @staticmethod

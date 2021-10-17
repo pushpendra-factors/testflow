@@ -3,6 +3,7 @@ import logging as log
 import scripts
 from lib.data_services.factors_data_service import FactorsDataService
 from scripts.gsc import TO_IN_MEMORY, TO_FILE, SUCCESS_MESSAGE, EXTRACT, RECORDS_COUNT, LOAD, REQUEST_COUNT
+import uuid
 
 
 # Note: If the number of custom paths exceed 5 in the subClasses. Move it to strategic pattern.
@@ -60,7 +61,7 @@ class BaseJob:
                 if not response.ok:
                     return response
         else:
-            response = FactorsDataService.add_gsc_document(self._project_id, self._url_prefix, self._doc_type, {}, timestamp)
+            response = FactorsDataService.add_gsc_document(self._project_id, self._url_prefix, self._doc_type, {"id": str(uuid.uuid4())}, timestamp)
         self.update_to_file_metrics(LOAD, REQUEST_COUNT, self._project_id, self._url_prefix, 1)
         self.update_to_file_metrics(LOAD, RECORDS_COUNT, self._project_id, self._url_prefix, len(records))
         return response
