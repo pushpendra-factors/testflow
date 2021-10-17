@@ -25,6 +25,7 @@ const (
 	QueryClassAttribution = "attribution"
 	QueryClassWeb         = "web"
 	QueryClassKPI         = "kpi"
+	QueryClassProfiles    = "profiles"
 
 	PresentationScatterPlot   = "sp"
 	PresentationLine          = "pl"

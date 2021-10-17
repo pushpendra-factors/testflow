@@ -507,6 +507,9 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	} else if baseQuery.GetClass() == model.QueryClassKPI {
 		groupQuery := baseQuery.(*model.KPIQueryGroup)
 		result, errCode = store.ExecuteKPIQueryGroup(projectID, "", *groupQuery)
+	} else if baseQuery.GetClass() == model.QueryClassProfiles {
+		groupQuery := baseQuery.(*model.ProfileQueryGroup)
+		result, errCode = store.RunProfilesGroupQuery(groupQuery.Queries, projectID)
 	}
 	if errCode != http.StatusOK {
 		return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg)

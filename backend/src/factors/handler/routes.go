@@ -104,6 +104,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
 	authRouteGroup.POST("/:project_id/factor", FactorHandler)
 	authRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
+	authRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
 	authRouteGroup.POST("/:project_id/channels/query", ChannelQueryHandler)
 
 	authRouteGroup.GET("/:project_id/channels/filter_values", GetChannelFilterValuesHandler)
