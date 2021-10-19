@@ -220,8 +220,7 @@ func (store *MemSQL) GetUser(projectId uint64, id string) (*model.User, int) {
 	var user model.User
 	db := C.GetServices().Db
 	if err := db.Limit(1).Where("project_id = ?", projectId).
-		Where("id = ?", id).Select(model.User{}.SelectColumns()).
-		Find(&user).Error; err != nil {
+		Where("id = ?", id).Find(&user).Error; err != nil {
 
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -240,10 +239,7 @@ func (store *MemSQL) GetUsers(projectId uint64, offset uint64, limit uint64) ([]
 	var users []model.User
 	db := C.GetServices().Db
 	if err := db.Order("created_at").Offset(offset).
-		Where("project_id = ?", projectId).Limit(limit).
-		Select(model.User{}.SelectColumns()).
-		Find(&users).Error; err != nil {
-
+		Where("project_id = ?", projectId).Limit(limit).Find(&users).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
 	if len(users) == 0 {
@@ -264,7 +260,6 @@ func (store *MemSQL) GetUsersByCustomerUserID(projectID uint64, customerUserID s
 	var users []model.User
 	db := C.GetServices().Db
 	if err := db.Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
-		Select(model.User{}.SelectColumns()).
 		Find(&users).Error; err != nil {
 
 		logCtx.WithError(err).Error("Failed to get users for customer_user_id")
@@ -323,7 +318,6 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID uint64, customer
 	var users []model.User
 	if err := db.Order("created_at ASC").
 		Where("project_id = ? AND id IN ( ? )", projectID, userIDs).
-		Select(model.User{}.SelectColumns()).
 		Find(&users).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to get selected users for id")
 		return nil, http.StatusInternalServerError
@@ -387,9 +381,7 @@ func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId str
 	var users []model.User
 	db := C.GetServices().Db
 	if err := db.Limit(1).Where("project_id = ?", projectId).Where(
-		"segment_anonymous_id = ?", segAnonId).
-		Select(model.User{}.SelectColumns()).
-		Find(&users).Error; err != nil {
+		"segment_anonymous_id = ?", segAnonId).Find(&users).Error; err != nil {
 		log.WithField("project_id", projectId).WithField(
 			"segment_anonymous_id", segAnonId).Error(
 			"Failed to get user by segment_anonymous_id.")
@@ -414,10 +406,10 @@ func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID uint64, customerUser
 	db := C.GetServices().Db
 
 	var users []model.User
-	if err := db.Table("users").
+	if err := db.Table("users").Select("distinct(id)").
 		Where("project_id = ? AND customer_user_id=?", projectID, customerUserID).
-		Select("distinct(id)").
 		Find(&users).Error; err != nil {
+
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -1013,8 +1005,7 @@ func (store *MemSQL) GetUserPropertiesByUserID(projectID uint64, id string) (*po
 
 	var user model.User
 	db := C.GetServices().Db
-	if err := db.Model(&model.User{}).
-		Where("project_id = ? AND id = ?", projectID, id).
+	if err := db.Model(&model.User{}).Where("project_id = ? AND id = ?", projectID, id).
 		Select("properties").Find(&user).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -1044,10 +1035,8 @@ func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
 	var user model.User
 	// $$$ is a gorm alias for ? jsonb operator.
 	db := C.GetServices().Db
-	err := db.Limit(1).Where("project_id=?", projectID).
-		Where("JSON_EXTRACT_STRING(properties, ?) = ?", key, value).
-		Select(model.User{}.SelectColumns()).
-		Find(&user).Error
+	err := db.Limit(1).Where("project_id=?", projectID).Where(
+		"JSON_EXTRACT_STRING(properties, ?) = ?", key, value).Find(&user).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
