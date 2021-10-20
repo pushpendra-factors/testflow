@@ -211,6 +211,9 @@ func (pg *Postgres) UpdateSavedQuery(projectID uint64, queryID uint64, query *mo
 		return &model.Queries{}, http.StatusBadRequest
 	}
 
+	if query.Type != 0 && query.Type != model.QueryTypeDashboardQuery && query.Type != model.QueryTypeSavedQuery {
+		return &model.Queries{}, http.StatusBadRequest
+	}
 	// update allowed fields.
 	updateFields := make(map[string]interface{}, 0)
 	if query.Title != "" {
@@ -221,8 +224,12 @@ func (pg *Postgres) UpdateSavedQuery(projectID uint64, queryID uint64, query *mo
 		updateFields["settings"] = query.Settings
 	}
 
-	err := db.Model(&model.Queries{}).Where("project_id = ? AND id=? AND type=? AND is_deleted = ?",
-		projectID, queryID, query.Type, "false").Update(updateFields).Error
+	if query.Type == model.QueryTypeDashboardQuery || query.Type == model.QueryTypeSavedQuery {
+		updateFields["type"] = query.Type
+	}
+
+	err := db.Model(&model.Queries{}).Where("project_id = ? AND id=? AND is_deleted = ?",
+		projectID, queryID, "false").Update(updateFields).Error
 	if err != nil {
 		return &model.Queries{}, http.StatusInternalServerError
 	}
