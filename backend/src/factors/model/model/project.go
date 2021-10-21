@@ -37,6 +37,9 @@ type Project struct {
 const (
 	JobsMetadataKeyNextSessionStartTimestamp = "next_session_start_timestamp"
 	JobsMetadataColumnName                   = "jobs_metadata"
+	LastModifiedTimeRef                      = "LAST_MODIFIED_TIME_REF"
+	HSTouchPointPropertyValueAsProperty      = "Property"
+	HSTouchPointPropertyValueAsConstant      = "Constant"
 )
 
 const DefaultProjectName = "My Project"
@@ -50,12 +53,12 @@ type SalesforceTouchPoints struct {
 }
 
 type SFTouchPointRule struct {
-	Filters           []SFTouchPointFilter `json:"filters"`
-	TouchPointTimeRef string               `json:"touch_point_time_ref"`
-	PropertiesMap     map[string]string    `json:"properties_map"`
+	Filters           []TouchPointFilter `json:"filters"`
+	TouchPointTimeRef string             `json:"touch_point_time_ref"`
+	PropertiesMap     map[string]string  `json:"properties_map"`
 }
 
-type SFTouchPointFilter struct {
+type TouchPointFilter struct {
 	Property  string `json:"pr"`
 	Operator  string `json:"op"`
 	Value     string `json:"va"`
@@ -71,14 +74,25 @@ func DefaultSalesforceTouchPointsRules() SalesforceTouchPoints {
 }
 
 type HubspotTouchPoints struct {
-	TouchPointRules map[string][]string `json:"hs_touch_point_rules"`
+	TouchPointRules map[string][]HSTouchPointRule `json:"hs_touch_point_rules"`
+}
+
+type HSTouchPointRule struct {
+	Filters           []TouchPointFilter                   `json:"filters"`
+	TouchPointTimeRef string                               `json:"touch_point_time_ref"`
+	PropertiesMap     map[string]HSTouchPointPropertyValue `json:"properties_map"`
+}
+
+type HSTouchPointPropertyValue struct {
+	Type  string `json:"ty"`
+	Value string `json:"va"`
 }
 
 // DefaultHubspotTouchPointsRules returns default query params and order (utm then qp) for various event properties.
 func DefaultHubspotTouchPointsRules() HubspotTouchPoints {
 
 	rules := HubspotTouchPoints{}
-	rules.TouchPointRules = make(map[string][]string)
+	rules.TouchPointRules = make(map[string][]HSTouchPointRule)
 	return rules
 }
 

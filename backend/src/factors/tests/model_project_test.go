@@ -43,8 +43,8 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	val2, _ := U.EncodeStructTypeToPostgresJsonb(salesforceTouchPoint)
 
 	hubspotTouchPoint := model.HubspotTouchPoints{}
-	hubspotTouchPoint.TouchPointRules = make(map[string][]string)
-	hubspotTouchPoint.TouchPointRules["Hub"] = []string{"Spot"}
+	hubspotTouchPoint.TouchPointRules = make(map[string][]model.HSTouchPointRule)
+	hubspotTouchPoint.TouchPointRules["Hub"] = []model.HSTouchPointRule{model.HSTouchPointRule{TouchPointTimeRef: "Spot"}}
 	val3, _ := U.EncodeStructTypeToPostgresJsonb(hubspotTouchPoint)
 
 	errCode = store.GetStore().UpdateProject(project.ID,
@@ -64,7 +64,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 
 	valUpdated3 := model.HubspotTouchPoints{}
 	_ = U.DecodePostgresJsonbToStructType(&getProject.HubspotTouchPoints, &valUpdated3)
-	assert.Equal(t, valUpdated3.TouchPointRules["Hub"], []string{"Spot"})
+	assert.Equal(t, valUpdated3.TouchPointRules["Hub"], []model.HSTouchPointRule{model.HSTouchPointRule{TouchPointTimeRef: "Spot"}})
 
 	// Test token is overwritten and cannot be provided.
 	previousProjectId := project.ID

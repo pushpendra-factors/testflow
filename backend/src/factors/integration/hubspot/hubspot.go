@@ -96,7 +96,7 @@ var allowedEventNames = []string{
 	U.EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 }
 
-func getContactProperties(projectID uint64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetContactProperties(projectID uint64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 	if document.Type != model.HubspotDocumentTypeContact {
 		return nil, nil, errors.New("invalid type")
 	}
@@ -241,7 +241,7 @@ func GetHubspotSmartEventPayload(projectID uint64, eventName, docID string,
 		} else {
 
 			if docType == model.HubspotDocumentTypeContact {
-				_, prevProperties, err = getContactProperties(projectID, prevDoc)
+				_, prevProperties, err = GetContactProperties(projectID, prevDoc)
 			}
 			if docType == model.HubspotDocumentTypeDeal {
 				_, prevProperties, err = getDealProperties(projectID, prevDoc)
@@ -560,12 +560,12 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, 
 	return anyFailures, allStatus
 }
 
-func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+func syncContact(project *model.Project, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	logCtx := log.WithField("project_id",
-		projectID).WithField("document_id", document.ID)
+		project.ID).WithField("document_id", document.ID)
 
 	if document.Action == model.HubspotDocumentActionDeleted {
-		contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, []string{document.ID}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+		contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{document.ID}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
 		if status != http.StatusFound {
 			logCtx.Error(
 				"Failed to get hubspot documents by type and action on sync contact, action delete.")
@@ -583,7 +583,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 
 		deleteContactUserID := contactDocuments[0].UserId
 		if deleteContactUserID == "" {
-			event, errCode := store.GetStore().GetEventById(projectID, contactDocuments[0].SyncId, "")
+			event, errCode := store.GetStore().GetEventById(project.ID, contactDocuments[0].SyncId, "")
 			if errCode != http.StatusFound {
 				logCtx.WithField("delete_contact", contactDocuments[0].ID).Error(
 					"Failed to get merged contact created event for getting user id.")
@@ -592,13 +592,13 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			deleteContactUserID = event.UserId
 		}
 
-		_, errCode := store.GetStore().UpdateUserProperties(projectID, deleteContactUserID, userPropertiesJsonb, document.Timestamp)
+		_, errCode := store.GetStore().UpdateUserProperties(project.ID, deleteContactUserID, userPropertiesJsonb, document.Timestamp)
 		if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 			logCtx.WithField("UserID", contactDocuments[0].UserId).WithField("userPropertiesJsonb", userPropertiesJsonb).Error("Failed to update user properties for contact delete action")
 			return http.StatusInternalServerError
 		}
 		errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
-			projectID, document.ID, model.HubspotDocumentTypeContact, " ", document.Timestamp, document.Action, contactDocuments[0].UserId)
+			project.ID, document.ID, model.HubspotDocumentTypeContact, " ", document.Timestamp, document.Action, contactDocuments[0].UserId)
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update hubspot contact document as synced, contact deleted document.")
 			return http.StatusInternalServerError
@@ -627,7 +627,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			}
 
 			if len(mergedVIDs) != 0 {
-				mergeContactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, mergedVIDs, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+				mergeContactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, mergedVIDs, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
 				if status != http.StatusFound {
 					logCtx.Error("Failed to get hubspot documents by type and action on sync contact.")
 					return http.StatusInternalServerError
@@ -649,7 +649,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 
 						mergedContactUserID := mergedContact.UserId
 						if mergedContactUserID == "" {
-							event, errCode := store.GetStore().GetEventById(projectID, mergedContact.SyncId, "")
+							event, errCode := store.GetStore().GetEventById(project.ID, mergedContact.SyncId, "")
 							if errCode != http.StatusFound {
 								logCtx.WithField("merged_contact", mergedContact.ID).Error(
 									"Failed to get merged contact created event for getting user id.")
@@ -658,7 +658,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 							mergedContactUserID = event.UserId
 						}
 
-						_, errCode := store.GetStore().UpdateUserProperties(projectID, mergedContactUserID, mergeUserPropertiesJsonb, document.Timestamp)
+						_, errCode := store.GetStore().UpdateUserProperties(project.ID, mergedContactUserID, mergeUserPropertiesJsonb, document.Timestamp)
 						if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 							logCtx.WithField("UserID", mergedContact.UserId).WithField("userPropertiesJsonb", mergeUserPropertiesJsonb).Error("Failed to update user properties")
 							return http.StatusInternalServerError
@@ -669,7 +669,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		}
 	}
 
-	enProperties, properties, err := getContactProperties(projectID, document)
+	enProperties, properties, err := GetContactProperties(project.ID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properites from hubspot contact.")
 		return http.StatusInternalServerError
@@ -679,7 +679,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 	if !exists {
 		logCtx.Error("Missing lead_guid on hubspot contact properties. Sync failed.")
 		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
-			projectID, document.ID, model.HubspotDocumentTypeContact, "", document.Timestamp, document.Action, "")
+			project.ID, document.ID, model.HubspotDocumentTypeContact, "", document.Timestamp, document.Action, "")
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update hubspot contact document as synced.")
 			return http.StatusInternalServerError
@@ -689,7 +689,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 	}
 
 	trackPayload := &SDK.TrackPayload{
-		ProjectId:       projectID,
+		ProjectId:       project.ID,
 		EventProperties: *enProperties,
 		UserProperties:  *enProperties,
 		Timestamp:       getEventTimestamp(document.Timestamp),
@@ -698,12 +698,12 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 	logCtx = logCtx.WithField("action", document.Action).WithField(
 		model.UserPropertyHubspotContactLeadGUID, leadGUID)
 
-	customerUserID := getCustomerUserIDFromProperties(projectID, *enProperties)
+	customerUserID := getCustomerUserIDFromProperties(project.ID, *enProperties)
 	var eventID, userID string
 	if document.Action == model.HubspotDocumentActionCreated {
 
 		createdUserID, status := store.GetStore().CreateUser(&model.User{
-			ProjectId:      projectID,
+			ProjectId:      project.ID,
 			JoinTimestamp:  getEventTimestamp(document.Timestamp),
 			CustomerUserId: customerUserID})
 		if status != http.StatusCreated {
@@ -714,7 +714,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
 		trackPayload.UserId = createdUserID
 
-		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
+		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot contact created event.")
 			return http.StatusInternalServerError
@@ -724,7 +724,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		eventID = response.EventId
 	} else if document.Action == model.HubspotDocumentActionUpdated {
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
-		createdDocuments, status := store.GetStore().GetHubspotContactCreatedSyncIDAndUserID(projectID, document.ID)
+		createdDocuments, status := store.GetStore().GetHubspotContactCreatedSyncIDAndUserID(project.ID, document.ID)
 		if status != http.StatusFound {
 			if status != http.StatusMultipleChoices {
 				logCtx.WithField("error_code", status).Error("Failed to get user from contact created document.")
@@ -746,7 +746,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		if createdDocuments[0].UserId != "" {
 			userID = createdDocuments[0].UserId
 		} else {
-			event, errCode := store.GetStore().GetEventById(projectID, createdDocuments[0].SyncId, "")
+			event, errCode := store.GetStore().GetEventById(project.ID, createdDocuments[0].SyncId, "")
 			if errCode != http.StatusFound {
 				logCtx.WithField("event_id", createdDocuments[0].SyncId).Error(
 					"Failed to get contact created event for getting user id.")
@@ -754,7 +754,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			}
 
 			errCode = store.GetStore().UpdateHubspotDocumentAsSynced(
-				projectID, document.ID, model.HubspotDocumentTypeContact, event.ID, createdDocuments[0].Timestamp, model.HubspotDocumentActionCreated, event.UserId)
+				project.ID, document.ID, model.HubspotDocumentTypeContact, event.ID, createdDocuments[0].Timestamp, model.HubspotDocumentActionCreated, event.UserId)
 			if errCode != http.StatusAccepted {
 				logCtx.Error("Failed to update hubspot contact created document user id.")
 			}
@@ -763,7 +763,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		}
 
 		if customerUserID != "" {
-			status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
+			status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{
 				UserId: userID, CustomerUserId: customerUserID}, false)
 			if status != http.StatusOK {
 				logCtx.WithField("customer_user_id", customerUserID).Error(
@@ -775,7 +775,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		}
 
 		trackPayload.UserId = userID
-		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
+		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot contact updated event.")
 			return http.StatusInternalServerError
@@ -795,7 +795,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		defaultSmartEventTimestamp = timestamp
 	}
 
-	user, status := store.GetStore().GetUser(projectID, userID)
+	user, status := store.GetStore().GetUser(project.ID, userID)
 	if status != http.StatusFound {
 		logCtx.WithField("error_code", status).Error("Failed to get user on sync contact.")
 	}
@@ -807,20 +807,158 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			Warn("Different customer user id seen on sync contact")
 	}
 
+	if document.Action == model.HubspotDocumentActionUpdated {
+		err = ApplyHSOfflineTouchPointRule(project, trackPayload, document, defaultSmartEventTimestamp)
+		if err != nil {
+			// log and continue
+			logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("failed creating hubspot offline touch point")
+		}
+	}
+
 	var prevProperties *map[string]interface{}
 	for i := range hubspotSmartEventNames {
-		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, document.ID, userID, document.Type,
+		prevProperties = TrackHubspotSmartEvent(project.ID, &hubspotSmartEventNames[i], eventID, document.ID, userID, document.Type,
 			properties, prevProperties, defaultSmartEventTimestamp, false)
 	}
 
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
-		projectID, document.ID, model.HubspotDocumentTypeContact, eventID, document.Timestamp, document.Action, userID)
+		project.ID, document.ID, model.HubspotDocumentTypeContact, eventID, document.Timestamp, document.Action, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot contact document as synced.")
 		return http.StatusInternalServerError
 	}
 
 	return http.StatusOK
+}
+
+func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, lastModifiedTimeStamp int64) error {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRule",
+		"document_id": document.ID, "document_action": document.Action})
+
+	if &project.HubspotTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.HubspotTouchPoints) {
+
+		var touchPointRules map[string][]model.HSTouchPointRule
+		err := U.DecodePostgresJsonbToStructType(&project.HubspotTouchPoints, &touchPointRules)
+		if err != nil {
+			// logging and continuing.
+			logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to fetch " +
+				"offline touch point rules for hubspot document.")
+			return err
+		}
+
+		rules := touchPointRules["hs_touch_point_rules"]
+
+		for _, rule := range rules {
+
+			// check if rule is applicable
+			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, logCtx) {
+				continue
+			}
+
+			_, err = CreateTouchPointEvent(project, trackPayload, document, rule, lastModifiedTimeStamp)
+			if err != nil {
+				logCtx.WithError(err).Error("failed to create touch point for hubspot contact updated document.")
+				continue
+			}
+
+		}
+	}
+	return nil
+}
+
+func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, rule model.HSTouchPointRule, lastModifiedTimeStamp int64) (*SDK.TrackResponse, error) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent", "document_id": document.ID, "document_action": document.Action})
+	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("CreateTouchPointEvent: creating hubspot offline touch point document")
+	var trackResponse *SDK.TrackResponse
+	var err error
+	payload := &SDK.TrackPayload{
+		ProjectId:       project.ID,
+		EventProperties: trackPayload.EventProperties,
+		UserId:          trackPayload.UserId,
+		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+	}
+
+	var timestamp int64
+	if rule.TouchPointTimeRef == model.LastModifiedTimeRef {
+		timestamp = lastModifiedTimeStamp
+	} else {
+		timeValue, exists := (trackPayload.EventProperties)[rule.TouchPointTimeRef]
+		if !exists {
+			logCtx.Error("couldn't get the timestamp on hubspot contact properties using given rule.TouchPointTimeRef-", rule.TouchPointTimeRef)
+			return nil, errors.New(fmt.Sprintf("couldn't get the timestamp on hubspot contact properties using given rule.TouchPointTimeRef - %s", rule.TouchPointTimeRef))
+		}
+		val, ok := timeValue.(int64)
+		if !ok {
+			logCtx.Error("couldn't convert the timestamp on hubspot contact properties. using lastModifiedTimeStamp instead, val", rule.TouchPointTimeRef, timeValue)
+			timestamp = lastModifiedTimeStamp
+		} else {
+			timestamp = val
+		}
+	}
+
+	payload.Timestamp = timestamp
+
+	// Mapping touch point properties:
+	for key, value := range rule.PropertiesMap {
+
+		if value.Type == model.HSTouchPointPropertyValueAsConstant {
+			logCtx.Error("applying constant value as ", key)
+			payload.EventProperties[key] = value.Value
+		} else {
+			if _, exists := trackPayload.EventProperties[value.Value]; exists {
+				payload.EventProperties[key] = trackPayload.EventProperties[value.Value]
+			} else {
+				logCtx.Error("applying property value as ", value.Value, key)
+				payload.EventProperties[key] = model.PropertyValueNone
+			}
+		}
+	}
+
+	status, trackResponse := SDK.Track(project.ID, payload, true, "")
+	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("create hubspot touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+		return trackResponse, errors.New(fmt.Sprintf("create hubspot touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+	}
+	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("Successfully: created hubspot offline touch point")
+	return trackResponse, nil
+}
+
+func canCreateHSTouchPoint(documentActionType int) bool {
+	// Ignore doc types other than HubspotDocumentActionUpdated
+	if documentActionType != model.HubspotDocumentActionUpdated {
+		return false
+	}
+	return true
+}
+
+func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+
+	filtersPassed := 0
+	for _, filter := range rule.Filters {
+		switch filter.Operator {
+		case model.EqualsOpStr:
+			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
+				if filter.Value != "" && trackPayload.EventProperties[filter.Property] == filter.Value {
+					filtersPassed++
+				}
+			}
+		case model.ContainsOpStr:
+			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
+				if filter.Property != "" {
+					val, ok := trackPayload.EventProperties[filter.Property].(string)
+					if ok && strings.Contains(val, filter.Value) {
+						filtersPassed++
+					}
+				}
+			}
+		default:
+			logCtx.WithField("Document", trackPayload).Error("No matching operator found for offline touch point rules for hubspot document.")
+			continue
+		}
+	}
+	return filtersPassed != 0 && filtersPassed == len(rule.Filters)
 }
 
 func getDealUserID(projectID uint64, deal *Deal) string {
@@ -1194,7 +1332,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 				contactUser, status := store.GetStore().GetUser(projectID, contactSyncEvent.UserId)
 				if status != http.StatusFound {
 					logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
-						"Failed to get user by contact event user update user properites with company properties.")
+						"Failed to get user by contact event user update user properties with company properties.")
 					isContactsUpdateFailed = true
 					continue
 				}
@@ -1441,8 +1579,8 @@ func GetBatchedOrderedDocumentsByID(documents []model.HubspotDocument, batchSize
 	return batchedDocumentsByID
 }
 
-func syncAll(projectID uint64, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
-	logCtx := log.WithField("project_id", projectID)
+func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
+	logCtx := log.WithField("project_id", project.ID)
 	var seenFailures bool
 	for i := range documents {
 		logCtx = logCtx.WithField("document", documents[i])
@@ -1450,17 +1588,17 @@ func syncAll(projectID uint64, documents []model.HubspotDocument, hubspotSmartEv
 		switch documents[i].Type {
 
 		case model.HubspotDocumentTypeContact:
-			errCode := syncContact(projectID, &documents[i], hubspotSmartEventNames)
+			errCode := syncContact(project, &documents[i], hubspotSmartEventNames)
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeCompany:
-			errCode := syncCompany(projectID, &documents[i])
+			errCode := syncCompany(project.ID, &documents[i])
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
 		case model.HubspotDocumentTypeDeal:
-			errCode := syncDeal(projectID, &documents[i], hubspotSmartEventNames)
+			errCode := syncDeal(project.ID, &documents[i], hubspotSmartEventNames)
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}
@@ -1490,10 +1628,10 @@ type syncWorkerStatus struct {
 }
 
 // syncAllWorker is a wrapper over syncAll function for providing concurrency
-func syncAllWorker(projectID uint64, wg *sync.WaitGroup, syncStatus *syncWorkerStatus, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) {
+func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncWorkerStatus, documents []model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) {
 	defer wg.Done()
 
-	errCode := syncAll(projectID, documents, hubspotSmartEventNames)
+	errCode := syncAll(project, documents, hubspotSmartEventNames)
 
 	syncStatus.Lock.Lock()
 	defer syncStatus.Lock.Unlock()
@@ -1537,6 +1675,19 @@ func Sync(projectID uint64, workersPerProject int) ([]Status, bool) {
 		orderedTimeSeries = append(orderedTimeSeries, []int64{minTimestamp, time.Now().Unix() * 1000})
 	}
 
+	// Get/Create SF touch point event name
+	_, status = store.GetStore().CreateOrGetOfflineTouchPointEventName(projectID)
+	if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+		logCtx.Error("failed to create event name on SF for offline touch point")
+		return statusByProjectAndType, true
+	}
+
+	project, errCode := store.GetStore().GetProject(projectID)
+	if errCode != http.StatusFound {
+		log.Error("Failed to get project")
+		return statusByProjectAndType, true
+	}
+
 	anyFailure := false
 	overAllSyncStatus := make(map[string]bool)
 	for _, timeRange := range orderedTimeSeries {
@@ -1573,7 +1724,7 @@ func Sync(projectID uint64, workersPerProject int) ([]Status, bool) {
 					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": syncOrderByType[i]}).Info("Processing Batch by doc_id")
 					workerIndex++
 					wg.Add(1)
-					go syncAllWorker(projectID, &wg, &syncStatus, batch[docID], (*hubspotSmartEventNames)[docTypeAlias])
+					go syncAllWorker(project, &wg, &syncStatus, batch[docID], (*hubspotSmartEventNames)[docTypeAlias])
 				}
 				wg.Wait()
 			}

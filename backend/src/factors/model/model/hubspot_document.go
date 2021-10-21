@@ -217,7 +217,7 @@ func GetHubspotAllowedObjects(projectID uint64) *map[string]string {
 	return &hubspotObjectType
 }
 
-// GetHubspotObjectTypeByDocumentType get hubspot matching queriable object by document type
+// GetHubspotObjectTypeByDocumentType get hubspot matching queryable object by document type
 func GetHubspotObjectTypeByDocumentType(docType string) string {
 	if docType == "" {
 		return ""
