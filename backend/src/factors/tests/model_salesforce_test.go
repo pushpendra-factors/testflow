@@ -2750,7 +2750,7 @@ func TestSalesforceOfflineTouchPoint(t *testing.T) {
 		EventProperties: *enCampaignMemberProperties,
 	}
 
-	filter1 := model.SFTouchPointFilter{
+	filter1 := model.TouchPointFilter{
 		Property:  "$salesforce_campaign_name",
 		Operator:  "contains",
 		Value:     "Webinar",
@@ -2758,7 +2758,7 @@ func TestSalesforceOfflineTouchPoint(t *testing.T) {
 	}
 
 	rule := model.SFTouchPointRule{
-		Filters:           []model.SFTouchPointFilter{filter1},
+		Filters:           []model.TouchPointFilter{filter1},
 		TouchPointTimeRef: model.SFCampaignMemberCreated, // SFCampaignMemberResponded
 		PropertiesMap:     map[string]string{"$campaign": "$salesforce_campaignmember_campaignname"},
 	}
@@ -2781,7 +2781,7 @@ func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	filter1 := model.SFTouchPointFilter{
+	filter1 := model.TouchPointFilter{
 		Property:  "$salesforce_campaign_name",
 		Operator:  "contains",
 		Value:     "Webinar",
@@ -2789,7 +2789,7 @@ func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 	}
 
 	rule := model.SFTouchPointRule{
-		Filters:           []model.SFTouchPointFilter{filter1},
+		Filters:           []model.TouchPointFilter{filter1},
 		TouchPointTimeRef: model.SFCampaignMemberCreated, // SFCampaignMemberResponded
 		PropertiesMap:     map[string]string{"$campaign": "$salesforce_campaignmember_campaignname"},
 	}

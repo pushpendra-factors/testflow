@@ -8,6 +8,7 @@ import (
 	IntHubspot "factors/integration/Hubspot"
 	"factors/model/model"
 	"factors/model/store"
+	SDK "factors/sdk"
 	"factors/task/event_user_cache"
 	"factors/util"
 	U "factors/util"
@@ -3161,4 +3162,165 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Equal(t, "testcompany2.com", user.Group1ID)
 	userProperties, err := util.DecodePostgresJsonb(&user.Properties)
 	assert.Equal(t, "lead", (*userProperties)["$hubspot_company_lifecyclestage"])
+}
+
+func TestHubspotOfflineTouchPoint(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	_, status := store.GetStore().CreateOrGetOfflineTouchPointEventName(project.ID)
+	if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+		fmt.Println("failed to create event name on SF for offline touch point")
+		return
+	}
+
+	documentID := 1
+	createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	cuid := U.RandomLowerAphaNumString(5)
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	// document first created
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdDate, createdDate, createdDate, "lead", cuid, "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+		Action:    model.HubspotDocumentActionUpdated,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
+	assert.Nil(t, err)
+
+	enProperties, _, err := IntHubspot.GetContactProperties(project.ID, &hubspotDocument)
+	assert.Nil(t, err)
+	(*enProperties)["$hubspot_campaign_name"] = "Webinar"
+
+	trackPayload := &SDK.TrackPayload{
+		ProjectId:       project.ID,
+		EventProperties: *enProperties,
+		UserProperties:  *enProperties,
+		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+		Timestamp:       getEventTimestamp(hubspotDocument.Timestamp),
+	}
+	userID1 := U.RandomLowerAphaNumString(5)
+	createdUserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, CustomerUserId: cuid, JoinTimestamp: getEventTimestamp(hubspotDocument.Timestamp)})
+	assert.Equal(t, http.StatusCreated, status)
+
+	trackPayload.UserId = createdUserID
+
+	filter1 := model.TouchPointFilter{
+		Property:  "$hubspot_campaign_name",
+		Operator:  "contains",
+		Value:     "Webinar",
+		LogicalOp: "AND",
+	}
+
+	rulePropertyMap := make(map[string]model.HSTouchPointPropertyValue)
+	rulePropertyMap["$campaign"] = model.HSTouchPointPropertyValue{Type: model.HSTouchPointPropertyValueAsProperty, Value: "$hubspot_campaign_name"}
+	rulePropertyMap["$channel"] = model.HSTouchPointPropertyValue{Type: model.HSTouchPointPropertyValueAsConstant, Value: "Other"}
+
+	rule := model.HSTouchPointRule{
+		Filters:           []model.TouchPointFilter{filter1},
+		TouchPointTimeRef: model.LastModifiedTimeRef,
+		PropertiesMap:     rulePropertyMap,
+	}
+
+	var defaultSmartEventTimestamp int64
+	if timestamp, err := model.GetHubspotDocumentUpdatedTimestamp(&hubspotDocument); err != nil {
+		defaultSmartEventTimestamp = hubspotDocument.Timestamp
+	} else {
+		defaultSmartEventTimestamp = timestamp
+	}
+
+	trackResponse, err := IntHubspot.CreateTouchPointEvent(project, trackPayload, &hubspotDocument, rule, defaultSmartEventTimestamp)
+	assert.Nil(t, err)
+	assert.NotNil(t, trackResponse)
+
+	event, errCode := store.GetStore().GetEventById(project.ID, trackResponse.EventId, trackResponse.UserId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, event)
+	eventPropertiesBytes, err := event.Properties.Value()
+	var eventPropertiesMap map[string]interface{}
+	_ = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+	assert.Equal(t, eventPropertiesMap["$campaign"], "Webinar")
+}
+
+func TestHubspotOfflineTouchPointDecode(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	filter1 := model.TouchPointFilter{
+		Property:  "$hubspot_campaign_name",
+		Operator:  "contains",
+		Value:     "Webinar",
+		LogicalOp: "AND",
+	}
+
+	rulePropertyMap := make(map[string]model.HSTouchPointPropertyValue)
+	rulePropertyMap["$campaign"] = model.HSTouchPointPropertyValue{Type: model.HSTouchPointPropertyValueAsProperty, Value: "$hubspot_campaign_type"}
+	rulePropertyMap["$channel"] = model.HSTouchPointPropertyValue{Type: model.HSTouchPointPropertyValueAsConstant, Value: "Other"}
+
+	rule := model.HSTouchPointRule{
+		Filters:           []model.TouchPointFilter{filter1},
+		TouchPointTimeRef: model.LastModifiedTimeRef,
+		PropertiesMap:     rulePropertyMap,
+	}
+
+	// creating manual rule
+	touchPointRules := make(map[string][]model.HSTouchPointRule)
+	touchPointRules["hs_touch_point_rules"] = []model.HSTouchPointRule{rule}
+
+	// adding json rule
+	project.HubspotTouchPoints = postgres.Jsonb{RawMessage: json.RawMessage(`{"hs_touch_point_rules":[{"filters":[{"pr":"$hubspot_campaign_type","op":"equals","va":"Field Events","lop":"AND"},{"pr":"$hubspot_campaign_name","op":"contains","va":"Sendoso","lop":"AND"}],"touch_point_time_ref":"LAST_MODIFIED_TIME_REF","properties_map":{"$campaign_name":{"type":"property","value":"$hubspot_campaign_name"},"$source":{"type":"constant","value":"Source1"},"$channel":{"type":"constant","value":"CRM"},"$type":{"type":"constant","value":"Offer"}}}]}`)}
+	store.GetStore().UpdateProject(project.ID, project)
+
+	project, errCode := store.GetStore().GetProject(project.ID)
+	if errCode != http.StatusFound {
+		return
+	}
+	if &project.HubspotTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.HubspotTouchPoints) {
+
+		var touchPointRules map[string][]model.HSTouchPointRule
+		err := U.DecodePostgresJsonbToStructType(&project.HubspotTouchPoints, &touchPointRules)
+		assert.Nil(t, err)
+
+		rules := touchPointRules["hs_touch_point_rules"]
+
+		assert.Equal(t, len(rules), 1)
+	}
+}
+
+func getEventTimestamp(timestamp int64) int64 {
+	if timestamp == 0 {
+		return 0
+	}
+	return timestamp / 1000
 }

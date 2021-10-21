@@ -952,7 +952,7 @@ func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.
 		_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
 		columns := append(selectKeys, selectMetrics...)
 		if err != nil {
-			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
+			logCtx.WithError(err).WithField("channel_query", *query).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
 		}
 		return columns, resultMetrics, http.StatusOK
@@ -965,7 +965,7 @@ func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.
 		_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
 		columns := append(selectKeys, selectMetrics...)
 		if err != nil {
-			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
+			logCtx.WithError(err).WithField("channel_query", *query).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
 		}
 		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
@@ -977,7 +977,7 @@ func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.
 		_, resultMetrics, err = pg.ExecuteSQL(sql, params, logCtx)
 		columns = append(selectKeys, selectMetrics...)
 		if err != nil {
-			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
+			logCtx.WithError(err).WithField("channel_query", *query).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
 		}
 		return columns, resultMetrics, http.StatusOK
@@ -995,6 +995,10 @@ func (pg *Postgres) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, 
 	var params []interface{}
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	transformedQuery, customerAccountID, err := pg.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
+	if projectID == 595 {
+		logCtx.WithField("query", transformedQuery).Error("Testing for query failure1")
+	}
+
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.AdwordsSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
@@ -1234,6 +1238,11 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 			adwordsGroupBys = append(adwordsGroupBys, groupBy)
 		}
 	}
+	if projectID == 595 {
+		log.WithField("query", *query).WithField("adwordsGroupBys", adwordsGroupBys).WithField("smartPropertyAdGroupGroupBys", smartPropertyAdGroupGroupBys).
+			WithField("smartPropertyCampaignGroupBys", smartPropertyCampaignGroupBys).Error("Testing for query failure1")
+	}
+
 	// Group By
 	dimensions := fields{}
 

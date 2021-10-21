@@ -84,24 +84,6 @@ func createProject(project *model.Project) (*model.Project, int) {
 		project.InteractionSettings = *settingsJsonb
 	}
 
-	// Initialize Salesforce TouchPoints.
-	salesforceTouchPoints, err := U.EncodeStructTypeToPostgresJsonb(model.DefaultSalesforceTouchPointsRules())
-	if err != nil {
-		// Log error and continue to create project.
-		logCtx.WithError(err).Error("Failed to marshal Salesforce TouchPoints on create project.")
-	} else {
-		project.SalesforceTouchPoints = *salesforceTouchPoints
-	}
-
-	// Initialize Hubspot TouchPoints.
-	hubspotTouchPoints, err := U.EncodeStructTypeToPostgresJsonb(model.DefaultHubspotTouchPointsRules())
-	if err != nil {
-		// Log error and continue to create project.
-		logCtx.WithError(err).Error("Failed to marshal Hubspot TouchPoints on create project.")
-	} else {
-		project.HubspotTouchPoints = *hubspotTouchPoints
-	}
-
 	//Initialize default channel group rules
 	channelGroupRulesJsonb, err := U.EncodeStructTypeToPostgresJsonb(model.DefaultChannelPropertyRules)
 	if err != nil {

@@ -971,10 +971,10 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 		}
 
 		if memberDocuments[i].Synced == false {
-			err = ApplyOfflineTouchPointRule(project, &finalTrackPayload, &memberDocuments[i], endTimestamp)
+			err = ApplySFOfflineTouchPointRule(project, &finalTrackPayload, &memberDocuments[i], endTimestamp)
 			if err != nil {
 				// log and continue
-				logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("Create SF offline touch point")
+				logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("failed creating SF offline touch point")
 			}
 		}
 
@@ -1082,7 +1082,7 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 		return http.StatusInternalServerError
 	}
 
-	err = ApplyOfflineTouchPointRule(project, &finalTrackPayload, document, endTimestamp)
+	err = ApplySFOfflineTouchPointRule(project, &finalTrackPayload, document, endTimestamp)
 	if err != nil {
 		// log and continue
 		logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("Create SF offline touch point")
@@ -1096,9 +1096,9 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 	return http.StatusOK
 }
 
-func ApplyOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
+func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyOfflineTouchPointRule", "document_id": document.ID, "document_action": document.Action})
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule", "document_id": document.ID, "document_action": document.Action})
 
 	if &project.SalesforceTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.SalesforceTouchPoints) {
 
@@ -1125,14 +1125,14 @@ func ApplyOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackP
 
 				_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
 				if err != nil {
-					logCtx.WithError(err).Error("Failed to create touch point for campaign member document.")
+					logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
 					continue
 				}
 			case model.SalesforceDocumentUpdated:
 
 				campaignMemberDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, endTimestamp)
 				if status != http.StatusFound {
-					logCtx.Warn("Failed to get campaign member document for campaign member.")
+					logCtx.Warn("failed to get campaign member salesforce document for campaign member.")
 					continue
 				}
 				logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).WithField("Document[0]", campaignMemberDocuments[0]).Info("Found existing campaign member document")
@@ -1140,7 +1140,7 @@ func ApplyOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackP
 				// len(campaignMemberDocuments) > 0 && timestamp sorted desc
 				enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[0])
 				if err != nil {
-					logCtx.WithError(err).Error("Failed to get properties for campaign member.")
+					logCtx.WithError(err).Error("Failed to get properties for salesforce campaign member.")
 					continue
 				}
 				// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
@@ -1149,12 +1149,12 @@ func ApplyOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackP
 						continue
 					}
 				}
-				logCtx.Info("Found existing campaign member document")
+				logCtx.Info("Found existing salesforce campaign member document")
 				if val, exists := trackPayload.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
 					if val.(bool) == true {
 						_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
 						if err != nil {
-							logCtx.WithError(err).Error("Failed to create touch point for campaign member document.")
+							logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
 							continue
 						}
 					}
@@ -1168,7 +1168,7 @@ func ApplyOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackP
 func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, rule model.SFTouchPointRule) (*SDK.TrackResponse, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "CreateTouchPointEvent", "document_id": document.ID, "document_action": document.Action})
-	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("CreateTouchPointEvent: creating member document")
+	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("CreateTouchPointEvent: creating salesforce document")
 	var trackResponse *SDK.TrackResponse
 	var err error
 	payload := &SDK.TrackPayload{
@@ -1205,9 +1205,10 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 
 	status, trackResponse := SDK.Track(project.ID, payload, true, "")
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("created touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
-		return trackResponse, errors.New(fmt.Sprintf("created touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("create salesforce touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
+		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
 	}
+	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("Successfully: created salesforce offline touch point")
 	return trackResponse, nil
 }
 
