@@ -6,6 +6,7 @@ import {
 import styles from './index.module.scss';
 import { SearchOutlined } from '@ant-design/icons';
 import { getQueryType } from '../../../utils/dataFormatter';
+import { QUERY_TYPE_PROFILE } from '../../../utils/constants';
 
 function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
   const [searchVal, setSearchVal] = useState('');
@@ -60,7 +61,8 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
             events: 'events_cq',
             funnel: 'funnels_cq',
             channel_v1: 'campaigns_cq',
-            attribution: 'attributions_cq'
+            attribution: 'attributions_cq',
+            profiles: 'profiles_cq'
           };
           let svgName = '';
           Object.entries(queryTypeName).forEach(([k, v]) => {
@@ -72,6 +74,7 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
           const isSelected = selectedQueries.findIndex(sq => sq.query_id === q.id) > -1;
 
           return (
+            queryType === QUERY_TYPE_PROFILE ? null :
             <div key={q.id} className={`flex items-center justify-between px-1 py-3 cursor-pointer ${styles.queryRow} ${isSelected ? styles.selected : ''}`}>
               <div className="flex justify-start items-center">
                 <div className="mr-2">

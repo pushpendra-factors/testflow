@@ -6,6 +6,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_CAMPAIGN,
   REPORT_SECTION,
+  QUERY_TYPE_PROFILE,
 } from '../../../utils/constants';
 import styles from './index.module.scss';
 import { Button } from 'antd';
@@ -120,25 +121,44 @@ function CalendarRow({
     );
   }
 
+  let calendarWidget = null;
+
+  if (queryType === QUERY_TYPE_PROFILE) {
+    calendarWidget = (
+      <Button
+        className={``}
+        size={'large'}
+        type={'default'}
+        style={{ pointerEvents: 'none' }}
+      >
+        <SVG name={`calendar`} size={20} extraClass={`mr-1`}></SVG>All Time
+      </Button>
+    );
+  } else {
+    calendarWidget = (
+      <div className='calendar'>
+        <FaDatepicker
+          customPicker
+          presetRange
+          monthPicker
+          range={{
+            startDate: durationObj.from,
+            endDate: durationObj.to,
+          }}
+          placement='topRight'
+          onSelect={setDateRange}
+          comparison_supported={comparison_supported}
+          handleCompareWithClick={handleCompareWithClick}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className='flex justify-between items-center'>
       <div className='flex items-center'>
         {metricsDropdown}
-        <div className='calendar'>
-          { <FaDatepicker
-            customPicker
-            presetRange
-            monthPicker
-            range={{
-              startDate: durationObj.from,
-              endDate: durationObj.to,
-            }}
-            placement='topRight'
-            onSelect={setDateRange}
-            comparison_supported={comparison_supported}
-            handleCompareWithClick={handleCompareWithClick}
-          />}
-        </div>
+        {calendarWidget}
         {comparison_supported && renderCompareScenario()}
         {granularity}
       </div>

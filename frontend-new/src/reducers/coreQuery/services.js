@@ -128,6 +128,23 @@ export const getFunnelData = (projectId, query, dashboard) => {
   return post(null, url, { query });
 };
 
+export const getProfileData = (projectId, query, dashboard) => {
+  let url;
+  if (!dashboard) {
+    url = host + 'projects/' + projectId + '/profiles/query';
+  } else {
+    url =
+      host +
+      'projects/' +
+      projectId +
+      `/profiles/query?refresh=${dashboard.refresh}&dashboard_id=` +
+      dashboard.id +
+      '&dashboard_unit_id=' +
+      dashboard.unit_id;
+  }
+  return post(null, url, query);
+};
+
 export const saveQuery = (projectId, title, query, type, settings) => {
   const url = host + 'projects/' + projectId + '/queries';
   return post(null, url, { query, title, type, settings });

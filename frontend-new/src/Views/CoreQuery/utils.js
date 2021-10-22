@@ -27,6 +27,8 @@ import {
   PREDEFINED_DATES,
   CHART_TYPE_SCATTER_PLOT,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
+  QUERY_TYPE_PROFILE,
+  TYPE_ALL_USERS,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 import { formatFilterDate } from '../../utils/dataFormatter';
@@ -111,10 +113,7 @@ const getEventsWithProperties = (queries) => {
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va:
-            fil.props[1] === 'datetime'
-              ? fil.values
-              : fil.values,
+          va: fil.props[1] === 'datetime' ? fil.values : fil.values,
         });
       }
     });
@@ -127,13 +126,49 @@ const getEventsWithProperties = (queries) => {
   return ewps;
 };
 
+const getProfileWithProperties = (queries) => {
+  const pwps = [];
+  queries.forEach((ev) => {
+    const filterProps = [];
+    ev.filters.forEach((fil) => {
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            en: fil.props[2],
+            pr: fil.props[0],
+            op: operatorMap[fil.operator],
+            va: val,
+            lop: !index ? 'AND' : 'OR',
+            ty: fil.props[1],
+          });
+        });
+      } else {
+        filterProps.push({
+          en: fil.props[2],
+          pr: fil.props[0],
+          op: operatorMap[fil.operator],
+          va: fil.values,
+          lop: 'AND',
+          ty: fil.props[1],
+        });
+      }
+    });
+    pwps.push({
+      ty: TYPE_ALL_USERS,
+      pr: filterProps,
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+    });
+  });
+  return pwps;
+};
+
 const getGlobalFilters = (globalFilters = []) => {
   const filterProps = [];
   globalFilters.forEach((fil) => {
     if (Array.isArray(fil.values)) {
       fil.values.forEach((val, index) => {
         filterProps.push({
-          en: 'user_g',
+          en: 'user',
           lop: !index ? 'AND' : 'OR',
           op: operatorMap[fil.operator],
           pr: fil.props[0],
@@ -143,20 +178,55 @@ const getGlobalFilters = (globalFilters = []) => {
       });
     } else {
       filterProps.push({
-        en: 'user_g',
+        en: 'user',
         lop: 'AND',
         op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
-        va:
-          fil.props[1] === 'datetime'
-            ? fil.values
-            : fil.values,
+        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
       });
     }
   });
 
   return filterProps;
+};
+
+export const getProfileQuery = (queries, groupBy, globalFilters = []) => {
+  const query = {};
+  query.cl = QUERY_TYPE_PROFILE;
+  // query_group.ty = TYPE_ALL_USERS;
+
+  query.queries = getProfileWithProperties(queries);
+  query.gup = getGlobalFilters(globalFilters);
+
+  const appliedGroupBy = [...groupBy.event, ...groupBy.global];
+  query.gbp = appliedGroupBy.map((opt) => {
+    let appGbp = {};
+    if (opt.eventIndex) {
+      appGbp = {
+        pr: opt.property,
+        en: opt.prop_category,
+        pty: opt.prop_type,
+        eni: opt.eventIndex,
+      };
+    } else {
+      appGbp = {
+        pr: opt.property,
+        en: opt.prop_category,
+        pty: opt.prop_type,
+      };
+    }
+    if (opt.prop_type === 'datetime') {
+      opt.grn ? (appGbp['grn'] = opt.grn) : (appGbp['grn'] = 'day');
+    }
+    if (opt.prop_type === 'numerical') {
+      opt.gbty ? (appGbp['gbty'] = opt.gbty) : (appGbp['gbty'] = '');
+    }
+    return appGbp;
+  });
+
+  query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
+  return query;
 };
 
 export const getFunnelQuery = (
@@ -676,10 +746,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
-        va:
-          filter.props[1] === 'datetime'
-            ? filter.values
-            : filter.values,
+        va: filter.props[1] === 'datetime' ? filter.values : filter.values,
       });
     }
 
@@ -1040,6 +1107,40 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
     }
   }
 
+  if (queryType === QUERY_TYPE_PROFILE) {
+    let horizontalBarChart = (
+      <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
+        Display Bar Chart
+      </Radio>
+    );
+    const commons = (
+      <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>Display Table</Radio>
+    );
+    if (requestQuery.gbp.length) {
+      const columnsChart = (
+        <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+          Display Columns Chart
+        </Radio>
+      );
+      if (requestQuery.gbp.length > 3) {
+        horizontalBarChart = null;
+      }
+      return (
+        <>
+          {columnsChart}
+          {horizontalBarChart}
+          {commons}
+        </>
+      );
+    }
+    return (
+      <>
+        {horizontalBarChart}
+        {commons}
+      </>
+    );
+  }
+
   if (queryType === QUERY_TYPE_EVENT) {
     if (requestQuery[0].ec === constantObj[EACH_USER_TYPE]) {
       const commons = (
@@ -1126,4 +1227,86 @@ export const isComparisonEnabled = (queryType, events, groupBy, models) => {
     }
   }
   return false;
+};
+
+export const getProfileQueryFromRequestQuery = (requestQuery) => {
+  const events = requestQuery.queries.map((e) => {
+    const filters = [];
+    e.pr.forEach((pr) => {
+      if (pr.lop === 'AND') {
+        filters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, 'user'],
+          values: [pr.va],
+        });
+      } else {
+        filters[filters.length - 1].values.push(pr.va);
+      }
+    });
+    return {
+      label: e.ty,
+      filters,
+    };
+  });
+
+  const globalFilters = [];
+
+  if (requestQuery && requestQuery.gup && Array.isArray(requestQuery.gup)) {
+    requestQuery.gup.forEach((pr) => {
+      if (pr.lop === 'AND') {
+        globalFilters.push({
+          operator:
+            pr.ty === 'datetime'
+              ? reverseDateOperatorMap[pr.op]
+              : reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+        });
+      } else {
+        globalFilters[globalFilters.length - 1].values.push(pr.va);
+      }
+    });
+  }
+
+  const queryType = requestQuery.cl;
+  const breakdown = requestQuery.gbp.map((opt) => {
+    return {
+      property: opt.pr,
+      prop_category: opt.en,
+      prop_type: opt.pty,
+      eventName: opt.ena,
+      eventIndex: opt.eni ? opt.eni : 0,
+      grn: opt.grn,
+      gbty: opt.gbty,
+    };
+  });
+  const event = breakdown
+    .filter((b) => b.eventIndex)
+    .map((b, index) => {
+      return {
+        ...b,
+        overAllIndex: index,
+      };
+    });
+  const global = breakdown
+    .filter((b) => !b.eventIndex)
+    .map((b, index) => {
+      return {
+        ...b,
+        overAllIndex: index,
+      };
+    });
+  const result = {
+    events,
+    queryType,
+    globalFilters,
+    breakdown: {
+      event,
+      global,
+    },
+  };
+  return result;
 };

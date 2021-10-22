@@ -23,6 +23,7 @@ import {
   apiChartAnnotations,
   CHART_TYPE_TABLE,
   DASHBOARD_TYPES,
+  QUERY_TYPE_PROFILE,
 } from '../../utils/constants';
 import { getSaveChartOptions } from '../../Views/CoreQuery/utils';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
@@ -161,6 +162,10 @@ function SaveQuery({
               gbt: q.gbt ? 'date' : '',
             };
           }),
+        };
+      } else if (queryType === QUERY_TYPE_PROFILE) {
+        query = {
+          ...requestQuery,
         };
       }
       let res;
@@ -335,18 +340,32 @@ function SaveQuery({
                 className={styles.switchBtn}
                 checkedChildren='On'
                 unCheckedChildren='Off'
+                disabled={queryType === QUERY_TYPE_PROFILE}
               />
-              <Text extraClass='m-0' type='title' level={6} weight='bold'>
-                Add to Dashboard
-              </Text>
+              {queryType != QUERY_TYPE_PROFILE ? (
+                <Text extraClass='m-0' type='title' level={6} weight='bold'>
+                  Add to Dashboard
+                </Text>
+              ) : (
+                <Text
+                  extraClass='m-0 italic'
+                  type='title'
+                  level={9}
+                  color='grey'
+                >
+                  Add to Dashboard Unavailable for Profiles
+                </Text>
+              )}
             </div>
-            <Text
-              extraClass={`pt-1 ${styles.noteText}`}
-              mini
-              type={'paragraph'}
-            >
-              {dashboardHelpText}
-            </Text>
+            {queryType != QUERY_TYPE_PROFILE ? (
+              <Text
+                extraClass={`pt-1 ${styles.noteText}`}
+                mini
+                type={'paragraph'}
+              >
+                {dashboardHelpText}
+              </Text>
+            ) : null}
             {dashboardList}
           </React.Fragment>
         </div>

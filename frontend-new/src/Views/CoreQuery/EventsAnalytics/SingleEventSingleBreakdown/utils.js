@@ -12,7 +12,7 @@ import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
 import { renderHorizontalBarChart } from '../SingleEventMultipleBreakdown/utils';
-import styles from '../SingleEventMultipleBreakdown/index.module.scss';
+import tableStyles from '../../../../components/DataTable/index.module.scss';
 
 export const defaultSortProp = () => {
   return {
@@ -336,7 +336,7 @@ export const getHorizontalBarChartColumns = (
     return {
       title: displayTitle,
       dataIndex: e.pr,
-      className: styles.horizontalBarTableHeader,
+      className: tableStyles.horizontalBarTableHeader,
       render: (d) => {
         const obj = {
           children: <div className='h-full p-6'>{d}</div>,

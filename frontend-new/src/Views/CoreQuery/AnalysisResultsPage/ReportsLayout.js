@@ -19,16 +19,16 @@ import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import WeeklyInsights from '../WeeklyInsights';
 import { fetchWeeklyIngishts } from '../../../reducers/insights';
 import { connect, useDispatch } from 'react-redux';
+import ProfileComposer from '../../../components/ProfileComposer';
 
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_PROFILE,
 } from '../../../utils/constants';
 
-import { Collapse, Button } from 'antd';
-
-const { Panel } = Collapse;
+import { Button } from 'antd';
 
 function ReportsLayout({
   queryType,
@@ -109,13 +109,28 @@ function ReportsLayout({
         />
       );
     }
+    if (queryType === QUERY_TYPE_PROFILE) {
+      return (
+        <ProfileComposer
+          queries={rest.composerFunctions.profileQueries}
+          runProfileQuery={rest.composerFunctions.runProfileQuery}
+          eventChange={rest.composerFunctions.profileQueryChange}
+          queryType={queryType}
+          queryOptions={rest.queryOptions}
+          setQueryOptions={rest.composerFunctions.setExtraOptions}
+          collapse={rest.composerFunctions.showResult}
+          setCollapse={() => setQueryOpen(false)}
+        />
+      );
+    }
   };
 
   const renderQueryComposerNew = () => {
     if (
       queryType === QUERY_TYPE_FUNNEL ||
       queryType === QUERY_TYPE_EVENT ||
-      queryType === QUERY_TYPE_ATTRIBUTION
+      queryType === QUERY_TYPE_ATTRIBUTION ||
+      queryType === QUERY_TYPE_PROFILE
     ) {
       return (
         <div

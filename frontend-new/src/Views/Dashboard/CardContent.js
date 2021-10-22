@@ -4,6 +4,7 @@ import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
   getCampaignStateFromRequestQuery,
+  getProfileQueryFromRequestQuery,
 } from '../CoreQuery/utils';
 import EventsAnalytics from './EventsAnalytics';
 import Funnels from './Funnels';
@@ -15,12 +16,14 @@ import {
   DASHBOARD_WIDGET_SECTION,
   reverse_user_types,
   presentationObj,
+  QUERY_TYPE_PROFILE,
 } from '../../utils/constants';
 import Attributions from './Attributions';
 import CampaignAnalytics from './CampaignAnalytics';
 import NoDataChart from '../../components/NoDataChart';
 import { useSelector } from 'react-redux';
 import { SVG, Text } from '../../components/factorsComponents';
+import ProfileAnalysis from './ProfileAnalysis';
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
@@ -47,6 +50,11 @@ function CardContent({ unit, resultState, durationObj }) {
         unit.query.query.query,
         attr_dimensions
       );
+    } else if (
+      unit.query.query.cl &&
+      unit.query.query.cl === QUERY_TYPE_PROFILE
+    ) {
+      return getProfileQueryFromRequestQuery(unit.query.query);
     } else {
       return getStateQueryFromRequestQuery(unit.query.query);
     }
@@ -60,7 +68,11 @@ function CardContent({ unit, resultState, durationObj }) {
   }, [queryType, unit.query.query]);
 
   const events = useMemo(() => {
-    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+    if (
+      queryType === QUERY_TYPE_EVENT ||
+      queryType === QUERY_TYPE_FUNNEL ||
+      queryType === QUERY_TYPE_PROFILE
+    ) {
       return equivalentQuery.events.map((elem) =>
         elem.alias ? elem.alias : eventNames[elem.label] || elem.label
       );
@@ -68,7 +80,11 @@ function CardContent({ unit, resultState, durationObj }) {
   }, [equivalentQuery.events, queryType]);
 
   const breakdown = useMemo(() => {
-    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+    if (
+      queryType === QUERY_TYPE_EVENT ||
+      queryType === QUERY_TYPE_FUNNEL ||
+      queryType == QUERY_TYPE_PROFILE
+    ) {
       return [
         ...equivalentQuery.breakdown.event,
         ...equivalentQuery.breakdown.global,
@@ -212,6 +228,19 @@ function CardContent({ unit, resultState, durationObj }) {
           arrayMapper={campaignsArrayMapper}
           section={DASHBOARD_WIDGET_SECTION}
           durationObj={durationObj}
+        />
+      );
+    }
+
+    if (queryType === QUERY_TYPE_PROFILE) {
+      content = (
+        <ProfileAnalysis
+          queries={events}
+          resultState={resultState}
+          chartType={presentationObj[dashboardPresentation]}
+          section={DASHBOARD_WIDGET_SECTION}
+          breakdown={breakdown}
+          unit={unit}
         />
       );
     }

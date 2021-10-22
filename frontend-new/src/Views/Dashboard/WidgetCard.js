@@ -21,6 +21,7 @@ import {
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_WEB,
   ATTRIBUTION_METRICS,
+  QUERY_TYPE_PROFILE,
 } from '../../utils/constants';
 import { DashboardContext } from '../../contexts/DashboardContext';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -100,6 +101,11 @@ function WidgetCard({
           unit.query.query.cl === QUERY_TYPE_WEB
         ) {
           queryType = QUERY_TYPE_WEB;
+        } else if (
+          unit.query.query.cl &&
+          unit.query.query.cl === QUERY_TYPE_PROFILE
+        ) {
+          queryType = QUERY_TYPE_PROFILE;
         } else {
           queryType = QUERY_TYPE_FUNNEL;
         }
@@ -115,6 +121,14 @@ function WidgetCard({
           );
           if (
             queryType === QUERY_TYPE_FUNNEL &&
+            !hasComponentUnmounted.current
+          ) {
+            setResultState({
+              ...initialState,
+              data: res.data.result,
+            });
+          } else if (
+            queryType === QUERY_TYPE_PROFILE &&
             !hasComponentUnmounted.current
           ) {
             setResultState({

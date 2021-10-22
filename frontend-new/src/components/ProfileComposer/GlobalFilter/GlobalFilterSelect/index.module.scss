@@ -1,0 +1,19 @@
+.filter {
+    display: flex;
+
+    &__propContainer {
+        position: relative;
+    }
+
+    &__event_selector { 
+        position: relative;
+
+        &__btn {
+            position: relative;
+        }
+
+        .ant-select-selector {
+            border-radius: 12px;
+        }
+    }
+}

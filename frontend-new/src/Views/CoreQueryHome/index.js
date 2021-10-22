@@ -17,6 +17,7 @@ import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
   getCampaignStateFromRequestQuery,
+  getProfileQueryFromRequestQuery,
 } from '../CoreQuery/utils';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import ConfirmationModal from '../../components/ConfirmationModal';
@@ -36,6 +37,7 @@ import {
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   LOCAL_STORAGE_ITEMS,
+  QUERY_TYPE_PROFILE,
 } from '../../utils/constants';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -78,6 +80,11 @@ const coreQueryoptions = [
     title: 'Templates',
     icon: 'templates_cq',
     desc: 'A list of advanced queries crafted by experts',
+  },
+  {
+    title: 'Profiles',
+    icon: 'profiles_cq',
+    desc: 'Explore all Profiles with filters and breakdowns',
   },
 ];
 
@@ -128,7 +135,9 @@ function CoreQuery({
   setNavigatedFromDashboard,
   fetchWeeklyIngishts,
   activeProject,
+  activeAccount,
   updateSavedQuerySettings,
+  setProfileQueries,
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
@@ -147,6 +156,7 @@ function CoreQuery({
       funnel: 'funnels_cq',
       channel_v1: 'campaigns_cq',
       attribution: 'attributions_cq',
+      profiles: 'profiles_cq'
     };
     let svgName = '';
     Object.entries(queryTypeName).forEach(([k, v]) => {
@@ -218,6 +228,27 @@ function CoreQuery({
           ],
           globalFilters: equivalentQuery.globalFilters,
           ...newDateRange,
+        };
+      });
+    },
+    [dispatch]
+  );
+
+  const updateProfileQueryState = useCallback(
+    (equivalentQuery) => {
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: equivalentQuery.breakdown,
+      });
+      setProfileQueries(equivalentQuery.events);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          groupBy: [
+            ...equivalentQuery.breakdown.global,
+            ...equivalentQuery.breakdown.event,
+          ],
+          globalFilters: equivalentQuery.globalFilters,
         };
       });
     },
@@ -335,6 +366,9 @@ function CoreQuery({
           const usefulQuery = { ...equivalentQuery, ...newDateRange };
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
+        } else if (record.query.cl && record.query.cl === QUERY_TYPE_PROFILE) {
+          equivalentQuery = getProfileQueryFromRequestQuery(record.query);
+          updateProfileQueryState(equivalentQuery);
         } else {
           equivalentQuery = getStateQueryFromRequestQuery(record.query);
           updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
@@ -435,6 +469,18 @@ function CoreQuery({
     if (item.title === 'Campaigns') {
       setQueryType(QUERY_TYPE_CAMPAIGN);
     }
+
+    if (item.title === 'Profiles') {
+      setQueryType(QUERY_TYPE_PROFILE);
+      setProfileQueries([]);
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: {
+          global: [],
+          event: [],
+        },
+      });
+    }
   };
 
   return (
@@ -491,6 +537,10 @@ function CoreQuery({
             <Col span={20}>
               <div className={'flex'}>
                 {coreQueryoptions.map((item, index) => {
+                  const emailIDs = ['solutions@factors.ai', 'vikas@factors.ai', 'sonali@factors.ai'];
+                  if (item.title === 'Profiles' && !emailIDs.includes(activeAccount)) {
+                    return null;
+                  }
                   return (
                     <div
                       key={index}
@@ -511,7 +561,7 @@ function CoreQuery({
                         <SVG name={item.icon} size={40} />
                       </div>
 
-                      <div className='fai--custom-card-new--bottom-section p-4'>
+                      <div className='fai--custom-card-new--bottom-section'>
                         <Text
                           type={'title'}
                           level={7}
@@ -591,6 +641,7 @@ function CoreQuery({
 }
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
+  activeAccount: state.agent?.agent_details?.email,
 });
 
 export default connect(mapStateToProps, { fetchWeeklyIngishts })(CoreQuery);
