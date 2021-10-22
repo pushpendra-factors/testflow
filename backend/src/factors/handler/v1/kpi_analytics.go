@@ -157,7 +157,8 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during validation of execute KPIQuery.", true
 	}
 
-	dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, err := getDashboardRelatedInformationFromRequest(request, c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("refresh"))
+	dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err := getDashboardRelatedInformationFromRequest(request,
+		c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("refresh"), c.Query("is_query"))
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
 	}
@@ -189,7 +190,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		return data, statusCode, errorCode, errMsg, isErr
 	}
 
-	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() {
+	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
 		logCtx.WithField("request_payload", request).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
 		return nil, statusCode, PROCESSING_FAILED, "Not found in cache. Execution suspended temporarily.", true
 	}
@@ -216,7 +217,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	return gin.H{"result": queryResults}, http.StatusOK, "", "", false
 }
 
-func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam string, unitIdParam string, refreshParam string) (uint64, uint64, int64, int64, bool, bool, error) {
+func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam, unitIdParam, refreshParam, isQueryParam string) (uint64, uint64, int64, int64, bool, bool, bool, error) {
 	var dashboardId uint64
 	var unitId uint64
 	var err error
@@ -227,10 +228,14 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
+	isQuery := false
+	if isQueryParam != "" {
+		isQuery, _ = strconv.ParseBool(isQueryParam)
+	}
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if !isDashboardQueryRequest {
-		return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, err
+		return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
 	}
 	dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
 	unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
@@ -240,7 +245,7 @@ func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dash
 	if err != nil || unitId == 0 {
 		err = errors.New("Query failed. Invalid DashboardUnitID.")
 	}
-	return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, err
+	return dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err
 }
 
 func getResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID uint64, request model.KPIQueryGroup,

@@ -53,9 +53,13 @@ func ChannelQueryHandler(c *gin.Context) {
 	refreshParam := c.Query("refresh")
 	var timezoneString U.TimeZoneString
 	var statusCode int
-
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
+	}
+	isQuery := false
+	isQueryParam := c.Query("is_query")
+	if isQueryParam != "" {
+		isQuery, _ = strconv.ParseBool(isQueryParam)
 	}
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
@@ -121,7 +125,7 @@ func ChannelQueryHandler(c *gin.Context) {
 		return
 	}
 
-	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() {
+	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
 		logCtx.WithField("request_payload", queryPayload).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": "Query failed. Not found in cache. Suspended db execution."})

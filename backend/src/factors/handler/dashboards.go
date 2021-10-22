@@ -578,6 +578,11 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
+	isQuery := false
+	isQueryParam := c.Query("is_query")
+	if isQueryParam != "" {
+		isQuery, _ = strconv.ParseBool(isQueryParam)
+	}
 
 	if requestPayload.Timezone != "" {
 		_, errCode := time.LoadLocation(string(requestPayload.Timezone))
@@ -649,7 +654,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 			})
 		}
 
-		if C.DisableDashboardQueryDBExecution() {
+		if C.DisableDashboardQueryDBExecution() && !isQuery {
 			logCtx.WithField("request_payload", requestPayload).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"error": "Query failed. Not found in cache. Suspended db execution."})
