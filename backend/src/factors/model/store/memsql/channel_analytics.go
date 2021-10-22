@@ -335,9 +335,15 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.Channe
 		errorResult := model.BuildErrorResultForChannelsV1("")
 		return errorResult, http.StatusBadRequest
 	}
+	if projectID == 699 {
+		logCtx.WithField("columns", columns).WithField("metrics", resultMetrics).Warn("Testing channel analytics.")
+	}
 	resultMetrics = U.ConvertInternalToExternal(resultMetrics)
 	queryResult.Headers = columns
 	queryResult.Rows = resultMetrics
+	if projectID == 699 {
+		logCtx.WithField("queryResult", queryResult).Warn("Testing channel analytics.")
+	}
 
 	return queryResult, status
 }
