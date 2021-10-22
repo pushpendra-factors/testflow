@@ -231,6 +231,8 @@ func (store *MemSQL) GetPropertyTypeByKeyValue(projectID uint64, eventName strin
 				return pType
 			}
 
+		} else if strings.HasPrefix(propertyKey, U.SALESFORCE_PROPERTY_PREFIX) { // for not configured property return categorical
+			return U.PropertyTypeCategorical
 		}
 	}
 
