@@ -151,6 +151,10 @@ func TestPropertyDetails(t *testing.T) {
 	category = store.GetStore().GetPropertyTypeByKeyValue(project.ID, "", numericalProperty2, "123", true)
 	assert.Equal(t, U.PropertyTypeNumerical, category)
 
+	// missing property type but with prefix should be treadted as categorical
+	category = store.GetStore().GetPropertyTypeByKeyValue(project.ID, eventName, U.SALESFORCE_PROPERTY_PREFIX+"updated_batch_no_c", nil, false)
+	assert.Equal(t, U.PropertyTypeCategorical, category)
+
 	/*
 		Get from cache
 	*/

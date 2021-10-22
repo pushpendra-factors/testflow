@@ -219,6 +219,8 @@ func (pg *Postgres) GetPropertyTypeByKeyValue(projectID uint64, eventName string
 				return pType
 			}
 
+		} else if strings.HasPrefix(propertyKey, U.SALESFORCE_PROPERTY_PREFIX) { // for not configured property return categorical
+			return U.PropertyTypeCategorical
 		}
 	}
 
