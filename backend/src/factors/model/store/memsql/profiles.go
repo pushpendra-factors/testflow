@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -61,6 +62,7 @@ func (store *MemSQL) ExecuteProfilesQuery(projectID uint64, query model.ProfileQ
 }
 
 func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	query = model.TransformProfilesQuery(query)
 	sql, params, err := buildAllUsersQuery(projectID, query)
 	if err != nil {

@@ -1059,6 +1059,7 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 }
 
 func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	rows, tx, err := store.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err

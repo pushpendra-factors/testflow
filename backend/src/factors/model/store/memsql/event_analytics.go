@@ -27,6 +27,7 @@ type ResultGroup struct {
 }
 
 func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectId uint64) (model.ResultGroup, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	queries := make([]model.Query, 0, 0)
 	U.DeepCopy(&queriesOriginal, &queries)
 

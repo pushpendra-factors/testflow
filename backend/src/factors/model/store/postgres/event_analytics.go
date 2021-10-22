@@ -27,6 +27,7 @@ type ResultGroup struct {
 }
 
 func (pg *Postgres) RunEventsGroupQuery(queriesOriginal []model.Query, projectId uint64) (model.ResultGroup, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	queries := make([]model.Query, 0, 0)
 	U.DeepCopy(&queriesOriginal, &queries)
 
@@ -54,6 +55,7 @@ func (pg *Postgres) RunEventsGroupQuery(queriesOriginal []model.Query, projectId
 
 func (pg *Postgres) runSingleEventsQuery(projectId uint64, query model.Query,
 	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	defer waitGroup.Done()
 	result, errCode, errMsg := pg.ExecuteEventsQuery(projectId, query)
@@ -76,6 +78,7 @@ func (pg *Postgres) ExecuteEventsQuery(projectId uint64, query model.Query) (*mo
 
 func (pg *Postgres) RunInsightsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
 	stmnt, params, err := pg.BuildInsightsQuery(projectId, query)
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure

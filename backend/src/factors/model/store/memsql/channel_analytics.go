@@ -356,6 +356,7 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.Channe
 // removed source as we want aggregated results for all channels
 func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.ChannelQueryV1,
 	reqID string) ([]string, [][]interface{}, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	var finalQuery string
@@ -490,6 +491,7 @@ func (store *MemSQL) GetChannelFilterValues(projectID uint64, channel, filter st
 // ExecuteChannelQuery - @Kark TODO v0
 func (store *MemSQL) ExecuteChannelQuery(projectID uint64,
 	queryOriginal *model.ChannelQuery) (*model.ChannelQueryResult, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	var query *model.ChannelQuery
 	U.DeepCopy(queryOriginal, &query)

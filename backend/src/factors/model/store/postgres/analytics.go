@@ -1046,6 +1046,7 @@ func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*s
 }
 
 func (pg *Postgres) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	rows, tx, err := pg.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err

@@ -357,6 +357,7 @@ func (pg *Postgres) ExecuteChannelQueryV1(projectID uint64, query *model.Channel
 // removed source as we want aggregated results for all channels
 func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.ChannelQueryV1,
 	reqID string) ([]string, [][]interface{}, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	var finalQuery string
