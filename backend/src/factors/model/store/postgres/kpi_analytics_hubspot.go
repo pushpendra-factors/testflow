@@ -3,6 +3,7 @@ package postgres
 import (
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -16,12 +17,22 @@ func (pg *Postgres) GetKPIConfigsForHubspot(projectID uint64, reqID string) (map
 	if len(hubspotProjectSettings) == 0 {
 		return nil, http.StatusOK
 	}
+	finalResult := make(map[string]interface{}, 0)
+	for _, displayCategory := range model.DisplayCategoriesForHubspot {
+		finalResult = U.MergeJSONMaps(finalResult, pg.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory))
+	}
+	return finalResult, http.StatusOK
+}
+
+// Move to model?
+// Should we still have properties - because user_properties are dynamic here?
+func (pg *Postgres) getConfigForSpecificHubspotCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {
 	return map[string]interface{}{
 		"category":         model.EventCategory,
-		"display_category": model.HubspotDisplayCategory,
-		"metrics":          model.GetMetricsForDisplayCategory(model.HubspotDisplayCategory),
-		"properties":       pg.getPropertiesForHubspot(projectID, reqID),
-	}, http.StatusOK
+		"display_category": displayCategory,
+		"metrics":          model.GetMetricsForDisplayCategory(displayCategory),
+		// "properties":       pg.getPropertiesForHubspot(projectID, reqID),
+	}
 }
 
 // getRequiredUserProperties gives response in following format - each data_type with multiple property_names.

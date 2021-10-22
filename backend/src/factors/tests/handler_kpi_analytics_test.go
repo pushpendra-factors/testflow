@@ -8,6 +8,7 @@ import (
 	"factors/model/model"
 	M "factors/model/model"
 	"factors/model/store"
+	TaskSession "factors/task/session"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -52,6 +53,16 @@ func TestKpiAnalytics(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	response := DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
+
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	eventName := U.RandomLowerAphaNumString(10)
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"$referrer": "https://example.com/abc?ref=1", "$referrer_url": "https://example.com/abc", "$referrer_domain": "example.com", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_ad": "ad_2021_1", "$qp_utm_ad_id": "9876543210", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$platform": "web", "$browser": "Mozilla", "$browser_version": "v0.1", "$browser_with_version": "Mozilla_v0.1", "$user_agent": "browser", "$os": "Linux", "$os_version": "v0.1", "$os_with_version": "Linux_v0.1", "$country": "india", "$region": "karnataka", "$city": "bengaluru", "$timezone": "Asia/Calcutta"}}`,
+			eventName, timestamp)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
+	assert.Nil(t, err)
 
 	t.Run("abc", func(t *testing.T) {
 
@@ -160,8 +171,8 @@ func TestKpiAnalytics(t *testing.T) {
 			DisplayCategory: "website_session",
 			Metrics:         []string{"average_initial_page_load_time"},
 			Filters:         nil,
-			From:            startTimestamp,
-			To:              startTimestamp + 40,
+			From:            timestamp,
+			To:              timestamp + (40 * 24 * 60 * 60),
 		}
 
 		kpiQueryGroup := model.KPIQueryGroup{

@@ -854,7 +854,14 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 	termStmnt := ""
 
 	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, query.Timezone)
+		if query.AggregatePropertyType == U.PropertyTypeNumerical {
+			noneSelectCase := fmt.Sprintf("CASE WHEN %s.%s = '%s' THEN 0.0 ", refStep, aggregatePropertyDetails.Property, model.PropertyValueNone)
+			emptySelectCase := fmt.Sprintf("WHEN %s.%s = '' THEN 0.0 ", refStep, aggregatePropertyDetails.Property)
+			defaultCase := fmt.Sprintf("ELSE (%s.%s::real) END AS %s ", refStep, aggregatePropertyDetails.Property, model.AliasAggr)
+			aggregateSelect = noneSelectCase + emptySelectCase + defaultCase
+		} else {
+			aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, query.Timezone)
+		}
 		termStmnt = termStmnt + ", " + aggregateSelect
 		*qParams = append(*qParams, aggregateParams...)
 	}
@@ -1759,7 +1766,14 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 			selectStr = selectStr + " , " + egKeysForStep
 		}
 		if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-			selectStr = selectStr + ", " + fmt.Sprintf("%s.%s as %s", step, model.AliasAggr, model.AliasAggr)
+			if query.AggregatePropertyType == U.PropertyTypeNumerical {
+				noneSelectCase := fmt.Sprintf("CASE WHEN %s.%s = '%s' THEN 0.0 ", step, model.AliasAggr, model.PropertyValueNone)
+				emptySelectCase := fmt.Sprintf("WHEN %s.%s = '' THEN 0.0 ", step, model.AliasAggr)
+				defaultCase := fmt.Sprintf("ELSE (%s.%s::real) END as %s ", step, model.AliasAggr, model.AliasAggr)
+				selectStr = selectStr + ", " + noneSelectCase + emptySelectCase + defaultCase
+			} else {
+				selectStr = selectStr + ", " + fmt.Sprintf("%s.%s as %s", step, model.AliasAggr, model.AliasAggr)
+			}
 		}
 		selectStmnt := fmt.Sprintf("SELECT %s FROM %s", selectStr, step)
 		if i == 0 {

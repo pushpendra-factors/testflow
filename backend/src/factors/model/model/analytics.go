@@ -200,9 +200,10 @@ type Query struct {
 	SessionEndEvent   int64 `json:"see"`
 
 	// For specific case of KPI - single eventType
-	AggregateFunction string `json:"agFn"`
-	AggregateProperty string `json:"agPr"`
-	AggregateEntity   string `json:"agEn"`
+	AggregateFunction     string `json:"agFn"`
+	AggregateProperty     string `json:"agPr"`
+	AggregateEntity       string `json:"agEn"`
+	AggregatePropertyType string `json:"agTy"`
 }
 
 func (q *Query) GetClass() string {

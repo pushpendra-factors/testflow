@@ -1,13 +1,21 @@
 package model
 
 const (
-	HubspotDisplayCategory = "hubspot_metrics"
+	HubspotContactsDisplayCategory  = "hubspot_contacts"
+	HubspotCompaniesDisplayCategory = "hubspot_companies"
+	// HubspotDealsDisplayCategory     = "hubspot_deals"
 )
 
-func ValidateKPIHubspot(kpiQuery KPIQuery) bool {
-	return validateKPIQueryMetricsForHubspot(kpiQuery.Metrics)
+var DisplayCategoriesForHubspot = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory}
+
+func ValidateKPIHubspotContacts(kpiQuery KPIQuery) bool {
+	return ValidateKPIQueryMetricsForAnyEventType(kpiQuery.Metrics, MapOfMetricsToData[HubspotContactsDisplayCategory])
 }
 
-func validateKPIQueryMetricsForHubspot(kpiQueryMetrics []string) bool {
-	return ValidateKPIQueryMetricsForAnyEventType(kpiQueryMetrics, MapOfMetricsToData[HubspotDisplayCategory])
+func ValidateKPIHubspotCompanies(kpiQuery KPIQuery) bool {
+	return ValidateKPIQueryMetricsForAnyEventType(kpiQuery.Metrics, MapOfMetricsToData[HubspotCompaniesDisplayCategory])
 }
+
+// func ValidateKPIHubspotDeals(kpiQuery KPIQuery) bool {
+// 	return ValidateKPIQueryMetricsForAnyEventType(kpiQuery.Metrics, MapOfMetricsToData[HubspotDealsDisplayCategory])
+// }
