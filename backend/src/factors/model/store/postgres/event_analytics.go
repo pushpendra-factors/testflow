@@ -27,6 +27,7 @@ type ResultGroup struct {
 }
 
 func (pg *Postgres) RunEventsGroupQuery(queriesOriginal []model.Query, projectId uint64) (model.ResultGroup, int) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	queries := make([]model.Query, 0, 0)
 	U.DeepCopy(&queriesOriginal, &queries)
 
@@ -54,6 +55,7 @@ func (pg *Postgres) RunEventsGroupQuery(queriesOriginal []model.Query, projectId
 
 func (pg *Postgres) runSingleEventsQuery(projectId uint64, query model.Query,
 	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	defer waitGroup.Done()
 	result, errCode, errMsg := pg.ExecuteEventsQuery(projectId, query)
@@ -76,6 +78,7 @@ func (pg *Postgres) ExecuteEventsQuery(projectId uint64, query model.Query) (*mo
 
 func (pg *Postgres) RunInsightsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
 	stmnt, params, err := pg.BuildInsightsQuery(projectId, query)
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -854,7 +857,14 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 	termStmnt := ""
 
 	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, query.Timezone)
+		if query.AggregatePropertyType == U.PropertyTypeNumerical {
+			noneSelectCase := fmt.Sprintf("CASE WHEN %s.%s = '%s' THEN 0.0 ", refStep, aggregatePropertyDetails.Property, model.PropertyValueNone)
+			emptySelectCase := fmt.Sprintf("WHEN %s.%s = '' THEN 0.0 ", refStep, aggregatePropertyDetails.Property)
+			defaultCase := fmt.Sprintf("ELSE (%s.%s::real) END AS %s ", refStep, aggregatePropertyDetails.Property, model.AliasAggr)
+			aggregateSelect = noneSelectCase + emptySelectCase + defaultCase
+		} else {
+			aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, query.Timezone)
+		}
 		termStmnt = termStmnt + ", " + aggregateSelect
 		*qParams = append(*qParams, aggregateParams...)
 	}
@@ -1759,7 +1769,14 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 			selectStr = selectStr + " , " + egKeysForStep
 		}
 		if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-			selectStr = selectStr + ", " + fmt.Sprintf("%s.%s as %s", step, model.AliasAggr, model.AliasAggr)
+			if query.AggregatePropertyType == U.PropertyTypeNumerical {
+				noneSelectCase := fmt.Sprintf("CASE WHEN %s.%s = '%s' THEN 0.0 ", step, model.AliasAggr, model.PropertyValueNone)
+				emptySelectCase := fmt.Sprintf("WHEN %s.%s = '' THEN 0.0 ", step, model.AliasAggr)
+				defaultCase := fmt.Sprintf("ELSE (%s.%s::real) END as %s ", step, model.AliasAggr, model.AliasAggr)
+				selectStr = selectStr + ", " + noneSelectCase + emptySelectCase + defaultCase
+			} else {
+				selectStr = selectStr + ", " + fmt.Sprintf("%s.%s as %s", step, model.AliasAggr, model.AliasAggr)
+			}
 		}
 		selectStmnt := fmt.Sprintf("SELECT %s FROM %s", selectStr, step)
 		if i == 0 {

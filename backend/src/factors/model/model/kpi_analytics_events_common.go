@@ -12,9 +12,16 @@ func ValidateKPIQuery(kpiQuery KPIQuery) bool {
 		return ValidateKPIPageView(kpiQuery)
 	} else if kpiQuery.DisplayCategory == FormSubmissionsDisplayCategory {
 		return ValidateKPIFormSubmissions(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == HubspotDisplayCategory {
-	} else if kpiQuery.DisplayCategory == SalesforceDisplayCategory {
-		return ValidateKPISalesforce(kpiQuery)
+	} else if kpiQuery.DisplayCategory == HubspotContactsDisplayCategory {
+		return ValidateKPIHubspotContacts(kpiQuery)
+	} else if kpiQuery.DisplayCategory == HubspotCompaniesDisplayCategory {
+		return ValidateKPIHubspotCompanies(kpiQuery)
+	} else if kpiQuery.DisplayCategory == SalesforceUsersDisplayCategory {
+		return ValidateKPISalesforceUsers(kpiQuery)
+	} else if kpiQuery.DisplayCategory == SalesforceAccountsDisplayCategory {
+		return ValidateKPISalesforceAccounts(kpiQuery)
+	} else if kpiQuery.DisplayCategory == SalesforceOpportunitiesDisplayCategory {
+		return ValidateKPISalesforceOpportunities(kpiQuery)
 	} else {
 		return false
 	}
@@ -31,7 +38,6 @@ func GetDirectDerviableQueryPropsFromKPI(kpiQuery KPIQuery) Query {
 	return query
 }
 
-// kark1 - Errors out on line 99 Entrances, Exits.
 func BuildFiltersAndGroupByBasedOnKPIQuery(query Query, kpiQuery KPIQuery, metric string) Query {
 	metricsData := MapOfMetricsToData[kpiQuery.DisplayCategory][metric]
 	var objectType string
@@ -100,6 +106,7 @@ func SplitKPIQueryToInternalKPIQueries(query Query, kpiQuery KPIQuery, metric st
 		currentQuery.AggregateFunction = metricTransformation.Metrics.Aggregation
 		currentQuery.AggregateProperty = metricTransformation.Metrics.Property
 		currentQuery.AggregateEntity = metricTransformation.Metrics.Entity
+		currentQuery.AggregatePropertyType = metricTransformation.Metrics.GroupByType
 		currentQuery.EventsWithProperties = prependFiltersBasedOnInternalTransformation(metricTransformation.Filters, query.EventsWithProperties)
 		finalResultantQueries = append(finalResultantQueries, currentQuery)
 	}
@@ -117,9 +124,10 @@ func prependFiltersBasedOnInternalTransformation(filters []QueryProperty, events
 // Note: Considering the format to be generally... event_index, event_name,..., count.
 func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bool, hasAnyGroupBy bool) []*QueryResult {
 	resultantResults := make([]*QueryResult, 0)
-	var tmpResult *QueryResult
-	tmpResult = &QueryResult{}
 	for _, result := range results {
+		var tmpResult *QueryResult
+		tmpResult = &QueryResult{}
+
 		tmpResult.Headers = getTransformedHeaders(result.Headers, hasGroupByTimestamp, hasAnyGroupBy)
 		tmpResult.Rows = getTransformedRows(result.Rows, hasGroupByTimestamp, hasAnyGroupBy)
 		resultantResults = append(resultantResults, tmpResult)
@@ -160,6 +168,8 @@ func getTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGr
 // resultAsMap - key with groupByColumns, value as row.
 func HandlingEventResultsByApplyingOperations(results []*QueryResult, transformations []TransformQueryi) QueryResult {
 	var resultAsMap, intermediateResultsAsMap map[string][]interface{}
+	resultAsMap = make(map[string][]interface{})
+	intermediateResultsAsMap = make(map[string][]interface{})
 	var finalResultRows [][]interface{}
 	var finalResult QueryResult
 	for index, result := range results {
@@ -176,7 +186,7 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, transforma
 				intermediateResultsAsMap[key] = row
 			}
 			resultAsMap = intermediateResultsAsMap
-			intermediateResultsAsMap = nil
+			intermediateResultsAsMap = make(map[string][]interface{})
 		}
 	}
 	for _, value := range resultAsMap {
@@ -203,7 +213,7 @@ func getValueFromValuesAndOperator(value1 interface{}, value2 interface{}, opera
 }
 
 func makeHashWithKeyAsGroupBy(rows [][]interface{}) map[string][]interface{} {
-	var hashMap map[string][]interface{}
+	var hashMap map[string][]interface{} = make(map[string][]interface{})
 	for _, row := range rows {
 		key := getkeyFromRow(row)
 		hashMap[key] = row

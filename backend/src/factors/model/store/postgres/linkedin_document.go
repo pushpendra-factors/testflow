@@ -476,6 +476,7 @@ func (pg *Postgres) GetLinkedinSQLQueryAndParametersForFilterValues(projectID ui
 
 func (pg *Postgres) ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	fetchSource := false
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	logCtx := log.WithField("xreq_id", reqID)
 
 	if query.GroupByTimestamp == "" {

@@ -326,6 +326,7 @@ func addColumnInformationForGoogleOrganicDocument(googleOrganicDocument *model.G
 
 func (pg *Postgres) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	fetchSource := false
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	logCtx := log.WithField("xreq_id", reqID)
 	if query.GetGroupByTimestamp() == "" {
 		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)

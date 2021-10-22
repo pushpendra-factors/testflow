@@ -3,6 +3,7 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -16,14 +17,21 @@ func (store *MemSQL) GetKPIConfigsForHubspot(projectID uint64, reqID string) (ma
 	if len(hubspotProjectSettings) == 0 {
 		return nil, http.StatusOK
 	}
-	return map[string]interface{}{
-		"category":         model.EventCategory,
-		"display_category": model.HubspotDisplayCategory,
-		"metrics":          model.GetMetricsForDisplayCategory(model.HubspotDisplayCategory),
-		"properties":       store.getPropertiesForHubspot(projectID, reqID),
-	}, http.StatusOK
+	finalResult := make(map[string]interface{}, 0)
+	for _, displayCategory := range model.DisplayCategoriesForHubspot {
+		finalResult = U.MergeJSONMaps(finalResult, store.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory))
+	}
+	return finalResult, http.StatusOK
 }
 
+func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {
+	return map[string]interface{}{
+		"category":         model.EventCategory,
+		"display_category": displayCategory,
+		"metrics":          model.GetMetricsForDisplayCategory(displayCategory),
+		// "properties":       pg.getPropertiesForHubspot(projectID, reqID),
+	}
+}
 func (store *MemSQL) getPropertiesForHubspot(projectID uint64, reqID string) []map[string]string {
 	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
 	properties, propertiesToDisplayNames, err := store.GetRequiredUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())

@@ -1,18 +1,21 @@
 package model
 
 const (
-	SalesforceDisplayCategory = "salesforce_metrics"
+	SalesforceUsersDisplayCategory         = "salesforce_users"
+	SalesforceAccountsDisplayCategory      = "salesforce_accounts"
+	SalesforceOpportunitiesDisplayCategory = "salesforce_opportunities"
 )
 
-var KPIMetricsForSalesforce = []string{
-	CountOfContactsCreated, CountOfContactsUpdated,
-	CountOfLeadsCreated, CountOfLeadsUpdated,
-	CountOfOpportunitiesCreated, CountOfOpportunitiesUpdated,
+var DisplayCategoriesForSalesforce = []string{SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory}
+
+func ValidateKPISalesforceUsers(kpiQuery KPIQuery) bool {
+	return ValidateKPIQueryMetricsForAnyEventType(kpiQuery.Metrics, MapOfMetricsToData[SalesforceUsersDisplayCategory])
 }
 
-func ValidateKPISalesforce(kpiQuery KPIQuery) bool {
-	return validateKPIQueryMetricsForSalesforce(kpiQuery.Metrics)
+func ValidateKPISalesforceAccounts(kpiQuery KPIQuery) bool {
+	return ValidateKPIQueryMetricsForAnyEventType(kpiQuery.Metrics, MapOfMetricsToData[SalesforceAccountsDisplayCategory])
 }
-func validateKPIQueryMetricsForSalesforce(kpiQueryMetrics []string) bool {
-	return ValidateKPIQueryMetricsForAnyEventType(kpiQueryMetrics, MapOfMetricsToData[SalesforceDisplayCategory])
+
+func ValidateKPISalesforceOpportunities(kpiQuery KPIQuery) bool {
+	return ValidateKPIQueryMetricsForAnyEventType(kpiQuery.Metrics, MapOfMetricsToData[SalesforceOpportunitiesDisplayCategory])
 }

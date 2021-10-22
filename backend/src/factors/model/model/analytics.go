@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	C "factors/config"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -200,9 +201,10 @@ type Query struct {
 	SessionEndEvent   int64 `json:"see"`
 
 	// For specific case of KPI - single eventType
-	AggregateFunction string `json:"agFn"`
-	AggregateProperty string `json:"agPr"`
-	AggregateEntity   string `json:"agEn"`
+	AggregateFunction     string `json:"agFn"`
+	AggregateProperty     string `json:"agPr"`
+	AggregateEntity       string `json:"agEn"`
+	AggregatePropertyType string `json:"agTy"`
 }
 
 func (q *Query) GetClass() string {
@@ -696,6 +698,8 @@ func TransformQueryPlaceholdersForContext(stmnt string) string {
 // ExpandArrayWithIndividualValues Converts query string ...value IN (?) with array param to ...value IN (?, ?).
 // Expands array param to the params values. To support array param in sql.DB.Query.
 func ExpandArrayWithIndividualValues(stmnt string, params []interface{}) (string, []interface{}) {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+
 	placeholdersCount := 0
 	for _, c := range stmnt {
 		if c == '?' {

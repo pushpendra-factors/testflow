@@ -246,15 +246,27 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		UniqueUsers:  {"display_name": "Unique users", "object_type": U.EVENT_NAME_FORM_SUBMITTED},
 		CountPerUser: {"display_name": "Count per user", "object_type": U.EVENT_NAME_FORM_SUBMITTED},
 	},
-	HubspotDisplayCategory: {
+	HubspotContactsDisplayCategory: {
 		CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_CREATED},
 		CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED},
 	},
-	SalesforceDisplayCategory: {
-		CountOfContactsCreated:      {"display_name": "Contacts created", "object_type": U.EVENT_NAME_SALESFORCE_CONTACT_CREATED},
-		CountOfContactsUpdated:      {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED},
-		CountOfLeadsCreated:         {"display_name": "Leads created", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_CREATED},
-		CountOfLeadsUpdated:         {"display_name": "Leads updated", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_UPDATED},
+	HubspotCompaniesDisplayCategory: {
+		CountOfContactsCreated: {"display_name": "Companies created", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_CREATED},
+		CountOfContactsUpdated: {"display_name": "Companies updated", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_UPDATED},
+	},
+	// HubspotDealsDisplayCategory: {
+	// 	CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_CREATED},
+	// 	CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED},
+	// },
+	SalesforceUsersDisplayCategory: {
+		CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_SALESFORCE_CONTACT_CREATED},
+		CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED},
+	},
+	SalesforceAccountsDisplayCategory: {
+		CountOfLeadsCreated: {"display_name": "Leads created", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_CREATED},
+		CountOfLeadsUpdated: {"display_name": "Leads updated", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_UPDATED},
+	},
+	SalesforceOpportunitiesDisplayCategory: {
 		CountOfOpportunitiesCreated: {"display_name": "Opportunities created", "object_type": U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED},
 		CountOfOpportunitiesUpdated: {"display_name": "Opportunities updated", "object_type": U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED},
 	},
@@ -330,52 +342,53 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 	U.UP_PLATFORM:     {UserEntity: {"name": U.UP_PLATFORM, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_PLATFORM], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
 
 	// Session and Generic Event - Properties which could be in event or user entity.
-	U.UP_OS: {UserEntity: {"name": U.UP_OS, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_OS], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
-		EventEntity: {"name": U.UP_OS, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.UP_OS], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_OS_VERSION: {UserEntity: {"name": U.UP_OS_VERSION, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_OS_VERSION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
-		EventEntity: {"name": U.UP_OS, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.UP_OS], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_BROWSER: {UserEntity: {"name": U.UP_BROWSER, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_BROWSER], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
-		EventEntity: {"name": U.UP_BROWSER, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.UP_BROWSER], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_BROWSER_VERSION: {UserEntity: {"name": U.UP_BROWSER_VERSION, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_BROWSER_VERSION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
-		EventEntity: {"name": U.UP_BROWSER_VERSION, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.UP_BROWSER_VERSION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_COUNTRY: {UserEntity: {"name": U.UP_COUNTRY, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_COUNTRY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
-		EventEntity: {"name": U.UP_COUNTRY, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.UP_COUNTRY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_REGION: {UserEntity: {"name": U.UP_REGION, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_REGION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
-		EventEntity: {"name": U.UP_REGION, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.UP_REGION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
-	U.UP_CITY: {UserEntity: {"name": U.UP_CITY, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_CITY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
-		EventEntity: {"name": U.UP_CITY, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.UP_CITY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
+	U.UP_OS: {UserEntity: {"name": U.UP_OS, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_OS], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
+		EventEntity: {"name": U.UP_OS, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_OS], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
+	U.UP_OS_VERSION: {UserEntity: {"name": U.UP_OS_VERSION, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_OS_VERSION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
+		EventEntity: {"name": U.UP_OS_VERSION, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_OS_VERSION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
+	U.UP_BROWSER: {UserEntity: {"name": U.UP_BROWSER, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_BROWSER], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
+		EventEntity: {"name": U.UP_BROWSER, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_BROWSER], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
+	U.UP_BROWSER_VERSION: {UserEntity: {"name": U.UP_BROWSER_VERSION, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_BROWSER_VERSION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
+		EventEntity: {"name": U.UP_BROWSER_VERSION, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_BROWSER_VERSION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
+	U.UP_COUNTRY: {UserEntity: {"name": U.UP_COUNTRY, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_COUNTRY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
+		EventEntity: {"name": U.UP_COUNTRY, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_COUNTRY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
+	U.UP_REGION: {UserEntity: {"name": U.UP_REGION, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_REGION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
+		EventEntity: {"name": U.UP_REGION, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_REGION], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
+	U.UP_CITY: {UserEntity: {"name": U.UP_CITY, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_CITY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity},
+		EventEntity: {"name": U.UP_CITY, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_CITY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
 }
 
+// TODO: Add salesforce and hubspot.
 // Need more information on initial_page_url - properties.go
 // Need to decide on placeholder value set.
 // 1 Represents agggregation equivalent to aggregateFunc(1) in sql. For eg - select count(1)
 var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]TransformQueryi{
 	WebsiteSessionDisplayCategory: {
-		TotalSessions: []TransformQueryi{{Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""}}},
-		UniqueUsers:   []TransformQueryi{{Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""}}},
+		TotalSessions: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+		UniqueUsers:   []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
 		NewUsers: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_IS_FIRST_SESSION, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}},
 			},
 		},
 		RepeatUsers: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_IS_FIRST_SESSION, LogicalOp: "AND", Operator: NotEqualOpStr, Value: "true"}},
 			},
 		},
 		SessionsPerUser: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 		EngagedSessions: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
@@ -384,7 +397,7 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		EngagedUsers: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
@@ -393,14 +406,14 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		EngagedSessionsPerUser: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
 				},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
@@ -409,90 +422,90 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		TotalTimeOnSite: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "sum", Entity: EventEntity, Property: U.SP_SPENT_TIME, Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "sum", Entity: EventEntity, Property: U.SP_SPENT_TIME, GroupByType: U.PropertyTypeNumerical, Operator: ""},
 			},
 		},
 		AvgSessionDuration: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "sum", Entity: EventEntity, Property: U.SP_SPENT_TIME, Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "sum", Entity: EventEntity, Property: U.SP_SPENT_TIME, GroupByType: U.PropertyTypeNumerical, Operator: "Division"},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 		AvgPageViewsPerSession: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "sum", Entity: EventEntity, Property: U.SP_PAGE_VIEWS, Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "sum", Entity: EventEntity, Property: U.SP_PAGE_VIEWS, GroupByType: U.PropertyTypeNumerical, Operator: "Division"},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 		AvgInitialPageLoadTime: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "sum", Entity: EventEntity, Property: U.SP_INITIAL_PAGE_LOAD_TIME, Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "sum", Entity: EventEntity, Property: U.SP_INITIAL_PAGE_LOAD_TIME, GroupByType: U.PropertyTypeNumerical, Operator: "Division"},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 		BounceRate: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_COUNT, LogicalOp: "AND", Operator: EqualsOpStr, Value: "1"},
 				},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 		EngagementRate: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
 				},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 	},
 	PageViewsDisplayCategory: {
 		Entrances: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_INITIAL_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}},
 			},
 		},
 		Exits: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_INITIAL_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}}},
 		},
 		PageViews: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 		UniqueUsers: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 		PageviewsPerUser: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 		EngagedPageViews: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SCROLL_PERCENT, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "50"},
@@ -501,7 +514,7 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		EngagedUsers: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SCROLL_PERCENT, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "50"},
@@ -510,41 +523,42 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		EngagementRate: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SCROLL_PERCENT, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "50"},
 				},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 	},
 	FormSubmissionsDisplayCategory: {
-		Count:       []TransformQueryi{{Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: ""}}},
-		UniqueUsers: []TransformQueryi{{Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""}}},
+		Count:       []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+		UniqueUsers: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
 		CountPerUser: []TransformQueryi{
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: EventEntity, Property: "1", Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
 			},
 			{
-				Metrics: transformMetricsToEventAnalytics{Aggregation: "count", Entity: UserEntity, Property: "1", Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
 	},
 }
 
 type TransformQueryi struct {
-	Metrics transformMetricsToEventAnalytics
+	Metrics KpiToEventMetricRepr
 	Filters []QueryProperty
 }
 
-type transformMetricsToEventAnalytics struct {
+type KpiToEventMetricRepr struct {
 	Aggregation string
 	Entity      string
 	Property    string
 	Operator    string
+	GroupByType string
 }
 
 // Util/Common Methods.
