@@ -14,6 +14,7 @@ import {
   CHART_TYPE_SCATTER_PLOT,
   QUERY_TYPE_FUNNEL,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
+  QUERY_TYPE_PROFILE,
 } from './constants';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
 
@@ -282,6 +283,20 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
       },
     ];
   }
+  if (queryType === QUERY_TYPE_PROFILE && breakdownLength) {
+    menuItems = [
+      {
+        key: CHART_TYPE_BARCHART,
+        name: 'Columns',
+      },
+    ];
+    if (breakdownLength <= 3) {
+      menuItems.push({
+        key: CHART_TYPE_HORIZONTAL_BAR_CHART,
+        name: 'Bars',
+      });
+    }
+  }
   return menuItems;
 };
 
@@ -507,7 +522,6 @@ export const SortResults = (result, currentSorter) => {
   return result;
 };
 
-
 export const formatFilterDate = (selectedDates) => {
   const parsedVal = JSON.parse(selectedDates);
   const fromDateKey = parsedVal.fr ? 'fr' : 'from';
@@ -544,12 +558,14 @@ export const getBreakdownDisplayTitle = (
   userPropNames,
   eventPropNames
 ) => {
+  const property = breakdown.pr || breakdown.property;
+  const prop_category = breakdown.en || breakdown.prop_category;
   let displayTitle =
-    breakdown.en === 'user'
-      ? userPropNames[breakdown.pr] || breakdown.pr
-      : breakdown.en === 'event'
-      ? eventPropNames[breakdown.pr] || breakdown.pr
-      : breakdown.pr;
+    prop_category === 'user'
+      ? userPropNames[property] || property
+      : prop_category === 'event'
+      ? eventPropNames[property] || property
+      : property;
 
   if (breakdown.eventIndex) {
     displayTitle = displayTitle + ' (event)';
@@ -565,3 +581,7 @@ export const Wait = (duration) => {
   });
 };
 
+export const toLetters = (num) => {
+  const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+  return charArr[num];
+};

@@ -35,12 +35,14 @@ import {
   getAttributionQuery,
   getCampaignsQuery,
   isComparisonEnabled,
+  getProfileQuery,
 } from './utils';
 import {
   getEventsData,
   getFunnelData,
   getAttributionsData,
   getCampaignsData,
+  getProfileData,
 } from '../../reducers/coreQuery/services';
 import {
   QUERY_TYPE_FUNNEL,
@@ -55,6 +57,8 @@ import {
   REPORT_SECTION,
   INITIAL_SESSION_ANALYTICS_SEQ,
   ATTRIBUTION_METRICS,
+  QUERY_TYPE_PROFILE,
+  ALL_USER_TYPE,
 } from '../../utils/constants';
 import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
@@ -81,6 +85,7 @@ import {
   getValidGranularityOptions,
   shouldDataFetch,
 } from '../../utils/dataFormatter';
+import ProfileComposer from '../../components/ProfileComposer';
 
 const { Panel } = Collapse;
 
@@ -106,6 +111,7 @@ function CoreQuery({
   const [querySaved, setQuerySaved] = useState(false);
   const [breakdownType, setBreakdownType] = useState(EACH_USER_TYPE);
   const [queries, setQueries] = useState([]);
+  const [profileQueries, setProfileQueries] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
     groupBy: [
       {
@@ -244,11 +250,16 @@ function CoreQuery({
         );
         updateAppliedBreakdown();
       }
+      if (queryType === QUERY_TYPE_PROFILE) {
+        setAppliedQueries(profileQueries.map((elem) => elem.label));
+        updateAppliedBreakdown();
+      }
     },
     [
       dispatch,
       groupBy,
       queries,
+      profileQueries,
       queryType,
       models,
       updateAppliedBreakdown,
@@ -582,6 +593,39 @@ function CoreQuery({
     ]
   );
 
+  const runProfileQuery = useCallback(
+    async (isQuerySaved) => {
+      try {
+        const query = getProfileQuery(profileQueries, groupBy, globalFilters);
+        configActionsOnRunningQuery(isQuerySaved);
+        updateRequestQuery(query);
+        updateResultState({ ...initialState, loading: true });
+        const res = await getProfileData(
+          activeProject.id,
+          query,
+          getDashboardConfigs(isQuerySaved)
+        );
+        updateResultState({
+          ...initialState,
+          data: res.data.result || res.data,
+          // data: SampleResponse,
+        });
+      } catch (err) {
+        console.log(err);
+        updateResultState({ ...initialState, error: true });
+      }
+    },
+    [
+      profileQueries,
+      activeProject.id,
+      groupBy,
+      globalFilters,
+      updateResultState,
+      configActionsOnRunningQuery,
+      getDashboardConfigs,
+    ]
+  );
+
   const handleGranularityChange = useCallback(
     ({ key: frequency }) => {
       if (queryType === QUERY_TYPE_EVENT) {
@@ -716,6 +760,11 @@ function CoreQuery({
           id: clickedSavedReport.query_id,
           name: clickedSavedReport.queryName,
         });
+      } else if (clickedSavedReport.queryType === QUERY_TYPE_PROFILE) {
+        runProfileQuery({
+          id: clickedSavedReport.query_id,
+          name: clickedSavedReport.queryName,
+        });
       } else {
         runQuery({
           id: clickedSavedReport.query_id,
@@ -730,6 +779,7 @@ function CoreQuery({
     runQuery,
     runAttributionQuery,
     runCampaignsQuery,
+    runProfileQuery,
   ]);
 
   useEffect(() => {
@@ -761,6 +811,29 @@ function CoreQuery({
     setQueries(queryupdated);
   };
 
+  const profileQueryChange = (newEvent, index, changeType = 'add') => {
+    const queryupdated = [...profileQueries];
+    if (queryupdated[index]) {
+      if (changeType === 'add') {
+        if (JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
+          deleteGroupByForEvent(newEvent, index);
+        }
+        queryupdated[index] = newEvent;
+      } else {
+        if (changeType === 'filters_updated') {
+          // dont remove group by if filter is changed
+          queryupdated[index] = newEvent;
+        } else {
+          deleteGroupByForEvent(newEvent, index);
+          queryupdated.splice(index, 1);
+        }
+      }
+    } else {
+      queryupdated.push(newEvent);
+    }
+    setProfileQueries(queryupdated);
+  };
+
   const closeDrawer = () => {
     setDrawerVisible(false);
   };
@@ -790,6 +863,11 @@ function CoreQuery({
         return {
           text: 'Attributions',
           icon: 'attributions_cq',
+        };
+      case QUERY_TYPE_PROFILE:
+        return {
+          text: 'Profile Analysis',
+          icon: 'profiles_cq',
         };
       default:
         return {
@@ -848,7 +926,8 @@ function CoreQuery({
     return (
       queryType === QUERY_TYPE_FUNNEL ||
       queryType === QUERY_TYPE_EVENT ||
-      queryType === QUERY_TYPE_ATTRIBUTION
+      queryType === QUERY_TYPE_ATTRIBUTION ||
+      queryType === QUERY_TYPE_PROFILE
     );
   };
 
@@ -879,13 +958,27 @@ function CoreQuery({
         ></CampQueryComposer>
       );
     }
+
+    if (queryType === QUERY_TYPE_PROFILE) {
+      return (
+        <ProfileComposer
+          queries={profileQueries}
+          runProfileQuery={runProfileQuery}
+          eventChange={profileQueryChange}
+          queryType={queryType}
+          queryOptions={queryOptions}
+          setQueryOptions={setExtraOptions}
+        ></ProfileComposer>
+      );
+    }
   };
 
   const renderQueryComposerNew = () => {
     if (
       queryType === QUERY_TYPE_FUNNEL ||
       queryType === QUERY_TYPE_EVENT ||
-      queryType === QUERY_TYPE_ATTRIBUTION
+      queryType === QUERY_TYPE_ATTRIBUTION ||
+      queryType === QUERY_TYPE_PROFILE
     ) {
       return (
         <div
@@ -970,11 +1063,14 @@ function CoreQuery({
   const composerFunctions = {
     runQuery,
     queryChange,
+    profileQueryChange,
     setExtraOptions,
     runFunnelQuery,
     runAttributionQuery,
+    runProfileQuery,
     activeKey,
     queries,
+    profileQueries,
     showResult,
   };
 
@@ -1026,6 +1122,7 @@ function CoreQuery({
                 setQueryType={setQueryType}
                 setDrawerVisible={closeResultPage}
                 setQueries={setQueries}
+                setProfileQueries={setProfileQueries}
                 setQueryOptions={setExtraOptions}
                 setClickedSavedReport={setClickedSavedReport}
                 location={location}

@@ -39,6 +39,11 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
+	isQuery := false
+	isQueryParam := c.Query("is_query")
+	if isQueryParam != "" {
+		isQuery, _ = strconv.ParseBool(isQueryParam)
+	}
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
@@ -122,7 +127,7 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 	}
 
-	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() {
+	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
 		logCtx.WithField("request_payload", profileQueryGroup).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": "Query failed. Not found in cache. Suspended db execution."})

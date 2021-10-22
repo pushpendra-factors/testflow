@@ -11,6 +11,7 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_PROFILE,
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
@@ -21,12 +22,13 @@ import FunnelsResultPage from '../FunnelsResultPage';
 import CalendarRow from './CalendarRow';
 import AttributionsResult from '../AttributionsResult';
 import CampaignAnalytics from '../CampaignAnalytics';
-import { getChartTypeMenuItems } from '../../../utils/dataFormatter';
+import { getChartTypeMenuItems, toLetters } from '../../../utils/dataFormatter';
 import CampaignMetricsDropdown from './CampaignMetricsDropdown';
 import EventsAnalytics from '../EventsAnalytics';
 import WebsiteAnalyticsTable from '../../Dashboard/WebsiteAnalytics/WebsiteAnalyticsTable';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import { Text, SVG } from '../../../components/factorsComponents';
+import ProfilesResultPage from '../ProfilesResultPage';
 
 function ReportContent({
   resultState,
@@ -65,7 +67,7 @@ function ReportContent({
       key = breakdown.length ? 'breakdown' : 'no_breakdown';
       return chartTypes[queryType][key];
     }
-    if (queryType === QUERY_TYPE_EVENT) {
+    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_PROFILE) {
       key = breakdown.length ? 'breakdown' : 'no_breakdown';
       if (
         breakdown.length > 3 &&
@@ -100,7 +102,11 @@ function ReportContent({
   const handleChartTypeChange = useCallback(
     ({ key }) => {
       let changedKey;
-      if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+      if (
+        queryType === QUERY_TYPE_EVENT ||
+        queryType === QUERY_TYPE_FUNNEL ||
+        queryType === QUERY_TYPE_PROFILE
+      ) {
         changedKey = breakdown.length ? 'breakdown' : 'no_breakdown';
       }
       if (queryType === QUERY_TYPE_CAMPAIGN) {
@@ -143,11 +149,14 @@ function ReportContent({
     ) {
       items = getChartTypeMenuItems(queryType, breakdown.length, queries);
     }
+    if (queryType === QUERY_TYPE_PROFILE) {
+      items = getChartTypeMenuItems(queryType, breakdown.length, queries);
+    }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       items = getChartTypeMenuItems(queryType);
     }
-    setChartTypeMenuItems(items);
+    setChartTypeMenuItems(items.length > 1 ? items : []);
   }, [queryType, campaignState.group_by, breakdown, breakdownType, queries]);
 
   if (resultState.loading) {
@@ -225,6 +234,18 @@ function ReportContent({
     }
   }
 
+  if (queryType === QUERY_TYPE_PROFILE) {
+    if (queries.length > 1 && breakdown.length) {
+      metricsDropdown = (
+        <CampaignMetricsDropdown
+          metrics={queries.map((_, index) => `All Users (${toLetters(index)})`)}
+          currValue={currMetricsValue}
+          onChange={setCurrMetricsValue}
+        />
+      );
+    }
+  }
+
   if (resultState.data) {
     if (queryType === QUERY_TYPE_WEB) {
       content = (
@@ -292,6 +313,19 @@ function ReportContent({
           durationObj={durationObj}
           breakdownType={breakdownType}
           section={section}
+          renderedCompRef={renderedCompRef}
+        />
+      );
+    }
+    if (queryType === QUERY_TYPE_PROFILE) {
+      content = (
+        <ProfilesResultPage
+          queries={queries}
+          resultState={resultState}
+          chartType={chartType}
+          section={section}
+          breakdown={breakdown}
+          currMetricsValue={currMetricsValue}
           renderedCompRef={renderedCompRef}
         />
       );

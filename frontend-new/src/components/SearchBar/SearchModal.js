@@ -74,7 +74,8 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                   events: 'events_cq',
                   funnel: 'funnels_cq',
                   channel_v1: 'campaigns_cq',
-                  attribution: 'attributions_cq'
+                  attribution: 'attributions_cq',
+                  profiles: 'profiles_cq'
                 };
                 let svgName = '';
                 Object.entries(queryTypeName).forEach(([k, v]) => {

@@ -5,6 +5,7 @@ export const QUERY_TYPE_CAMPAIGN = 'channel_v1';
 export const QUERY_TYPE_TEMPLATE = 'templates';
 export const QUERY_TYPE_WEB = 'web';
 export const NAMED_QUERY = 'named_query';
+export const QUERY_TYPE_PROFILE = 'profiles';
 
 export const ATTRIBUTION_METHODOLOGY = [
   {
@@ -53,6 +54,7 @@ export const EVENT_BREADCRUMB = {
   [QUERY_TYPE_FUNNEL]: 'Funnel',
   [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
   [QUERY_TYPE_CAMPAIGN]: 'Campaigns',
+  [QUERY_TYPE_PROFILE]: 'Profiles',
 };
 
 export const valueMapper = {
@@ -65,6 +67,7 @@ export const ACTIVE_USERS_CRITERIA = 'active_users';
 export const FREQUENCY_CRITERIA = 'frequency';
 export const TYPE_EVENTS_OCCURRENCE = 'events_occurrence';
 export const TYPE_UNIQUE_USERS = 'unique_users';
+export const TYPE_ALL_USERS = 'all_users';
 
 export const EACH_USER_TYPE = 'each';
 export const ANY_USER_TYPE = 'any';
@@ -402,6 +405,10 @@ export const DefaultChartTypes = {
     breakdown: CHART_TYPE_BARCHART,
     no_breakdown: CHART_TYPE_BARCHART,
   },
+  [QUERY_TYPE_PROFILE]: {
+    no_breakdown: CHART_TYPE_HORIZONTAL_BAR_CHART,
+    breakdown: CHART_TYPE_BARCHART,
+  },
 };
 
 export const QUERY_TYPE_TEXT = {
@@ -409,6 +416,7 @@ export const QUERY_TYPE_TEXT = {
   [QUERY_TYPE_FUNNEL]: 'Funnels',
   [QUERY_TYPE_CAMPAIGN]: 'Campaigns',
   [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
+  [QUERY_TYPE_PROFILE]: 'Profiles',
 };
 
 export const FIRST_METRIC_IN_ATTR_RESPOSE = 'Impressions';
@@ -439,3 +447,5 @@ export const DATE_FORMATS = {
   day: 'D-MMM-YYYY',
   hour: 'D-MMM-YYYY H [h]',
 };
+
+export const ProfileUsersMapper = { all_users: 'All Users' };

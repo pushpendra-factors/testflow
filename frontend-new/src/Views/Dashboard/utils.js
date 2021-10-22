@@ -4,6 +4,7 @@ import {
   getFunnelData,
   getAttributionsData,
   getCampaignsData,
+  getProfileData,
 } from '../../reducers/coreQuery/services';
 import {
   QUERY_TYPE_ATTRIBUTION,
@@ -12,6 +13,7 @@ import {
   LOCAL_STORAGE_ITEMS,
   ATTRIBUTION_METRICS,
   PREDEFINED_DATES,
+  QUERY_TYPE_PROFILE,
 } from '../../utils/constants';
 import {
   getItemFromLocalStorage,
@@ -141,6 +143,13 @@ export const getDataFromServer = (
       };
     }
     return getAttributionsData(activeProjectId, attributionQuery, {
+      refresh,
+      unit_id: unitId,
+      id: dashboardId,
+    });
+  } else if (query.query.cl && query.query.cl === QUERY_TYPE_PROFILE) {
+    const profileQuery = query.query;
+    return getProfileData(activeProjectId, profileQuery, {
       refresh,
       unit_id: unitId,
       id: dashboardId,

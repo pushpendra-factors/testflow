@@ -113,6 +113,8 @@ function BreakdownCharts({
 
   let chart = null;
 
+  console.log(visibleProperties);
+
   if (chartType === CHART_TYPE_BARCHART) {
     chart = (
       <BarChart section={section} title={title} chartData={visibleProperties} />

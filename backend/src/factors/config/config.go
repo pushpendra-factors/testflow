@@ -698,7 +698,7 @@ func isValidMemSQLResourcePool(resourcePool string) bool {
 		availablePools = []string{
 			"soft_cpu_50",
 			"timeout_5m",
-			"soft_cpu_45_timeout_5m",
+			"soft_cpu_45_mem_50_tout_15m",
 		}
 
 	} else if IsStaging() {

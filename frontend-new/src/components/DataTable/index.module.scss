@@ -1,142 +1,157 @@
-$factorsDarkColor: #0E2647;
-$boxShadowPrimaryColor: #B7BEC8;
-$boxShadowSecondaryColor: #E7E9ED;
+$factorsDarkColor: #0e2647;
+$boxShadowPrimaryColor: #b7bec8;
+$boxShadowSecondaryColor: #e7e9ed;
 
 .table {
+  :global(.ant-pagination-item:focus),
+  :global(.ant-pagination-item:hover),
+  :global(.ant-pagination-item-active),
+  :global(.ant-pagination-item-active:focus),
+  :global(.ant-pagination-item-active:hover) {
+    border-color: #5949bc !important;
+  }
 
+  :global(.ant-pagination-item:focus a),
+  :global(.ant-pagination-item:hover a),
+  :global(.ant-pagination-item-active a),
+  :global(.ant-pagination-item-active:focus a),
+  :global(.ant-pagination-item-active:hover a) {
+    color: #5949bc;
+  }
 
-    :global(.ant-pagination-item:focus),
-    :global(.ant-pagination-item:hover),
-    :global(.ant-pagination-item-active),
-    :global(.ant-pagination-item-active:focus),
-    :global(.ant-pagination-item-active:hover) {
-        border-color: #5949BC !important;
-    }
+  :global(.ant-table.ant-table-bordered
+      > .ant-table-container
+      > .ant-table-content
+      > table
+      > thead
+      > tr
+      > th),
+  :global(.ant-table.ant-table-bordered
+      > .ant-table-container
+      > .ant-table-content
+      > table
+      > tbody
+      > tr
+      > td) {
+    border: none;
+  }
 
-    :global(.ant-pagination-item:focus a),
-    :global(.ant-pagination-item:hover a),
-    :global(.ant-pagination-item-active a),
-    :global(.ant-pagination-item-active:focus a),
-    :global(.ant-pagination-item-active:hover a) {
-        color: #5949BC;
-    }
+  th {
+    box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor,
+      inset -1px 0px 0px $boxShadowSecondaryColor;
+  }
 
-    :global(.ant-table.ant-table-bordered > .ant-table-container > .ant-table-content > table > thead > tr > th),
-    :global(.ant-table.ant-table-bordered > .ant-table-container > .ant-table-content > table > tbody > tr > td) {
-        border: none;
-    }
+  td {
+    box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor,
+      inset -1px 0px 0px $boxShadowSecondaryColor;
+  }
 
-    th {
-        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset -1px 0px 0px $boxShadowSecondaryColor;
-    }
+  :global(th.ant-table-cell) {
+    font-style: normal;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 16px;
+    color: $factorsDarkColor;
+    height: 40px !important;
+    padding: 12px 8px;
+    font-weight: 600;
+  }
 
-    td {
-        box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor, inset -1px 0px 0px $boxShadowSecondaryColor;
-    }
+  :global(td.ant-table-cell) {
+    font-style: normal;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
+    color: $factorsDarkColor;
+    height: 48px !important;
+    padding: 12px 8px;
+  }
 
-    :global(th.ant-table-cell) {
-        font-style: normal;
-        font-weight: 600;
-        font-size: 12px;
-        line-height: 16px;
-        color: $factorsDarkColor;
-        height: 40px !important;
-        padding: 12px 8px;
-        font-weight: 600;
-    }
+  :global(.ant-table-thead > tr > th) {
+    background-color: white;
+  }
 
-    :global(td.ant-table-cell) {
-        font-style: normal;
-        font-weight: 400;
-        font-size: 14px;
-        line-height: 20px;
-        color: $factorsDarkColor;
-        height: 48px !important;
-        padding: 12px 8px;
-    }
+  :global(.ant-checkbox-inner) {
+    border-radius: 4px;
+  }
 
-    :global(.ant-table-thead > tr > th) {
-        background-color: white;
-    }
+  :global(.ant-checkbox-checked .ant-checkbox-inner) {
+    background-color: $factorsDarkColor;
+    border-color: $factorsDarkColor;
+  }
 
-    :global(.ant-checkbox-inner) {
-        border-radius: 4px;
-    }
+  :global(.ant-checkbox-input:focus + .ant-checkbox-inner) {
+    border-color: $factorsDarkColor;
+  }
 
-    :global(.ant-checkbox-checked .ant-checkbox-inner) {
-        background-color: $factorsDarkColor;
-        border-color: $factorsDarkColor;
-    }
+  :global(tr.ant-table-row-selected > td),
+  :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
+    background: #fff;
+  }
 
-    :global(.ant-checkbox-input:focus + .ant-checkbox-inner) {
-        border-color: $factorsDarkColor;
-    }
-
-    :global(tr.ant-table-row-selected > td),
-    :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
-        background: #fff;
-    }
-
-    :global(.ant-table-selection) {
-        display: none;
-    }
+  :global(.ant-table-selection) {
+    display: none;
+  }
 }
 
 .searchBar {
+  box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
+
+  .breakupHeading {
+    font-family: 'Work Sans', sans-serif;
+    font-style: normal;
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 24px;
+    letter-spacing: -0.01em;
+    color: $factorsDarkColor;
+  }
+
+  .downloadCSVHeading {
+    font-family: 'Work Sans', sans-serif;
+    font-style: normal;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.01em;
+    color: $factorsDarkColor;
+    opacity: 0.56;
+  }
+
+  .inputSearchBar {
+    border: none;
     box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
+    padding: 0rem 0rem 0.25rem 0;
 
-    .breakupHeading {
-        font-family: 'Work Sans', sans-serif;
-        font-style: normal;
-        font-weight: 600;
-        font-size: 18px;
-        line-height: 24px;
-        letter-spacing: -0.01em;
-        color: $factorsDarkColor;
+    :global(input) {
+      font-family: 'Work Sans', sans-serif;
+      font-style: normal;
+      letter-spacing: -0.01em;
     }
 
-    .downloadCSVHeading {
-        font-family: 'Work Sans', sans-serif;
-        font-style: normal;
-        font-weight: 600;
-        font-size: 14px;
-        line-height: 20px;
-        letter-spacing: -0.01em;
-        color: $factorsDarkColor;
-        opacity: 0.56;
+    :global(.ant-input-prefix) {
+      margin-right: 0.5rem;
     }
+  }
 
-    .inputSearchBar {
-        border: none;
-        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
-        padding: 0rem 0rem 0.25rem 0;
-
-        :global(input) {
-            font-family: 'Work Sans', sans-serif;
-            font-style: normal;
-            letter-spacing: -0.01em;
-        }
-
-        :global(.ant-input-prefix) {
-            margin-right: 0.5rem;
-        }
+  .inputPlaceHolderFont {
+    :global(input) {
+      font-weight: 600;
+      font-size: 18px;
+      color: $boxShadowPrimaryColor;
+      line-height: 24px;
     }
+  }
 
-    .inputPlaceHolderFont {
-        :global(input) {
-            font-weight: 600;
-            font-size: 18px;
-            color: $boxShadowPrimaryColor;
-            line-height: 24px;
-        }
+  .inputTextFont {
+    :global(input) {
+      font-weight: 500;
+      font-size: 16px;
+      line-height: 18px;
     }
+  }
+}
 
-    .inputTextFont {
-        :global(input) {
-            font-weight: 500;
-            font-size: 16px;
-            line-height: 18px;
-        }
-    }
-
+th.horizontalBarTableHeader {
+  padding: 12px 24px !important;
 }

@@ -14,7 +14,7 @@ import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
 import HorizontalBarChartCell from './HorizontalBarChartCell';
-import styles from './index.module.scss';
+import tableStyles from '../../../../components/DataTable/index.module.scss';
 
 export const defaultSortProp = () => {
   return {
@@ -343,7 +343,7 @@ export const renderHorizontalBarChart = (
   );
 };
 
-const getBreakdownDataMapperWithUniqueValues = (data, key) => {
+export const getBreakdownDataMapperWithUniqueValues = (data, key) => {
   let values = new Set();
   const breakdownMapper = {};
   data.forEach((d) => {
@@ -457,7 +457,7 @@ export const getHorizontalBarChartColumns = (
       title: displayTitle,
       dataIndex: `${e.pr} - ${index}`,
       width: cardSize !== 1 ? 100 : 200,
-      className: styles.horizontalBarTableHeader,
+      className: tableStyles.horizontalBarTableHeader,
       render: (d) => {
         const obj = {
           children: <div className='h-full p-6'>{d.value}</div>,
