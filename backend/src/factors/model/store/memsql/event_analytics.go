@@ -93,9 +93,6 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-	if projectId == 386 {
-		log.WithField("result", result).Error("Testing for query failure1")
-	}
 
 	groupPropsLen := len(query.GroupByProperties)
 
@@ -105,18 +102,10 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
-	if projectId == 386 {
-		log.WithField("result", result).Error("Testing for query failure2")
-	}
-
 	err = SanitizeQueryResult(result, &query)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to sanitize query results.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
-	}
-
-	if projectId == 386 {
-		log.WithField("result", result).Error("Testing for query failure3")
 	}
 
 	// Replace the event_name with alias, if the event condition is each_given_event
@@ -149,10 +138,6 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		// add event name header and fill rows
 		addEventNameIndexInResult(result)
 
-		if projectId == 386 {
-			log.WithField("result", result).Error("Testing for query failure4")
-		}
-
 	} else {
 		// removing index from event name for old queries.
 		eventNameIndex := -1
@@ -167,9 +152,6 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 				splitPos := strings.Index(eventName, "_")
 				result.Rows[i][eventNameIndex] = eventName[splitPos+1:]
 			}
-		}
-		if projectId == 386 {
-			log.WithField("result", result).Error("Testing for query failure5")
 		}
 	}
 
