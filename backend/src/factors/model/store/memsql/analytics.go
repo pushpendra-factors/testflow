@@ -1069,6 +1069,7 @@ func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.Query
 	if err != nil {
 		return nil, err
 	}
+	log.WithField("result", resultRows).Error("Testing for query failure5")
 
 	result := &model.QueryResult{Headers: resultHeaders, Rows: resultRows}
 	return result, nil

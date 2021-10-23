@@ -40,8 +40,10 @@ func DBReadRows(rows *sql.Rows, tx *sql.Tx) ([]string, [][]interface{}, error) {
 	}
 
 	resultRows := make([][]interface{}, 0, 0)
-
+	count := 0
 	for rows.Next() {
+		log.WithField("counting", count).Error("Testing for query failure6")
+		count = count + 1
 		columns := make([]interface{}, len(cols))
 		columnPointers := make([]interface{}, len(cols))
 		for i := range columns {
