@@ -168,6 +168,34 @@ const getGlobalFilters = (globalFilters = []) => {
     if (Array.isArray(fil.values)) {
       fil.values.forEach((val, index) => {
         filterProps.push({
+          en: 'user_g',
+          lop: !index ? 'AND' : 'OR',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: fil.props[1] === 'datetime' ? val : val,
+        });
+      });
+    } else {
+      filterProps.push({
+        en: 'user_g',
+        lop: 'AND',
+        op: operatorMap[fil.operator],
+        pr: fil.props[0],
+        ty: fil.props[1],
+        va: fil.props[1] === 'datetime' ? fil.values : fil.values,
+      });
+    }
+  });
+  return filterProps;
+};
+
+const getGlobalProfileFilters = (globalFilters = []) => {
+  const filterProps = [];
+  globalFilters.forEach((fil) => {
+    if (Array.isArray(fil.values)) {
+      fil.values.forEach((val, index) => {
+        filterProps.push({
           en: 'user',
           lop: !index ? 'AND' : 'OR',
           op: operatorMap[fil.operator],
@@ -187,7 +215,6 @@ const getGlobalFilters = (globalFilters = []) => {
       });
     }
   });
-
   return filterProps;
 };
 
@@ -197,7 +224,7 @@ export const getProfileQuery = (queries, groupBy, globalFilters = []) => {
   // query_group.ty = TYPE_ALL_USERS;
 
   query.queries = getProfileWithProperties(queries);
-  query.gup = getGlobalFilters(globalFilters);
+  query.gup = getGlobalProfileFilters(globalFilters);
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
   query.gbp = appliedGroupBy.map((opt) => {
