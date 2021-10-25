@@ -79,7 +79,7 @@ import {
   SET_COMPARE_DURATION,
   SET_NAVIGATED_FROM_DASHBOARD,
   UPDATE_CHART_TYPES,
-  SET_SAVED_QUERY_SETTINGS,
+  SET_SAVED_QUERY_SETTINGS
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -1134,6 +1134,7 @@ function CoreQuery({
                 setActiveKey={setActiveKey}
                 setBreakdownType={setBreakdownType}
                 setNavigatedFromDashboard={setNavigatedFromDashboard}
+                updateChartTypes={updateChartTypes}
                 updateSavedQuerySettings={updateSavedQuerySettings}
               />
             )}

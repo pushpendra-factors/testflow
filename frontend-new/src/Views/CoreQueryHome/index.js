@@ -36,6 +36,7 @@ import {
   reverse_user_types,
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
+  DefaultChartTypes,
   LOCAL_STORAGE_ITEMS,
   QUERY_TYPE_PROFILE,
 } from '../../utils/constants';
@@ -135,6 +136,7 @@ function CoreQuery({
   setNavigatedFromDashboard,
   fetchWeeklyIngishts,
   activeProject,
+  updateChartTypes,
   activeAccount,
   updateSavedQuerySettings,
   setProfileQueries,
@@ -185,6 +187,10 @@ function CoreQuery({
       actions: '',
     };
   };
+
+  useEffect(() => {
+    updateChartTypes(DefaultChartTypes);
+  }, [updateChartTypes]);
 
   const confirmDelete = useCallback(() => {
     deleteQuery(dispatch, activeRow);
