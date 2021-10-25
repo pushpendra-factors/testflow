@@ -33,7 +33,8 @@ function WebsiteAnalytics({
           active_project.id,
           reqBody,
           dashboardId,
-          refresh
+          refresh,
+          false
         );
  
         setResultState({ ...initialState, data: response.data.result, refreshed_at: response.data.refreshed_at });
