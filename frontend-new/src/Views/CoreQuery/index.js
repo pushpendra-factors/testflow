@@ -79,7 +79,7 @@ import {
   SET_COMPARE_DURATION,
   SET_NAVIGATED_FROM_DASHBOARD,
   UPDATE_CHART_TYPES,
-  SET_SAVED_QUERY_SETTINGS,
+  SET_SAVED_QUERY_SETTINGS
 } from './constants';
 import {
   getValidGranularityOptions,
@@ -313,8 +313,9 @@ function CoreQuery({
         const res = await getEventsData(
           activeProject.id,
           query,
-          getDashboardConfigs(isGranularityChange ? false : isQuerySaved) //we need to call fresh query when granularity is changed
-        );
+          getDashboardConfigs(isGranularityChange ? false : isQuerySaved), //we need to call fresh query when granularity is changed
+          true
+          );
         const data = res.data.result || res.data;
         if (result_criteria === TOTAL_EVENTS_CRITERIA) {
           updateResultState({
@@ -404,7 +405,8 @@ function CoreQuery({
         const res = await getFunnelData(
           activeProject.id,
           query,
-          getDashboardConfigs(isQuerySaved)
+          getDashboardConfigs(isQuerySaved),
+          true
         );
         if (isCompareQuery) {
           updateLocalReducer(
@@ -482,7 +484,8 @@ function CoreQuery({
           const res = await getAttributionsData(
             activeProject.id,
             query,
-            getDashboardConfigs(isQuerySaved)
+            getDashboardConfigs(isQuerySaved),
+            true
           );
           if (isCompareQuery) {
             updateLocalReducer(
@@ -565,8 +568,9 @@ function CoreQuery({
         const res = await getCampaignsData(
           activeProject.id,
           query,
-          getDashboardConfigs(isGranularityChange ? false : isQuerySaved) //we need to call fresh query when granularity is changed
-        );
+          getDashboardConfigs(isGranularityChange ? false : isQuerySaved), //we need to call fresh query when granularity is changed
+          true
+          );
         updateResultState({
           ...initialState,
           data: res.data.result || res.data,
@@ -603,7 +607,8 @@ function CoreQuery({
         const res = await getProfileData(
           activeProject.id,
           query,
-          getDashboardConfigs(isQuerySaved)
+          getDashboardConfigs(isQuerySaved),
+          true
         );
         updateResultState({
           ...initialState,
@@ -1129,6 +1134,7 @@ function CoreQuery({
                 setActiveKey={setActiveKey}
                 setBreakdownType={setBreakdownType}
                 setNavigatedFromDashboard={setNavigatedFromDashboard}
+                updateChartTypes={updateChartTypes}
                 updateSavedQuerySettings={updateSavedQuerySettings}
               />
             )}

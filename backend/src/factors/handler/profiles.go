@@ -98,6 +98,10 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 
 		// setting up the timezone for individual queries from the global value
 		profileQueryGroup.Queries[index].SetTimeZone(timezoneString)
+		err = profileQueryGroup.Queries[index].TransformDateTypeFilters()
+		if err != nil {
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
+		}
 		// setting granularity for datetime filters
 		for indexGroupBy := range profileQueryGroup.Queries[index].GroupBys {
 			profileQueryGroup.Queries[index].GroupBys[indexGroupBy].Index = indexGroupBy

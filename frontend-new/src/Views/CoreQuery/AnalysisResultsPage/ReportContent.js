@@ -16,6 +16,7 @@ import {
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
+  presentationObj
 } from '../../../utils/constants';
 import { Spin } from 'antd';
 import FunnelsResultPage from '../FunnelsResultPage';
@@ -58,7 +59,7 @@ function ReportContent({
     metricsDropdown = <div className='mr-0'></div>;
 
   const {
-    coreQueryState: { chartTypes },
+    coreQueryState: { chartTypes, navigatedFromDashboard },
   } = useContext(CoreQueryContext);
 
   const chartType = useMemo(() => {
@@ -93,7 +94,7 @@ function ReportContent({
     campaignState.group_by,
     chartTypes,
     queryType,
-    attributionsState.models,
+    attributionsState.models
   ]);
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
@@ -137,6 +138,14 @@ function ReportContent({
       attributionsState.models,
     ]
   );
+
+  useEffect(() => {
+    if (navigatedFromDashboard?.query?.settings?.chart) {
+      handleChartTypeChange({
+        key: presentationObj[navigatedFromDashboard.query.settings.chart],
+      });
+    }
+  }, [navigatedFromDashboard]);
 
   useEffect(() => {
     let items = [];

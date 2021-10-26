@@ -36,6 +36,7 @@ import {
   reverse_user_types,
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
+  DefaultChartTypes,
   LOCAL_STORAGE_ITEMS,
   QUERY_TYPE_PROFILE,
 } from '../../utils/constants';
@@ -135,6 +136,7 @@ function CoreQuery({
   setNavigatedFromDashboard,
   fetchWeeklyIngishts,
   activeProject,
+  updateChartTypes,
   activeAccount,
   updateSavedQuerySettings,
   setProfileQueries,
@@ -185,6 +187,10 @@ function CoreQuery({
       actions: '',
     };
   };
+
+  useEffect(() => {
+    updateChartTypes(DefaultChartTypes);
+  }, [updateChartTypes]);
 
   const confirmDelete = useCallback(() => {
     deleteQuery(dispatch, activeRow);
@@ -537,7 +543,7 @@ function CoreQuery({
             <Col span={20}>
               <div className={'flex'}>
                 {coreQueryoptions.map((item, index) => {
-                  const emailIDs = ['solutions@factors.ai', 'vikas@factors.ai', 'sonali@factors.ai'];
+                  const emailIDs = ['solutions@factors.ai', 'vikas@factors.ai', 'sonali@factors.ai', 'ashhar@factors.ai'];
                   if (item.title === 'Profiles' && !emailIDs.includes(activeAccount)) {
                     return null;
                   }

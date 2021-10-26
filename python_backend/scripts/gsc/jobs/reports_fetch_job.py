@@ -114,7 +114,7 @@ class ReportsFetch(BaseJob):
         rows_string = JsonUtil.create(rows)
         for timestamp in self._extract_load_timestamps:
             job_storage = scripts.gsc.CONFIG.GSC_APP.job_storage
-            job_storage.write(rows_string, timestamp, self._project_id, self._url_prefix, self._doc_type)
+            job_storage.write_gsc(rows_string, timestamp, self._project_id, self._url_prefix, self._doc_type)
             self.update_to_file_metrics(EXTRACT, REQUEST_COUNT, self._project_id, self._doc_type, 1)
             self.update_to_file_metrics(EXTRACT, RECORDS_COUNT, self._project_id, self._doc_type, len(rows))
     
@@ -123,7 +123,7 @@ class ReportsFetch(BaseJob):
             rows = self._rows
         else:
             job_storage = scripts.gsc.CONFIG.GSC_APP.job_storage
-            rows_string = job_storage.read(timestamp, self._project_id, self._url_prefix, self._doc_type)
+            rows_string = job_storage.read_gsc(timestamp, self._project_id, self._url_prefix, self._doc_type)
             rows = JsonUtil.read(rows_string)
         return rows
 

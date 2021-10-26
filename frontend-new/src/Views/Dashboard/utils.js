@@ -109,14 +109,15 @@ export const getDataFromServer = (
           refresh,
           unit_id: unitId,
           id: dashboardId,
-        }
+        }, 
+        false
       );
     } else {
       return getEventsData(activeProjectId, queryGroup, {
         refresh,
         unit_id: unitId,
         id: dashboardId,
-      });
+      }, false);
     }
   } else if (query.query.cl && query.query.cl === QUERY_TYPE_ATTRIBUTION) {
     let attributionQuery = query.query;
@@ -146,14 +147,14 @@ export const getDataFromServer = (
       refresh,
       unit_id: unitId,
       id: dashboardId,
-    });
+    }, false);
   } else if (query.query.cl && query.query.cl === QUERY_TYPE_PROFILE) {
     const profileQuery = query.query;
     return getProfileData(activeProjectId, profileQuery, {
       refresh,
       unit_id: unitId,
       id: dashboardId,
-    });
+    }, false);
   } else {
     let funnelQuery = query.query;
     if (durationObj.from && durationObj.to) {
@@ -184,7 +185,7 @@ export const getDataFromServer = (
       refresh,
       unit_id: unitId,
       id: dashboardId,
-    });
+    }, false);
   }
 };
 
