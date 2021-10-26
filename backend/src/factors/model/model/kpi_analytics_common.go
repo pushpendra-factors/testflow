@@ -330,9 +330,11 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 	U.EP_TIMESTAMP:    {EventEntity: {"name": U.EP_TIMESTAMP, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_TIMESTAMP], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 
 	// Generic Event - Event Properties.
-	U.EP_PAGE_URL:        {EventEntity: {"name": U.EP_PAGE_URL, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.EP_PAGE_LOAD_TIME:  {EventEntity: {"name": U.EP_PAGE_LOAD_TIME, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_LOAD_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.EP_PAGE_SPENT_TIME: {EventEntity: {"name": U.EP_PAGE_SPENT_TIME, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_SPENT_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	// These aer not categorical i beleve. To check.
+	U.EP_PAGE_URL:            {EventEntity: {"name": U.EP_PAGE_URL, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	U.EP_PAGE_LOAD_TIME:      {EventEntity: {"name": U.EP_PAGE_LOAD_TIME, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_LOAD_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	U.EP_PAGE_SPENT_TIME:     {EventEntity: {"name": U.EP_PAGE_SPENT_TIME, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_SPENT_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	U.EP_PAGE_SCROLL_PERCENT: {EventEntity: {"name": U.EP_PAGE_SCROLL_PERCENT, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_SPENT_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 
 	// Generic Event - User Properties.
 	U.UP_DEVICE_TYPE:  {UserEntity: {"name": U.UP_DEVICE_TYPE, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_DEVICE_TYPE], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
