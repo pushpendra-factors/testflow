@@ -8,6 +8,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -23,6 +24,7 @@ func (store *MemSQL) satisfiesPropertyDetailForeignConstraints(propertyDetail mo
 
 // GetPropertyTypeFromDB returns property type by key
 func (store *MemSQL) GetPropertyTypeFromDB(projectID uint64, eventName, propertyKey string, isUserProperty bool) (int, *model.PropertyDetail) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey})
 	if projectID == 0 || propertyKey == "" {
 		return http.StatusBadRequest, nil
@@ -232,6 +234,7 @@ func (store *MemSQL) GetPropertyTypeByKeyValue(projectID uint64, eventName strin
 			}
 
 		} else if strings.HasPrefix(propertyKey, U.SALESFORCE_PROPERTY_PREFIX) { // for not configured property return categorical
+			model.SetCachePropertiesType(projectID, eventName, propertyKey, U.PropertyTypeCategorical, isUserProperty, false)
 			return U.PropertyTypeCategorical
 		}
 	}
