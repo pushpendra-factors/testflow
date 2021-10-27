@@ -944,6 +944,12 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, lo
 					filtersPassed++
 				}
 			}
+		case model.NotEqualOpStr:
+			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
+				if filter.Value != "" && trackPayload.EventProperties[filter.Property] != filter.Value {
+					filtersPassed++
+				}
+			}
 		case model.ContainsOpStr:
 			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
 				if filter.Property != "" {
