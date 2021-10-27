@@ -1232,13 +1232,19 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 		switch filter.Operator {
 		case model.EqualsOpStr:
 			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
-				if trackPayload.EventProperties[filter.Property] == filter.Value {
+				if filter.Value != "" && trackPayload.EventProperties[filter.Property] == filter.Value {
+					filtersPassed++
+				}
+			}
+		case model.NotEqualOpStr:
+			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
+				if filter.Value != "" && trackPayload.EventProperties[filter.Property] != filter.Value {
 					filtersPassed++
 				}
 			}
 		case model.ContainsOpStr:
 			if _, exists := trackPayload.EventProperties[filter.Property]; exists {
-				if strings.Contains(trackPayload.EventProperties[filter.Property].(string), filter.Value) {
+				if filter.Value != "" && strings.Contains(trackPayload.EventProperties[filter.Property].(string), filter.Value) {
 					filtersPassed++
 				}
 			}
