@@ -562,10 +562,10 @@ func aggregateEventsAcrossDate(events []model.CacheEventNamesWithTimestamp) []U.
 
 // Hacked solution - to fetch a type of EventNames.
 func (pg *Postgres) GetMostFrequentlyEventNamesByType(projectID uint64, limit int, lastNDays int, typeOfEvent string) ([]string, error) {
-	var mostFrequentEvents []U.NameCountTimestampCategory
+	mostFrequentEventNames := make([]string, 0)
 	var eventNameType string
 	var exists bool
-	var eventNames []model.EventName
+	var finalEventNames []model.EventName
 	var result []string
 	db := C.GetServices().Db
 
@@ -579,20 +579,20 @@ func (pg *Postgres) GetMostFrequentlyEventNamesByType(projectID uint64, limit in
 
 	for _, event := range eventsSorted {
 		if event.GroupName == U.FrequentlySeen {
-			mostFrequentEvents = append(mostFrequentEvents, event)
+			mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
 		}
 	}
 	if limit > 0 {
-		sliceLength := len(mostFrequentEvents)
+		sliceLength := len(mostFrequentEventNames)
 		if sliceLength > limit*2 {
-			mostFrequentEvents = mostFrequentEvents[0 : limit*2]
+			mostFrequentEventNames = mostFrequentEventNames[0 : limit*2]
 		}
 	}
 
-	if dbResult := db.Where("type = ? AND name IN ?", eventNameType, mostFrequentEvents).Select("name").Limit(limit).Find(&eventNames); dbResult.Error != nil {
+	if dbResult := db.Where("type = ? AND name IN (?)", eventNameType, mostFrequentEventNames).Select("name").Limit(limit).Find(&finalEventNames); dbResult.Error != nil {
 		return nil, dbResult.Error
 	}
-	for _, eventName := range eventNames {
+	for _, eventName := range finalEventNames {
 		result = append(result, eventName.Name)
 	}
 	return result, nil
