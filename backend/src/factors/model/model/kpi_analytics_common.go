@@ -42,8 +42,10 @@ const (
 	CountPerUser = "count_per_user"
 
 	// Common Metrics to Hubspot And Salesforce
-	CountOfContactsCreated = "count_of_contacts_created"
-	CountOfContactsUpdated = "count_of_contacts_updated"
+	CountOfContactsCreated  = "count_of_contacts_created"
+	CountOfContactsUpdated  = "count_of_contacts_updated"
+	CountOfCompaniesCreated = "count_of_companies_created"
+	CountOfCompaniesUpdated = "count_of_companies_updated"
 
 	// Unique Metrics to hubspot
 	CountOfAccountsCreated = "count_of_accounts_created"
@@ -251,8 +253,8 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED},
 	},
 	HubspotCompaniesDisplayCategory: {
-		CountOfContactsCreated: {"display_name": "Companies created", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_CREATED},
-		CountOfContactsUpdated: {"display_name": "Companies updated", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_UPDATED},
+		CountOfCompaniesCreated: {"display_name": "Companies created", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_CREATED},
+		CountOfCompaniesUpdated: {"display_name": "Companies updated", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_UPDATED},
 	},
 	// HubspotDealsDisplayCategory: {
 	// 	CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_CREATED},
@@ -547,6 +549,26 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 			},
 		},
+	},
+	HubspotContactsDisplayCategory: {
+		CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+		CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	},
+	HubspotCompaniesDisplayCategory: {
+		CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+		CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	},
+	SalesforceUsersDisplayCategory: {
+		CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+		CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	},
+	SalesforceAccountsDisplayCategory: {
+		CountOfLeadsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+		CountOfLeadsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	},
+	SalesforceOpportunitiesDisplayCategory: {
+		CountOfOpportunitiesCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+		CountOfOpportunitiesUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
 	},
 }
 
