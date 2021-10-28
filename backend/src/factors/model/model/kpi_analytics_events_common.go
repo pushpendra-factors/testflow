@@ -122,27 +122,29 @@ func prependFiltersBasedOnInternalTransformation(filters []QueryProperty, events
 
 // Functions supporting transforming eventResults to KPIresults
 // Note: Considering the format to be generally... event_index, event_name,..., count.
-func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bool, hasAnyGroupBy bool) []*QueryResult {
+func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bool, hasAnyGroupBy bool, displayCategory string) []*QueryResult {
 	resultantResults := make([]*QueryResult, 0)
 	for _, result := range results {
 		var tmpResult *QueryResult
 		tmpResult = &QueryResult{}
 
-		tmpResult.Headers = getTransformedHeaders(result.Headers, hasGroupByTimestamp, hasAnyGroupBy)
+		tmpResult.Headers = getTransformedHeaders(result.Headers, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
 		tmpResult.Rows = getTransformedRows(result.Rows, hasGroupByTimestamp, hasAnyGroupBy)
 		resultantResults = append(resultantResults, tmpResult)
 	}
 	return resultantResults
 }
 
-func getTransformedHeaders(headers []string, hasGroupByTimestamp bool, hasAnyGroupBy bool) []string {
+func getTransformedHeaders(headers []string, hasGroupByTimestamp bool, hasAnyGroupBy bool, displayCategory string) []string {
 	currentHeaders := make([]string, 0)
-	if hasAnyGroupBy && hasGroupByTimestamp {
-		currentHeaders = headers
-	} else if hasGroupByTimestamp {
+	if (hasAnyGroupBy && hasGroupByTimestamp) || hasGroupByTimestamp {
 		currentHeaders = headers
 	} else {
 		currentHeaders = headers[2:]
+	}
+	if hasGroupByTimestamp && !hasAnyGroupBy {
+		headers[1] = displayCategory
+		currentHeaders = headers
 	}
 	return currentHeaders
 }

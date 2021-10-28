@@ -276,3 +276,41 @@ func sendKPIAnalyticsQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent, k
 	log.Warn(jsonResponse)
 	return w
 }
+
+func TestEventNamesByTypeHandler(t *testing.T) {
+	a := gin.Default()
+	H.InitAppRoutes(a)
+
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+
+	project, agent, _ := SetupProjectWithAgentDAO()
+	assert.NotNil(t, project)
+
+	sendEventNamesTypeQueryReq(a, project.ID, agent)
+}
+
+func sendEventNamesTypeQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/event_names/page_views", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating create dashboard_unit req.")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	log.Warn(jsonResponse)
+	return w
+}

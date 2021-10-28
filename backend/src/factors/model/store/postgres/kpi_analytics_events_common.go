@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
@@ -64,7 +65,7 @@ func (pg *Postgres) transformToAndExecuteEventAnalyticsQueries(projectID uint64,
 	}
 	waitGroup.Wait()
 	for _, result := range queryResults {
-		if result.Headers[0] == model.AliasError {
+		if result.Headers == nil || result.Headers[0] == model.AliasError {
 			return queryResults, http.StatusPartialContent
 		}
 	}
@@ -75,17 +76,25 @@ func (pg *Postgres) transformToAndExecuteEventAnalyticsQueries(projectID uint64,
 func (pg *Postgres) ExecuteForSingleKPIMetric(projectID uint64, query model.Query, kpiQuery model.KPIQuery,
 	kpiMetric string, result *model.QueryResult, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
+	finalResult := model.QueryResult{}
 
+	finalResult = pg.wrappedExecuteForResult(projectID, query, kpiQuery, kpiMetric)
+	*result = finalResult
+}
+
+func (pg *Postgres) wrappedExecuteForResult(projectID uint64, query model.Query, kpiQuery model.KPIQuery, kpiMetric string) model.QueryResult {
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	transformations := model.TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
 	currentQuery := model.BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
 	currentQueries := model.SplitKPIQueryToInternalKPIQueries(currentQuery, kpiQuery, kpiMetric, transformations)
 	finalResult := pg.executeForResults(projectID, currentQueries, kpiQuery, transformations)
-	*result = finalResult
+	return finalResult
 }
 
 func (pg *Postgres) executeForResults(projectID uint64, queries []model.Query, kpiQuery model.KPIQuery, transformations []model.TransformQueryi) model.QueryResult {
 	results := make([]*model.QueryResult, len(queries))
 	hasGroupByTimestamp := false
+	displayCategory := kpiQuery.DisplayCategory
 	var finalResult model.QueryResult
 	if kpiQuery.GroupByTimestamp != "" {
 		hasGroupByTimestamp = true
@@ -93,14 +102,14 @@ func (pg *Postgres) executeForResults(projectID uint64, queries []model.Query, k
 	if len(queries) == 1 {
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results[0], _, _ = pg.RunInsightsQuery(projectID, queries[0])
-		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy)
+		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
 		finalResult = *results[0]
 	} else {
 		for i, query := range queries {
 			results[i], _, _ = pg.RunInsightsQuery(projectID, query)
 		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) == 0
-		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy)
+		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
 		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations)
 	}
 	return finalResult

@@ -578,10 +578,10 @@ func aggregateEventsAcrossDate(events []model.CacheEventNamesWithTimestamp) []U.
 
 // Hacked solution - to fetch a type of EventNames.
 func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID uint64, limit int, lastNDays int, typeOfEvent string) ([]string, error) {
-	var mostFrequentEventsNames []string
+	mostFrequentEventNames := make([]string, 0)
 	var eventNameType string
 	var exists bool
-	var eventNames []model.EventName
+	var finalEventNames []model.EventName
 	var result []string
 	db := C.GetServices().Db
 	if eventNameType, exists = model.EventTypeToEnameType[typeOfEvent]; !exists {
@@ -594,22 +594,22 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID uint64, limit i
 
 	for _, event := range eventsSorted {
 		if event.GroupName == U.FrequentlySeen {
-			mostFrequentEventsNames = append(mostFrequentEventsNames, event.Name)
+			mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
 		}
 	}
 	if limit > 0 {
-		sliceLength := len(mostFrequentEventsNames)
+		sliceLength := len(mostFrequentEventNames)
 		if sliceLength > limit*2 {
-			mostFrequentEventsNames = mostFrequentEventsNames[0 : limit*2]
+			mostFrequentEventNames = mostFrequentEventNames[0 : limit*2]
 		}
 	}
 
-	log.WithField("mostFrequentEventsNames", mostFrequentEventsNames).Warn("Kark1")
+	log.WithField("mostFrequentEventsNames", mostFrequentEventNames).Warn("Kark1")
 
-	if dbResult := db.Where("type = ? AND name IN ?", eventNameType, mostFrequentEventsNames).Select("name").Limit(limit).Find(&eventNames); dbResult.Error != nil {
+	if dbResult := db.Where("type = ? AND name IN (?)", eventNameType, mostFrequentEventNames).Select("name").Limit(limit).Find(&finalEventNames); dbResult.Error != nil {
 		return nil, dbResult.Error
 	}
-	for _, eventName := range eventNames {
+	for _, eventName := range finalEventNames {
 		result = append(result, eventName.Name)
 	}
 	return result, nil
