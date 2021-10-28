@@ -43,7 +43,7 @@ func GetProjectSettingHandler(c *gin.Context) {
 }
 
 // Test Command
-// curl -i -H "Content-Type: application/json" -X PUT http://localhost:8080/projects/1/settings -d '{"auto_track": false}'
+// curl -i -H "Content-UnitType: application/json" -X PUT http://localhost:8080/projects/1/settings -d '{"auto_track": false}'
 // UpdateProjectSettingsHandler godoc
 // @Summary Update the project settings for given project id.
 // @Tags ProjectSettings

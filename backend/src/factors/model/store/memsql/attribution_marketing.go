@@ -343,7 +343,7 @@ func (store *MemSQL) PullCustomDimensionData(projectID uint64, attributionKey st
 func (store *MemSQL) PullSmartProperties(projectID uint64, campaignIDPlaceHolder string, campaignNamePlaceHolder string, adgroupIDPlaceHolder string, adgroupNamePlaceHolder string, sourceChannelPlaceHolder string, objectType int, attributionKey string) (map[string]model.MarketingData, error) {
 
 	// GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Type": objectType, "Source": sourceChannelPlaceHolder})
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder})
 	stmt := "SELECT JSON_EXTRACT_STRING(object_property, ?) AS campaignID,  JSON_EXTRACT_STRING(object_property, ?) AS campaignName, " +
 		"JSON_EXTRACT_STRING(object_property, ?) AS adgroupID,  JSON_EXTRACT_STRING(object_property, ?) AS adgroupName, " +
 		"properties FROM smart_properties " +

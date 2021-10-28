@@ -63,8 +63,10 @@ var (
 	onlyWebAnalytics  = flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
 	skipWebAnalytics  = flag.Bool("skip_web_analytics", false, "Skip the web analytics and run other.")
 	// better to have 0 or 1 values instead of false/true
-	onlyAttribution                 = flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
-	skipAttribution                 = flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
+	onlyAttribution  = flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
+	skipAttribution  = flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
+	runningForMemsql = flag.Int("running_for_memsql", 0, "Disable routines for memsql.")
+
 	multipleTimezoneEnabledProjects = flag.String("timezone_enabled_projects", "", "List of projectIds where multiple timezones are enabled")
 
 	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
@@ -75,6 +77,10 @@ var (
 func registerStructs() {
 	beam.RegisterType(reflect.TypeOf((*model.DashboardUnit)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*model.BeamDashboardUnitCachePayload)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*model.CachingUnitReport)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*model.CachingProjectReport)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*model.FailedDashboardUnitReport)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*FB.CacheResponse)(nil)).Elem())
 
 	beam.RegisterType(reflect.TypeOf((*FB.GetDashboardUnitCachePayloadsFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*FB.CacheDashboardUnitDoFn)(nil)).Elem())
@@ -82,6 +88,7 @@ func registerStructs() {
 	beam.RegisterType(reflect.TypeOf((*model.WebAnalyticsCachePayload)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*FB.GetWebAnalyticsCachePayloadsFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*FB.CacheWebAnalyticsDoFn)(nil)).Elem())
+
 }
 
 type cachingJobSummary struct {
@@ -260,6 +267,9 @@ func main() {
 		SentryDSN:                       *sentryDSN,
 		MultipleTimezoneEnabledProjects: C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
 		DisableRedisWrites:              disableRedisWrites,
+		SkipAttributionDashboardCaching: *skipAttribution,
+		OnlyAttributionDashboardCaching: *onlyAttribution,
+		IsRunningForMemsql:              *runningForMemsql,
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", healthcheckPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))
@@ -267,7 +277,7 @@ func main() {
 	// Create initial PCollection for the projectIDs string passed to be processed.
 	projectIDString := beam.Create(s, fmt.Sprintf("%s|%s", *projectIDs, *excludeProjectIDs))
 
-	dashboardJobProps := &FB.CachingJobProps{OnlyAttribution: *onlyAttribution, SkipAttribution: *skipAttribution}
+	dashboardJobProps := &FB.CachingJobProps{OnlyAttribution: *onlyAttribution, SkipAttribution: *skipAttribution, IsRunningForMemsql: *runningForMemsql}
 
 	var cacheResponses, webAnalyticsCacheResponses beam.PCollection
 	if !*onlyWebAnalytics {

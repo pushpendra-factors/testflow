@@ -25,11 +25,10 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
-	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
-
 	// supporting existing old/saved queries
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
 
+	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// for existing queries and backward support
 	if query.QueryType == "" {
 		query.QueryType = model.AttributionQueryTypeConversionBased
@@ -47,10 +46,14 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 
+	logCtx.Info("Done FetchMarketingReports")
+
 	err = pg.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports)
 	if err != nil {
 		return nil, err
 	}
+
+	logCtx.Info("Done PullCustomDimensionData")
 
 	sessionEventNameID, eventNameToIDList, err := pg.getEventInformation(projectID, query)
 	if err != nil {
@@ -59,15 +62,18 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
 	_sessions, sessionUsers, err := pg.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
+	logCtx.Info("Done getAllTheSessions error not checked")
 	if err != nil {
 		return nil, err
 	}
+
+	logCtx.Info("Done getAllTheSessions")
 
 	usersInfo, err := pg.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
 	if err != nil {
 		return nil, err
 	}
-	// coalUserId[Key][UserSessionData]
+	logCtx.Info("Done GetCoalesceIDFromUserIDs")
 	sessions := model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo)
 
 	if C.GetAttributionDebug() == 1 {
@@ -77,6 +83,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	attributionData, isCompare, err := pg.FireAttribution(projectID, query, eventNameToIDList, sessions)
 
+	logCtx.Info("Done FireAttribution")
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +108,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	// Add custom dimensions
 	model.AddCustomDimensions(attributionData, query, marketingReports)
 
+	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	// Attribution data to rows
 	dataRows := model.GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 
@@ -119,6 +127,8 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	// Additional filtering based on AttributionKey.
 	result.Rows = model.FilterRows(result.Rows, query.AttributionKey, model.GetLastKeyValueIndex(result.Headers))
 
+	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
+
 	// sort the rows by conversionEvent
 	conversionIndex := model.GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
@@ -136,10 +146,12 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	})
 
 	currency, err := pg.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
+	logCtx.Info("Done sort GetAdwordsCurrency")
 	if err != nil {
 		return result, err
 	}
 	result.Meta.Currency = currency
+	logCtx.Info("Done result")
 	return result, nil
 }
 

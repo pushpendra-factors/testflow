@@ -131,7 +131,7 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to build request.")
 	}
-	req.Header.Set("Content-Type", "application/json") // Default header.
+	req.Header.Set("Content-UnitType", "application/json") // Default header.
 	req.Header.Set("Authorization", *projectPrivateToken)
 
 	resp, err := client.Do(req)

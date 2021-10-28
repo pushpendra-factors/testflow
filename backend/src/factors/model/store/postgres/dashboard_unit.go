@@ -295,7 +295,7 @@ func (pg *Postgres) UpdateDashboardUnit(projectId uint64, agentUUID string,
 }
 
 // CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
-func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
+func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map) {
 	logCtx := log.WithFields(log.Fields{
 		"Method": "CacheDashboardUnitsForProjects",
 	})
@@ -305,17 +305,17 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
 		logCtx.Info("Starting to cache units for the project")
 		startTime := U.TimeNowUnix()
-		unitsCount := pg.CacheDashboardUnitsForProjectID(projectID, numRoutines)
+		unitsCount := pg.CacheDashboardUnitsForProjectID(projectID, numRoutines, reportCollector)
 
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
 		logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
-			Infof("Time taken for caching %d dashboard units", unitsCount)
+			Infof("Project Report: Time taken for caching %d dashboard units", unitsCount)
 	}
 }
 
 // CacheDashboardUnitsForProjectID Caches all the dashboard units for the given `projectID`.
-func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int {
+func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int, reportCollector *sync.Map) int {
 	if numRoutines == 0 {
 		numRoutines = 1
 	}
@@ -327,16 +327,24 @@ func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, numRoutine
 
 	var waitGroup sync.WaitGroup
 	count := 0
-	waitGroup.Add(U.MinInt(len(dashboardUnits), numRoutines))
+	if C.GetIsRunningForMemsql() == 0 {
+		waitGroup.Add(U.MinInt(len(dashboardUnits), numRoutines))
+	}
 	for i := range dashboardUnits {
 		count++
-		go pg.CacheDashboardUnit(dashboardUnits[i], &waitGroup)
-		if count%numRoutines == 0 {
-			waitGroup.Wait()
-			waitGroup.Add(U.MinInt(len(dashboardUnits)-count, numRoutines))
+		if C.GetIsRunningForMemsql() == 0 {
+			go pg.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector)
+			if count%numRoutines == 0 {
+				waitGroup.Wait()
+				waitGroup.Add(U.MinInt(len(dashboardUnits)-count, numRoutines))
+			}
+		} else {
+			pg.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector)
 		}
 	}
-	waitGroup.Wait()
+	if C.GetIsRunningForMemsql() == 0 {
+		waitGroup.Wait()
+	}
 	return len(dashboardUnits)
 }
 
@@ -377,14 +385,15 @@ func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, e
 }
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
-func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
-
+func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
 	logCtx := log.WithFields(log.Fields{
 		"ProjectID":       dashboardUnit.ProjectID,
 		"DashboardID":     dashboardUnit.DashboardId,
 		"DashboardUnitID": dashboardUnit.ID,
 	})
-	defer waitGroup.Done()
+	if C.GetIsRunningForMemsql() == 0 {
+		defer waitGroup.Done()
+	}
 	queryClass, _, errMsg := pg.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 	if errMsg != "" {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
@@ -394,6 +403,7 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 	if queryClass == model.QueryClassWeb {
 		return
 	}
+
 	timezoneString, statusCode := pg.GetTimezoneForProject(dashboardUnit.ProjectID)
 	if statusCode != http.StatusFound {
 		errMsg := fmt.Sprintf("Failed to get project Timezone for %d", dashboardUnit.ProjectID)
@@ -401,9 +411,9 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 		return
 	}
 	var unitWaitGroup sync.WaitGroup
-	unitWaitGroup.Add(len(U.QueryDateRangePresets))
-	for _, rangeFunction := range U.QueryDateRangePresets {
-		from, to, errCode := rangeFunction(timezoneString)
+	for preset, rangeFunction := range U.QueryDateRangePresets {
+
+		fr, t, errCode := rangeFunction(timezoneString)
 		if errCode != nil {
 			errMsg := fmt.Sprintf("Failed to get proper project Timezone for %d", dashboardUnit.ProjectID)
 			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
@@ -423,6 +433,13 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 			return
 		}
+
+		// Filtering queries on type and range for attribution query
+		shouldCache, from, to := model.ShouldCacheUnitForTimeRange(queryClass, preset, fr, t, C.GetOnlyAttributionDashboardCaching(), C.GetSkipAttributionDashboardCaching())
+		if !shouldCache {
+			continue
+		}
+
 		baseQuery.SetQueryDateRange(from, to)
 		baseQuery.SetTimeZone(timezoneString)
 		err = baseQuery.TransformDateTypeFilters()
@@ -435,14 +452,21 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 			DashboardUnit: dashboardUnit,
 			BaseQuery:     baseQuery,
 		}
-		go pg.cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup)
+		if C.GetIsRunningForMemsql() == 0 {
+			unitWaitGroup.Add(1)
+			go pg.cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector)
+		} else {
+			pg.cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup, reportCollector)
+		}
 	}
-	unitWaitGroup.Wait()
+	if C.GetIsRunningForMemsql() == 0 {
+		unitWaitGroup.Wait()
+	}
 }
 
 // CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
-func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string) {
-	// Catches any panic in query execution and logs as an error. Prevents jobs from crashing.
+func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string, model.CachingUnitReport) {
+	// Catches any panic in query execution and logs as an error. Prevent jobs from crashing.
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	dashboardUnit := cachePayload.DashboardUnit
@@ -452,6 +476,19 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 	dashboardUnitID := dashboardUnit.ID
 	timezoneString := baseQuery.GetTimeZone()
 	from, to := baseQuery.GetQueryDateRange()
+
+	unitReport := model.CachingUnitReport{
+		UnitType:    model.CachingUnitNormal,
+		ProjectId:   projectID,
+		DashboardID: dashboardID,
+		UnitID:      dashboardUnitID,
+		QueryClass:  baseQuery.GetClass(),
+		Status:      model.CachingUnitStatusNotComputed,
+		From:        from,
+		To:          to,
+		QueryRange:  U.SecondsToHMSString(to - from),
+	}
+
 	logCtx := log.WithFields(log.Fields{
 		"Method":          "CacheDashboardUnitForDateRange",
 		"ProjectID":       projectID,
@@ -460,7 +497,7 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 		"FromTo":          fmt.Sprintf("%d-%d", from, to),
 	})
 	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, timezoneString, false) {
-		return http.StatusOK, ""
+		return http.StatusOK, "", unitReport
 	}
 	logCtx.Info("Starting to cache unit for date range")
 	startTime := U.TimeNowUnix()
@@ -471,10 +508,13 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 	var errMsg string
 	if baseQuery.GetClass() == model.QueryClassFunnel || baseQuery.GetClass() == model.QueryClassInsights {
 		analyticsQuery := baseQuery.(*model.Query)
+		unitReport.Query = analyticsQuery
 		result, errCode, errMsg = pg.Analyze(projectID, *analyticsQuery)
 	} else if baseQuery.GetClass() == model.QueryClassAttribution {
 		attributionQuery := baseQuery.(*model.AttributionQueryUnit)
+		unitReport.Query = attributionQuery
 		result, err = pg.ExecuteAttributionQuery(projectID, attributionQuery.Query)
+		logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": err}).Info("Got attribution result")
 		if err != nil && !model.IsIntegrationNotFoundError(err) {
 			errCode = http.StatusInternalServerError
 		} else {
@@ -482,36 +522,47 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 		}
 	} else if baseQuery.GetClass() == model.QueryClassChannel {
 		channelQuery := baseQuery.(*model.ChannelQueryUnit)
+		unitReport.Query = channelQuery
 		result, errCode = pg.ExecuteChannelQuery(projectID, channelQuery.Query)
 	} else if baseQuery.GetClass() == model.QueryClassChannelV1 {
 		groupQuery := baseQuery.(*model.ChannelGroupQueryV1)
+		unitReport.Query = groupQuery
 		result, errCode = pg.RunChannelGroupQuery(projectID, groupQuery.Queries, "")
 	} else if baseQuery.GetClass() == model.QueryClassEvents {
 		groupQuery := baseQuery.(*model.QueryGroup)
+		unitReport.Query = groupQuery
 		result, errCode = pg.RunEventsGroupQuery(groupQuery.Queries, projectID)
 	} else if baseQuery.GetClass() == model.QueryClassKPI {
 		groupQuery := baseQuery.(*model.KPIQueryGroup)
+		unitReport.Query = groupQuery
 		result, errCode = pg.ExecuteKPIQueryGroup(projectID, "", *groupQuery)
 	}
 	if errCode != http.StatusOK {
-		logCtx.Info("failed to run the query for dashboard caching")
-		return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg)
+		logCtx.WithField("QueryClass", baseQuery.GetClass()).WithField("Query", unitReport.Query).Info("failed to run the query for dashboard caching")
+		unitReport.Status = model.CachingUnitStatusFailed
+		unitReport.TimeTaken = U.TimeNowUnix() - startTime
+		unitReport.TimeTakenStr = U.SecondsToHMSString(unitReport.TimeTaken)
+		return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg), unitReport
 	}
 
 	timeTaken := U.TimeNowUnix() - startTime
 	timeTakenString := U.SecondsToHMSString(timeTaken)
-	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
-		Info("Done caching unit for range")
+	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).Info("Done caching unit for range")
 	model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to, timezoneString)
 
 	// Set in query cache result as well in case someone runs the same query from query handler.
 	model.SetQueryCacheResult(projectID, baseQuery, result)
-	return http.StatusOK, ""
+	unitReport.Status = model.CachingUnitStatusPassed
+	unitReport.TimeTaken = timeTaken
+	unitReport.TimeTakenStr = timeTakenString
+	return http.StatusOK, "", unitReport
 }
 
 func (pg *Postgres) cacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
-	waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
+	waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
+	if C.GetIsRunningForMemsql() == 0 {
+		defer waitGroup.Done()
+	}
 	dashboardUnit := cachePayload.DashboardUnit
 	baseQuery := cachePayload.BaseQuery
 	projectID := dashboardUnit.ProjectID
@@ -525,14 +576,17 @@ func (pg *Postgres) cacheDashboardUnitForDateRange(cachePayload model.DashboardU
 		"DashboardUnitID": dashboardUnitID,
 		"FromTo":          fmt.Sprintf("%d-%d", from, to),
 	})
-	errCode, errMsg := pg.CacheDashboardUnitForDateRange(cachePayload)
+	errCode, errMsg, report := pg.CacheDashboardUnitForDateRange(cachePayload)
+	reportCollector.Store(model.GetCachingUnitReportUniqueKey(report), report)
 	if errCode != http.StatusOK {
 		logCtx.Errorf("Error while running query %s", errMsg)
+		return
 	}
+	logCtx.Info("Completed caching for Dashboard unit")
 }
 
 // CacheDashboardsForMonthlyRange To cache monthly dashboards for the project id.
-func (pg *Postgres) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int) {
+func (pg *Postgres) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map) {
 	projectIDsToRun := pg.GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDsToRun {
 		logCtx := log.WithFields(log.Fields{
@@ -569,7 +623,9 @@ func (pg *Postgres) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs
 			}
 
 			var waitGroup sync.WaitGroup
-			waitGroup.Add(U.MinInt(len(monthlyRanges), numRoutines))
+			if C.GetIsRunningForMemsql() == 0 {
+				waitGroup.Add(U.MinInt(len(monthlyRanges), numRoutines))
+			}
 			count := 0
 			for _, monthlyRange := range monthlyRanges {
 				count++
@@ -593,13 +649,20 @@ func (pg *Postgres) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs
 					DashboardUnit: dashboardUnit,
 					BaseQuery:     baseQuery,
 				}
-				go pg.cacheDashboardUnitForDateRange(cachePayload, &waitGroup)
-				if count%numRoutines == 0 {
-					waitGroup.Wait()
-					waitGroup.Add(U.MinInt(len(monthlyRanges)-count, numRoutines))
+				if C.GetIsRunningForMemsql() == 0 {
+					go pg.cacheDashboardUnitForDateRange(cachePayload, &waitGroup, reportCollector)
+					if count%numRoutines == 0 {
+						waitGroup.Wait()
+						waitGroup.Add(U.MinInt(len(monthlyRanges)-count, numRoutines))
+					}
+				} else {
+					pg.cacheDashboardUnitForDateRange(cachePayload, &waitGroup, reportCollector)
 				}
+
 			}
-			waitGroup.Wait()
+			if C.GetIsRunningForMemsql() == 0 {
+				waitGroup.Wait()
+			}
 		}
 	}
 }

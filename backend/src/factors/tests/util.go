@@ -22,7 +22,7 @@ func ServePostRequest(r *gin.Engine, uri string,
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", uri, bytes.NewBuffer(reqBodyString))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-UnitType", "application/json")
 	r.ServeHTTP(w, req)
 	return w
 }
@@ -32,7 +32,7 @@ func ServePutRequest(r *gin.Engine, uri string,
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("PUT", uri, bytes.NewBuffer(reqBodyString))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-UnitType", "application/json")
 	r.ServeHTTP(w, req)
 	return w
 }
@@ -40,7 +40,7 @@ func ServePutRequest(r *gin.Engine, uri string,
 func ServeGetRequest(r *gin.Engine, uri string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", uri, bytes.NewBuffer([]byte{}))
-	req.Header.Set("Content-Type", "application/json") // Default header.
+	req.Header.Set("Content-UnitType", "application/json") // Default header.
 	r.ServeHTTP(w, req)
 	return w
 }
@@ -48,7 +48,7 @@ func ServeGetRequest(r *gin.Engine, uri string) *httptest.ResponseRecorder {
 func ServeDeleteRequest(r *gin.Engine, uri string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", uri, bytes.NewBuffer([]byte{}))
-	req.Header.Set("Content-Type", "application/json") // Default header.
+	req.Header.Set("Content-UnitType", "application/json") // Default header.
 	r.ServeHTTP(w, req)
 	return w
 }
@@ -67,8 +67,8 @@ func ServePostRequestWithHeaders(r *gin.Engine, uri string, reqBodyString []byte
 	}
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", uri, bytes.NewBuffer(reqBodyString))
-	req.Header.Set("Content-Type", "application/json") // Default header.
-	setHeaders(req, headers)                           // Setting custom headers.
+	req.Header.Set("Content-UnitType", "application/json") // Default header.
+	setHeaders(req, headers)                               // Setting custom headers.
 	req.RemoteAddr = "127.0.0.1"
 	r.ServeHTTP(w, req)
 	return w
@@ -81,8 +81,8 @@ func ServeGetRequestWithHeaders(r *gin.Engine, uri string, headers map[string]st
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", uri, bytes.NewBuffer([]byte{}))
-	req.Header.Set("Content-Type", "application/json") // Default header.
-	setHeaders(req, headers)                           // Setting custom headers.
+	req.Header.Set("Content-UnitType", "application/json") // Default header.
+	setHeaders(req, headers)                               // Setting custom headers.
 	r.ServeHTTP(w, req)
 	return w
 }

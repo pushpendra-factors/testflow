@@ -1289,13 +1289,15 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 			adwordsGroupBys = append(adwordsGroupBys, groupBy)
 		}
 	}
-	// Group By
-	dimensions := fields{}
 
 	if projectID == 595 {
 		log.WithField("query", *query).WithField("adwordsGroupBys", adwordsGroupBys).WithField("smartPropertyAdGroupGroupBys", smartPropertyAdGroupGroupBys).
 			WithField("smartPropertyCampaignGroupBys", smartPropertyCampaignGroupBys).Error("Testing for query failure1")
 	}
+
+	// Group By
+	dimensions := fields{}
+
 	for _, groupBy := range adwordsGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
 		internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]

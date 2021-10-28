@@ -3703,7 +3703,7 @@ var doc = `{
                     "type": "string"
                 },
                 "ty": {
-                    "description": "Type: categorical or numerical",
+                    "description": "UnitType: categorical or numerical",
                     "type": "string"
                 },
                 "va": {
@@ -4484,7 +4484,7 @@ var doc = `{
                     "type": "string"
                 },
                 "ty": {
-                    "description": "Type: categorical or numerical",
+                    "description": "UnitType: categorical or numerical",
                     "type": "string"
                 },
                 "va": {

@@ -122,13 +122,13 @@ type Model interface {
 	DeleteDashboardUnit(projectID uint64, agentUUID string, dashboardId uint64, id uint64) int
 	DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID uint64, dashboardUnitIDs []uint64) (int, string)
 	UpdateDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64, unit *model.DashboardUnit) (*model.DashboardUnit, int)
-	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int)
-	CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int
-	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup)
+	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map)
+	CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int, reportCollector *sync.Map) int
+	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map)
 	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
-	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string)
-	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int)
+	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string, model.CachingUnitReport)
+	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map)
 
 	// dashboard
 	CreateDashboard(projectID uint64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int)
@@ -410,11 +410,11 @@ type Model interface {
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *model.WebAnalyticsQueries, int)
 	CreateWebAnalyticsDefaultDashboardWithUnits(projectID uint64, agentUUID string) int
 	ExecuteWebAnalyticsQueries(projectID uint64, queries *model.WebAnalyticsQueries) (queryResult *model.WebAnalyticsQueryResult, errCode int)
-	CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int)
+	CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map)
 	GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs string) []uint64
 	GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]model.WebAnalyticsCachePayload, int, string)
-	CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload) int
-	CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int)
+	CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload) (int, model.CachingUnitReport)
+	CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map)
 
 	// journey_mining
 	GetWeightedJourneyMatrix(projectID uint64, journeyEvents []model.QueryEventWithProperties,

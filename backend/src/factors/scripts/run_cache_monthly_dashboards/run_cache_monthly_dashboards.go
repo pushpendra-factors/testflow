@@ -37,6 +37,8 @@ func main() {
 	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
+	runningForMemsql := flag.Int("running_for_memsql", 0, "Disable routines for memsql.")
+
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -78,10 +80,11 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      taskID,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		RedisHost:        *redisHost,
-		RedisPort:        *redisPort,
-		SentryDSN:        *sentryDSN,
+		PrimaryDatastore:   *primaryDatastore,
+		RedisHost:          *redisHost,
+		RedisPort:          *redisPort,
+		SentryDSN:          *sentryDSN,
+		IsRunningForMemsql: *runningForMemsql,
 	}
 	C.InitConf(config)
 
@@ -124,7 +127,9 @@ func main() {
 
 func cacheMonthlyDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numMonths, numRoutines int,
 	timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
+	if C.GetIsRunningForMemsql() == 0 {
+		defer waitGroup.Done()
+	}
 	startTime := util.TimeNowUnix()
 	store.GetStore().CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs, numMonths, numRoutines)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
@@ -133,7 +138,9 @@ func cacheMonthlyDashboardUnitsForProjects(projectIDs, excludeProjectIDs string,
 
 func cacheMonthlyWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs string, numMonths, numRoutines int,
 	timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
+	if C.GetIsRunningForMemsql() == 0 {
+		defer waitGroup.Done()
+	}
 	startTime := util.TimeNowUnix()
 	store.GetStore().CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs, numMonths, numRoutines)
 	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)

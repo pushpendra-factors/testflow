@@ -24,7 +24,7 @@ func sendCreateProjectRequest(r *gin.Engine, projectName string, agent *model.Ag
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/projects").
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithPostParams(map[string]string{"name": projectName, "project_uri": "factors.ai", "time_format": "HH:mm:ss", "date_format": "yyyy-MM-dd", "time_zone": "IST"}).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -49,7 +49,7 @@ func sendEditProjectRequest(r *gin.Engine, projectId uint64, projectName string,
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%v", projectId)).
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithPostParams(map[string]string{"name": "edit", "project_uri": "factors.ai.edit", "time_format": "HH:mm:ss.edit", "date_format": "yyyy-MM-dd.edit", "time_zone": "IST.edit"}).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),

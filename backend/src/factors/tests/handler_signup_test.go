@@ -97,7 +97,7 @@ func TestSignUp(t *testing.T) {
 func sendSignUpRequest(email string, phone string, r *gin.Engine) *httptest.ResponseRecorder {
 	params := map[string]string{"email": email, "phone": phone}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/accounts/signup").
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithPostParams(params)
 
 	req, err := rb.Build()
@@ -113,7 +113,7 @@ func sendSignUpRequest(email string, phone string, r *gin.Engine) *httptest.Resp
 func sendSignUpRequestWithAdditionalDetails(email string, phone string, r *gin.Engine) *httptest.ResponseRecorder {
 	params := map[string]interface{}{"email": email, "phone": phone, "first_name": "first_name", "last_name": "last_name", "company_url": "app.factors.ai", "subscribe_newsletter": true}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/accounts/signup").
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithPostParams(params)
 
 	req, err := rb.Build()

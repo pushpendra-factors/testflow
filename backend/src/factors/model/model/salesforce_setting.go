@@ -114,7 +114,7 @@ var (
 		"Amount":                         true,
 		"ExpectedRevenue":                true,
 		"CloseDate":                      true,
-		"Type":                           true,
+		"UnitType":                       true,
 		"LeadSource":                     true,
 		"IsWon":                          true,
 		"OwnerId":                        true,

@@ -1273,7 +1273,7 @@ func GetNumberOfDigits(input int64) int {
 	}
 	count := 0
 	for input > 0 {
-		input = input/10
+		input = input / 10
 		count = count + 1
 	}
 	return count

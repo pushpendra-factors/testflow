@@ -54,7 +54,7 @@ func BuildSequential(projectId uint64, configs map[string]interface{}) (map[stri
 
 	logCtx := bsLog.WithFields(log.Fields{"ProjectId": projectId,
 		"StartTime": startTimestamp, "EndTime": endTimestamp,
-		"Type": modelType})
+		"UnitType": modelType})
 
 	// Prefix timestamp with randomAlphanumeric(5).
 	curTimeInMilliSecs := time.Now().UnixNano() / 1000000
