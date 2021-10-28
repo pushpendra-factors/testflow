@@ -16,7 +16,10 @@ import {
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
-  presentationObj
+  CHART_TYPE_SPARKLINES,
+  presentationObj,
+  CHART_TYPE_STACKED_BAR,
+  CHART_TYPE_LINECHART
 } from '../../../utils/constants';
 import { Spin } from 'antd';
 import FunnelsResultPage from '../FunnelsResultPage';
@@ -66,28 +69,32 @@ function ReportContent({
     let key;
     if (queryType === QUERY_TYPE_FUNNEL) {
       key = breakdown.length ? 'breakdown' : 'no_breakdown';
-      return chartTypes[queryType][key];
+      return chartTypes[queryType][key] === 'table'? CHART_TYPE_BARCHART : chartTypes[queryType][key];
     }
     if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_PROFILE) {
       key = breakdown.length ? 'breakdown' : 'no_breakdown';
       if (
-        breakdown.length > 3 &&
-        chartTypes[queryType][key] === CHART_TYPE_HORIZONTAL_BAR_CHART
+        breakdown.length >= 1
       ) {
-        return CHART_TYPE_BARCHART;
+        return chartTypes[queryType][key] === 'table'? CHART_TYPE_BARCHART : chartTypes[queryType][key];
       }
-      return chartTypes[queryType][key];
+      return chartTypes[queryType][key] === 'table'? CHART_TYPE_SPARKLINES : chartTypes[queryType][key];
     }
     if (queryType === QUERY_TYPE_CAMPAIGN) {
       key = campaignState.group_by.length ? 'breakdown' : 'no_breakdown';
-      return chartTypes[queryType][key];
+      if (
+        campaignState.group_by.length >= 1
+      ) {
+        return chartTypes[queryType][key] === 'table'? CHART_TYPE_BARCHART : chartTypes[queryType][key];
+      }
+      return ((chartTypes[queryType][key] === 'table')? CHART_TYPE_SPARKLINES : chartTypes[queryType][key]);
     }
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       key =
         attributionsState.models.length === 1
           ? 'single_touch_point'
           : 'dual_touch_point';
-      return chartTypes[queryType][key];
+      return ((chartTypes[queryType][key] === 'table')? CHART_TYPE_BARCHART : chartTypes[queryType][key]);
     }
   }, [
     breakdown,
