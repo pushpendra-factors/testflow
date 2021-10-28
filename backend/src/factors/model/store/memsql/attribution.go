@@ -25,10 +25,10 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
-
 	// supporting existing old/saved queries
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
 
+	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery", "ProjectID": projectID, "Query": query})
 	// for existing queries and backward support
 	if query.QueryType == "" {
 		query.QueryType = model.AttributionQueryTypeConversionBased
@@ -46,10 +46,14 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		return nil, err
 	}
 
+	logCtx.Info("Done FetchMarketingReports")
+
 	err = store.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports)
 	if err != nil {
 		return nil, err
 	}
+
+	logCtx.Info("Done PullCustomDimensionData")
 
 	sessionEventNameID, eventNameToIDList, err := store.getEventInformation(projectID, query)
 	if err != nil {
@@ -58,21 +62,36 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 
 	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
 	_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
+	logCtx.Info("Done getAllTheSessions 1 error not checked")
+	logCtx.Info(len(sessionUsers))
+	logCtx.Info(len(_sessions))
+	logCtx.Info(err)
+	logCtx.Info("Done getAllTheSessions 2 error checked")
 	if err != nil {
+		logCtx.Info("Done getAllTheSessions 3 return from  checked")
 		return nil, err
 	}
+	logCtx.Info("Done getAllTheSessions")
 
 	usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
 	if err != nil {
 		return nil, err
 	}
-	// coalUserId[Key][UserSessionData]
+
+	logCtx.Info("Done GetCoalesceIDFromUserIDs")
 	sessions := model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo)
+	logCtx.Info("Done UpdateSessionsMapWithCoalesceID")
 
 	attributionData, isCompare, err := store.FireAttribution(projectID, query, eventNameToIDList, sessions)
 
+	logCtx.Info("Done FireAttribution")
 	if err != nil {
 		return nil, err
+	}
+
+	if C.GetAttributionDebug() == 1 {
+		uniqueKeys := len(*attributionData)
+		logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 	}
 
 	// Add the Added keys
@@ -87,11 +106,10 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	// Add additional metrics values
 	model.ComputeAdditionalMetrics(attributionData)
 
-	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
-
 	// Add custom dimensions
 	model.AddCustomDimensions(attributionData, query, marketingReports)
 
+	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	// Attribution data to rows
 	dataRows := model.GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 
@@ -111,6 +129,8 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	result.Rows = model.FilterRows(result.Rows, query.AttributionKey, model.GetLastKeyValueIndex(result.Headers))
 
 	// sort the rows by conversionEvent
+	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
+
 	conversionIndex := model.GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
 		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
@@ -127,10 +147,12 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	})
 
 	currency, err := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
+	logCtx.Info("Done sort GetAdwordsCurrency")
 	if err != nil {
 		return result, err
 	}
 	result.Meta.Currency = currency
+	logCtx.Info("Done result")
 	return result, nil
 }
 
@@ -318,6 +340,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 	userIDsInBatches := U.GetStringListAsBatch(userIDs, model.UserBatchSize)
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	userIDToCoalUserIDMap := make(map[string]model.UserInfo)
+	logCtx.Info("GetCoalesceIDFromUserIDs 1")
 	for _, users := range userIDsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
@@ -325,9 +348,11 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 			"FROM users WHERE id IN (" + placeHolder + ")"
 		rows, tx, err := store.ExecQueryWithContext(queryUserIDCoalID, value)
 		if err != nil {
-			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
+			logCtx.WithError(err).Error("SQL Query failed for GetCoalesceIDFromUserIDs")
 			return nil, err
 		}
+		logCtx.Info("GetCoalesceIDFromUserIDs 2")
+
 		for rows.Next() {
 			var userID string
 			var coalesceID string
@@ -340,6 +365,9 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 		}
 		U.CloseReadQuery(rows, tx)
 	}
+	logCtx.Info("GetCoalesceIDFromUserIDs 3")
+	logCtx.Info(len(userIDToCoalUserIDMap))
+
 	return userIDToCoalUserIDMap, nil
 }
 
@@ -401,7 +429,7 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 		return nil, nil, err
 	}
 	defer U.CloseReadQuery(rows, tx)
-
+	logCtx.Info("Attribution before ProcessEventRows")
 	return model.ProcessEventRows(rows, query, logCtx, reports)
 }
 

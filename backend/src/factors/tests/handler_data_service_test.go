@@ -56,7 +56,7 @@ func TestRecordIncrementMetricType(t *testing.T) {
 	assert.NotNil(t, project)
 	assert.NotNil(t, agent)
 
-	registeredMetricName := "data_server_dummy_incr_metric" // Type incr.
+	registeredMetricName := "data_server_dummy_incr_metric" // UnitType incr.
 	registeredMetricType := metrics.MetricTypeIncr
 
 	// For unknow metric type, it should fail.

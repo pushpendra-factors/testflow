@@ -24,7 +24,7 @@ import (
 func sendSignInRequest(email, password string, r *gin.Engine) *httptest.ResponseRecorder {
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/agents/signin").
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithPostParams(map[string]string{"email": email, "password": password})
 
 	req, err := rb.Build()
@@ -77,7 +77,7 @@ func TestAPIAgentSignout(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, "/agents/signout").
-		WithHeader("Content-Type", "application/json")
+		WithHeader("Content-UnitType", "application/json")
 
 	req, err := rb.Build()
 	if err != nil {
@@ -97,7 +97,7 @@ func sendAgentInviteRequest(email string, role int64, projectId uint64,
 	authData string, exp int, r *gin.Engine) *httptest.ResponseRecorder {
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/agents/invite", projectId)).
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithPostParams(map[string]interface{}{
 			"email": email,
 			"role":  role,
@@ -482,7 +482,7 @@ func TestAPIUpdateAgentInProject(t *testing.T) {
 func sendAgentVerifyRequest(r *gin.Engine, authData, password, firstName, lastName string) *httptest.ResponseRecorder {
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/agents/activate").
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithPostParams(map[string]interface{}{
 			"first_name": firstName,
 			"last_name":  lastName,
@@ -547,7 +547,7 @@ func TestAPIAgentVerify(t *testing.T) {
 func sendAgentResetPasswordEmailReq(r *gin.Engine, email string) *httptest.ResponseRecorder {
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/agents/forgotpassword").
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithPostParams(map[string]interface{}{
 			"email": email,
 		})
@@ -589,7 +589,7 @@ func TestAPIAgentGenerateResetPasswordEmail(t *testing.T) {
 func sendAgentSetPasswordRequest(r *gin.Engine, authData, password string) *httptest.ResponseRecorder {
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/agents/setpassword").
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithPostParams(map[string]interface{}{
 			"password": password,
 		}).WithQueryParams(map[string]string{

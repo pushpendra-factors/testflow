@@ -73,7 +73,7 @@ func GetCampaignPerfReportAdwordsDoc(yesterday time.Time, projectIDStage uint64,
 	adwordsDoc := AdwordsDocument{}
 	adwordsDoc.ProjectID = projectIDStage
 	adwordsDoc.CustomerAccountID = adwordsCustomerAccountIDStage
-	adwordsDoc.TypeAlias = campaignPerformanceReportTypeAlias // Type = 5
+	adwordsDoc.TypeAlias = campaignPerformanceReportTypeAlias // UnitType = 5
 	timeStr := yesterday.Format("20060102")
 	intDate64, _ := strconv.ParseInt(timeStr, 10, 64)
 	adwordsDoc.Timestamp = intDate64

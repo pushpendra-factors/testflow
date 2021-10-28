@@ -31,6 +31,7 @@ type CacheResponse struct {
 	ErrorCode                               int
 	ErrorMessage                            string
 	CacheResponseType                       string
+	UnitReport                              model.CachingUnitReport
 }
 
 func initConf(config *C.Configuration) {
@@ -56,7 +57,7 @@ func EmitProjectKeyCacheResponse(ctx context.Context, cacheResponse CacheRespons
 		"ProjectID":       cacheResponse.ProjectID,
 		"DashboardID":     cacheResponse.DashboardID,
 		"DashboardUnitID": cacheResponse.DashboardUnitID,
-		"Type":            cacheResponse.CacheResponseType,
+		"UnitType":        cacheResponse.CacheResponseType,
 		"ErrorMessage":    cacheResponse.ErrorMessage,
 	}).Info("EmitProjectKeyCacheResponse in caching.")
 	emit(cacheResponse.ProjectID, cacheResponse)
@@ -84,7 +85,7 @@ func ReportProjectLevelSummary(projectID uint64, values func(*CacheResponse) boo
 				"ProjectID":       projectID,
 				"DashboardID":     cacheResponse.DashboardID,
 				"DashboardUnitID": cacheResponse.DashboardUnitID,
-				"Type":            cacheResponse.CacheResponseType,
+				"UnitType":        cacheResponse.CacheResponseType,
 				"ErrorMessage":    cacheResponse.ErrorMessage,
 			}).Info("Error in caching.")
 		}
@@ -109,12 +110,16 @@ func ReportOverallJobSummary(commonKey uint64, values func(*CacheResponse) bool)
 	overallStats[BeamCacheTypeWebAnalytics] = make(map[string]int64)
 
 	var cacheResponse CacheResponse
+	var allUnitReports []model.CachingUnitReport
 	for values(&cacheResponse) {
 		overallStats[cacheResponse.CacheResponseType]["TimeTaken"] += cacheResponse.TimeTaken
 		if cacheResponse.ErrorCode == http.StatusOK {
 			overallStats[cacheResponse.CacheResponseType]["SuccessCount"]++
 		} else {
 			overallStats[cacheResponse.CacheResponseType]["FailedCount"]++
+		}
+		if cacheResponse.UnitReport.UnitID != 0 {
+			allUnitReports = append(allUnitReports, cacheResponse.UnitReport)
 		}
 	}
 	unitsTimeTakenString := U.SecondsToHMSString(overallStats[BeamCacheTypeDashboardUnits]["TimeTaken"])
@@ -130,21 +135,37 @@ func ReportOverallJobSummary(commonKey uint64, values func(*CacheResponse) bool)
 		overallStats[BeamCacheTypeWebAnalytics]["SuccessCount"], overallStats[BeamCacheTypeWebAnalytics]["FailedCount"])
 	message := "Overall time taken: " + overallTimeTaken + " | " + unitsSummary + " | " + webSummary
 
+	slowUnits := model.GetNSlowestUnits(allUnitReports, 3)
+	failedUnits := model.GetFailedUnitsByProject(allUnitReports)
+	slowProjects := model.GetNSlowestProjects(allUnitReports, 5)
+	failed, passed, notComputed := model.GetTotalFailedComputedNotComputed(allUnitReports)
+
+	status := map[string]interface{}{
+		"Summary":              message,
+		"TotalFailed":          failed,
+		"TotalPassed":          passed,
+		"TotalNotComputed":     notComputed,
+		"Top3SlowUnits":        slowUnits,
+		"FailedUnitsByProject": failedUnits,
+		"Top5SlowProjects":     slowProjects,
+	}
+
 	log.WithFields(log.Fields{
 		"Method": "reportOverallJobSummary",
 	}).Info(message)
 	if overallStats[BeamCacheTypeDashboardUnits]["FailedCount"] > 0 || overallStats[BeamCacheTypeWebAnalytics]["FailedCount"] > 0 {
-		C.PingHealthcheckForFailure(beam.PipelineOptions.Get("HealthchecksPingID"), message)
+		C.PingHealthcheckForFailure(beam.PipelineOptions.Get("HealthchecksPingID"), status)
 	} else {
-		C.PingHealthcheckForSuccess(beam.PipelineOptions.Get("HealthchecksPingID"), message)
+		C.PingHealthcheckForSuccess(beam.PipelineOptions.Get("HealthchecksPingID"), status)
 	}
 	return message
 }
 
 // CachingJobProps Job level properties to store custom flags for the run.
 type CachingJobProps struct {
-	OnlyAttribution int
-	SkipAttribution int
+	OnlyAttribution    int
+	SkipAttribution    int
+	IsRunningForMemsql int
 }
 
 type GetDashboardUnitCachePayloadsFn struct {
@@ -173,6 +194,14 @@ func (f *GetDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 	projectIDSplit := strings.Split(projectsToRunString, "|")
 	stringProjectIDs := strings.TrimSpace(projectIDSplit[0])
 	excludeProjectIDs := strings.TrimSpace(projectIDSplit[1])
+
+	logCtx := FB.GetLogContext().WithFields(log.Fields{
+		"LogType":           "MemSqlDebug",
+		"Method":            "GetDashboardUnitCachePayloadsFn",
+		"stringProjectIDs":  stringProjectIDs,
+		"excludeProjectIDs": excludeProjectIDs,
+	})
+	logCtx.Info("Running caching for projects")
 
 	projectIDs := store.GetStore().GetProjectsToRunForIncludeExcludeString(stringProjectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDs {
@@ -236,8 +265,12 @@ func (f *CacheDashboardUnitDoFn) ProcessElement(ctx context.Context,
 	beamCachePayload model.BeamDashboardUnitCachePayload, emit func(CacheResponse)) {
 
 	FB.GetLogContext().WithFields(log.Fields{
-		"Time":     time.Now().UnixNano() / 1000,
-		"TimeType": "Start",
+		"Time":        time.Now().UnixNano() / 1000,
+		"TimeType":    "Start",
+		"Project":     beamCachePayload.DashboardUnit.ProjectID,
+		"DashboardId": beamCachePayload.DashboardUnit.DashboardId,
+		"UnitId":      beamCachePayload.DashboardUnit.ID,
+		"QueryClass":  beamCachePayload.QueryClass,
 	}).Info("ProcessElement log cacheDashboardUnitDoFn")
 
 	baseQuery, err := model.DecodeQueryForClass(beamCachePayload.Query, beamCachePayload.QueryClass)
@@ -265,12 +298,7 @@ func (f *CacheDashboardUnitDoFn) ProcessElement(ctx context.Context,
 		BaseQuery:     baseQuery,
 	}
 	startTime := U.TimeNowUnix()
-	errCode, errMsg := store.GetStore().CacheDashboardUnitForDateRange(cachePayload)
-
-	if errCode != http.StatusOK {
-		logCtx.WithField("transformed  BaseQuery", baseQuery).Info("dashboard caching - couldn't run the caching query")
-		return
-	}
+	errCode, errMsg, cachingReport := store.GetStore().CacheDashboardUnitForDateRange(cachePayload)
 
 	timeTaken := U.TimeNowUnix() - startTime
 
@@ -286,11 +314,19 @@ func (f *CacheDashboardUnitDoFn) ProcessElement(ctx context.Context,
 		ErrorMessage:      errMsg,
 		TimeTaken:         timeTaken,
 		CacheResponseType: BeamCacheTypeDashboardUnits,
+		UnitReport:        cachingReport,
 	}
 	FB.GetLogContext().WithFields(log.Fields{
-		"Time":     time.Now().UnixNano() / 1000,
-		"TimeType": "End",
+		"Time":          time.Now().UnixNano() / 1000,
+		"TimeType":      "End",
+		"ProjectID":     dashboardUnit.ProjectID,
+		"DashboardId":   dashboardUnit.DashboardId,
+		"UnitID":        dashboardUnit.ID,
+		"cacheResponse": cacheResponse,
 	}).Info("ProcessElement log cacheDashboardUnitDoFn")
+	if errCode != http.StatusOK {
+		logCtx.WithField("transformed  BaseQuery", baseQuery).Info("dashboard caching - couldn't run the caching query")
+	}
 	emit(cacheResponse)
 }
 
@@ -415,7 +451,7 @@ func (f *CacheWebAnalyticsDoFn) ProcessElement(ctx context.Context,
 		"TimeType": "Start",
 	}).Info("ProcessElement log cacheWebAnalyticsDoFn")
 	startTime := U.TimeNowUnix()
-	errCode := store.GetStore().CacheWebsiteAnalyticsForDateRange(cachePayload)
+	errCode, cachingUnitReport := store.GetStore().CacheWebsiteAnalyticsForDateRange(cachePayload)
 	timeTaken := U.TimeNowUnix() - startTime
 
 	cacheResponse := CacheResponse{
@@ -426,6 +462,7 @@ func (f *CacheWebAnalyticsDoFn) ProcessElement(ctx context.Context,
 		ErrorCode:         errCode,
 		TimeTaken:         timeTaken,
 		CacheResponseType: BeamCacheTypeWebAnalytics,
+		UnitReport:        cachingUnitReport,
 	}
 	FB.GetLogContext().WithFields(log.Fields{
 		"Time":     time.Now().UnixNano() / 1000,

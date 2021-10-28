@@ -1244,14 +1244,13 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 		Settings:  postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 100}`)},
 	})
 
-
 	dashboardUnit, _, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
 		&model.DashboardUnit{
-		DashboardId:  dashboard.ID,
-		Description:        U.RandomString(5),
-		QueryId: dashboardQuery.ID,
-		Presentation: model.PresentationCard,
-	})
+			DashboardId:  dashboard.ID,
+			Description:  U.RandomString(5),
+			QueryId:      dashboardQuery.ID,
+			Presentation: model.PresentationCard,
+		})
 	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
 	dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
 	dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = query1.GetClass()

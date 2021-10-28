@@ -186,6 +186,9 @@ type Configuration struct {
 	AttributionDebug                     int
 	DisableDashboardQueryDBExecution     bool
 	AllowedHubspotGroupsByProjectIDs     string
+	OnlyAttributionDashboardCaching      int
+	SkipAttributionDashboardCaching      int
+	IsRunningForMemsql                   int
 }
 
 type Services struct {
@@ -1160,9 +1163,9 @@ func watchPatternServers(psUpdateChannel clientv3.WatchChan) {
 		msg := <-psUpdateChannel
 		for _, event := range msg.Events {
 			log.WithFields(log.Fields{
-				"Type":  event.Type,
-				"Key":   string(event.Kv.Key),
-				"Value": string(event.Kv.Value),
+				"UnitType": event.Type,
+				"Key":      string(event.Kv.Key),
+				"Value":    string(event.Kv.Value),
 			}).Infoln("Event Received on PatternServerUpdateChannel")
 
 			if event.Type == mvccpb.PUT {
@@ -1538,6 +1541,18 @@ func GetTokensFromStringListAsString(stringList string) []string {
 
 func GetAttributionDebug() int {
 	return configuration.AttributionDebug
+}
+
+func GetOnlyAttributionDashboardCaching() int {
+	return configuration.OnlyAttributionDashboardCaching
+}
+
+func GetIsRunningForMemsql() int {
+	return configuration.IsRunningForMemsql
+}
+
+func GetSkipAttributionDashboardCaching() int {
+	return configuration.SkipAttributionDashboardCaching
 }
 
 func GetSDKRequestQueueAllowedTokens() []string {

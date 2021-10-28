@@ -441,9 +441,9 @@ func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger files
 			if len(psUpdateEvent.Events) > 0 {
 				for _, event := range psUpdateEvent.Events {
 					logCtx.WithFields(log.Fields{
-						"Type":  event.Type,
-						"Key":   string(event.Kv.Key),
-						"Value": string(event.Kv.Value),
+						"UnitType": event.Type,
+						"Key":      string(event.Kv.Key),
+						"Value":    string(event.Kv.Value),
 					}).Infoln("Event Received on PatternServerUpdateChannel")
 				}
 				err := handlePatternServerNodeUpdates(ps)
@@ -462,9 +462,9 @@ func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger files
 
 			for _, event := range versionFileUpdateEvent.Events {
 				logCtx.WithFields(log.Fields{
-					"Type":  event.Type,
-					"Key":   string(event.Kv.Key),
-					"Value": string(event.Kv.Value),
+					"UnitType": event.Type,
+					"Key":      string(event.Kv.Key),
+					"Value":    string(event.Kv.Value),
 				}).Infoln("Event Received on versionFileUpdateChan")
 				newVersion := string(event.Kv.Value)
 				logCtx.WithField("NewVersion", newVersion).Infoln("Update ProjectFileVersion")

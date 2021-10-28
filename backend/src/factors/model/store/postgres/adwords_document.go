@@ -995,9 +995,6 @@ func (pg *Postgres) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, 
 	var params []interface{}
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	transformedQuery, customerAccountID, err := pg.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
-	if projectID == 595 {
-		logCtx.WithField("query", transformedQuery).Error("Testing for query failure1")
-	}
 
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.AdwordsSpecificError)
@@ -1238,6 +1235,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 			adwordsGroupBys = append(adwordsGroupBys, groupBy)
 		}
 	}
+
 	if projectID == 595 {
 		log.WithField("query", *query).WithField("adwordsGroupBys", adwordsGroupBys).WithField("smartPropertyAdGroupGroupBys", smartPropertyAdGroupGroupBys).
 			WithField("smartPropertyCampaignGroupBys", smartPropertyCampaignGroupBys).Error("Testing for query failure1")

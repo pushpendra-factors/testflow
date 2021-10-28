@@ -14,7 +14,7 @@ import (
 )
 
 // Test command.
-// curl -H "Content-Type: application/json" -i -X POST http://localhost:8080/projects -d '{ "name": "project_name"}'
+// curl -H "Content-UnitType: application/json" -i -X POST http://localhost:8080/projects -d '{ "name": "project_name"}'
 func CreateProjectHandler(c *gin.Context) {
 	r := c.Request
 
@@ -58,7 +58,7 @@ func CreateProjectHandler(c *gin.Context) {
 }
 
 // Test command.
-// curl -H "Content-Type: application/json" -i -X PUT http://localhost:8080/projects/1 -d '{ "name": "project_name"}'
+// curl -H "Content-UnitType: application/json" -i -X PUT http://localhost:8080/projects/1 -d '{ "name": "project_name"}'
 // EditProjectHandler godoc
 // @Summary To edit the allowed fields of an existing project.
 // @Tags Projects

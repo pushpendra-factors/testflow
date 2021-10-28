@@ -31,7 +31,7 @@ func SDKStatusHandler(c *gin.Context) {
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "auto": false, "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}'
+// curl -i -H "Content-UnitType: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "auto": false, "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}'
 // SDKTrackHandler godoc
 // @Summary Create a new track request.
 // @Tags SDK
@@ -86,7 +86,7 @@ func SDKTrackHandler(c *gin.Context) {
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: PROJECT_TOKEN" -X POST http://localhost:8080/sdk/event/bulk -d '[{"user_id": "YOUR_USER_ID", "event_name": "login", "auto": false, "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}]'
+// curl -i -H "Content-UnitType: application/json" -H "Authorization: PROJECT_TOKEN" -X POST http://localhost:8080/sdk/event/bulk -d '[{"user_id": "YOUR_USER_ID", "event_name": "login", "auto": false, "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}]'
 // SDKBulkEventHandler godoc
 // @Summary Create a new bulk events track request.
 // @Tags SDK
@@ -153,7 +153,7 @@ func SDKBulkEventHandler(c *gin.Context) {
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/user/identify -d '{"user_id":"USER_ID", "c_uid": "CUSTOMER_USER_ID"}'
+// curl -i -H "Content-UnitType: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/user/identify -d '{"user_id":"USER_ID", "c_uid": "CUSTOMER_USER_ID"}'
 // SDKIdentifyHandler godoc
 // @Summary To identify a factors user id with customer user id.
 // @Tags SDK
@@ -197,7 +197,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/user/add_properties -d '{"id": "USER_ID", "properties": {"name": "USER_NAME"}}'
+// curl -i -H "Content-UnitType: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/user/add_properties -d '{"id": "USER_ID", "properties": {"name": "USER_NAME"}}'
 // SDKAddUserPropertiesHandler godoc
 // @Summary To update properties of a factors user.
 // @Tags SDK
@@ -250,7 +250,7 @@ type sdkSettingsResponse struct {
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
+// curl -i -H "Content-UnitType: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
 // SDKGetProjectSettingsHandler godoc
 // @Summary To get project settings.
 // @Tags SDK

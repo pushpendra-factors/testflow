@@ -4,6 +4,7 @@ import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -41,6 +42,47 @@ type BeamDashboardUnitCachePayload struct {
 	Query         postgres.Jsonb
 	From, To      int64
 	TimeZone      U.TimeZoneString
+}
+
+const (
+	CachingUnitNormal            = 0
+	CachingUnitWebAnalytics      = 1
+	CachingUnitStatusFailed      = -1
+	CachingUnitStatusNotComputed = 0
+	CachingUnitStatusPassed      = 1
+)
+
+type CachingUnitReport struct {
+	UnitType     int // CachingUnitNormal=1 or CachingUnitWebAnalytics=1
+	ProjectId    uint64
+	DashboardID  uint64
+	UnitID       uint64
+	QueryID      uint64
+	QueryClass   string
+	Query        interface{}
+	From, To     int64
+	QueryRange   string
+	Status       int // CachingUnitStatusFailed=-1 or CachingUnitStatusNotComputed=0 or CachingUnitStatusPassed=1
+	TimeTaken    int64
+	TimeTakenStr string
+}
+
+func GetCachingUnitReportUniqueKey(report CachingUnitReport) string {
+	return fmt.Sprintf("%v-%d-%d-%d-%v-%d-%d", report.UnitType, report.ProjectId, report.DashboardID, report.UnitID,
+		report.QueryClass, report.From, report.To)
+}
+
+type CachingProjectReport struct {
+	ProjectId    uint64
+	ProjectName  string
+	TotalRuntime string
+}
+
+type FailedDashboardUnitReport struct {
+	DashboardID uint64
+	UnitID      uint64
+	QueryClass  string
+	QueryRange  string
 }
 
 func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
@@ -103,6 +145,93 @@ func IsValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 
 	// Todo(Dinesh): Validate query based on query class here.
 	return true, ""
+}
+
+func GetNSlowestUnits(cacheReports []CachingUnitReport, n int) []CachingUnitReport {
+
+	var units []CachingUnitReport
+	U.DeepCopy(&cacheReports, &units)
+
+	sort.Slice(units, func(i, j int) bool {
+		return units[i].TimeTaken > units[j].TimeTaken
+	})
+
+	return units[0:U.MinInt(n, len(units))]
+}
+
+func GetTotalFailedComputedNotComputed(cacheReports []CachingUnitReport) (int, int, int) {
+
+	statusFailed := 0
+	statusNotComputed := 0
+	statusPassed := 0
+
+	for _, unit := range cacheReports {
+		switch unit.Status {
+		case CachingUnitStatusFailed:
+			statusFailed++
+		case CachingUnitStatusPassed:
+			statusPassed++
+		case CachingUnitStatusNotComputed:
+			statusNotComputed++
+		}
+	}
+	return statusFailed, statusPassed, statusNotComputed
+}
+
+func GetFailedUnitsByProject(cacheReports []CachingUnitReport) map[uint64][]FailedDashboardUnitReport {
+
+	var units []CachingUnitReport
+	U.DeepCopy(&cacheReports, &units)
+
+	sort.Slice(units, func(i, j int) bool {
+		return units[i].TimeTaken > units[j].TimeTaken
+	})
+
+	projectFailedUnits := make(map[uint64][]FailedDashboardUnitReport)
+	for _, unit := range cacheReports {
+		if unit.Status == CachingUnitStatusFailed {
+			failedUnit := FailedDashboardUnitReport{
+				DashboardID: unit.DashboardID,
+				UnitID:      unit.UnitID,
+				QueryClass:  unit.QueryClass,
+				QueryRange:  unit.QueryRange,
+			}
+			if value, exists := projectFailedUnits[unit.ProjectId]; exists {
+				projectFailedUnits[unit.ProjectId] = append(value, failedUnit)
+			} else {
+				failedUnits := []FailedDashboardUnitReport{failedUnit}
+				projectFailedUnits[unit.ProjectId] = failedUnits
+			}
+		}
+	}
+	return projectFailedUnits
+}
+
+func GetNSlowestProjects(cacheReports []CachingUnitReport, n int) []CachingProjectReport {
+
+	var units []CachingUnitReport
+	U.DeepCopy(&cacheReports, &units)
+
+	sort.Slice(units, func(i, j int) bool {
+		return units[i].TimeTaken > units[j].TimeTaken
+	})
+
+	projectTotalTime := make(map[uint64]int64)
+	for _, unit := range cacheReports {
+		projectTotalTime[unit.ProjectId] = projectTotalTime[unit.ProjectId] + unit.TimeTaken
+	}
+
+	var projects []CachingProjectReport
+	for key, value := range projectTotalTime {
+		projects = append(projects, CachingProjectReport{ProjectId: key,
+			ProjectName: "", TotalRuntime: U.SecondsToHMSString(value)})
+	}
+	sort.Slice(projects, func(i, j int) bool {
+		return projects[i].TotalRuntime > projects[j].TotalRuntime
+	})
+
+	return projects[0:U.MinInt(n, len(projects))]
+
 }
 
 func ShouldCacheUnitForTimeRange(queryClass, preset string, from, to int64, onlyAttribution, skipAttribution int) (bool, int64, int64) {

@@ -54,13 +54,14 @@ func (pg *Postgres) transformToAndExecuteEventAnalyticsQueries(projectID uint64,
 
 	var waitGroup sync.WaitGroup
 	count := 0
-	waitGroup.Add(U.MinInt(len(kpiQuery.Metrics), AllowedGoroutines))
+	actualRoutineLimit := U.MinInt(len(kpiQuery.Metrics), AllowedGoroutines)
+	waitGroup.Add(actualRoutineLimit)
 	for index, kpiMetric := range kpiQuery.Metrics {
 		count++
 		go pg.ExecuteForSingleKPIMetric(projectID, query, kpiQuery, kpiMetric, &queryResults[index], &waitGroup)
-		if count%AllowedGoroutines == 0 {
+		if count%actualRoutineLimit == 0 {
 			waitGroup.Wait()
-			waitGroup.Add(U.MinInt(len(kpiQuery.Metrics)-count, AllowedGoroutines))
+			waitGroup.Add(U.MinInt(len(kpiQuery.Metrics)-count, actualRoutineLimit))
 		}
 	}
 	waitGroup.Wait()

@@ -36,7 +36,7 @@ func sendGetUserReq(r *gin.Engine, projectId uint64, agent *model.Agent, offset,
 	}
 
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/users", projectId)).
-		WithHeader("Content-Type", "application/json").
+		WithHeader("Content-UnitType", "application/json").
 		WithQueryParams(qP).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),

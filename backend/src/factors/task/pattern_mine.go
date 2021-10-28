@@ -1314,7 +1314,7 @@ func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string,
 		eventNamesWithType).Info("Building user and type from DB.")
 
 	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get event names and Type from DB")
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get event names and UnitType from DB")
 		return nil, nil, err
 	}
 

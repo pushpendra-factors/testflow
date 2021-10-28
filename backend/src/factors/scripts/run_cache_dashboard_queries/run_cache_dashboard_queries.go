@@ -1,6 +1,7 @@
 package main
 
 import (
+	"factors/model/model"
 	"flag"
 	"fmt"
 	"sync"
@@ -48,10 +49,21 @@ func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
+	// better to have 0 or 1 values instead of false/true
+	onlyAttribution := flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
+	skipAttribution := flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
+
+	runningForMemsql := flag.Int("running_for_memsql", 0, "Disable routines for memsql.")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 
 	flag.Parse()
 	taskID := "dashboard_caching"
-	healthcheckPingID := C.HealthcheckDashboardCachingPingID
+	if *overrideAppName != "" {
+		taskID = *overrideAppName
+	}
+	defaultHealthcheckPingID := C.HealthcheckDashboardCachingPingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	defer C.PingHealthcheckForPanic(taskID, *envFlag, healthcheckPingID)
 	logCtx := log.WithFields(log.Fields{"Prefix": taskID})
 
@@ -94,8 +106,11 @@ func main() {
 			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
 			UseExactConnFromConfig: true,
 		},
-		PrimaryDatastore:   *primaryDatastore,
-		DisableRedisWrites: disableRedisWrites,
+		PrimaryDatastore:                *primaryDatastore,
+		DisableRedisWrites:              disableRedisWrites,
+		SkipAttributionDashboardCaching: *skipAttribution,
+		OnlyAttributionDashboardCaching: *onlyAttribution,
+		IsRunningForMemsql:              *runningForMemsql,
 	}
 
 	C.InitConf(config)
@@ -119,36 +134,77 @@ func main() {
 
 	var notifyMessage string
 	var waitGroup sync.WaitGroup
-	var timeTaken sync.Map
+	var reportCollector sync.Map
 
 	if !*onlyWebAnalytics {
+		if C.GetIsRunningForMemsql() == 0 {
+			waitGroup.Add(1)
+			go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
+		} else {
+			cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
+		}
+	}
+	if C.GetIsRunningForMemsql() == 0 {
 		waitGroup.Add(1)
-		go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &timeTaken, &waitGroup)
+		go cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
+	} else {
+		cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
 	}
 
-	waitGroup.Add(1)
-	go cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &timeTaken, &waitGroup)
+	if C.GetIsRunningForMemsql() == 0 {
+		waitGroup.Wait()
+	}
+	timeTakenString, _ := reportCollector.Load("all")
+	timeTakenStringWeb, _ := reportCollector.Load("web")
+	// Collect all the reports in an array
+	var allUnitReports []model.CachingUnitReport
+	reportCollector.Range(func(key, value interface{}) bool {
+		if key.(string) != "web" && key.(string) != "all" {
+			allUnitReports = append(allUnitReports, value.(model.CachingUnitReport))
+		}
+		return true
+	})
 
-	waitGroup.Wait()
-	timeTakenString, _ := timeTaken.Load("all")
-	timeTakenStringWeb, _ := timeTaken.Load("web")
+	slowUnits := model.GetNSlowestUnits(allUnitReports, 3)
+	failedUnits := model.GetFailedUnitsByProject(allUnitReports)
+	slowProjects := model.GetNSlowestProjects(allUnitReports, 5)
+	failed, passed, notComputed := model.GetTotalFailedComputedNotComputed(allUnitReports)
+
+	logCtx.Info("Completed dashboard caching")
+	logCtx.WithFields(log.Fields{"slowUnits": slowUnits, "failedUnits": failedUnits, "slowProjects": slowProjects}).Info("Final Caching Job Report")
 	notifyMessage = fmt.Sprintf("Caching successful for %s - %s projects. Time taken: %+v. Time taken for web analytics: %+v",
 		*projectIDFlag, *excludeProjectIDFlag, timeTakenString, timeTakenStringWeb)
-	C.PingHealthcheckForSuccess(healthcheckPingID, notifyMessage)
+	logCtx.Info(notifyMessage)
+
+	status := map[string]interface{}{
+		"Summary":              notifyMessage,
+		"TotalFailed":          failed,
+		"TotalPassed":          passed,
+		"TotalNotComputed":     notComputed,
+		"Top3SlowUnits":        slowUnits,
+		"FailedUnitsByProject": failedUnits,
+		"Top5SlowProjects":     slowProjects,
+	}
+	C.PingHealthcheckForSuccess(healthcheckPingID, status)
 }
 
-func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
+func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup) {
+
+	if C.GetIsRunningForMemsql() == 0 {
+		defer waitGroup.Done()
+	}
 	startTime := util.TimeNowUnix()
-	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines)
+	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines, reportCollector)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
-	timeTaken.Store("all", timeTakenString)
+	reportCollector.Store("all", timeTakenString)
 }
 
-func cacheWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
+func cacheWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup) {
+	if C.GetIsRunningForMemsql() == 0 {
+		defer waitGroup.Done()
+	}
 	startTime := util.TimeNowUnix()
-	store.GetStore().CacheWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs, numRoutines)
+	store.GetStore().CacheWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs, numRoutines, reportCollector)
 	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
-	timeTaken.Store("web", timeTakenStringWeb)
+	reportCollector.Store("web", timeTakenStringWeb)
 }

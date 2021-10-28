@@ -35,13 +35,14 @@ func (pg *Postgres) RunEventsGroupQuery(queriesOriginal []model.Query, projectId
 	resultGroup.Results = make([]model.QueryResult, len(queries))
 	var waitGroup sync.WaitGroup
 	count := 0
-	waitGroup.Add(U.MinInt(len(queries), AllowedGoroutines))
+	actualRoutineLimit := U.MinInt(len(queries), AllowedGoroutines)
+	waitGroup.Add(actualRoutineLimit)
 	for index, query := range queries {
 		count++
 		go pg.runSingleEventsQuery(projectId, query, &resultGroup.Results[index], &waitGroup)
-		if count%AllowedGoroutines == 0 {
+		if count%actualRoutineLimit == 0 {
 			waitGroup.Wait()
-			waitGroup.Add(U.MinInt(len(queries)-count, AllowedGoroutines))
+			waitGroup.Add(U.MinInt(len(queries)-count, actualRoutineLimit))
 		}
 	}
 	waitGroup.Wait()
@@ -65,6 +66,7 @@ func (pg *Postgres) runSingleEventsQuery(projectId uint64, query model.Query,
 	} else {
 		*resultHolder = *result
 	}
+	return
 }
 
 func (pg *Postgres) ExecuteEventsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {

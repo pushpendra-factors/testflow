@@ -371,7 +371,7 @@ func (b *Backend) setTaskState(taskState *tasks.TaskState) error {
 		var results []*dynamodb.AttributeValue
 		for _, r := range taskState.Results {
 			avMap := map[string]*dynamodb.AttributeValue{
-				"Type": {
+				"UnitType": {
 					S: aws.String(r.Type),
 				},
 				"Value": {

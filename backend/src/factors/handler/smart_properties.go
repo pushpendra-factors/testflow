@@ -22,7 +22,7 @@ const ruleIDKey = "rule_id"
 // @Accept  json
 // @Produce json
 // @Param project_id path integer true "Project ID"
-// @Param object_type path string true "Object Type (campaign/ad_group)"
+// @Param object_type path string true "Object UnitType (campaign/ad_group)"
 // @Success 200 {object} model.SmartPropertyRulesConfig
 // @Router /{project_id}/v1/smart_properties/config/{object_type} [get]
 func GetSmartPropertyRulesConfigHandler(c *gin.Context) (interface{}, int, string, string, bool) {

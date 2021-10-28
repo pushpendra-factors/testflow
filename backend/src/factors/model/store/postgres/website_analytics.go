@@ -1387,8 +1387,10 @@ func (pg *Postgres) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]
 	return cachePayloads, http.StatusFound, ""
 }
 
-func (pg *Postgres) cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
+func (pg *Postgres) cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
+	if C.GetIsRunningForMemsql() == 0 {
+		defer waitGroup.Done()
+	}
 
 	cachePayloads, errCode, errMsg := pg.GetWebAnalyticsCachePayloadsForProject(projectID)
 	if errCode != http.StatusFound {
@@ -1398,22 +1400,49 @@ func (pg *Postgres) cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGrou
 
 	var dashboardWaitGroup sync.WaitGroup
 	for index := range cachePayloads {
-		dashboardWaitGroup.Add(1)
-		go pg.cacheWebsiteAnalyticsForDateRange(cachePayloads[index], &dashboardWaitGroup)
+		if C.GetIsRunningForMemsql() == 0 {
+			dashboardWaitGroup.Add(1)
+			go pg.cacheWebsiteAnalyticsForDateRange(cachePayloads[index], &dashboardWaitGroup, reportCollector)
+		} else {
+			pg.cacheWebsiteAnalyticsForDateRange(cachePayloads[index], &dashboardWaitGroup, reportCollector)
+		}
 	}
-	dashboardWaitGroup.Wait()
+	if C.GetIsRunningForMemsql() == 0 {
+		dashboardWaitGroup.Wait()
+	}
 }
 
 // CacheWebsiteAnalyticsForDateRange Cache web analytics dashboard for with given payload.
-func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload) int {
+func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload) (int, model.CachingUnitReport) {
 	projectID := cachePayload.ProjectID
 	dashboardID := cachePayload.DashboardID
 	from, to := cachePayload.From, cachePayload.To
 	queries := cachePayload.Queries
 	logCtx := log.WithFields(log.Fields{"did": dashboardID, "pid": projectID, "from": from, "to": to})
 	timezoneString := cachePayload.Timezone
+	uniqueId := ""
+	for _, unit := range queries.CustomGroupQueries {
+		uniqueId = uniqueId + unit.UniqueID + "-"
+	}
+	uniqueId = uniqueId + "--"
+	for _, name := range queries.QueryNames {
+		uniqueId = uniqueId + name + "-"
+	}
+
+	unitReport := model.CachingUnitReport{
+		UnitType:    model.CachingUnitWebAnalytics,
+		ProjectId:   projectID,
+		DashboardID: dashboardID,
+		UnitID:      0,
+		QueryClass:  uniqueId,
+		Status:      model.CachingUnitStatusNotComputed,
+		From:        from,
+		To:          to,
+		QueryRange:  U.SecondsToHMSString(to - from),
+	}
+
 	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, timezoneString, true) {
-		return http.StatusOK
+		return http.StatusOK, unitReport
 	}
 
 	queriesWithTimeRange := &model.WebAnalyticsQueries{
@@ -1427,7 +1456,10 @@ func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnal
 	queryResult, errCode := pg.ExecuteWebAnalyticsQueries(
 		projectID, queriesWithTimeRange)
 	if errCode != http.StatusOK {
-		return http.StatusInternalServerError
+		unitReport.Status = model.CachingUnitStatusFailed
+		unitReport.TimeTaken = U.TimeNowUnix() - startTime
+		unitReport.TimeTakenStr = U.SecondsToHMSString(unitReport.TimeTaken)
+		return http.StatusInternalServerError, unitReport
 	}
 
 	timeTaken := time.Now().Unix() - startTime
@@ -1435,14 +1467,30 @@ func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnal
 	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).Info("Completed website analytics query.")
 
 	model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to, timezoneString)
-	return http.StatusOK
+	unitReport.Status = model.CachingUnitStatusPassed
+	unitReport.TimeTaken = timeTaken
+	unitReport.TimeTakenStr = timeTakenString
+	return http.StatusOK, unitReport
 }
 
 func (pg *Postgres) cacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload,
-	waitGroup *sync.WaitGroup) {
-
-	defer waitGroup.Done()
-	pg.CacheWebsiteAnalyticsForDateRange(cachePayload)
+	waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
+	if C.GetIsRunningForMemsql() == 0 {
+		defer waitGroup.Done()
+	}
+	logCtx := log.WithFields(log.Fields{
+		"Method":      "cacheWebsiteAnalyticsForDateRange",
+		"ProjectID":   cachePayload.ProjectID,
+		"DashboardID": cachePayload.DashboardID,
+		"FromTo":      fmt.Sprintf("%d-%d", cachePayload.From, cachePayload.To),
+	})
+	errCode, report := pg.CacheWebsiteAnalyticsForDateRange(cachePayload)
+	reportCollector.Store(model.GetCachingUnitReportUniqueKey(report), report)
+	if errCode != http.StatusOK {
+		logCtx.Errorf("Error while running Web analytics query")
+		return
+	}
+	logCtx.Info("Completed caching for WebsiteAnalytics unit")
 }
 
 // GetWebAnalyticsEnabledProjectIDsFromList Returns only project ids for which web analytics is enabled.
@@ -1472,27 +1520,34 @@ func (pg *Postgres) GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, e
 }
 
 // CacheWebsiteAnalyticsForProjects Runs for all the projectIDs passed as comma separated.
-func (pg *Postgres) CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
+func (pg *Postgres) CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map) {
 	projectIDsToRun := pg.GetWebAnalyticsEnabledProjectIDsFromList(stringProjectsIDs, excludeProjectIDs)
 
 	var waitGroup sync.WaitGroup
 	count := 0
-	waitGroup.Add(U.MinInt(len(projectIDsToRun), numRoutines))
+	if C.GetIsRunningForMemsql() == 0 {
+		waitGroup.Add(U.MinInt(len(projectIDsToRun), numRoutines))
+	}
 	for _, projectID := range projectIDsToRun {
 		count++
 		log.WithFields(log.Fields{"ProjectID": projectID}).Info("Starting web analytics dashboard caching")
-		go pg.cacheWebsiteAnalyticsForProjectID(projectID, &waitGroup)
-
-		if count%numRoutines == 0 {
-			waitGroup.Wait()
-			waitGroup.Add(U.MinInt(len(projectIDsToRun)-count, numRoutines))
+		if C.GetIsRunningForMemsql() == 0 {
+			go pg.cacheWebsiteAnalyticsForProjectID(projectID, &waitGroup, reportCollector)
+			if count%numRoutines == 0 {
+				waitGroup.Wait()
+				waitGroup.Add(U.MinInt(len(projectIDsToRun)-count, numRoutines))
+			}
+		} else {
+			pg.cacheWebsiteAnalyticsForProjectID(projectID, &waitGroup, reportCollector)
 		}
 	}
-	waitGroup.Wait()
+	if C.GetIsRunningForMemsql() == 0 {
+		waitGroup.Wait()
+	}
 }
 
 // CacheWebsiteAnalyticsForMonthlyRange Cache monthly range dashboards for website analytics.
-func (pg *Postgres) CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int) {
+func (pg *Postgres) CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map) {
 	projectIDsToRun := pg.GetWebAnalyticsEnabledProjectIDsFromList(projectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDsToRun {
 		timezoneString, statusCode := pg.GetTimezoneForProject(projectID)
@@ -1510,7 +1565,9 @@ func (pg *Postgres) CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProj
 		}
 
 		var waitGroup sync.WaitGroup
-		waitGroup.Add(U.MinInt(len(monthlyRanges), numRoutines))
+		if C.GetIsRunningForMemsql() == 0 {
+			waitGroup.Add(U.MinInt(len(monthlyRanges), numRoutines))
+		}
 		count := 0
 		for _, monthlyRange := range monthlyRanges {
 			count++
@@ -1522,12 +1579,19 @@ func (pg *Postgres) CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProj
 				To:          to,
 				Queries:     webAnalyticsQueries,
 			}
-			go pg.cacheWebsiteAnalyticsForDateRange(cachePayload, &waitGroup)
-			if count%numRoutines == 0 {
-				waitGroup.Wait()
-				waitGroup.Add(U.MinInt(len(monthlyRanges)-count, numRoutines))
+			if C.GetIsRunningForMemsql() == 0 {
+				go pg.cacheWebsiteAnalyticsForDateRange(cachePayload, &waitGroup, reportCollector)
+				if count%numRoutines == 0 {
+					waitGroup.Wait()
+					waitGroup.Add(U.MinInt(len(monthlyRanges)-count, numRoutines))
+				}
+			} else {
+				pg.cacheWebsiteAnalyticsForDateRange(cachePayload, &waitGroup, reportCollector)
 			}
 		}
-		waitGroup.Wait()
+		if C.GetIsRunningForMemsql() == 0 {
+
+			waitGroup.Wait()
+		}
 	}
 }

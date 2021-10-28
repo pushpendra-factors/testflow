@@ -404,6 +404,7 @@ func validateAuthData(authDataStr string) (*model.Agent, string, int) {
 	} else if errCode == http.StatusInternalServerError {
 		return nil, "error fetching agent", http.StatusInternalServerError
 	}
+	return agent, "", http.StatusOK
 
 	email, err := helpers.ParseAndDecryptProtectedFields(agent.Salt, authData.ProtectedFields)
 	if err != nil {

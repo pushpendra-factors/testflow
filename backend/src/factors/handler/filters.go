@@ -37,7 +37,7 @@ type APISmartEventFilterResponePayload struct {
 	FilterExpr  model.SmartCRMEventFilter `json:"expr,omitempty"`
 }
 
-// Test command: curl -H "Content-Type: application/json" -i -X POST http://localhost:8080/projects/1/filters -d '{ "name": "login", "expr": "a.com/u1/u2"}'
+// Test command: curl -H "Content-UnitType: application/json" -i -X POST http://localhost:8080/projects/1/filters -d '{ "name": "login", "expr": "a.com/u1/u2"}'
 // CreateFilterHandler godoc
 // @Summary To create a new filter.
 // @Tags Filters
@@ -237,7 +237,7 @@ func GetSmartEventFiltersHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, responsePayload)
 }
 
-// Test command: curl -H "Content-Type: application/json" -i -X PUT http://localhost:8080/projects/1/v1/smart_event/type=crm&filter_id=537 -d '{ "name": "updated_name" }'
+// Test command: curl -H "Content-UnitType: application/json" -i -X PUT http://localhost:8080/projects/1/v1/smart_event/type=crm&filter_id=537 -d '{ "name": "updated_name" }'
 // UpdateSmartEventFilterHandler godoc
 // @Summary To update an existing smart event filter.
 // @Tags V1ApiSmartEvent
@@ -309,7 +309,7 @@ func UpdateSmartEventFilterHandler(c *gin.Context) {
 
 }
 
-// Test command: curl -H "Content-Type: application/json" -i -X DELETE http://localhost:8080/projects/1/v1/smart_event/type=crm&filter_id=537
+// Test command: curl -H "Content-UnitType: application/json" -i -X DELETE http://localhost:8080/projects/1/v1/smart_event/type=crm&filter_id=537
 // DeleteSmartEventFilterHandler godoc
 // @Summary To delete an existing smart event filter.
 // @Tags V1ApiSmartEvent
@@ -365,7 +365,7 @@ func DeleteSmartEventFilterHandler(c *gin.Context) (interface{}, int, string, st
 	return responsePayload, http.StatusAccepted, "", "", false
 }
 
-// Test command: curl -H "Content-Type: application/json" -i -X PUT http://localhost:8080/projects/1/filters/364 -d '{ "name": "updated_name" }'
+// Test command: curl -H "Content-UnitType: application/json" -i -X PUT http://localhost:8080/projects/1/filters/364 -d '{ "name": "updated_name" }'
 // UpdateFilterHandler godoc
 // @Summary To update an existing filter.
 // @Tags Filters

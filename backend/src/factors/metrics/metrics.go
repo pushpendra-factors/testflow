@@ -12,7 +12,7 @@ import (
 )
 
 // All tracked metrics are to be added here.
-// Type of the metric i.e. Incr / Count / Latency / Bytes must be prefixed with each metric name.
+// UnitType of the metric i.e. Incr / Count / Latency / Bytes must be prefixed with each metric name.
 const (
 	// Metrics to event processing as sdk integration and sdk request workers.
 	IncrSDKRequestOverallCount           = "sdk_request_overall_count"
