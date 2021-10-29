@@ -604,8 +604,6 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID uint64, limit i
 		}
 	}
 
-	log.WithField("mostFrequentEventsNames", mostFrequentEventNames).Warn("Kark1")
-
 	if dbResult := db.Where("type = ? AND name IN (?)", eventNameType, mostFrequentEventNames).Select("name").Limit(limit).Find(&finalEventNames); dbResult.Error != nil {
 		return nil, dbResult.Error
 	}

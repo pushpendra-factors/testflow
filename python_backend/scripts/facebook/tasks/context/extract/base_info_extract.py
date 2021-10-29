@@ -86,7 +86,6 @@ class BaseInfoExtract(BaseExtract):
                     {"base_path": "/usr/local/var/factors/cloud_storage/", "file_path": file_path, "file_override": False})
         return
 
-    # kark.
     def read_records(self):
         records_string, result_response, current_no_of_requests = self.source.read()
         self.total_number_of_records += current_no_of_requests 
