@@ -107,42 +107,42 @@ func main() {
 
 	var notifyMessage string
 	var waitGroup sync.WaitGroup
-	var timeTaken sync.Map
+	var reportCollector sync.Map
 
 	waitGroup.Add(1)
 	go cacheMonthlyDashboardUnitsForProjects(
-		*projectIDFlag, *excludeProjectIDFlag, *numMonthsFlag, *numRoutinesFlag, &timeTaken, &waitGroup)
+		*projectIDFlag, *excludeProjectIDFlag, *numMonthsFlag, *numRoutinesFlag, &reportCollector, &reportCollector, &waitGroup)
 
 	waitGroup.Add(1)
 	go cacheMonthlyWebsiteAnalyticsForProjects(
-		*projectIDFlag, *excludeProjectIDFlag, *numMonthsFlag, *numRoutinesForWebAnalyticsFlag, &timeTaken, &waitGroup)
+		*projectIDFlag, *excludeProjectIDFlag, *numMonthsFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &reportCollector, &waitGroup)
 
 	waitGroup.Wait()
-	timeTakenString, _ := timeTaken.Load("all")
-	timeTakenStringWeb, _ := timeTaken.Load("web")
+	timeTakenString, _ := reportCollector.Load("all")
+	timeTakenStringWeb, _ := reportCollector.Load("web")
 	notifyMessage = fmt.Sprintf("Caching successful for %s - %s projects. Time taken: %+v. Time taken for web analytics: %+v",
 		*projectIDFlag, *excludeProjectIDFlag, timeTakenString, timeTakenStringWeb)
 	C.PingHealthcheckForSuccess(healthcheckPingID, notifyMessage)
 }
 
-func cacheMonthlyDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numMonths, numRoutines int,
+func cacheMonthlyDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map,
 	timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
 	startTime := util.TimeNowUnix()
-	store.GetStore().CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs, numMonths, numRoutines)
+	store.GetStore().CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs, numMonths, numRoutines, reportCollector)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	timeTaken.Store("all", timeTakenString)
 }
 
-func cacheMonthlyWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs string, numMonths, numRoutines int,
+func cacheMonthlyWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map,
 	timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
 	startTime := util.TimeNowUnix()
-	store.GetStore().CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs, numMonths, numRoutines)
+	store.GetStore().CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs, numMonths, numRoutines, reportCollector)
 	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	timeTaken.Store("web", timeTakenStringWeb)
 }
