@@ -518,6 +518,7 @@ func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, ev
 		"valuesLimit": valuesLimit, "rowsLimit": rowsLimit, "starttime": starttime, "endtime": endtime})
 
 	values := make([]U.PropertyValue, 0)
+	// TODO: Use additional table for property value fetching, if this is slow.
 	queryStr := fmt.Sprintf("SELECT value, COUNT(*) AS count, MAX(timestamp) AS last_seen, JSON_GET_TYPE(value) AS value_type FROM"+
 		" "+"(SELECT JSON_EXTRACT_STRING(properties, ?) AS value, timestamp FROM events WHERE project_id = ? AND event_name_id IN"+
 		" "+"(SELECT id FROM event_names WHERE project_id = ? AND name = ?) AND timestamp > ? AND timestamp <= ? AND JSON_EXTRACT_STRING(properties, ?) IS NOT NULL LIMIT %d)"+

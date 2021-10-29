@@ -113,6 +113,12 @@ func main() {
 		"Disable direct execution of query from dashboard, if not available on cache.")
 
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
+
+	enableFilterOptimisation := flag.Bool("enable_filter_optimisation", false,
+		"Enables filter optimisation changes for memsql implementation.")
+	filterPropertiesStartTimestamp := flag.Int64("filter_properties_start_timestamp", -1,
+		"Start timestamp of data available for filtering with parquet on memsql.")
+
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -188,6 +194,8 @@ func main() {
 		DisableQueryCache:                       disableQueryCache,
 		AttributionDebug:                        *attributionDebug,
 		DisableDashboardQueryDBExecution:        *disableDashboardQueryDBExecution,
+		EnableFilterOptimisation:                *enableFilterOptimisation,
+		FilterPropertiesStartTimestamp:          *filterPropertiesStartTimestamp,
 	}
 	C.InitConf(config)
 

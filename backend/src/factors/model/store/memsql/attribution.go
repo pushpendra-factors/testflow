@@ -507,25 +507,32 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			// add user batching
 			usersPlaceHolder := U.GetValuePlaceHolder(len(users))
 			value := U.GetInterfaceList(users)
-			queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND " +
+
+			selectEventHits := "SELECT user_id, timestamp FROM events"
+			whereEventHits := " WHERE events.project_id=? AND " +
 				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
 				" AND user_id IN ( " + usersPlaceHolder + " ) "
+
 			qParams := []interface{}{projectID, queryFrom, queryTo}
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
 
 			// add event filter
-			wStmtEvent, wParamsEvent, err := getFilterSQLStmtForEventProperties(projectID, linkedEvent.Properties)
+			wStmtEvent, wParamsEvent, eventJoinStmnt, err := getFilterSQLStmtForEventProperties(
+				projectID, linkedEvent.Properties, queryFrom)
 			if err != nil {
 				return err, nil
 			}
+
+			queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
+
 			if wStmtEvent != "" {
 				queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
 				qParams = append(qParams, wParamsEvent...)
 			}
 
 			// add user filter
-			wStmtUser, wParamsUser, err := getFilterSQLStmtForUserProperties(projectID, linkedEvent.Properties)
+			wStmtUser, wParamsUser, _, err := getFilterSQLStmtForUserProperties(projectID, linkedEvent.Properties, queryFrom)
 			if err != nil {
 				return err, nil
 			}
@@ -585,23 +592,30 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 	for i := 0; i < len(conversionEventNameIDs)-1; i++ {
 		placeHolder += ",?"
 	}
-	queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND timestamp >= ? AND " +
+
+	selectEventHits := "SELECT user_id, timestamp FROM events"
+	whereEventHits := "WHERE events.project_id=? AND timestamp >= ? AND " +
 		" timestamp <=? AND events.event_name_id IN (" + placeHolder + ") "
 	qParams := []interface{}{projectID, conversionFrom, conversionTo}
 	qParams = append(qParams, conversionEventNameIDs...)
 
 	// add event filter
-	wStmtEvent, wParamsEvent, err := getFilterSQLStmtForEventProperties(projectID, goalEventProperties) // query.ConversionEvent.Properties)
+	wStmtEvent, wParamsEvent, filterJoinStmnt, err := getFilterSQLStmtForEventProperties(
+		projectID, goalEventProperties, conversionFrom) // query.ConversionEvent.Properties)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	queryEventHits := selectEventHits + " " + filterJoinStmnt + " " + whereEventHits
+
 	if wStmtEvent != "" {
 		queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
 		qParams = append(qParams, wParamsEvent...)
 	}
 
 	// add user filter
-	wStmtUser, wParamsUser, err := getFilterSQLStmtForUserProperties(projectID, goalEventProperties) // query.ConversionEvent.Properties)
+	wStmtUser, wParamsUser, _, err := getFilterSQLStmtForUserProperties(projectID,
+		goalEventProperties, conversionFrom) // query.ConversionEvent.Properties)
 	if err != nil {
 		return nil, nil, nil, err
 	}

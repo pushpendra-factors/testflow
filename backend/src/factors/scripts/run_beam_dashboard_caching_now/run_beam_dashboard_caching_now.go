@@ -61,6 +61,10 @@ var (
 	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName           = flag.String("app_name", "", "Override default app_name.")
 	enableMemSQLRedisWrites   = flag.Bool("enable_mql_redis_writes", false, "To enable redis writes when using MemSQL")
+	enableFilterOptimisation  = flag.Bool("enable_filter_optimisation", false,
+		"Enables filter optimisation changes for memsql implementation.")
+	filterPropertiesStartTimestamp = flag.Int64("filter_properties_start_timestamp", -1,
+		"Start timestamp of data available for filtering with parquet on memsql.")
 )
 
 func registerStructs() {
@@ -113,6 +117,8 @@ func main() {
 		RedisPort:                       *redisPort,
 		SentryDSN:                       *sentryDSN,
 		MultipleTimezoneEnabledProjects: C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
+		EnableFilterOptimisation:        *enableFilterOptimisation,
+		FilterPropertiesStartTimestamp:  *filterPropertiesStartTimestamp,
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", healthcheckPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))

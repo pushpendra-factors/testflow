@@ -57,7 +57,13 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 
+	enableFilterOptimisation := flag.Bool("enable_filter_optimisation", false,
+		"Enables filter optimisation changes for memsql implementation.")
+	filterPropertiesStartTimestamp := flag.Int64("filter_properties_start_timestamp", -1,
+		"Start timestamp of data available for filtering with parquet on memsql.")
+
 	flag.Parse()
+
 	taskID := "dashboard_caching"
 	if *overrideAppName != "" {
 		taskID = *overrideAppName
@@ -108,6 +114,8 @@ func main() {
 		},
 		PrimaryDatastore:                *primaryDatastore,
 		DisableRedisWrites:              disableRedisWrites,
+		EnableFilterOptimisation:        *enableFilterOptimisation,
+		FilterPropertiesStartTimestamp:  *filterPropertiesStartTimestamp,
 		SkipAttributionDashboardCaching: *skipAttribution,
 		OnlyAttributionDashboardCaching: *onlyAttribution,
 		IsRunningForMemsql:              *runningForMemsql,

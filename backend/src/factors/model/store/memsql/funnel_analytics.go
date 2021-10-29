@@ -544,6 +544,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 		}
 		addParams = egParams
 		addJoinStatement := "JOIN users ON events.user_id=users.id AND users.project_id = ? "
+		addJoinStatement = addJoinStatement + getUsersFilterJoinStatement(projectId, q.GlobalUserProperties)
 		addParams = append(addParams, projectId)
 
 		var groupBy string

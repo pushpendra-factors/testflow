@@ -75,7 +75,8 @@ func isValidLogicalOp(op string) bool {
 	return op == "AND" || op == "OR"
 }
 
-func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty,
+	fromTimestamp int64) (rStmnt string, rParams []interface{}, err error) {
 
 	pLen := len(properties)
 	if pLen == 0 {
@@ -108,7 +109,7 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 				return rStmnt, rParams, errors.New("invalid logical op on where condition")
 			}
 
-			propertyEntity := model.GetPropertyEntityFieldForFilter(p.Entity)
+			propertyEntity := GetPropertyEntityFieldForFilter(p.Entity, fromTimestamp)
 			propertyOp := getOp(p.Operator, p.Type)
 
 			if p.Value != model.PropertyValueNone {
@@ -218,26 +219,61 @@ func GetDateFilter(qP model.QueryProperty, propertyEntity string, property strin
 	return stmt, resultParams, nil
 }
 
+func getEventsFilterJoinStatement(projectID uint64,
+	eventLevelProperties []model.QueryProperty, fromTimestamp int64) string {
+
+	if len(eventLevelProperties) == 0 {
+		return ""
+	}
+
+	if !C.UseEventsFilterPropertiesOptimisedLogic(fromTimestamp) {
+		return ""
+	}
+
+	joinStmnt := " " + "LEFT JOIN event_properties_json ON events.id = event_properties_json.id AND events.user_id = event_properties_json.user_id"
+	joinStmnt = joinStmnt + " " + fmt.Sprintf("AND events.project_id=%d", projectID)
+	return joinStmnt
+}
+
+func getUsersFilterJoinStatement(projectID uint64,
+	globalUserProperties []model.QueryProperty) string {
+
+	if len(globalUserProperties) == 0 {
+		return ""
+	}
+
+	if !C.UseUsersFilterPropertiesOptimisedLogic() {
+		return ""
+	}
+
+	joinStmnt := " " + "LEFT JOIN user_properties_json ON users.id = user_properties_json.id"
+	joinStmnt = joinStmnt + " " + fmt.Sprintf("AND users.project_id = %d", projectID)
+	return joinStmnt
+}
+
 // returns SQL query condition to address conditions only on events.properties
-func getFilterSQLStmtForEventProperties(projectID uint64, properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+func getFilterSQLStmtForEventProperties(projectID uint64, properties []model.QueryProperty,
+	fromTimestamp int64) (rStmnt string, rParams []interface{}, joinStmnt string, err error) {
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
-
-		propertyEntity := model.GetPropertyEntityFieldForFilter(p.Entity)
-		if propertyEntity == "events.properties" {
+		if p.Entity == model.PropertyEntityEvent {
 			filteredProperty = append(filteredProperty, p)
 		}
 	}
-	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty)
+
+	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
-	return wStmt, wParams, nil
+
+	return wStmt, wParams, getEventsFilterJoinStatement(projectID, filteredProperty, fromTimestamp), nil
 }
 
 // returns SQL query condition to address conditions for Users.properties
-func getFilterSQLStmtForLatestUserProperties(projectID uint64, properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+func getFilterSQLStmtForLatestUserProperties(projectID uint64,
+	properties []model.QueryProperty, fromTimestamp int64) (
+	rStmnt string, rParams []interface{}, err error) {
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
@@ -245,28 +281,33 @@ func getFilterSQLStmtForLatestUserProperties(projectID uint64, properties []mode
 			filteredProperty = append(filteredProperty, p)
 		}
 	}
-	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty)
+
+	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
 	if err != nil {
 		return "", nil, err
 	}
+
 	return wStmt, wParams, nil
 }
 
 // returns SQL query condition to address conditions only on user_properties.properties
-func getFilterSQLStmtForUserProperties(projectID uint64, properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+func getFilterSQLStmtForUserProperties(projectID uint64,
+	properties []model.QueryProperty, fromTimestamp int64) (
+	rStmnt string, rParams []interface{}, joinStmnt string, err error) {
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
-		propertyEntity := model.GetPropertyEntityFieldForFilter(p.Entity)
-		if propertyEntity == "events.user_properties" {
+		if p.Entity == model.PropertyEntityUser {
 			filteredProperty = append(filteredProperty, p)
 		}
 	}
-	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty)
+
+	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty, fromTimestamp)
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
-	return wStmt, wParams, nil
+
+	return wStmt, wParams, getEventsFilterJoinStatement(projectID, filteredProperty, fromTimestamp), nil
 }
 
 // Alias for group by properties gk_1, gk_2.
@@ -276,6 +317,31 @@ func groupKeyByIndex(i int) string {
 
 func stepNameByIndex(i int) string {
 	return fmt.Sprintf("%s%d", model.StepPrefix, i)
+}
+
+func GetPropertyEntityFieldForFilter(entityName string, fromTimestamp int64) string {
+	switch entityName {
+	case model.PropertyEntityUser:
+		if !C.UseEventsFilterPropertiesOptimisedLogic(fromTimestamp) {
+			return model.GetPropertyEntityFieldForFilter(entityName)
+		}
+
+		return "event_properties_json.user_properties_json"
+	case model.PropertyEntityEvent:
+		if !C.UseEventsFilterPropertiesOptimisedLogic(fromTimestamp) {
+			return model.GetPropertyEntityFieldForFilter(entityName)
+		}
+
+		return "event_properties_json.properties_json"
+	case model.PropertyEntityUserGlobal:
+		if !C.UseUsersFilterPropertiesOptimisedLogic() {
+			return model.GetPropertyEntityFieldForFilter(entityName)
+		}
+
+		return "user_properties_json.properties_json"
+	}
+
+	return ""
 }
 
 // Translates empty and null group by property values as $none on select.
@@ -459,7 +525,10 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 		return errors.New("invalid select on events filter")
 	}
 
-	rStmnt := "SELECT " + addSelecStmnt + " FROM events" + " " + addJoinStmnt
+	eventFilterJoinStmnt := ""
+	eventFilterJoinStmnt = getEventsFilterJoinStatement(projectId, qep.Properties, from)
+
+	rStmnt := "SELECT " + addSelecStmnt + " FROM events" + " " + eventFilterJoinStmnt + " " + addJoinStmnt
 	var fromTimestamp string
 	if from > 0 {
 		fromTimestamp = "?"
@@ -496,7 +565,8 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 	var err error
 	if globalUserFilter != nil && len(globalUserFilter) != 0 {
 		// add user filter
-		gupStmt, gupParam, err = getFilterSQLStmtForLatestUserProperties(projectId, globalUserFilter)
+		gupStmt, gupParam, err = getFilterSQLStmtForLatestUserProperties(
+			projectId, globalUserFilter, from)
 		if err != nil {
 			return errors.New("invalid user properties for global filter")
 		}
@@ -505,7 +575,7 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 	}
 
 	// mergeCond for whereProperties can also be 'OR'.
-	wStmnt, wParams, err := buildWhereFromProperties(projectId, qep.Properties)
+	wStmnt, wParams, err := buildWhereFromProperties(projectId, qep.Properties, from)
 	if err != nil {
 		return err
 	}

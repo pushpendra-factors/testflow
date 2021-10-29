@@ -44,7 +44,13 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	enableFilterOptimisation := flag.Bool("enable_filter_optimisation", false,
+		"Enables filter optimisation changes for memsql implementation.")
+	filterPropertiesStartTimestamp := flag.Int64("filter_properties_start_timestamp", -1,
+		"Start timestamp of data available for filtering with parquet on memsql.")
+
 	flag.Parse()
+
 	taskID := "monthly_dashboard_caching"
 	healthcheckPingID := C.HealthcheckDashboardCachingPingID
 	defer C.PingHealthcheckForPanic(taskID, *envFlag, healthcheckPingID)
@@ -80,11 +86,13 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      taskID,
 		},
-		PrimaryDatastore:   *primaryDatastore,
-		RedisHost:          *redisHost,
-		RedisPort:          *redisPort,
-		SentryDSN:          *sentryDSN,
-		IsRunningForMemsql: *runningForMemsql,
+		PrimaryDatastore:               *primaryDatastore,
+		RedisHost:                      *redisHost,
+		RedisPort:                      *redisPort,
+		SentryDSN:                      *sentryDSN,
+		EnableFilterOptimisation:       *enableFilterOptimisation,
+		FilterPropertiesStartTimestamp: *filterPropertiesStartTimestamp,
+		IsRunningForMemsql:             *runningForMemsql,
 	}
 	C.InitConf(config)
 

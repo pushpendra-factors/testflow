@@ -752,18 +752,6 @@ func SanitizeStringSumToNumeric(result *QueryResult) {
 	}
 }
 
-func GetPropertyEntityFieldForFilter(entityName string) string {
-	if entityName == PropertyEntityUser {
-		// Filtering is supported only with event level user_properties.
-		return "events.user_properties"
-	} else if entityName == PropertyEntityEvent {
-		return "events.properties"
-	} else if entityName == PropertyEntityUserGlobal {
-		return "users.properties"
-	}
-	return ""
-}
-
 // CheckIfHasNoneFilter Returns if set of filters has $none as a value
 func CheckIfHasNoneFilter(properties []QueryProperty) bool {
 
@@ -773,6 +761,19 @@ func CheckIfHasNoneFilter(properties []QueryProperty) bool {
 		}
 	}
 	return false
+}
+
+func GetPropertyEntityFieldForFilter(entityName string) string {
+	switch entityName {
+	case PropertyEntityUser:
+		return "events.user_properties"
+	case PropertyEntityEvent:
+		return "events.properties"
+	case PropertyEntityUserGlobal:
+		return "users.properties"
+	}
+
+	return ""
 }
 
 // AddAliasNameOnEventCondEachGivenEventQueryResult replaces EventName in the result's header with the AliasName

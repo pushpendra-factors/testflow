@@ -779,6 +779,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 		}
 
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
+		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
 		stepParams = append(stepParams, projectID)
 		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy, q.GlobalUserProperties)
@@ -863,6 +864,7 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
+		termStmnt = termStmnt + getUsersFilterJoinStatement(projectID, query.GlobalUserProperties)
 		// Using string format for project_id condition, as the value is from internal system.
 		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
@@ -1598,6 +1600,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
+		termStmnt = termStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
 		// Using string format for project_id condition, as the value is from internal system.
 		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}
@@ -1885,6 +1888,7 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 		}
 
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
+		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
 		stepParams = append(stepParams, projectID)
 		err := addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties)
@@ -1966,6 +1970,9 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
+		termStmnt = termStmnt + getUsersFilterJoinStatement(projectID, query.GlobalUserProperties)
+		termStmnt = termStmnt + " "
+
 		// Using string format for project_id condition, as the value is from internal system.
 		termStmnt = termStmnt + " AND " + fmt.Sprintf("users.project_id = %d", projectID)
 	}

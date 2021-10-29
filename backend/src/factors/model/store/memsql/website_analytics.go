@@ -1181,6 +1181,7 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 				customGroupPropertySelectStmnt = customGroupPropertySelectStmnt + ","
 			}
 
+			// TODO: Use the additional table for properties, if this is slow.
 			customGroupPropertySelectStmnt = fmt.Sprintf(
 				"%s JSON_EXTRACT_STRING(events.properties, ?)",
 				customGroupPropertySelectStmnt,

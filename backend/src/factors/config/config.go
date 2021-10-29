@@ -186,6 +186,8 @@ type Configuration struct {
 	AttributionDebug                     int
 	DisableDashboardQueryDBExecution     bool
 	AllowedHubspotGroupsByProjectIDs     string
+	EnableFilterOptimisation             bool
+	FilterPropertiesStartTimestamp       int64
 	OnlyAttributionDashboardCaching      int
 	SkipAttributionDashboardCaching      int
 	IsRunningForMemsql                   int
@@ -819,6 +821,10 @@ func GetPrimaryDatastore() string {
 		return DatastoreTypeMemSQL
 	}
 	return DatastoreTypePostgres
+}
+
+func IsDatastoreMemSQL() bool {
+	return GetConfig().PrimaryDatastore == DatastoreTypeMemSQL
 }
 
 // GetRoutesURLPrefix Prefix for urls supported on memsql. Returns /mql if enabled.
@@ -1806,4 +1812,13 @@ func GetCloudManager() filestore.FileManager {
 
 func DisableDashboardQueryDBExecution() bool {
 	return configuration.DisableDashboardQueryDBExecution
+}
+
+func UseEventsFilterPropertiesOptimisedLogic(queryFromTimestamp int64) bool {
+	return configuration.EnableFilterOptimisation &&
+		(queryFromTimestamp >= configuration.FilterPropertiesStartTimestamp)
+}
+
+func UseUsersFilterPropertiesOptimisedLogic() bool {
+	return configuration.EnableFilterOptimisation
 }
