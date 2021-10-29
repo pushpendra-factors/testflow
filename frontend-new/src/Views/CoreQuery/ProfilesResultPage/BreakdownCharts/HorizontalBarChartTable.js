@@ -60,7 +60,7 @@ const HorizontalBarChartTable = ({
         <DataTable
           renderSearch={false}
           isWidgetModal={false}
-          tableData={data}
+          tableData={data.slice(0, 200)}
           columns={columns}
           ignoreDocumentClick={true}
           isPaginationEnabled={false}

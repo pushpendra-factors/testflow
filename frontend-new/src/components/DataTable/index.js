@@ -17,10 +17,11 @@ function DataTable({
   ignoreDocumentClick,
   renderSearch = true,
   isPaginationEnabled = true,
+  defaultPageSize = 10,
 }) {
   const componentRef = useRef(null);
   const downloadBtnRef = useRef(null);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
 
   const [searchBar, showSearchBar] = useState(false);
 

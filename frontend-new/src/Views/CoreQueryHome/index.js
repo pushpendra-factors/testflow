@@ -158,7 +158,7 @@ function CoreQuery({
       funnel: 'funnels_cq',
       channel_v1: 'campaigns_cq',
       attribution: 'attributions_cq',
-      profiles: 'profiles_cq'
+      profiles: 'profiles_cq',
     };
     let svgName = '';
     Object.entries(queryTypeName).forEach(([k, v]) => {
@@ -543,8 +543,17 @@ function CoreQuery({
             <Col span={20}>
               <div className={'flex'}>
                 {coreQueryoptions.map((item, index) => {
-                  const emailIDs = ['solutions@factors.ai', 'vikas@factors.ai', 'sonali@factors.ai', 'ashhar@factors.ai'];
-                  if (item.title === 'Profiles' && !emailIDs.includes(activeAccount)) {
+                  const emailIDs = [
+                    'solutions@factors.ai',
+                    'vikas@factors.ai',
+                    'sonali@factors.ai',
+                    'ashhar@factors.ai',
+                    'jitesh@factors.ai',
+                  ];
+                  if (
+                    item.title === 'Profiles' &&
+                    !emailIDs.includes(activeAccount)
+                  ) {
                     return null;
                   }
                   return (

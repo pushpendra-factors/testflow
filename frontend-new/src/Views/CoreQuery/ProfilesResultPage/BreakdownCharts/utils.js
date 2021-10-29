@@ -15,6 +15,7 @@ import {
   renderHorizontalBarChart,
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
+import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
 
 export const defaultSortProp = () => {
   return {
@@ -49,6 +50,20 @@ export const getDateBreakdownIndices = (data, breakdown) => {
   return result;
 };
 
+export const getProfileBreakDownGranularities = (
+  breakDownSlice,
+  breakdowns
+) => {
+  const grns = [];
+  let brks = [...breakdowns];
+  breakDownSlice.forEach((h) => {
+    const brkIndex = brks.findIndex((x) => h === x.property);
+    grns.push(brks[brkIndex]?.grn);
+    brks.splice(brkIndex, 1);
+  });
+  return grns;
+};
+
 export const formatData = (data, breakdown, queries, currentEventIndex) => {
   if (
     !data ||
@@ -70,12 +85,17 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
     const activeQuery = queries[currentEventIndex];
     const valIndex = headers.findIndex((h) => h === activeQuery);
     const breakdownIndices = getBreakdownIndices(headers, breakdown);
+    const breakdownHeaders = headers.slice(breakdownIndices[0]);
+    const grns = getProfileBreakDownGranularities(breakdownHeaders, breakdown);
+
     let result = [];
     rows.forEach((elem, index) => {
       const breakdownVals = {};
       breakdownIndices.forEach((b, bIdx) => {
         if (b > -1) {
-          breakdownVals[`${breakdown[bIdx].property} - ${bIdx}`] = elem[b];
+          breakdownVals[
+            `${breakdown[bIdx].property} - ${bIdx}`
+          ] = parseForDateTimeLabel(grns[bIdx], elem[b]);
         }
       });
       const color = generateColors(1);
