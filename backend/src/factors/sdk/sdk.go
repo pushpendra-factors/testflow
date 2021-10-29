@@ -472,7 +472,7 @@ func isPropertiesDefaultableTrackRequest(source string, isAutoTracked bool) bool
 }
 
 func Track(projectId uint64, request *TrackPayload,
-	skipSession bool, source string) (int, *TrackResponse) {
+	skipSession bool, source string, objectType string) (int, *TrackResponse) {
 	logCtx := log.WithField("project_id", projectId)
 
 	if projectId == 0 || request == nil {
@@ -701,8 +701,8 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 
 	newUserPropertiesJSON := &postgres.Jsonb{RawMessage: userPropsJSON}
-	userPropertiesV2, errCode := store.GetStore().UpdateUserProperties(
-		projectId, request.UserId, newUserPropertiesJSON, request.Timestamp)
+	userPropertiesV2, errCode := store.GetStore().UpdateUserPropertiesV2(
+		projectId, request.UserId, newUserPropertiesJSON, request.Timestamp, source, objectType)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		logCtx.WithField("err_code", errCode).
 			Error("Update user properties on track failed. DB update failed.")
@@ -1176,7 +1176,7 @@ func excludeBotRequestBySetting(token, userAgent string) bool {
 func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) {
 	projectID, errCode := store.GetStore().GetProjectIDByToken(token)
 	if errCode == http.StatusFound {
-		return Track(projectID, reqPayload, false, SourceJSSDK)
+		return Track(projectID, reqPayload, false, SourceJSSDK, "")
 	}
 
 	if errCode == http.StatusNotFound {
@@ -1497,7 +1497,7 @@ func overwriteUserPropertiesOnTable(projectID uint64, userID string, eventID str
 		WithField("user_id", userID).WithField("eventID", eventID)
 
 	errCode := store.GetStore().OverwriteUserPropertiesByID(
-		projectID, userID, updateUserPropertiesJson, false, 0)
+		projectID, userID, updateUserPropertiesJson, false, 0, "")
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("err_code", errCode).
 			Error("Failed to overwrite user's properties with initial page properties.")
@@ -1756,7 +1756,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		trackPayload.Name = reqPayload.EventName
 	}
 
-	errCode, trackResponse := Track(projectID, &trackPayload, false, SourceAMPSDK)
+	errCode, trackResponse := Track(projectID, &trackPayload, false, SourceAMPSDK, "")
 	if trackResponse.EventId != "" {
 		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(projectID, userID,
 			trackResponse.EventId, pageURL)

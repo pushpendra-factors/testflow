@@ -674,7 +674,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 			"$qp_utm_campaign": "campaign1",
 		},
 	}
-	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.NotNil(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
@@ -692,7 +692,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 		Timestamp: timestamp,
 		UserId:    user.ID,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
 	_, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
@@ -717,7 +717,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 			"$qp_utm_campaign": "campaign2",
 		},
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
 	_, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
@@ -728,7 +728,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 		Timestamp: timestamp,
 		UserId:    user.ID,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
 	event, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
@@ -762,7 +762,7 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 			Name:       randomeEventName,
 			Timestamp:  timestamp,
 		}
-		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
 		// Event should be created with the given event_id.
 		assert.Equal(t, eventId, response.EventId)
@@ -791,7 +791,7 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 			Name:       randomeEventName,
 			Timestamp:  timestamp,
 		}
-		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
 		// Event should be created with the given event_id.
 		assert.Equal(t, eventId, response.EventId)
@@ -2326,7 +2326,7 @@ func TestSDKTrackFirstEventUserProperties(t *testing.T) {
 		Name:      randomEventURL,
 		Timestamp: timestamp,
 	}
-	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
 
 	event, errCode := store.GetStore().GetEventById(project.ID, response.EventId, "")

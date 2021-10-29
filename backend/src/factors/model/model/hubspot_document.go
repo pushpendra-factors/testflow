@@ -270,9 +270,9 @@ func GetHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 	if document.Type == HubspotDocumentTypeCompany ||
 		document.Type == HubspotDocumentTypeDeal {
 
-		propertyUpdateAtKey = "hs_lastmodifieddate"
+		propertyUpdateAtKey = U.PROPERTY_KEY_LAST_MODIFIED_DATE_HS
 	} else if document.Type == HubspotDocumentTypeContact {
-		propertyUpdateAtKey = "lastmodifieddate"
+		propertyUpdateAtKey = U.PROPERTY_KEY_LAST_MODIFIED_DATE
 	}
 	if propertyUpdateAtKey != "" {
 		properties, exists := (*value)["properties"]
@@ -553,7 +553,7 @@ func GetHubspotDocumentLastModifiedDate(document *HubspotDocument) (int64, error
 		return 0, errorFailedToGetPropertiesFromHubspotDocument
 	}
 	propertiesMap := properties.(map[string]interface{})
-	lastmodifieddate, exists := (propertiesMap)["lastmodifieddate"]
+	lastmodifieddate, exists := (propertiesMap)[U.PROPERTY_KEY_LAST_MODIFIED_DATE]
 	if !exists || lastmodifieddate == nil {
 		return 0, errorFailedToGetLastModifiedDateFromHubspotDocument
 	}

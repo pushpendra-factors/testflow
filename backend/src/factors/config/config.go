@@ -175,22 +175,23 @@ type Configuration struct {
 	// Flags to disable DB and Redis writes when enabled.
 	// Added as pointer to prevent accidental writes from
 	// other services while testing.
-	DisableDBWrites                      *bool
-	DisableRedisWrites                   *bool
-	DisableQueryCache                    *bool
-	AllowedCampaignEnrichmentByProjectID string
-	UseOpportunityAssociationByProjectID string
-	AllowChannelGroupingForProjectIDs    string
-	CloudManager                         filestore.FileManager
-	SegmentExcludedCustomerIDByProject   map[uint64]string // map[project_id]customer_user_id
-	AttributionDebug                     int
-	DisableDashboardQueryDBExecution     bool
-	AllowedHubspotGroupsByProjectIDs     string
-	EnableFilterOptimisation             bool
-	FilterPropertiesStartTimestamp       int64
-	OnlyAttributionDashboardCaching      int
-	SkipAttributionDashboardCaching      int
-	IsRunningForMemsql                   int
+	DisableDBWrites                        *bool
+	DisableRedisWrites                     *bool
+	DisableQueryCache                      *bool
+	AllowedCampaignEnrichmentByProjectID   string
+	UseOpportunityAssociationByProjectID   string
+	AllowChannelGroupingForProjectIDs      string
+	CloudManager                           filestore.FileManager
+	SegmentExcludedCustomerIDByProject     map[uint64]string // map[project_id]customer_user_id
+	AttributionDebug                       int
+	DisableDashboardQueryDBExecution       bool
+	AllowedHubspotGroupsByProjectIDs       string
+	EnableFilterOptimisation               bool
+	FilterPropertiesStartTimestamp         int64
+	OnlyAttributionDashboardCaching        int
+	SkipAttributionDashboardCaching        int
+	IsRunningForMemsql                     int
+	UseSourcePropertyOverwriteByProjectIDs string
 }
 
 type Services struct {
@@ -1223,6 +1224,27 @@ func UseOpportunityAssociationByProjectID(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.UseOpportunityAssociationByProjectID, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+// UseSourcePropertyOverwriteByProjectIDs should use property overwrite by source
+func UseSourcePropertyOverwriteByProjectIDs(projectID uint64) bool {
+	if configuration.UseSourcePropertyOverwriteByProjectIDs == "" {
+		return false
+	}
+
+	if configuration.UseSourcePropertyOverwriteByProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.UseSourcePropertyOverwriteByProjectIDs, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true

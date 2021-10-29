@@ -99,6 +99,10 @@ var EP_FIRST_SEEN_SINCE_USER_JOIN string = "$firstSeenSinceUserJoin"
 var EP_LAST_SEEN_SINCE_USER_JOIN string = "$lastSeenSinceUserJoin"
 var EP_CRM_REFERENCE_EVENT_ID string = "$crm_reference_event_id"
 
+// lastmodifieddate properties.
+const PROPERTY_KEY_LAST_MODIFIED_DATE = "lastmodifieddate"
+const PROPERTY_KEY_LAST_MODIFIED_DATE_HS = "hs_lastmodifieddate"
+
 var GENERIC_NUMERIC_EVENT_PROPERTIES = [...]string{
 	EP_FIRST_SEEN_OCCURRENCE_COUNT,
 	EP_LAST_SEEN_OCCURRENCE_COUNT,

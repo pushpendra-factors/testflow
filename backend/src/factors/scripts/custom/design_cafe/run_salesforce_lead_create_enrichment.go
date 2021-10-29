@@ -244,7 +244,7 @@ func buildUserCreatedEvent(projectID uint64, properties map[string]interface{}, 
 		trackPayload.UserId = latestUserId
 	}
 
-	status, response := SDK.Track(projectID, trackPayload, true, "Salesforce")
+	status, response := SDK.Track(projectID, trackPayload, true, "Salesforce", "")
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 		return errors.New("Failed to track Salesforce lead created")
 	}

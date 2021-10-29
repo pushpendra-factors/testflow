@@ -101,6 +101,7 @@ func main() {
 	allowedCampaignEnrichmentByProjectID := flag.String("allowed_campaign_enrichment_by_project_id", "", "Campaign enrichment by project_id.")
 	useOpportunityAssociationByProjectID := flag.String("use_opportunity_association_by_project_id", "", "Use salesforce associations for opportunity stitching")
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
+	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -145,20 +146,21 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore:                     *primaryDatastore,
-		APIDomain:                            *apiDomain,
-		SentryDSN:                            *sentryDSN,
-		SalesforceAppID:                      *salesforceAppID,
-		SalesforceAppSecret:                  *salesforceAppSecret,
-		RedisHost:                            *redisHost,
-		RedisPort:                            *redisPort,
-		RedisHostPersistent:                  *redisHostPersistent,
-		RedisPortPersistent:                  *redisPortPersistent,
-		DryRunCRMSmartEvent:                  *dryRunSmartEvent,
-		CacheSortedSet:                       *cacheSortedSet,
-		AllowedCampaignEnrichmentByProjectID: *allowedCampaignEnrichmentByProjectID,
-		UseOpportunityAssociationByProjectID: *useOpportunityAssociationByProjectID,
-		DisableRedisWrites:                   disableRedisWrites,
+		PrimaryDatastore:                       *primaryDatastore,
+		APIDomain:                              *apiDomain,
+		SentryDSN:                              *sentryDSN,
+		SalesforceAppID:                        *salesforceAppID,
+		SalesforceAppSecret:                    *salesforceAppSecret,
+		RedisHost:                              *redisHost,
+		RedisPort:                              *redisPort,
+		RedisHostPersistent:                    *redisHostPersistent,
+		RedisPortPersistent:                    *redisPortPersistent,
+		DryRunCRMSmartEvent:                    *dryRunSmartEvent,
+		CacheSortedSet:                         *cacheSortedSet,
+		AllowedCampaignEnrichmentByProjectID:   *allowedCampaignEnrichmentByProjectID,
+		UseOpportunityAssociationByProjectID:   *useOpportunityAssociationByProjectID,
+		DisableRedisWrites:                     disableRedisWrites,
+		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
 	}
 
 	C.InitConf(config)

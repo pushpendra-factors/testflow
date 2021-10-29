@@ -48,7 +48,7 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 		UserId:          userId,
 		EventProperties: properties,
 	}
-	_, response := SDK.Track(projectId, &trackPayload, false, SDK.SourceJSSDK)
+	_, response := SDK.Track(projectId, &trackPayload, false, SDK.SourceJSSDK, "")
 	TaskSession.AddSession([]uint64{projectId}, timestamp-60, 0, 0, 0, 0, 1)
 
 	event, errCode := store.GetStore().GetEventById(projectId, response.EventId, "")

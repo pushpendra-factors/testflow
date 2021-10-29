@@ -33,7 +33,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 		},
 		Timestamp: timestamp,
 	}
-	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 	userId := response.UserId
@@ -50,7 +50,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 			"authorName":    "author1",
 		},
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 
@@ -135,7 +135,7 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 		},
 		Timestamp: timestamp + 1,
 	}
-	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 
@@ -152,7 +152,7 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 		Timestamp: timestamp + 2,
 		UserId:    response.UserId,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 
@@ -207,7 +207,7 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 		},
 		Timestamp: timestamp + 3,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 

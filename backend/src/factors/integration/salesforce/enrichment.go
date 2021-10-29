@@ -219,7 +219,7 @@ TrackSalesforceEventByDocumentType tracks salesforce events by action
 	for action created -> create both created and updated events with date created timestamp
 	for action updated -> create on updated event with last modified timestamp
 */
-func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, customerUserID string) (string, string, SDK.TrackPayload, error) {
+func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, customerUserID string, objectType string) (string, string, SDK.TrackPayload, error) {
 
 	var finalPayload SDK.TrackPayload
 	if projectID == 0 {
@@ -243,8 +243,8 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	var eventID, userID string
 	if document.Action == model.SalesforceDocumentCreated {
 		finalPayload = *trackPayload
-		if customerUserID != "" {
-			userID, status := store.GetStore().CreateUser(&model.User{
+		if finalPayload.UserId == "" {
+			newUserID, status := store.GetStore().CreateUser(&model.User{
 				ProjectId:      projectID,
 				CustomerUserId: customerUserID,
 				JoinTimestamp:  createdTimestamp,
@@ -253,13 +253,13 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 			if status != http.StatusCreated {
 				return "", "", finalPayload, fmt.Errorf("create user failed for doc type %d, status code %d", document.Type, status)
 			}
-			finalPayload.UserId = userID
+			finalPayload.UserId = newUserID
 		}
 
 		finalPayload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentCreated)
 		finalPayload.Timestamp = createdTimestamp
 
-		status, trackResponse := SDK.Track(projectID, &finalPayload, true, SDK.SourceSalesforce)
+		status, trackResponse := SDK.Track(projectID, &finalPayload, true, SDK.SourceSalesforce, objectType)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			return "", "", finalPayload, fmt.Errorf("created event track failed for doc type %d, message %s", document.Type, trackResponse.Error)
 		}
@@ -311,7 +311,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 
 		finalPayload.UserId = userID
 
-		status, trackResponse := SDK.Track(projectID, &finalPayload, true, SDK.SourceSalesforce)
+		status, trackResponse := SDK.Track(projectID, &finalPayload, true, SDK.SourceSalesforce, objectType)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			return "", "", finalPayload, fmt.Errorf("updated event track failed for doc type %d", document.Type)
 		}
@@ -327,7 +327,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		payload.Timestamp = lastModifiedTimestamp
 		payload.UserId = userID
 		payload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
-		status, _ := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce)
+		status, _ := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce, objectType)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			return "", "", finalPayload, fmt.Errorf("updated event for different timestamp track failed for doc type %d", document.Type)
 		}
@@ -364,7 +364,7 @@ func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesfo
 		logCtx.Warn("Skipping user identification on salesforce account sync. No customer_user_id on properties.")
 	}
 
-	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
+	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID, model.SalesforceDocumentTypeNameAccount)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to track salesforce account event.")
@@ -440,7 +440,7 @@ func enrichContact(projectID uint64, document *model.SalesforceDocument, salesfo
 		logCtx.Warn("Skipping user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
 
-	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
+	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID, model.SalesforceDocumentTypeNameContact)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to track salesforce contact event.")
 		return http.StatusInternalServerError
@@ -581,7 +581,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 	}
 
 	if !C.IsDryRunCRMSmartEvent() {
-		status, _ := SDK.Track(projectID, smartEventTrackPayload, true, SDK.SourceSalesforce)
+		status, _ := SDK.Track(projectID, smartEventTrackPayload, true, SDK.SourceSalesforce, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.Error("Failed to create salesforce smart event")
 		}
@@ -768,9 +768,9 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 	if customerUserID != "" || userID != "" {
 		if userID != "" {
 			trackPayload.UserId = userID // will also handle opportunity updated event which is not stiched with other object
-			eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
+			eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "", model.SalesforceDocumentTypeNameOpportunity)
 		} else {
-			eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
+			eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID, model.SalesforceDocumentTypeNameOpportunity)
 		}
 
 		if err != nil {
@@ -779,7 +779,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 			return http.StatusInternalServerError
 		}
 	} else {
-		eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
+		eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "", model.SalesforceDocumentTypeNameOpportunity)
 		if err != nil {
 			logCtx.WithError(err).Error(
 				"Failed to track salesforce opportunity event.")
@@ -838,7 +838,7 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 		logCtx.Warn("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
 	}
 
-	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
+	eventID, userID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID, model.SalesforceDocumentTypeNameLead)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to track salesforce lead event.")
 		return http.StatusInternalServerError
@@ -963,7 +963,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 			UserId:          existingUserID,
 		}
 
-		eventID, userID, finalTrackPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, &referenceDocument, "")
+		eventID, userID, finalTrackPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, &referenceDocument, "", "")
 		if err != nil {
 			logCtx.WithField("member_id", referenceDocument.ID).WithError(err).Error(
 				"Failed to track salesforce campaign member update on campaign update.")
@@ -1076,7 +1076,7 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 		UserId:          existingUserID,
 	}
 
-	eventID, userID, finalTrackPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, document, "")
+	eventID, userID, finalTrackPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, document, "", "")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to track salesforce lead event.")
 		return http.StatusInternalServerError
@@ -1203,7 +1203,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		}
 	}
 
-	status, trackResponse := SDK.Track(project.ID, payload, true, "")
+	status, trackResponse := SDK.Track(project.ID, payload, true, "", "")
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("create salesforce touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
 		return trackResponse, errors.New(fmt.Sprintf("create salesforce touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))

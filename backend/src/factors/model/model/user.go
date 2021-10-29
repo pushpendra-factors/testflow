@@ -548,7 +548,7 @@ func SetCacheUserIDByAMPUserID(projectID uint64, ampUserID, userID string) int {
 	return http.StatusOK
 }
 
-func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, customerUserID string) (*map[string]interface{}, int) {
+func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, customerUserID string, source string, objectType string) (*map[string]interface{}, int) {
 	logCtx := log.WithField("project_id", projectID).
 		WithField("users", users).
 		WithField("customer_user_id", customerUserID)
@@ -612,20 +612,50 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 				Error("Failed to decode user properties on merge.")
 			return &mergedUserProperties, http.StatusInternalServerError
 		}
+
+		useSourcePropertyOverwrite := config.UseSourcePropertyOverwriteByProjectIDs(projectID)
 		if user.PropertiesUpdatedTimestamp > mergedUpdatedTimestamp {
-			mergedUpdatedTimestamp = user.PropertiesUpdatedTimestamp
+			if useSourcePropertyOverwrite {
+				if source != SmartCRMEventSourceHubspot && source != SmartCRMEventSourceSalesforce {
+					mergedUpdatedTimestamp = user.PropertiesUpdatedTimestamp
+				}
+			} else {
+				mergedUpdatedTimestamp = user.PropertiesUpdatedTimestamp
+			}
+		}
+
+		overwriteProperties := false
+		if useSourcePropertyOverwrite {
+			overwriteProperties, err = CheckForCRMUserPropertiesOverwrite(source, objectType, *userProperties, mergedUserProperties)
+			if err != nil {
+				logCtx.WithField("error", err.Error()).Error("Failed to get overwriteProperties flag value.")
+			}
 		}
 
 		for property := range *userProperties {
-
 			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
+			if U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) ||
+				IsEmptyPropertyValue((*userProperties)[property]) {
+				continue
+			}
+
 			_, isInitialProperty := initialPropertiesVisitedMap[property]
 			if !isInitialProperty {
-				if !U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) &&
-					!IsEmptyPropertyValue((*userProperties)[property]) {
-					// For all other properties, overwrite with the latest user property.
-					mergedUserProperties[property] = (*userProperties)[property]
+				if useSourcePropertyOverwrite {
+					if (source == SmartCRMEventSourceHubspot && strings.HasPrefix(property, U.HUBSPOT_PROPERTY_PREFIX)) ||
+						(source == SmartCRMEventSourceSalesforce && strings.HasPrefix(property, U.SALESFORCE_PROPERTY_PREFIX)) {
+						if overwriteProperties {
+							mergedUserProperties[property] = (*userProperties)[property]
+						} else {
+							if _, exist := mergedUserProperties[property]; !exist {
+								mergedUserProperties[property] = (*userProperties)[property]
+							}
+						}
+						continue
+					}
 				}
+
+				mergedUserProperties[property] = (*userProperties)[property]
 			}
 		}
 	}
@@ -645,6 +675,52 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
 
 	return &mergedUserProperties, http.StatusOK
+}
+
+func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomingProperties map[string]interface{},
+	currentProperties map[string]interface{}) (bool, error) {
+	logCtx := log.WithField("source", source).
+		WithField("objectType", objectType)
+
+	if source != SmartCRMEventSourceHubspot && source != SmartCRMEventSourceSalesforce {
+		return false, nil
+	}
+
+	overwriteProperties := false
+	if objectType == "" {
+		return overwriteProperties, nil
+	}
+
+	propertySuffix := GetPropertySuffix(source, objectType)
+	lastmodifieddateProperty := GetCRMEnrichPropertyKeyByType(source, objectType, propertySuffix)
+	incomingPropertyValue, err := util.GetPropertyValueAsFloat64(incomingProperties[lastmodifieddateProperty])
+	if err != nil {
+		logCtx.WithField("mergedUserProperties", incomingProperties).WithField("error", err.Error()).
+			Error("Failed to convert lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
+		return overwriteProperties, err
+	}
+	currentPropertyValue, err := util.GetPropertyValueAsFloat64(currentProperties[lastmodifieddateProperty])
+	if err != nil {
+		logCtx.WithField("userProperties", currentProperties).WithField("error", err.Error()).
+			Error("Failed to convert lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
+		return overwriteProperties, err
+	}
+	if currentPropertyValue < incomingPropertyValue {
+		overwriteProperties = true
+	}
+	return overwriteProperties, nil
+}
+
+func GetPropertySuffix(source string, objectType string) string {
+	if source == SmartCRMEventSourceHubspot {
+		if objectType == HubspotDocumentTypeNameContact {
+			return util.PROPERTY_KEY_LAST_MODIFIED_DATE
+		} else {
+			return util.PROPERTY_KEY_LAST_MODIFIED_DATE_HS
+		}
+	} else {
+		return util.PROPERTY_KEY_LAST_MODIFIED_DATE
+	}
 }
 
 // SetUserGroupFieldByColumnName update user struct field by gorm column name. If value already set then it won't update the value

@@ -185,7 +185,7 @@ func (store *MemSQL) UpdateUser(projectId uint64, id string,
 func (store *MemSQL) UpdateUserProperties(projectId uint64, id string,
 	newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int) {
 
-	return store.UpdateUserPropertiesV2(projectId, id, newProperties, updateTimestamp)
+	return store.UpdateUserPropertiesV2(projectId, id, newProperties, updateTimestamp, "", "")
 }
 
 func (store *MemSQL) IsUserExistByID(projectID uint64, id string) int {
@@ -1083,7 +1083,8 @@ func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint
 
 func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint64, userID string,
 	currentProperties *postgres.Jsonb, currentUpdateTimestamp int64,
-	newProperties *postgres.Jsonb, newUpdateTimestamp int64) (*postgres.Jsonb, int) {
+	newProperties *postgres.Jsonb, newUpdateTimestamp int64, source string, objectType string,
+) (*postgres.Jsonb, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	logCtx := log.WithField("project_id", projectID)
@@ -1118,17 +1119,37 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 	var currentPropertiesMap map[string]interface{}
 	json.Unmarshal((*currentProperties).RawMessage, &currentPropertiesMap)
 
+	overwriteProperties := false
+	useSourcePropertyOverwrite := C.UseSourcePropertyOverwriteByProjectIDs(projectID)
+	if useSourcePropertyOverwrite {
+		overwriteProperties, err = model.CheckForCRMUserPropertiesOverwrite(source, objectType, newPropertiesMap, currentPropertiesMap)
+		if err != nil {
+			logCtx.WithField("error", err.Error()).Error("Failed to get overwriteProperties flag value.")
+		}
+	}
+
 	// Overwrite the keys only, if the update is future, else only add new keys.
 	if newUpdateTimestamp >= currentUpdateTimestamp {
 		mergo.Merge(&mergedPropertiesMap, newPropertiesMap, mergo.WithOverride)
-
 		// For fixing the meta identifier object which was a string earlier and changed to JSON.
 		// Mergo doesn't consider change in datatype as change in the same key.
 		if _, exists := newPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY]; exists {
 			mergedPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY] = newPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY]
 		}
 	} else {
-		mergo.Merge(&mergedPropertiesMap, newPropertiesMap)
+		if useSourcePropertyOverwrite && (source == model.SmartCRMEventSourceHubspot || source == model.SmartCRMEventSourceSalesforce) {
+			for property := range newPropertiesMap {
+				if (strings.HasPrefix(property, U.HUBSPOT_PROPERTY_PREFIX) || strings.HasPrefix(property, U.SALESFORCE_PROPERTY_PREFIX)) && overwriteProperties {
+					mergedPropertiesMap[property] = newPropertiesMap[property]
+				} else {
+					if _, exists := mergedPropertiesMap[property]; !exists {
+						mergedPropertiesMap[property] = newPropertiesMap[property]
+					}
+				}
+			}
+		} else {
+			mergo.Merge(&mergedPropertiesMap, newPropertiesMap)
+		}
 	}
 
 	// Using merged properties for equality check to achieve
@@ -1153,7 +1174,7 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 // UpdateUserPropertiesV2 - Merge new properties with the existing properties of user and also
 // merge the properties of user with same customer_user_id, then updates properties on users table.
 func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
-	newProperties *postgres.Jsonb, newUpdateTimestamp int64) (*postgres.Jsonb, int) {
+	newProperties *postgres.Jsonb, newUpdateTimestamp int64, sourceValue string, objectType string) (*postgres.Jsonb, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	logCtx := log.WithField("project_id", projectID).WithField("id", id).
@@ -1168,7 +1189,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 	}
 
 	newPropertiesMergedJSON, errCode := store.mergeNewPropertiesWithCurrentUserProperties(projectID, id,
-		&user.Properties, user.PropertiesUpdatedTimestamp, newProperties, newUpdateTimestamp)
+		&user.Properties, user.PropertiesUpdatedTimestamp, newProperties, newUpdateTimestamp, sourceValue, objectType)
 	if errCode == http.StatusNotModified {
 		return &user.Properties, http.StatusNotModified
 	}
@@ -1179,7 +1200,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 
 	// Skip merge by customer_user_id, if customer_user_id is not available.
 	if user.CustomerUserId == "" {
-		errCode = store.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp)
+		errCode = store.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			return nil, http.StatusInternalServerError
 		}
@@ -1195,7 +1216,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 
 	// Skip merge by customer_user_id, if only the current user has the customer_user_id.
 	if len(users) == 1 {
-		errCode = store.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp)
+		errCode = store.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			return nil, http.StatusInternalServerError
 		}
@@ -1233,7 +1254,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 		}
 	}
 
-	mergedByCustomerUserIDMap, errCode := model.MergeUserPropertiesByCustomerUserID(projectID, users, user.CustomerUserId)
+	mergedByCustomerUserIDMap, errCode := model.MergeUserPropertiesByCustomerUserID(projectID, users, user.CustomerUserId, sourceValue, objectType)
 	if errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}
@@ -1266,7 +1287,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 		}
 
 		errCode = store.OverwriteUserPropertiesByID(projectID, user.ID,
-			mergedPropertiesAfterSkipJSON, true, newUpdateTimestamp)
+			mergedPropertiesAfterSkipJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			logCtx.WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
 			hasFailure = true
@@ -1309,7 +1330,7 @@ func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID uint64,
 }
 
 func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
-	properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64) int {
+	properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	logCtx := log.WithField("project_id", projectID).WithField("id", id).
@@ -1338,7 +1359,13 @@ func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
 
 	update := map[string]interface{}{"properties": properties}
 	if updateTimestamp > 0 && updateTimestamp > currentPropertiesUpdatedTimestamp {
-		update["properties_updated_timestamp"] = updateTimestamp
+		if C.UseSourcePropertyOverwriteByProjectIDs(projectID) {
+			if source != model.SmartCRMEventSourceHubspot && source != model.SmartCRMEventSourceSalesforce {
+				update["properties_updated_timestamp"] = updateTimestamp
+			}
+		} else {
+			update["properties_updated_timestamp"] = updateTimestamp
+		}
 	}
 
 	db := C.GetServices().Db
@@ -1691,7 +1718,7 @@ func (pg *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 			continue
 		}
 
-		errCode = pg.OverwriteUserPropertiesByID(projectID, userID, userPropertiesJsonb, false, 0)
+		errCode = pg.OverwriteUserPropertiesByID(projectID, userID, userPropertiesJsonb, false, 0, "")
 		if errCode != http.StatusAccepted {
 			logCtx.WithField("err_code", errCode).Error("Failed to overwrite user properties record.")
 			hasFailure = true
@@ -1921,7 +1948,7 @@ func (store *MemSQL) UpdateUserGroupProperties(projectID uint64, userID string,
 		newUpdateTimestamp = user.PropertiesUpdatedTimestamp
 	}
 
-	errCode = store.OverwriteUserPropertiesByID(projectID, user.ID, mergedPropertiesJSON, true, newUpdateTimestamp)
+	errCode = store.OverwriteUserPropertiesByID(projectID, user.ID, mergedPropertiesJSON, true, newUpdateTimestamp, "")
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 		logCtx.WithField("err_code", errCode).WithField("user_id", user.ID).Error("Failed to update user properties on group user.")
 		return nil, http.StatusInternalServerError

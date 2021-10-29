@@ -769,7 +769,7 @@ func TestHubspotDocumentDelete(t *testing.T) {
 	var myStoredVariable map[string]interface{}
 	json.Unmarshal([]byte(jsonContact), &myStoredVariable)
 	tempJson := myStoredVariable["properties"].((map[string]interface{}))
-	get_lastmodifieddate := tempJson["lastmodifieddate"].(string)
+	get_lastmodifieddate := tempJson[U.PROPERTY_KEY_LAST_MODIFIED_DATE].(string)
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
 	hubspotDocument = model.HubspotDocument{
@@ -899,7 +899,7 @@ func TestHubspotSyncJobDocumentDeleteAndMerge(t *testing.T) {
 	var myStoredVariable map[string]interface{}
 	json.Unmarshal([]byte(jsonContact), &myStoredVariable)
 	tempJson := myStoredVariable["properties"].((map[string]interface{}))
-	get_lastmodifieddate := tempJson["lastmodifieddate"].(string)
+	get_lastmodifieddate := tempJson[U.PROPERTY_KEY_LAST_MODIFIED_DATE].(string)
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
 	hubspotDocument = model.HubspotDocument{
@@ -2828,7 +2828,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 	assert.Equal(t, 2, count)
 }
 
-func TestGetHubspotContactCreatedSyncIDAndUserID(t *testing.T) {
+func TestHubspotGetHubspotContactCreatedSyncIDAndUserID(t *testing.T) {
 	r := gin.Default()
 	H.InitDataServiceRoutes(r)
 	H.InitAppRoutes(r)
@@ -3323,4 +3323,359 @@ func getEventTimestamp(timestamp int64) int64 {
 		return 0
 	}
 	return timestamp / 1000
+}
+
+func TestHubspotUserPropertiesOverwrite(t *testing.T) {
+	// Initialize the project and the user. Also capture currentTimestamp, futureTimestamp & middleTimestamp.
+	currentTimestamp := time.Now().Unix()
+	futureTimestamp := currentTimestamp + 10000
+	middleTimestamp := currentTimestamp + 1000
+	fmt.Printf("\ncurrentTimestamp : %d\nfutureTimestamp : %d\nmiddleTimestamp : %d\n", currentTimestamp, futureTimestamp, middleTimestamp)
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+	assert.NotEmpty(t, user.Properties)
+	_, errCode := store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// Update user properties lastmodifieddate as middleTimestamp, PropertiesUpdatedTimestamp
+	// as futureTimestamp.
+	newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "india", "age": 30.1, "paid": true, "$hubspot_contact_lastmodifieddate": %d}`, middleTimestamp)))}
+	_, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
+		newProperties, futureTimestamp)
+	assert.Equal(t, http.StatusAccepted, status)
+	storedUser, errCode := store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, futureTimestamp, storedUser.PropertiesUpdatedTimestamp)
+	var propertiesMap map[string]interface{}
+	err = json.Unmarshal((storedUser.Properties).RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	storedLastModifiedDate, err := util.GetPropertyValueAsFloat64(propertiesMap["$hubspot_contact_lastmodifieddate"])
+	assert.Nil(t, err)
+	assert.Equal(t, middleTimestamp, int64(storedLastModifiedDate))
+
+	// Update user property lastmodifieddate as futureTimestamp and PropertiesUpdatedTimestamp as currentTimestamp.
+	// Since the source and object-type are blank, the property value and PropertiesUpdatedTimestamp should not get
+	// updated.
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"$hubspot_contact_lastmodifieddate": %d}`, futureTimestamp)))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+		newProperties, currentTimestamp)
+	assert.Equal(t, http.StatusAccepted, status)
+	storedUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, futureTimestamp, storedUser.PropertiesUpdatedTimestamp)
+	var updatedPropertiesMap map[string]interface{}
+	err = json.Unmarshal((storedUser.Properties).RawMessage, &updatedPropertiesMap)
+	assert.Nil(t, err)
+	storedLastModifiedDate, err = util.GetPropertyValueAsFloat64(updatedPropertiesMap["$hubspot_contact_lastmodifieddate"])
+	assert.Nil(t, err)
+	assert.Equal(t, middleTimestamp, int64(storedLastModifiedDate))
+
+	// Get oldTimestamp, before the futureTimestamp.
+	oldTimestamp := futureTimestamp - 1000
+	fmt.Printf("\noldTimestamp : %d\n", oldTimestamp)
+
+	// Update user properties lastmodifieddate as futureTimestamp, PropertiesUpdatedTimestamp as oldTimestamp.
+	// lastmodifieddate should get updated with futureTimestamp, but PropertiesUpdatedTimestamp should remain unchanged.
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "india", "age": 30.1, "paid": true, "$hubspot_contact_lastmodifieddate": %d}`, futureTimestamp)))}
+	_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, user.ID,
+		newProperties, oldTimestamp, SDK.SourceHubspot, model.HubspotDocumentTypeNameContact)
+	assert.Equal(t, http.StatusAccepted, status)
+	storedUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, futureTimestamp, storedUser.PropertiesUpdatedTimestamp)
+	err = json.Unmarshal((storedUser.Properties).RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	storedLastModifiedDate, err = util.GetPropertyValueAsFloat64(propertiesMap["$hubspot_contact_lastmodifieddate"])
+	assert.Nil(t, err)
+	assert.Equal(t, futureTimestamp, int64(storedLastModifiedDate))
+
+	// hubspot record test -> Testing single user
+	project, _, err = SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createDocumentID := rand.Intn(100)
+	timestampT1 := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	cuid := U.RandomLowerAphaNumString(5)
+
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	// create contact record with (properties->‘lastmodified’:timestampT1)
+	jsonContact := fmt.Sprintf(jsonContactModel, createDocumentID, timestampT1, timestampT1, timestampT1, "lead", cuid, "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionCreated,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Execute sync job to process the contact created above
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 3)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// Verification for contact creation.
+	createDocument, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", createDocumentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, createDocument[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap := make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+
+	// Verify hubspot_contact_lastmodifieddate is set to timestampT1
+	lastmodifieddateProperty := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err := util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+	assert.Equal(t, err, nil)
+	assert.Equal(t, timestampT1, int64(userPropertyValue)*1000)
+
+	// Update user properties (“a”:1) with timestampT3
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"a": 1}`))}
+	timestampT3 := timestampT1 + 10000
+	_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, user.ID,
+		newProperties, timestampT3, SDK.SourceHubspot, model.HubspotDocumentTypeNameContact)
+	assert.Equal(t, http.StatusAccepted, status)
+	timestampT2 := timestampT1 + 1000
+
+	jsonContactModel = `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	// update contact record with (properties->‘lastmodified’:timestampT2)
+	jsonContact = fmt.Sprintf(jsonContactModel, createDocumentID, timestampT1, timestampT1, timestampT2, "lead", cuid, "123-45")
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionUpdated,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Execute sync job to process the contact updated above
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 3)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// Verify hubspot_contact_lastmodifieddate is set to timestampT2 and PropertiesUpdatedTimestamp to timestampT3.
+	updateDocument, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", createDocumentID)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionUpdated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, updateDocument[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err = util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+	assert.Equal(t, err, nil)
+	assert.Equal(t, timestampT2, int64(userPropertyValue)*1000)
+	assert.Equal(t, timestampT1, user.PropertiesUpdatedTimestamp*1000)
+
+	// hubspot record test -> Testing multi-user by customer-user-id
+	project, _, err = SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createDocumentIDU1 := rand.Intn(100)
+	timestampT1 = time.Now().AddDate(0, 0, -1).Unix() * 1000
+	cuid_first := getRandomEmail()
+
+	jsonContactModel = `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	// create contact record createDocumentIDU1 with (properties->‘lastmodified’:timestampT1) and email property
+	// ("email": cuid_first)
+	jsonContact = fmt.Sprintf(jsonContactModel, createDocumentIDU1, timestampT1, timestampT1, timestampT1, "lead", cuid_first, "123-45")
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionCreated,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Execute sync job to process the contact created above
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 3)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// Create normal user U2 (createUserU2) with same email property as that of createDocumentIDU1 ("email": cuid_first)
+	userU2, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cuid_first, JoinTimestamp: timestampT3})
+	assert.Equal(t, http.StatusCreated, errCode1)
+
+	// Verify lastmodifieddate user property of userU2 to be timestampT1, which is same as createDocumentIDU1
+	user, status = store.GetStore().GetUser(project.ID, userU2)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err = util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+	assert.Equal(t, err, nil)
+	assert.Equal(t, timestampT1, int64(userPropertyValue)*1000)
+
+	// Update user properties (“a”:1) with timestampT3 for userU2
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"a": 1}`))}
+	timestampT3 = timestampT1 + 10000
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+		newProperties, timestampT3)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	timestampT2 = timestampT1 + 1000
+
+	jsonContactModel = `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	// create contact updated record for createDocumentIDU1 with (properties->‘lastmodified’:timestampT2)
+	jsonContact = fmt.Sprintf(jsonContactModel, createDocumentIDU1, timestampT1, timestampT1, timestampT2, "lead", cuid_first, "123-45")
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionUpdated,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Execute sync job to process the contact updated above
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 3)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// Verify hubspot_contact_lastmodifieddate is set to timestampT2 for both createDocumentIDU1 and userU2.
+	// Verify PropertiesUpdatedTimestamp is set to timestampT3 for both createDocumentIDU1 and userU2.
+	updateDocument, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%v", createDocumentIDU1)}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionUpdated})
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, updateDocument[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err = util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+	assert.Equal(t, err, nil)
+	assert.Equal(t, timestampT2, int64(userPropertyValue)*1000)
+	assert.Equal(t, timestampT3, user.PropertiesUpdatedTimestamp)
+
+	user, status = store.GetStore().GetUser(project.ID, userU2)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err = util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+	assert.Equal(t, err, nil)
+	assert.Equal(t, timestampT2, int64(userPropertyValue)*1000)
+	assert.Equal(t, timestampT3, user.PropertiesUpdatedTimestamp)
 }

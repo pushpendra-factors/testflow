@@ -393,8 +393,8 @@ type Model interface {
 	GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string)
 	UpdateUser(projectID uint64, id string, user *model.User, updateTimestamp int64) (*model.User, int)
 	UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
-	UpdateUserPropertiesV2(projectID uint64, id string, newProperties *postgres.Jsonb, newUpdateTimestamp int64) (*postgres.Jsonb, int)
-	OverwriteUserPropertiesByID(projectID uint64, id string, properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64) int
+	UpdateUserPropertiesV2(projectID uint64, id string, newProperties *postgres.Jsonb, newUpdateTimestamp int64, sourceValue string, objectType string) (*postgres.Jsonb, int)
+	OverwriteUserPropertiesByID(projectID uint64, id string, properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int
 	OverwriteUserPropertiesByCustomerUserID(projectID uint64, customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int
 	GetUserByPropertyKey(projectID uint64, key string, value interface{}) (*model.User, int)
 	UpdateUserPropertiesForSession(projectID uint64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int

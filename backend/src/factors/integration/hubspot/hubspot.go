@@ -354,7 +354,7 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 				"smart_event_timestamp": smartEventTrackPayload.Timestamp}).Warning("Smart event using fallback user id detected.")
 
 		} else {
-			status, _ := SDK.Track(projectID, smartEventTrackPayload, true, SDK.SourceHubspot)
+			status, _ := SDK.Track(projectID, smartEventTrackPayload, true, SDK.SourceHubspot, "")
 			if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 				logCtx.Error("Failed to create hubspot smart event")
 			}
@@ -592,7 +592,8 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 			deleteContactUserID = event.UserId
 		}
 
-		_, errCode := store.GetStore().UpdateUserProperties(project.ID, deleteContactUserID, userPropertiesJsonb, document.Timestamp)
+		_, errCode := store.GetStore().UpdateUserProperties(project.ID, deleteContactUserID, userPropertiesJsonb,
+			document.Timestamp)
 		if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 			logCtx.WithField("UserID", contactDocuments[0].UserId).WithField("userPropertiesJsonb", userPropertiesJsonb).Error("Failed to update user properties for contact delete action")
 			return http.StatusInternalServerError
@@ -658,7 +659,8 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 							mergedContactUserID = event.UserId
 						}
 
-						_, errCode := store.GetStore().UpdateUserProperties(project.ID, mergedContactUserID, mergeUserPropertiesJsonb, document.Timestamp)
+						_, errCode := store.GetStore().UpdateUserProperties(project.ID, mergedContactUserID,
+							mergeUserPropertiesJsonb, document.Timestamp)
 						if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 							logCtx.WithField("UserID", mergedContact.UserId).WithField("userPropertiesJsonb", mergeUserPropertiesJsonb).Error("Failed to update user properties")
 							return http.StatusInternalServerError
@@ -714,7 +716,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
 		trackPayload.UserId = createdUserID
 
-		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceHubspot)
+		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContact)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot contact created event.")
 			return http.StatusInternalServerError
@@ -775,7 +777,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 		}
 
 		trackPayload.UserId = userID
-		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceHubspot)
+		status, response := SDK.Track(project.ID, trackPayload, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameContact)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"status": status, "track_response": response}).Error("Failed to track hubspot contact updated event.")
 			return http.StatusInternalServerError
@@ -916,7 +918,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		}
 	}
 
-	status, trackResponse := SDK.Track(project.ID, payload, true, "")
+	status, trackResponse := SDK.Track(project.ID, payload, true, "", "")
 	if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("create hubspot touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
 		return trackResponse, errors.New(fmt.Sprintf("create hubspot touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
@@ -1229,7 +1231,7 @@ func syncCompanyProperties(projectID uint64, groupID string, docID string, docum
 			UserId:    companyUserID,
 		}
 
-		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
+		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameCompany)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"status": status, "track_response": response, "event_name": processEventNames[i], "event_timestamp": processEventTimestamps[i]}).Error("Failed to track hubspot company event.")
 			return "", errors.New("failed to track hubspot company event")
@@ -1350,8 +1352,8 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 					}
 				}
 
-				_, errCode := store.GetStore().UpdateUserProperties(projectID,
-					contactUser.ID, userPropertiesJsonb, contactUser.PropertiesUpdatedTimestamp+1)
+				_, errCode := store.GetStore().UpdateUserPropertiesV2(projectID, contactUser.ID, userPropertiesJsonb,
+					contactUser.PropertiesUpdatedTimestamp+1, SDK.SourceHubspot, model.HubspotDocumentTypeNameCompany)
 				if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 					logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
 						"Failed to update user properites with company properties.")
@@ -1514,7 +1516,7 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 			return http.StatusOK
 		}
 
-		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
+		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot, model.HubspotDocumentTypeNameDeal)
 		if status != http.StatusOK && status != http.StatusFound &&
 			status != http.StatusNotModified {
 

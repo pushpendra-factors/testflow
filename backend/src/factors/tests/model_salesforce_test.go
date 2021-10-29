@@ -15,6 +15,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateSalesforceDocument(t *testing.T) {
+func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	refreshToken := U.RandomLowerAphaNumString(5)
@@ -1935,7 +1936,7 @@ func TestSalesforceCampaignTest(t *testing.T) {
 	assert.Equal(t, 4, success)
 }
 
-func TestGetLatestSalesforceDocument(t *testing.T) {
+func TestSalesforceGetLatestSalesforceDocument(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
@@ -2269,6 +2270,37 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 func TestSalesforcePerDayBatching(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
+
+	status := IntSalesforce.CreateOrGetSalesforceEventName(project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	eventName := U.EVENT_NAME_SALESFORCE_CONTACT_CREATED
+	dateTimeProperty := "$salesforce_contact_lastmodifieddate"
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	eventName = U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	eventName = ""
+	dateTimeProperty = "$salesforce_contact_lastmodifieddate"
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty, U.PropertyTypeDateTime, true, true)
+	assert.Equal(t, http.StatusCreated, status)
+
+	eventName = U.EVENT_NAME_SALESFORCE_LEAD_CREATED
+	dateTimeProperty = "$salesforce_lead_lastmodifieddate"
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	eventName = U.EVENT_NAME_SALESFORCE_LEAD_UPDATED
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	eventName = ""
+	dateTimeProperty = "$salesforce_lead_lastmodifieddate"
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty, U.PropertyTypeDateTime, true, true)
+	assert.Equal(t, http.StatusCreated, status)
 
 	/*
 		generate per day time series -> {Day1,Day2}, {Day2,Day3},{Day3,Day4} upto current day
@@ -2816,4 +2848,257 @@ func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 
 		assert.Equal(t, len(rules), 3)
 	}
+}
+
+func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
+	// Initialize the project and the user. Also capture currentTimestamp, futureTimestamp & middleTimestamp.
+	currentTimestamp := time.Now().Unix()
+	futureTimestamp := currentTimestamp + 10000
+	middleTimestamp := currentTimestamp + 1000
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+	assert.NotEmpty(t, user.Properties)
+	_, errCode := store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	status := IntSalesforce.CreateOrGetSalesforceEventName(project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	eventName := U.EVENT_NAME_SALESFORCE_CONTACT_CREATED
+	dateTimeProperty := "$salesforce_contact_lastmodifieddate"
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	eventName = U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	eventName = ""
+	dateTimeProperty = "$salesforce_contact_lastmodifieddate"
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty, U.PropertyTypeDateTime, true, true)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Update user properties lastmodifieddate as middleTimestamp, PropertiesUpdatedTimestamp
+	// as futureTimestamp.
+	newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "india", "age": 30.1, "paid": true, "$salesforce_contact_lastmodifieddate": %d}`, middleTimestamp)))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+		newProperties, futureTimestamp)
+	assert.Equal(t, http.StatusAccepted, status)
+	storedUser, errCode := store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, futureTimestamp, storedUser.PropertiesUpdatedTimestamp)
+	var propertiesMap map[string]interface{}
+	err = json.Unmarshal((storedUser.Properties).RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	storedLastModifiedDate, err := util.GetPropertyValueAsFloat64(propertiesMap["$salesforce_contact_lastmodifieddate"])
+	assert.Nil(t, err)
+	assert.Equal(t, middleTimestamp, int64(storedLastModifiedDate))
+
+	// Update user property lastmodifieddate as futureTimestamp and PropertiesUpdatedTimestamp as currentTimestamp.
+	// Since the source and object-type are blank, the property value and PropertiesUpdatedTimestamp should not get
+	// updated.
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"$salesforce_contact_lastmodifieddate": %d}`, futureTimestamp)))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+		newProperties, currentTimestamp)
+	assert.Equal(t, http.StatusAccepted, status)
+	storedUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, futureTimestamp, storedUser.PropertiesUpdatedTimestamp)
+	var updatedPropertiesMap map[string]interface{}
+	err = json.Unmarshal((storedUser.Properties).RawMessage, &updatedPropertiesMap)
+	assert.Nil(t, err)
+	storedLastModifiedDate, err = util.GetPropertyValueAsFloat64(updatedPropertiesMap["$salesforce_contact_lastmodifieddate"])
+	assert.Nil(t, err)
+	assert.Equal(t, middleTimestamp, int64(storedLastModifiedDate))
+
+	// Get oldTimestamp, before the futureTimestamp.
+	oldTimestamp := futureTimestamp - 1000
+
+	// Update user properties lastmodifieddate as futureTimestamp, PropertiesUpdatedTimestamp as oldTimestamp.
+	// lastmodifieddate should get updated with futureTimestamp, but PropertiesUpdatedTimestamp should remain unchanged.
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+		`{"country": "india", "age": 30.1, "paid": true, "$salesforce_contact_lastmodifieddate": %d}`, futureTimestamp)))}
+	_, status = store.GetStore().UpdateUserPropertiesV2(project.ID, user.ID,
+		newProperties, oldTimestamp, SDK.SourceSalesforce, model.SalesforceDocumentTypeNameContact)
+	assert.Equal(t, http.StatusAccepted, status)
+	storedUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, futureTimestamp, storedUser.PropertiesUpdatedTimestamp)
+	err = json.Unmarshal((storedUser.Properties).RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	storedLastModifiedDate, err = util.GetPropertyValueAsFloat64(propertiesMap["$salesforce_contact_lastmodifieddate"])
+	assert.Nil(t, err)
+	assert.Equal(t, futureTimestamp, int64(storedLastModifiedDate))
+
+	// salesforce record test -> Testing single user
+	contactID := U.RandomLowerAphaNumString(5)
+	name := U.RandomLowerAphaNumString(5)
+
+	timestampT1 := time.Now().AddDate(0, 0, -20)
+
+	// salesforce record with created == updated.
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, name, timestampT1.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestampT1.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument := &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Execute enrich job to process the contact created above
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// Verification for contact creation.
+	createDocument, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID}, model.SalesforceDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, createDocument[0].UserID)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap := make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+
+	// Verify salesforce_contact_lastmodifieddate is set to timestampT1
+	lastmodifieddateProperty := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, exists := properitesMap[lastmodifieddateProperty]
+	assert.Equal(t, exists, true)
+	assert.Equal(t, float64(timestampT1.Unix()), userPropertyValue)
+
+	// Update user properties (“a”:1) with timestampT3
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"a": 1}`))}
+	timestampT3 := timestampT1.AddDate(0, 0, 10)
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+		newProperties, timestampT3.Unix())
+	assert.Equal(t, http.StatusAccepted, status)
+	timestampT2 := timestampT1.AddDate(0, 0, 5)
+
+	// update contact record with (properties->‘lastmodified’:timestampT2)
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, name, timestampT1.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestampT2.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Execute enrich job to process the contact created above
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// Verify salesforce_contact_lastmodifieddate is set to timestampT2 and PropertiesUpdatedTimestamp to timestampT3.
+	updateDocument, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID}, model.SalesforceDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, updateDocument[0].UserID)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, exists = properitesMap[lastmodifieddateProperty]
+	assert.Equal(t, exists, true)
+	assert.Equal(t, float64(timestampT2.Unix()), userPropertyValue)
+	assert.Equal(t, timestampT3.Unix(), user.PropertiesUpdatedTimestamp)
+
+	// Salesforce record test -> Testing multi-user by customer-user-id
+	createDocumentIDU1 := rand.Intn(100)
+	cuid_first := getRandomEmail()
+
+	// create contact record createDocumentIDU1 with (properties->‘lastmodified’:timestampT1) and email property
+	// ("email": cuid_first)
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s", "email":"%s"}`, fmt.Sprintf("%v", createDocumentIDU1), name, timestampT1.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestampT1.UTC().Format(model.SalesforceDocumentDateTimeLayout), cuid_first)
+	salesforceDocument = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Execute enrich job to process the contact created above
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// Create normal user U2 (createUserU2) with same email property as that of createDocumentIDU1 ("email": cuid_first)
+	userU2, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cuid_first, JoinTimestamp: timestampT1.Unix()})
+	assert.Equal(t, http.StatusCreated, errCode1)
+
+	// Verify lastmodifieddate user property of userU2 to be timestampT1, which is same as createDocumentIDU1
+	user, status = store.GetStore().GetUser(project.ID, userU2)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, exists = properitesMap[lastmodifieddateProperty]
+	assert.Equal(t, exists, true)
+	assert.Equal(t, float64(timestampT1.Unix()), userPropertyValue)
+
+	// Update user properties (“a”:1) with timestampT3 for userU2
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"a": 1}`))}
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+		newProperties, timestampT3.Unix())
+	assert.Equal(t, http.StatusAccepted, status)
+
+	// create contact updated record for createDocumentIDU1 with (properties->‘lastmodified’:timestampT2)
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s", "email":"%s"}`, fmt.Sprintf("%v", createDocumentIDU1), name, timestampT1.UTC().Format(model.SalesforceDocumentDateTimeLayout), timestampT2.UTC().Format(model.SalesforceDocumentDateTimeLayout), cuid_first)
+	salesforceDocument = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// Execute enrich job to process the contact created above
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// Verify salesforce_contact_lastmodifieddate is set to timestampT2 for both createDocumentIDU1 and userU2.
+	// Verify PropertiesUpdatedTimestamp is set to timestampT3 for both createDocumentIDU1 and userU2.
+	updateDocument, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{fmt.Sprintf("%v", createDocumentIDU1)}, model.SalesforceDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, updateDocument[0].UserID)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, exists = properitesMap[lastmodifieddateProperty]
+	assert.Equal(t, exists, true)
+	assert.Equal(t, float64(timestampT2.Unix()), userPropertyValue)
+	assert.Equal(t, timestampT3.Unix(), user.PropertiesUpdatedTimestamp)
+
+	user, status = store.GetStore().GetUser(project.ID, userU2)
+	assert.Equal(t, http.StatusFound, status)
+	properitesMap = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+	assert.Nil(t, err)
+	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameContact,
+		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, exists = properitesMap[lastmodifieddateProperty]
+	assert.Equal(t, exists, true)
+	assert.Equal(t, float64(timestampT2.Unix()), userPropertyValue)
+	assert.Equal(t, timestampT3.Unix(), user.PropertiesUpdatedTimestamp)
 }
