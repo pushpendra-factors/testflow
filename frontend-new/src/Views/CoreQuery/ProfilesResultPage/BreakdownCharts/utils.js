@@ -56,9 +56,14 @@ export const getProfileBreakDownGranularities = (
 ) => {
   const grns = [];
   let brks = [...breakdowns];
+  console.log('breakdowns', breakdowns);
   breakDownSlice.forEach((h) => {
     const brkIndex = brks.findIndex((x) => h === x.property);
-    grns.push(brks[brkIndex]?.grn);
+    grns.push(
+      brks[brkIndex].prop_type === 'datetime' && brks[brkIndex].grn
+        ? brks[brkIndex].grn
+        : undefined
+    );
     brks.splice(brkIndex, 1);
   });
   return grns;
