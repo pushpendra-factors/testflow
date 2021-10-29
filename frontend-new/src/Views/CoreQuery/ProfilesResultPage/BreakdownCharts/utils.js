@@ -291,7 +291,7 @@ export const getHorizontalBarChartColumns = (
       className: tableStyles.horizontalBarTableHeader,
       render: (d) => {
         const obj = {
-          children: <div className='h-full p-6'>{d.value}</div>,
+          children: <div className='h-full p-6 break-all'>{d.value}</div>,
           props: d.hasOwnProperty('rowSpan') ? { rowSpan: d.rowSpan } : {},
         };
         return obj;
