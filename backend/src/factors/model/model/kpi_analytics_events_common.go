@@ -137,14 +137,13 @@ func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bo
 
 func getTransformedHeaders(headers []string, hasGroupByTimestamp bool, hasAnyGroupBy bool, displayCategory string) []string {
 	currentHeaders := make([]string, 0)
-	if (hasAnyGroupBy && hasGroupByTimestamp) || hasGroupByTimestamp {
+	if hasAnyGroupBy && hasGroupByTimestamp {
+		currentHeaders = append(headers[1:2], headers[3:]...)
+	} else if !hasAnyGroupBy && hasGroupByTimestamp {
+		headers[1] = AliasAggr
 		currentHeaders = headers
 	} else {
 		currentHeaders = headers[2:]
-	}
-	if hasGroupByTimestamp && !hasAnyGroupBy {
-		headers[1] = displayCategory
-		currentHeaders = headers
 	}
 	return currentHeaders
 }
@@ -153,10 +152,12 @@ func getTransformedHeaders(headers []string, hasGroupByTimestamp bool, hasAnyGro
 // TODO: validate if rows are there or not.
 func getTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGroupBy bool) [][]interface{} {
 	var currentRows [][]interface{}
+	currentRows = make([][]interface{}, 0)
 	for _, row := range rows {
 		if hasAnyGroupBy && hasGroupByTimestamp {
-			currentRows = append(currentRows, row)
-		} else if hasGroupByTimestamp {
+			currentRow := append(row[1:2], row[3:]...)
+			currentRows = append(currentRows, currentRow)
+		} else if !hasAnyGroupBy && hasGroupByTimestamp {
 			currentRows = append(currentRows, row)
 		} else {
 			currentRows = append(currentRows, row[2:])

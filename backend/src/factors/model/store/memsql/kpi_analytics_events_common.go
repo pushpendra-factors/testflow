@@ -102,7 +102,7 @@ func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, 
 		hasGroupByTimestamp = true
 	}
 	if len(queries) == 1 {
-		hasAnyGroupBy := len(queries[0].GroupByProperties) == 0
+		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results[0], _, _ = store.RunInsightsQuery(projectID, queries[0])
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
 		finalResult = *results[0]
@@ -110,7 +110,7 @@ func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, 
 		for i, query := range queries {
 			results[i], _, _ = store.RunInsightsQuery(projectID, query)
 		}
-		hasAnyGroupBy := len(queries[0].GroupByProperties) == 0
+		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
 		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations)
 	}
