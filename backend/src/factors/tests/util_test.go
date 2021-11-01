@@ -112,3 +112,30 @@ func TestParseProjectIDToStringMapFromConfig(t *testing.T) {
 	assert.Contains(t, cMap, uint64(2))
 	assert.Equal(t, "Customer User ID", cMap[uint64(2)])
 }
+
+func TestCheckOrConvertStandardTimestamp(t *testing.T) {
+	type args struct {
+		inTimestamp int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want int64
+	}{
+		{"Test1", args{int64(1635227139001)}, 1635227139},
+		{"Test2", args{int64(1635227139002)}, 1635227139},
+		{"Test3", args{int64(1635227139999)}, 1635227139},
+
+		{"Test4", args{int64(1635227001)}, 1635227001},
+		{"Test5", args{int64(1635227002)}, 1635227002},
+		{"Test6", args{int64(1635227999)}, 1635227999},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := U.CheckAndGetStandardTimestamp(tt.args.inTimestamp); got != tt.want {
+				t.Errorf("CheckOrConvertStandardTimestamp() = %v, want %v", got, tt.want)
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
