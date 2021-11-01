@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { connect } from 'react-redux';
 import {
-  Row, Col, Button, Input, Form, message
+  Row, Col, Button, Input, Form, message, Checkbox
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
@@ -37,9 +37,12 @@ function SignUp({ signup }) {
     setDataLoading(true);
     form.validateFields().then((values) => {
       setDataLoading(true);
-      signup(values).then(() => {
+      const filteredValues = Object.fromEntries(
+        Object.entries(values).filter(([key, value]) => key !== 'terms_and_conditions') );
+
+      signup(filteredValues).then(() => {
         setDataLoading(false);
-        setformData(values);
+        setformData(filteredValues);
       }).catch((err) => {
         setDataLoading(false);
         form.resetFields();
@@ -172,6 +175,37 @@ function SignUp({ signup }) {
                                                 <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
                                                 // placeholder="Phone Number"
                                                  />
+                                            </Form.Item>
+                                        </div>
+                                </Col>
+                            </Row>
+
+                            <Row>
+                                <Col span={24}>
+                                        <div className={'flex flex-col mt-5 w-full'} > 
+                                            <Form.Item label={null}
+                                                name="subscribe_newsletter" valuePropName={'checked'}                                 
+                                                >
+                                                <div className='flex items-center'>
+                                                    <Checkbox disabled={dataLoading} ></Checkbox>
+                                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-4'} >Please keep me up to date on Factors, including news, new products, and services.</Text>
+                                                </div>
+                                            </Form.Item>
+                                        </div>
+                                </Col>
+                            </Row>
+                            
+                            <Row>
+                                <Col span={24}>
+                                        <div className={'flex flex-col mt-5 w-full'} >
+                                            <Form.Item label={null} 
+                                                name='terms_and_conditions' valuePropName={'checked'}
+                                                rules={[{ required: true, transform: value => (value || undefined), type: 'boolean', message: 'Please agree to the terms and conditions' }]}
+                                                >
+                                                <div className='flex items-center' >
+                                                    <Checkbox disabled={dataLoading} ></Checkbox>
+                                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 ml-4'} >By signing up, I agree to the <a href='https://www.factors.ai/terms-of-use' target='_blank'>terms of service</a> and <a href='https://www.factors.ai/privacy-policy' target='_blank'>privacy policy</a> of factors.ai</Text>
+                                                </div>
                                             </Form.Item>
                                         </div>
                                 </Col>

@@ -2,7 +2,7 @@
 { 
     &:hover,&:active,&:focus{
         .ant-checkbox-inner{
-            border-color: $fa-color--brand-6 !important;  
+            border-color: $fa-color--mono-6 !important;  
         } 
 
     }
@@ -10,12 +10,12 @@
         &.ant-checkbox-checked
         {
             &::after{
-                border-color: $fa-color--brand-6;   
+                border-color: $fa-color--mono-6;   
             }
             .ant-checkbox-inner{
-                border-color: $fa-color--brand-6;  
-                background-color: $fa-color--brand-6;  
-    
+                border-color: $fa-color--mono-6;  
+                background-color: $fa-color--mono-6;  
+                transform: scale(1.2);
             }
         }
     }
