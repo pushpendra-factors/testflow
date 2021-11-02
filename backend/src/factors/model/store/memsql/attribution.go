@@ -524,22 +524,29 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 				return err, nil
 			}
 
-			queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
-
 			if wStmtEvent != "" {
-				queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
+				whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
 				qParams = append(qParams, wParamsEvent...)
 			}
 
 			// add user filter
-			wStmtUser, wParamsUser, _, err := getFilterSQLStmtForUserProperties(projectID, linkedEvent.Properties, queryFrom)
+			wStmtUser, wParamsUser, eventUserJoinStmnt, err := getFilterSQLStmtForUserProperties(projectID, linkedEvent.Properties, queryFrom)
 			if err != nil {
 				return err, nil
 			}
+
 			if wStmtUser != "" {
-				queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmtUser)
+				whereEventHits = whereEventHits + " AND " + fmt.Sprintf("( %s )", wStmtUser)
 				qParams = append(qParams, wParamsUser...)
 			}
+
+			// JOIN events_properties_json table, if there is
+			// filter on event_properties or event_user_properties.
+			if eventJoinStmnt == "" {
+				eventJoinStmnt = eventUserJoinStmnt
+			}
+
+			queryEventHits := selectEventHits + " " + eventJoinStmnt + " " + whereEventHits
 
 			// fetch query results
 			rows, tx, err := store.ExecQueryWithContext(queryEventHits, qParams)
