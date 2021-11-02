@@ -508,10 +508,10 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			usersPlaceHolder := U.GetValuePlaceHolder(len(users))
 			value := U.GetInterfaceList(users)
 
-			selectEventHits := "SELECT user_id, timestamp FROM events"
+			selectEventHits := "SELECT events.user_id, events.timestamp FROM events"
 			whereEventHits := " WHERE events.project_id=? AND " +
 				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
-				" AND user_id IN ( " + usersPlaceHolder + " ) "
+				" AND events.user_id IN ( " + usersPlaceHolder + " ) "
 
 			qParams := []interface{}{projectID, queryFrom, queryTo}
 			qParams = append(qParams, linkedEventNameIDs...)
@@ -593,7 +593,7 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 		placeHolder += ",?"
 	}
 
-	selectEventHits := "SELECT user_id, timestamp FROM events"
+	selectEventHits := "SELECT events.user_id, events.timestamp FROM events"
 	whereEventHits := "WHERE events.project_id=? AND timestamp >= ? AND " +
 		" timestamp <=? AND events.event_name_id IN (" + placeHolder + ") "
 	qParams := []interface{}{projectID, conversionFrom, conversionTo}

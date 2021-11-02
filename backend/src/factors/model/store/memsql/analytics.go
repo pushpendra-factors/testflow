@@ -1123,7 +1123,9 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	// Set resource pool before query.
 	C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx)
 	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
-	log.WithFields(log.Fields{"Query": U.DBDebugPreparedStatement(stmnt, params)}).Info("Exec query with context")
+	log.WithError(err).
+		WithFields(log.Fields{"Query": U.DBDebugPreparedStatement(stmnt, params)}).
+		Info("Exec query with context")
 
 	return rows, tx, err
 }
