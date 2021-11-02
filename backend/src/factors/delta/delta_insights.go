@@ -48,6 +48,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	}
 	insightGranularity := configs["insightGranularity"].(string)
 	skipWpi := configs["skipWpi"].(bool)
+	skipWpi2 := configs["skipWpi2"].(bool)
 	log.Info("Reading delta query.")
 	computedQueries := make(map[uint64]bool)
 	dashboardUnits, _ := store.GetStore().GetDashboardUnitsForProjectID(projectId)
@@ -67,7 +68,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 		// TODO: This was changed from set to map
 		unionOfFeatures := make(map[string]map[string]bool)
 		log.Info("1st pass: Scanning events file to get top-k base features for each period.")
-		err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep, skipWpi)
+		err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 1"))
 			status["error-wpi-pass1-"+queryIdString] = err.Error()
@@ -75,7 +76,7 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 		}
 		isDownloaded = true
 		log.Info("2nd pass: Scanning events file again to compute counts for union of features.")
-		err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep, skipWpi)
+		err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 2"))
 			status["error-wpi-pass2-"+queryIdString] = err.Error()
@@ -159,10 +160,13 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 	return nil
 }
 
-func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, skipWpi bool) error {
+func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool, skipWpi bool, skipWpi2 bool) error {
+	earlierWeekMap := make(map[int64]bool)
+	earlierWeekMap[periodCodes[0].From] = periodCodes[0].From < periodCodes[1].From
+	earlierWeekMap[periodCodes[1].From] = periodCodes[0].From > periodCodes[1].From
 	for _, periodCode := range periodCodes {
 		fileDownloaded := false
-		if skipWpi == false {
+		if skipWpi == false || (earlierWeekMap[periodCode.From] == false && skipWpi2 == false) {
 			err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
 			if err != nil {
 				return err
