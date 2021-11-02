@@ -99,7 +99,7 @@ func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventP
 		A = b OR A = c and A != d	ordering is wrong
 		A != b OR A != c and A != d	ordering is wrong
 	*/
-	andCount, orCount := 0, 0
+	andCount, orCount, containsCount, equalsCount := 0, 0, 0, 0
 	for _, value := range filterValues {
 		if value.LogicalOp == "AND" {
 			andCount++
@@ -107,19 +107,26 @@ func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventP
 		if value.LogicalOp == "OR" {
 			orCount++
 		}
+		if value.Operator == model.EqualsOpStr || value.Operator == model.NotEqualOpStr {
+			equalsCount++
+		}
+		if value.Operator == model.ContainsOpStr || value.Operator == model.NotContainsOpStr {
+			containsCount++
+		}
 	}
 	/*
 		Rejection cases
 		With same property in two different rows with atleast one containining multiple	count(AND) > 1 and count(OR) >= 1
 		multiple with !=	op = != and count(OR) >= 1
 	*/
-	if andCount > 1 && orCount >= 1 {
+	if andCount > 1 && orCount >= 1 && equalsCount == 0 && containsCount >= 1 {
 		/*
 			A = b OR A = c and A = d	ordering is wrong
 			A != b OR A != c and A = d	ordering is wrong
 			A = b OR A = c and A != d	ordering is wrong
 			A != b OR A != c and A != d	ordering is wrong
 		*/
+		/* in case of the above ones with contains and not contains it is valid. its only a rejection case in = and != combinations */
 		return false
 		// "Multiple filters with same property and any one with multi select"
 	}
@@ -1445,8 +1452,20 @@ func PublishDeltaInsights(topSortedInsights CrossPeriodInsights, filePath string
 func GetEventFileScanner(projectId uint64, periodCode Period, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, insightGranularity string, isDownloaded bool) (*bufio.Scanner, error) {
 	var err error
+	localFile := true
 	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, periodCode.From, insightGranularity)
-	if isDownloaded == false {
+	// TODO: Change this to efTmpPath and efTmpName and write the code to download an events file from cloud to local.
+	// We already have the logic to dump an events file from DB to local and from local to cloud, but not from cloud to local.
+	// The following eventsFilePath will run fine if the cloud_path is a local one. But not if it's an actual remote cloud path.
+	eventsFilePath := efTmpPath + efTmpName
+	fmt.Println(eventsFilePath)
+	scanner, err := T.OpenEventFileAndGetScanner(eventsFilePath)
+	if err != nil {
+		localFile = false
+		deltaComputeLog.WithFields(log.Fields{"err": err,
+			"eventsFilePath": eventsFilePath}).Error("Failed opening event file and getting scanner.")
+	}
+	if isDownloaded == false || localFile == false {
 		efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, periodCode.From, insightGranularity)
 		deltaComputeLog.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
 			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
@@ -1463,15 +1482,11 @@ func GetEventFileScanner(projectId uint64, periodCode Period, cloudManager *file
 			return nil, err
 		}
 	}
-	// TODO: Change this to efTmpPath and efTmpName and write the code to download an events file from cloud to local.
-	// We already have the logic to dump an events file from DB to local and from local to cloud, but not from cloud to local.
-	// The following eventsFilePath will run fine if the cloud_path is a local one. But not if it's an actual remote cloud path.
-	eventsFilePath := efTmpPath + efTmpName
-	fmt.Println(eventsFilePath)
-	scanner, err := T.OpenEventFileAndGetScanner(eventsFilePath)
+	scanner, err = T.OpenEventFileAndGetScanner(eventsFilePath)
 	if err != nil {
 		deltaComputeLog.WithFields(log.Fields{"err": err,
 			"eventsFilePath": eventsFilePath}).Error("Failed opening event file and getting scanner.")
 	}
+
 	return scanner, err
 }
