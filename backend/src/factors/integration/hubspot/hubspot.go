@@ -306,7 +306,7 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 	}
 
 	if hubspotSmartEventName.EventName == "" || hubspotSmartEventName.Filter == nil || hubspotSmartEventName.Type == "" {
-		logCtx.Error("Missing smart event fileds.")
+		logCtx.Error("Missing smart event fields.")
 		return prevProperties
 	}
 
@@ -332,13 +332,13 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 	} else {
 		fieldTimestamp, err := getTimestampFromField(projectID, timestampReferenceField, currentProperties)
 		if err != nil {
-			logCtx.WithField("timestamp_refrence_field", timestampReferenceField).
+			logCtx.WithField("timestamp_reference_field", timestampReferenceField).
 				WithError(err).Errorf("Failed to get timestamp from reference field")
 			smartEventTrackPayload.Timestamp = getEventTimestamp(defaultTimestamp) + 1 // use record timestamp if custom timestamp not available
 		} else {
 			if fieldTimestamp <= 0 {
-				logCtx.WithField("timestamp_refrence_field", timestampReferenceField).
-					WithError(err).Error("O timestamp from timestamp refrence field.")
+				logCtx.WithField("timestamp_reference_field", timestampReferenceField).
+					WithError(err).Error("O timestamp from timestamp reference field.")
 				smartEventTrackPayload.Timestamp = getEventTimestamp(defaultTimestamp) + 1
 			} else {
 				smartEventTrackPayload.Timestamp = fieldTimestamp // make sure timestamp in seconds
@@ -838,6 +838,8 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRule",
 		"document_id": document.ID, "document_action": document.Action})
 
+	lastModifiedTimeStamp = U.CheckAndGetStandardTimestamp(lastModifiedTimeStamp)
+
 	if &project.HubspotTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.HubspotTouchPoints) {
 
 		var touchPointRules map[string][]model.HSTouchPointRule
@@ -906,13 +908,13 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	for key, value := range rule.PropertiesMap {
 
 		if value.Type == model.HSTouchPointPropertyValueAsConstant {
-			logCtx.Error("applying constant value as ", key)
+			logCtx.Error("applying CONSTANT value for key: ", key, ", value: ", value.Value)
 			payload.EventProperties[key] = value.Value
 		} else {
 			if _, exists := trackPayload.EventProperties[value.Value]; exists {
 				payload.EventProperties[key] = trackPayload.EventProperties[value.Value]
 			} else {
-				logCtx.Error("applying property value as ", value.Value, key)
+				logCtx.Error("applying PROPERTY value for ey: ", key, ", value: ", value.Value)
 				payload.EventProperties[key] = model.PropertyValueNone
 			}
 		}
@@ -923,7 +925,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		logCtx.WithField("Document", trackPayload).WithError(err).Error(fmt.Errorf("create hubspot touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
 		return trackResponse, errors.New(fmt.Sprintf("create hubspot touchpoint event track failed for doc type %d, message %s", document.Type, trackResponse.Error))
 	}
-	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("Successfully: created hubspot offline touch point")
+	logCtx.WithField("statusCode", status).WithField("trackResponsePayload", trackResponse).Info("Successfully: created hubspot offline touch point")
 	return trackResponse, nil
 }
 

@@ -41,6 +41,7 @@ func mainRunDeltaInsights() {
 	kValue := flag.Int("k", -1, "--k=10")
 	whitelistedDashboardIds := flag.String("whitelisted_dashboard_ids", "*", "")
 	skipWpi := flag.Bool("skip_wpi", false, "")
+	skipWpi2 := flag.Bool("skip_wpi2", false, "")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -145,6 +146,7 @@ func mainRunDeltaInsights() {
 	var k int = *kValue // Selecting all top features if k = -1.
 	configs["k"] = k
 	configs["skipWpi"] = (*skipWpi)
+	configs["skipWpi2"] = (*skipWpi2)
 	if *isWeeklyEnabled {
 		configs["insightGranularity"] = T.ModelTypeWeek
 		status := taskWrapper.TaskFuncWithProjectId("WIWeekly", *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)

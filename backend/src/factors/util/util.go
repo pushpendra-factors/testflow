@@ -1278,3 +1278,10 @@ func GetNumberOfDigits(input int64) int {
 	}
 	return count
 }
+
+func CheckAndGetStandardTimestamp(inTimestamp int64) int64 {
+	if inTimestamp > int64(10000000000) {
+		return int64(inTimestamp / int64(1000))
+	}
+	return inTimestamp
+}

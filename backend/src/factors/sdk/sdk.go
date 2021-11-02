@@ -670,7 +670,7 @@ func Track(projectId uint64, request *TrackPayload,
 					"customerUserId": customerUserID}).Error("Failed to identify user on form submit event.")
 			}
 
-			// fill form submit properties once identification is sucessfull
+			// fill form submit properties once identification is successful
 			if errCode == http.StatusOK {
 				for k, v := range *formSubmitUserProperties {
 					(*userProperties)[k] = v
@@ -696,7 +696,7 @@ func Track(projectId uint64, request *TrackPayload,
 	logCtx = logCtx.WithField("user_properties", userProperties)
 	userPropsJSON, err := json.Marshal(userProperties)
 	if err != nil {
-		logCtx.WithError(err).Error("Update user properites on track failed. JSON marshal failed.")
+		logCtx.WithError(err).Error("Update user proprieties on track failed. JSON marshal failed.")
 		response.Error = "Failed updating user properties."
 	}
 
