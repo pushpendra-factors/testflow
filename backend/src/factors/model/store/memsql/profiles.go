@@ -121,7 +121,7 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 
 	filterJoinStmnt := getUsersFilterJoinStatement(projectID, query.Filters)
 	stepSqlStmnt := fmt.Sprintf(
-		"SELECT %s FROM users %s WHERE project_id = ? %s %s ORDER BY all_users LIMIT 10000",
+		"SELECT %s FROM users %s WHERE users.project_id = ? %s %s ORDER BY all_users LIMIT 10000",
 		selectStmnt, filterJoinStmnt, filterStmnt, groupByStmnt,
 	)
 	params = append(params, groupBySelectParams...)
