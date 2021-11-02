@@ -21,6 +21,7 @@ type KPIFilterValuesRequest struct {
 	ObjectType   string `json:"object_type"`
 	PropertyName string `json:"property_name"`
 	Entity       string `json:"entity"`
+	Metric string `json:"me"`
 }
 
 func (req *KPIFilterValuesRequest) isValid() bool {
@@ -113,6 +114,7 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		}
 		resultantFilterValuesResponse = channelsFilterValues.FilterValues
 	} else if request.Category == model.EventCategory && request.Entity == model.EventEntity {
+		request.ObjectType = model.GetObjectTypeForFilterValues(request.ObjectType, request.Metric)
 		eventsFilterValues, err := storeSelected.GetPropertyValuesByEventProperty(projectID, request.ObjectType, request.PropertyName, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache())
 		if err != nil {
 			logCtx.Warn(err)
@@ -120,6 +122,7 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		}
 		resultantFilterValuesResponse = eventsFilterValues
 	} else {
+		request.ObjectType = model.GetObjectTypeForFilterValues(request.ObjectType, request.Metric)
 		userFilterValues, err := storeSelected.GetPropertyValuesByUserProperty(projectID, request.PropertyName, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache())
 		if err != nil {
 			logCtx.Warn(err)

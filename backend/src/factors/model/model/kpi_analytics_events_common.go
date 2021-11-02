@@ -39,18 +39,40 @@ func GetDirectDerviableQueryPropsFromKPI(kpiQuery KPIQuery) Query {
 }
 
 func BuildFiltersAndGroupByBasedOnKPIQuery(query Query, kpiQuery KPIQuery, metric string) Query {
-	metricsData := MapOfMetricsToData[kpiQuery.DisplayCategory][metric]
-	var objectType string
-	if kpiQuery.DisplayCategory != PageViewsDisplayCategory {
-		objectType = metricsData["object_type"]
-	} else if kpiQuery.DisplayCategory == PageViewsDisplayCategory && U.ContainsStringInArray([]string{Entrances, Exits}, metric) {
-		objectType = U.EVENT_NAME_SESSION
-	} else {
-		objectType = kpiQuery.PageUrl
-	}
+	objectType := GetObjectTypeForQueryExecute(kpiQuery.DisplayCategory, metric, kpiQuery.PageUrl)
 	query.EventsWithProperties, query.GlobalUserProperties = getFilterEventsForEventAnalytics(kpiQuery.Filters, objectType)
 	query.GroupByProperties = getGroupByEventsForEventsAnalytics(kpiQuery.GroupBy, objectType)
 	return query
+}
+
+func GetObjectTypeForQueryExecute(displayCategory string, metric string, pageUrl string) string {
+	metricsData := MapOfMetricsToData[displayCategory][metric]
+	var objectType string
+	if displayCategory != PageViewsDisplayCategory {
+		objectType = metricsData["object_type"]
+	} else if displayCategory == PageViewsDisplayCategory && U.ContainsStringInArray([]string{Entrances, Exits}, metric) {
+		objectType = U.EVENT_NAME_SESSION
+	} else {
+		objectType = pageUrl
+	}
+	return objectType
+}
+
+func GetObjectTypeForFilterValues(displayCategory string, metric string) string {
+	var objectType string
+	if displayCategory == WebsiteSessionDisplayCategory {
+		objectType = U.EVENT_NAME_SESSION
+	} else if displayCategory == FormSubmissionsDisplayCategory {
+		objectType = U.EVENT_NAME_FORM_SUBMITTED
+	} else if U.ContainsStringInArray([]string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, SalesforceUsersDisplayCategory,
+		SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory}, displayCategory) {
+		metricsData := MapOfMetricsToData[displayCategory][metric]
+		objectType = metricsData["object_type"]
+	} else { // pageViews case as default.
+		objectType = displayCategory
+	}
+
+	return objectType
 }
 
 func getFilterEventsForEventAnalytics(filters []KPIFilter, objectType string) ([]QueryEventWithProperties, []QueryProperty) {
