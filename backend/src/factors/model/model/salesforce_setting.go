@@ -104,6 +104,8 @@ var (
 		"Whatsapp_Opt_IN__c":                true,
 		"MobileYM__c":                       true,
 		"Customer_WhatsApp_OptIN__c":        true,
+		"Design_User_Name__c":               true,
+		"Design_User__c":                    true,
 	}
 
 	designcafeOpportunityAllowedFields = map[string]bool{
@@ -166,6 +168,9 @@ var (
 		"Payment_Mode__c":                true,
 		"Packages__c":                    true,
 		"MobileYM__c":                    true,
+		"Design_User_Name__c":            true,
+		"Design_User__c":                 true,
+		"Opportunity_status__c":          true,
 	}
 
 	designcafeAllowedObjects = map[string]map[string]bool{
