@@ -908,13 +908,12 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	for key, value := range rule.PropertiesMap {
 
 		if value.Type == model.HSTouchPointPropertyValueAsConstant {
-			logCtx.Error("applying CONSTANT value for key: ", key, ", value: ", value.Value)
 			payload.EventProperties[key] = value.Value
 		} else {
 			if _, exists := trackPayload.EventProperties[value.Value]; exists {
 				payload.EventProperties[key] = trackPayload.EventProperties[value.Value]
 			} else {
-				logCtx.Error("applying PROPERTY value for ey: ", key, ", value: ", value.Value)
+				// Property value is not found, hence keeping it as $none
 				payload.EventProperties[key] = model.PropertyValueNone
 			}
 		}
