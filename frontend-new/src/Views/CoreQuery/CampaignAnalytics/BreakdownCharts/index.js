@@ -32,11 +32,14 @@ function BreakdownCharts({
 
   useEffect(() => {
     const aggData = formatData(data, arrayMapper, breakdown);
+    
+    //jitesh please check, i've changed it to "data.result ? data.result[0] : data.result_group[0]"
+    
     const {
       categories: cat,
       highchartsData: hcd,
     } = formatDataInHighChartsFormat(
-      data.result_group[0],
+      data.result ? data.result[0] : data.result_group[0],
       arrayMapper,
       aggData
     );

@@ -11,8 +11,9 @@ import { connect, useSelector, useDispatch } from 'react-redux';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CampQueryComposer from '../../components/CampQueryComposer';
+import KPIComposer from 'Components/KPIComposer';
 import CoreQueryHome from '../CoreQueryHome';
-import { Drawer, Button, Collapse, Modal } from 'antd';
+import { Drawer, Button, Collapse, Modal, message } from 'antd';
 import {
   Text,
   SVG,
@@ -31,6 +32,7 @@ import {
   getQuery,
   initialState,
   getFunnelQuery,
+  getKPIQuery,
   DefaultDateRangeFormat,
   getAttributionQuery,
   getCampaignsQuery,
@@ -43,11 +45,13 @@ import {
   getAttributionsData,
   getCampaignsData,
   getProfileData,
+  getKPIData,
 } from '../../reducers/coreQuery/services';
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_KPI,
   QUERY_TYPE_ATTRIBUTION,
   TOTAL_EVENTS_CRITERIA,
   TOTAL_USERS_CRITERIA,
@@ -85,6 +89,11 @@ import {
   getValidGranularityOptions,
   shouldDataFetch,
 } from '../../utils/dataFormatter';
+import { fetchKPIConfig, fetchPageUrls } from 'Reducers/kpi';
+import {
+  SampleResponse,
+  NoGroupBySampleResponse,
+} from '../../utils/SampleResponse';
 import ProfileComposer from '../../components/ProfileComposer';
 
 const { Panel } = Collapse;
@@ -94,6 +103,9 @@ function CoreQuery({
   deleteGroupByForEvent,
   location,
   getCampaignConfigData,
+  fetchKPIConfig,
+  KPI_config,
+  fetchPageUrls,
 }) {
   const [coreQueryState, localDispatch] = useReducer(
     CoreQueryReducer,
@@ -111,6 +123,9 @@ function CoreQuery({
   const [querySaved, setQuerySaved] = useState(false);
   const [breakdownType, setBreakdownType] = useState(EACH_USER_TYPE);
   const [queries, setQueries] = useState([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState(false);
+  const [KPIConfigProps, setKPIConfigProps] = useState([]);
+
   const [profileQueries, setProfileQueries] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
     groupBy: [
@@ -244,7 +259,11 @@ function CoreQuery({
         type: SET_COMPARISON_SUPPORTED,
         payload: isComparisonEnabled(queryType, queries, groupBy, models),
       });
-      if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
+      if (
+        queryType === QUERY_TYPE_FUNNEL ||
+        queryType === QUERY_TYPE_EVENT ||
+        queryType === QUERY_TYPE_KPI
+      ) {
         setAppliedQueries(
           queries.map((elem) => (elem.alias ? elem.alias : elem.label))
         );
@@ -533,6 +552,63 @@ function CoreQuery({
     ]
   );
 
+  const runKPIQuery = useCallback(
+    async (
+      isQuerySaved,
+      durationObj = null,
+      isGranularityChange = false,
+      isCompareQuery = false
+    ) => {
+      try {
+        if (!durationObj) {
+          durationObj = dateRange;
+          resetComparisonData();
+        }
+        const KPIquery = getKPIQuery(
+          queries,
+          durationObj,
+          groupBy,
+          queryOptions
+        );
+        if (!isCompareQuery) {
+          configActionsOnRunningQuery(isQuerySaved);
+          updateResultState({ ...initialState, loading: true });
+          updateRequestQuery(KPIquery);
+        } else {
+          updateLocalReducer(COMPARISON_DATA_LOADING);
+        }
+        const res = await getKPIData(
+          activeProject.id,
+          KPIquery,
+          getDashboardConfigs(isQuerySaved),
+          true
+        );
+        updateResultState({
+          ...initialState,
+          data: res.data.result || res.data,
+        });
+      } catch (err) {
+        console.log(err);
+        updateResultState({
+          ...initialState,
+          error: true,
+        });
+      }
+    },
+    [
+      queries,
+      activeProject.id,
+      groupBy,
+      globalFilters,
+      dateRange,
+      updateResultState,
+      configActionsOnRunningQuery,
+      updateLocalReducer,
+      resetComparisonData,
+      getDashboardConfigs,
+    ]
+  );
+
   const runCampaignsQuery = useCallback(
     async (isQuerySaved, durationObj = null, isGranularityChange = false) => {
       try {
@@ -626,7 +702,6 @@ function CoreQuery({
       groupBy,
       globalFilters,
       updateResultState,
-      configActionsOnRunningQuery,
       getDashboardConfigs,
     ]
   );
@@ -681,7 +756,11 @@ function CoreQuery({
         to = dates.endDate;
       }
 
-      if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) {
+      if (
+        queryType === QUERY_TYPE_EVENT ||
+        queryType === QUERY_TYPE_CAMPAIGN ||
+        queryType === QUERY_TYPE_KPI
+      ) {
         frequency = getValidGranularityOptions({ from, to }, queryType)[0];
       }
 
@@ -765,6 +844,8 @@ function CoreQuery({
           id: clickedSavedReport.query_id,
           name: clickedSavedReport.queryName,
         });
+      } else if (clickedSavedReport.queryType === QUERY_TYPE_KPI) {
+        runKPIQuery(rowClicked.queryName);
       } else if (clickedSavedReport.queryType === QUERY_TYPE_PROFILE) {
         runProfileQuery({
           id: clickedSavedReport.query_id,
@@ -784,6 +865,7 @@ function CoreQuery({
     runQuery,
     runAttributionQuery,
     runCampaignsQuery,
+    runKPIQuery,
     runProfileQuery,
   ]);
 
@@ -793,7 +875,7 @@ function CoreQuery({
     };
   }, [dispatch]);
 
-  const queryChange = (newEvent, index, changeType = 'add') => {
+  const queryChange = (newEvent, index, changeType = 'add', flag = null) => {
     const queryupdated = [...queries];
     if (queryupdated[index]) {
       if (changeType === 'add') {
@@ -811,6 +893,9 @@ function CoreQuery({
         }
       }
     } else {
+      if (flag) {
+        Object.assign(newEvent, { pageViewVal: flag });
+      }
       queryupdated.push(newEvent);
     }
     setQueries(queryupdated);
@@ -867,6 +952,11 @@ function CoreQuery({
       case QUERY_TYPE_ATTRIBUTION:
         return {
           text: 'Attributions',
+          icon: 'attributions_cq',
+        };
+      case QUERY_TYPE_KPI:
+        return {
+          text: 'KPI',
           icon: 'attributions_cq',
         };
       case QUERY_TYPE_PROFILE:
@@ -932,6 +1022,7 @@ function CoreQuery({
       queryType === QUERY_TYPE_FUNNEL ||
       queryType === QUERY_TYPE_EVENT ||
       queryType === QUERY_TYPE_ATTRIBUTION ||
+      queryType === QUERY_TYPE_KPI ||
       queryType === QUERY_TYPE_PROFILE
     );
   };
@@ -956,6 +1047,24 @@ function CoreQuery({
       return <AttrQueryComposer runAttributionQuery={runAttributionQuery} />;
     }
 
+    if (queryType === QUERY_TYPE_KPI) {
+      return (
+        <KPIComposer
+          queries={queries}
+          setQueries={setQueries}
+          eventChange={queryChange}
+          queryType={queryType}
+          queryOptions={queryOptions}
+          setQueryOptions={setExtraOptions}
+          activeKey={activeKey}
+          handleRunQuery={runKPIQuery}
+          selectedMainCategory={selectedMainCategory}
+          setSelectedMainCategory={setSelectedMainCategory}
+          KPIConfigProps={KPIConfigProps}
+          setKPIConfigProps={setKPIConfigProps}
+        />
+      );
+    }
     if (queryType === QUERY_TYPE_CAMPAIGN) {
       return (
         <CampQueryComposer
@@ -983,6 +1092,7 @@ function CoreQuery({
       queryType === QUERY_TYPE_FUNNEL ||
       queryType === QUERY_TYPE_EVENT ||
       queryType === QUERY_TYPE_ATTRIBUTION ||
+      queryType === QUERY_TYPE_KPI ||
       queryType === QUERY_TYPE_PROFILE
     ) {
       return (
@@ -1003,10 +1113,13 @@ function CoreQuery({
     setQuerySaved(false);
     updateRequestQuery(null);
     closeDrawer();
+
+    if (queryType === QUERY_TYPE_KPI) {
+      setQueries([]);
+    }
   };
 
   function changeTab(key) {
-    // console.log('current tab is=-->>',key);
     setActiveTab(key);
   }
 
@@ -1039,7 +1152,6 @@ function CoreQuery({
           visible={drawerVisible}
           footer={null}
           centered={false}
-          // zIndex={1005}
           mask={false}
           closable={false}
           className={'fa-modal--full-width'}
@@ -1077,12 +1189,49 @@ function CoreQuery({
     queries,
     profileQueries,
     showResult,
+    runKPIQuery,
+    setQueries,
+    queryOptions,
+    selectedMainCategory,
+    setSelectedMainCategory,
+    KPIConfigProps,
   };
 
   const closeResultPage = (flag = false) => {
     setQuerySaved(false);
     setDrawerVisible(flag);
   };
+
+  useEffect(() => {
+    // not the right place to do this. We can do it in App Layout or in the KPI query builder component
+    fetchKPIConfig(activeProject.id)
+      .then(() => {
+        fetchPageUrls(activeProject.id).catch((e) => {
+          console.log('fetch KPI page URLS error', e);
+        });
+      })
+      .catch((e) => {
+        console.log('fetchKPIConfig error', e);
+      });
+  }, [activeProject]);
+
+  useEffect(() => {
+    let KPIlist = KPI_config || [];
+    let selGroup = KPIlist.find((item) => {
+      return item.display_category == selectedMainCategory?.group;
+    });
+    let DDvalues = selGroup?.properties.map((item) => {
+      if (item == null) return;
+      let ddName = item.display_name ? item.display_name : item.name;
+      return [
+        ddName,
+        item.name,
+        item.data_type,
+        item.entity ? item.entity : item.object_type,
+      ];
+    });
+    setKPIConfigProps(DDvalues);
+  }, [selectedMainCategory]);
 
   return (
     <>
@@ -1189,6 +1338,7 @@ function CoreQuery({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
+  KPI_config: state.kpi?.config,
 });
 
 const mapDispatchToProps = (dispatch) =>
@@ -1196,6 +1346,8 @@ const mapDispatchToProps = (dispatch) =>
     {
       deleteGroupByForEvent,
       getCampaignConfigData,
+      fetchKPIConfig,
+      fetchPageUrls,
     },
     dispatch
   );

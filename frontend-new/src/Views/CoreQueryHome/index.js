@@ -27,6 +27,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_KPI,
   QUERY_TYPE_TEMPLATE,
   TYPE_EVENTS_OCCURRENCE,
   TOTAL_EVENTS_CRITERIA,
@@ -55,6 +56,14 @@ import TemplatesModal from '../CoreQuery/Templates';
 import { fetchWeeklyIngishts } from '../../reducers/insights';
 import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
+import { fetchAgentInfo } from 'Reducers/agentActions';
+
+const whiteListedAccounts_KPI = [  
+  'jitesh@factors.ai', 
+  'kartheek@factors.ai',
+  'baliga@factors.ai', 
+  'praveenr@factors.ai',
+]; 
 
 const coreQueryoptions = [
   {
@@ -66,6 +75,11 @@ const coreQueryoptions = [
     title: 'Funnels',
     icon: 'funnels_cq',
     desc: 'Find how users are navigating a defined path',
+  },
+  {
+    title: 'KPI',
+    icon: 'KPI_cq',
+    desc: 'Access all your marketing metrics including website, ads and MAP/CRM data here.',
   },
   {
     title: 'Campaigns',
@@ -140,6 +154,7 @@ function CoreQuery({
   activeAccount,
   updateSavedQuerySettings,
   setProfileQueries,
+  fetchAgentInfo
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
@@ -149,6 +164,14 @@ function CoreQuery({
   const history = useHistory();
   const { metadata } = useSelector((state) => state.insights);
   const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
+
+  useEffect(() => {
+    const getData = async () => {
+      await fetchAgentInfo(); 
+    };
+    getData();
+  }, [activeProject]);
+
 
   const getFormattedRow = (q) => {
     const requestQuery = q.query;
@@ -205,8 +228,7 @@ function CoreQuery({
     showDeleteModal(true);
   }, []);
 
-  const handleViewResult = useCallback((row, event) => {
-    console.log('row id-->>', row);
+  const handleViewResult = useCallback((row, event) => { 
     event.stopPropagation();
     event.preventDefault();
     getWeeklyIngishts(row);
@@ -262,8 +284,7 @@ function CoreQuery({
   );
 
   const getWeeklyIngishts = (record) => {
-    if (metadata?.QueryWiseResult) {
-      // console.log('saved query unit id-->>', record);
+    if (metadata?.QueryWiseResult) { 
       const insightsItem = metadata?.QueryWiseResult[record.key];
       if (insightsItem) {
         dispatch({
@@ -317,7 +338,11 @@ function CoreQuery({
             const usefulQuery = { ...equivalentQuery, ...newDateRange };
             delete usefulQuery.queryType;
             dispatch({ type: INITIALIZE_CAMPAIGN_STATE, payload: usefulQuery });
-          } else {
+          } 
+          // else if(queryType === QUERY_TYPE_KPI) {
+          //  // Vishnu convert backend formatted query to  our local state query
+          // } 
+          else {
             equivalentQuery = getStateQueryFromRequestQuery(
               record.query.query_group[0]
             );
@@ -472,6 +497,18 @@ function CoreQuery({
       setQueryType(QUERY_TYPE_ATTRIBUTION);
     }
 
+    if (item.title === 'KPI') {
+      setQueryType(QUERY_TYPE_KPI);
+      setQueries([]);
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: {
+          global: [],
+          event: [],
+        },
+      });
+    }
+
     if (item.title === 'Campaigns') {
       setQueryType(QUERY_TYPE_CAMPAIGN);
     }
@@ -488,7 +525,7 @@ function CoreQuery({
       });
     }
   };
-
+  
   return (
     <>
       <ErrorBoundary
@@ -542,7 +579,10 @@ function CoreQuery({
           <Row gutter={[24, 24]} justify='center' className={'mt-10'}>
             <Col span={20}>
               <div className={'flex'}>
-                {coreQueryoptions.map((item, index) => {
+                {coreQueryoptions.map((item, index) => { 
+                  if (item.title === 'KPI' && !whiteListedAccounts_KPI.includes(activeAccount)) {
+                    return null;
+                  }
                   return (
                     <div
                       key={index}
@@ -646,4 +686,4 @@ const mapStateToProps = (state) => ({
   activeAccount: state.agent?.agent_details?.email,
 });
 
-export default connect(mapStateToProps, { fetchWeeklyIngishts })(CoreQuery);
+export default connect(mapStateToProps, { fetchWeeklyIngishts, fetchAgentInfo })(CoreQuery);

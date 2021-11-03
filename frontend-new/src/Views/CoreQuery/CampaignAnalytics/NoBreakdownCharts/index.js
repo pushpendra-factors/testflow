@@ -22,6 +22,7 @@ function NoBreakdownCharts({
   const [chartsData, setChartsData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [seriesData, setSeriesData] = useState([]);
+  console.log('chartsData', chartsData);
 
   useEffect(() => {
     setChartsData(formatData(data, arrayMapper));

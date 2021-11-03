@@ -27,7 +27,12 @@ export const getEventNames = (dispatch, projectId) => {
   );
 };
 
-export const getEventsData = (projectId, query_group, dashboard, isQuery = false) => {
+export const getEventsData = (
+  projectId,
+  query_group,
+  dashboard,
+  isQuery = false
+) => {
   let url;
   if (!dashboard) {
     url = host + 'projects/' + projectId + '/v1/query';
@@ -39,8 +44,9 @@ export const getEventsData = (projectId, query_group, dashboard, isQuery = false
       `/v1/query?refresh=${dashboard.refresh}&dashboard_id=` +
       dashboard.id +
       '&dashboard_unit_id=' +
-      dashboard.unit_id + 
-      '&is_query='+isQuery;
+      dashboard.unit_id +
+      '&is_query=' +
+      isQuery;
   }
   return post(null, url, { query_group });
 };
@@ -112,7 +118,7 @@ export function fetchUserProperties(projectId, queryType) {
   return get(null, url);
 }
 
-export const getFunnelData = (projectId, query, dashboard, isQuery=false) => {
+export const getFunnelData = (projectId, query, dashboard, isQuery = false) => {
   let url;
   if (!dashboard) {
     url = host + 'projects/' + projectId + '/query';
@@ -125,12 +131,18 @@ export const getFunnelData = (projectId, query, dashboard, isQuery=false) => {
       dashboard.id +
       '&dashboard_unit_id=' +
       dashboard.unit_id +
-      '&is_query='+isQuery;
+      '&is_query=' +
+      isQuery;
   }
   return post(null, url, { query });
 };
 
-export const getProfileData = (projectId, query, dashboard, isQuery=false) => {
+export const getProfileData = (
+  projectId,
+  query,
+  dashboard,
+  isQuery = false
+) => {
   let url;
   if (!dashboard) {
     url = host + 'projects/' + projectId + '/profiles/query';
@@ -143,7 +155,27 @@ export const getProfileData = (projectId, query, dashboard, isQuery=false) => {
       dashboard.id +
       '&dashboard_unit_id=' +
       dashboard.unit_id +
-      '&is_query='+isQuery;
+      '&is_query=' +
+      isQuery;
+  }
+  return post(null, url, query);
+};
+
+export const getKPIData = (projectId, query, dashboard, isQuery = false) => {
+  let url;
+  if (!dashboard) {
+    url = host + 'projects/' + projectId + '/v1/kpi/query';
+  } else {
+    url =
+      host +
+      'projects/' +
+      projectId +
+      `/v1/kpi/query?refresh=${dashboard.refresh}&dashboard_id=` +
+      dashboard.id +
+      '&dashboard_unit_id=' +
+      dashboard.unit_id +
+      '&is_query=' +
+      isQuery;
   }
   return post(null, url, query);
 };
@@ -198,7 +230,12 @@ export const fetchQueries = (projectId) => {
   };
 };
 
-export const getAttributionsData = (projectId, reqBody, dashboard, isQuery=false) => {
+export const getAttributionsData = (
+  projectId,
+  reqBody,
+  dashboard,
+  isQuery = false
+) => {
   let url;
   if (!dashboard) {
     url = host + 'projects/' + projectId + '/attribution/query';
@@ -211,8 +248,8 @@ export const getAttributionsData = (projectId, reqBody, dashboard, isQuery=false
       dashboard.id +
       '&dashboard_unit_id=' +
       dashboard.unit_id +
-      '&is_query='+isQuery
-      ;
+      '&is_query=' +
+      isQuery;
   }
   return post(null, url, reqBody);
 };
@@ -223,7 +260,12 @@ export const fetchCampaignConfig = (projectId, channel) => {
   return get(null, url);
 };
 
-export const getCampaignsData = (projectId, reqBody, dashboard, isQuery=false) => {
+export const getCampaignsData = (
+  projectId,
+  reqBody,
+  dashboard,
+  isQuery = false
+) => {
   let url;
   if (!dashboard) {
     url = host + 'projects/' + projectId + '/v1/channels/query';
@@ -235,9 +277,9 @@ export const getCampaignsData = (projectId, reqBody, dashboard, isQuery=false) =
       `/v1/channels/query?refresh=${dashboard.refresh}&dashboard_id=` +
       dashboard.id +
       '&dashboard_unit_id=' +
-      dashboard.unit_id + 
-      '&is_query='+isQuery
-      ;
+      dashboard.unit_id +
+      '&is_query=' +
+      isQuery;
   }
   return post(null, url, reqBody);
 };
@@ -247,9 +289,12 @@ export const getWebAnalyticsData = (
   reqBody,
   dashboardId,
   refresh,
-  isQuery=false
+  isQuery = false
 ) => {
-  const url = `${host}projects/${projectId}/dashboard/${dashboardId}/units/query/web_analytics?refresh=${refresh}` + '&is_query='+isQuery;
+  const url =
+    `${host}projects/${projectId}/dashboard/${dashboardId}/units/query/web_analytics?refresh=${refresh}` +
+    '&is_query=' +
+    isQuery;
   return post(null, url, reqBody);
 };
 

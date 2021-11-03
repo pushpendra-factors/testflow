@@ -24,6 +24,7 @@ import {
   CHART_TYPE_TABLE,
   DASHBOARD_TYPES,
   QUERY_TYPE_PROFILE,
+  QUERY_TYPE_KPI,
 } from '../../utils/constants';
 import { getSaveChartOptions } from '../../Views/CoreQuery/utils';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
@@ -162,6 +163,13 @@ function SaveQuery({
               gbt: q.gbt ? 'date' : '',
             };
           }),
+        };
+      } else if (queryType === QUERY_TYPE_KPI) {
+        query = {
+          ...requestQuery,
+          fr: startOfWeek,
+          to: todayNow,
+          gbt: q.gbt ? 'date' : '',
         };
       } else if (queryType === QUERY_TYPE_PROFILE) {
         query = {

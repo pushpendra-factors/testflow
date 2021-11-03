@@ -4,19 +4,19 @@
     .ant-radio{
         &:hover,&:active,&:focus{
             .ant-radio-inner{
-                border-color: $fa-color--brand-6;  
+                border-color: $fa-color--brand-color;  
             } 
 
         }
         &.ant-radio-checked
         {
             &::after{
-                border-color: $fa-color--brand-6;   
+                border-color: $fa-color--brand-color;   
             }
            .ant-radio-inner{
-                border-color: $fa-color--brand-6; 
+                border-color: $fa-color--brand-color; 
                 &::after{
-                    background-color: $fa-color--brand-6;  
+                    background-color: $fa-color--brand-color;  
                 }
     
             }

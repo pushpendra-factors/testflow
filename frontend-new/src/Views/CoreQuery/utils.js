@@ -5,6 +5,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_KPI,
   TOTAL_EVENTS_CRITERIA,
   TYPE_EVENTS_OCCURRENCE,
   TYPE_UNIQUE_USERS,
@@ -125,6 +126,7 @@ const getEventsWithProperties = (queries) => {
   });
   return ewps;
 };
+
 
 const getProfileWithProperties = (queries) => {
   const pwps = [];
@@ -319,6 +321,132 @@ export const getFunnelQuery = (
   // }
   query.ec = 'any_given_event';
   query.tz = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';
+  return query;
+};
+
+const getEventsWithPropertiesKPI = (filters, category) => {  
+    const filterProps = [];
+    filters.forEach((fil) => {
+      console.log('getEventsWithPropertiesKPI filters', fil);
+      if (Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => { 
+          filterProps.push({ 
+            prNa: fil?.extra[1],
+            prDaTy: fil?.extra[2],
+            co: operatorMap[fil.operator],
+            lOp: !index ? 'AND' : 'OR',
+            en: category == 'channels' ? '' :  fil?.extra[3],
+            objTy: category == 'channels' ? fil?.extra[3] : '', 
+            va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+          });
+        });
+      } else {
+        filterProps.push({ 
+            prNa: fil?.extra[1],
+            prDaTy: fil?.extra[2],
+            co: operatorMap[fil.operator],
+            lOp: 'AND',
+            en: category == 'channels' ? '' :  fil?.extra[3],
+            objTy: category == 'channels' ? fil?.extra[3] : '', 
+            va: fil.props[1] === 'datetime' ? formatFilterDate(fil.values) : fil.values,
+        });
+      }
+    }); 
+  return filterProps;
+};
+
+const getGroupByWithPropertiesKPI = (appliedGroupBy, index, category ) =>{
+  return appliedGroupBy.map((opt) => {
+    let appGbp = {};
+    if (opt.eventIndex == index) {
+      appGbp = {
+        gr: '',
+        prNa: opt.property,
+        prDaTy: opt.prop_type,
+        eni: opt.eventIndex,
+        en: category == 'channels' ? '' : opt.prop_category,
+        objTy: category == 'channels' ? opt.prop_category :  '', 
+      };
+    } 
+    else {
+      appGbp = { 
+        gr: '',
+        prNa: opt.property,
+        prDaTy: opt.prop_type,
+        en: category == 'channels' ? '' : opt.prop_category,
+        objTy: category == 'channels' ? opt.prop_category : '',
+      };
+    }
+    if (opt.prop_type === 'datetime') {
+      opt.grn ? (appGbp['grn'] = opt.grn) : (appGbp['grn'] = 'day');
+    }
+    if (opt.prop_type === 'numerical') {
+      opt.gbty ? (appGbp['gbty'] = opt.gbty) : (appGbp['gbty'] = '');
+    }
+    return appGbp;
+  });
+} 
+
+const getKPIqueryGroup = (queries,eventGrpBy, period) =>{
+  let queryArr = [];
+  queries.forEach((item, index) => {
+    let GrpByItem = eventGrpBy.filter((item)=>item.eventIndex==index+1)
+    queryArr.push({
+      ca: item?.category,
+      pgUrl: item?.pageViewVal ? item?.pageViewVal : '',
+      dc: item.group,
+      me: [item.metric],
+      fil: getEventsWithPropertiesKPI(item.filters, item?.category),
+      gBy: getGroupByWithPropertiesKPI(GrpByItem, index, item?.category),
+      fr: period.from,
+      to: period.to,
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+    });
+    queryArr.push({
+      ca: item?.category,
+      pgUrl: item?.pageViewVal ? item?.pageViewVal : '',
+      dc: item.group,
+      me: [item.metric],
+      fil: getEventsWithPropertiesKPI(item.filters, item?.category),
+      gBy: getGroupByWithPropertiesKPI(GrpByItem, index, item?.category),
+      gbt: 'date',
+      fr: period.from,
+      to: period.to,
+      tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
+    });
+  });
+  return queryArr
+}
+
+export const getKPIQuery = (
+  queries,
+  date_range,
+  groupBy,
+  queryOptions,
+  globalFilters = []
+) => {
+  const query = {};
+  query.cl = QUERY_TYPE_KPI?.toLocaleLowerCase();
+  const period = {};
+  if (date_range?.from && date_range?.to) {
+    period.from = MomentTz(date_range.from).startOf('day').utc().unix();
+    period.to = MomentTz(date_range.to).endOf('day').utc().unix();
+  } else {
+    period.from = MomentTz().startOf('week').utc().unix();
+    period.to =
+      MomentTz().format('dddd') !== 'Sunday'
+        ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+        : MomentTz().utc().unix();
+  }
+
+  const eventGrpBy = [...groupBy.event];
+  query.qG = getKPIqueryGroup(queries,eventGrpBy, period);
+  
+  const GlobalGrpBy = [...groupBy.global];
+  query.gGBy = getGroupByWithPropertiesKPI(GlobalGrpBy); 
+
+  query.gFil = getEventsWithPropertiesKPI(queryOptions?.globalFilters, queries[0]?.category); 
+
   return query;
 };
 
@@ -1095,6 +1223,19 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
         </Radio>
       </>
     );
+  }
+  if (queryType === QUERY_TYPE_KPI) {
+    const commons = (
+      <>
+        <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
+          Display Line Chart
+        </Radio>
+        <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+          Display Table
+        </Radio>
+      </>
+    );
+    return <>{commons}</>;
   }
   if (queryType === QUERY_TYPE_CAMPAIGN) {
     const commons = (

@@ -14,6 +14,7 @@ import {
   CHART_TYPE_SCATTER_PLOT,
   QUERY_TYPE_FUNNEL,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
+  QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
 } from './constants';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
@@ -283,6 +284,68 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
       },
     ];
   }
+  // if (queryType === QUERY_TYPE_KPI) {
+  //   menuItems = [
+  //     {
+  //       key: CHART_TYPE_BARCHART,
+  //       name: 'Columns',
+  //     },
+  //     {
+  //       key: CHART_TYPE_HORIZONTAL_BAR_CHART,
+  //       name: 'Bars',
+  //     },
+  //     {
+  //       key: CHART_TYPE_LINECHART,
+  //       name: 'Line Chart',
+  //     },
+  //     {
+  //       key: CHART_TYPE_STACKED_AREA,
+  //       name: 'Stacked Area',
+  //     },
+  //     {
+  //       key: CHART_TYPE_STACKED_BAR,
+  //       name: 'Stacked Column',
+  //     },
+  //   ];
+  // }
+  if (queryType === QUERY_TYPE_KPI && !breakdownLength) {
+    menuItems = [
+      {
+        key: CHART_TYPE_SPARKLINES,
+        name: 'Sparkline',
+      },
+      {
+        key: CHART_TYPE_LINECHART,
+        name: 'Line Chart',
+      },
+    ];
+  }
+
+  if (queryType === QUERY_TYPE_KPI && breakdownLength) {
+    menuItems = [
+      {
+        key: CHART_TYPE_BARCHART,
+        name: 'Columns',
+      },
+      {
+        key: CHART_TYPE_HORIZONTAL_BAR_CHART,
+        name: 'Bars',
+      },
+      {
+        key: CHART_TYPE_LINECHART,
+        name: 'Line Chart',
+      },
+      {
+        key: CHART_TYPE_STACKED_AREA,
+        name: 'Stacked Area',
+      },
+      {
+        key: CHART_TYPE_STACKED_BAR,
+        name: 'Stacked Column',
+      },
+    ];
+  }
+
   if (queryType === QUERY_TYPE_PROFILE && breakdownLength) {
     menuItems = [
       {

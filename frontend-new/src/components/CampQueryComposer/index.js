@@ -375,6 +375,8 @@ const CampQueryComposer = ({
     );
   };
 
+  console.log("inside campquery compioser")
+
   try {
     return (
       <div className={styles.composer}>

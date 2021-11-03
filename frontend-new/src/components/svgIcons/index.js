@@ -404,6 +404,20 @@ const Attributions_cqSVG = ({ size = 16, color, extraClass }) => {
   );
 };
 
+const KPI_cqSVG = ({ size = 16, color, extraClass }) => {
+  return (
+    <svg width={size} height={size} className={extraClass}  viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M54.5 44.667H14V16.167C14 15.417 13.25 14.667 12.5 14.667H9.5C8.65625 14.667 8 15.417 8 16.167V47.667C8 49.3545 9.3125 50.667 11 50.667H54.5C55.25 50.667 56 50.0107 56 49.167V46.167C56 45.417 55.25 44.667 54.5 44.667ZM51.5 17.667H40.3438C38.375 17.667 37.3438 20.1045 38.75 21.5107L41.8438 24.6045L35 31.4482L28.0625 24.6045C26.9375 23.3857 24.9688 23.3857 23.8438 24.6045L17.375 31.0732C16.8125 31.6357 16.8125 32.5732 17.375 33.1357L19.5312 35.292C20.0938 35.8545 21.0312 35.8545 21.5938 35.292L26 30.9795L32.8438 37.8232C33.9688 39.042 35.9375 39.042 37.0625 37.8232L46.0625 28.8232L49.1562 31.917C50.5625 33.3232 52.9062 32.292 52.9062 30.3232V19.167C53 18.417 52.25 17.667 51.5 17.667Z" fill="url(#paint0_linear_619:953)"/>
+    <defs>
+    <linearGradient id="paint0_linear_619:953" x1="15.8191" y1="45.3711" x2="35.0049" y2="16.9614" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#7A6DC9"/>
+    <stop offset="1" stop-color="#5DB9C8"/>
+    </linearGradient>
+    </defs>
+    </svg> 
+  );
+};
+
 const FilterSVG = ({ size = 16, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1783,5 +1797,6 @@ export {
   ThumbsUp_SSVG,
   ThumbsDown_SSVG,
   HorizontalbarchartSVG,
-  Profiles_cqSVG
+  Profiles_cqSVG,
+  KPI_cqSVG
 };
