@@ -853,7 +853,7 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 		if !beamConfig.RunOnBeam {
 			countPatterns(projectId, filepath, missingPatternsTwo, numRoutines, countOccurence)
 			filteredMissingPatterns, patternsSize, err = filterAndCompressPatterns(
-				lenThreePatterns, maxModelSize, cumulativePatternsSize,
+				missingPatternsTwo, maxModelSize, cumulativePatternsSize,
 				patternLen, max_PATTERN_LENGTH)
 			if err != nil {
 				return err
