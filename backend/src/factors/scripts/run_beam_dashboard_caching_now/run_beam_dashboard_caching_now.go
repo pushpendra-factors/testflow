@@ -70,10 +70,18 @@ var (
 func registerStructs() {
 	beam.RegisterType(reflect.TypeOf((*model.DashboardUnit)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*model.BeamDashboardUnitCachePayload)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*model.CachingUnitReport)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*model.CachingProjectReport)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*model.FailedDashboardUnitReport)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*FB.CacheResponse)(nil)).Elem())
+
+	beam.RegisterType(reflect.TypeOf((*FB.GetDashboardUnitCachePayloadsFn)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*FB.CacheDashboardUnitDoFn)(nil)).Elem())
 
 	beam.RegisterType(reflect.TypeOf((*model.WebAnalyticsCachePayload)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*FB.GetWebAnalyticsCachePayloadsNowFn)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*FB.GetWebAnalyticsCachePayloadsFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*FB.CacheWebAnalyticsDoFn)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*FB.GetWebAnalyticsCachePayloadsNowFn)(nil)).Elem())
 }
 
 // TODO(prateek): Check a way to add handling for panic and worker errors.
