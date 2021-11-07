@@ -1139,6 +1139,10 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 	} else {
 		if useSourcePropertyOverwrite && (source == model.SmartCRMEventSourceHubspot || source == model.SmartCRMEventSourceSalesforce) {
 			for property := range newPropertiesMap {
+				if model.IsEmptyPropertyValue(newPropertiesMap[property]) {
+					continue
+				}
+
 				if (strings.HasPrefix(property, U.HUBSPOT_PROPERTY_PREFIX) || strings.HasPrefix(property, U.SALESFORCE_PROPERTY_PREFIX)) && overwriteProperties {
 					mergedPropertiesMap[property] = newPropertiesMap[property]
 				} else {
