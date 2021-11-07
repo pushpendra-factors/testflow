@@ -625,10 +625,12 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 		}
 
 		overwriteProperties := false
+		var overwritePropertiesError bool
 		if useSourcePropertyOverwrite {
 			overwriteProperties, err = CheckForCRMUserPropertiesOverwrite(source, objectType, *userProperties, mergedUserProperties)
 			if err != nil {
 				logCtx.WithField("error", err.Error()).Error("Failed to get overwriteProperties flag value.")
+				overwritePropertiesError = true
 			}
 		}
 
@@ -641,7 +643,7 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 
 			_, isInitialProperty := initialPropertiesVisitedMap[property]
 			if !isInitialProperty {
-				if useSourcePropertyOverwrite {
+				if useSourcePropertyOverwrite && !overwritePropertiesError {
 					if (source == SmartCRMEventSourceHubspot && strings.HasPrefix(property, U.HUBSPOT_PROPERTY_PREFIX)) ||
 						(source == SmartCRMEventSourceSalesforce && strings.HasPrefix(property, U.SALESFORCE_PROPERTY_PREFIX)) {
 						if overwriteProperties {
