@@ -63,6 +63,8 @@ const whiteListedAccounts_KPI = [
   'kartheek@factors.ai',
   'baliga@factors.ai', 
   'praveenr@factors.ai',
+  'sonali@factors.ai',
+  'solutions@factors.ai',
 ]; 
 
 const coreQueryoptions = [
