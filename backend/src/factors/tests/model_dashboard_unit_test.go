@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -72,19 +73,6 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.NotNil(t, dashboardUnit2.QueryId)
 		assert.NotNil(t, dashboardUnit2.Presentation)
 
-		// should be given a positions on dashboard.
-		gDashboard, errCode := store.GetStore().GetDashboard(project.ID, agent.UUID, dashboard.ID)
-		assert.Equal(t, http.StatusFound, errCode)
-		var currentPosition map[string]map[uint64]int
-		err := json.Unmarshal((*gDashboard.UnitsPosition).RawMessage, &currentPosition)
-		assert.Nil(t, err)
-		assert.Contains(t, currentPosition[model.GetUnitType(model.PresentationLine)], dashboardUnit.ID)
-		assert.Contains(t, currentPosition[model.GetUnitType(model.PresentationBar)], dashboardUnit1.ID)
-		assert.NotNil(t, currentPosition[model.GetUnitType(model.PresentationLine)][dashboardUnit.ID])
-		assert.NotNil(t, currentPosition[model.GetUnitType(model.PresentationLine)][dashboardUnit1.ID])
-		assert.Contains(t, currentPosition[model.GetUnitType(model.PresentationCard)], dashboardUnit2.ID)
-		assert.NotNil(t, currentPosition[model.GetUnitType(model.PresentationCard)][dashboardUnit2.ID])
-
 	})
 
 	t.Run("CreateDashboardUnitWithPresentation", func(t *testing.T) {
@@ -112,32 +100,13 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.NotNil(t, dashboardUnit2.QueryId)
 		assert.NotNil(t, dashboardUnit2.Presentation)
 
-		// should be given a positions on dashboard.
-		gDashboard, errCode := store.GetStore().GetDashboard(project.ID, agent.UUID, dashboard.ID)
-		assert.Equal(t, http.StatusFound, errCode)
-		var currentPosition map[string]map[uint64]int
-		err := json.Unmarshal((*gDashboard.UnitsPosition).RawMessage, &currentPosition)
-		assert.Nil(t, err)
-		assert.Contains(t, currentPosition[model.GetUnitType(model.PresentationCard)], dashboardUnit.ID)
-		assert.Contains(t, currentPosition[model.GetUnitType(model.PresentationCard)], dashboardUnit1.ID)
-		assert.NotNil(t, currentPosition[model.GetUnitType(model.PresentationCard)][dashboardUnit.ID])
-		assert.NotNil(t, currentPosition[model.GetUnitType(model.PresentationCard)][dashboardUnit1.ID])
-		assert.Contains(t, currentPosition[model.GetUnitType(model.PresentationCard)], dashboardUnit2.ID)
-		assert.NotNil(t, currentPosition[model.GetUnitType(model.PresentationCard)][dashboardUnit2.ID])
-
 	})
 
 	t.Run("CreateDashboardUnit:Invalid", func(t *testing.T) {
 
-		// invalid presentation.
-		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{DashboardId: dashboard.ID,
-			Presentation: "", QueryId: dashboardQuery.ID})
-		assert.Equal(t, http.StatusBadRequest, errCode)
-		assert.Nil(t, dashboardUnit)
-
 		// invalid dashboard.
 		rName = U.RandomString(5)
-		dashboardUnit, errCode, _ = store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{DashboardId: 0,
+		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{DashboardId: 0,
 			Presentation: model.PresentationLine, QueryId: dashboardQuery.ID})
 		assert.Equal(t, http.StatusBadRequest, errCode)
 		assert.Nil(t, dashboardUnit)
@@ -474,18 +443,8 @@ func TestDeleteDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusAccepted, errCode)
 
 		// should remove position given for unit on dashboard and rebalanced positions.
-		gDashboard, errCode := store.GetStore().GetDashboard(project.ID, agent.UUID, dashboard.ID)
+		_, errCode = store.GetStore().GetDashboard(project.ID, agent.UUID, dashboard.ID)
 		assert.Equal(t, http.StatusFound, errCode)
-		var currentPosition map[string]map[uint64]int
-		err := json.Unmarshal((*gDashboard.UnitsPosition).RawMessage, &currentPosition)
-		assert.Nil(t, err)
-		assert.NotContains(t, currentPosition[model.GetUnitType(model.PresentationLine)], unit.ID)
-		assert.Contains(t, currentPosition[model.GetUnitType(model.PresentationBar)], unit1.ID)
-		// unit1 should be repositioned to 0.
-		assert.Equal(t, currentPosition[model.GetUnitType(model.PresentationBar)][unit1.ID], 0)
-		// delete should not affect postions other unit type.
-		assert.Contains(t, currentPosition, model.GetUnitType(model.PresentationCard))
-		assert.Equal(t, currentPosition[model.GetUnitType(model.PresentationCard)][unit2.ID], 0)
 
 		// Unit must have got soft deleted.
 		_, errCode = store.GetStore().GetDashboardUnitByUnitID(unit.ProjectID, unit.ID)
@@ -919,8 +878,8 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = queryClass
 		dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = baseQuery
 	}
-
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1)
+	var reportCollector sync.Map
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1, &reportCollector)
 	assert.Equal(t, 4, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -1034,8 +993,8 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 		dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = queryClass
 		dashboardUnitQueriesMap[dashboardUnit.ID]["queries"] = baseQuery
 	}
-
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1)
+	var reportCollector sync.Map
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1, &reportCollector)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to, errCode := rangeFunction(timezoneString)
@@ -1131,7 +1090,8 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 		dashboardUnitQueriesMap[dashboardUnit.ID]["queries"] = baseQuery
 	}
 
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1)
+	var reportCollector sync.Map
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1, &reportCollector)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	timezonestring := U.TimeZoneString(project.TimeZone)
 	for _, rangeFunction := range U.QueryDateRangePresets {
@@ -1256,7 +1216,8 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 	dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = query1.GetClass()
 	dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = query1
 
-	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1)
+	var reportCollector sync.Map
+	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1, &reportCollector)
 	result := struct {
 		Cache  bool              `json:"cache"`
 		Result model.QueryResult `json:"result"`
