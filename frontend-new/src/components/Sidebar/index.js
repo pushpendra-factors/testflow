@@ -12,7 +12,7 @@ import { connect } from 'react-redux';
 import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
 import CreateNewProject from './CreateNewProject';
 import _ from 'lodash';
-
+import { useTour } from "@reactour/tour";
 
 // const ColorCollection = ['#4C9FC8','#4CBCBD', '#86D3A3', '#F9C06E', '#E89E7B', '#9982B5'];
 
@@ -27,6 +27,7 @@ function Sidebar(props) {
   const [searchProjectName, setsearchProjectName] = useState('');
   const [CreateNewProjectModal, setCreateNewProjectModal] = useState(false);
   const history = useHistory();
+  const {isOpen, setIsOpen} = useTour();
 
   const searchProject = (e) => {
     setsearchProjectName(e.target.value);
@@ -118,17 +119,17 @@ function Sidebar(props) {
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Dashboard" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-              <NavLink activeClassName="active" exact to="/"><SVG name={'dashboard'} size={24} color="white"/></NavLink>
+              <NavLink data-tour = 'step-1' onClick={() => setIsOpen(true)} activeClassName="active" exact to="/"><SVG name={'dashboard'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Analyse" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-               <NavLink activeClassName="active" exact to="/analyse"><SVG name={'corequery'} size={24} color="white"/></NavLink>
+               <NavLink data-tour = 'step-2' activeClassName="active" exact to="/analyse"><SVG name={'corequery'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Explain" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-                <NavLink activeClassName="active" to="/explain"><SVG name={'key'} size={24} color="white"/></NavLink> 
+                <NavLink data-tour = 'step-3' activeClassName="active" to="/explain"><SVG name={'key'} size={24} color="white"/></NavLink> 
               </Tooltip>
             </Row>
             {/* <Row justify="center" align="middle" className=" w-full py-2">
@@ -142,7 +143,7 @@ function Sidebar(props) {
             </Row> */}
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Settings" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-                <NavLink activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
+                <NavLink data-tour = 'step-4' activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
 

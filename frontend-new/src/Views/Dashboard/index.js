@@ -11,7 +11,6 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { setItemToLocalStorage } from '../../utils/dataFormatter';
 import { getDashboardDateRange } from './utils';
 import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
-import { useTour } from "@reactour/tour";
 
 function Dashboard() {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
@@ -19,7 +18,6 @@ function Dashboard() {
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
   const dispatch = useDispatch();
-  const { setIsOpen } = useTour();
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -78,11 +76,10 @@ function Dashboard() {
         onError={FaErrorLog}
       >
         <Header>
-          <div data-tour='step-1' className='w-full h-full py-4 flex flex-col justify-center items-center'>
+          <div className='w-full h-full py-4 flex flex-col justify-center items-center'>
             <SearchBar />
           </div>
         </Header>
-         <button onClick={() => setIsOpen(true)}>Open</button>
 
         <div className={'mt-20'}>
           <ProjectTabs
