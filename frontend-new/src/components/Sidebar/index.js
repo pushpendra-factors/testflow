@@ -35,7 +35,7 @@ function Sidebar(props) {
 
   const popOvercontent = () => {
     return (
-        <div className={'fa-popupcard'}>
+        <div data-tour = 'step-4.1' className={'fa-popupcard'}>
           <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Projects</Text>
           {props.projects.length > 6 ? <input onChange={(e) => searchProject(e)} value={searchProjectName} placeholder={'Search Project'} className={'fa-project-list--search'}/> : null}
           <div className={'flex flex-col items-start fa-project-list--wrapper'} >
@@ -124,12 +124,12 @@ function Sidebar(props) {
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Analyse" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-               <NavLink data-tour = 'step-2' activeClassName="active" exact to="/analyse"><SVG name={'corequery'} size={24} color="white"/></NavLink>
+              <NavLink data-tour = 'step-5' activeClassName="active" exact to="/analyse"><SVG name={'corequery'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Explain" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-                <NavLink data-tour = 'step-3' activeClassName="active" to="/explain"><SVG name={'key'} size={24} color="white"/></NavLink> 
+                <NavLink data-tour = 'step-6' activeClassName="active" to="/explain"><SVG name={'key'} size={24} color="white"/></NavLink> 
               </Tooltip>
             </Row>
             {/* <Row justify="center" align="middle" className=" w-full py-2">
@@ -143,7 +143,7 @@ function Sidebar(props) {
             </Row> */}
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Settings" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-                <NavLink data-tour = 'step-4' activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
+                <NavLink data-tour = 'step-7' activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
 
@@ -161,7 +161,7 @@ function Sidebar(props) {
                 setShowPopOver(true);
               }}
                 trigger="click"> 
-                  <Avatar shape={'square'}  className={'flex justify-center flex-col items-center fa-aside--avatar'} style={{ color: '#fff', backgroundColor: '#52BE95', fontSize: '16px', textTransform: 'uppercase', fontWeight:'400' }}>{`${props.active_project?.name?.charAt(0)}`}</Avatar>
+                  <Avatar data-tour = 'step-4' shape={'square'}  className={'flex justify-center flex-col items-center fa-aside--avatar'} style={{ color: '#fff', backgroundColor: '#52BE95', fontSize: '16px', textTransform: 'uppercase', fontWeight:'400' }}>{`${props.active_project?.name?.charAt(0)}`}</Avatar>
               </Popover>
             </Row>
           </div>

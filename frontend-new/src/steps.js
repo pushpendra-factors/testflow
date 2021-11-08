@@ -1,27 +1,78 @@
 const steps = [
-   {
+  {
     selector: '[data-tour="step-1"]',
-    content:` <p>Lorem ipsum dolor sit amet</p>`,
+    content: 'Vivamus sed dui nisi',
+    action: node => {
+      node.click()
+    },
   },
   {
     selector: '[data-tour="step-2"]',
-    content: `<p>consectetur adipiscing elit</p>`,
+    content: 'Vivamus sed dui nisi',
+    position: 'center',
+    action: node => {
+      node.focus()
+    },
+  },
+  {
+    selector: '[data-tour="step-2.1"]',
+    content: 'Vivamus sed dui nisi',
+    position: 'center',
   },
   {
     selector: '[data-tour="step-3"]',
-    content: `<p>Vivamus sed dui nisi</p>`,
+    content: 'Vivamus sed dui nisi',
   },
   {
     selector: '[data-tour="step-4"]',
-    content: `<p>Vivamus sed dui nisi</p>`,
+    content: 'Vivamus sed dui nisi',
+    position: 'right',
+    action: node => {
+      node.click()
+    },
+  },
+  {
+    selector: '[data-tour="step-4.1"]',
+    content: 'Vivamus sed dui nisi',
+    position: 'right',
   },
   {
     selector: '[data-tour="step-5"]',
-    content: `<p>Vivamus sed dui nisi</p>`,
+    content: 'Vivamus sed dui nisi',
+    content: 'Vivamus sed dui nisi',
+    action: node => {
+      node.click()
+    },
   },
   {
     selector: '[data-tour="step-6"]',
-    content: `<p>Vivamus sed dui nisi</p>`,
+    content: 'Vivamus sed dui nisi',
+    content: 'Vivamus sed dui nisi',
+    action: node => {
+      node.click()
+    },
+  },
+  {
+    selector: '[data-tour="step-7"]',
+    content: 'Vivamus sed dui nisi',
+    action: node => {
+      node.click()
+    },
+  },
+  {
+    selector: '[data-tour="step-8"]',
+    content: 'Vivamus sed dui nisi',
+    action: node => {
+      node.click()
+    },
+  },
+  {
+    selector: '[data-tour="step-9"]',
+    content: 'Vivamus sed dui nisi',
+  },
+    {
+    selector: '[data-tour="step-9.1"]',
+    content: 'Vivamus sed dui nisi',
   },
 ];
 
