@@ -176,6 +176,15 @@ var EP_SESSION_COUNT string = "$session_count"
 var EP_TERM string = "$term"
 var EP_CHANNEL string = "$channel" // added at runtime.
 
+// Event Form meta attributes properties
+var EP_FORM_ID string = "$form_id"
+var EP_FORM_NAME string = "$form_name"
+var EP_FORM_CLASS string = "$form_class"
+var EP_FORM_TYPE string = "$form_type"
+var EP_FORM_METHOD string = "$form_method"
+var EP_FORM_TARGET string = "$form_target"
+var EP_FORM_ACTION string = "$form_action"
+
 // User Properties
 var UP_INITIAL_PAGE_EVENT_ID string = "$initial_page_event_id" // internal. id of initial page event.
 var UP_MERGE_TIMESTAMP string = "$merge_timestamp"             // Internal property used in user properties merge.
@@ -375,6 +384,15 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	UP_NAME,
 	UP_FIRST_NAME,
 	UP_LAST_NAME,
+
+	// Form meta properties
+	EP_FORM_ID,
+	EP_FORM_NAME,
+	EP_FORM_CLASS,
+	EP_FORM_TYPE,
+	EP_FORM_METHOD,
+	EP_FORM_TARGET,
+	EP_FORM_ACTION,
 }
 
 var FORM_SUBMIT_USER_PROPERTIES = [...]string{
@@ -1156,6 +1174,13 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_CHANNEL:                "Channel",
 	UP_POSTAL_CODE:            "Postal Code",
 	UP_CONTINENT:              "Continent",
+	EP_FORM_ID:                "Form Id",
+	EP_FORM_NAME:              "Form Name",
+	EP_FORM_CLASS:             "Form Class",
+	EP_FORM_TARGET:            "Form Target",
+	EP_FORM_METHOD:            "Form Method",
+	EP_FORM_ACTION:            "Form Action",
+	EP_FORM_TYPE:              "Form Type",
 }
 
 var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{

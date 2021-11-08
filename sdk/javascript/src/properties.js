@@ -18,6 +18,15 @@ const NAME = PREFIX+"name";
 const FIRST_NAME = PREFIX+"first_name";
 const LAST_NAME = PREFIX+"last_name";
 
+//Form properties
+const FORM_ID = PREFIX + "form_id";
+const FORM_NAME = PREFIX + "form_name";
+const FORM_CLASS = PREFIX + "form_class";
+const FORM_TYPE = PREFIX + "form_type";
+const FORM_METHOD = PREFIX + "form_method";
+const FORM_TARGET = PREFIX + "form_target";
+const FORM_ACTION = PREFIX + "form_action";
+
 // No $ since it's supposed to be tracked for marketing purposes
 const SOURCE = "source";
 
@@ -266,6 +275,19 @@ function getFromQueryParams(location) {
     return parseFromQueryString(getAllQueryParamStr(location));
 }
 
+function getFormMetaAttributes(form) {
+    if(!form) return {};
+    var properties = {};
+    properties[FORM_ID] = form.getAttribute('id');
+    properties[FORM_NAME] = form.getAttribute('name');
+    properties[FORM_CLASS] = form.getAttribute('class');
+    properties[FORM_ACTION] = form.getAttribute('action');
+    properties[FORM_METHOD] = form.getAttribute('method');
+    properties[FORM_TARGET] = form.getAttribute('target');
+    properties[FORM_TYPE] = form.getAttribute('type');
+    return properties;
+}
+
 function getPropertiesFromForm(form) {
     return form ? getPropertiesFromInputs(form.querySelectorAll('input')) : {}
 }
@@ -352,6 +374,7 @@ module.exports = {
     getPageLoadTimeInMs: getPageLoadTimeInMs,
     getPageLoadTime: getPageLoadTime,
     getPropertiesFromForm: getPropertiesFromForm,
+    getFormMetaAttributes: getFormMetaAttributes,
     getPageScrollPercent: getPageScrollPercent,
     getPropertiesFromAllNonFormInputs: getPropertiesFromAllNonFormInputs,
 

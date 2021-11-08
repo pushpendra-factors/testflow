@@ -433,6 +433,12 @@ App.prototype.captureAndTrackFormSubmit = function(appInstance, formElement) {
         logger.debug("Form element is undefined on capture form submit.");
 
     var properties = Properties.getPropertiesFromForm(formElement);
+    var formProperties = Properties.getFormMetaAttributes(formElement);
+
+    if(formProperties && Object.keys(formProperties).length > 0) {
+        logger.debug("Collecting form meta attributes", false);
+        properties = Object.assign(formProperties, properties);
+    }
     if (!properties || Object.keys(properties).length == 0)
         logger.debug("No properties captured from form.", false);
 
