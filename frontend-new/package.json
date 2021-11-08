@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@emotion/react": "^11.5.0",
+    "@reactour/tour": "^2.3.0",
     "@sentry/react": "^5.29.2",
     "@sentry/tracing": "^5.29.2",
     "@testing-library/jest-dom": "^4.2.4",
