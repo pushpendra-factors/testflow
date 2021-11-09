@@ -94,7 +94,7 @@ func createEtsStruct(userId string, user1CreatedTime,
 		emap[et] = t
 		tmp := P.EvSameTs{EventsNames: enameList, EventTimestamp: nextEventCreatedTime.Unix()}
 		tmp.EventsMap = make(map[string]P.CounterEventFormat)
-		for k,v := range emap {
+		for k, v := range emap {
 			tmp.EventsMap[k] = v
 		}
 		etsList = append(etsList, tmp)
@@ -106,6 +106,7 @@ func createEtsStruct(userId string, user1CreatedTime,
 }
 
 func TestPatternCountEvents(t *testing.T) {
+	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	// Count A -> B -> C
@@ -136,7 +137,7 @@ func TestPatternCountEvents(t *testing.T) {
 		etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 		for i, _ := range events {
-			err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i])
+			err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
 			assert.Nil(t, err)
 		}
 
@@ -151,7 +152,7 @@ func TestPatternCountEvents(t *testing.T) {
 		etsList = createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 		for i, _ := range events {
-			err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i])
+			err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
 			assert.Nil(t, err)
 			// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 		}
@@ -231,6 +232,7 @@ func TestPatternCountEvents(t *testing.T) {
 }
 
 func TestPatternGetPerUserCount(t *testing.T) {
+	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	// Count A -> B -> C
@@ -252,7 +254,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i])
+		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
 		assert.Nil(t, err)
 		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -268,7 +270,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	etsList = createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i])
+		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
 		assert.Nil(t, err)
 		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -466,6 +468,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 }
 
 func TestPatternEdgeConditions(t *testing.T) {
+	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	countOccurFlag := true
@@ -504,7 +507,7 @@ func TestPatternEdgeConditions(t *testing.T) {
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	etsList := createEtsStruct("user1", userCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
-	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.NotNil(t, err)
 
 	// Test Count Event, with wrong userId or wrong userCreatedTime.
@@ -515,16 +518,16 @@ func TestPatternEdgeConditions(t *testing.T) {
 	err = p.ResetForNewUser("user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
 	etsList = createEtsStruct("user1", userCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
-	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.Nil(t, err)
 	// Wrong userId.
 	etsList = createEtsStruct("user2", userCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
-	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.NotNil(t, err)
 	// Wrong userCreatedTime. Error is ignored.
 	etsList = createEtsStruct("user1", eventCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
 
-	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.Nil(t, err)
 
 	// Test Events out of order. Out of order events are noticed only when
@@ -555,10 +558,10 @@ func TestPatternEdgeConditions(t *testing.T) {
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
 	etsList = createEtsStruct(userId, userCreatedTime, event1CreatedTime, []string{"A"}, []uint{1})
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.Nil(t, err)
 	etsList = createEtsStruct(userId, userCreatedTime, event2CreatedTime, []string{"B"}, []uint{1})
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.NotNil(t, err)
 
 }
@@ -594,6 +597,7 @@ func TestAddNumericAndCategoricalProperties(t *testing.T) {
 }
 
 func TestPatternCountEventsOccurenceFalse(t *testing.T) {
+	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	// Count A -> B -> C
@@ -621,7 +625,7 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 	etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i])
+		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
 		assert.Nil(t, err)
 		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -637,7 +641,7 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 	etsList = createEtsStruct(userId, user2CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i])
+		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
 		assert.Nil(t, err)
 		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -717,6 +721,7 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 }
 
 func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
+	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	// Count A -> B -> C
@@ -738,7 +743,7 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 	etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i])
+		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -753,7 +758,7 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 	etsList = createEtsStruct(userId, user2CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i])
+		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -951,6 +956,7 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 }
 
 func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
+	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	countOccurFlag := false
@@ -993,7 +999,7 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	userId := "user1"
 	etsList := createEtsStruct(userId, userCreatedTime, eventCreatedTime, events, cardinalities)
 
-	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.NotNil(t, err)
 
 	// Test Count Event, with wrong userId or wrong userCreatedTime.
@@ -1006,17 +1012,17 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 
 	etsList = createEtsStruct(userId, userCreatedTime, eventCreatedTime, events, cardinalities)
 
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.Nil(t, err)
 	// Wrong userId.
 	events = []string{"J"}
 	etsList = createEtsStruct("user2", userCreatedTime, eventCreatedTime, events, cardinalities)
-	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.NotNil(t, err)
 	etsList = createEtsStruct("user1", eventCreatedTime, eventCreatedTime, events, cardinalities)
 
 	// Wrong userCreatedTime. Error is ignored.
-	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.Nil(t, err)
 
 	// Test Events out of order. Out of order events are noticed only when
@@ -1047,10 +1053,10 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
 	etsList = createEtsStruct(userId, userCreatedTime, event1CreatedTime, []string{"A"}, []uint{1})
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.Nil(t, err)
 	etsList = createEtsStruct(userId, userCreatedTime, event2CreatedTime, []string{"B"}, []uint{1})
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0])
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
 	assert.NotNil(t, err)
 
 }

@@ -5,7 +5,7 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
-	IntHubspot "factors/integration/Hubspot"
+	IntHubspot "factors/integration/hubspot"
 	"factors/model/model"
 	"factors/model/store"
 	SDK "factors/sdk"

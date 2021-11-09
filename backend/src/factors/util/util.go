@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"regexp"
 	"sort"
@@ -1004,16 +1005,16 @@ func DeepCopy(a, b interface{}) {
 	json.Unmarshal(byt, b)
 }
 
-type Pair struct {
-	Key   string
-	Value int
-}
+// type Pair struct {
+// 	Key   string
+// 	Value int
+// }
 
-type PairList []Pair
+// type PairList []Pair
 
-func (p PairList) Len() int           { return len(p) }
-func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
-func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+// func (p PairList) Len() int           { return len(p) }
+// func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
+// func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 // IsStandardEvent check if eventname is standard Event
 func IsStandardEvent(eventName string) bool {
@@ -1267,6 +1268,45 @@ func GetFilteredMapBySkipList(sourceMap *map[string]interface{}, propertySkipLis
 	return &filteredMap
 }
 
+func FilterOnSupport(itms map[string]int, support float32) map[string]int {
+	sumVal := 0
+	for _, v := range itms {
+		sumVal += v
+	}
+	filterVal := int(math.Ceil((float64(support) * float64(sumVal) / 100)))
+
+	for k, v := range itms {
+		if v < filterVal {
+			delete(itms, k)
+
+		}
+	}
+	return itms
+}
+
+func FilterOnFrequency(itms map[string]int, topk int) {
+	ll := make([]string, 0)
+	for k := range itms {
+		ll = append(ll, k)
+	}
+	sort.Strings(ll)
+	pl := SortOnPriority(ll, itms, false)
+	// pl := RankByWordCount(itms)
+	for idx, v := range pl {
+		if idx > topk {
+			delete(itms, v)
+		}
+	}
+}
+
+func IsDateTime(val string) bool {
+	const layout = "2006-01-02T15:04:05-0700"
+	_, err := time.Parse(layout, val)
+	if err != nil {
+		return false
+	}
+	return true
+}
 func GetNumberOfDigits(input int64) int {
 	if input == 0 {
 		return 1

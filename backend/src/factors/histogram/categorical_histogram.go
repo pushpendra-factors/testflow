@@ -199,7 +199,7 @@ func (h *CategoricalHistogramStruct) AddMap(keyValues map[string]string) error {
 		}
 		seenKeys[template[i].Name] = true
 	}
-	for k, _ := range keyValues {
+	for k := range keyValues {
 		if _, ok := seenKeys[k]; !ok {
 			return fmt.Errorf(
 				"Unexpected key %s in %v ,seenValues  %v ", k, keyValues, seenKeys)

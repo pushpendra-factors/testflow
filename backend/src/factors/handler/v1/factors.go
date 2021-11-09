@@ -110,7 +110,7 @@ func PostFactorsHandler(c *gin.Context) {
 		projectId, params.StartEvent, startConstraints,
 		params.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams); err != nil {
 		logCtx.WithError(err).Error("Factors failed.")
-		if err.Error() == "Root node not found or frequency 0" {
+		if err.Error() == "root node not found or frequency 0" {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 		}
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -357,7 +357,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			projectId, params.StartEvent, startConstraints,
 			params.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps1, "", nil); err != nil {
 			logCtx.WithError(err).Error("Factors failed.")
-			if err.Error() == "Root node not found or frequency 0" {
+			if err.Error() == "root node not found or frequency 0" {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 			}
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -380,7 +380,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			projectId, params.StartEvent, startConstraints,
 			params.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps2, "", nil); err != nil {
 			logCtx.WithError(err).Error("Factors failed.")
-			if err.Error() == "Root node not found or frequency 0" {
+			if err.Error() == "root node not found or frequency 0" {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 			}
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -427,7 +427,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			projectId, params1.StartEvent, startConstraints,
 			params1.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, "", nil); err != nil {
 			logCtx.WithError(err).Error("Factors failed.")
-			if err.Error() == "Root node not found or frequency 0" {
+			if err.Error() == "root node not found or frequency 0" {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 			}
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -441,7 +441,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			projectId, params2.StartEvent, startConstraints,
 			params2.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, "", nil); err != nil {
 			logCtx.WithError(err).Error("Factors failed.")
-			if err.Error() == "Root node not found or frequency 0" {
+			if err.Error() == "root node not found or frequency 0" {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 			}
 			c.AbortWithStatus(http.StatusBadRequest)

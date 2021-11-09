@@ -18,15 +18,15 @@ import (
 )
 
 const (
-	RPCServiceName                         = "ps"
-	RPCEndpoint                            = "/rpc"
-	OperationNameGetAllPatterns            = "GetAllPatterns"
-	OperationNameGetAllContainingPatterns  = "GetAllContainingPatterns"
-	OperationNameGetPatterns               = "GetPatterns"
-	OperationNameGetCountOfPattern         = "GetCountOfPattern"
-	OperationNameGetTotalEventCount        = "GetTotalEventCount"
-	Separator                              = "."
-	OperationNameGetUserAndEventsInfo      = "GetUserAndEventsInfo"
+	RPCServiceName                        = "ps"
+	RPCEndpoint                           = "/rpc"
+	OperationNameGetAllPatterns           = "GetAllPatterns"
+	OperationNameGetAllContainingPatterns = "GetAllContainingPatterns"
+	OperationNameGetPatterns              = "GetPatterns"
+	OperationNameGetCountOfPattern        = "GetCountOfPattern"
+	OperationNameGetTotalEventCount       = "GetTotalEventCount"
+	Separator                             = "."
+	OperationNameGetUserAndEventsInfo     = "GetUserAndEventsInfo"
 )
 
 type GenericRPCResp struct {
@@ -106,6 +106,7 @@ func CreatePatternsFromRawPatterns(rawPatterns []*json.RawMessage) ([]*pattern.P
 		if err != nil {
 			return patterns, err
 		}
+		p.GenFrequentProperties()
 
 		patterns = append(patterns, &p)
 	}
