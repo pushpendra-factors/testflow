@@ -1,0 +1,1 @@
+ALTER TABLE salesforce_documents ADD COLUMN group_user_id text;
