@@ -802,7 +802,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		EventProperties: properties,
 	}
 
-	status, response := SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	status, response := SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.NotEmpty(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
@@ -825,7 +825,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		UserId:          userId,
 	}
 
-	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Equal(t, http.StatusOK, status)
 
@@ -850,7 +850,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		UserId:          userId,
 	}
 
-	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Equal(t, http.StatusOK, status)
 	user, status = store.GetStore().GetUser(project.ID, userId)
@@ -873,7 +873,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		UserId:          userId,
 	}
 
-	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Equal(t, http.StatusOK, status)
 	user, status = store.GetStore().GetUser(project.ID, userId)
@@ -898,7 +898,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		EventProperties: properties,
 	}
 
-	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response.EventId)
 	assert.NotEmpty(t, response.UserId)
@@ -924,7 +924,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		UserId:          userId,
 	}
 
-	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Equal(t, http.StatusOK, status)
 	user, status = store.GetStore().GetUser(project.ID, userId)
@@ -946,7 +946,7 @@ func TestGetUserByPropertyKey(t *testing.T) {
 
 	errCode := store.GetStore().OverwriteUserPropertiesByID(project.ID, user.ID,
 		&postgres.Jsonb{RawMessage: json.RawMessage([]byte(
-			`{"$hubspot_contact_lead_guid": "xxx"}`))}, false, 0)
+			`{"$hubspot_contact_lead_guid": "xxx"}`))}, false, 0, "")
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	leadUser, errCode := store.GetStore().GetUserByPropertyKey(project.ID,
