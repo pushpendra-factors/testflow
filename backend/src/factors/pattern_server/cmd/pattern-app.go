@@ -31,10 +31,11 @@ import (
 )
 
 const (
-	DefaultTTLSeconds = 10
-	Development       = "development"
-	Staging           = "staging"
-	Production        = "production"
+	InitialDefaultMetadata = "version1"
+	DefaultTTLSeconds      = 10
+	Development            = "development"
+	Staging                = "staging"
+	Production             = "production"
 )
 
 // Add Test
@@ -315,7 +316,12 @@ func main() {
 	version, err := etcdClient.GetProjectVersion()
 	if err != nil {
 		logCtx.WithError(err).Errorln("Failed to fetch projects metadata version from etcd")
-		panic(err)
+		err = etcdClient.SetProjectVersion(InitialDefaultMetadata)
+		if err != nil {
+			logCtx.WithError(err).Errorln("Failed to set projects metadata version from etcd")
+			panic(err)
+		}
+		version = InitialDefaultMetadata
 	}
 
 	projectDataMap, err := getProjectsDataFromVersion(version, cloudManger)

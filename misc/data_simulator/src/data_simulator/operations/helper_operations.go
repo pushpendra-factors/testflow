@@ -39,7 +39,7 @@ func LoadExistingUsers(env string) map[string]map[string]string {
 	userData := make(map[string]map[string]string)
 
 	var files []string
-	if env == "development" {
+	if env == "development" || env == "docker" {
 		files = utils.GetAllFiles(constants.LOCALOUTPUTFOLDER, config.ConfigV2.User_data_file_name_prefix)
 	} else {
 		files = utils.ListAllCloudFiles(fmt.Sprintf("%s/%s", constants.UNPROCESSEDFILESCLOUD, constants.LOCALOUTPUTFOLDER),
@@ -50,7 +50,7 @@ func LoadExistingUsers(env string) map[string]map[string]string {
 		var scanner *bufio.Scanner
 		if strings.HasSuffix(element, ".gz") {
 			var gzr *gzip.Reader
-			if env == "development" {
+			if env == "development" || env == "docker" {
 				gzr = utils.GetFileHandlegz(element)
 			} else {
 				_context := context.Background()
@@ -74,7 +74,7 @@ func LoadExistingUsers(env string) map[string]map[string]string {
 			scanner = bufio.NewScanner(gzr)
 		}
 		if strings.HasSuffix(element, ".log") {
-			if env == "development" {
+			if env == "development" || env == "docker" {
 				_reader, _ := os.Open(element)
 				scanner = bufio.NewScanner(_reader)
 			} else {

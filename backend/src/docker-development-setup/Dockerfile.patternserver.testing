@@ -1,0 +1,17 @@
+FROM golang:1.14-alpine AS builder
+
+ENV GOPATH /go
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o /go/bin/pattern-app pattern_server/cmd/pattern-app.go
+ADD /docker-development-setup/samplemodeldata/chunks /go/factors/cloud_storage/projects/1/models/1596524994039/chunks
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/* && apk add curl
+# Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/factors/cloud_storage/projects/1/models/1596524994039/chunks /go/projects/1/models/1596524994039/chunks
+COPY --from=builder /go/bin/pattern-app /go/bin/pattern-app
+CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/bin/pattern-app --etcd=etcd:2379 --db_host=postgres --ip=patternserver --bucket_name=/go --disk_dir=/go; break; fi; sleep 2; done"]
+EXPOSE 8100

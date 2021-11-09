@@ -1,0 +1,18 @@
+FROM golang:1.14-alpine AS builder
+
+ENV GOPATH /go
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o /go/src/factors/backend/bin/documentdatagen scripts/ingest_demo_data/ingest_demo_data.go
+ADD /factors/scripts/ingest_demo_data/demo_data/adwords_documents.txt /go/src/documentdatagen/demo_data/bin/adwords_documents.txt
+ADD /factors/scripts/ingest_demo_data/demo_data/linkedin_documents.txt /go/src/documentdatagen/demo_data/bin/linkedin_documents.txt
+ADD /factors/scripts/ingest_demo_data/demo_data/facebook_documents.txt /go/src/documentdatagen/demo_data/bin/facebook_documents.txt
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && apk add curl && rm -rf /var/cache/apk/*
+COPY --from=builder /go/src/factors/backend/bin/documentdatagen /go/src/factors/backend/bin/documentdatagen
+COPY --from=builder /go/src/documentdatagen/demo_data/bin/adwords_documents.txt /go/bin/demo_data/adwords_documents.txt
+COPY --from=builder /go/src/documentdatagen/demo_data/bin/linkedin_documents.txt /go/bin/demo_data/linkedin_documents.txt
+COPY --from=builder /go/src/documentdatagen/demo_data/bin/facebook_documents.txt /go/bin/demo_data/facebook_documents.txt
+CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/src/factors/backend/bin/documentdatagen --env=docker --db_host=${DB_HOST}; break; fi; sleep 2; done"]

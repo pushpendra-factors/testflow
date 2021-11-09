@@ -1,0 +1,10 @@
+FROM node:14-alpine
+
+WORKDIR /factors
+ENV NODE_ENV='development'
+ADD . ./frontend-new
+RUN cd frontend-new && npm rebuild node-sass && npm install && npm install express && npm run build-docker
+WORKDIR /factors/frontend-new
+RUN mv ./dist/development/* ./dist
+ENTRYPOINT ["node", "serve-dist.js"]
+EXPOSE 3000
