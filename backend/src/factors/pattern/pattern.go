@@ -648,7 +648,7 @@ func (p *Pattern) GetPerUserCount(
 		log.Error(errorString)
 		return 0, fmt.Errorf(errorString)
 	}
-	if p.PatternVersion != 1 {
+	if p.PatternVersion == 2 {
 		//p.GenFrequentProperties()
 
 		epf, upf := int(p.PerUserCount), int(p.PerUserCount)
@@ -955,7 +955,7 @@ func (p *Pattern) GetPerOccurrenceUserPropertyRanges(
 }
 
 func (p *Pattern) GetPerUserEventPropertyValues(eventIndex int, propertyName string) []string {
-	if p.PatternVersion == 1 {
+	if p.PatternVersion < 2 {
 		// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
 		return p.PerUserEventCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
 	} else {
@@ -964,7 +964,7 @@ func (p *Pattern) GetPerUserEventPropertyValues(eventIndex int, propertyName str
 }
 
 func (p *Pattern) GetPerUserUserPropertyValues(eventIndex int, propertyName string) []string {
-	if p.PatternVersion == 1 {
+	if p.PatternVersion < 2 {
 		// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
 		return p.PerUserUserCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
 	} else {

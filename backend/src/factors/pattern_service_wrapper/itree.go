@@ -1469,7 +1469,7 @@ func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []s
 	userCatProperties := make([]string, 0)
 	userCatPropertiesSorted := make([]string, 0)
 	userPropertiesCountTuple := make([]PropertyCountTuple, 0)
-	if parentNode.Pattern.PatternVersion == 1 {
+	if parentNode.Pattern.PatternVersion < 1 {
 		if parentNode.Pattern.PerUserUserCategoricalProperties != nil {
 			for _, template := range *parentNode.Pattern.PerUserUserCategoricalProperties.Template {
 				userCatProperties = append(userCatProperties, formatProperty(template.Name))
@@ -1498,7 +1498,7 @@ func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []s
 	}
 
 	userNumProperties := make([]string, 0)
-	if parentNode.Pattern.PatternVersion == 1 {
+	if parentNode.Pattern.PatternVersion < 1 {
 		if parentNode.Pattern.PerUserUserNumericProperties != nil {
 			for _, template := range *parentNode.Pattern.PerUserUserNumericProperties.Template {
 				userNumProperties = append(userNumProperties, formatProperty(template.Name))
@@ -1509,7 +1509,7 @@ func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []s
 	}
 
 	eventCatProperties := make([]string, 0)
-	if parentNode.Pattern.PatternVersion == 1 {
+	if parentNode.Pattern.PatternVersion < 1 {
 		if parentNode.Pattern.PerUserEventCategoricalProperties != nil {
 			for _, template := range *parentNode.Pattern.PerUserEventCategoricalProperties.Template {
 				eventCatProperties = append(eventCatProperties, formatProperty(template.Name))
@@ -1523,7 +1523,7 @@ func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []s
 	}
 
 	eventNumProperties := make([]string, 0)
-	if parentNode.Pattern.PatternVersion == 1 {
+	if parentNode.Pattern.PatternVersion < 1 {
 		if parentNode.Pattern.PerUserEventNumericProperties != nil {
 			for _, template := range *parentNode.Pattern.PerUserEventNumericProperties.Template {
 				eventNumProperties = append(eventNumProperties, formatProperty(template.Name))
