@@ -2,9 +2,6 @@ const steps = [
   {
     selector: '[data-tour="step-1"]',
     content: 'Vivamus sed dui nisi',
-    action: node => {
-      node.click()
-    },
   },
   {
     selector: '[data-tour="step-2"]',
@@ -18,6 +15,18 @@ const steps = [
     selector: '[data-tour="step-2.1"]',
     content: 'Vivamus sed dui nisi',
     position: 'center',
+    styles: {
+      maskWrapper: base => ({
+        ...base,
+        color: 'red',
+      }),
+      highlightedArea: (base, { x, y }) => ({
+        ...base,
+        x: x + 10,
+        y: y + 10,
+      }),
+      badge: base => ({ ...base, color: 'red' }),
+    },
   },
   {
     selector: '[data-tour="step-3"]',
@@ -39,14 +48,12 @@ const steps = [
   {
     selector: '[data-tour="step-5"]',
     content: 'Vivamus sed dui nisi',
-    content: 'Vivamus sed dui nisi',
     action: node => {
       node.click()
     },
   },
   {
     selector: '[data-tour="step-6"]',
-    content: 'Vivamus sed dui nisi',
     content: 'Vivamus sed dui nisi',
     action: node => {
       node.click()

@@ -119,7 +119,7 @@ function Sidebar(props) {
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Dashboard" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-              <NavLink data-tour = 'step-1' onClick={() => setIsOpen(true)} activeClassName="active" exact to="/"><SVG name={'dashboard'} size={24} color="white"/></NavLink>
+              <NavLink data-tour = 'step-1' isOpen={isOpen} onClick={() => setIsOpen(!isOpen)} activeClassName="active" exact to="/"><SVG name={'dashboard'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
