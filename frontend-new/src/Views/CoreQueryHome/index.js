@@ -81,9 +81,9 @@ const coreQueryoptions = [
     desc: 'Find how users are navigating a defined path',
   },
   {
-    title: 'KPI',
+    title: 'KPIs',
     icon: 'KPI_cq',
-    desc: 'Access all your marketing metrics including website, ads and MAP/CRM data here.',
+    desc: 'Access your key marketing metrics',
   },
   {
     title: 'Campaigns',
@@ -501,7 +501,7 @@ function CoreQuery({
       setQueryType(QUERY_TYPE_ATTRIBUTION);
     }
 
-    if (item.title === 'KPI') {
+    if (item.title === 'KPIs') {
       setQueryType(QUERY_TYPE_KPI);
       setQueries([]);
       dispatch({
@@ -584,7 +584,7 @@ function CoreQuery({
             <Col span={20}>
               <div className={'flex'}>
                 {coreQueryoptions.map((item, index) => { 
-                  if (item.title === 'KPI' && !whiteListedAccounts_KPI.includes(activeAccount)) {
+                  if (item.title === 'KPIs' && !whiteListedAccounts_KPI.includes(activeAccount)) {
                     return null;
                   }
                   return (
