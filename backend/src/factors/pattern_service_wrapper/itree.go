@@ -3,6 +3,7 @@
 package pattern_service_wrapper
 
 import (
+	"errors"
 	"factors/model/store"
 	P "factors/pattern"
 	U "factors/util"
@@ -113,8 +114,8 @@ var BLACKLISTED_JOURNEYS = map[string][]string{
 	// "$hubspot_contact_created": []string{"$hubspot_contact_updated","ANY_CRM"},
 	// "$sf_opportunity_created":  []string{"$sf_opportunity_updated","ANY_CRM"},
 	// "$sf_lead_created":         []string{"$sf_lead_updated","ANY_CRM"},
-	"Deal Won":                 []string{"Deal Created"},
-	"*":                        []string{"$hubspot_contact_updated","$sf_lead_updated","$sf_opportunity_updated","$sf_account_updated","$sf_contact_updated","ANY_CRM"},
+	"Deal Won": []string{"Deal Created"},
+	"*":        []string{"$hubspot_contact_updated", "$sf_lead_updated", "$sf_opportunity_updated", "$sf_account_updated", "$sf_contact_updated", "ANY_CRM"},
 }
 
 var BLACKLISTED_PROPERTIES = map[string][]string{
@@ -2459,91 +2460,110 @@ func sortMap(data map[string]uint) interface{} {
 	return res
 }
 
-func BuildUserDistribution(reqId string, event string, patternWrapper PatternServiceWrapperInterface) (interface{}, interface{}, interface{}, error) {
+func BuildUserDistribution(reqId string, event string,
+	constraints *P.EventConstraints, patternWrapper PatternServiceWrapperInterface) (uint, map[string]uint, map[string]uint, error) {
 	if event == "" {
-		return nil, nil, nil, fmt.Errorf("Missing event")
+		return 0, nil, nil, fmt.Errorf("Missing event")
 	}
 
 	patterns, err := patternWrapper.GetAllContainingPatterns(reqId, event)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error fetching patterns")
+		return 0, nil, nil, fmt.Errorf("error fetching patterns")
 	}
 	before := make(map[string]uint)
 	after := make(map[string]uint)
-	base := make(map[string]uint)
+	base := uint(0)
+	isConstraintPresent := true
+	if len(constraints.EPNumericConstraints) == 0 && len(constraints.EPCategoricalConstraints) == 0 && len(constraints.UPNumericConstraints) == 0 && len(constraints.UPCategoricalConstraints) == 0 {
+		isConstraintPresent = false
+	}
 	for _, pattern := range patterns {
 		if len(pattern.EventNames) == 1 {
-			base["base"] = pattern.PerUserCount
+			if isConstraintPresent == true {
+				patternDetails := patternWrapper.GetPattern(reqId, pattern.EventNames)
+				count, err := patternDetails.GetCount(constructPatternConstraints(
+					1, constraints, constraints), P.COUNT_TYPE_PER_USER)
+				if err == nil {
+					base = uint(count)
+				}
+			} else {
+				base = pattern.PerUserCount
+			}
 		}
 		if len(pattern.EventNames) == 2 {
+			patternDetails := patternWrapper.GetPattern(reqId, pattern.EventNames)
 			if pattern.EventNames[0] == event && pattern.EventNames[1] != event {
-				after[pattern.EventNames[1]] += pattern.PerUserCount
+				if isConstraintPresent == true {
+					count, err := patternDetails.GetCount(constructPatternConstraints(
+						2, constraints, constraints), P.COUNT_TYPE_PER_USER)
+					if err == nil {
+						after[pattern.EventNames[1]] += uint(count)
+					}
+				} else {
+					after[pattern.EventNames[1]] += pattern.PerUserCount
+				}
 			}
 			if pattern.EventNames[1] == event && pattern.EventNames[0] != event {
-				before[pattern.EventNames[0]] += pattern.PerUserCount
-			}
-		}
-	}
-	// Janani: optimize it - reverse the loop
-	for eventFiltered, _ := range before {
-		for _, pattern := range patterns {
-			if len(pattern.EventNames) == 3 {
-				if pattern.EventNames[0] == event && pattern.EventNames[1] == eventFiltered && pattern.EventNames[2] == event {
-					before[eventFiltered] -= pattern.PerUserCount
+				if isConstraintPresent == true {
+					count, err := patternDetails.GetCount(constructPatternConstraints(
+						2, constraints, constraints), P.COUNT_TYPE_PER_USER)
+					if err == nil {
+						before[pattern.EventNames[0]] += uint(count)
+					}
+				} else {
+					before[pattern.EventNames[0]] += pattern.PerUserCount
 				}
 			}
 		}
 	}
-	for eventFiltered, _ := range after {
-		for _, pattern := range patterns {
-			if len(pattern.EventNames) == 3 {
-				if pattern.EventNames[0] == eventFiltered && pattern.EventNames[1] == event && pattern.EventNames[2] == eventFiltered {
-					after[eventFiltered] -= pattern.PerUserCount
-				}
-			}
-		}
-	}
-	return sortMap(base), sortMap(before), sortMap(after), nil
+	return base, before, after, nil
 }
 
-func BuildUserDistributionWithProperties(reqId string, event string, baseProperty P.EventConstraints, distributionProperty map[string]string, patternWrapper PatternServiceWrapperInterface) (interface{}, error) {
-	if event == "" {
-		event = U.SEN_ALL_ACTIVE_USERS
+func BuildUserDistributionWithProperties(reqId string, events []string, startConstraints *P.EventConstraints, endConstraints *P.EventConstraints, patternWrapper PatternServiceWrapperInterface) (uint, map[string]uint, error) {
+	if len(events) == 0 {
+		events = []string{U.SEN_ALL_ACTIVE_USERS}
 	}
-	res := make(map[string]uint)
-	pattern := patternWrapper.GetPattern(reqId, []string{event})
+	if len(events) > 2 {
+		return 0, nil, errors.New("Invalid number of events")
+	}
+	overall, target := uint(0), make(map[string]uint)
+	pattern := patternWrapper.GetPattern(reqId, events)
 	if pattern == nil {
-		return nil, fmt.Errorf("error fetching patterns")
+		return 0, nil, fmt.Errorf("error fetching patterns")
 	}
-	if len(pattern.EventNames) == 1 {
-		if count, _ := pattern.GetCount(constructPatternConstraints(
-			1, &baseProperty, &baseProperty), P.COUNT_TYPE_PER_USER); count > 0 {
-			res["base"] = count
-			allUserCatProperties, _, _, _ := extractProperties(&ItreeNode{Pattern: pattern})
-			if distributionProperty == nil || len(distributionProperty) == 0 {
-				for _, property := range allUserCatProperties {
-					if property != baseProperty.UPCategoricalConstraints[0].PropertyName {
-						distributionProperty[property] = "categorical"
-					}
-				}
+	existingConstraints := make(map[string]bool)
+	for _, prop := range endConstraints.UPCategoricalConstraints {
+		existingConstraints[prop.PropertyName] = true
+	}
+	if count, _ := pattern.GetCount(constructPatternConstraints(
+		1, startConstraints, endConstraints), P.COUNT_TYPE_PER_USER); count > 0 {
+		overall = count
+		allUserCatProperties, _, _, _ := extractProperties(&ItreeNode{Pattern: pattern})
+		distributionProperty := make(map[string]string)
+		for _, property := range allUserCatProperties {
+			if existingConstraints[property] != true {
+				distributionProperty[property] = "categorical"
 			}
-			for property, propertyCategory := range distributionProperty {
-				if propertyCategory == "categorical" {
-					values := pattern.GetPerUserUserPropertyValues(0, property)
-					for _, value := range values {
-						constraints := P.EventConstraints{}
-						constraints.UPCategoricalConstraints = baseProperty.UPCategoricalConstraints
-						constraints.UPNumericConstraints = baseProperty.UPNumericConstraints
-						constraints.UPCategoricalConstraints = append(constraints.UPCategoricalConstraints,
-							P.CategoricalConstraint{PropertyName: property, PropertyValue: value, Operator: P.EQUALS_OPERATOR_CONST})
-						if count, _ := pattern.GetCount(constructPatternConstraints(
-							1, &constraints, &constraints), P.COUNT_TYPE_PER_USER); count > 0 {
-							res[property+"-"+value] = count
-						}
+		}
+		for property, propertyCategory := range distributionProperty {
+			if propertyCategory == "categorical" {
+				values := pattern.GetPerUserUserPropertyValues(0, property)
+				for _, value := range values {
+					constraints := P.EventConstraints{
+						EPNumericConstraints:     endConstraints.EPNumericConstraints,
+						EPCategoricalConstraints: endConstraints.EPCategoricalConstraints,
+						UPNumericConstraints:     endConstraints.UPNumericConstraints,
+						UPCategoricalConstraints: endConstraints.UPCategoricalConstraints,
+					}
+					constraints.UPCategoricalConstraints = append(constraints.UPCategoricalConstraints,
+						P.CategoricalConstraint{PropertyName: property, PropertyValue: value, Operator: P.EQUALS_OPERATOR_CONST})
+					if count, _ := pattern.GetCount(constructPatternConstraints(
+						1, startConstraints, &constraints), P.COUNT_TYPE_PER_USER); count > 0 {
+						target[property+"::"+value] = count
 					}
 				}
 			}
 		}
 	}
-	return sortMap(res), nil
+	return overall, target, nil
 }
