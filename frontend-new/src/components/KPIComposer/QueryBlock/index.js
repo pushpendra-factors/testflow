@@ -164,16 +164,7 @@ function QueryBlock({
         {pageUrlDD ? (
           <div className={styles.query_block__event_selector__btn}>
             <FaSelect
-              // groupedProperties={[{
-              //   icon: 'custom_events',
-              //   label: 'website_session',
-              //   values: pageURLs || []
-              // }]}
-              options={[
-                ['hello', 'hello.com'],
-                ['hello1', 'hello1.com'],
-                ['hello2', 'hello2.com'],
-              ]}
+              options={pageURLs || []}
               placeholder='Select Event'
               optionClick={(val) => setPageURL(val)}
               onClickOutside={() => setPageUrlDD(false)}
