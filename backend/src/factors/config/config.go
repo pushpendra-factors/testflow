@@ -192,6 +192,7 @@ type Configuration struct {
 	SkipAttributionDashboardCaching        int
 	IsRunningForMemsql                     int
 	UseSourcePropertyOverwriteByProjectIDs string
+	AllowedSalesforceGroupsByProjectIDs    string
 }
 
 type Services struct {
@@ -342,6 +343,26 @@ func IsAllowedHubspotGroupsByProjectID(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.AllowedHubspotGroupsByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsAllowedSalesforceGroupsByProjectID(projectID uint64) bool {
+	if configuration.AllowedSalesforceGroupsByProjectIDs == "" {
+		return false
+	}
+
+	if configuration.AllowedSalesforceGroupsByProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowedSalesforceGroupsByProjectIDs, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true

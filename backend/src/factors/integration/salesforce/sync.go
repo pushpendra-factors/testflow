@@ -955,6 +955,32 @@ func CreateOrGetSalesforceEventName(projectID uint64) int {
 		}
 	}
 
+	if !C.IsAllowedSalesforceGroupsByProjectID(projectID) {
+		return http.StatusOK
+	}
+
+	/*
+		Create group and its events
+	*/
+	_, status := store.GetStore().CreateGroup(projectID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	if status != http.StatusCreated && status != http.StatusConflict {
+		return http.StatusInternalServerError
+	}
+
+	for _, event_name := range []string{U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED} {
+		_, status = store.GetStore().CreateOrGetEventName(&model.EventName{
+			ProjectId: projectID,
+			Name:      event_name,
+			Type:      model.TYPE_USER_CREATED_EVENT_NAME,
+		})
+
+		if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+			logCtx.WithFields(log.Fields{"event_name": event_name}).Error("Failed to create salesforce group event name.")
+			return http.StatusInternalServerError
+		}
+	}
+
 	return http.StatusOK
 }
 

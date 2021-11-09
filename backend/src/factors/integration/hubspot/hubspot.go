@@ -1105,57 +1105,6 @@ func GetHubspotSmartEventNames(projectID uint64) *map[string][]HubspotSmartEvent
 	return &hubspotSmartEventNames
 }
 
-func updateCompanyGroupProperties(projectID uint64, companyID, companyUserID string, enProperties *map[string]interface{}, companyCreatedTimestamp, updateTimestamp int64) (string, error) {
-
-	if projectID < 1 || enProperties == nil || companyCreatedTimestamp == 0 {
-		return "", errors.New("invalid parameters")
-	}
-
-	newGroupUser := false
-	if companyUserID == "" {
-		newGroupUser = true
-	}
-
-	pJSONProperties, err := util.EncodeToPostgresJsonb(enProperties)
-	if err != nil {
-		return "", err
-	}
-
-	if !newGroupUser {
-		user, status := store.GetStore().GetUser(projectID, companyUserID)
-		if status != http.StatusFound {
-			return "", errors.New("failed to get user")
-		}
-
-		if !(*user.IsGroupUser) {
-			return "", errors.New("user is not group user")
-		}
-
-		_, status = store.GetStore().UpdateUserGroupProperties(projectID, companyUserID, pJSONProperties, updateTimestamp)
-		if status != http.StatusAccepted {
-			return "", errors.New("failed to update company group properties")
-		}
-		return companyUserID, nil
-	}
-
-	isGroupUser := true
-	userID, status := store.GetStore().CreateGroupUser(&model.User{
-		ProjectId:     projectID,
-		IsGroupUser:   &isGroupUser,
-		JoinTimestamp: companyCreatedTimestamp,
-	}, model.GROUP_NAME_HUBSPOT_COMPANY, companyID)
-	if status != http.StatusCreated {
-		return userID, errors.New("failed to create company group user")
-	}
-
-	_, status = store.GetStore().UpdateUserGroupProperties(projectID, userID, pJSONProperties, updateTimestamp)
-	if status != http.StatusAccepted {
-		return userID, errors.New("failed to update company group properties")
-	}
-
-	return userID, nil
-}
-
 func getCompanyNameAndDomainName(document *model.HubspotDocument) (string, string, error) {
 	if document.Type != model.HubspotDocumentTypeCompany {
 		return "", "", errors.New("invalid document type")
@@ -1191,7 +1140,7 @@ func syncCompanyProperties(projectID uint64, groupID string, docID string, docum
 	var processEventTimestamps []int64
 	var err error
 	if documentAction == model.HubspotDocumentActionCreated {
-		companyUserID, err = updateCompanyGroupProperties(projectID, groupID, "", userProperties, documentTimestmap, documentTimestmap)
+		companyUserID, err = store.GetStore().CreateOrUpdateCompanyGroupPropertiesBySource(projectID, groupID, "", userProperties, documentTimestmap, documentTimestmap, model.SmartCRMEventSourceHubspot)
 		if err != nil {
 			return "", err
 		}
@@ -1214,7 +1163,7 @@ func syncCompanyProperties(projectID uint64, groupID string, docID string, docum
 			updateCreatedRecord = true
 		}
 
-		companyUserID, err = updateCompanyGroupProperties(projectID, docID, createdDocument[0].UserId, userProperties, createdDocument[0].Timestamp, documentTimestmap)
+		companyUserID, err = store.GetStore().CreateOrUpdateCompanyGroupPropertiesBySource(projectID, docID, createdDocument[0].UserId, userProperties, createdDocument[0].Timestamp, documentTimestmap, model.SmartCRMEventSourceHubspot)
 		if err != nil {
 			return "", err
 		}

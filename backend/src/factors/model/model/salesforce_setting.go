@@ -1,6 +1,8 @@
 package model
 
-import C "factors/config"
+import (
+	C "factors/config"
+)
 
 // Salesforce required fields per project
 var (

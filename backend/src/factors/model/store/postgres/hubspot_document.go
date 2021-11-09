@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jinzhu/gorm"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
 	"factors/model/model"
@@ -307,10 +308,9 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 		}
 
 	}
-	UpdateCountCacheByDocumentType(projectId,&document.CreatedAt,"hubspot")
+	UpdateCountCacheByDocumentType(projectId, &document.CreatedAt, "hubspot")
 	return http.StatusCreated
 }
-
 
 func getHubspotTypeAlias(t int) string {
 	for alias, typ := range model.HubspotDocumentTypeAlias {
@@ -868,4 +868,67 @@ func (pg *Postgres) GetLastSyncedHubspotDocumentByID(projectID uint64, docID str
 	}
 
 	return &document[0], http.StatusFound
+}
+
+func (pg *Postgres) CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint64, companyID, companyUserID string, enProperties *map[string]interface{}, companyCreatedTimestamp, updateTimestamp int64, source string) (string, error) {
+
+	if projectID < 1 || enProperties == nil || companyCreatedTimestamp == 0 {
+		return "", errors.New("invalid parameters")
+	}
+
+	if source != model.SmartCRMEventSourceHubspot && source != model.SmartCRMEventSourceSalesforce {
+		return "", errors.New("invalid source")
+	}
+
+	newGroupUser := false
+	if companyUserID == "" {
+		newGroupUser = true
+	}
+
+	pJSONProperties, err := util.EncodeToPostgresJsonb(enProperties)
+	if err != nil {
+		return "", err
+	}
+
+	if !newGroupUser {
+		user, status := pg.GetUser(projectID, companyUserID)
+		if status != http.StatusFound {
+			return "", errors.New("failed to get user")
+		}
+
+		if !(*user.IsGroupUser) {
+			return "", errors.New("user is not group user")
+		}
+
+		_, status = pg.UpdateUserGroupProperties(projectID, companyUserID, pJSONProperties, updateTimestamp)
+		if status != http.StatusAccepted {
+			return "", errors.New("failed to update company group properties")
+		}
+		return companyUserID, nil
+	}
+
+	isGroupUser := true
+
+	groupName := ""
+	if source == model.SmartCRMEventSourceHubspot {
+		groupName = model.GROUP_NAME_HUBSPOT_COMPANY
+	} else {
+		groupName = model.GROUP_NAME_SALESFORCE_ACCOUNT
+	}
+
+	userID, status := pg.CreateGroupUser(&model.User{
+		ProjectId:     projectID,
+		IsGroupUser:   &isGroupUser,
+		JoinTimestamp: companyCreatedTimestamp,
+	}, groupName, companyID)
+	if status != http.StatusCreated {
+		return userID, errors.New("failed to create company group user")
+	}
+
+	_, status = pg.UpdateUserGroupProperties(projectID, userID, pJSONProperties, updateTimestamp)
+	if status != http.StatusAccepted {
+		return userID, errors.New("failed to update company group properties")
+	}
+
+	return userID, nil
 }

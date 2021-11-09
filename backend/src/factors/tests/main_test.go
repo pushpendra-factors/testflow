@@ -81,6 +81,7 @@ func TestMain(m *testing.M) {
 		UseOpportunityAssociationByProjectID:   "*",
 		AllowedHubspotGroupsByProjectIDs:       "*",
 		UseSourcePropertyOverwriteByProjectIDs: "*",
+		AllowedSalesforceGroupsByProjectIDs:    "*",
 	}
 	C.InitConf(config)
 

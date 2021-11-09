@@ -106,6 +106,7 @@ func main() {
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
+	enableSalesforceGroupsByProjectIDs := flag.String("salesforce_groups_by_project_ids", "", "Enable salesforce groups by projects.")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -161,6 +162,7 @@ func main() {
 		UseOpportunityAssociationByProjectID:   *useOpportunityAssociationByProjectID,
 		DisableRedisWrites:                     disableRedisWrites,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
+		AllowedSalesforceGroupsByProjectIDs:    *enableSalesforceGroupsByProjectIDs,
 	}
 
 	C.InitConf(config)

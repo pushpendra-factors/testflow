@@ -331,11 +331,11 @@ type Model interface {
 	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)
 	GetSalesforceObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
 	GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.SalesforceDocument, int)
-	UpdateSalesforceDocumentAsSynced(projectID uint64, document *model.SalesforceDocument, syncID, userID string) int
+	UpdateSalesforceDocumentBySyncStatus(projectID uint64, document *model.SalesforceDocument, syncID, userID, groupUserID string, synced bool) int
 	BuildAndUpsertDocument(projectID uint64, objectName string, value model.SalesforceRecord) error
 	CreateSalesforceDocument(projectID uint64, document *model.SalesforceDocument) int
 	CreateSalesforceDocumentByAction(projectID uint64, document *model.SalesforceDocument, action model.SalesforceAction) int
-	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int) ([]model.SalesforceDocument, int)
+	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int, includeUnSynced bool) ([]model.SalesforceDocument, int)
 	GetSalesforceObjectValuesByPropertyName(ProjectID uint64, objectType string, propertyName string) []interface{}
 	GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int, from, to int64) ([]model.SalesforceDocument, int)
 	GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int)
@@ -507,4 +507,6 @@ type Model interface {
 	//Group
 	CreateGroup(projectID uint64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
 	GetGroup(projectID uint64, groupName string) (*model.Group, int)
+	CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint64, companyID, companyUserID string, enProperties *map[string]interface{},
+		companyCreatedTimestamp, updateTimestamp int64, source string) (string, error)
 }

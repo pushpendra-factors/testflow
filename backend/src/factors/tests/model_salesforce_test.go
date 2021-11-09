@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -87,7 +88,7 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	// enrich job, create contact created and contact updated event.
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 1)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
 	eventNameCreated := fmt.Sprintf("$sf_%s_created", salesforceDocument.TypeAlias)
@@ -182,7 +183,7 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 1)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
 	// query count of unique users
@@ -280,7 +281,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusCreated, status)
-	status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID3)
+	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID3, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	createdAt = time.Now().AddDate(0, 0, -11)
@@ -294,7 +295,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusCreated, status)
-	status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID1)
+	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID1, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	createdAt = time.Now().AddDate(0, 0, -11)
@@ -308,7 +309,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusCreated, status)
-	status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID2)
+	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID2, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	createdAt = time.Now().AddDate(0, 0, -11)
@@ -458,7 +459,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 		}
 		status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 		assert.Equal(t, http.StatusCreated, status)
-		status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userIDs[i])
+		status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userIDs[i], "", true)
 		assert.Equal(t, http.StatusAccepted, status)
 	}
 
@@ -471,7 +472,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusCreated, status)
-	status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID1)
+	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID1, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	updatedDate = updatedDate.AddDate(0, 0, -1)
@@ -484,7 +485,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
 	assert.Equal(t, http.StatusCreated, status)
-	status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID1)
+	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID1, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	/*
@@ -498,7 +499,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	assert.Equal(t, "G", (*prevProperties)["character"])
 	assert.Equal(t, "Saturday", (*prevProperties)["day"])
 
-	prevDocs, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID1}, model.SalesforceDocumentTypeContact)
+	prevDocs, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID1}, model.SalesforceDocumentTypeContact, false)
 	assert.Equal(t, http.StatusFound, status)
 	_, prevProperties, err = IntSalesforce.GetSalesforceDocumentProperties(project.ID, &prevDocs[len(prevDocs)-1])
 	assert.Nil(t, err)
@@ -677,7 +678,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	assert.Nil(t, prevProperties)
 }
 
-func TestSameUserSmartEvent(t *testing.T) {
+func TestSalesforceSameUserSmartEvent(t *testing.T) {
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
@@ -743,7 +744,7 @@ func TestSameUserSmartEvent(t *testing.T) {
 	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1})
 	assert.Equal(t, http.StatusCreated, status)
 	eventID1 := U.RandomLowerAphaNumString(10)
-	store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocumentPrev, eventID1, userID1)
+	store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocumentPrev, eventID1, userID1, "", true)
 
 	currentProperties := make(map[string]interface{})
 	currentProperties["character"] = "I"
@@ -894,7 +895,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 1)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	query := model.Query{
 		From: createdDate.Unix() - 500,
@@ -1422,7 +1423,7 @@ func createDummySalesforceDocument(projectID uint64, value interface{}, doctType
 	return nil
 }
 
-func TestSmartEventPropertyDetails(t *testing.T) {
+func TestSalesforceSmartEventPropertyDetails(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	r := gin.Default()
@@ -1532,7 +1533,7 @@ func TestSmartEventPropertyDetails(t *testing.T) {
 
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 1)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
 	configs := make(map[string]interface{})
@@ -1769,11 +1770,12 @@ func TestSalesforceCampaignTest(t *testing.T) {
 
 	enrichStatus, anyFailure := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, false, anyFailure)
-	assert.Len(t, enrichStatus, 4)
+	assert.Len(t, enrichStatus, 5)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[2].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[3].Status)
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[4].Status)
 
 	query := model.Query{
 		From: campaign1CreatedTimestamp.Unix() - 500,
@@ -2143,7 +2145,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 3)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 
@@ -2238,7 +2240,7 @@ func TestSalesforceOpportunityAssociations(t *testing.T) {
 
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 3)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 
@@ -2306,7 +2308,7 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 		generate per day time series -> {Day1,Day2}, {Day2,Day3},{Day3,Day4} upto current day
 	*/
 	startTimestamp := time.Now().AddDate(0, 0, -10) // 10 days excluding today
-	startDate := time.Date(startTimestamp.Year(), startTimestamp.Month(), startTimestamp.Day(), 0, 0, 0, 0, time.UTC)
+	startDate := time.Date(startTimestamp.UTC().Year(), startTimestamp.UTC().Month(), startTimestamp.UTC().Day(), 0, 0, 0, 0, time.UTC)
 	expectedTimeSeries := [][]int64{}
 	for i := 0; i < 11; i++ {
 		expectedTimeSeries = append(expectedTimeSeries, []int64{startDate.AddDate(0, 0, i).Unix(), startDate.AddDate(0, 0, i+1).Unix()})
@@ -2341,7 +2343,7 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 	assert.Nil(t, err)
 
 	contactID1 := U.RandomString(5)
-	contact1CreatedDate := lead1CreatedDate.Add(500 * time.Minute)
+	contact1CreatedDate := lead1CreatedDate.Add(500 * time.Second)
 	contact1LastModifiedDate := contact1CreatedDate.Add(10 * time.Second)
 	contactCreated := map[string]interface{}{
 		"Id":               contactID1,
@@ -2377,7 +2379,7 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 	assert.Nil(t, err)
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 3)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 
@@ -2620,7 +2622,7 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 3)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 
@@ -2649,7 +2651,7 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 	// failed opportunity should be process now
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 1)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
 	analyzeResult, status, _ = store.GetStore().Analyze(project.ID, query)
@@ -2850,6 +2852,304 @@ func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 	}
 }
 
+func querySingleEventWithBreakdownByUserProperty(projectID uint64, eventName string, propertyName string, from, to int64) (map[string]interface{}, int) {
+	query := model.Query{
+		Class: model.QueryClassEvents,
+		From:  from,
+		To:    to,
+		Type:  model.QueryTypeEventsOccurrence,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{Name: eventName},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Property:  propertyName,
+				Entity:    model.PropertyEntityUser,
+				EventName: eventName,
+			},
+		},
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+
+	results, status := store.GetStore().RunEventsGroupQuery([]model.Query{query}, projectID)
+	if status != http.StatusOK {
+		return nil, status
+	}
+
+	result := results.Results[0]
+	resultMap := make(map[string]interface{}, 0)
+	for i := range result.Rows {
+		row := result.Rows[i]
+		resultMap[util.GetPropertyValueAsString(row[2])] = row[3]
+	}
+
+	return resultMap, status
+}
+
+func TestSalesforceGroups(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	accountID1 := "acc1_" + getRandomName()
+	accountID2 := "acc2_" + getRandomName()
+
+	createdDate := time.Now().UTC().AddDate(0, 0, -3)
+	processRecords := make([]map[string]interface{}, 0)
+	processRecordsType := make([]string, 0)
+	document := map[string]interface{}{
+		"Id":               accountID1,
+		"Name":             "account1",
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameAccount)
+
+	document = map[string]interface{}{
+		"Id":               accountID2,
+		"Name":             "account2",
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameAccount)
+
+	leadID1 := "acc1_lead1_" + getRandomName()
+	leadID2 := "acc2_lead1_" + getRandomName()
+	document = map[string]interface{}{
+		"Id":                 leadID1,
+		"Name":               "lead1",
+		"ConvertedAccountId": accountID1,
+		"CreatedDate":        createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate":   createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameLead)
+
+	document = map[string]interface{}{
+		"Id":                 leadID2,
+		"Name":               "lead2",
+		"ConvertedAccountId": accountID2,
+		"CreatedDate":        createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate":   createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameLead)
+
+	contactID1 := "acc1_contact1_" + getRandomName()
+	contactID2 := "acc2_contact1_" + getRandomName()
+	document = map[string]interface{}{
+		"Id":               contactID1,
+		"Name":             "contact1",
+		"AccountId":        accountID1,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameContact)
+
+	document = map[string]interface{}{
+		"Id":               contactID2,
+		"Name":             "contact2",
+		"AccountId":        accountID2,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameContact)
+
+	opportunityID1 := "acc1_opp1_" + getRandomName()
+	opportunityID2 := "acc2_opp1_" + getRandomName()
+
+	document = map[string]interface{}{
+		"Id":               opportunityID1,
+		"Name":             "opportunity1",
+		"AccountId":        accountID1,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameOpportunity)
+
+	document = map[string]interface{}{
+		"Id":               opportunityID2,
+		"Name":             "opportunity2",
+		"AccountId":        accountID2,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameOpportunity)
+
+	for i := range processRecords {
+		err = createDummySalesforceDocument(project.ID, processRecords[i], processRecordsType[i])
+		assert.Nil(t, err, fmt.Sprintf("doc_type %s", processRecordsType[i]))
+	}
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 5) // group account status
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+	assert.Equal(t, "success", enrichStatus[2].Status)
+	assert.Equal(t, "success", enrichStatus[3].Status)
+	assert.Equal(t, "success", enrichStatus[4].Status)
+
+	for i := range processRecords {
+		docType := model.GetSalesforceDocTypeByAlias(processRecordsType[i])
+		documents, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(processRecords[i]["Id"])}, docType, 0)
+		assert.Equal(t, http.StatusFound, status)
+		assert.NotEmpty(t, documents[0].UserID)
+		if documents[0].Type == model.SalesforceDocumentTypeAccount {
+			assert.NotEqual(t, "", documents[0].GroupUserID)
+			assert.NotEqual(t, "", documents[0].UserID)
+			groupUser, _ := store.GetStore().GetUser(project.ID, documents[0].GroupUserID)
+			if strings.HasPrefix(documents[0].ID, "acc1_") {
+				assert.Equal(t, "account1", groupUser.Group1ID)
+			} else {
+				assert.Equal(t, "account2", groupUser.Group1ID)
+			}
+		} else {
+			nonGroupUser, _ := store.GetStore().GetUser(project.ID, documents[0].UserID)
+			assert.Equal(t, false, *nonGroupUser.IsGroupUser)
+			if strings.HasPrefix(documents[0].ID, "acc1_") {
+				assert.Equal(t, "account1", nonGroupUser.Group1ID)
+			} else {
+				assert.Equal(t, "account2", nonGroupUser.Group1ID)
+			}
+			assert.NotEqual(t, "", nonGroupUser.Group1UserID)
+		}
+	}
+
+	result, status := querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
+		"$salesforce_lead_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 2)
+	assert.Equal(t, float64(1), result[leadID1])
+	assert.Equal(t, float64(1), result[leadID2])
+
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
+		"$salesforce_lead_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 2)
+	assert.Equal(t, float64(2), result[leadID1])
+	assert.Equal(t, float64(2), result[leadID2])
+
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_account_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 2)
+	assert.Equal(t, float64(1), result[accountID1])
+	assert.Equal(t, float64(1), result[accountID2])
+
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		"$salesforce_account_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 2)
+	assert.Equal(t, float64(2), result[accountID1])
+	assert.Equal(t, float64(2), result[accountID2])
+
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		"$salesforce_account_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 2)
+	assert.Equal(t, float64(1), result[accountID1])
+	assert.Equal(t, float64(1), result[accountID2])
+
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		"$salesforce_account_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 2)
+	assert.Equal(t, float64(2), result[accountID1])
+	assert.Equal(t, float64(2), result[accountID2])
+
+	// Two new update on the account. Account name will not be updated on group id
+	processRecords = []map[string]interface{}{}
+	processRecordsType = []string{}
+	document = map[string]interface{}{
+		"Id":               accountID1,
+		"Name":             "account1.1",
+		"city":             "A",
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.AddDate(0, 0, 1).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameAccount)
+
+	document = map[string]interface{}{
+		"Id":               accountID2,
+		"Name":             "account2.2",
+		"City":             "B",
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.AddDate(0, 0, 1).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameAccount)
+
+	for i := range processRecords {
+		err = createDummySalesforceDocument(project.ID, processRecords[i], processRecordsType[i])
+		assert.Nil(t, err, fmt.Sprintf("doc_type %s", processRecordsType[i]))
+	}
+
+	// check before for property A
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		"$salesforce_account_city", createdDate.AddDate(0, 0, 1).Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 0)
+
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 2) // group account status
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		"$salesforce_account_id", createdDate.AddDate(0, 0, 1).Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 2)
+	assert.Equal(t, float64(1), result[accountID1])
+	assert.Equal(t, float64(1), result[accountID2])
+
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+		"$salesforce_account_city", createdDate.AddDate(0, 0, 1).Unix(), createdDate.AddDate(0, 0, 1).Unix()+10)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 2)
+	assert.Equal(t, float64(1), result["A"])
+	assert.Equal(t, float64(1), result["B"])
+
+	for id, docType := range map[string]int{
+		leadID1:        model.SalesforceDocumentTypeLead,
+		leadID2:        model.SalesforceDocumentTypeLead,
+		contactID1:     model.SalesforceDocumentTypeContact,
+		contactID2:     model.SalesforceDocumentTypeContact,
+		accountID1:     model.SalesforceDocumentTypeAccount,
+		accountID2:     model.SalesforceDocumentTypeAccount,
+		opportunityID1: model.SalesforceDocumentTypeOpportunity,
+		opportunityID2: model.SalesforceDocumentTypeOpportunity,
+	} {
+		documents, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(id)}, docType, 0)
+		assert.Equal(t, http.StatusFound, status)
+		lasteDocument := documents[len(documents)-1]
+		if docType == model.SalesforceDocumentTypeAccount {
+			groupUser, status := store.GetStore().GetUser(project.ID, lasteDocument.GroupUserID)
+			assert.Equal(t, http.StatusFound, status)
+
+			if strings.HasPrefix(id, "acc1_") {
+				assert.Equal(t, "account1", groupUser.Group1ID)
+			} else {
+				assert.Equal(t, "account2", groupUser.Group1ID)
+			}
+		} else {
+			assert.Equal(t, "", lasteDocument.GroupUserID)
+			user, status := store.GetStore().GetUser(project.ID, lasteDocument.UserID)
+			assert.Equal(t, http.StatusFound, status)
+			if strings.HasPrefix(id, "acc1_") {
+				assert.Equal(t, "account1", user.Group1ID)
+			} else {
+				assert.Equal(t, "account2", user.Group1ID)
+			}
+		}
+	}
+}
+
 func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	// Initialize the project and the user. Also capture currentTimestamp, futureTimestamp & middleTimestamp.
 	currentTimestamp := time.Now().Unix()
@@ -2958,7 +3258,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	}
 
 	// Verification for contact creation.
-	createDocument, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID}, model.SalesforceDocumentTypeContact)
+	createDocument, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID}, model.SalesforceDocumentTypeContact, false)
 	assert.Equal(t, http.StatusFound, status)
 	user, status = store.GetStore().GetUser(project.ID, createDocument[0].UserID)
 	assert.Equal(t, http.StatusFound, status)
@@ -2999,7 +3299,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	}
 
 	// Verify salesforce_contact_lastmodifieddate is set to timestampT2 and PropertiesUpdatedTimestamp to timestampT3.
-	updateDocument, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID}, model.SalesforceDocumentTypeContact)
+	updateDocument, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID}, model.SalesforceDocumentTypeContact, false)
 	assert.Equal(t, http.StatusFound, status)
 	user, status = store.GetStore().GetUser(project.ID, updateDocument[0].UserID)
 	assert.Equal(t, http.StatusFound, status)
@@ -3076,7 +3376,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 
 	// Verify salesforce_contact_lastmodifieddate is set to timestampT2 for both createDocumentIDU1 and userU2.
 	// Verify PropertiesUpdatedTimestamp is set to timestampT3 for both createDocumentIDU1 and userU2.
-	updateDocument, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{fmt.Sprintf("%v", createDocumentIDU1)}, model.SalesforceDocumentTypeContact)
+	updateDocument, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{fmt.Sprintf("%v", createDocumentIDU1)}, model.SalesforceDocumentTypeContact, false)
 	assert.Equal(t, http.StatusFound, status)
 	user, status = store.GetStore().GetUser(project.ID, updateDocument[0].UserID)
 	assert.Equal(t, http.StatusFound, status)

@@ -79,7 +79,8 @@ func (pg *Postgres) GetGroup(projectID uint64, groupName string) (*model.Group, 
 
 	group := model.Group{}
 
-	if err := db.Model(&model.Group{}).Where("project_id = ? AND name = ? ", projectID, groupName).Find(&group).Error; err != nil {
+	if err := db.Model(&model.Group{}).Where("project_id = ? AND name = ? ", projectID, groupName).
+		Find(&group).Error; err != nil {
 
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound

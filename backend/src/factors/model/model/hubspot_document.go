@@ -198,7 +198,7 @@ func GetCRMTimeSeriesByStartTimestamp(projectID uint64, from int64, CRMEventSour
 
 	timeSeries := [][]int64{}
 	startTime := time.Unix(from/multiplier, 0)
-	startDate := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
+	startDate := time.Date(startTime.UTC().Year(), startTime.UTC().Month(), startTime.UTC().Day(), 0, 0, 0, 0, time.UTC)
 	currentTime := time.Now()
 	for ; startDate.Unix() < currentTime.Unix(); startDate = startDate.AddDate(0, 0, 1) {
 		timeSeries = append(timeSeries, []int64{startTime.Unix() * multiplier, startDate.AddDate(0, 0, 1).Unix() * multiplier})

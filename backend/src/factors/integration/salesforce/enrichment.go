@@ -26,7 +26,7 @@ type Status struct {
 	Status    string `json:"status"`
 }
 
-var salesforceSyncOrderByType = [...]int{
+var salesforceEnrichOrderByType = [...]int{
 	model.SalesforceDocumentTypeLead,
 	model.SalesforceDocumentTypeContact,
 	model.SalesforceDocumentTypeOpportunity,
@@ -283,7 +283,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 
 			finalPayload.Timestamp = lastModifiedTimestamp
 			// TODO(maisa): Use GetSyncedSalesforceDocumentByType while updating multiple contacts in an account object
-			documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type)
+			documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type, false)
 			if status != http.StatusFound {
 				return "", "", finalPayload, errors.New("failed to get synced document")
 			}
@@ -336,6 +336,135 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	return eventID, userID, finalPayload, nil
 }
 
+func getAccountGroupID(enProperties *map[string]interface{}) string {
+
+	accountName := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameAccount, "name")])
+	accountID := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameAccount, "id")])
+	accountWebsite := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameAccount, "website")])
+	if accountName != "" {
+		return accountName
+	}
+
+	if accountWebsite != "" {
+		return accountWebsite
+	}
+
+	return accountID
+}
+
+func enrichGroupAcccount(projectID uint64, document *model.SalesforceDocument) int {
+	logCtx := log.WithField("project_id", projectID).
+		WithFields(log.Fields{"doc_id": document.ID, "doc_action": document.Action, "doc_timestamp": document.Timestamp})
+
+	if projectID == 0 || document == nil {
+		return http.StatusBadRequest
+	}
+
+	if document.Type != model.SalesforceDocumentTypeAccount || document.GroupUserID != "" {
+		return http.StatusInternalServerError
+	}
+
+	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties")
+		return http.StatusInternalServerError
+	}
+
+	accountID := getAccountGroupID(enProperties)
+
+	createdTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentCreated)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get account created timestamp.")
+		return http.StatusInternalServerError
+	}
+
+	lastModifiedTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get account last modified timestamp.")
+		return http.StatusInternalServerError
+	}
+
+	accountUserID := ""
+	var processEventNames []string
+	var processEventTimestamps []int64
+	if document.Action == model.SalesforceDocumentCreated {
+		accountUserID, err = store.GetStore().CreateOrUpdateCompanyGroupPropertiesBySource(projectID, accountID, "", enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to update salesforce account group.")
+			return http.StatusInternalServerError
+		}
+
+		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", accountUserID, false)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to set group_user_id in salesforce account created document.")
+			return http.StatusInternalServerError
+		}
+
+		processEventNames = append(processEventNames, util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED, util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED)
+		processEventTimestamps = append(processEventTimestamps, createdTimestamp, createdTimestamp)
+
+		if createdTimestamp != lastModifiedTimestamp {
+			processEventNames = append(processEventNames, util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED)
+			processEventTimestamps = append(processEventTimestamps, lastModifiedTimestamp)
+		}
+	}
+
+	if document.Action == model.SalesforceDocumentUpdated {
+		documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type, true)
+		if status != http.StatusFound {
+			return http.StatusInternalServerError
+		}
+
+		createdDocument := documents[0]
+
+		accountUserID, err = store.GetStore().CreateOrUpdateCompanyGroupPropertiesBySource(projectID, accountID, createdDocument.GroupUserID, enProperties, createdTimestamp, lastModifiedTimestamp, model.SmartCRMEventSourceSalesforce)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to update salesforce account group properties.")
+			return http.StatusInternalServerError
+		}
+
+		if createdDocument.GroupUserID == "" {
+			errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, &createdDocument, "", "", accountUserID, false)
+			if errCode != http.StatusAccepted {
+				logCtx.Error("Failed to update group_user_id in salesforce account created document.")
+				return http.StatusInternalServerError
+			}
+		}
+
+		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", accountUserID, false)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update group_user_id in salesforce account updated document.")
+			return http.StatusInternalServerError
+		}
+
+		processEventNames = append(processEventNames, util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED)
+		processEventTimestamps = append(processEventTimestamps, lastModifiedTimestamp)
+	}
+
+	for i := range processEventNames {
+
+		trackPayload := &SDK.TrackPayload{
+			Name:      processEventNames[i],
+			ProjectId: projectID,
+			Timestamp: processEventTimestamps[i],
+			UserId:    accountUserID,
+		}
+
+		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceSalesforce, "")
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"status": status, "track_response": response, "event_name": processEventNames[i],
+				"event_timestamp": processEventTimestamps[i]}).Error("Failed to track salesforce account event.")
+			return http.StatusInternalServerError
+		}
+
+	}
+
+	return http.StatusOK
+}
+
 func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
@@ -380,7 +509,7 @@ func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesfo
 			properties, prevProperties, lastModifiedTimestamp)
 	}
 
-	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce account document as synced.")
 		return http.StatusInternalServerError
@@ -455,10 +584,21 @@ func enrichContact(projectID uint64, document *model.SalesforceDocument, salesfo
 			properties, prevProperties, lastModifiedTimestamp)
 	}
 
-	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce contact document as synced.")
 		return http.StatusInternalServerError
+	}
+
+	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
+		accountID := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+			model.GetSalesforceAliasByDocType(document.Type), "accountid")])
+		if accountID != "" {
+			status := updateSalesforceUserAccountGroups(projectID, accountID, userID)
+			if status != http.StatusOK {
+				logCtx.Error("Failed to update salesforce contact group details.")
+			}
+		}
 	}
 
 	return http.StatusOK
@@ -501,7 +641,7 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, documentID, use
 
 	if prevProperties == nil {
 		prevDocs, status := store.GetStore().GetSyncedSalesforceDocumentByType(
-			projectID, []string{documentID}, docType)
+			projectID, []string{documentID}, docType, false)
 		if status != http.StatusFound && status != http.StatusNotFound {
 			return nil, prevProperties, false
 		}
@@ -658,7 +798,7 @@ func getOpportunityLinkedLeadOrContactDocument(projectID uint64, document *model
 
 	for i := range opportunityMappingOrder {
 		if opportunityMappingOrder[i] == model.SalesforceChildRelationshipNameOpportunityContactRoles && oppContactID != "" {
-			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppContactID}, model.SalesforceDocumentTypeContact)
+			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppContactID}, model.SalesforceDocumentTypeContact, false)
 			if status == http.StatusFound {
 				return &linkedObject[0], nil // get the first document
 			}
@@ -666,7 +806,7 @@ func getOpportunityLinkedLeadOrContactDocument(projectID uint64, document *model
 		}
 
 		if opportunityMappingOrder[i] == model.SalesforceDocumentTypeNameLead && oppLeadID != "" {
-			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppLeadID}, model.SalesforceDocumentTypeLead)
+			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppLeadID}, model.SalesforceDocumentTypeLead, false)
 			if status == http.StatusFound {
 				return &linkedObject[0], nil
 			}
@@ -731,8 +871,8 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 					}
 
 					// update the user_id column for later reference
-					errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, linkedDocument,
-						event.ID, event.UserId)
+					errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, linkedDocument,
+						event.ID, event.UserId, "", true)
 					if errCode != http.StatusAccepted {
 						logCtx.WithFields(log.Fields{"linked_document_id": linkedDocument.ID}).
 							Error("Failed to update user id in linked document.")
@@ -789,7 +929,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 		logCtx.Error("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
 	}
 
-	if userID == "" {
+	if eventUserID != "" && userID != eventUserID {
 		userID = eventUserID
 	}
 
@@ -802,9 +942,55 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 			document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
-	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce opportunity document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
+		accountID := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+			model.GetSalesforceAliasByDocType(document.Type), "accountid")])
+		if accountID != "" {
+			status := updateSalesforceUserAccountGroups(projectID, accountID, userID)
+			if status != http.StatusOK {
+				logCtx.Error("Failed to update salesforce opportunity group details.")
+			}
+		}
+	}
+
+	return http.StatusOK
+}
+
+func updateSalesforceUserAccountGroups(projectID uint64, accountID, userID string) int {
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{accountID}, model.SalesforceDocumentTypeAccount, true)
+	if status != http.StatusFound {
+		if status == http.StatusNotFound {
+			return http.StatusOK // return ok if account was never capture
+		}
+		return http.StatusInternalServerError
+	}
+
+	groupUserID := documents[0].GroupUserID
+	if groupUserID == "" {
+		return http.StatusInternalServerError
+	}
+
+	groupUser, status := store.GetStore().GetUser(projectID, groupUserID)
+	if status != http.StatusFound {
+		return http.StatusInternalServerError
+	}
+
+	groupID, err := model.GetUserGroupID(groupUser)
+	if err != nil {
+		log.WithError(err).Error("Failed to get group user group id.")
+		return http.StatusInternalServerError
+	}
+
+	_, status = store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_SALESFORCE_ACCOUNT, groupID, groupUserID)
+	if status != http.StatusAccepted && status != http.StatusNotModified {
+		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "group_user_id": groupUserID, "group_id": groupID}).
+			Error("Failed to update salesforce user group id.")
 		return http.StatusInternalServerError
 	}
 
@@ -853,10 +1039,21 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 			properties, prevProperties, lastModifiedTimestamp)
 	}
 
-	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce lead document as synced.")
 		return http.StatusInternalServerError
+	}
+
+	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
+		accountID := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+			model.GetSalesforceAliasByDocType(document.Type), "convertedaccountid")])
+		if accountID != "" {
+			status := updateSalesforceUserAccountGroups(projectID, accountID, userID)
+			if status != http.StatusOK {
+				logCtx.Error("Failed to update salesforce lead group details.")
+			}
+		}
 	}
 
 	return http.StatusOK
@@ -898,7 +1095,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 	}
 
 	if len(campaignMemberIDs) < 1 {
-		status := store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, document, "", "")
+		status := store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, "", "", "", true)
 		if status != http.StatusAccepted {
 			logCtx.Error("Failed to mark campaign as synced.")
 			return http.StatusInternalServerError
@@ -920,7 +1117,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 	memberDocuments, status = store.GetStore().GetLatestSalesforceDocumentByID(project.ID, campaignMemberIDs, model.SalesforceDocumentTypeCampaignMember, endTimestamp)
 	if status != http.StatusFound {
 		logCtx.Warn("Failed to get campaign members.")
-		status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, document, "", "")
+		status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, "", "", "", true)
 		if status != http.StatusAccepted {
 			logCtx.Error("Failed to mark campaign as synced.")
 			return http.StatusInternalServerError
@@ -979,7 +1176,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 		}
 
 		if memberDocuments[i].Synced == false {
-			status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, &memberDocuments[i], eventID, userID)
+			status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, &memberDocuments[i], eventID, userID, "", true)
 			if status != http.StatusAccepted {
 				logCtx.WithField("member_id", referenceDocument.ID).Error("Failed to mark campaign member as synced.")
 				return http.StatusInternalServerError
@@ -987,7 +1184,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 		}
 	}
 
-	status = store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, document, "", "")
+	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, "", "", "", true)
 	if status != http.StatusAccepted {
 		logCtx.Error("Failed to mark campaign as synced.")
 		return http.StatusInternalServerError
@@ -1004,7 +1201,7 @@ func getExistingCampaignMemberUserIDFromProperties(projectID uint64, properties 
 
 	// use contact Id associated user id. Once user converts from lead to contact, salesforce prioritize contact based identification
 	if existingContactMemberID != "" {
-		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingContactMemberID)}, model.SalesforceDocumentTypeContact)
+		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingContactMemberID)}, model.SalesforceDocumentTypeContact, false)
 		if status == http.StatusFound {
 			if existingMember[0].UserID != "" {
 				existingUserID = existingMember[0].UserID
@@ -1013,7 +1210,7 @@ func getExistingCampaignMemberUserIDFromProperties(projectID uint64, properties 
 	}
 
 	if existingUserID == "" { // use lead Id if available
-		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingLeadMemberID)}, model.SalesforceDocumentTypeLead)
+		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingLeadMemberID)}, model.SalesforceDocumentTypeLead, false)
 		if status == http.StatusFound {
 			if existingMember[0].UserID != "" {
 				existingUserID = existingMember[0].UserID
@@ -1088,7 +1285,7 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 		logCtx.WithField("EventID", eventID).WithField("userID", eventID).WithField("userID", eventID).Info("Create SF offline touch point")
 	}
 
-	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(project.ID, document, eventID, userID)
+	errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, document, eventID, userID, "", true)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce lead document as synced.")
 		return http.StatusInternalServerError
@@ -1382,6 +1579,39 @@ func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmar
 	return &salesforceSmartEventNames
 }
 
+func enrichGroup(projectID uint64) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	if projectID == 0 {
+		logCtx.Error("Invalid project id.")
+		return http.StatusBadRequest
+	}
+
+	documents, errCode := store.GetStore().GetSalesforceDocumentsByTypeForSync(projectID, model.SalesforceDocumentTypeAccount, 0, 0)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get salesforce account documents for groups.")
+		return http.StatusInternalServerError
+	}
+
+	var seenFailures bool
+	for i := range documents {
+		startTime := time.Now().Unix()
+
+		errCode = enrichGroupAcccount(projectID, &documents[i])
+		if errCode != http.StatusOK {
+			seenFailures = true
+		}
+		logCtx.WithFields(log.Fields{"time_taken_in_secs": time.Now().Unix() - startTime, "doc_id": documents[i].ID}).
+			Debug("Completed group document sync.")
+	}
+
+	if seenFailures {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
 // Enrich sync salesforce documents to events
 func Enrich(projectID uint64) ([]Status, bool) {
 
@@ -1434,9 +1664,20 @@ func Enrich(projectID uint64) ([]Status, bool) {
 
 	anyFailure := false
 	overAllSyncStatus := make(map[string]bool)
+
+	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
+		errCode = enrichGroup(projectID)
+		if errCode != http.StatusOK {
+			overAllSyncStatus[model.SalesforceDocumentTypeNameGroupAccount] = true
+		} else {
+			overAllSyncStatus[model.SalesforceDocumentTypeNameGroupAccount] = false
+		}
+	}
+
 	for _, timeRange := range orderedTimeSeries {
 
-		for _, docType := range salesforceSyncOrderByType {
+		for _, docType := range salesforceEnrichOrderByType {
+
 			if docMinTimestamp[docType] <= 0 || timeRange[1] < docMinTimestamp[docType] {
 				continue
 			}

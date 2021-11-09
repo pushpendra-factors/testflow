@@ -12,18 +12,19 @@ import (
 
 // SalesforceDocument is an interface for salesforce_documents table
 type SalesforceDocument struct {
-	ProjectID uint64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
-	ID        string           `gorm:"primary_key:true;auto_increment:false" json:"id"`
-	Type      int              `gorm:"primary_key:true;auto_increment:false" json:"type"`
-	Action    SalesforceAction `gorm:"auto_increment:false;not null" json:"action"`
-	Timestamp int64            `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
-	TypeAlias string           `gorm:"-" json:"type_alias"`
-	Value     *postgres.Jsonb  `json:"value"`
-	Synced    bool             `gorm:"default:false;not null" json:"synced"`
-	SyncID    string           `gorm:"default:null" json:"sync_id"`
-	UserID    string           `gorm:"default:null" json:"user_id"`
-	CreatedAt time.Time        `json:"created_at"`
-	UpdatedAt time.Time        `json:"updated_at"`
+	ProjectID   uint64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ID          string           `gorm:"primary_key:true;auto_increment:false" json:"id"`
+	Type        int              `gorm:"primary_key:true;auto_increment:false" json:"type"`
+	Action      SalesforceAction `gorm:"auto_increment:false;not null" json:"action"`
+	Timestamp   int64            `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
+	TypeAlias   string           `gorm:"-" json:"type_alias"`
+	Value       *postgres.Jsonb  `json:"value"`
+	Synced      bool             `gorm:"default:false;not null" json:"synced"`
+	SyncID      string           `gorm:"default:null" json:"sync_id"`
+	UserID      string           `gorm:"default:null" json:"user_id"`
+	GroupUserID string           `gorm:"default:null" json:"group_user_id"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
 }
 
 type SalesforceAction int
@@ -93,6 +94,7 @@ const (
 	SalesforceDocumentTypeOpportunity    = 4
 	SalesforceDocumentTypeCampaign       = 5
 	SalesforceDocumentTypeCampaignMember = 6
+	SalesforceDocumentTypeGroupAccount   = 7
 
 	SalesforceDocumentTypeNameContact        = "contact"
 	SalesforceDocumentTypeNameLead           = "lead"
@@ -100,6 +102,7 @@ const (
 	SalesforceDocumentTypeNameOpportunity    = "opportunity"
 	SalesforceDocumentTypeNameCampaign       = "campaign"
 	SalesforceDocumentTypeNameCampaignMember = "campaignmember"
+	SalesforceDocumentTypeNameGroupAccount   = "group_account"
 
 	SFCampaignMemberResponded    = "campaign_member_first_responded_date"
 	SFCampaignMemberCreated      = "campaign_member_created_date"
@@ -127,6 +130,7 @@ var SalesforceDocumentTypeAlias = map[string]int{
 	SalesforceDocumentTypeNameOpportunity:    SalesforceDocumentTypeOpportunity,
 	SalesforceDocumentTypeNameCampaign:       SalesforceDocumentTypeCampaign,
 	SalesforceDocumentTypeNameCampaignMember: SalesforceDocumentTypeCampaignMember,
+	SalesforceDocumentTypeNameGroupAccount:   SalesforceDocumentTypeGroupAccount,
 }
 
 // SalesforceStandardDocumentType will be pulled if no custom list is provided

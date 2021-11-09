@@ -2557,7 +2557,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 		generate per day time series -> {Day1,Day2}, {Day2,Day3},{Day3,Day4} upto current day
 	*/
 	startTimestamp := time.Now().AddDate(0, 0, -10) // 10 days excluding today
-	startDate := time.Date(startTimestamp.Year(), startTimestamp.Month(), startTimestamp.Day(), 0, 0, 0, 0, time.UTC)
+	startDate := time.Date(startTimestamp.UTC().Year(), startTimestamp.UTC().Month(), startTimestamp.UTC().Day(), 0, 0, 0, 0, time.UTC)
 	expectedTimeSeries := [][]int64{}
 	for i := 0; i < 11; i++ {
 		expectedTimeSeries = append(expectedTimeSeries, []int64{startDate.AddDate(0, 0, i).Unix() * 1000, startDate.AddDate(0, 0, i+1).Unix() * 1000})

@@ -31,15 +31,16 @@ type User struct {
 	PropertiesUpdatedTimestamp int64          `json:"properties_updated_timestamp"`
 	SegmentAnonymousId         string         `gorm:"type:varchar(200);default:null" json:"seg_aid"`
 	AMPUserId                  string         `gorm:"default:null" json:"amp_user_id"`
-	IsGroupUser                *bool          `gorm:"default:null" json:"is_group_user"`
-	Group1ID                   string         `gorm:"default:null;column:group_1_id" json:"group_1_id"`
-	Group1UserID               string         `gorm:"default:null;column:group_1_user_id" json:"group_1_user_id"`
-	Group2ID                   string         `gorm:"default:null;column:group_2_id" json:"group_2_id"`
-	Group2UserID               string         `gorm:"default:null;column:group_2_user_id" json:"group_2_user_id"`
-	Group3ID                   string         `gorm:"default:null;column:group_3_id" json:"group_3_id"`
-	Group3UserID               string         `gorm:"default:null;column:group_3_user_id" json:"group_3_user_id"`
-	Group4ID                   string         `gorm:"default:null;column:group_4_id" json:"group_4_id"`
-	Group4UserID               string         `gorm:"default:null;column:group_4_user_id" json:"group_4_user_id"`
+	// Avoid updating group field tags
+	IsGroupUser  *bool  `gorm:"default:null" json:"is_group_user"`
+	Group1ID     string `gorm:"default:null;column:group_1_id" json:"group_1_id"`
+	Group1UserID string `gorm:"default:null;column:group_1_user_id" json:"group_1_user_id"`
+	Group2ID     string `gorm:"default:null;column:group_2_id" json:"group_2_id"`
+	Group2UserID string `gorm:"default:null;column:group_2_user_id" json:"group_2_user_id"`
+	Group3ID     string `gorm:"default:null;column:group_3_id" json:"group_3_id"`
+	Group3UserID string `gorm:"default:null;column:group_3_user_id" json:"group_3_user_id"`
+	Group4ID     string `gorm:"default:null;column:group_4_id" json:"group_4_id"`
+	Group4UserID string `gorm:"default:null;column:group_4_user_id" json:"group_4_user_id"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
 	CustomerUserId string `gorm:"type:varchar(255);default:null" json:"c_uid"`
@@ -781,4 +782,40 @@ func SetUserGroupFieldByColumnName(user *User, columnName, value string) (bool, 
 	}
 
 	return processed, updated, nil
+}
+
+func GetUserGroupID(user *User) (string, error) {
+	if !(*user.IsGroupUser) {
+		return "", errors.New("not a group user")
+	}
+
+	refUserVal := reflect.ValueOf(user)
+	refUserTyp := refUserVal.Elem().Type()
+
+	value := ""
+	for i := 0; i < refUserVal.Elem().NumField(); i++ {
+		refField := refUserTyp.Field(i)
+		if tagName := refField.Tag.Get("json"); strings.HasPrefix(tagName, "group_") {
+			field := refUserVal.Elem().Field(i)
+			if field.Kind() != reflect.String {
+				continue
+			}
+
+			fieldValue := field.String()
+			if fieldValue != "" { // group user won't have multiple id associated and group user id are empty
+				if value != "" {
+					return "", errors.New("more than 1 field value found")
+				}
+				value = fieldValue
+			}
+
+		}
+
+	}
+
+	if value == "" {
+		return "", errors.New("failed to get group id for user")
+	}
+
+	return value, nil
 }
