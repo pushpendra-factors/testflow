@@ -187,7 +187,6 @@ type KPIFilter struct {
 	LogicalOp        string `json:"lOp"`
 }
 
-// TODO: Change from milliseconds to seconds.
 // Duplicate code present between QueryProperty and KPIFilter
 func (qp *KPIFilter) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
 	if qp.PropertyDataType == U.PropertyTypeDateTime && (qp.Condition == InLastStr || qp.Condition == NotInLastStr) {
@@ -323,20 +322,19 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 	U.EP_CONTENT:                {EventEntity: {"name": U.EP_CONTENT, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_CONTENT], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.SP_INITIAL_PAGE_URL:       {EventEntity: {"name": U.SP_INITIAL_PAGE_URL, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_INITIAL_PAGE_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.SP_LATEST_PAGE_URL:        {EventEntity: {"name": U.SP_LATEST_PAGE_URL, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_LATEST_PAGE_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.EP_PAGE_COUNT:             {EventEntity: {"name": U.EP_PAGE_COUNT, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_COUNT], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.SP_SPENT_TIME:             {EventEntity: {"name": U.SP_SPENT_TIME, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_SPENT_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.SP_INITIAL_PAGE_LOAD_TIME: {EventEntity: {"name": U.SP_INITIAL_PAGE_LOAD_TIME, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_INITIAL_PAGE_LOAD_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	U.EP_PAGE_COUNT:             {EventEntity: {"name": U.EP_PAGE_COUNT, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_COUNT], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
+	U.SP_SPENT_TIME:             {EventEntity: {"name": U.SP_SPENT_TIME, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_SPENT_TIME], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
+	U.SP_INITIAL_PAGE_LOAD_TIME: {EventEntity: {"name": U.SP_INITIAL_PAGE_LOAD_TIME, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_INITIAL_PAGE_LOAD_TIME], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
 
 	// Session and Generic Event - Event Properties
 	U.EP_REFERRER_URL: {EventEntity: {"name": U.EP_REFERRER_URL, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_REFERRER_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.EP_TIMESTAMP:    {EventEntity: {"name": U.EP_TIMESTAMP, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_TIMESTAMP], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	U.EP_TIMESTAMP:    {EventEntity: {"name": U.EP_TIMESTAMP, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_TIMESTAMP], "data_type": U.PropertyTypeDateTime, "entity": EventEntity}},
 
 	// Generic Event - Event Properties.
-	// These aer not categorical i beleve. To check.
-	U.EP_PAGE_URL:            {EventEntity: {"name": U.EP_PAGE_URL, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.EP_PAGE_LOAD_TIME:      {EventEntity: {"name": U.EP_PAGE_LOAD_TIME, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_LOAD_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.EP_PAGE_SPENT_TIME:     {EventEntity: {"name": U.EP_PAGE_SPENT_TIME, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_SPENT_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.EP_PAGE_SCROLL_PERCENT: {EventEntity: {"name": U.EP_PAGE_SCROLL_PERCENT, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_SPENT_TIME], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	U.EP_PAGE_URL:            {EventEntity: {"name": U.EP_PAGE_URL, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_URL], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
+	U.EP_PAGE_LOAD_TIME:      {EventEntity: {"name": U.EP_PAGE_LOAD_TIME, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_LOAD_TIME], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
+	U.EP_PAGE_SPENT_TIME:     {EventEntity: {"name": U.EP_PAGE_SPENT_TIME, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_SPENT_TIME], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
+	U.EP_PAGE_SCROLL_PERCENT: {EventEntity: {"name": U.EP_PAGE_SCROLL_PERCENT, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_PAGE_SPENT_TIME], "data_type": U.PropertyTypeNumerical, "entity": EventEntity}},
 
 	// Generic Event - User Properties.
 	U.UP_DEVICE_TYPE:  {UserEntity: {"name": U.UP_DEVICE_TYPE, "display_name": U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES[U.UP_DEVICE_TYPE], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
@@ -362,9 +360,6 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 		EventEntity: {"name": U.UP_CITY, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_CITY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
 }
 
-// TODO: Add salesforce and hubspot.
-// Need more information on initial_page_url - properties.go
-// Need to decide on placeholder value set.
 // 1 Represents agggregation equivalent to aggregateFunc(1) in sql. For eg - select count(1)
 var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]TransformQueryi{
 	WebsiteSessionDisplayCategory: {
