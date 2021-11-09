@@ -70,14 +70,14 @@ function EventFilterWrapper({
 
   const {userPropNames} = useSelector((state) => state.coreQuery)
 
-  // useEffect(() => {
+  useEffect(() => {
  
-  //   if(filter && filter.props[1] === 'categorical') {
-  //     setValuesByProps(filter.props)
-  //     setNewFilterState(filter);
-  //   }
+    if(filter) {
+      setValuesByProps(filter.props)
+      setNewFilterState(filter);
+    }
 
-  // }, [filter])
+  }, [filter])
 
   useEffect(() => {
       const filterDD = Object.assign({}, filterDropDownOptions);
