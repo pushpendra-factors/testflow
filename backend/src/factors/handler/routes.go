@@ -170,6 +170,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/factors/tracked_event", V1.CreateFactorsTrackedEventsHandler)
 	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_event/remove", V1.RemoveFactorsTrackedEventsHandler)
 	authRouteGroup.GET("/:project_id/v1/factors/tracked_event", V1.GetAllFactorsTrackedEventsHandler)
+	authRouteGroup.GET("/:project_id/v1/factors/grouped_tracked_event", V1.GetAllGroupedFactorsTrackedEventsHandler)
 
 	// Tracked User Property
 	authRouteGroup.POST("/:project_id/v1/factors/tracked_user_property", V1.CreateFactorsTrackedUserPropertyHandler)

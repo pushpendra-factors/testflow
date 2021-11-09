@@ -2,12 +2,13 @@ package v1
 
 import (
 	mid "factors/middleware"
+	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"strings"
 )
 
 // GetAllFactorsTrackedEventsHandler - Get All tracked events handler
@@ -19,6 +20,14 @@ import (
 // @Param project_id path integer true "Project ID"
 // @Success 200 {array} model.FactorsTrackedEvent
 // @Router /{project_id}/v1/factors/tracked_event [GET]
+
+const (
+	WebsiteEvent     = "website_event"
+	ContactEvent     = "contact_event"
+	AccountEvent     = "account_event"
+	OpportunityEvent = "opportunity_event"
+)
+
 func GetAllFactorsTrackedEventsHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -37,6 +46,65 @@ type CreateFactorsTrackedEventParams struct {
 	EventName string `json:"event_name" binding:"required"`
 }
 
+func GetAllGroupedFactorsTrackedEventsHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	trackedEvents, errCode := store.GetStore().GetAllFactorsTrackedEventsByProject(projectID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	GroupedEvents := GroupTrackedEvents(&trackedEvents)
+	c.JSON(http.StatusOK, GroupedEvents)
+}
+func GroupTrackedEvents(trackedEvents *[]model.FactorsTrackedEventInfo) (trackedEventsGroup map[string][]model.FactorsTrackedEventInfo) {
+	var trackedEventGroup = make(map[string][]model.FactorsTrackedEventInfo)
+
+	var WebsiteEvents []model.FactorsTrackedEventInfo
+	var ContactEvents []model.FactorsTrackedEventInfo
+	var AccountEvents []model.FactorsTrackedEventInfo
+	var OpportunityEvents []model.FactorsTrackedEventInfo
+
+	for _, trackedEvent := range *trackedEvents {
+		EventType := GetEventType(trackedEvent)
+		if EventType == WebsiteEvent {
+			WebsiteEvents = append(WebsiteEvents, trackedEvent)
+		} else if EventType == ContactEvent {
+			ContactEvents = append(ContactEvents, trackedEvent)
+		} else if EventType == AccountEvent {
+			AccountEvents = append(AccountEvents, trackedEvent)
+		} else if EventType == OpportunityEvent {
+			OpportunityEvents = append(OpportunityEvents, trackedEvent)
+		}
+	}
+
+	trackedEventGroup[WebsiteEvent] = WebsiteEvents
+	trackedEventGroup[ContactEvent] = ContactEvents
+	trackedEventGroup[AccountEvent] = AccountEvents
+	trackedEventGroup[OpportunityEvent] = OpportunityEvents
+
+	return trackedEventGroup
+
+}
+func GetEventType(trackedEvent model.FactorsTrackedEventInfo) (EventType string) {
+	EventName := trackedEvent.Name
+	if strings.HasPrefix(EventName, "hubspot") || strings.HasPrefix(EventName, "salesforce") {
+		if strings.Contains(EventName, "account") {
+			return AccountEvent
+		} else if strings.Contains(EventName, "opportunity") {
+			return OpportunityEvent
+		} else if strings.Contains(EventName, "contact") {
+			return ContactEvent
+		} else {
+			return WebsiteEvent
+		}
+	} else {
+		return WebsiteEvent
+	}
+}
 func getcreateFactorsTrackedEventParams(c *gin.Context) (*CreateFactorsTrackedEventParams, error) {
 	params := CreateFactorsTrackedEventParams{}
 	err := c.BindJSON(&params)

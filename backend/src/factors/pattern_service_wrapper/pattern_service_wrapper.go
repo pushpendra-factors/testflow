@@ -1002,6 +1002,7 @@ type FactorsInsights struct {
 	FactorsMultiplierIncreaseFlag bool                    `json:"factors_multiplier_increase_flag"`
 	FactorsInsightsType           string                  `json:"factors_insights_type"`
 	FactorsSubInsights            []*FactorsInsights      `json:"factors_sub_insights"`
+	FactorsInsightsRank           uint64                  `json:"factors_insights_rank"`
 }
 
 func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0GoalPercentage float64,
@@ -1020,10 +1021,11 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0Go
 	levelInsightsMap := make(map[int][]parentInsightsTuple)
 	indexLevelMap := make(map[int]int)
 	indexLevelMap[0] = 0
+	
 	for _, node := range nodes {
 		indexLevelMap[node.Index] = indexLevelMap[node.ParentIndex] + 1
 	}
-	for _, node := range nodes {
+	for rank, node := range nodes {
 		// Dedup results to show more novel results as user scrolls down.
 		if shouldFilterResult(node, &seenPropertyConstraints, &seenEvents) {
 			continue
@@ -1037,6 +1039,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0Go
 		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY || node.NodeType == NODE_TYPE_CAMPAIGN {
 			PLen := len(node.Pattern.EventNames)
 			var insights FactorsInsights
+			insights.FactorsInsightsRank = uint64(rank) // adding rank
 			if node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY {
 				attributes := make([]FactorsAttributeTuple, 0)
 				for _, attribute := range node.AddedConstraint.EPNumericConstraints {
