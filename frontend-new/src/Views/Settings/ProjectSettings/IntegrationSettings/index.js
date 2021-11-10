@@ -153,7 +153,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
       <div className={'mb-10 pl-4'}>
         <Row>
           <Col span={12}>
-            <Text data-tour = 'step-9' type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Integrations</Text>
+            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Integrations</Text>
           </Col>
         </Row>
         <Row className={'mt-4'}>

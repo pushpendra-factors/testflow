@@ -35,7 +35,7 @@ function Sidebar(props) {
 
   const popOvercontent = () => {
     return (
-        <div data-tour = 'step-4.1' className={'fa-popupcard'}>
+        <div data-tour = 'step-9' className={'fa-popupcard'}>
           <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Projects</Text>
           {props.projects.length > 6 ? <input onChange={(e) => searchProject(e)} value={searchProjectName} placeholder={'Search Project'} className={'fa-project-list--search'}/> : null}
           <div className={'flex flex-col items-start fa-project-list--wrapper'} >
@@ -161,7 +161,7 @@ function Sidebar(props) {
                 setShowPopOver(true);
               }}
                 trigger="click"> 
-                  <Avatar data-tour = 'step-4' shape={'square'}  className={'flex justify-center flex-col items-center fa-aside--avatar'} style={{ color: '#fff', backgroundColor: '#52BE95', fontSize: '16px', textTransform: 'uppercase', fontWeight:'400' }}>{`${props.active_project?.name?.charAt(0)}`}</Avatar>
+                  <Avatar data-tour = 'step-8' shape={'square'}  className={'flex justify-center flex-col items-center fa-aside--avatar'} style={{ color: '#fff', backgroundColor: '#52BE95', fontSize: '16px', textTransform: 'uppercase', fontWeight:'400' }}>{`${props.active_project?.name?.charAt(0)}`}</Avatar>
               </Popover>
             </Row>
           </div>
