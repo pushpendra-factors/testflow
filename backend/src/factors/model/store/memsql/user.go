@@ -1049,7 +1049,7 @@ func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
 }
 
 func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint64,
-	customerUserID string) ([]model.User, int) {
+	customerUserID string, includeUser *model.User) ([]model.User, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	logCtx := log.WithField("project_id", projectID).
@@ -1076,6 +1076,22 @@ func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint
 		users = append(users[0:model.MaxUsersForPropertiesMerge/2],
 			users[usersLength-model.MaxUsersForPropertiesMerge/2:usersLength]...)
 	}
+
+	if includeUser != nil {
+		// include user if not found in the list
+		userExistByCustomerUserID := false
+		for i := range users {
+			if users[i].ID == includeUser.ID {
+				userExistByCustomerUserID = true
+				break
+			}
+		}
+
+		if !userExistByCustomerUserID {
+			users = append(users, *includeUser)
+		}
+	}
+
 	metrics.Increment(metrics.IncrUserPropertiesMergeCount)
 
 	return users, http.StatusFound
@@ -1212,7 +1228,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 		return newPropertiesMergedJSON, http.StatusAccepted
 	}
 
-	users, errCode := store.getUsersForMergingPropertiesByCustomerUserID(projectID, user.CustomerUserId)
+	users, errCode := store.getUsersForMergingPropertiesByCustomerUserID(projectID, user.CustomerUserId, user)
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get user by customer_user_id for merging user properties.")
 		return &user.Properties, http.StatusInternalServerError
