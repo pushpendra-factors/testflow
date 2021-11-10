@@ -280,7 +280,7 @@ func (pg *Postgres) mergeNewPropertiesWithCurrentUserProperties(projectID uint64
 	return mergedPropertiesJSON, http.StatusOK
 }
 
-func (pg *Postgres) getUsersForMergingPropertiesByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int) {
+func (pg *Postgres) getUsersForMergingPropertiesByCustomerUserID(projectID uint64, customerUserID string, includeUser *model.User) ([]model.User, int) {
 	logCtx := log.WithField("project_id", projectID).WithField("customer_user_id", customerUserID)
 
 	if projectID == 0 || customerUserID == "" {
@@ -304,6 +304,22 @@ func (pg *Postgres) getUsersForMergingPropertiesByCustomerUserID(projectID uint6
 		users = append(users[0:model.MaxUsersForPropertiesMerge/2],
 			users[usersLength-model.MaxUsersForPropertiesMerge/2:usersLength]...)
 	}
+
+	if includeUser != nil {
+		// include user if not found in the list
+		userExistByCustomerUserID := false
+		for i := range users {
+			if users[i].ID == includeUser.ID {
+				userExistByCustomerUserID = true
+				break
+			}
+		}
+
+		if !userExistByCustomerUserID {
+			users = append(users, *includeUser)
+		}
+	}
+
 	metrics.Increment(metrics.IncrUserPropertiesMergeCount)
 
 	return users, http.StatusFound
@@ -343,7 +359,7 @@ func (pg *Postgres) UpdateUserPropertiesV2(projectID uint64, id string,
 		return newPropertiesMergedJSON, http.StatusAccepted
 	}
 
-	users, errCode := pg.getUsersForMergingPropertiesByCustomerUserID(projectID, user.CustomerUserId)
+	users, errCode := pg.getUsersForMergingPropertiesByCustomerUserID(projectID, user.CustomerUserId, user)
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get user by customer_user_id for merging user properties.")
 		return &user.Properties, http.StatusInternalServerError
