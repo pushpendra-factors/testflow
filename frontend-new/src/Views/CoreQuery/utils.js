@@ -439,6 +439,11 @@ export const getKPIQuery = (
         : MomentTz().utc().unix();
   }
 
+
+  console.log("KPIQuery debugging...");
+  console.log("KPIQuery --> queries, time-period", queries, period)
+  console.log("KPIQuery --> groupBy, queryOptions", groupBy, queryOptions)
+
   const eventGrpBy = [...groupBy.event];
   query.qG = getKPIqueryGroup(queries,eventGrpBy, period);
   

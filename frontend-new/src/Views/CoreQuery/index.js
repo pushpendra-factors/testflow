@@ -95,6 +95,7 @@ import {
   NoGroupBySampleResponse,
 } from '../../utils/SampleResponse';
 import ProfileComposer from '../../components/ProfileComposer';
+import _ from 'lodash';
 
 const { Panel } = Collapse;
 
@@ -1220,9 +1221,9 @@ function CoreQuery({
     let selGroup = KPIlist.find((item) => {
       return item.display_category == selectedMainCategory?.group;
     });
-    let DDvalues = selGroup?.properties.map((item) => {
+    let DDvalues = selGroup?.properties.map((item) => { 
       if (item == null) return;
-      let ddName = item.display_name ? item.display_name : item.name;
+      let ddName = item.display_name ? (selGroup?.category == 'channels' ? `${_.startCase(item.object_type)} ${item.display_name}` : item.display_name)  : item.name;
       return [
         ddName,
         item.name,
