@@ -271,7 +271,8 @@ function QueryBlock({
           </Button>
 
           {moreOptions ? <FaSelect
-            options={[['Filter By', 'filter'], ['Breakdown', 'groupby'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
+            // options={[['Filter By', 'filter'], ['Breakdown', 'groupby'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
+            options={[['Filter By', 'filter'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
             optionClick={(val) => setAdditionalactions(val)}
             onClickOutside={() => setMoreOptions(false)}
           ></FaSelect> : false}
@@ -455,7 +456,7 @@ function QueryBlock({
         </div>
       </div>
       {eventFilters()}
-      {groupByItems()} 
+      {/* {groupByItems()}  */}
     </div>
   );
 }

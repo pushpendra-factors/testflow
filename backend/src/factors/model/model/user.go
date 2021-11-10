@@ -680,6 +680,20 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 	return &mergedUserProperties, http.StatusOK
 }
 
+func getCRMTimestampValue(value interface{}) (int64, error) {
+	fValue, err := util.GetPropertyValueAsFloat64(value)
+	if err != nil {
+		timestamp, err := GetSalesforceDocumentTimestamp(value) // make sure timezone info is loaded to the container
+		if err != nil {
+			return 0, err
+		}
+
+		return timestamp, nil
+	}
+
+	return int64(fValue), nil
+}
+
 func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomingProperties map[string]interface{},
 	currentProperties map[string]interface{}) (bool, error) {
 	logCtx := log.WithField("source", source).
@@ -696,16 +710,16 @@ func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomi
 
 	propertySuffix := GetPropertySuffix(source, objectType)
 	lastmodifieddateProperty := GetCRMEnrichPropertyKeyByType(source, objectType, propertySuffix)
-	incomingPropertyValue, err := util.GetPropertyValueAsFloat64(incomingProperties[lastmodifieddateProperty])
+	incomingPropertyValue, err := getCRMTimestampValue(incomingProperties[lastmodifieddateProperty])
 	if err != nil {
-		logCtx.WithField("mergedUserProperties", incomingProperties).WithField("error", err.Error()).
-			Error("Failed to convert lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
+		logCtx.WithField("mergedUserProperties", incomingProperties).WithError(err).
+			Error("Failed to convert incoming lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
 		return overwriteProperties, err
 	}
-	currentPropertyValue, err := util.GetPropertyValueAsFloat64(currentProperties[lastmodifieddateProperty])
+	currentPropertyValue, err := getCRMTimestampValue(currentProperties[lastmodifieddateProperty])
 	if err != nil {
-		logCtx.WithField("userProperties", currentProperties).WithField("error", err.Error()).
-			Error("Failed to convert lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
+		logCtx.WithField("userProperties", currentProperties).WithError(err).
+			Error("Failed to convert current lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
 		return overwriteProperties, err
 	}
 	if currentPropertyValue < incomingPropertyValue {
