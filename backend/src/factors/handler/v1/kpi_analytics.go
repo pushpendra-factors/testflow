@@ -21,7 +21,7 @@ type KPIFilterValuesRequest struct {
 	ObjectType   string `json:"object_type"`
 	PropertyName string `json:"property_name"`
 	Entity       string `json:"entity"`
-	Metric string `json:"me"`
+	Metric       string `json:"me"`
 }
 
 func (req *KPIFilterValuesRequest) isValid() bool {

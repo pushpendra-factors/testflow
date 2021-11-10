@@ -2015,7 +2015,7 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 		aggregateGroupBys = joinWithComma(model.AliasEventName, aggregateGroupBys)
 	}
 	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(CAST(%s) AS DECIMAL) as %s FROM %s",
+		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(CAST(%s AS DECIMAL)) as %s FROM %s",
 			query.AggregateFunction, model.AliasAggr, model.AliasAggr, aggregateFromStepName)
 	} else {
 		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(event_id) AS %s FROM %s",

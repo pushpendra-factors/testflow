@@ -162,7 +162,7 @@ func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID uint64, ids []s
 
 	stmnt := "project_id = ? AND id IN (?) AND type = ?"
 	if !includeUnSynced {
-		stmnt = stmnt + " " + "synced=true "
+		stmnt = stmnt + " AND " + "synced=true "
 	}
 
 	db := C.GetServices().Db

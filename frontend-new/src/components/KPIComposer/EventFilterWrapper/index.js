@@ -15,6 +15,7 @@ import { fetchEventPropertyValues, fetchUserPropertyValues,
   fetchChannelObjPropertyValues } from '../../../reducers/coreQuery/services';
 import FaFilterSelectKPI from '../FaFilterSelectKPI';
 import {fetchKPIFilterValues} from 'Reducers/kpi';
+import _ from 'lodash';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -70,14 +71,14 @@ function EventFilterWrapper({
 
   const {userPropNames} = useSelector((state) => state.coreQuery)
 
-  // useEffect(() => {
+  useEffect(() => {
  
-  //   if(filter && filter.props[1] === 'categorical') {
-  //     setValuesByProps(filter.props)
-  //     setNewFilterState(filter);
-  //   }
+    if(filter) {
+      setValuesByProps(filter.props)
+      setNewFilterState(filter);
+    }
 
-  // }, [filter])
+  }, [filter])
 
   useEffect(() => {
       const filterDD = Object.assign({}, filterDropDownOptions);
@@ -91,7 +92,7 @@ function EventFilterWrapper({
       }) 
       let DDvalues =  selGroup?.properties?.map((item)=>{
         if (item == null) return
-        let ddName = item.display_name ? item.display_name : item.name
+        let ddName = item.display_name ? (selGroup?.category == 'channels' ? `${_.startCase(item.object_type)} ${item.display_name}` : item.display_name)  : item.name;
         return [ddName, item.name, item.data_type, item.entity ? item.entity : item.object_type]
       })  
 

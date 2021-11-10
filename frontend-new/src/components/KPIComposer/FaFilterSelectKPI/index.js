@@ -4,7 +4,7 @@ import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents'; 
 import { Button, Input, InputNumber, Tooltip, DatePicker, Select } from 'antd';
 import GroupSelect2 from '../GroupSelect2';
-// import FaDatepicker from '../FaDatepicker';
+import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from '../FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
@@ -275,17 +275,17 @@ const FAFilterSelect = ({
         const deltaPicker = ['in the last', 'not in the last'];
         const datePicker = ['before', 'since'];
         
-        // if(rangePicker.includes(operator)) {
-        //     selectorComponent = (<FaDatepicker
-        //         customPicker
-        //         presetRange
-        //         monthPicker
-        //         placement="topRight"
-        //         range={rang}
-        //         onSelect={(rng) => onDateSelect(rng)
-        //         }
-        //     />);
-        // }
+        if(rangePicker.includes(operator)) {
+            selectorComponent = (<FaDatepicker
+                customPicker
+                presetRange
+                monthPicker
+                placement="topRight"
+                range={rang}
+                onSelect={(rng) => onDateSelect(rng)
+                }
+            />);
+        }
 
         if (deltaPicker.includes(operator)) {
             const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});

@@ -4,7 +4,7 @@ import styles from './index.module.scss';
 import { Button } from 'antd';
 
 import { SVG, Text } from 'factorsComponents';
-
+import _ from 'lodash';
 import { connect } from 'react-redux';
 import GroupSelect2 from '../GroupSelect2';
 import FaSelect from '../../FaSelect';
@@ -50,7 +50,7 @@ const EventGroupBlock = ({
     }) 
     let DDvalues =  selGroup?.properties?.map((item)=>{
       if (item == null) return
-      let ddName = item.display_name ? item.display_name : item.name
+      let ddName = item.display_name ? (selGroup?.category == 'channels' ? `${_.startCase(item.object_type)} ${item.display_name}` : item.display_name)  : item.name;
       return [ddName, item.name, item.data_type, item.entity ? item.entity : item.object_type]
     })  
 
