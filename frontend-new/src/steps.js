@@ -38,15 +38,12 @@ const style = {
   }),
   close: base => ({ 
     ...base,
-    position: 'absolute',
-    fontFamily: 'monospace',
     background: 'var(--reactour-accent,#007aff)',
     height: '2.1em',
     width: '2.6em',
     lineHeight: 2,
     paddingLeft: '0.8125em',
     paddingRight: '0.8125em',
-    fontSize: '1em',
     borderRadius: '1.625em',
     color: 'white',
     textAlign: 'center',
@@ -126,7 +123,11 @@ const steps = [
   },
   {
     selector: '[data-tour="step-7"]',
-    content: <p>Set up your custom events and properties, as well as configure your UTM parameters to match the standards used across the platform.</p>,
+    content: 
+      <div>
+        <p>Set up your custom events and properties,</p>
+        <p>as well as configure your UTM parameters to match the standards used across the platform.</p>
+      </div>,
     position: 'center',
     action: node => {
       node.click()
