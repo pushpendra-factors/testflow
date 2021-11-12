@@ -28,6 +28,13 @@ func main() {
 	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
 	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
+	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -74,6 +81,16 @@ func main() {
 			Password: *dbPass,
 			AppName:  taskID,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:         *memSQLHost,
+			Port:         *memSQLPort,
+			User:         *memSQLUser,
+			Name:         *memSQLName,
+			Password:     *memSQLPass,
+			Certificate:  *memSQLCertificate,
+			ResourcePool: *memSQLResourcePool,
+			AppName:      taskID,
+		},
 		SentryDSN:           *sentryDSN,
 		PrimaryDatastore:    *primaryDatastore,
 		RedisHost:           *redisHost,
@@ -109,7 +126,7 @@ func main() {
 		eventNameIDs = append(eventNameIDs, eventNameID)
 	}
 
-	log.Info(fmt.Sprintf("Running for event_name_id %d", eventNameIDs))
+	log.Info(fmt.Sprintf("Running for event_name_id %v", eventNameIDs))
 	propertiesUpdateList, updateCount, err := beginBackFillDateTimePropertiesByEventNameID(*projectID, eventNameIDs, *from, *to, *wetRun)
 	if err != nil {
 		log.WithFields(log.Fields{"wet_run": *wetRun}).WithError(err).Error("Failed to update event for datetime properties.")
@@ -149,25 +166,17 @@ func beginBackFillDateTimePropertiesByEventNameID(projectID uint64, eventNameIDs
 	}
 
 	datetimeProperties := make(map[string]bool, 0)
-	for i := range eventNameIDs {
-		eventName, err := store.GetStore().GetEventNameFromEventNameId(eventNameIDs[i], projectID)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get event name.")
-			return nil, nil, errors.New("failed to get event name")
-		}
 
-		propertyDetails, status := store.GetStore().GetAllPropertyDetailsByProjectID(projectID, eventName.Name, false)
-		if status != http.StatusFound {
-			logCtx.Error("Failed to get property details.")
-			return nil, nil, errors.New("failed to get property details")
-		}
+	propertyDetails, status := store.GetStore().GetAllPropertyDetailsByProjectID(projectID, "", true)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get property details.")
+		return nil, nil, errors.New("failed to get property details")
+	}
 
-		for pName, pType := range *propertyDetails {
-			if pType == util.PropertyTypeDateTime {
-				datetimeProperties[pName] = true
-			}
+	for pName, pType := range *propertyDetails {
+		if pType == util.PropertyTypeDateTime && strings.HasPrefix(pName, util.SALESFORCE_PROPERTY_PREFIX) {
+			datetimeProperties[pName] = true
 		}
-
 	}
 
 	if len(datetimeProperties) < 1 {
