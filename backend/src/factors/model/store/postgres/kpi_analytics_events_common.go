@@ -109,7 +109,7 @@ func (pg *Postgres) executeForResults(projectID uint64, queries []model.Query, k
 		for i, query := range queries {
 			results[i], _, _ = pg.RunInsightsQuery(projectID, query)
 		}
-		hasAnyGroupBy := len(queries[0].GroupByProperties) == 0
+		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
 		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations)
 	}
