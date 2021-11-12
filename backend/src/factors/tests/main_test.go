@@ -77,11 +77,12 @@ func TestMain(m *testing.M) {
 		// Test is not 100% backward compatible. Only some of the unit tests
 		// have flag based cases for both backward and forward compatibility.
 		// So kept on-table user_properties as primary.
-		AllowedCampaignEnrichmentByProjectID:   *allowedCampaignEnrichmentByProjectID,
-		UseOpportunityAssociationByProjectID:   "*",
-		AllowedHubspotGroupsByProjectIDs:       "*",
-		UseSourcePropertyOverwriteByProjectIDs: "*",
-		AllowedSalesforceGroupsByProjectIDs:    "*",
+		AllowedCampaignEnrichmentByProjectID:        *allowedCampaignEnrichmentByProjectID,
+		UseOpportunityAssociationByProjectID:        "*",
+		AllowedHubspotGroupsByProjectIDs:            "*",
+		UseSourcePropertyOverwriteByProjectIDs:      "*",
+		AllowedSalesforceGroupsByProjectIDs:         "*",
+		AllowSupportForUserPropertiesInIdentityCall: "*",
 	}
 	C.InitConf(config)
 

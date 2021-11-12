@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	"github.com/ttacon/libphonenumber"
 )
@@ -1324,4 +1325,20 @@ func CheckAndGetStandardTimestamp(inTimestamp int64) int64 {
 		return int64(inTimestamp / int64(1000))
 	}
 	return inTimestamp
+}
+
+func ConvertPostgresJSONBToMap(sourceJsonb postgres.Jsonb) (map[string]interface{}, error) {
+	var targetMap map[string]interface{}
+	byteArray, err := json.Marshal(sourceJsonb)
+	if err != nil {
+		log.WithError(err).Error("Failed to marshal JSONB object to byte array inside ConvertPostgresJSONBToMap.")
+		return nil, err
+	}
+
+	err = json.Unmarshal(byteArray, &targetMap)
+	if err != nil {
+		log.WithError(err).Error("Failed to unmarshal user properties inside ConvertPostgresJSONBToMap.")
+		return nil, err
+	}
+	return targetMap, nil
 }
