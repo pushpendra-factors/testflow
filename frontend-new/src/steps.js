@@ -13,6 +13,9 @@ const style = {
     boxShadow: '0 0 3em rgba(0, 0, 0, 0.5)',
     color: '#007aff',
     borderRadius: 10,
+    'p' : {
+      fontSize: 15,
+    }
   }),
   button: base => ({ 
     ...base,
@@ -34,7 +37,7 @@ const style = {
   maskArea: base => ({ ...base, rx: 10 }),
   maskWrapper: base => ({
     ...base,
-    opacity: 0.5,
+    opacity: 0.3,
   }),
   close: base => ({ 
     ...base,
@@ -70,10 +73,9 @@ const steps = [
     selector: '[data-tour="step-1"]',
     content: 
       <div>
-        <p>Let’s start — here is your dashboard.</p>
+        <p><strong>Let’s start — here is your dashboard.</strong></p>
         <p>All previously built and saved reports can be added to this view for quick and easy access.</p>
       </div>,
-    position: 'center',
     styles: style,
   },
   {
@@ -98,10 +100,9 @@ const steps = [
     selector: '[data-tour="step-5"]',
     content: 
       <div>
-        <p>The heart of your work lies here — the Analyse engine.</p>
+        <p><strong>The heart of your work lies here — the Analyse engine.</strong></p>
         <p>Here you can run deep analyses and charts for events, funnels, and campaigns, as well as model attribution analyses across all your marketing touchpoints</p>
       </div>,
-    position: 'center',
     action: node => {
       node.click()
     },
@@ -111,11 +112,10 @@ const steps = [
     selector: '[data-tour="step-6"]',
     content: 
       <div>
-        <p>Ah, the Explain engine!</p>
+        <p><strong>Ah, the Explain engine!</strong></p>
         <p>Here, we periodically track conversion goals and journeys you define, to help you understand what factors are impacting them the most.</p>
         <p>You’ll have periodic and actionable insights sent to you.</p>
       </div>,
-    position: 'center',
     action: node => {
       node.click()
     },
@@ -128,7 +128,6 @@ const steps = [
         <p>Set up your custom events and properties,</p>
         <p>as well as configure your UTM parameters to match the standards used across the platform.</p>
       </div>,
-    position: 'center',
     action: node => {
       node.click()
     },
@@ -160,7 +159,7 @@ const steps = [
     selector: '[data-tour="step-11"]',
     content: 
       <div>
-        <p>For each integration you need,</p>
+        <p><strong>For each integration you need,</strong></p>
         <p>use the primary blue button for an easy SSO (Single Sign-On) process, or view documentation from the adjacent button.</p>
       </div>,
     position: 'right',
