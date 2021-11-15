@@ -2,23 +2,31 @@ package memsql
 
 import (
 	"factors/model/model"
-	U "factors/util"
 	"net/http"
 )
 
-func (store *MemSQL) GetKPIConfigsForSalesforce(projectID uint64, reqID string) (map[string]interface{}, int) {
-	hubspotProjectSettings, errCode := store.GetAllSalesforceProjectSettingsForProject(projectID)
+func (store *MemSQL) GetKPIConfigsForSalesforceUsers(projectID uint64, reqID string) (map[string]interface{}, int) {
+	return store.GetKPIConfigsForSalesforce(projectID, reqID, model.SalesforceUsersDisplayCategory)
+}
+
+func (store *MemSQL) GetKPIConfigsForSalesforceAccounts(projectID uint64, reqID string) (map[string]interface{}, int) {
+	return store.GetKPIConfigsForSalesforce(projectID, reqID, model.SalesforceAccountsDisplayCategory)
+}
+
+func (store *MemSQL) GetKPIConfigsForSalesforceOpportunities(projectID uint64, reqID string) (map[string]interface{}, int) {
+	return store.GetKPIConfigsForSalesforce(projectID, reqID, model.SalesforceOpportunitiesDisplayCategory)
+}
+
+func (store *MemSQL) GetKPIConfigsForSalesforce(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
+	salesforceProjectSettings, errCode := store.GetAllSalesforceProjectSettingsForProject(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusOK {
 		return nil, http.StatusOK
 	}
-	if len(hubspotProjectSettings) == 0 {
+	if len(salesforceProjectSettings) == 0 {
 		return nil, http.StatusOK
 	}
-	finalResult := make(map[string]interface{}, 0)
-	for _, displayCategory := range model.DisplayCategoriesForSalesforce {
-		finalResult = U.MergeJSONMaps(finalResult, store.getConfigForSpecificSalesforceCategory(projectID, reqID, displayCategory))
-	}
-	return finalResult, http.StatusOK
+
+	return store.getConfigForSpecificSalesforceCategory(projectID, reqID, displayCategory), http.StatusOK
 }
 
 func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {

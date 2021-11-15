@@ -2,11 +2,18 @@ package memsql
 
 import (
 	"factors/model/model"
-	U "factors/util"
 	"net/http"
 )
 
-func (store *MemSQL) GetKPIConfigsForHubspot(projectID uint64, reqID string) (map[string]interface{}, int) {
+func (store *MemSQL) GetKPIConfigsForHubspotContacts(projectID uint64, reqID string) (map[string]interface{}, int) {
+	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotContactsDisplayCategory)
+}
+
+func (store *MemSQL) GetKPIConfigsForHubspotCompanies(projectID uint64, reqID string) (map[string]interface{}, int) {
+	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotCompaniesDisplayCategory)
+}
+
+func (store *MemSQL) GetKPIConfigsForHubspot(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
 	hubspotProjectSettings, errCode := store.GetAllHubspotProjectSettingsForProjectID(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusOK {
 		return nil, http.StatusOK
@@ -14,11 +21,8 @@ func (store *MemSQL) GetKPIConfigsForHubspot(projectID uint64, reqID string) (ma
 	if len(hubspotProjectSettings) == 0 {
 		return nil, http.StatusOK
 	}
-	finalResult := make(map[string]interface{}, 0)
-	for _, displayCategory := range model.DisplayCategoriesForHubspot {
-		finalResult = U.MergeJSONMaps(finalResult, store.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory))
-	}
-	return finalResult, http.StatusOK
+
+	return store.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory), http.StatusOK
 }
 
 func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {

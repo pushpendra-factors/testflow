@@ -2,11 +2,18 @@ package postgres
 
 import (
 	"factors/model/model"
-	U "factors/util"
 	"net/http"
 )
 
-func (pg *Postgres) GetKPIConfigsForHubspot(projectID uint64, reqID string) (map[string]interface{}, int) {
+func (pg *Postgres) GetKPIConfigsForHubspotContacts(projectID uint64, reqID string) (map[string]interface{}, int) {
+	return pg.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotContactsDisplayCategory)
+}
+
+func (pg *Postgres) GetKPIConfigsForHubspotCompanies(projectID uint64, reqID string) (map[string]interface{}, int) {
+	return pg.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotCompaniesDisplayCategory)
+}
+
+func (pg *Postgres) GetKPIConfigsForHubspot(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
 	hubspotProjectSettings, errCode := pg.GetAllHubspotProjectSettingsForProjectID(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusOK {
 		return nil, http.StatusOK
@@ -14,11 +21,8 @@ func (pg *Postgres) GetKPIConfigsForHubspot(projectID uint64, reqID string) (map
 	if len(hubspotProjectSettings) == 0 {
 		return nil, http.StatusOK
 	}
-	finalResult := make(map[string]interface{}, 0)
-	for _, displayCategory := range model.DisplayCategoriesForHubspot {
-		finalResult = U.MergeJSONMaps(finalResult, pg.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory))
-	}
-	return finalResult, http.StatusOK
+
+	return pg.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory), http.StatusOK
 }
 
 func (pg *Postgres) getConfigForSpecificHubspotCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {
