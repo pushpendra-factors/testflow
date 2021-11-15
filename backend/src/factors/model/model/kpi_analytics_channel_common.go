@@ -24,7 +24,7 @@ func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperti
 
 func TransformKPIQueryToChannelsV1Query(kpiQuery KPIQuery) (ChannelQueryV1, error) {
 	var currentChannel string
-	var exists bool
+	var err error
 	channelSelectMetrics := make([]string, 0)
 	channelSelectMetrics = append(channelSelectMetrics, kpiQuery.Metrics...)
 	channelQueryV1 := ChannelQueryV1{
@@ -36,8 +36,9 @@ func TransformKPIQueryToChannelsV1Query(kpiQuery KPIQuery) (ChannelQueryV1, erro
 	}
 	channelQueryV1.GroupBy = transformGroupByKPIToChannelsV1(kpiQuery.GroupBy)
 	channelQueryV1.Filters = transformFiltersKPIToChannelsV1(kpiQuery.Filters)
-	if currentChannel, exists = MapOfCategoryToChannel[kpiQuery.DisplayCategory]; !exists {
-		return ChannelQueryV1{}, errors.New("wrong Display Category given for channels")
+	currentChannel, err = GetChannelFromKPIQuery(kpiQuery.DisplayCategory)
+	if err != nil {
+		return ChannelQueryV1{}, err
 	}
 	channelQueryV1.Channel = currentChannel
 	return channelQueryV1, nil
@@ -70,4 +71,13 @@ func transformFiltersKPIToChannelsV1(kpiFilters []KPIFilter) []ChannelFilterV1 {
 		resultChannelFilters = append(resultChannelFilters, tempChannelFilter)
 	}
 	return resultChannelFilters
+}
+
+func GetChannelFromKPIQuery(displayCategory string) (string, error) {
+	var currentChannel string
+	var exists bool
+	if currentChannel, exists = MapOfCategoryToChannel[displayCategory]; !exists {
+		return "", errors.New("wrong Display Category given for channels")
+	}
+	return currentChannel, nil
 }
