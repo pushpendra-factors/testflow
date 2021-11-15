@@ -58,6 +58,8 @@ type IdentifyPayload struct {
 	CustomerUserId string `json:"c_uid"`
 	Timestamp      int64  `json:"timestamp"`
 
+	UserProperties postgres.Jsonb `json:"user_properties"`
+
 	CreateUser bool `json:"create_user"`
 	// join_timestamp to use at the time of creating user,
 	// if not provided, request timestamp will be used.
@@ -883,6 +885,20 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 		logCtx.WithError(err).Error("Failed to get and add identified user properties on identify.")
 	}
 
+	allowSupportForUserPropertiesInIdentityCall := C.AllowSupportForUserPropertiesInIdentityCall(projectId)
+
+	if allowSupportForUserPropertiesInIdentityCall {
+		incomingProperties, err := U.ConvertPostgresJSONBToMap(request.UserProperties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to convert Postgres JSONB object to Map.")
+		}
+
+		userProperties, err = U.AddToPostgresJsonb(userProperties, incomingProperties, true)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to merge incoming user properties with existing user properties.")
+		}
+	}
+
 	// if create_user not true and user is not found,
 	// allow to create_user.
 	if !request.CreateUser && request.UserId != "" {
@@ -1018,12 +1034,12 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 			newUser.Properties = *userProperties
 		}
 
-		_, errCode := store.GetStore().CreateUser(&newUser)
+		createdUserID, errCode := store.GetStore().CreateUser(&newUser)
 		if errCode != http.StatusCreated {
 			return errCode, &IdentifyResponse{Error: "Identification failed. User creation failed."}
 		}
 
-		return http.StatusOK, &IdentifyResponse{UserId: newUser.ID,
+		return http.StatusOK, &IdentifyResponse{UserId: createdUserID,
 			Message: "User has been identified successfully"}
 
 	}

@@ -17,11 +17,12 @@ import (
 )
 
 type KPIFilterValuesRequest struct {
-	Category     string `json:"category"`
-	ObjectType   string `json:"object_type"`
-	PropertyName string `json:"property_name"`
-	Entity       string `json:"entity"`
-	Metric       string `json:"me"`
+	Category        string `json:"category"`
+	DisplayCategory string `json:"display_category"`
+	ObjectType      string `json:"object_type"`
+	PropertyName    string `json:"property_name"`
+	Entity          string `json:"entity"`
+	Metric          string `json:"me"`
 }
 
 func (req *KPIFilterValuesRequest) isValid() bool {
@@ -60,7 +61,9 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		storeSelected.GetKPIConfigsForWebsiteSessions,
 		storeSelected.GetKPIConfigsForPageViews,
 		storeSelected.GetKPIConfigsForFormSubmissions,
-		storeSelected.GetKPIConfigsForHubspot, storeSelected.GetKPIConfigsForSalesforce,
+		storeSelected.GetKPIConfigsForHubspotContacts, storeSelected.GetKPIConfigsForHubspotCompanies,
+		storeSelected.GetKPIConfigsForSalesforceUsers, storeSelected.GetKPIConfigsForSalesforceAccounts,
+		storeSelected.GetKPIConfigsForSalesforceOpportunities,
 		storeSelected.GetKPIConfigsForAdwords, storeSelected.GetKPIConfigsForGoogleOrganic,
 		storeSelected.GetKPIConfigsForFacebook, storeSelected.GetKPIConfigsForLinkedin,
 		storeSelected.GetKPIConfigsForAllChannels,
@@ -107,7 +110,12 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 	logCtx = logCtx.WithField("request", request)
 
 	if request.Category == model.ChannelCategory {
-		channelsFilterValues, errCode := storeSelected.GetChannelFilterValuesV1(projectID, request.Category, request.ObjectType,
+		currentChannel, err := model.GetChannelFromKPIQuery(request.DisplayCategory)
+		if err != nil {
+			return nil, http.StatusBadRequest, PROCESSING_FAILED, "Input display category is wrong", true
+		}
+		request.DisplayCategory = currentChannel
+		channelsFilterValues, errCode := storeSelected.GetChannelFilterValuesV1(projectID, request.DisplayCategory, request.ObjectType,
 			request.PropertyName, reqID)
 		if errCode != http.StatusOK && errCode != http.StatusFound {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true

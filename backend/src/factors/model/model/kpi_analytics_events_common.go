@@ -192,15 +192,14 @@ func getTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGr
 // Considering all rows to be equal in size because of analytics response.
 // resultAsMap - key with groupByColumns, value as row.
 func HandlingEventResultsByApplyingOperations(results []*QueryResult, transformations []TransformQueryi) QueryResult {
-	var resultAsMap, intermediateResultsAsMap map[string][]interface{}
-	resultAsMap = make(map[string][]interface{})
-	intermediateResultsAsMap = make(map[string][]interface{})
-	var finalResultRows [][]interface{}
+	resultAsMap := make(map[string][]interface{})
+	finalResultRows := make([][]interface{}, 0)
 	var finalResult QueryResult
 	for index, result := range results {
 		if index == 0 {
 			resultAsMap = makeHashWithKeyAsGroupBy(result.Rows)
 		} else {
+			intermediateResultsAsMap := make(map[string][]interface{})
 			for _, row := range result.Rows {
 				key := getkeyFromRow(row)
 				value1 := resultAsMap[key][len(row)-1]
@@ -211,7 +210,6 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, transforma
 				intermediateResultsAsMap[key] = row
 			}
 			resultAsMap = intermediateResultsAsMap
-			intermediateResultsAsMap = make(map[string][]interface{})
 		}
 	}
 	for _, value := range resultAsMap {
@@ -246,11 +244,13 @@ func makeHashWithKeyAsGroupBy(rows [][]interface{}) map[string][]interface{} {
 	return hashMap
 }
 
-// could be anything. need to replace %d
 func getkeyFromRow(row []interface{}) string {
+	if len(row) <= 1 {
+		return "1"
+	}
 	var key string
 	for _, value := range row[:len(row)-1] {
-		key = fmt.Sprintf("%d", value) + ":"
+		key = fmt.Sprintf("%v", value) + ":"
 	}
 	return key
 }

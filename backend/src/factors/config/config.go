@@ -175,24 +175,25 @@ type Configuration struct {
 	// Flags to disable DB and Redis writes when enabled.
 	// Added as pointer to prevent accidental writes from
 	// other services while testing.
-	DisableDBWrites                        *bool
-	DisableRedisWrites                     *bool
-	DisableQueryCache                      *bool
-	AllowedCampaignEnrichmentByProjectID   string
-	UseOpportunityAssociationByProjectID   string
-	AllowChannelGroupingForProjectIDs      string
-	CloudManager                           filestore.FileManager
-	SegmentExcludedCustomerIDByProject     map[uint64]string // map[project_id]customer_user_id
-	AttributionDebug                       int
-	DisableDashboardQueryDBExecution       bool
-	AllowedHubspotGroupsByProjectIDs       string
-	EnableFilterOptimisation               bool
-	FilterPropertiesStartTimestamp         int64
-	OnlyAttributionDashboardCaching        int
-	SkipAttributionDashboardCaching        int
-	IsRunningForMemsql                     int
-	UseSourcePropertyOverwriteByProjectIDs string
-	AllowedSalesforceGroupsByProjectIDs    string
+	DisableDBWrites                             *bool
+	DisableRedisWrites                          *bool
+	DisableQueryCache                           *bool
+	AllowedCampaignEnrichmentByProjectID        string
+	UseOpportunityAssociationByProjectID        string
+	AllowChannelGroupingForProjectIDs           string
+	CloudManager                                filestore.FileManager
+	SegmentExcludedCustomerIDByProject          map[uint64]string // map[project_id]customer_user_id
+	AttributionDebug                            int
+	DisableDashboardQueryDBExecution            bool
+	AllowedHubspotGroupsByProjectIDs            string
+	EnableFilterOptimisation                    bool
+	FilterPropertiesStartTimestamp              int64
+	OnlyAttributionDashboardCaching             int
+	SkipAttributionDashboardCaching             int
+	IsRunningForMemsql                          int
+	UseSourcePropertyOverwriteByProjectIDs      string
+	AllowedSalesforceGroupsByProjectIDs         string
+	AllowSupportForUserPropertiesInIdentityCall string
 }
 
 type Services struct {
@@ -1266,6 +1267,28 @@ func UseSourcePropertyOverwriteByProjectIDs(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.UseSourcePropertyOverwriteByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+// AllowSupportForUserPropertiesInIdentityCall id used to check if support for user properties
+// is allowed for a given (or list of) project
+func AllowSupportForUserPropertiesInIdentityCall(projectID uint64) bool {
+	if configuration.AllowSupportForUserPropertiesInIdentityCall == "" {
+		return false
+	}
+
+	if configuration.AllowSupportForUserPropertiesInIdentityCall == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowSupportForUserPropertiesInIdentityCall, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true

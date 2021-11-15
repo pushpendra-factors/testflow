@@ -621,15 +621,23 @@ func (store *MemSQL) GetEventNamesOrderedByOccurenceAndRecency(projectID uint64,
 	if err != nil {
 		return nil, err
 	}
+	eventsFiltered := make([]U.NameCountTimestampCategory, 0)
+	eventsFiltered = eventsSorted
 	if limit > 0 {
 		sliceLength := len(eventsSorted)
 		if sliceLength > limit {
-			eventsSorted = eventsSorted[0:limit]
+			eventsFiltered = eventsSorted[0:limit]
+			for _, event := range eventsSorted[limit:sliceLength] {
+				_, ok := U.STANDARD_EVENTS_GROUP_NAMES[event.Name]
+				if ok {
+					eventsFiltered = append(eventsFiltered, event)
+				}
+			}
 		}
 	}
 
 	eventStringWithGroups := make(map[string][]string)
-	for _, event := range eventsSorted {
+	for _, event := range eventsFiltered {
 		eventStringWithGroups[event.GroupName] = append(eventStringWithGroups[event.GroupName], event.Name)
 	}
 

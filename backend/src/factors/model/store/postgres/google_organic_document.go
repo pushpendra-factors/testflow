@@ -68,7 +68,7 @@ func (pg *Postgres) GetGoogleOrganicFilterValues(projectID uint64, requestFilter
 	logCtx := log.WithField("projectID", projectID).WithField("req_id", reqID)
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to fetch Project Setting in searcch console filter values.")
+		logCtx.Error("Failed to fetch Project Setting in search console filter values.")
 		return []interface{}{}, http.StatusInternalServerError
 	}
 	urlPrefix := projectSetting.IntGoogleOrganicURLPrefixes

@@ -18,10 +18,12 @@ class MetricsAggregator:
         "task_stats": None,
         "failures": {},
         "success": {},
-        "skipped": {}
+        "skipped": {},
+        "token_failures": {},
     }
     env = None
     HEALTHCHECK_PING_ID = 'f2265955-a71c-42fe-a5ba-36d22a98419c'
+    HEALTHCHECK_PING_ID_TOKEN_FAILURE = '2305bb1e-30db-4567-8c1a-2559ea738cbf'
 
     @classmethod
     def init(cls, env, type_of_run):
@@ -64,9 +66,16 @@ class MetricsAggregator:
             cls.etl_stats["failures"][message].setdefault(doc_type, set())
             cls.etl_stats["failures"][message][doc_type].add(project_id)
         elif status == "failed":
-            cls.etl_stats["failures"].setdefault(message, {})
-            cls.etl_stats["failures"][message].setdefault(doc_type, set())
-            cls.etl_stats["failures"][message][doc_type].add(project_id)
+            # In our observation we have encountered that "No such object" error comes when extract has failed due to some reason(highly due to token expiry)
+            # We'll keep monitoring it manually, if we figure some other cases happening, we'll seprate the two.
+            if ("Error validating access token".lower() in message.lower()) or ("No such object".lower() in message.lower()):
+                cls.etl_stats["token_failures"].setdefault(message, {})
+                cls.etl_stats["token_failures"][message].setdefault(doc_type, set())
+                cls.etl_stats["token_failures"][message][doc_type].add(project_id)
+            else:
+                cls.etl_stats["failures"].setdefault(message, {})
+                cls.etl_stats["failures"][message].setdefault(doc_type, set())
+                cls.etl_stats["failures"][message][doc_type].add(project_id)
         elif status == "skipped":
             cls.etl_stats["skipped"].setdefault(project_id, set())
             cls.etl_stats["skipped"][project_id].add(customer_acc_id)
@@ -97,13 +106,22 @@ class MetricsAggregator:
         if cls.etl_stats["status"] == "success":
             HealthChecksUtil.ping(cls.env, cls.etl_stats["success"], cls.HEALTHCHECK_PING_ID)
         else:
-            cls.publish_to_healthcheck_failure()
-            log.warning("Job has errors. Successfully synced Projects and customer accounts are: %s",
-                        json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
+            if len(cls.etl_stats["failures"]) != 0:
+                cls.publish_to_healthcheck_failure()
+                log.warning("Job has errors. Successfully synced Projects and customer accounts are: %s",
+                            json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
+            if len(cls.etl_stats["token_failures"]) != 0:
+                cls.publish_to_healthcheck_token_failure()
+                log.warning("Job has errors for token failure. Successfully synced Projects and customer accounts are: %s",
+                            json.dumps(cls.etl_stats["token_failures"], default=JsonUtil.serialize_sets))
 
     @classmethod
     def publish_to_healthcheck_failure(cls):
         HealthChecksUtil.ping(cls.env, cls.etl_stats["failures"], cls.HEALTHCHECK_PING_ID, endpoint="/fail")
+    
+    @classmethod
+    def publish_to_healthcheck_token_failure(cls):
+        HealthChecksUtil.ping(cls.env, cls.etl_stats["token_failures"], cls.HEALTHCHECK_PING_ID_TOKEN_FAILURE, endpoint="/fail")
 
     @classmethod
     def compare_load_and_extract(cls):

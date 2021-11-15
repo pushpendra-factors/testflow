@@ -1550,6 +1550,158 @@ func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, users []model.User, e
 	}
 }
 
+func TestSupportForUserPropertiesInIdentifyCall(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	// Test case provided with new UserId, having CreateUser flag as true, and new customer_user_id
+	userID := U.GetUUID()
+	customerUserID := U.RandomLowerAphaNumString(10)
+	name := U.RandomLowerAphaNumString(7)
+	email := getRandomEmail()
+	t.Run("WithUserIdAndCreateUserAsTrue", func(t *testing.T) {
+		timestamp := U.UnixTimeBeforeDuration(2 * time.Hour)
+		userProperties := []byte(fmt.Sprintf(`{"name": "%s", "email": "%s"}`, name, email))
+
+		payload := &SDK.IdentifyPayload{
+			UserId:         userID,
+			CreateUser:     true,
+			CustomerUserId: customerUserID,
+			UserProperties: postgres.Jsonb{userProperties},
+			JoinTimestamp:  timestamp,
+			Source:         "sdk_user_identify",
+		}
+		status, response := SDK.Identify(project.ID, payload, true)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, userID, response.UserId)
+		user, _ := store.GetStore().GetUser(project.ID, response.UserId)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserID, user.CustomerUserId)
+		properitesMap := make(map[string]interface{})
+		err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+		assert.Nil(t, err)
+		assert.Equal(t, name, properitesMap["name"])
+		assert.Equal(t, email, properitesMap["email"])
+	})
+
+	// Test case provided with no UserId, having CreateUser flag as false, with existing customer_user_id
+	t.Run("WithUserIdAndCreateUserAsFalse", func(t *testing.T) {
+		userProperties := []byte(fmt.Sprintf(`{"name": "%s", "email": "%s"}`, name, email))
+
+		payload := &SDK.IdentifyPayload{
+			CreateUser:     false,
+			CustomerUserId: customerUserID,
+			UserProperties: postgres.Jsonb{userProperties},
+		}
+		status, response := SDK.Identify(project.ID, payload, true)
+		assert.Equal(t, http.StatusOK, status)
+		user, _ := store.GetStore().GetUser(project.ID, response.UserId)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserID, user.CustomerUserId)
+		properitesMap := make(map[string]interface{})
+		err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+		assert.Nil(t, err)
+		assert.Equal(t, name, properitesMap["name"])
+		assert.Equal(t, email, properitesMap["email"])
+	})
+
+	// // Test case provided with existing UserId, having CreateUser flag as false, with new customer_user_id, overwrite falg as false
+	t.Run("WithUserIdAndCreateUserAsFalse", func(t *testing.T) {
+		customerUserId := U.RandomLowerAphaNumString(10)
+		userProperties := []byte(fmt.Sprintf(`{"name": "%s", "email": "%s"}`, name, email))
+
+		payload := &SDK.IdentifyPayload{
+			UserId:         userID,
+			CreateUser:     false,
+			CustomerUserId: customerUserId,
+			UserProperties: postgres.Jsonb{userProperties},
+		}
+		status, response := SDK.Identify(project.ID, payload, false)
+		assert.Equal(t, http.StatusOK, status)
+		user, _ := store.GetStore().GetUser(project.ID, response.UserId)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserId, user.CustomerUserId)
+		properitesMap := make(map[string]interface{})
+		err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+		assert.Nil(t, err)
+		assert.Equal(t, name, properitesMap["name"])
+		assert.Equal(t, email, properitesMap["email"])
+	})
+
+	// Test case provided with existing UserId, having CreateUser flag as false, with new customer_user_id, overwrite falg as true
+	t.Run("WithUserIdAndCreateUserAsFalse", func(t *testing.T) {
+		customerUserId := U.RandomLowerAphaNumString(10)
+		userProperties := []byte(fmt.Sprintf(`{"name": "%s", "email": "%s"}`, name, email))
+
+		payload := &SDK.IdentifyPayload{
+			UserId:         user.ID,
+			CreateUser:     false,
+			CustomerUserId: customerUserId,
+			UserProperties: postgres.Jsonb{userProperties},
+		}
+		status, _ := SDK.Identify(project.ID, payload, true)
+		assert.Equal(t, http.StatusOK, status)
+		user, _ := store.GetStore().GetUser(project.ID, user.ID)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserId, user.CustomerUserId)
+		properitesMap := make(map[string]interface{})
+		err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+		assert.Nil(t, err)
+		assert.Equal(t, name, properitesMap["name"])
+		assert.Equal(t, email, properitesMap["email"])
+	})
+
+	// Test case provided with new UserId, having CreateUser flag as true, but with existing customer_user_id
+	userID2 := U.GetUUID()
+	t.Run("WithUserIDCreateUserAsTrueAndExistingCustomerUserID", func(t *testing.T) {
+		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		userProperties := []byte(fmt.Sprintf(`{"name": "%s", "email": "%s"}`, name, email))
+
+		payload := &SDK.IdentifyPayload{
+			UserId:         userID2,
+			CreateUser:     true,
+			CustomerUserId: customerUserID,
+			UserProperties: postgres.Jsonb{userProperties},
+			JoinTimestamp:  timestamp,
+		}
+		status, response := SDK.Identify(project.ID, payload, true)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, userID2, response.UserId)
+		user, _ := store.GetStore().GetUser(project.ID, response.UserId)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserID, user.CustomerUserId)
+		properitesMap := make(map[string]interface{})
+		err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+		assert.Nil(t, err)
+		assert.Equal(t, name, properitesMap["name"])
+		assert.Equal(t, email, properitesMap["email"])
+	})
+
+	// Test case provided with existing UserId, having CreateUser flag as false, and new customer_user_id, overwrite falg as true
+	t.Run("WithUserIdAndCreateUserAsFalse", func(t *testing.T) {
+		customerUserId := U.RandomLowerAphaNumString(10)
+		userProperties := []byte(fmt.Sprintf(`{"name": "%s", "email": "%s"}`, name, email))
+
+		payload := &SDK.IdentifyPayload{
+			UserId:         user.ID,
+			CreateUser:     false,
+			CustomerUserId: customerUserId,
+			UserProperties: postgres.Jsonb{userProperties},
+		}
+		status, response := SDK.Identify(project.ID, payload, true)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Empty(t, response.UserId)
+		user, _ := store.GetStore().GetUser(project.ID, user.ID)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserId, user.CustomerUserId)
+		properitesMap := make(map[string]interface{})
+		err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
+		assert.Nil(t, err)
+		assert.Equal(t, name, properitesMap["name"])
+		assert.Equal(t, email, properitesMap["email"])
+	})
+}
+
 func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()

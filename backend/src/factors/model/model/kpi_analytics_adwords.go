@@ -16,6 +16,7 @@ func GetKPIConfigsForAdwords() map[string]interface{} {
 
 // TODO: Move to constants declared in model.
 var MapOfCategoryToChannel = map[string]string{
+	AllChannelsDisplayCategory:   "all_ads",
 	AdwordsDisplayCategory:       "google_ads",
 	FacebookDisplayCategory:      "facebook_ads",
 	LinkedinDisplayCategory:      "linkedin_ads",
