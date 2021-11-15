@@ -1054,7 +1054,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 	var fpr, fpp float64
 	pLen := len(parentPattern.EventNames)
 
-	userCatProperties, userNumProperties, eventCatProperties, eventNumProperties := extractProperties(parentNode)
+	userCatProperties, userNumProperties, eventCatProperties, eventNumProperties := extractProperties(parentNode, nil, nil)
 
 	var eventName string
 	if pLen == 1 {
@@ -1270,7 +1270,8 @@ var debugCounts map[string]int
 func BuildNewItreeV1(reqId string,
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
-	patternWrapper PatternServiceWrapperInterface, countType string, debugKey string, debugParams map[string]string, projectId uint64) (*Itree, error, interface{}) {
+	patternWrapper PatternServiceWrapperInterface, countType string, debugKey string, debugParams map[string]string, projectId uint64,
+	includedEventProperties map[string]bool, includedUserProperties map[string]bool, includedEvents map[string]bool) (*Itree, error, interface{}) {
 	if endEvent == "" {
 		return nil, fmt.Errorf("missing end event"), nil
 	}
@@ -1367,7 +1368,7 @@ func BuildNewItreeV1(reqId string,
 
 			startDateTime := time.Now()
 			if attributeChildNodes, err, debugInfo := itree.buildAndAddPropertyChildNodesV1(reqId,
-				parentNode.node, allActiveUsersPattern, patternWrapper, countType, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"], startEventConstraints, endEventConstraints); err != nil {
+				parentNode.node, allActiveUsersPattern, patternWrapper, countType, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"], startEventConstraints, endEventConstraints, includedEventProperties, includedUserProperties); err != nil {
 				log.Errorf(fmt.Sprintf("%s", err))
 				return nil, err, nil
 			} else {
@@ -1390,7 +1391,7 @@ func BuildNewItreeV1(reqId string,
 		if parentNode.node.NodeType == NODE_TYPE_SEQUENCE || parentNode.node.NodeType == NODE_TYPE_ROOT || parentNode.node.NodeType == NODE_TYPE_CAMPAIGN {
 			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddSequenceChildNodesV1(reqId, parentNode.node,
-				candidatePatterns, patternWrapper, allActiveUsersPattern, countType, startEventConstraints, endEventConstraints, crmEvents); err != nil {
+				candidatePatterns, patternWrapper, allActiveUsersPattern, countType, startEventConstraints, endEventConstraints, crmEvents, includedEvents); err != nil {
 				return nil, err, nil
 			} else {
 				endDateTime := time.Now()
@@ -1458,7 +1459,7 @@ func extractProperty(constraint P.EventConstraints) map[string]string {
 	return properties
 }
 
-func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []string) {
+func extractProperties(parentNode *ItreeNode, includedEventProperties map[string]bool, includedUserProperties map[string]bool) ([]string, []string, []string, []string) {
 
 	type PropertyCountTuple struct {
 		Property string
@@ -1533,7 +1534,23 @@ func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []s
 		eventNumProperties = []string{}
 	}
 
-	return userCatPropertiesSorted, userNumProperties, eventCatProperties, eventNumProperties
+	return changePropertiesOrder(userCatPropertiesSorted, includedUserProperties), changePropertiesOrder(userNumProperties, includedUserProperties), changePropertiesOrder(eventCatProperties, includedEventProperties), changePropertiesOrder(eventNumProperties, includedEventProperties)
+}
+
+func changePropertiesOrder(properties []string, included map[string]bool) []string {
+	if included == nil {
+		return properties
+	}
+	first := make([]string, 0)
+	second := make([]string, 0)
+	for _, property := range properties {
+		if included[property] == true {
+			first = append(first, property)
+		} else {
+			second = append(second, property)
+		}
+	}
+	return append(first, second...)
 }
 
 func formatProperty(property string) string {
@@ -1543,7 +1560,7 @@ func formatProperty(property string) string {
 func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	parentNode *ItreeNode, allActiveUsersPattern *P.Pattern,
 	patternWrapper PatternServiceWrapperInterface, countType string, level int, debugKey string, debugPropertyName string, debugPropertyValue string,
-	startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints) ([]*ItreeNode, error, interface{}) {
+	startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, includedEventProperties, includedUserProperties map[string]bool) ([]*ItreeNode, error, interface{}) {
 	// The top child nodes are obtained by adding constraints on the (N-1) event
 	// of parent pattern.
 	// i.e If parrent pattern is A -> B -> C -> Y with
@@ -1557,7 +1574,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	baseProperty := extractProperty(parentConstraints[len(parentConstraints)-1])
 	var fpr, fpp float64
 	pLen := len(parentPattern.EventNames)
-	userCatProperties, userNumProperties, eventCatProperties, eventNumProperties := extractProperties(parentNode)
+	userCatProperties, userNumProperties, eventCatProperties, eventNumProperties := extractProperties(parentNode, includedEventProperties, includedUserProperties)
 	if pLen == 1 {
 		if countType == P.COUNT_TYPE_PER_USER {
 			// Parent is root node. Count is all users.
@@ -1865,7 +1882,9 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 	parentNode *ItreeNode, candidatePattens []*P.Pattern,
 	patternWrapper PatternServiceWrapperInterface,
-	allActiveUsersPattern *P.Pattern, countType string, startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, crmEvents map[string]bool) ([]*ItreeNode, error) {
+	allActiveUsersPattern *P.Pattern, countType string,
+	startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints,
+	crmEvents map[string]bool, includedEvents map[string]bool) ([]*ItreeNode, error) {
 
 	parentPattern := parentNode.Pattern
 	peLen := len(parentPattern.EventNames)
@@ -1929,12 +1948,23 @@ func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 		})
 
 	// Only top MAX_SEQUENCE_CHILD_NODES in order of drop in GiniImpurity are selected.
+	childNodesSelected := childNodes
 	if len(childNodes) > MAX_SEQUENCE_CHILD_NODES {
-		childNodes = childNodes[:MAX_SEQUENCE_CHILD_NODES]
+		childNodesSelected = childNodes[:MAX_SEQUENCE_CHILD_NODES]
+		if includedEvents != nil && len(includedEvents) > 0 {
+			for _, cNode := range childNodes[MAX_SEQUENCE_CHILD_NODES:] {
+				for _, event := range cNode.Pattern.EventNames {
+					if includedEvents[event] == true {
+						childNodesSelected = append(childNodesSelected, cNode)
+						break
+					}
+				}
+			}
+		}
 	}
 
 	addedChildNodes := []*ItreeNode{}
-	for _, cNode := range childNodes {
+	for _, cNode := range childNodesSelected {
 		if cNode.InformationDrop <= 0.0 {
 			continue
 		}
@@ -2565,7 +2595,7 @@ func BuildUserDistributionWithProperties(reqId string, events []string, startCon
 	if count, _ := pattern.GetCount(constructPatternConstraints(
 		1, startConstraints, endConstraints), P.COUNT_TYPE_PER_USER); count > 0 {
 		overall = count
-		allUserCatProperties, _, _, _ := extractProperties(&ItreeNode{Pattern: pattern})
+		allUserCatProperties, _, _, _ := extractProperties(&ItreeNode{Pattern: pattern}, nil, nil)
 		distributionProperty := make(map[string]string)
 		for _, property := range allUserCatProperties {
 			if existingConstraints[property] != true {

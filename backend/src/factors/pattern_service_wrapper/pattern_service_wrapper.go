@@ -1021,7 +1021,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0Go
 	levelInsightsMap := make(map[int][]parentInsightsTuple)
 	indexLevelMap := make(map[int]int)
 	indexLevelMap[0] = 0
-	
+
 	for _, node := range nodes {
 		indexLevelMap[node.Index] = indexLevelMap[node.ParentIndex] + 1
 	}
@@ -1230,8 +1230,11 @@ func FactorV1(reqId string, projectId uint64, startEvent string,
 	rootNode := &ItreeNode{}
 	iPatternNodesUnsorted := []*ItreeNode{}
 	var debugData interface{}
+	includedEventProperties := make(map[string]bool)
+	includedUserProperties := make(map[string]bool)
+	includedEvents := make(map[string]bool)
 	if itree, err, debugInfo := BuildNewItreeV1(reqId, startEvent, startEventConstraints,
-		endEvent, endEventConstraints, pw, countType, debugKey, debugParams, projectId); err != nil {
+		endEvent, endEventConstraints, pw, countType, debugKey, debugParams, projectId, includedEventProperties, includedUserProperties, includedEvents); err != nil {
 		log.Error(err)
 		return Factors{}, err, nil
 	} else {
