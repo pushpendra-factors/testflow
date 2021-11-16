@@ -194,6 +194,7 @@ type Configuration struct {
 	UseSourcePropertyOverwriteByProjectIDs      string
 	AllowedSalesforceGroupsByProjectIDs         string
 	AllowSupportForUserPropertiesInIdentityCall string
+	DevBox                                      bool
 }
 
 type Services struct {
@@ -1887,4 +1888,8 @@ func UseEventsFilterPropertiesOptimisedLogic(queryFromTimestamp int64) bool {
 
 func UseUsersFilterPropertiesOptimisedLogic() bool {
 	return configuration.EnableFilterOptimisation
+}
+
+func IsDevBox() bool {
+	return configuration.DevBox
 }

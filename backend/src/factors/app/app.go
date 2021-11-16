@@ -118,6 +118,7 @@ func main() {
 		"Enables filter optimisation changes for memsql implementation.")
 	filterPropertiesStartTimestamp := flag.Int64("filter_properties_start_timestamp", -1,
 		"Start timestamp of data available for filtering with parquet on memsql.")
+	devBox := flag.Bool("dev_box", false, "Is this going to be deployed on one box")
 
 	flag.Parse()
 
@@ -196,6 +197,7 @@ func main() {
 		DisableDashboardQueryDBExecution:        *disableDashboardQueryDBExecution,
 		EnableFilterOptimisation:                *enableFilterOptimisation,
 		FilterPropertiesStartTimestamp:          *filterPropertiesStartTimestamp,
+		DevBox:                                  *devBox,
 	}
 	C.InitConf(config)
 
