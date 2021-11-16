@@ -179,6 +179,7 @@ var EP_DAY_OF_WEEK string = "$day_of_week"
 var EP_SESSION_COUNT string = "$session_count"
 var EP_TERM string = "$term"
 var EP_CHANNEL string = "$channel" // added at runtime.
+var EP_TYPE string = "$type"
 
 // Event Form meta attributes properties
 var EP_FORM_ID string = "$form_id"
@@ -380,6 +381,10 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_COST,
 	EP_REVENUE,
 	EP_TERM,
+
+	// event properties part of offline touch points
+	EP_CHANNEL,
+	EP_TYPE,
 
 	// user_properties captured on event. i.e form_submit.
 	UP_EMAIL,
