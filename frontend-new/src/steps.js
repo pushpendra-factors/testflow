@@ -76,6 +76,7 @@ const steps = [
         <Text type={'title'} level={7}>All previously built and saved reports can be added to this view for quick and easy access.</Text>
       </div>,
     styles: style,
+    position: 'right',
   },
   {
     selector: '[data-tour="step-2"]',
@@ -106,6 +107,7 @@ const steps = [
       node.click()
     },
     styles: style,
+    position: 'right',
   },
   {
     selector: '[data-tour="step-6"]',
@@ -119,6 +121,7 @@ const steps = [
       node.click()
     },
     styles: style,
+    position: 'right',
   },
   {
     selector: '[data-tour="step-7"]',
@@ -131,6 +134,7 @@ const steps = [
       node.click()
     },
     styles: style,
+    position: 'right',
   },
   {
     selector: '[data-tour="step-8"]',
