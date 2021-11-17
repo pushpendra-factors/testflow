@@ -330,7 +330,6 @@ func CustomCors() gin.HandlerFunc {
 					"https://staging-app-old.factors.ai",
 					"https://flash-staging.factors.ai",
 					"https://sloth-staging.factors.ai",
-					"https://5bf6-34-82-27-133.ngrok.io",
 				}
 			} else {
 				corsConfig.AllowOrigins = []string{
