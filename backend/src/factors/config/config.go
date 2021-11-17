@@ -58,6 +58,8 @@ const TEST = "test"
 const STAGING = "staging"
 const PRODUCTION = "production"
 
+const MemSQLResourcePoolOLAP = "pool_olap"
+
 // Warning: Any changes to the cookie name has to be
 // in sync with other services which uses the cookie.
 const FactorsSessionCookieName = "factors-sid"
@@ -688,14 +690,9 @@ func setMemSQLResourcePoolQueryCallback(db *gorm.DB) {
 	}
 }
 
-func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx) {
+func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx, pool string) {
 	logCtx := log.WithField("memsql_user", configuration.MemSQLInfo.User)
 	if configuration.PrimaryDatastore != DatastoreTypeMemSQL {
-		return
-	}
-
-	pool := configuration.MemSQLInfo.ResourcePool
-	if pool == "" {
 		return
 	}
 
