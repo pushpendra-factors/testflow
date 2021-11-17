@@ -692,6 +692,12 @@ func setMemSQLResourcePoolQueryCallback(db *gorm.DB) {
 
 func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx, pool string) {
 	logCtx := log.WithField("memsql_user", configuration.MemSQLInfo.User)
+
+	// Use olap_pool only for production environment.
+	if !IsProduction() {
+		return
+	}
+
 	if configuration.PrimaryDatastore != DatastoreTypeMemSQL {
 		return
 	}
