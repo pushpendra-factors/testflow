@@ -79,6 +79,8 @@ func main() {
 	segmentExcludedCustomerUserIDByProject := flag.String("segment_excluded_customer_user_ids", "",
 		"Map of project_id and customer_user_id to exclude identification on segment.")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
+	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
+
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -127,7 +129,8 @@ func main() {
 		PrimaryDatastore: *primaryDatastore,
 		SegmentExcludedCustomerIDByProject: C.ParseProjectIDToStringMapFromConfig(
 			*segmentExcludedCustomerUserIDByProject, "SegmentExcludedCustomerIDByProject"),
-		DisableRedisWrites: disableRedisWrites,
+		DisableRedisWrites:                          disableRedisWrites,
+		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
 	}
 	C.InitConf(config)
 

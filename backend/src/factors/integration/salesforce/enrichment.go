@@ -1368,9 +1368,10 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	logCtx.WithField("document", document).WithField("trackPayload", trackPayload).Info("CreateTouchPointEvent: creating salesforce document")
 	var trackResponse *SDK.TrackResponse
 	var err error
+	eventProperties := make(U.PropertiesMap, 0)
 	payload := &SDK.TrackPayload{
 		ProjectId:       project.ID,
-		EventProperties: trackPayload.EventProperties,
+		EventProperties: eventProperties,
 		UserId:          trackPayload.UserId,
 		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
 	}
@@ -1390,6 +1391,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		}
 	}
 	payload.Timestamp = timestamp
+	payload.EventProperties[U.EP_TIMESTAMP] = timestamp
 
 	// Mapping touch point properties:
 	for key, value := range rule.PropertiesMap {

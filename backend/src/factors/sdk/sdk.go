@@ -885,7 +885,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 		logCtx.WithError(err).Error("Failed to get and add identified user properties on identify.")
 	}
 
-	allowSupportForUserPropertiesInIdentityCall := C.AllowSupportForUserPropertiesInIdentityCall(projectId)
+	allowSupportForUserPropertiesInIdentityCall := C.AllowSupportForUserPropertiesInIdentifyCall(projectId)
 
 	if allowSupportForUserPropertiesInIdentityCall {
 		incomingProperties, err := U.ConvertPostgresJSONBToMap(request.UserProperties)

@@ -60,6 +60,7 @@ func main() {
 		false, "Enables SDK and Integration request queue duplication.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
+	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -107,6 +108,7 @@ func main() {
 		DuplicateQueueRedisPort:                        *duplicateQueueRedisPort,
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 		DisableRedisWrites:                             disableRedisWrites,
+		AllowSupportForUserPropertiesInIdentifyCall:    *allowSupportForUserPropertiesInIdentifyCall,
 	}
 	C.InitConf(config)
 

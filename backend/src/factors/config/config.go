@@ -193,8 +193,8 @@ type Configuration struct {
 	IsRunningForMemsql                          int
 	UseSourcePropertyOverwriteByProjectIDs      string
 	AllowedSalesforceGroupsByProjectIDs         string
-	AllowSupportForUserPropertiesInIdentityCall string
 	DevBox                                      bool
+	AllowSupportForUserPropertiesInIdentifyCall string
 }
 
 type Services struct {
@@ -1279,17 +1279,17 @@ func UseSourcePropertyOverwriteByProjectIDs(projectID uint64) bool {
 
 // AllowSupportForUserPropertiesInIdentityCall id used to check if support for user properties
 // is allowed for a given (or list of) project
-func AllowSupportForUserPropertiesInIdentityCall(projectID uint64) bool {
-	if configuration.AllowSupportForUserPropertiesInIdentityCall == "" {
+func AllowSupportForUserPropertiesInIdentifyCall(projectID uint64) bool {
+	if configuration.AllowSupportForUserPropertiesInIdentifyCall == "" {
 		return false
 	}
 
-	if configuration.AllowSupportForUserPropertiesInIdentityCall == "*" {
+	if configuration.AllowSupportForUserPropertiesInIdentifyCall == "*" {
 		return true
 	}
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
-	projectIDs := strings.Split(configuration.AllowSupportForUserPropertiesInIdentityCall, ",")
+	projectIDs := strings.Split(configuration.AllowSupportForUserPropertiesInIdentifyCall, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true
