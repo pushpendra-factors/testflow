@@ -195,6 +195,7 @@ type Configuration struct {
 	IsRunningForMemsql                          int
 	UseSourcePropertyOverwriteByProjectIDs      string
 	AllowedSalesforceGroupsByProjectIDs         string
+	DevBox                                      bool
 	AllowSupportForUserPropertiesInIdentifyCall string
 }
 
@@ -1890,4 +1891,8 @@ func UseEventsFilterPropertiesOptimisedLogic(queryFromTimestamp int64) bool {
 
 func UseUsersFilterPropertiesOptimisedLogic() bool {
 	return configuration.EnableFilterOptimisation
+}
+
+func IsDevBox() bool {
+	return configuration.DevBox
 }
