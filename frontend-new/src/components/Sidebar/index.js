@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar, Popover, Button, Modal, Col, notification, Tooltip, Tag
+  Layout, Row, Avatar, Popover, Button, Modal, Col, notification, Tooltip, Tag, Badge
 } from 'antd';
 import { NavLink, useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
@@ -9,9 +9,10 @@ import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject } from 'Reducers/global';
 import { signout } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
-import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
+import { PlusOutlined, PoweroffOutlined, BankOutlined, SmileFilled } from '@ant-design/icons';
 import CreateNewProject from './CreateNewProject';
 import _ from 'lodash';
+import SetupAssist from '../../Views/Settings/SetupAssist';
 
 
 // const ColorCollection = ['#4C9FC8','#4CBCBD', '#86D3A3', '#F9C06E', '#E89E7B', '#9982B5'];
@@ -20,6 +21,7 @@ function Sidebar(props) {
   const { Sider } = Layout;
 
   const [visible, setVisible] = useState(false);
+  const [visibleAssist, setVisibleAssist] = useState(false);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
@@ -145,7 +147,18 @@ function Sidebar(props) {
                 <NavLink activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
-
+          </div>
+          <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
+            <Row justify="center" align="middle" className=" w-full py-2">
+              <Badge style={{background: '#bb4ebb', color:'white'}} count={'Setup Assist'} offset={[20, -10]}>
+              <SmileFilled 
+                  style={{color:'white', fontSize: '20px'}}
+                  onClick={()=> {
+                  setVisibleAssist(true);
+                  }} 
+                />
+              </Badge>
+            </Row>
           </div>
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
             <Row justify="center" align="middle" className=" w-full py-2">
@@ -171,6 +184,7 @@ function Sidebar(props) {
         {/* Modals triggered from sidebar */}
         <ModalLib visible={visible} handleCancel={handleCancel} />
         <UserSettings visible={ShowUserSettings} handleCancel={closeUserSettingsModal} />
+        <SetupAssist visible={visibleAssist} handleCancel={() => setVisibleAssist(false)} />
 
         <CreateNewProject
           visible={CreateNewProjectModal}
