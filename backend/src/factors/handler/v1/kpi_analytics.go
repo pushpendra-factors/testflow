@@ -198,6 +198,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 
 	data, statusCode, errorCode, errMsg, isErr := getResultFromCacheOrDashboard(c, reqID, projectID, request, dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, timezoneString, isDashboardQueryRequest, logCtx)
 	if statusCode != http.StatusProcessing {
+		log.Info("KPI_result_cache ", data)
 		return data, statusCode, errorCode, errMsg, isErr
 	}
 
@@ -214,6 +215,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		model.DeleteQueryCacheKey(projectID, &request)
 		logCtx.Error("Failed to process query from DB")
 		if statusCode == http.StatusPartialContent {
+			log.Info("KPI_result_partial ", queryResults)
 			return queryResults, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
 		}
 		return nil, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
@@ -225,6 +227,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		model.SetCacheResultByDashboardIdAndUnitId(queryResults, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, request.GetTimeZone())
 		return H.DashboardQueryResponsePayload{Result: queryResults, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
 	}
+	log.Info("KPI_result_success ", queryResults)
 	return gin.H{"result": queryResults}, http.StatusOK, "", "", false
 }
 
