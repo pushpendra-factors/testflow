@@ -64,10 +64,10 @@ spec:
           - $(QUEUE_REDIS_PORT)
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
-          - --email_sender
-          - $(EMAIL_SENDER)
           - --worker_concurrency
-          - "10"
+          - "20"
+          - --device_detector_path
+          - $(DEVICE_DETECTOR_DATA_PATH)
           - --sentry_dsn
           - $(SENTRY_DSN)
           - --redis_host_ps
@@ -78,6 +78,9 @@ spec:
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
+          - --allow_support_for_user_properties_in_identify_call
+          - "2"
+          - --cache_with_sorted_set
         envFrom:
         - configMapRef:
             name: config-appserver
@@ -90,13 +93,13 @@ spec:
         - configMapRef:
             name: config-persistent-redis
         - configMapRef:
+            name: config-queue-redis
+        - configMapRef:
             name: config-add-session-job
         - secretRef:
             name: secret-postgres
         - secretRef:
             name: secret-sentry
-        - configMapRef:
-            name: config-queue-redis
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine

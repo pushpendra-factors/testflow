@@ -42,7 +42,7 @@ spec:
           - --env
           - $(ENV)
           - --source
-          - "memsql"
+          - memsql
           - --db_host
           - $(DB_HOST)
           - --db_port
@@ -62,17 +62,17 @@ spec:
           - --memsql_name
           - $(MEMSQL_DB)
           - --memsql_user
-          - $(MEMSQL_USER)
+          - $(MEMSQL_OLTP_USER)
           - --memsql_pass
           - $(MEMSQL_PASSWORD)
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)
-          - --memsql_resource_pool
-          - $(MEMSQL_RPOOL_SOFT_CPU_50)
           - --project_ids
-          - "*"
+          - '*'
           - --include_tables
           - $(REVERSE_REPLICATOR_INCLUDED_TABLES)
+          - --exclude_tables
+          - property_details
           - --page_size
           - "10000"
           - --routines_heavy
@@ -80,6 +80,7 @@ spec:
           - --skip_dedupe_tables
           - adwords_documents,google_organic_documents
           - --disable_sync_column
+          - --is_reverse_replication
         envFrom:
         - configMapRef:
             name: config-env

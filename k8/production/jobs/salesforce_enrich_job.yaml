@@ -42,9 +42,9 @@ spec:
             - --redis_port
             - $(REDIS_PORT)
             - --redis_host_ps
-            - $(PERSISTENT_REDIS_HOST)
+            - $(REDIS_HOST_2)
             - --redis_port_ps
-            - $(PERSISTENT_REDIS_PORT)
+            - $(REDIS_PORT_2)
             - --salesforce_app_secret
             - $(SALESFORCE_APP_SECRET)
             - --salesforce_app_id
@@ -55,6 +55,27 @@ spec:
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
+            - --enable_property_type_from_db
+            - --property_details_cache_size
+            - "1000"
+            - --whitelisted_project_ids_property_type_check_from_db
+            - '*'
+            - --num_project_routines
+            - "50"
+            - --cache_with_sorted_set
+            - --blacklist_enrichment_by_project_id
+            - "613"
+            - --disabled_project_ids
+            - "613"
+            - --allowed_campaign_enrichment_by_project_id
+            - '*'
+            - --use_opportunity_association_by_project_id
+            - '*'
+            - --enrich_only
+            - --salesforce_groups_by_project_ids
+            - "566"
+            - --use_source_property_overwrite_by_project_id
+            - 566,2,616,645,483
             envFrom:
             - configMapRef:
                 name: config-env

@@ -3,12 +3,12 @@ kind: CronJob
 metadata:
   labels:
     nodePool: shared-persistent-pool
-  name: bigquery-upload-job
+  name: monitoring-job-memsql
 spec:
-  schedule: "30 03 * * *" # In UTC
-  concurrencyPolicy: Forbid
+  schedule: "*/5 * * * *" # every 15 minutes
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
+  startingDeadlineSeconds: 30
   jobTemplate:
     spec:
       template:
@@ -20,12 +20,18 @@ spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
-          - name: bigquery-upload-job
-            image: us.gcr.io/factors-production/bigquery-upload-job:v0.71_4a75f686
+          - name: monitoring-job-memsql
+            image: us.gcr.io/factors-production/monitoring:v0.15_eeb2024b
             imagePullPolicy: IfNotPresent
             args:
-            - --primary_datastore
-            - memsql
+            - --integration_queue_threshold
+            - "20000"
+            - --slow_queries_threshold
+            - "75"
+            - --delayed_task_threshold
+            - "2000"
+            - --env
+            - $(ENV)
             - --memsql_host
             - $(MEMSQL_HOST)
             - --memsql_port
@@ -33,48 +39,35 @@ spec:
             - --memsql_name
             - $(MEMSQL_DB)
             - --memsql_user
-            - $(MEMSQL_USER)
+            - $(MEMSQL_ADMIN_USER)
             - --memsql_pass
-            - $(MEMSQL_PASSWORD)
+            - $(MEMSQL_ADMIN_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
-            - --env
-            - $(ENV)
-            - --bucket_name
-            - $(ARCHIVE_BUCKET_NAME)
-            - --db_host
-            - $(DB_HOST)
-            - --db_port
-            - $(DB_PORT)
-            - --db_name
-            - $(POSTGRES_DB)
-            - --db_user
-            - $(POSTGRES_USER)
-            - --db_pass
-            - $(POSTGRES_PASSWORD)
-            - --sentry_dsn
-            - $(SENTRY_DSN)
+            - --queue_redis_host
+            - $(QUEUE_REDIS_HOST)
+            - --queue_redis_port
+            - $(QUEUE_REDIS_PORT)
+            - --dup_queue_redis_host
+            - $(DUP_QUEUE_REDIS_HOST)
+            - --dup_queue_redis_port
+            - $(DUP_QUEUE_REDIS_PORT)
             - --gcp_project_id
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
-            - --all
-            - $(UPLOAD_ALL)
+            - --sdk_queue_threshold
+            - "50000"
+            - --primary_datastore
+            - memsql
+            - --enable_sdk_and_integration_request_queue_duplication
             envFrom:
             - configMapRef:
                 name: config-env
             - configMapRef:
-                name: config-bucket
-            - configMapRef:
-                name: config-postgres
-            - configMapRef:
-                name: config-bigqueryuploadjob
-            - configMapRef:
                 name: config-memsql
+            - configMapRef:
+                name: config-queue-redis
             - secretRef:
                 name: secret-memsql
-            - secretRef:
-                name: secret-postgres
-            - secretRef:
-                name: secret-sentry
           restartPolicy: OnFailure

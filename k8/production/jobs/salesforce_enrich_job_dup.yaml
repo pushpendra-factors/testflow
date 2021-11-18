@@ -34,23 +34,19 @@ spec:
             - --memsql_name
             - $(MEMSQL_DB)
             - --memsql_user
-            - $(MEMSQL_USER)
+            - $(MEMSQL_OLTP_USER)
             - --memsql_pass
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
-            - --memsql_resource_pool
-            - $(MEMSQL_RPOOL_SOFT_CPU_50)
-            - --primary_datastore
-            - "memsql"
             - --redis_host
             - $(REDIS_HOST_2)
             - --redis_port
             - $(REDIS_PORT_2)
             - --redis_host_ps
-            - $(REDIS_HOST_2)
+            - $(PERSISTENT_REDIS_HOST)
             - --redis_port_ps
-            - $(REDIS_PORT_2)
+            - $(PERSISTENT_REDIS_PORT)
             - --salesforce_app_secret
             - $(SALESFORCE_APP_SECRET)
             - --salesforce_app_id
@@ -61,13 +57,32 @@ spec:
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
+            - --primary_datastore
+            - memsql
             - --enable_property_type_from_db
             - --property_details_cache_size
-            - "1000"
+            - "5000"
             - --whitelisted_project_ids_property_type_check_from_db
             - '*'
+            - --app_name
+            - salesforce-enrich-job-dup
+            - --blacklist_enrichment_by_project_id
+            - "613"
+            - --disabled_project_ids
+            - "613"
+            - --num_project_routines
+            - "50"
+            - --allowed_campaign_enrichment_by_project_id
+            - '*'
+            - --use_opportunity_association_by_project_id
+            - '*'
+            - --healthcheck_ping_id
+            - 5a5652a3-c661-4a6f-b456-f9f0423b1c55
             - --cache_with_sorted_set
-            - --sync_only
+            - --salesforce_groups_by_project_ids
+            - "566"
+            - --use_source_property_overwrite_by_project_id
+            - 566,2,616,645,483
             envFrom:
             - configMapRef:
                 name: config-env

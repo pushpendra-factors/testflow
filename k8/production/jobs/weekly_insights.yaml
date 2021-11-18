@@ -3,10 +3,9 @@ kind: CronJob
 metadata:
   labels:
     nodePool: shared-persistent-pool
-  name: rollup-sortedset-cache-job
+  name: weekly-insights-job
 spec:
-  schedule: "0 */1 * * *" #On Trigger
-  concurrencyPolicy: Forbid
+  schedule: "1 2 3 4 5" # In UTC
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
   jobTemplate:
@@ -20,12 +19,16 @@ spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: shared-persistent-pool
           containers:
-          - name: rollup-sortedset-cache-job
-            image: us.gcr.io/factors-production/rollup-sortedset-cache-job:v0.010-18d3217
+          - name: weekly-insights-job
+            image: us.gcr.io/factors-production/weekly-insights-job:1.0
             imagePullPolicy: IfNotPresent
             args:
             - --env
             - $(ENV)
+            - --bucket_name
+            - $(BUCKET_NAME)
+            - --local_disk_tmp_dir
+            - /tmp
             - --db_host
             - $(DB_HOST)
             - --db_port
@@ -34,21 +37,19 @@ spec:
             - $(POSTGRES_DB)
             - --db_user
             - $(POSTGRES_USER)
-            - --redis_host_ps
-            - $(PERSISTENT_REDIS_HOST)
-            - --redis_port_ps
-            - $(PERSISTENT_REDIS_PORT)
             - --db_pass
             - $(POSTGRES_PASSWORD)
-            - --sentry_dsn
-            - $(SENTRY_DSN)
-            - --gcp_project_id
-            - $(GCP_PROJECT_ID)
-            - --gcp_project_location
-            - $(GCP_PROJECT_LOCATION)
+            - --project_ids
+            - 628,594,559,616,399,645,641,483,640,684,695,699,2251799815000001
+            - --weekly_enabled
+            - --lookback
+            - "13"
+            - --k
+            - "100"
+            - --whitelisted_dashboard_ids
+            - '*'
             - --primary_datastore
             - memsql
-            - --enable_mql_redis_writes
             - --memsql_host
             - $(MEMSQL_HOST)
             - --memsql_port
@@ -61,23 +62,19 @@ spec:
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
+            - --skip_wpi
+            - --skip_wpi2
             envFrom:
             - configMapRef:
                 name: config-env
             - configMapRef:
+                name: config-bucket
+            - configMapRef:
                 name: config-postgres
-            - configMapRef:
-                name: config-redis
-            - configMapRef:
-                name: config-persistent-redis
             - configMapRef:
                 name: config-memsql
             - secretRef:
                 name: secret-memsql
             - secretRef:
                 name: secret-postgres
-            - secretRef:
-                name: secret-aws
-            - secretRef:
-                name: secret-sentry
           restartPolicy: OnFailure
