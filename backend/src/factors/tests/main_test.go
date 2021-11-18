@@ -82,7 +82,7 @@ func TestMain(m *testing.M) {
 		AllowedHubspotGroupsByProjectIDs:            "*",
 		UseSourcePropertyOverwriteByProjectIDs:      "*",
 		AllowedSalesforceGroupsByProjectIDs:         "*",
-		AllowSupportForUserPropertiesInIdentityCall: "*",
+		AllowSupportForUserPropertiesInIdentifyCall: "*",
 	}
 	C.InitConf(config)
 

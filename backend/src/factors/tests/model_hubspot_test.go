@@ -2754,7 +2754,7 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 			assert.Equal(t, "$none", rows[0][3])
 		} else {
 			assert.Equal(t, fmt.Sprintf("%d", contactTimestamp.Unix()), rows[i][2])
-			assert.Equal(t, fmt.Sprintf("%d", companyTimestamp.Unix()*1000), rows[i][3])
+			assert.Equal(t, fmt.Sprintf("%d", companyTimestamp.Unix()), rows[i][3])
 			companyTimestamp = companyTimestamp.AddDate(0, 0, 1)
 		}
 		contactTimestamp = contactTimestamp.AddDate(0, 0, 1)
