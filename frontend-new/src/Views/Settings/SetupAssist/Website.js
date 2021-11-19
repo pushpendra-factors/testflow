@@ -91,7 +91,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
             <Text type={'title'} level={5} extraClass={'m-0'}>With our Customer Data Platform or Data Warehouse</Text>
           </Col>
           <Col>
-            <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
+            <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
           </Col>
         </Row>
         <Row className={'mt-4'}>
@@ -111,7 +111,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
             <Text type={'title'} level={5} extraClass={'m-0'}>Connect with your website data</Text>
           </Col>
           <Col>
-            <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
+            <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
           </Col>
         </Row>
         <JavascriptSDK />
