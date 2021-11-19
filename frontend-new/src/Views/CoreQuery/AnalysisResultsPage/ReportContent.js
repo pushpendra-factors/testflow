@@ -21,6 +21,7 @@ import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_LINECHART,
+  CHART_TYPE_TABLE,
 } from '../../../utils/constants';
 import { Spin } from 'antd';
 import FunnelsResultPage from '../FunnelsResultPage';
@@ -76,20 +77,28 @@ function ReportContent({
 
   const chartType = useMemo(() => {
     let key;
-    if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_KPI) {
+    if (queryType === QUERY_TYPE_FUNNEL) {
       key = breakdown.length ? 'breakdown' : 'no_breakdown';
-      return chartTypes[queryType][key] === 'table'
+      return chartTypes[queryType][key] === CHART_TYPE_TABLE
         ? CHART_TYPE_BARCHART
+        : chartTypes[queryType][key];
+    }
+    if (queryType === QUERY_TYPE_KPI) {
+      key = breakdown.length ? 'breakdown' : 'no_breakdown';
+      return chartTypes[queryType][key] === CHART_TYPE_TABLE
+        ? breakdown.length
+          ? CHART_TYPE_BARCHART
+          : CHART_TYPE_SPARKLINES
         : chartTypes[queryType][key];
     }
     if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_PROFILE) {
       key = breakdown.length ? 'breakdown' : 'no_breakdown';
       if (breakdown.length >= 1) {
-        return chartTypes[queryType][key] === 'table'
+        return chartTypes[queryType][key] === CHART_TYPE_TABLE
           ? CHART_TYPE_BARCHART
           : chartTypes[queryType][key];
       }
-      return chartTypes[queryType][key] === 'table'
+      return chartTypes[queryType][key] === CHART_TYPE_TABLE
         ? CHART_TYPE_SPARKLINES
         : chartTypes[queryType][key];
     }
@@ -97,11 +106,11 @@ function ReportContent({
     if (queryType === QUERY_TYPE_CAMPAIGN) {
       key = campaignState.group_by.length ? 'breakdown' : 'no_breakdown';
       if (campaignState.group_by.length >= 1) {
-        return chartTypes[queryType][key] === 'table'
+        return chartTypes[queryType][key] === CHART_TYPE_TABLE
           ? CHART_TYPE_BARCHART
           : chartTypes[queryType][key];
       }
-      return chartTypes[queryType][key] === 'table'
+      return chartTypes[queryType][key] === CHART_TYPE_TABLE
         ? CHART_TYPE_SPARKLINES
         : chartTypes[queryType][key];
     }
@@ -111,7 +120,7 @@ function ReportContent({
         attributionsState.models.length === 1
           ? 'single_touch_point'
           : 'dual_touch_point';
-      return chartTypes[queryType][key] === 'table'
+      return chartTypes[queryType][key] === CHART_TYPE_TABLE
         ? CHART_TYPE_BARCHART
         : chartTypes[queryType][key];
     }
@@ -379,7 +388,7 @@ function ReportContent({
       );
     }
 
-    if (queryType === QUERY_TYPE_KPI) { 
+    if (queryType === QUERY_TYPE_KPI) {
       content = (
         <KPIAnalysis
           resultState={resultState}

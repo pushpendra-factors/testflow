@@ -22,6 +22,7 @@ import {
   QUERY_TYPE_WEB,
   ATTRIBUTION_METRICS,
   QUERY_TYPE_PROFILE,
+  QUERY_TYPE_KPI,
 } from '../../utils/constants';
 import { DashboardContext } from '../../contexts/DashboardContext';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -90,6 +91,8 @@ function WidgetCard({
           } else {
             queryType = QUERY_TYPE_EVENT;
           }
+        } else if (unit.query.query.cl === QUERY_TYPE_KPI) {
+          queryType = QUERY_TYPE_KPI;
         } else if (
           unit.query.query.cl &&
           unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
@@ -151,6 +154,14 @@ function WidgetCard({
             setResultState({
               ...initialState,
               data: res.data.result,
+            });
+          } else if (
+            queryType === QUERY_TYPE_KPI &&
+            !hasComponentUnmounted.current
+          ) {
+            setResultState({
+              ...initialState,
+              data: res.data.result || res.data,
             });
           } else {
             if (!hasComponentUnmounted.current) {
@@ -391,17 +402,6 @@ function WidgetCard({
                       />
                     </Text>
                   </div>
-                  {/* <div className="description">
-                  <Text
-                    ellipsis
-                    type={"paragraph"}
-                    mini
-                    color={"grey"}
-                    extraClass={"m-0"}
-                  >
-                    {unit.description}
-                  </Text>
-                </div> */}
                 </div>
               </Tooltip>
               <div className='flex items-center'>

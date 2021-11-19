@@ -167,9 +167,14 @@ function SaveQuery({
       } else if (queryType === QUERY_TYPE_KPI) {
         query = {
           ...requestQuery,
-          fr: startOfWeek,
-          to: todayNow,
-          gbt: q.gbt ? 'date' : '',
+          qG: requestQuery.qG.map((q) => {
+            return {
+              ...q,
+              fr: startOfWeek,
+              to: todayNow,
+              gbt: q.gbt ? 'date' : '',
+            };
+          }),
         };
       } else if (queryType === QUERY_TYPE_PROFILE) {
         query = {
