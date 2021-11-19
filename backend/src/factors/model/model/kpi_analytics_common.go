@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -523,11 +522,35 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		EngagementRate: []TransformQueryi{
 			{
-				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SCROLL_PERCENT, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "50"},
 				},
+			},
+			{
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
+			},
+		},
+		AvgPageLoadTime: []TransformQueryi{
+			{
+				Metrics: KpiToEventMetricRepr{Aggregation: "sum", Entity: EventEntity, Property: U.EP_PAGE_LOAD_TIME, GroupByType: U.PropertyTypeNumerical, Operator: "Division"},
+			},
+			{
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
+			},
+		},
+		AvgVerticalScrollPercent: {
+			{
+				Metrics: KpiToEventMetricRepr{Aggregation: "sum", Entity: EventEntity, Property: U.EP_PAGE_SCROLL_PERCENT, GroupByType: U.PropertyTypeNumerical, Operator: "Division"},
+			},
+			{
+				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
+			},
+		},
+		AvgTimeOnPage: {
+			{
+				Metrics: KpiToEventMetricRepr{Aggregation: "sum", Entity: EventEntity, Property: U.EP_PAGE_SPENT_TIME, GroupByType: U.PropertyTypeNumerical, Operator: "Division"},
 			},
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
@@ -550,22 +573,22 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
 		CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
 	},
-	HubspotCompaniesDisplayCategory: {
-		CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-		CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	},
+	// HubspotCompaniesDisplayCategory: {
+	// 	CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	// 	CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	// },
 	SalesforceUsersDisplayCategory: {
 		CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
 		CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
 	},
-	SalesforceAccountsDisplayCategory: {
-		CountOfLeadsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-		CountOfLeadsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	},
-	SalesforceOpportunitiesDisplayCategory: {
-		CountOfOpportunitiesCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-		CountOfOpportunitiesUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	},
+	// SalesforceAccountsDisplayCategory: {
+	// 	CountOfLeadsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	// 	CountOfLeadsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	// },
+	// SalesforceOpportunitiesDisplayCategory: {
+	// 	CountOfOpportunitiesCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	// 	CountOfOpportunitiesUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
+	// },
 }
 
 type TransformQueryi struct {
@@ -660,15 +683,8 @@ func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, confi
 }
 
 func GetTransformedHeadersForChannels(headers []string) []string {
-	currentHeaders := make([]string, 0)
-	for i, _ := range headers {
-		if headers[i] == "datetime" || strings.HasPrefix(headers[i], "campaign_") || strings.HasPrefix(headers[i], "ad_group_") ||
-			strings.HasPrefix(headers[i], "adgroup_") || strings.HasPrefix(headers[i], "ad_set_") || strings.HasPrefix(headers[i], "adset_") ||
-			strings.HasPrefix(headers[i], "campaign_group_") || strings.HasPrefix(headers[i], "creative_") || strings.HasPrefix(headers[i], "keyword_") {
-			currentHeaders = append(currentHeaders, headers[i])
-		} else {
-			currentHeaders = append(currentHeaders, AliasAggr)
-		}
-	}
+	currentHeaders := headers
+	size := len(currentHeaders)
+	currentHeaders[size-1] = AliasAggr
 	return currentHeaders
 }
