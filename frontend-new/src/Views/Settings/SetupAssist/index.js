@@ -15,15 +15,7 @@ const SetupAssist = (props) => {
 
     return (
         <>
-            <Modal title={null}
-            visible={props.visible}
-            footer={null}
-            centered={false}
-            mask={false}
-            closable={false}
-            className={'fa-modal--full-width'}
-            >
-                <div className={'fa-container'}>
+            <div className={'fa-container'}>
                 <Row gutter={[24, 24]} justify={'center'} className={'pt-12 pb-8 mt-0 '}>
                     <Col span={17}>
                     <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'}>Congratulations, Let's get started</Text>
@@ -36,15 +28,16 @@ const SetupAssist = (props) => {
                 <Row gutter={[24, 24]} justify={'center'}>
                     <Col span={5}>
                         <Timeline>
-                            <Timeline.Item><Text type={'title'} level={7} weight={'bold'} style={{paddingBottom:'20px'}} color ={current === 0 ? 'blue': 'grey'} onClick={() => setCurrent(0)}>Connect with your website data</Text></Timeline.Item>
-                            <Timeline.Item><Text type={'title'} level={7} weight={'bold'} style={{paddingBottom:'20px'}} color ={current === 1 ? 'blue': 'grey'} onClick={() => setCurrent(1)}>Connect with your Ad platforms</Text></Timeline.Item>
-                            <Timeline.Item><Text type={'title'} level={7} weight={'bold'} style={{paddingBottom:'20px'}} color ={current === 2 ? 'blue': 'grey'} onClick={() => setCurrent(2)}>Connect with your CRMS</Text></Timeline.Item>
-                            <Timeline.Item><Text type={'title'} level={7} weight={'bold'} style={{paddingBottom:'20px'}} color ={current === 3 ? 'blue': 'grey'} onClick={() => setCurrent(3)}>Other integrations</Text></Timeline.Item>
+                            <Timeline.Item color ={current === 0 ? 'blue': 'grey'}><Text type={'title'} level={7} weight={'bold'} style={{paddingBottom:'20px'}} color ={current === 0 ? 'blue': 'grey'} onClick={() => setCurrent(0)}>Connect with your website data</Text></Timeline.Item>
+                            <Timeline.Item color ={current === 1 ? 'blue': 'grey'}><Text type={'title'} level={7} weight={'bold'} style={{paddingBottom:'20px'}} color ={current === 1 ? 'blue': 'grey'} onClick={() => setCurrent(1)}>Connect with your Ad platforms</Text></Timeline.Item>
+                            <Timeline.Item color ={current === 2 ? 'blue': 'grey'}><Text type={'title'} level={7} weight={'bold'} style={{paddingBottom:'20px'}} color ={current === 2 ? 'blue': 'grey'} onClick={() => setCurrent(2)}>Connect with your CRMS</Text></Timeline.Item>
+                            <Timeline.Item color ={current === 3 ? 'blue': 'grey'}><Text type={'title'} level={7} weight={'bold'} style={{paddingBottom:'20px'}} color ={current === 3 ? 'blue': 'grey'} onClick={() => setCurrent(3)}>Other integrations</Text></Timeline.Item>
                         </Timeline>
                         <Row style={{width:'120vh'}}>
                             <Col span={5}>
-                                <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Setup a call with a rep</Text>
-                                <Text type={'title'} level={7} weight={'regular'} extraClass={'m-0'}>We are always happy to assist you</Text>
+                                <Text type={'title'} level={5} weight={'bold'} extraClass={'pb-2 m-0'}>Setup a call with a rep</Text>
+                                <Text type={'title'} level={7} weight={'regular'} extraClass={'pb-4 m-0'}>We are always happy to assist you</Text>
+                                <Button type={'primary'}>Setup Call</Button>
                             </Col>
                         </Row>
                     </Col>
@@ -52,8 +45,7 @@ const SetupAssist = (props) => {
                         {current === 0 ? <Website />: current === 1 ? <AdPlatforms />: current === 2 ? <CRMS /> : <OtherIntegrations />}
                     </Col>
                 </Row>
-                </div>
-            </Modal>
+            </div>
         </>
     )
 }

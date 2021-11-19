@@ -3,6 +3,7 @@ import { Layout, Spin } from "antd";
 import Sidebar from "../../components/Sidebar"; 
 import ProjectSettings from "../Settings/ProjectSettings";
 import componentsLib from "../../Views/componentsLib";
+import SetupAssist from "../Settings/SetupAssist";
 import { connect, useSelector, useDispatch } from "react-redux";
 import { bindActionCreators } from "redux";
 import {
@@ -116,6 +117,7 @@ function AppLayout({ fetchProjects,
                     component={CoreQuery}
                   />
                   <Route path="/explain" name="Factors" component={Factors} />
+                  <Route path="/project-setup" component={SetupAssist} />
                 </Switch>
               </Suspense>
             </Content>
