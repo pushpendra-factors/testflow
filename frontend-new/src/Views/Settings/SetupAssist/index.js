@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import {
     Row, Col, Modal, Button, Timeline
 } from 'antd';
+import { QrcodeOutlined } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
+import Website from './Website';
 
 const SetupAssist = (props) => {
     const [current, setCurrent] = useState(0);
@@ -19,19 +21,13 @@ const SetupAssist = (props) => {
             className={'fa-modal--full-width'}
             >
                 <div className={'fa-container'}>
-                    <Row justify={'space-between'} className={'py-4 m-0 '}>
-                    <Col>
-                    </Col>
-                    <Col>
-                        <Button size={'large'} type="text" onClick={() => props.handleCancel()}><SVG name="times"></SVG></Button>
-                    </Col>
-                    </Row>
-                </div>
-                <div className={'fa-container'}>
-                <Row gutter={[24, 24]} justify={'center'} className={'pt-4 pb-2 m-0 '}>
-                    <Col span={20}>
+                <Row gutter={[24, 24]} justify={'center'} className={'pt-12 pb-8 mt-0 '}>
+                    <Col span={17}>
                     <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'}>Congratulations, Let's get started</Text>
                     <Text type={'title'} level={6} weight={'regular'} extraClass={'m-0'} color={'grey'}>The first step to get up and running with Factors is to get data into your project:</Text>
+                    </Col>
+                    <Col>
+                        <Button type="default" size={'large'} style={{borderColor:'#1E89FF', color:'#1E89FF', background:'#fff'}} onClick={() => props.handleCancel()}><QrcodeOutlined style={{color:'#1E89FF'}} />Go to Dashboards</Button>
                     </Col>
                 </Row>
                 <Row gutter={[24, 24]} justify={'center'}>
@@ -44,7 +40,7 @@ const SetupAssist = (props) => {
                         </Timeline>
                     </Col>
                     <Col span={15}>
-
+                        <Website />
                     </Col>
                 </Row>
                 </div>
