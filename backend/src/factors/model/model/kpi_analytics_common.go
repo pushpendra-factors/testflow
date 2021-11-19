@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -656,4 +657,18 @@ func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, confi
 		}
 	}
 	return true
+}
+
+func GetTransformedHeadersForChannels(headers []string) []string {
+	currentHeaders := make([]string, 0)
+	for i, _ := range headers {
+		if headers[i] == "datetime" || strings.HasPrefix(headers[i], "campaign_") || strings.HasPrefix(headers[i], "ad_group_") ||
+			strings.HasPrefix(headers[i], "adgroup_") || strings.HasPrefix(headers[i], "ad_set_") || strings.HasPrefix(headers[i], "adset_") ||
+			strings.HasPrefix(headers[i], "campaign_group_") || strings.HasPrefix(headers[i], "creative_") || strings.HasPrefix(headers[i], "keyword_") {
+			currentHeaders = append(currentHeaders, headers[i])
+		} else {
+			currentHeaders = append(currentHeaders, AliasAggr)
+		}
+	}
+	return currentHeaders
 }

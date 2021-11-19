@@ -31,7 +31,7 @@ func (store *MemSQL) ExecuteKPIQueryForChannels(projectID uint64, reqID string, 
 		return queryResults, http.StatusBadRequest
 	}
 	resultHolder, statusCode := store.ExecuteChannelQueryV1(projectID, &channelsV1Query, reqID)
-	queryResult.Headers = resultHolder.Headers
+	queryResult.Headers = model.GetTransformedHeadersForChannels(resultHolder.Headers)
 	queryResult.Rows = resultHolder.Rows
 	queryResults = append(queryResults, queryResult)
 	return queryResults, statusCode
