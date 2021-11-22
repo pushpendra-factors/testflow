@@ -136,11 +136,10 @@ func bufApp(buf *[]byte, s string, w int, c byte) {
 
 		// Otherwise use either the stack buffer, if it is large enough, or
 		// allocate a new buffer on the heap, and copy all previous characters.
-		length := len(s)
-		if length > cap(b) {
-			*buf = make([]byte, length)
+		if l := len(s); l > cap(b) {
+			*buf = make([]byte, len(s))
 		} else {
-			*buf = (*buf)[:length]
+			*buf = (*buf)[:l]
 		}
 		b = *buf
 

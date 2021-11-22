@@ -22,7 +22,6 @@ const (
 	// TestMode indicates gin mode is test.
 	TestMode = "test"
 )
-
 const (
 	debugCode = iota
 	releaseCode
@@ -51,21 +50,19 @@ func init() {
 
 // SetMode sets gin mode according to input string.
 func SetMode(value string) {
-	if value == "" {
-		value = DebugMode
-	}
-
 	switch value {
-	case DebugMode:
+	case DebugMode, "":
 		ginMode = debugCode
 	case ReleaseMode:
 		ginMode = releaseCode
 	case TestMode:
 		ginMode = testCode
 	default:
-		panic("gin mode unknown: " + value + " (available mode: debug release test)")
+		panic("gin mode unknown: " + value)
 	}
-
+	if value == "" {
+		value = DebugMode
+	}
 	modeName = value
 }
 
