@@ -451,7 +451,7 @@ export const getKPIQuery = (
   query.qG = getKPIqueryGroup(queries, eventGrpBy, period);
 
   const GlobalGrpBy = [...groupBy.global];
-  query.gGBy = getGroupByWithPropertiesKPI(GlobalGrpBy);
+  query.gGBy = getGroupByWithPropertiesKPI(GlobalGrpBy,null,queries[0]?.category); 
 
   query.gFil = getEventsWithPropertiesKPI(
     queryOptions?.globalFilters,

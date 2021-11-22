@@ -451,7 +451,7 @@ function QueryBlock({
               {selectEvents()}
             </Tooltip>
           </div>
-              {event?.pageViewVal && selectPageUrls()}
+              {(event?.pageViewVal || event?.group == 'page_views') && selectPageUrls()}
           {additionalActions()}
         </div>
       </div>

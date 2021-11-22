@@ -328,10 +328,6 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
         name: 'Columns',
       },
       {
-        key: CHART_TYPE_HORIZONTAL_BAR_CHART,
-        name: 'Bars',
-      },
-      {
         key: CHART_TYPE_LINECHART,
         name: 'Line Chart',
       },
@@ -342,6 +338,10 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
       {
         key: CHART_TYPE_STACKED_BAR,
         name: 'Stacked Column',
+      },
+      {
+        key: CHART_TYPE_HORIZONTAL_BAR_CHART,
+        name: 'Bars',
       },
     ];
   }

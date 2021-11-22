@@ -501,11 +501,23 @@ function GlobalFilterBlock({
   const setValuesByProps = (props) => {   
     
     if(props){
-      let filterData = {
-        "category": selectedMainCategory?.category,
-        "object_type": selectedMainCategory?.group,
-        "property_name": props[1],
-        "entity": props[3]
+      let filterData = {};
+      
+   if(selectedMainCategory?.category == "channels"){ 
+        filterData = {
+          "category": selectedMainCategory?.category,
+          "object_type": props[3],
+          "property_name": props[1],
+          "display_category": selectedMainCategory?.group,
+          "entity":"event"
+      } 
+   } else {
+    filterData = {
+          "category": selectedMainCategory?.category,
+          "object_type": selectedMainCategory?.group,
+          "property_name": props[1],
+          "entity": props[3]
+    }
    }
      
      fetchKPIFilterValues(activeProject.id,filterData).then(res => { 
