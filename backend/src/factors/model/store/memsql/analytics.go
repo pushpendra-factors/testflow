@@ -192,6 +192,15 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 	return rStmnt, rParams, nil
 }
 
+// from = t1, to = t2
+// before = < t2
+// since = > t1
+// between = t1 to t2
+// notBetween = ~(t1 to t2)
+// inPrev == inLast = t1 to t2
+// notInPrev == notInLast = ~(t1 to t2)
+// inCurr = >t1
+// notinCurr = <t1
 func GetDateFilter(qP model.QueryProperty, propertyEntity string, property string) (string, []interface{}, error) {
 	var stmt string
 	var resultParams []interface{}
@@ -203,16 +212,16 @@ func GetDateFilter(qP model.QueryProperty, propertyEntity string, property strin
 	if qP.Operator == model.BeforeStr {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) < ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.To)
-	} else if qP.Operator == model.NotInLastStr {
+	} else if qP.Operator == model.NotInCurrent {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) < ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From)
-	} else if qP.Operator == model.SinceStr || qP.Operator == model.InLastStr {
+	} else if qP.Operator == model.SinceStr || qP.Operator == model.InCurrent {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) >= ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From)
-	} else if qP.Operator == model.EqualsOpStr || qP.Operator == model.BetweenStr { // equals - Backward Compatible of Between
+	} else if qP.Operator == model.EqualsOpStr || qP.Operator == model.BetweenStr || qP.Operator == model.InPrevious || qP.Operator == model.InLastStr { // equals - Backward Compatible of Between
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) BETWEEN ? AND ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From, dateTimeValue.To)
-	} else if qP.Operator == model.NotInBetweenStr {
+	} else if qP.Operator == model.NotInBetweenStr || qP.Operator == model.NotInPrevious || qP.Operator == model.NotInLastStr {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) NOT BETWEEN ? AND ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From, dateTimeValue.To)
 	}
