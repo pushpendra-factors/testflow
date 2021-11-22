@@ -9,7 +9,7 @@ import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject } from 'Reducers/global';
 import { signout } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
-import { PlusOutlined, PoweroffOutlined, BankOutlined, SmileFilled } from '@ant-design/icons';
+import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
 import CreateNewProject from './CreateNewProject';
 import _ from 'lodash';
 
@@ -147,7 +147,7 @@ function Sidebar(props) {
             </Row>
             <Row justify="center" align="middle" style={{marginTop:'500px'}} className=" w-full py-2">
               <Tooltip title="Setup Assist" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-                <NavLink activeClassName="active" to="/project-setup"><SmileFilled style={{color:'white'}} color="white"/></NavLink>
+                <NavLink activeClassName="active" to="/project-setup"><SVG name={'Emoji'} size={40} color="white"/></NavLink>
               </Tooltip>
             </Row>
           </div>

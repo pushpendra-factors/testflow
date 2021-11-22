@@ -83,12 +83,12 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
       <div className={'mb-10 pl-4'}>
         <Row gutter={[24, 24]} justify={'space-between'} className={'mt-0'}>
             <Col>
-                <Text type={'title'} level={5} extraClass={'pb-2 m-0'}>Connect with your website data</Text>
+                <Text type={'title'} level={5} weight={'bold'} extraClass={'pb-2 m-0'}>Connect with your website data</Text>
             </Col>
         </Row>
         <Row gutter={[24, 24]} justify={'space-between'} className={'pt-4 pb-2 mt-0 '}>
           <Col span={17}>
-            <Text type={'title'} level={5} extraClass={'m-0'}>With our Customer Data Platform or Data Warehouse</Text>
+            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>With our Customer Data Platform or Data Warehouse</Text>
           </Col>
           <Col>
             <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
@@ -108,7 +108,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
 
         <Row gutter={[24, 24]} justify={'space-between'} className={'pt-8 pb-2 mt-0 '}>
           <Col span={17}>
-            <Text type={'title'} level={5} extraClass={'m-0'}>Connect with your website data</Text>
+            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Connect with your website data</Text>
           </Col>
           <Col>
             <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>

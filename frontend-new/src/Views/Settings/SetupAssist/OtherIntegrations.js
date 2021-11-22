@@ -97,7 +97,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
       <div className={'mb-10 pl-4'}>
         <Row gutter={[24, 24]} justify={'space-between'} className={'pb-2 mt-0 '}>
           <Col span={17}>
-            <Text type={'title'} level={5} extraClass={'m-0'}>Other integrations</Text>
+            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Other integrations</Text>
           </Col>
           <Col>
             <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
