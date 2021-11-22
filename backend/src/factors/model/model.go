@@ -150,6 +150,7 @@ type Model interface {
 
 	// Profile
 	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID uint64) (model.ResultGroup, int)
+	ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)

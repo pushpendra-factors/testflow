@@ -91,10 +91,24 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
 		}
 	}
+
+	allowSupportForDateRangeInProfiles := C.AllowSupportForDateRangeInProfiles(projectID)
+
+	if allowSupportForDateRangeInProfiles && (profileQueryGroup.From == 0 || profileQueryGroup.To == 0) {
+		logCtx.WithError(err).Error("Query failed. Invalid date range provided.")
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid date range provided.", true
+	}
+
 	// copying global filters and groupby into sparate queries and datetime transformations
 	for index, _ := range profileQueryGroup.Queries {
 		profileQueryGroup.Queries[index].Filters = append(profileQueryGroup.Queries[index].Filters, profileQueryGroup.GlobalFilters...)
 		profileQueryGroup.Queries[index].GroupBys = append(profileQueryGroup.Queries[index].GroupBys, profileQueryGroup.GlobalGroupBys...)
+
+		// passing date range
+		if allowSupportForDateRangeInProfiles {
+			profileQueryGroup.Queries[index].From = profileQueryGroup.From
+			profileQueryGroup.Queries[index].To = profileQueryGroup.To
+		}
 
 		// setting up the timezone for individual queries from the global value
 		profileQueryGroup.Queries[index].SetTimeZone(timezoneString)

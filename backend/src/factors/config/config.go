@@ -197,6 +197,7 @@ type Configuration struct {
 	AllowedSalesforceGroupsByProjectIDs         string
 	DevBox                                      bool
 	AllowSupportForUserPropertiesInIdentifyCall string
+	AllowSupportForDateRangeInProfiles          string
 }
 
 type Services struct {
@@ -1293,6 +1294,28 @@ func AllowSupportForUserPropertiesInIdentifyCall(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.AllowSupportForUserPropertiesInIdentifyCall, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+// AllowSupportForDateRangeInProfiles is used to check if support for date range
+// is allowed for a given (or list of) project in Profiles module
+func AllowSupportForDateRangeInProfiles(projectID uint64) bool {
+	if configuration.AllowSupportForDateRangeInProfiles == "" {
+		return false
+	}
+
+	if configuration.AllowSupportForDateRangeInProfiles == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowSupportForDateRangeInProfiles, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true

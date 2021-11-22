@@ -83,6 +83,7 @@ func TestMain(m *testing.M) {
 		UseSourcePropertyOverwriteByProjectIDs:      "*",
 		AllowedSalesforceGroupsByProjectIDs:         "*",
 		AllowSupportForUserPropertiesInIdentifyCall: "*",
+		AllowSupportForDateRangeInProfiles:          "*",
 	}
 	C.InitConf(config)
 

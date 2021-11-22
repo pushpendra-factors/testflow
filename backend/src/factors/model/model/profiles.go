@@ -20,6 +20,8 @@ type ProfileQuery struct {
 	Type     string                 `json:"ty"` // all_users, hubspot_events, etc
 	Filters  []QueryProperty        `json:"pr"`
 	GroupBys []QueryGroupByProperty `json:"group_bys"`
+	From     int64                  `json:"from"`
+	To       int64                  `json:"to"`
 	Timezone string                 `json:"tz"`
 }
 
