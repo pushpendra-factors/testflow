@@ -250,7 +250,7 @@ const GlobalFilterSelect = ({
 
     const setDeltaGran = (val) => {
         const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
-        parsedValues['gran'] = val[0];
+        parsedValues['gran'] = val;
         setValuesState(JSON.stringify(parsedValues));
         setGrnSelectOpen(false);
         setDeltaFilt();

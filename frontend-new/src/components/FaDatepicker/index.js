@@ -104,6 +104,21 @@ const FaDatepicker = ({
     }
   };
 
+  const ifOnlyCustomPicker = () => {
+    if (
+      customPicker &&
+      !presetRange &&
+      !weekPicker &&
+      !monthPicker &&
+      !quarterPicker &&
+      !yearPicker &&
+      !nowPicker
+    ) {
+      return true;
+    }
+    return false;
+  };
+
   const onCustomChange = (startDate, dateString) => {
     const startDt = MomentTz(startDate[0]).startOf('day');
     let endDt = MomentTz(startDate[1]);
@@ -336,23 +351,22 @@ const FaDatepicker = ({
     }
   };
 
-  return (
-    <div className={`fa-custom-datepicker`}>
-      {
-        <>
-          <Dropdown
-            overlayClassName={'fa-custom-datepicker--dropdown'}
-            overlay={menu}
-            placement={placement}
-            trigger={!showDatePicker ? ['click'] : []}
-          >
-            <Button className={className} size={buttonSize ? buttonSize : null}>
-              <SVG name={'calendar'} size={16} extraClass={'mr-1'} />
-              {!showDatePicker && range ? displayRange(range) : null}
-              {!showDatePicker && !range ? `Choose Date` : null}
-              {showDatePicker && (
-                <>
-                  {datePickerType == 'custom' ? (
+  const renderCustomPicker = () => {
+    return (
+      <>
+        <div className={`fa-custom-datepicker`}>
+          {
+            <>
+              <Button
+                className={className}
+                size={buttonSize ? buttonSize : null}
+                onClick={() => setShowDatePicker(true)}
+              >
+                <SVG name={'calendar'} size={16} extraClass={'mr-1'} />
+                {!showDatePicker && range ? displayRange(range) : null}
+                {!showDatePicker && !range ? `Choose Date` : null}
+                {showDatePicker && (
+                  <>
                     <RangePicker
                       format={'MMM DD YYYY'}
                       disabledDate={(d) => !d || d.isAfter(MomentTz())}
@@ -364,42 +378,97 @@ const FaDatepicker = ({
                       autoFocus={true}
                       allowClear={true}
                       open={true}
-                      onOpenChange={()=>{
+                      onOpenChange={() => {
                         setShowDatePicker(false);
                       }}
                       onChange={onCustomChange}
                     />
-                  ) : (
-                    <DatePicker
-                      picker={datePickerType}
-                      disabledDate={(d) => !d || d.isAfter(MomentTz())}
-                      dropdownClassName={'fa-custom-datepicker--datepicker'}
-                      autoFocus={true}
-                      open={true}
-                      onOpenChange={()=>{
-                        setShowDatePicker(false);
-                      }}
-                      size={'small'}
-                      suffixIcon={null}
-                      showToday={false}
-                      bordered={false}
-                      allowClear={true}
-                      onChange={onChange}
-                    />
-                  )}
-                </>
-              )}
-              {showDatePicker && (
-                <span onClick={() => setShowDatePicker(false)}>
-                  <SVG name={'Times'} size={16} extraClass={'mr-1'} />
-                </span>
-              )}
-            </Button>
-          </Dropdown>
-        </>
-      }
-    </div>
-  );
+                  </>
+                )}
+                {showDatePicker && (
+                  <span onClick={() => setShowDatePicker(false)}>
+                    <SVG name={'Times'} size={16} extraClass={'mr-1'} />
+                  </span>
+                )}
+              </Button>
+            </>
+          }
+        </div>
+      </>
+    );
+  };
+
+  const renderFaDatePicker = () => {
+    return (
+      <div className={`fa-custom-datepicker`}>
+        {
+          <>
+            <Dropdown
+              overlayClassName={'fa-custom-datepicker--dropdown'}
+              overlay={menu}
+              placement={placement}
+              trigger={!showDatePicker ? ['click'] : []}
+            >
+              <Button
+                className={className}
+                size={buttonSize ? buttonSize : null}
+              >
+                <SVG name={'calendar'} size={16} extraClass={'mr-1'} />
+                {!showDatePicker && range ? displayRange(range) : null}
+                {!showDatePicker && !range ? `Choose Date` : null}
+                {showDatePicker && (
+                  <>
+                    {datePickerType == 'custom' ? (
+                      <RangePicker
+                        format={'MMM DD YYYY'}
+                        disabledDate={(d) => !d || d.isAfter(MomentTz())}
+                        dropdownClassName={'fa-custom-datepicker--datepicker'}
+                        size={'small'}
+                        suffixIcon={null}
+                        showToday={false}
+                        bordered={false}
+                        autoFocus={true}
+                        allowClear={true}
+                        open={true}
+                        onOpenChange={() => {
+                          setShowDatePicker(false);
+                        }}
+                        onChange={onCustomChange}
+                      />
+                    ) : (
+                      <DatePicker
+                        picker={datePickerType}
+                        disabledDate={(d) => !d || d.isAfter(MomentTz())}
+                        dropdownClassName={'fa-custom-datepicker--datepicker'}
+                        autoFocus={true}
+                        open={true}
+                        onOpenChange={() => {
+                          setShowDatePicker(false);
+                        }}
+                        size={'small'}
+                        suffixIcon={null}
+                        showToday={false}
+                        bordered={false}
+                        allowClear={true}
+                        onChange={onChange}
+                      />
+                    )}
+                  </>
+                )}
+                {showDatePicker && (
+                  <span onClick={() => setShowDatePicker(false)}>
+                    <SVG name={'Times'} size={16} extraClass={'mr-1'} />
+                  </span>
+                )}
+              </Button>
+            </Dropdown>
+          </>
+        }
+      </div>
+    );
+  };
+
+  return ifOnlyCustomPicker() ? renderCustomPicker() : renderFaDatePicker();
 };
 
 export default FaDatepicker;

@@ -567,7 +567,7 @@ export default function CampFilterBlock({
           filter && blockType === 'event' 
           && <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>{index >=1 ? 'and' : 'where'}</Text>
       }
-      <div className={`relative flex flex-grow ${filter ? 'ml-2': ''}`}>  
+      <div className={`relative flex flex-grow`}>  
         {filter
           ? renderFilterContent()
           : filterSelComp()

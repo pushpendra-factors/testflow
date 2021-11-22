@@ -556,7 +556,7 @@ export default function GlobalFilterBlock({
       {  
           <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>{index >=1 ? '...and' : 'Filter By'}</Text>
       }
-      <div className={`relative flex flex-grow ${filter ? 'ml-2': ''}`}>  
+      <div className={`relative flex flex-grow`}>  
         {filter
           ? renderFilterContent()
           : filterSelComp()
