@@ -145,7 +145,7 @@ function Sidebar(props) {
                 <NavLink activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
-            <Row justify="center" align="middle" style={{marginTop:'300px'}} className=" w-full py-2">
+            <Row justify="center" align="middle" style={{marginTop:'500px'}} className=" w-full py-2">
               <Tooltip title="Setup Assist" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
                 <NavLink activeClassName="active" to="/project-setup"><SmileFilled style={{color:'white'}} color="white"/></NavLink>
               </Tooltip>
