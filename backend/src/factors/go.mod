@@ -12,7 +12,7 @@ require (
 	github.com/RichardKnop/redsync v1.2.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/apache/beam v2.21.0+incompatible
-	github.com/aws/aws-sdk-go v1.23.20
+	github.com/aws/aws-sdk-go v1.34.28
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/certifi/gocertifi v0.0.0-20200211180108-c7c1fbc02894 // indirect
@@ -82,11 +82,10 @@ require (
 	github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2 // indirect
 	github.com/ttacon/libphonenumber v1.1.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
-	github.com/xdg/stringprep v1.0.1-0.20180714160509-73f8eece6fdc // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.etcd.io/etcd v3.3.10+incompatible
-	go.mongodb.org/mongo-driver v1.3.0
+	go.mongodb.org/mongo-driver v1.5.1
 	go.opencensus.io v0.22.4
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
