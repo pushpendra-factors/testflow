@@ -128,13 +128,13 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 		"SELECT %s FROM users %s WHERE users.project_id = ? %s", selectStmnt, filterJoinStmnt, filterStmnt)
 	params = append(params, groupBySelectParams...)
 	params = append(params, projectID)
+	params = append(params, filterParams...)
 	if allowSupportForDateRangeInProfiles {
 		stepSqlStmnt = fmt.Sprintf("%s AND join_timestamp>=? AND join_timestamp<=?", stepSqlStmnt)
 		params = append(params, query.From)
 		params = append(params, query.To)
 	}
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY all_users LIMIT 10000", stepSqlStmnt, groupByStmnt)
-	params = append(params, filterParams...)
 
 	finalSQLStmnt := ""
 	if isGroupByTypeWithBuckets(query.GroupBys) {
