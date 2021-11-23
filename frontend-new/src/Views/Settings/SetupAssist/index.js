@@ -42,7 +42,7 @@ const SetupAssist = () => {
                                 <Text type={'title'} level={4} weight={'bold'} extraClass={'pb-4 m-0'}>Setup a call with a rep</Text>
                                 <Text type={'title'} level={6} extraClass={'pb-6 m-0'}>We are always happy to assist you</Text>
                                 <Button type={'primary'}>Setup Call</Button>
-                                <img src='../../assets/images/character-1.png' style={{width: '100%',maxWidth: '80px',marginLeft:'100px'}}/>
+                                <img src='../../assets/images/character-1.png' style={{width: '100%',maxWidth: '80px',marginLeft:'110px', marginTop:'-20px'}}/>
                             </Col>
                         </Row>
                     </Col>
