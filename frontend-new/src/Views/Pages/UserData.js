@@ -6,24 +6,19 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 import { userdata } from '../../reducers/agentActions';
-import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 
 function UserData(props) {
   const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
-
   const history = useHistory();
-  const routeChange = (url) => {
-    history.push(url);
-  };
 
-  const CheckLogin = () => {
+  const UserDataFn = () => {
     setDataLoading(true);
     form.validateFields().then((value) => {
       setDataLoading(true);
       setTimeout(() => {
-        props.login(value.form_username, value.form_password)
+        props.userdata(value.form_phone, value.form_website,form_estimateusers,form_teamsize)
           .then(() => {
             setDataLoading(false);
             history.push('/');
@@ -52,8 +47,8 @@ function UserData(props) {
                     <div className={'flex flex-col justify-center items-center login-container'}>
                         <Row>
                             <Col span={24} >
-                                <div className={'flex justify-center items-center mb-2'} >
-                                    <SVG name={'Brand'} size={90} color="white"/>
+                                <div className={'flex justify-center items-center'} >
+                                    <SVG name={'BrandFull'} width={250} height={90} color="white"/>
                                 </div>
                             </Col>
                         </Row>
@@ -64,7 +59,7 @@ function UserData(props) {
                         name="login"
                         validateTrigger
                         initialValues={{ remember: false }}
-                        onFinish={CheckLogin}
+                        onFinish={UserDataFn}
                         onChange={onChange}
                         >
                         <Row>
@@ -76,10 +71,10 @@ function UserData(props) {
                             <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-10 w-full'} >
                                         <Form.Item label={null}
-                                            name="form_fullname"
-                                            rules={[{ required: true, message: 'Please enter full name' }]}
+                                            name="form_phone"
+                                            rules={[{ required: true, message: 'Please enter phone number' }]}
                                             >
-                                            <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'} placeholder="Full Name" />
+                                            <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'} placeholder="Phone Number" />
                                         </Form.Item>
                                     </div>
                             </Col>
@@ -94,7 +89,6 @@ function UserData(props) {
                                                 size={'large'}
                                                 placeholder="Company Website"
                                                 disabled={dataLoading}
-                                                // iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                                             />
                                             </Form.Item>
                                     </div>

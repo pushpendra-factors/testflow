@@ -11,7 +11,7 @@ class SVG extends React.Component {
 
   render() {
     const {
-      name, size, color, extraClass
+      name, size, width, height, color, extraClass
     } = this.props;
     const properName = this.handleTitleConversion(name) + 'SVG';
     const IconComponent = icons[properName];
@@ -29,7 +29,7 @@ class SVG extends React.Component {
                   : color === 'grey' ? '#63686F' : color;
 
     return (
-      <IconComponent size={size} color={color ? strokeColor : `#63686F` } extraClass={extraClass} />
+      <IconComponent size={size} width={width} height={height} color={color ? strokeColor : `#63686F` } extraClass={extraClass} />
     );
   }
 }

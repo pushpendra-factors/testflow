@@ -10,11 +10,22 @@ import AdPlatforms from './AdPlatforms';
 import CRMS from './CRMS';
 import OtherIntegrations from './OtherIntegrations';
 import { useHistory } from 'react-router-dom';
+import Lottie from 'react-lottie';
+import setupAssistData from '../../../assets/lottie/Setup assist1.json';
 
 const SetupAssist = () => {
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
     const history = useHistory();
+
+    const defaultOptions = {
+        loop: true,
+        autoplay: true,
+        animationData: setupAssistData,
+        rendererSettings: {
+            preserveAspectRatio: "xMidYMid slice"
+        }
+    };
 
     return (
         <>
@@ -32,10 +43,10 @@ const SetupAssist = () => {
                 <Row gutter={[24, 24]} justify={'center'}>
                     <Col span={5}>
                         <Timeline>
-                            <Timeline.Item color ={current === 0 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 0 ? 'blue': null} onClick={() => setCurrent(0)}>Connect with your website data</Text></Timeline.Item>
-                            <Timeline.Item color ={current === 1 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 1 ? 'blue': null} onClick={() => setCurrent(1)}>Connect with your Ad platforms</Text></Timeline.Item>
-                            <Timeline.Item color ={current === 2 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 2 ? 'blue': null} onClick={() => setCurrent(2)}>Connect with your CRMS</Text></Timeline.Item>
-                            <Timeline.Item color ={current === 3 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 3 ? 'blue': null} onClick={() => setCurrent(3)}>Other integrations</Text></Timeline.Item>
+                            <Timeline.Item color ={current === 0 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 0 ? 'brand-color': null} onClick={() => setCurrent(0)}>Connect with your website data</Text></Timeline.Item>
+                            <Timeline.Item color ={current === 1 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 1 ? 'brand-color': null} onClick={() => setCurrent(1)}>Connect with your Ad platforms</Text></Timeline.Item>
+                            <Timeline.Item color ={current === 2 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 2 ? 'brand-color': null} onClick={() => setCurrent(2)}>Connect with your CRMS</Text></Timeline.Item>
+                            <Timeline.Item color ={current === 3 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 3 ? 'brand-color': null} onClick={() => setCurrent(3)}>Other integrations</Text></Timeline.Item>
                         </Timeline>
                         <Row className={'pt-20'}>
                             <Col>
@@ -71,9 +82,13 @@ const SetupAssist = () => {
                             <Text type={'title'} level={7} weight={'regular'} extraClass={'ml-5'} color={'grey'}>You can always access it from the bottom left corner</Text>
                         </Col>
                     </Row>
-                    <Row className={'ml-10'}>
+                    <Row style={{marginLeft:'80px'}}>
                         <Col>
-                            <img src='../../assets/images/Assist-confirm.gif' style={{width: '70%', overflow:'hidden', borderRadius:'150px'}}/>
+                            <Lottie 
+                            options={defaultOptions}
+                            height={200}
+                            width={200}
+                            />
                         </Col>
                     </Row>
                     <Row style={{marginLeft: '120px'}} className={'pb-4'}>

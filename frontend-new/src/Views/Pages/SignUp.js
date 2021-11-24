@@ -43,6 +43,7 @@ function SignUp({ signup }) {
       signup(filteredValues).then(() => {
         setDataLoading(false);
         setformData(filteredValues);
+        history.push('/userdata');
       }).catch((err) => {
         setDataLoading(false);
         form.resetFields();
@@ -144,36 +145,6 @@ function SignUp({ signup }) {
                                                 >
                                                 <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
                                                 // placeholder="Work Email"
-                                                 />
-                                            </Form.Item>
-                                        </div>
-                                </Col>
-                            </Row>
-
-                            <Row>
-                                <Col span={24}>
-                                        <div className={'flex flex-col mt-5 w-full'} >
-                                            <Text type={'title'} level={7} extraClass={'m-0'}>Company URL</Text>
-                                            <Form.Item label={null}
-                                                name="comapny_url"
-                                                >
-                                                <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                // placeholder="Company URL"
-                                                 />
-                                            </Form.Item>
-                                        </div>
-                                </Col>
-                            </Row>
-
-                            <Row>
-                                <Col span={24}>
-                                        <div className={'flex flex-col mt-5 w-full'} >
-                                            <Text type={'title'} level={7} extraClass={'m-0'}>Phone Number</Text>
-                                            <Form.Item label={null}
-                                                name="phone"
-                                                >
-                                                <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                // placeholder="Phone Number"
                                                  />
                                             </Form.Item>
                                         </div>

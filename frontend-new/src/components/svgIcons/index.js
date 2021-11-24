@@ -17,9 +17,9 @@ const BrandSVG = ({ size = 16, color, extraClass }) => {
 
   );
 };
-const BrandFullSVG = ({ size = 16, color, extraClass }) => {
+const BrandFullSVG = ({ size = 16, width = 180, height = 48, color, extraClass }) => {
   return (
-    <svg width="180" height="48" viewBox="0 0 180 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width={width} height={height} viewBox="0 0 180 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g clip-path="url(#clip0)">
         <path fillRule="evenodd" clipRule="evenodd" d="M11.7098 16.5978C11.7098 10.4843 16.6658 5.52832 22.7794 5.52832H33.8489C33.8489 11.6418 28.8929 16.5978 22.7793 16.5978H11.7098ZM33.8489 18.4428C33.8489 24.5563 28.8929 29.5123 22.7794 29.5123H11.7099V18.4428H33.8489ZM22.7794 31.3572H11.7099V42.4267C17.8234 42.4267 22.7794 37.4707 22.7794 31.3572Z" fill="#ED5858" />
         <ellipse opacity="0.1" cx="41.7634" cy="33.6657" rx="28.2086" ry="29.0597" fill="white" />

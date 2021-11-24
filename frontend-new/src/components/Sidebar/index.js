@@ -148,7 +148,7 @@ function Sidebar(props) {
             <Row justify="center" align="middle" style={{marginTop:'53vh'}} className=" w-full py-2">
               <Tooltip title="Setup Assist" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
                 <NavLink activeClassName="active" to="/project-setup"><SVG name={'Emoji'} size={40} color="white"/></NavLink>
-                <Badge dot style={{top:'-35px', left:'25px'}}></Badge>
+                <Badge dot offset={[25,-35]}></Badge>
               </Tooltip>
             </Row>
           </div>
