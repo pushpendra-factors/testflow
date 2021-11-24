@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -1126,15 +1127,21 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	// For query: ...where id in ($1) where $1 is passed as a slice, convert to pq.Array()
 	stmnt, params = model.ExpandArrayWithIndividualValues(stmnt, params)
 
+	logFields := log.Fields{
+		"anaytics":       true,
+		"expanded_query": U.DBDebugPreparedStatement(stmnt, params),
+		"original_query": stmnt,
+		"params":         params,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
 	// Prefix application name for in comment for debugging.
 	stmnt = fmt.Sprintf("/*!%s*/ ", C.GetConfig().AppName) + stmnt
 
 	// Set resource pool before query.
 	C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx, C.MemSQLResourcePoolOLAP)
 	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
-	log.WithError(err).
-		WithFields(log.Fields{"Query": U.DBDebugPreparedStatement(stmnt, params)}).
-		Info("Exec query with context")
+	log.WithError(err).WithFields(logFields).Info("Exec query with context")
 
 	return rows, tx, err
 }
