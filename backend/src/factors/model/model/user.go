@@ -691,7 +691,12 @@ func getCRMTimestampValue(value interface{}) (int64, error) {
 		return timestamp, nil
 	}
 
-	return int64(fValue), nil
+	timestamp := int64(fValue)
+	if timestamp >= 10000000000 { // hubspot old millisecond timestamp
+		return timestamp / 1000, nil
+	}
+
+	return timestamp, nil
 }
 
 func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomingProperties map[string]interface{},

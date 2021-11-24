@@ -1233,7 +1233,13 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 
 		propertyKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 			model.HubspotDocumentTypeNameCompany, key)
-		userProperties[propertyKey] = value.Value
+		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, propertyKey, value.Value)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID, "property_key": propertyKey}).WithError(err).Error("Failed to get property value.")
+			continue
+		}
+
+		userProperties[propertyKey] = value
 	}
 
 	userPropertiesJsonb, err := U.EncodeToPostgresJsonb(&userProperties)
