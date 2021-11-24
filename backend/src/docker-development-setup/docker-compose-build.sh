@@ -31,3 +31,5 @@ docker-compose build datagen
 docker-compose build session
 
 docker-compose build rollupcache
+
+docker-compose build documentdatagen

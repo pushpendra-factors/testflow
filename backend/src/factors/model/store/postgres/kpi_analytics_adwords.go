@@ -31,7 +31,7 @@ func (pg *Postgres) ExecuteKPIQueryForChannels(projectID uint64, reqID string, k
 		return queryResults, http.StatusBadRequest
 	}
 	resultHolder, statusCode := pg.ExecuteChannelQueryV1(projectID, &channelsV1Query, reqID)
-	queryResult.Headers = resultHolder.Headers
+	queryResult.Headers = model.GetTransformedHeadersForChannels(resultHolder.Headers)
 	queryResult.Rows = resultHolder.Rows
 	queryResults = append(queryResults, queryResult)
 	return queryResults, statusCode

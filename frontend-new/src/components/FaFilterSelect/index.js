@@ -8,373 +8,560 @@ import FaDatepicker from '../FaDatepicker';
 import FaSelect from '../FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
-import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
+import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import moment from 'moment';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
-const {Option} = Select;
+const { Option } = Select;
+
+const rangePicker = ['=', '!='];
+const customRangePicker = ['between', 'not between'];
+const deltaPicker = ['in the previous', 'not in the previous'];
+const currentPicker = ['in the current', 'not in the current'];
+const datePicker = ['before', 'since'];
 
 const FAFilterSelect = ({
-    propOpts = [],
-    operatorOpts=defaultOpProps,
-    valueOpts=[],
-    setValuesByProps,
-    applyFilter,
-    filter
-},
-) => {
+  propOpts = [],
+  operatorOpts = defaultOpProps,
+  valueOpts = [],
+  setValuesByProps,
+  applyFilter,
+  filter,
+}) => {
+  const [propState, setPropState] = useState({
+    icon: '',
+    name: '',
+    type: '',
+  });
 
-    const [propState, setPropState] = useState({
-        icon: '',
-        name: '',
-        type: ''
-    });
+  const [operatorState, setOperatorState] = useState('=');
+  const [valuesState, setValuesState] = useState(null);
 
-    const [operatorState, setOperatorState] = useState("=");
-    const [valuesState, setValuesState] = useState(null);
+  const [propSelectOpen, setPropSelectOpen] = useState(false);
+  const [operSelectOpen, setOperSelectOpen] = useState(false);
+  const [valuesSelectionOpen, setValuesSelectionOpen] = useState(false);
+  const [grnSelectOpen, setGrnSelectOpen] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-    const [propSelectOpen, setPropSelectOpen] = useState(false);
-    const [operSelectOpen, setOperSelectOpen] = useState(false);
-    const [valuesSelectionOpen, setValuesSelectionOpen] = useState(false);
-    const [grnSelectOpen, setGrnSelectOpen] = useState(false);
-    const [showDatePicker ,setShowDatePicker] = useState(false);
+  const [updateState, updateStateApply] = useState(false);
 
-    const [updateState, updateStateApply] = useState(false);
+  const { userPropNames, eventPropNames } = useSelector(
+    (state) => state.coreQuery
+  );
 
-    const {userPropNames, eventPropNames} = useSelector((state) => state.coreQuery)
-
-    useEffect(() => {
-        if (filter) {
-            const prop = filter.props;
-            setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
-            setOperatorState(filter.operator);
-            // Set values state
-            setValues();
-            setPropSelectOpen(false);
-            setOperSelectOpen(false);
-            setValuesSelectionOpen(false);
-
-        }
-
-    }, [filter])
-
-    useEffect(() => {
-        if(updateState && valuesState && propState.type !== 'numerical') {
-            emitFilter();
-            updateStateApply(false);
-        }
-    }, [updateState])
-
-
-    const setValues = () => {
-        let values;
-        if (filter.props[1] === 'datetime') { 
-            const parsedValues = (filter.values[0] ? (typeof filter.values[0] === 'string')? JSON.parse(filter.values) : filter.values : {});
-            values = parseDateRangeFilter(parsedValues.fr, parsedValues.to, parsedValues)
-        } else {
-            values = filter.values;
-        }
-        setValuesState(values);
+  useEffect(() => {
+    if (
+      currentPicker.includes(
+        isArray(operatorState) ? operatorState[0] : operatorState
+      )
+    ) {
+      setCurrentFilt();
     }
-
-
-    const emitFilter = () => {
-        if(propState && operatorState && valuesState) {
-            applyFilter({
-                props: [propState.name, propState.type, propState.icon],
-                operator: operatorState,
-                values: valuesState
-            })
-        }
+    if (
+      deltaPicker.includes(
+        isArray(operatorState) ? operatorState[0] : operatorState
+      )
+    ) {
+      setDeltaFilt();
     }
+  }, [valuesState]);
 
-    const operatorSelect = (op) => {
-        setOperatorState(op);
-        setValuesState(null);
-        setOperSelectOpen(false);
+  useEffect(() => {
+    if (filter && !valuesState) {
+      const prop = filter.props;
+      setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
+      setOperatorState(filter.operator);
+      // Set values state
+      setValues();
+      setPropSelectOpen(false);
+      setOperSelectOpen(false);
+      setValuesSelectionOpen(false);
     }
+  }, [filter]);
 
-    const propSelect = (prop) => {
-        setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
-        setPropSelectOpen(false);
-        setOperatorState(prop[2] === 'datetime' ? 'between' : "=");
-        setValuesState(null);
-        setValuesByProps(prop);
+  useEffect(() => {
+    if (updateState && valuesState && propState.type !== 'numerical') {
+      emitFilter();
+      updateStateApply(false);
     }
+  }, [updateState]);
 
-    const valuesSelect = (val) => {
-        setValuesState(val.map(vl => JSON.parse(vl)[0]));
-        setValuesSelectionOpen(false);
-        updateStateApply(true);
+  const setValues = () => {
+    let values;
+    if (filter.props[1] === 'datetime') {
+      const filterVals = isArray(filter.values)
+        ? filter.values[0]
+        : filter.values;
+      const parsedValues = filterVals
+        ? typeof filterVals === 'string'
+          ? JSON.parse(filterVals)
+          : filterVals
+        : {};
+      values = parseDateRangeFilter(
+        parsedValues.fr,
+        parsedValues.to,
+        parsedValues
+      );
+    } else {
+      values = filter.values;
     }
-
-    const onDateSelect = (rng) => {
-        let startDate;
-        let endDate;
-        if(isArray(rng.startDate)) {
-            startDate = rng.startDate[0].toDate().getTime();
-            endDate = rng.startDate[1].toDate().getTime();
-        } else {
-            if(rng.startDate && rng.startDate._isAMomentObject){
-                startDate = rng.startDate.toDate().getTime();
-            } else {
-                startDate = rng.startDate.getTime();
-            }
-    
-            if(rng.endDate && rng.endDate._isAMomentObject){
-                endDate = rng.endDate.toDate().getTime();
-            } else {
-                endDate = rng.endDate.getTime();
-            }
-        }
-        
-        const rangeValue = {
-            "fr": startDate,
-            "to": endDate,
-            "ovp": false
-        }
-
-        setValuesState(JSON.stringify(rangeValue));
-        updateStateApply(true);
+    if (
+      currentPicker.includes(
+        isArray(filter.operator) ? filter.operator[0] : filter.operator
+      ) ||
+      deltaPicker.includes(
+        isArray(filter.operator) ? filter.operator[0] : filter.operator
+      )
+    ) {
+      setValuesState(JSON.stringify(values));
+    } else {
+      setValuesState(values);
     }
-    const setNumericalValue = (ev) => {
-        // onNumericalSelect(ev);
+  };
 
-        setValuesState(String(ev).toString());
+  const emitFilter = () => {
+    if (propState && operatorState && valuesState) {
+      applyFilter({
+        props: [propState.name, propState.type, propState.icon],
+        operator: operatorState,
+        values: valuesState,
+      });
     }
+  };
 
-    const parseDateRangeFilter = (fr, to, value) => {
-        const fromVal = fr ? fr : new Date(MomentTz().startOf('day')).getTime();
-        const toVal = to ? to : new Date(MomentTz()).getTime();
-        return {
-            from: fromVal,
-            to: toVal,
-            ovp: false,
-            num: value["num"],
-            gran: value["gran"]
-        }
-        // return (MomentTz(fromVal).format('MMM DD, YYYY') + ' - ' +
-        //           MomentTz(toVal).format('MMM DD, YYYY'));
-    }
+  const operatorSelect = (op) => {
+    setOperatorState(op);
+    setValuesState(null);
+    setOperSelectOpen(false);
+  };
 
-    const renderGroupDisplayName = (propState) => {
-        // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
-        let propertyName = '';
-        if(propState.name && propState.icon === 'user') {
-          propertyName = userPropNames[propState.name]?  userPropNames[propState.name] : propState.name;
-        }
-        if(propState.name && propState.icon === 'event') {
-          propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
-        }
-        if(!propState.name) {
-          propertyName = 'Select Property';
-        }
-        return propertyName;
+  const propSelect = (prop) => {
+    setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
+    setPropSelectOpen(false);
+    setOperatorState(prop[2] === 'datetime' ? 'between' : '=');
+    setValuesState(null);
+    setValuesByProps(prop);
+  };
+
+  const valuesSelect = (val) => {
+    setValuesState(val.map((vl) => JSON.parse(vl)[0]));
+    setValuesSelectionOpen(false);
+    updateStateApply(true);
+  };
+
+  const onDateSelect = (rng) => {
+    let startDate;
+    let endDate;
+    if (isArray(rng.startDate)) {
+      startDate = rng.startDate[0].toDate().getTime();
+      endDate = rng.startDate[1].toDate().getTime();
+    } else {
+      if (rng.startDate && rng.startDate._isAMomentObject) {
+        startDate = rng.startDate.toDate().getTime();
+      } else {
+        startDate = rng.startDate.getTime();
       }
 
-    const renderPropSelect = () => {
-        return (<div className={styles.filter__propContainer}>
+      if (rng.endDate && rng.endDate._isAMomentObject) {
+        endDate = rng.endDate.toDate().getTime();
+      } else {
+        endDate = rng.endDate.getTime();
+      }
+    }
 
-            <Tooltip title={renderGroupDisplayName(propState)}>
-                <Button
-                    icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
-                    className={`fa-button--truncate-xs`}
-                    type="link"
-                    onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderGroupDisplayName(propState)}
-                </Button>
-            </Tooltip>
-            <div className={styles.filter__event_selector}>
-                {propSelectOpen && (
-                    <div className={styles.filter__event_selector__btn}>
-                        <GroupSelect2
-                            groupedProperties={propOpts}
-                            placeholder="Select Property"
-                            optionClick={(group, val) => propSelect([...val, group])}
-                            onClickOutside={() => setPropSelectOpen(false)}
-                        ></GroupSelect2>
-                    </div>
-                )
-                }
+    const rangeValue = {
+      fr: startDate,
+      to: endDate,
+      ovp: false,
+    };
+
+    setValuesState(JSON.stringify(rangeValue));
+    updateStateApply(true);
+  };
+  const setNumericalValue = (ev) => {
+    // onNumericalSelect(ev);
+
+    setValuesState(String(ev).toString());
+  };
+
+  const parseDateRangeFilter = (fr, to, value) => {
+    const fromVal = fr ? fr : new Date(MomentTz().startOf('day')).getTime();
+    const toVal = to ? to : new Date(MomentTz()).getTime();
+    return {
+      from: fromVal,
+      to: toVal,
+      ovp: false,
+      num: value['num'],
+      gran: value['gran'],
+    };
+    // return (MomentTz(fromVal).format('MMM DD, YYYY') + ' - ' +
+    //           MomentTz(toVal).format('MMM DD, YYYY'));
+  };
+
+  const renderGroupDisplayName = (propState) => {
+    // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
+    let propertyName = '';
+    if (propState.name && propState.icon === 'user') {
+      propertyName = userPropNames[propState.name]
+        ? userPropNames[propState.name]
+        : propState.name;
+    }
+    if (propState.name && propState.icon === 'event') {
+      propertyName = eventPropNames[propState.name]
+        ? eventPropNames[propState.name]
+        : propState.name;
+    }
+    if (!propState.name) {
+      propertyName = 'Select Property';
+    }
+    return propertyName;
+  };
+
+  const renderPropSelect = () => {
+    return (
+      <div className={styles.filter__propContainer}>
+        <Tooltip title={renderGroupDisplayName(propState)}>
+          <Button
+            icon={
+              propState && propState.icon ? (
+                <SVG name={propState.icon} size={16} color={'purple'} />
+              ) : null
+            }
+            className={`fa-button--truncate-xs`}
+            type='link'
+            onClick={() => setPropSelectOpen(!propSelectOpen)}
+          >
+            {' '}
+            {renderGroupDisplayName(propState)}
+          </Button>
+        </Tooltip>
+        <div className={styles.filter__event_selector}>
+          {propSelectOpen && (
+            <div className={styles.filter__event_selector__btn}>
+              <GroupSelect2
+                groupedProperties={propOpts}
+                placeholder='Select Property'
+                optionClick={(group, val) => propSelect([...val, group])}
+                onClickOutside={() => setPropSelectOpen(false)}
+              ></GroupSelect2>
             </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
-        </div>)
+  const renderOperatorSelector = () => {
+    return (
+      <div className={styles.filter__propContainer}>
+        <Button
+          className={`fa-button--truncate ml-2`}
+          type='link'
+          onClick={() => setOperSelectOpen(true)}
+        >
+          {' '}
+          {operatorState ? operatorState : 'Select Operator'}
+        </Button>
+
+        {operSelectOpen && (
+          <FaSelect
+            options={operatorOpts[propState.type].map((op) => [op])}
+            optionClick={(val) => operatorSelect(val)}
+            onClickOutside={() => setOperSelectOpen(false)}
+          ></FaSelect>
+        )}
+      </div>
+    );
+  };
+
+  const setDeltaNumber = (val) => {
+    const parsedValues = valuesState
+      ? typeof valuesState === 'string'
+        ? JSON.parse(valuesState)
+        : valuesState
+      : {};
+    parsedValues['num'] = val;
+    setValuesState(JSON.stringify(parsedValues));
+    updateStateApply(true);
+  };
+
+  const setDeltaGran = (val) => {
+    const parsedValues = valuesState
+      ? typeof valuesState === 'string'
+        ? JSON.parse(valuesState)
+        : valuesState
+      : {};
+    parsedValues['gran'] = val;
+    setValuesState(JSON.stringify(parsedValues));
+    setGrnSelectOpen(false);
+    setDeltaFilt();
+  };
+
+  const setDeltaFilt = () => {
+    const parsedValues = valuesState
+      ? typeof valuesState === 'string'
+        ? JSON.parse(valuesState)
+        : valuesState
+      : {};
+    if (parsedValues['num'] && parsedValues['gran']) {
+      updateStateApply(true);
+    }
+  };
+
+  const setCurrentGran = (val) => {
+    const parsedValues = valuesState
+      ? typeof valuesState === 'string'
+        ? JSON.parse(valuesState)
+        : valuesState
+      : {};
+    parsedValues['gran'] = val;
+    setValuesState(JSON.stringify(parsedValues));
+    setGrnSelectOpen(false);
+    setCurrentFilt();
+  };
+
+  const setCurrentFilt = () => {
+    const parsedValues = valuesState
+      ? typeof valuesState === 'string'
+        ? JSON.parse(valuesState)
+        : valuesState
+      : {};
+    if (parsedValues['gran']) {
+      updateStateApply(true);
+    }
+  };
+
+  const onDatePickerSelect = (val) => {
+    let dateT;
+    let dateValue = {};
+    const operatorSt = isArray(operatorState)
+      ? operatorState[0]
+      : operatorState;
+    if (operatorSt === 'before') {
+      dateT = MomentTz(val).startOf('day');
+      dateValue['to'] = dateT.toDate().getTime();
     }
 
-    const renderOperatorSelector = () => {
-        return (<div className={styles.filter__propContainer}>
-
-            <Button
-                className={`fa-button--truncate ml-2`}
-                type="link"
-                onClick={() => setOperSelectOpen(true)}> {operatorState ? operatorState : 'Select Operator'}
-            </Button>
-
-            {operSelectOpen &&
-                <FaSelect
-                    options={operatorOpts[propState.type].map(op => [op])}
-                    optionClick={(val) => operatorSelect(val)}
-                    onClickOutside={() => setOperSelectOpen(false)}
-                >
-                </FaSelect>
-            }
-
-        </div>);
+    if (operatorSt === 'since') {
+      dateT = MomentTz(val).startOf('day');
+      dateValue['fr'] = dateT.toDate().getTime();
     }
 
-    const setDeltaNumber = (val = 1) => {
-        const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
-        parsedValues['num'] = val;
-        parsedValues['gran'] = 'days';
-        setValuesState(JSON.stringify(parsedValues));
-        updateStateApply(true);
+    setValuesState(JSON.stringify(dateValue));
+    updateStateApply(true);
+  };
+
+  const selectDateTimeSelector = (operator, rang, parsedVals) => {
+    let selectorComponent = null;
+
+    const parsedValues = valuesState
+      ? typeof valuesState === 'string'
+        ? JSON.parse(valuesState)
+        : valuesState
+      : {};
+
+    if (rangePicker.includes(operator)) {
+      selectorComponent = (
+        <FaDatepicker
+          customPicker
+          presetRange
+          monthPicker
+          placement='topRight'
+          range={rang}
+          onSelect={(rng) => onDateSelect(rng)}
+        />
+      );
     }
 
-    const setDeltaGran = (val) => {
-        const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
-        parsedValues['gran'] = val;
-        setValuesState(JSON.stringify(parsedValues));
-        setGrnSelectOpen(false);
-        setDeltaFilt()
+    if (customRangePicker.includes(operator)) {
+      selectorComponent = (
+        <FaDatepicker
+          customPicker
+          placement='topRight'
+          range={rang}
+          onSelect={(rng) => onDateSelect(rng)}
+        />
+      );
     }
 
-    const setDeltaFilt = () => {
-        const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
-        if(parsedValues["num"] && parsedValues["gran"]) {
-            updateStateApply(true)
-        }
+    if (deltaPicker.includes(operator)) {
+      selectorComponent = (
+        <div className={`fa-filter-dateDeltaContainer`}>
+          <InputNumber
+            value={parsedValues['num']}
+            min={1}
+            max={999}
+            onChange={setDeltaNumber}
+          ></InputNumber>
+
+          <Select
+            defaultValue=''
+            value={parsedValues['gran']}
+            className={'fa-select--ghost'}
+            onChange={setDeltaGran}
+          >
+            <Option value='' disabled>
+              <i>Select:</i>
+            </Option>
+            <Option value='days'>Days</Option>
+            <Option value='week'>Weeks</Option>
+            <Option value='month'>Months</Option>
+            <Option value='quarter'>Quarters</Option>
+          </Select>
+        </div>
+      );
     }
 
-    const onDatePickerSelect = (val) => {
-        let dateT;
-        let dateValue = {};
-        const operatorSt = isArray(operatorState)? operatorState[0] : operatorState;
-        if(operatorSt === 'before') {
-            dateT = MomentTz(val).startOf('day');
-            dateValue["to"] = dateT.toDate().getTime();
-        }
-
-        if(operatorSt === 'since') {
-            dateT = MomentTz(val).startOf('day');
-            dateValue["fr"] = dateT.toDate().getTime();
-        }
-
-        setValuesState(JSON.stringify(dateValue));
-        updateStateApply(true);
+    if (currentPicker.includes(operator)) {
+      selectorComponent = (
+        <div className={`fa-filter-dateDeltaContainer`}>
+          <Select
+            defaultValue=''
+            value={parsedValues['gran']}
+            className={'fa-select--ghost'}
+            onChange={setCurrentGran}
+          >
+            <Option value='' disabled>
+              <i>Select:</i>
+            </Option>
+            <Option value='week'>Week</Option>
+            <Option value='month'>Month</Option>
+            <Option value='quarter'>Quarter</Option>
+          </Select>
+        </div>
+      );
     }
 
-    const selectDateTimeSelector = (operator, rang, parsedVals) => {
-        let selectorComponent = null;
-        const rangePicker = ['=', '!=', 'between', 'not between'];
-        const deltaPicker = ['in the last', 'not in the last'];
-        const datePicker = ['before', 'since'];
-        
-        if(rangePicker.includes(operator)) {
-            selectorComponent = (<FaDatepicker
-                customPicker
-                presetRange
-                monthPicker
-                placement="topRight"
-                range={rang}
-                onSelect={(rng) => onDateSelect(rng)
-                }
-            />);
-        }
-
-        if (deltaPicker.includes(operator)) {
-            const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
-            selectorComponent = (
-                <div className={`fa-filter-dateDeltaContainer`}>
-                    <InputNumber value={parsedValues["num"]} min={1} onChange={setDeltaNumber}></InputNumber>
-                    {
-                        <>
-                            <Select defaultValue="days" className={'fa-select--ghost'} onChange={setDeltaGran}>
-                                <Option value="days">Days</Option>
-                            </Select>
-                        </>
-                    }
-                </div>
-            );
-        }
-
-        if(datePicker.includes(operator)) {
-            const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
-            selectorComponent = (<DatePicker
-                disabledDate={(d) => !d || d.isAfter(MomentTz())}
-                autoFocus={false}
-                className={`fa-date-picker`}
-                open={showDatePicker}
-                onOpenChange={()=>{
-                  setShowDatePicker(!showDatePicker);
-                }}
-                value={operator === 'before'? moment(parsedValues["to"]) : moment(parsedValues["from"])}
-                size={'small'}
-                suffixIcon={null}
-                showToday={false}
-                bordered={true}
-                allowClear={true}
-                onChange={onDatePickerSelect}
-              />)
-        }
-
-        return selectorComponent;
+    if (datePicker.includes(operator)) {
+      selectorComponent = (
+        <DatePicker
+          disabledDate={(d) => !d || d.isAfter(MomentTz())}
+          autoFocus={false}
+          className={`fa-date-picker`}
+          open={showDatePicker}
+          onOpenChange={() => {
+            setShowDatePicker(!showDatePicker);
+          }}
+          value={
+            operator === 'before'
+              ? moment(parsedValues['to'])
+              : moment(
+                  parsedValues['from']
+                    ? parsedValues['from']
+                    : parsedValues['fr']
+                )
+          }
+          size={'small'}
+          suffixIcon={null}
+          showToday={false}
+          bordered={true}
+          allowClear={true}
+          onChange={onDatePickerSelect}
+        />
+      );
     }
 
-    const renderValuesSelector = () => {
-        let selectionComponent;
-        const values = [];
-        if (propState.type === 'categorical') {
-            selectionComponent = (<FaSelect
-                multiSelect={true}
-                options={valueOpts && valueOpts[propState.name]?.length ? valueOpts[propState.name].map(op => [op]) : []}
-                applClick={(val) => valuesSelect(val)}
-                onClickOutside={() => setValuesSelectionOpen(false)}
-                selectedOpts={valuesState ? valuesState : []}
-                allowSearch={true}
-                posRight={true}
+    return selectorComponent;
+  };
+
+  const renderValuesSelector = () => {
+    let selectionComponent;
+    const values = [];
+    if (propState.type === 'categorical') {
+      selectionComponent = (
+        <FaSelect
+          multiSelect={true}
+          options={
+            valueOpts && valueOpts[propState.name]?.length
+              ? valueOpts[propState.name].map((op) => [op])
+              : []
+          }
+          applClick={(val) => valuesSelect(val)}
+          onClickOutside={() => setValuesSelectionOpen(false)}
+          selectedOpts={valuesState ? valuesState : []}
+          allowSearch={true}
+          posRight={true}
+        ></FaSelect>
+      );
+    }
+
+    if (propState.type === 'datetime') {
+      const parsedValues = valuesState
+        ? typeof valuesState === 'string'
+          ? JSON.parse(valuesState)
+          : valuesState
+        : {};
+      const fromRange = parsedValues.fr ? parsedValues.fr : parsedValues.from;
+      const dateRange = parseDateRangeFilter(
+        fromRange,
+        parsedValues.to,
+        parsedValues
+      );
+      const rang = {
+        startDate: dateRange.from,
+        endDate: dateRange.to,
+        num: dateRange.num,
+        gran: dateRange.gran,
+      };
+
+      selectionComponent = selectDateTimeSelector(
+        isArray(operatorState) ? operatorState[0] : operatorState,
+        rang
+      );
+    }
+
+    if (propState.type === 'numerical') {
+      selectionComponent = (
+        <InputNumber
+          value={valuesState}
+          onBlur={emitFilter}
+          onChange={setNumericalValue}
+        ></InputNumber>
+      );
+    }
+
+    return (
+      <div className={`${styles.filter__propContainer} ml-2`}>
+        {propState.type === 'categorical' ? (
+          <>
+            {' '}
+            <Tooltip
+              title={
+                valuesState && valuesState.length
+                  ? valuesState.join(', ')
+                  : null
+              }
             >
-            </FaSelect>);
-        }
-
-        if (propState.type === 'datetime') {
-            const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
-            const fromRange = parsedValues.fr? parsedValues.fr : parsedValues.from;
-            const dateRange = parseDateRangeFilter(fromRange, parsedValues.to, parsedValues);
-            const rang = {
-                startDate: dateRange.from,
-                endDate: dateRange.to,
-                num: dateRange.num,
-                gran: dateRange.gran
-            }
-
-            selectionComponent = selectDateTimeSelector(isArray(operatorState)? operatorState[0] : operatorState, rang);
-        }
-
-        if (propState.type === 'numerical') {
-            selectionComponent = (<InputNumber value={valuesState} onBlur={emitFilter} onChange={setNumericalValue}></InputNumber>);
-        }
-
-        return (<div className={`${styles.filter__propContainer} ml-2`}>
-            {propState.type === 'categorical' ? <> <Tooltip title={valuesState && valuesState.length ? valuesState.join(', ') : null}><Button
+              <Button
                 className={`fa-button--truncate`}
-                type="link"
-                onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}> {valuesState && valuesState.length ? valuesState.join(', ') : 'Select Values'}
-            </Button> </Tooltip> {valuesSelectionOpen && selectionComponent} </> : null}
+                type='link'
+                onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
+              >
+                {' '}
+                {valuesState && valuesState.length
+                  ? valuesState.join(', ')
+                  : 'Select Values'}
+              </Button>{' '}
+            </Tooltip>{' '}
+            {valuesSelectionOpen && selectionComponent}{' '}
+          </>
+        ) : null}
 
-            {propState.type !== 'categorical' ? selectionComponent : null}
-        </div>)
+        {propState.type !== 'categorical' ? selectionComponent : null}
+      </div>
+    );
+  };
 
-    }
+  return (
+    <div className={styles.filter}>
+      {renderPropSelect()}
 
-    return (<div className={styles.filter}>
-        {renderPropSelect()}
+      {propState?.name ? renderOperatorSelector() : null}
 
-        {propState?.name ? renderOperatorSelector() : null}
-
-        {operatorState? renderValuesSelector() : null}
-
-    </div>);
-
-}
+      {operatorState ? renderValuesSelector() : null}
+    </div>
+  );
+};
 
 export default FAFilterSelect;

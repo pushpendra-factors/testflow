@@ -128,6 +128,10 @@ const (
 	SinceStr                = "since"
 	InLastStr               = "inLast"
 	NotInLastStr            = "notInLast"
+	InCurrent               = "inCurrent"
+	NotInCurrent            = "notInCurrent"
+	InPrevious              = "inPrevious"
+	NotInPrevious           = "notInPrevious"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
@@ -335,10 +339,22 @@ func (qp *QueryProperty) TransformDateTypeFilters(timezoneString U.TimeZoneStrin
 		}
 		dateTimeValue.From = transformedFrom
 		dateTimeValue.To = transformedTo
-		if qp.Operator == InLastStr || qp.Operator == NotInLastStr {
-			lastXthDay := U.GetDateBeforeXPeriod(dateTimeValue.Number, dateTimeValue.Granularity, timezoneString)
-			dateTimeValue.From = lastXthDay
+		if qp.Operator == InCurrent || qp.Operator == NotInCurrent {
+			startTime, _, err := U.GetDynamicRangesForCurrentBasedOnGranularity(dateTimeValue.Granularity, timezoneString)
+			if err != nil {
+				return err
+			}
+			dateTimeValue.From = startTime
 		}
+		if qp.Operator == InPrevious || qp.Operator == NotInPrevious || qp.Operator == InLastStr || qp.Operator == NotInLastStr {
+			startTime, endTime, err := U.GetDynamicPreviousRanges(dateTimeValue.Granularity, dateTimeValue.Number, timezoneString)
+			if err != nil {
+				return err
+			}
+			dateTimeValue.From = startTime
+			dateTimeValue.To = endTime
+		}
+
 		transformedValue, _ := json.Marshal(dateTimeValue)
 		qp.Value = string(transformedValue)
 	}

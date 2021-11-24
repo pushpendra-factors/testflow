@@ -291,7 +291,7 @@ const FAFilterSelect = ({
             const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
             selectorComponent = (
                 <div className={`fa-filter-dateDeltaContainer`}>
-                    <InputNumber value={parsedValues["num"]} min={1} onChange={setDeltaNumber}></InputNumber>
+                    <InputNumber value={parsedValues["num"]} min={1} max={999} onChange={setDeltaNumber}></InputNumber>
                     {
                         <>
                             <Select defaultValue="days" className={'fa-select--ghost'} onChange={setDeltaGran}>

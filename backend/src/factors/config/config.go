@@ -195,7 +195,9 @@ type Configuration struct {
 	IsRunningForMemsql                          int
 	UseSourcePropertyOverwriteByProjectIDs      string
 	AllowedSalesforceGroupsByProjectIDs         string
+	DevBox                                      bool
 	AllowSupportForUserPropertiesInIdentifyCall string
+	AllowSupportForDateRangeInProfiles          string
 }
 
 type Services struct {
@@ -1301,6 +1303,28 @@ func AllowSupportForUserPropertiesInIdentifyCall(projectID uint64) bool {
 	return false
 }
 
+// AllowSupportForDateRangeInProfiles is used to check if support for date range
+// is allowed for a given (or list of) project in Profiles module
+func AllowSupportForDateRangeInProfiles(projectID uint64) bool {
+	if configuration.AllowSupportForDateRangeInProfiles == "" {
+		return false
+	}
+
+	if configuration.AllowSupportForDateRangeInProfiles == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowSupportForDateRangeInProfiles, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
 func InitDataService(config *Configuration) error {
 	if !IsConfigInitialized() {
 		log.Fatal("Config not initialised on InitDataService.")
@@ -1890,4 +1914,8 @@ func UseEventsFilterPropertiesOptimisedLogic(queryFromTimestamp int64) bool {
 
 func UseUsersFilterPropertiesOptimisedLogic() bool {
 	return configuration.EnableFilterOptimisation
+}
+
+func IsDevBox() bool {
+	return configuration.DevBox
 }

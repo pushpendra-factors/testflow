@@ -32,15 +32,11 @@ spec:
             - --memsql_name
             - $(MEMSQL_DB)
             - --memsql_user
-            - $(MEMSQL_USER)
+            - $(MEMSQL_OLTP_USER)
             - --memsql_pass
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
-            - --memsql_resource_pool
-            - $(MEMSQL_RPOOL_SOFT_CPU_50)
-            - --primary_datastore
-            - "memsql"
             - --redis_host
             - $(REDIS_HOST_2)
             - --redis_port
@@ -55,6 +51,27 @@ spec:
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
+            - --primary_datastore
+            - memsql
+            - --app_name
+            - hubspot-enrich-job-dup
+            - --property_details_cache_size
+            - "1000"
+            - --num_project_routines
+            - "1"
+            - --num_unique_doc_routines
+            - "25"
+            - --whitelisted_project_ids_property_type_check_from_db
+            - '*'
+            - --healthcheck_ping_id
+            - b7a878e4-d015-418a-bba0-7e5147b90f68
+            - --task_management_lookback
+            - "3"
+            - --enable_hubspot_groups_by_project_id
+            - "595"
+            - --enable_property_type_from_db
+            - --use_source_property_overwrite_by_project_id
+            - 566,2,645,616
             envFrom:
             - configMapRef:
                 name: config-env

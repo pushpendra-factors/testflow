@@ -5,6 +5,7 @@ import {
   getAttributionStateFromRequestQuery,
   getCampaignStateFromRequestQuery,
   getProfileQueryFromRequestQuery,
+  getKPIStateFromRequestQuery,
 } from '../CoreQuery/utils';
 import EventsAnalytics from './EventsAnalytics';
 import Funnels from './Funnels';
@@ -17,6 +18,7 @@ import {
   reverse_user_types,
   presentationObj,
   QUERY_TYPE_PROFILE,
+  QUERY_TYPE_KPI,
 } from '../../utils/constants';
 import Attributions from './Attributions';
 import CampaignAnalytics from './CampaignAnalytics';
@@ -24,12 +26,14 @@ import NoDataChart from '../../components/NoDataChart';
 import { useSelector } from 'react-redux';
 import { SVG, Text } from '../../components/factorsComponents';
 import ProfileAnalysis from './ProfileAnalysis';
+import KPIAnalysis from './KPIAnalysis';
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
   const { eventNames, attr_dimensions } = useSelector(
     (state) => state.coreQuery
   );
+  const { config: kpiConfig } = useSelector((state) => state.kpi);
 
   const equivalentQuery = useMemo(() => {
     if (unit.query.query.query_group) {
@@ -42,6 +46,8 @@ function CardContent({ unit, resultState, durationObj }) {
       } else {
         return getStateQueryFromRequestQuery(unit.query.query.query_group[0]);
       }
+    } else if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_KPI) {
+      return getKPIStateFromRequestQuery(unit.query.query, kpiConfig);
     } else if (
       unit.query.query.cl &&
       unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
@@ -71,7 +77,8 @@ function CardContent({ unit, resultState, durationObj }) {
     if (
       queryType === QUERY_TYPE_EVENT ||
       queryType === QUERY_TYPE_FUNNEL ||
-      queryType === QUERY_TYPE_PROFILE
+      queryType === QUERY_TYPE_PROFILE ||
+      queryType === QUERY_TYPE_KPI
     ) {
       return equivalentQuery.events.map((elem) =>
         elem.alias ? elem.alias : eventNames[elem.label] || elem.label
@@ -83,7 +90,8 @@ function CardContent({ unit, resultState, durationObj }) {
     if (
       queryType === QUERY_TYPE_EVENT ||
       queryType === QUERY_TYPE_FUNNEL ||
-      queryType == QUERY_TYPE_PROFILE
+      queryType == QUERY_TYPE_PROFILE ||
+      queryType === QUERY_TYPE_KPI
     ) {
       return [
         ...equivalentQuery.breakdown.event,
@@ -93,7 +101,11 @@ function CardContent({ unit, resultState, durationObj }) {
   }, [queryType, equivalentQuery.breakdown]);
 
   const arrayMapper = useMemo(() => {
-    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+    if (
+      queryType === QUERY_TYPE_EVENT ||
+      queryType === QUERY_TYPE_FUNNEL ||
+      queryType === QUERY_TYPE_KPI
+    ) {
       const am = [];
       equivalentQuery.events.forEach((q, index) => {
         am.push({
@@ -241,6 +253,20 @@ function CardContent({ unit, resultState, durationObj }) {
           section={DASHBOARD_WIDGET_SECTION}
           breakdown={breakdown}
           unit={unit}
+        />
+      );
+    }
+
+    if (queryType === QUERY_TYPE_KPI) {
+      content = (
+        <KPIAnalysis
+          queries={events}
+          resultState={resultState}
+          chartType={presentationObj[dashboardPresentation]}
+          section={DASHBOARD_WIDGET_SECTION}
+          breakdown={breakdown}
+          unit={unit}
+          arrayMapper={arrayMapper}
         />
       );
     }

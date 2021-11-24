@@ -27,12 +27,12 @@ spec:
             - --env
             - $(ENV)
             - --data_service_host
-            - $(DATA_SERVICE_HOST_URL)
+            - $(DATA_SERVICE_MEMSQL_HOST_URL)
             - --first_sync
             - --app_name
-            - "hubspot_sync_first"
+            - hubspot_sync_first
             - --healthcheck_ping_id
-            - "e8644320-8c94-4b5c-b8c8-5ea225ef518a"
+            - e8644320-8c94-4b5c-b8c8-5ea225ef518a
             envFrom:
             - configMapRef:
                 name: config-env

@@ -37,7 +37,7 @@ spec:
             - --db_pass
             - $(POSTGRES_PASSWORD)
             - --project_ids
-            - "2"
+            - "398"
             envFrom:
             - configMapRef:
                 name: config-env

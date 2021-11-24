@@ -27,6 +27,7 @@ import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../../components/SparkLineChart/Chart';
 import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
+import _ from 'lodash';
 
 const NoBreakdownCharts = forwardRef(
   (
@@ -108,7 +109,7 @@ const NoBreakdownCharts = forwardRef(
               <ChartHeader
                 bgColor='#4D7DB4'
                 query={aggregateData[0].name}
-                total={aggregateData[0].total}
+                total={_.round(aggregateData[0].total,1)}
               />
             </div>
             <div className='w-3/4'>

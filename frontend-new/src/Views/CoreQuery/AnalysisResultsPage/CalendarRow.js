@@ -7,6 +7,7 @@ import {
   QUERY_TYPE_CAMPAIGN,
   REPORT_SECTION,
   QUERY_TYPE_PROFILE,
+  QUERY_TYPE_KPI,
 } from '../../../utils/constants';
 import styles from './index.module.scss';
 import { Button } from 'antd';
@@ -105,7 +106,9 @@ function CalendarRow({
   let granularity = null;
 
   if (
-    (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) &&
+    (queryType === QUERY_TYPE_EVENT ||
+      queryType === QUERY_TYPE_CAMPAIGN ||
+      queryType === QUERY_TYPE_KPI) &&
     section === REPORT_SECTION &&
     isSeriesChart(chartType)
   ) {

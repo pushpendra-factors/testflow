@@ -5,6 +5,7 @@ import {
   getAttributionsData,
   getCampaignsData,
   getProfileData,
+  getKPIData,
 } from '../../reducers/coreQuery/services';
 import {
   QUERY_TYPE_ATTRIBUTION,
@@ -14,6 +15,7 @@ import {
   ATTRIBUTION_METRICS,
   PREDEFINED_DATES,
   QUERY_TYPE_PROFILE,
+  QUERY_TYPE_KPI,
 } from '../../utils/constants';
 import {
   getItemFromLocalStorage,
@@ -109,16 +111,55 @@ export const getDataFromServer = (
           refresh,
           unit_id: unitId,
           id: dashboardId,
-        }, 
+        },
         false
       );
     } else {
-      return getEventsData(activeProjectId, queryGroup, {
+      return getEventsData(
+        activeProjectId,
+        queryGroup,
+        {
+          refresh,
+          unit_id: unitId,
+          id: dashboardId,
+        },
+        false
+      );
+    }
+  } else if (query.query.cl && query.query.cl === QUERY_TYPE_KPI) {
+    let fr;
+    let to;
+    if (durationObj.from && durationObj.to) {
+      fr = MomentTz(durationObj.from).startOf('day').utc().unix();
+      to = MomentTz(durationObj.to).endOf('day').utc().unix();
+    } else {
+      fr = MomentTz().startOf('week').utc().unix();
+      to =
+        MomentTz().format('dddd') !== 'Sunday'
+          ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
+          : MomentTz().utc().unix();
+    }
+    const KPIQuery = {
+      ...query.query,
+      qG: query.query.qG.map((q) => {
+        return {
+          ...q,
+          fr,
+          to,
+        };
+      }),
+    };
+    
+    return getKPIData(
+      activeProjectId,
+      KPIQuery,
+      {
         refresh,
         unit_id: unitId,
         id: dashboardId,
-      }, false);
-    }
+      },
+      false
+    );
   } else if (query.query.cl && query.query.cl === QUERY_TYPE_ATTRIBUTION) {
     let attributionQuery = query.query;
     if (durationObj.from && durationObj.to) {
@@ -143,18 +184,28 @@ export const getDataFromServer = (
         },
       };
     }
-    return getAttributionsData(activeProjectId, attributionQuery, {
-      refresh,
-      unit_id: unitId,
-      id: dashboardId,
-    }, false);
+    return getAttributionsData(
+      activeProjectId,
+      attributionQuery,
+      {
+        refresh,
+        unit_id: unitId,
+        id: dashboardId,
+      },
+      false
+    );
   } else if (query.query.cl && query.query.cl === QUERY_TYPE_PROFILE) {
     const profileQuery = query.query;
-    return getProfileData(activeProjectId, profileQuery, {
-      refresh,
-      unit_id: unitId,
-      id: dashboardId,
-    }, false);
+    return getProfileData(
+      activeProjectId,
+      profileQuery,
+      {
+        refresh,
+        unit_id: unitId,
+        id: dashboardId,
+      },
+      false
+    );
   } else {
     let funnelQuery = query.query;
     if (durationObj.from && durationObj.to) {
@@ -181,11 +232,16 @@ export const getDataFromServer = (
       });
       funnelQuery.gup = formatFilters(funnelQuery.gup || []);
     }
-    return getFunnelData(activeProjectId, funnelQuery, {
-      refresh,
-      unit_id: unitId,
-      id: dashboardId,
-    }, false);
+    return getFunnelData(
+      activeProjectId,
+      funnelQuery,
+      {
+        refresh,
+        unit_id: unitId,
+        id: dashboardId,
+      },
+      false
+    );
   }
 };
 

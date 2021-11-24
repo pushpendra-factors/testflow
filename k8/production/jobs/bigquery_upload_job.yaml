@@ -24,6 +24,20 @@ spec:
             image: us.gcr.io/factors-production/bigquery-upload-job:v0.71_4a75f686
             imagePullPolicy: IfNotPresent
             args:
+            - --primary_datastore
+            - memsql
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
             - --env
             - $(ENV)
             - --bucket_name
@@ -38,14 +52,14 @@ spec:
             - $(POSTGRES_USER)
             - --db_pass
             - $(POSTGRES_PASSWORD)
-            - --all
-            - $(UPLOAD_ALL)
             - --sentry_dsn
             - $(SENTRY_DSN)
             - --gcp_project_id
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
+            - --all
+            - $(UPLOAD_ALL)
             envFrom:
             - configMapRef:
                 name: config-env
@@ -55,6 +69,10 @@ spec:
                 name: config-postgres
             - configMapRef:
                 name: config-bigqueryuploadjob
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
             - secretRef:
                 name: secret-postgres
             - secretRef:

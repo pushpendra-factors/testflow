@@ -56,10 +56,10 @@ function GroupBlock({
 
   const onChange = (value, index, category) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
-    newGroupByState.prop_category = 'user';
-    newGroupByState.eventName = '$present';
+    newGroupByState.prop_category = value[1][3];
+    newGroupByState.eventName = value[1][2];
     newGroupByState.property = value[1][1];
-    newGroupByState.prop_type = value[1][2];
+    newGroupByState.prop_type = value[1][2]; 
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }
@@ -160,13 +160,16 @@ function GroupBlock({
     </div>);
   }
 
-  const renderGroupDisplayName = (opt, index) => {
+  const renderGroupDisplayName = (opt, index) => { 
     let propertyName = '';
-    if (opt.property && opt.prop_category === 'user') {
-      propertyName = userPropNames[opt.property] ? userPropNames[opt.property] : opt.property;
-    }
-    if (opt.property && opt.prop_category === 'event') {
-      propertyName = eventPropNames[opt.property] ? eventPropNames[opt.property] : opt.property;
+    // if (opt.property && opt.prop_category === 'user') {
+    //   propertyName = userPropNames[opt.property] ? userPropNames[opt.property] : opt.property;
+    // }
+    // if (opt.property && opt.prop_category === 'event') {
+    //   propertyName = eventPropNames[opt.property] ? eventPropNames[opt.property] : opt.property;
+    // } 
+    if (opt?.property) {
+      propertyName = opt.property;
     }
     if (!opt.property) {
       propertyName = 'Select user property';
@@ -203,7 +206,8 @@ function GroupBlock({
               <div className={styles.group_block__event_selector__btn}>
                 <GroupSelect2 groupedProperties={filterOptions}
                   placeholder="Select Property" 
-                  optionClick={(group, val) => onChange([group, val], index)}
+                  optionClick={(group, val) => onChange(group, val)}
+                  // optionClick={(group, val) => onChange([group, val], index)}
                   onClickOutside={() => triggerDropDown(index, true)}
                   hideTitle={true}
                 ></GroupSelect2>

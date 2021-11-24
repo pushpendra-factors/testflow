@@ -59,11 +59,13 @@ spec:
             - --subnetwork
             - $(BEAM_SUBNETWORK)
             - --worker_machine_type
-            - "n2-highmem-2"
+            - n2-highmem-2
             - --max_num_workers
             - "4"
             - --project_id
-            - "*"
+            - '*'
+            - --exclude_project_id
+            - 576,399
             envFrom:
             - configMapRef:
                 name: config-env

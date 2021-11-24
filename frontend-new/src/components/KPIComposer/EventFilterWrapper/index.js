@@ -93,7 +93,8 @@ function EventFilterWrapper({
       let DDvalues =  selGroup?.properties?.map((item)=>{
         if (item == null) return
         let ddName = item.display_name ? (selGroup?.category == 'channels' ? `${_.startCase(item.object_type)} ${item.display_name}` : item.display_name)  : item.name;
-        return [ddName, item.name, item.data_type, item.entity ? item.entity : item.object_type]
+        let ddtype = selGroup?.category == 'channels' ? item.object_type : (item.entity ? item.entity : item.object_type)
+        return [ddName, item.name, item.data_type, ddtype]
       })  
 
       // filterDD.props = propState; 
@@ -524,13 +525,26 @@ function EventFilterWrapper({
      
 
     if(props){
-       let filterData = {
-        "category": selectedMainCategory?.category,
-        "object_type": selectedMainCategory?.group,
-        "property_name": props[1],
-        "entity": props[3]
-    }
+
+       let filterData = {}
       
+    if(selectedMainCategory?.category == "channels"){ 
+        filterData = {
+          "category": selectedMainCategory?.category,
+          "object_type": props[3],
+          "property_name": props[1],
+          "display_category": selectedMainCategory?.group,
+          "entity":"event"
+      } 
+    } else {
+      filterData = {
+            "category": selectedMainCategory?.category,
+            "object_type": selectedMainCategory?.group,
+            "property_name": props[1],
+            "entity": props[3]
+      }
+    }
+
       fetchKPIFilterValues(activeProject.id,filterData).then(res => { 
         const ddValues = Object.assign({}, dropDownValues);
         ddValues[props[0]] = [...res.data, '$none'];
@@ -604,7 +618,7 @@ function EventFilterWrapper({
       {
         <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>{index >= 1 ? '...and' : 'Filter By'}</Text>
       }
-      <div className={`relative flex flex-grow ${filter ? 'ml-2' : ''}`}>
+      <div className={`relative flex flex-grow`}>
         {filter
           ? renderFilterContent()
           : filterSelComp()

@@ -33,20 +33,17 @@ spec:
             - --memsql_name
             - $(MEMSQL_DB)
             - --memsql_user
-            - $(MEMSQL_USER)
+            - $(MEMSQL_OLTP_USER)
             - --memsql_pass
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
-            - --memsql_resource_pool
-            - $(MEMSQL_RPOOL_SOFT_CPU_50)
             - --primary_datastore
-            - "memsql"
-            - --project_ids
+            - memsql
             - --app_name
-            - "enrich_smart_properties_job_dup"
+            - enrich_smart_properties_job_dup
             - --healthcheck_ping_id
-            - "d2b55241-52d8-4cc5-a49c-5b57f6a96642"
+            - d2b55241-52d8-4cc5-a49c-5b57f6a96642
             envFrom:
             - configMapRef:
                 name: config-env

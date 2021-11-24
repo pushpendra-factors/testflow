@@ -54,37 +54,43 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 10
         args:
-          - --env
-          - $(ENV)
-          - --port
-          - "8089"
-          - --db_host
-          - $(DB_HOST)
-          - --db_port
-          - $(DB_PORT)
-          - --db_name
-          - $(POSTGRES_DB)
-          - --db_user
-          - $(POSTGRES_USER)
-          - --db_pass
-          - $(POSTGRES_PASSWORD)
-          - --redis_host
-          - $(REDIS_HOST)
-          - --redis_port
-          - $(REDIS_PORT)
-          - --sentry_dsn
-          - $(SENTRY_DSN)
-          - --gcp_project_id
-          - $(GCP_PROJECT_ID)
-          - --gcp_project_location
-          - $(GCP_PROJECT_LOCATION)
+        - --redis_host_ps
+        - $(PERSISTENT_REDIS_HOST)
+        - --redis_port_ps
+        - $(PERSISTENT_REDIS_PORT)
+        - --env
+        - $(ENV)
+        - --port
+        - "8089"
+        - --db_host
+        - $(DB_HOST)
+        - --db_port
+        - $(DB_PORT)
+        - --db_name
+        - $(POSTGRES_DB)
+        - --db_user
+        - $(POSTGRES_USER)
+        - --db_pass
+        - $(POSTGRES_PASSWORD)
+        - --redis_host
+        - $(REDIS_HOST)
+        - --redis_port
+        - $(REDIS_PORT)
+        - --sentry_dsn
+        - $(SENTRY_DSN)
+        - --gcp_project_id
+        - $(GCP_PROJECT_ID)
+        - --gcp_project_location
+        - $(GCP_PROJECT_LOCATION)
         envFrom:
         - configMapRef:
             name: config-env
         - configMapRef:
             name: config-postgres
         - configMapRef:
-          name: config-redis
+            name: config-redis
+        - configMapRef:
+            name: config-persistent-redis
         - secretRef:
             name: secret-postgres
         - secretRef:

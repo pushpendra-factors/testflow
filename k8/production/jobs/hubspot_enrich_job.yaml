@@ -40,12 +40,12 @@ spec:
             - $(REDIS_HOST)
             - --redis_port
             - $(REDIS_PORT)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
             - --redis_host_ps
             - $(PERSISTENT_REDIS_HOST)
             - --redis_port_ps
             - $(PERSISTENT_REDIS_PORT)
-            - --sentry_dsn
-            - $(SENTRY_DSN)
             - --gcp_project_id
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
@@ -60,6 +60,12 @@ spec:
             - --cache_with_sorted_set
             - --num_unique_doc_routines
             - "100"
+            - --task_management_lookback
+            - "3"
+            - --enable_hubspot_groups_by_project_id
+            - "595"
+            - --use_source_property_overwrite_by_project_id
+            - 566,2,645,616
             envFrom:
             - configMapRef:
                 name: config-env
@@ -67,10 +73,10 @@ spec:
                 name: config-postgres
             - secretRef:
                 name: secret-postgres
-            - configMapRef:
-                name: config-redis
             - secretRef:
                 name: secret-sentry
+            - configMapRef:
+                name: config-redis
             - configMapRef:
                 name: config-persistent-redis
           restartPolicy: OnFailure

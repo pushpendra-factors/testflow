@@ -38,17 +38,16 @@ spec:
             - --db_pass
             - $(POSTGRES_PASSWORD)
             - --project_ids
-            - "645"
+            - "483"
             - --lookback
-            - "50"
+            - "40"
             - --weekly_enabled
-            - --monthly_enabled
             - --etcd
             - $(ETCD)
             - --max_campaigns_limit
             - "10"
             - --run_beam
-            - "0"
+            - "1"
             - --count_version
             - "1"
             - --runner

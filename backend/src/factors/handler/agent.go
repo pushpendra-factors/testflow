@@ -69,7 +69,15 @@ func Signin(c *gin.Context) {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.SecondsInOneMonth*time.Second)
 
 	domain := C.GetCookieDomian()
-	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, C.UseSecureCookie(), C.UseHTTPOnlyCookie())
+
+	cookie := C.UseSecureCookie()
+	httpOnly := C.UseHTTPOnlyCookie()
+	if C.IsDevBox() {
+		cookie = true
+		httpOnly = true
+		c.SetSameSite(http.SameSiteNoneMode)
+	}
+	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, cookie, httpOnly)
 	resp := map[string]string{
 		"status": "success",
 	}

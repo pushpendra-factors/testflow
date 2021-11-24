@@ -24,8 +24,6 @@ function EventsAnalytics({
   renderedCompRef,
 }) {
   let content = null;
-
-  console.log("durationObj event analytics",durationObj);
   
   if (breakdownType === EACH_USER_TYPE) {
     if (resultState.data && !resultState.data.metrics.rows.length) {

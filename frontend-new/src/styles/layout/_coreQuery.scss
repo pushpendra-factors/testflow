@@ -263,6 +263,7 @@ $cq-card-transition: transform .2s ease-in-out;
             background: none !important;
             border: none !important;
             height: 28px !important;
+            min-width: 100px;
         }
     
         &:hover,&:active,&:focus {

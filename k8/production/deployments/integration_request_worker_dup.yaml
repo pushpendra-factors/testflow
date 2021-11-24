@@ -52,15 +52,11 @@ spec:
           - --memsql_name
           - $(MEMSQL_DB)
           - --memsql_user
-          - $(MEMSQL_USER)
+          - $(MEMSQL_OLTP_USER)
           - --memsql_pass
           - $(MEMSQL_PASSWORD)
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)
-          - --memsql_resource_pool
-          - $(MEMSQL_RPOOL_SOFT_CPU_50)
-          - --primary_datastore
-          - "memsql"
           - --redis_host
           - $(REDIS_HOST_2)
           - --redis_port
@@ -80,7 +76,7 @@ spec:
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
           - --worker_concurrency
-          - "10"
+          - "20"
           - --device_detector_path
           - $(DEVICE_DETECTOR_DATA_PATH)
           - --sentry_dsn
@@ -89,6 +85,12 @@ spec:
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
+          - --primary_datastore
+          - memsql
+          - --segment_excluded_customer_user_ids
+          - 576:User Identify
+          - --allow_support_for_user_properties_in_identify_call
+          - "2"
           - --enable_sdk_and_integration_request_queue_duplication
           - --cache_with_sorted_set
         envFrom:

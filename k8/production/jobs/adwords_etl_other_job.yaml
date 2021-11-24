@@ -39,8 +39,8 @@ spec:
             - "False"
             - --exclude_project_id
             - 518,517,520,550,519
-            - --timezone            
-            - "Other"
+            - --timezone
+            - Other
             envFrom:
             - configMapRef:
                 name: config-pythonappserver

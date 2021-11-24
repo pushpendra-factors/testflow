@@ -13,7 +13,7 @@ import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CampQueryComposer from '../../components/CampQueryComposer';
 import KPIComposer from 'Components/KPIComposer';
 import CoreQueryHome from '../CoreQueryHome';
-import { Drawer, Button, Collapse, Modal, message } from 'antd';
+import { Drawer, Button, Modal } from 'antd';
 import {
   Text,
   SVG,
@@ -62,7 +62,6 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   ATTRIBUTION_METRICS,
   QUERY_TYPE_PROFILE,
-  ALL_USER_TYPE,
 } from '../../utils/constants';
 import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
@@ -89,24 +88,15 @@ import {
   getValidGranularityOptions,
   shouldDataFetch,
 } from '../../utils/dataFormatter';
-import { fetchKPIConfig, fetchPageUrls } from 'Reducers/kpi';
-import {
-  SampleResponse,
-  NoGroupBySampleResponse,
-} from '../../utils/SampleResponse';
 import ProfileComposer from '../../components/ProfileComposer';
 import _ from 'lodash';
-
-const { Panel } = Collapse;
 
 function CoreQuery({
   activeProject,
   deleteGroupByForEvent,
   location,
   getCampaignConfigData,
-  fetchKPIConfig,
   KPI_config,
-  fetchPageUrls,
 }) {
   const [coreQueryState, localDispatch] = useReducer(
     CoreQueryReducer,
@@ -571,6 +561,7 @@ function CoreQuery({
           groupBy,
           queryOptions
         );
+
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
           updateResultState({ ...initialState, loading: true });
@@ -578,12 +569,14 @@ function CoreQuery({
         } else {
           updateLocalReducer(COMPARISON_DATA_LOADING);
         }
+
         const res = await getKPIData(
           activeProject.id,
           KPIquery,
-          getDashboardConfigs(isQuerySaved),
+          getDashboardConfigs(isGranularityChange ? false : isQuerySaved),
           true
         );
+
         updateResultState({
           ...initialState,
           data: res.data.result || res.data,
@@ -709,7 +702,7 @@ function CoreQuery({
 
   const handleGranularityChange = useCallback(
     ({ key: frequency }) => {
-      if (queryType === QUERY_TYPE_EVENT) {
+      if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) {
         const appliedDateRange = {
           ...queryOptions.date_range,
           frequency,
@@ -720,7 +713,12 @@ function CoreQuery({
             date_range: appliedDateRange,
           };
         });
-        runQuery(querySaved, appliedDateRange, true);
+        if (queryType === QUERY_TYPE_EVENT) {
+          runQuery(querySaved, appliedDateRange, true);
+        }
+        if(queryType === QUERY_TYPE_KPI) {
+          runKPIQuery(querySaved, appliedDateRange, true);
+        }
       }
       if (queryType === QUERY_TYPE_CAMPAIGN) {
         const payload = {
@@ -799,8 +797,16 @@ function CoreQuery({
       if (queryType === QUERY_TYPE_FUNNEL) {
         runFunnelQuery(querySaved, appliedDateRange, isCompareDate);
       }
+
+      if (queryType === QUERY_TYPE_KPI) {
+        runKPIQuery(querySaved, appliedDateRange);
+      }
+
       if (queryType === QUERY_TYPE_EVENT) {
         runQuery(querySaved, appliedDateRange);
+      }
+      if (queryType === QUERY_TYPE_KPI) {
+        runKPIQuery(querySaved, appliedDateRange);
       }
 
       if (queryType === QUERY_TYPE_CAMPAIGN) {
@@ -846,7 +852,10 @@ function CoreQuery({
           name: clickedSavedReport.queryName,
         });
       } else if (clickedSavedReport.queryType === QUERY_TYPE_KPI) {
-        runKPIQuery(rowClicked.queryName);
+        runKPIQuery({
+          id: clickedSavedReport.query_id,
+          name: clickedSavedReport.queryName,
+        });
       } else if (clickedSavedReport.queryType === QUERY_TYPE_PROFILE) {
         runProfileQuery({
           id: clickedSavedReport.query_id,
@@ -1204,31 +1213,19 @@ function CoreQuery({
   };
 
   useEffect(() => {
-    // not the right place to do this. We can do it in App Layout or in the KPI query builder component
-    fetchKPIConfig(activeProject.id)
-      .then(() => {
-        fetchPageUrls(activeProject.id).catch((e) => {
-          console.log('fetch KPI page URLS error', e);
-        });
-      })
-      .catch((e) => {
-        console.log('fetchKPIConfig error', e);
-      });
-  }, [activeProject]);
-
-  useEffect(() => {
     let KPIlist = KPI_config || [];
     let selGroup = KPIlist.find((item) => {
       return item.display_category == selectedMainCategory?.group;
     });
-    let DDvalues = selGroup?.properties.map((item) => { 
+    let DDvalues = selGroup?.properties.map((item) => {
       if (item == null) return;
       let ddName = item.display_name ? (selGroup?.category == 'channels' ? `${_.startCase(item.object_type)} ${item.display_name}` : item.display_name)  : item.name;
+      let ddtype = selGroup?.category == 'channels' ? item.object_type : (item.entity ? item.entity : item.object_type)
       return [
         ddName,
         item.name,
         item.data_type,
-        item.entity ? item.entity : item.object_type,
+        ddtype
       ];
     });
     setKPIConfigProps(DDvalues);
@@ -1347,8 +1344,6 @@ const mapDispatchToProps = (dispatch) =>
     {
       deleteGroupByForEvent,
       getCampaignConfigData,
-      fetchKPIConfig,
-      fetchPageUrls,
     },
     dispatch
   );
