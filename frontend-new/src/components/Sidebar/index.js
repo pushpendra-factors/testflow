@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar, Popover, Button, Modal, Col, notification, Tooltip, Tag
+  Layout, Row, Avatar, Popover, Button, Modal, Col, notification, Tooltip, Tag, Badge
 } from 'antd';
 import { NavLink, useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
@@ -148,6 +148,7 @@ function Sidebar(props) {
             <Row justify="center" align="middle" style={{marginTop:'53vh'}} className=" w-full py-2">
               <Tooltip title="Setup Assist" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
                 <NavLink activeClassName="active" to="/project-setup"><SVG name={'Emoji'} size={40} color="white"/></NavLink>
+                <Badge dot style={{top:'-35px', left:'25px'}}></Badge>
               </Tooltip>
             </Row>
           </div>

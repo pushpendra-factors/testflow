@@ -17,6 +17,7 @@ const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
 const ForgotPassword = lazyWithRetry(() => import("./Views/Pages/ForgotPassword"));
 const ResetPassword = lazyWithRetry(() => import("./Views/Pages/ResetPassword"));
 const SignUp = lazyWithRetry(() => import("./Views/Pages/SignUp"));
+const UserData = lazyWithRetry(() => import("./Views/Pages/UserData"));
 const Activate = lazyWithRetry(() => import("./Views/Pages/Activate")); 
 const Templates = lazyWithRetry(() => import("./Views/CoreQuery/Templates/ResultsPage"));
 const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
@@ -135,6 +136,7 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
         <Router>
           <Switch>
             <Route exact path="/signup" name="login" component={SignUp} />
+            <Route exact path="/userdata" name="login" component={UserData} />
             <Route
               exact
               path="/activate"
