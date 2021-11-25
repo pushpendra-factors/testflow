@@ -1,10 +1,14 @@
-name: setup-build-publish-Pattern-Mine-Job
+name: patternMine-setup-build-publish
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      image_id:
+        description: 'ID'
+        required: true
+        default: 'test'
+
+
     
 env:
   PROJECT_ID: ${{ secrets.GKE_STAGING_PROJECT }}
@@ -42,25 +46,17 @@ jobs:
     # helper for authentication
     - run: |-
         gcloud --quiet auth configure-docker
-
-    - name: Set outputs
-      id: vars
-      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-    
-    - name: Check outputs
-      run: echo ${{ steps.vars.outputs.sha_short }}
     
     - name: Build Pattern Mine 
       env : 
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
-        IMAGE_NAME: v1.${{ steps.vars.outputs.sha_short }}
+        IMAGE_NAME: ${{ github.event.inputs.image_id}}
       working-directory: ${{ env.GOPATH}}/src
       run : TAG=${{ env.IMAGE_NAME}} ENV=staging make pack-pattern-mine
 
     - name: Publish Pattern Mine 
       env : 
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
-        IMAGE_NAME: v1.${{ steps.vars.outputs.sha_short }}
+        IMAGE_NAME: ${{ github.event.inputs.image_id}}
       working-directory: ${{ env.GOPATH}}/src
       run : TAG=${{ env.IMAGE_NAME}} ENV=staging make upload-pattern-mine
-
