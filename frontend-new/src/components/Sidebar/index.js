@@ -12,6 +12,7 @@ import { connect } from 'react-redux';
 import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
 import CreateNewProject from './CreateNewProject';
 import _ from 'lodash';
+import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
 
 
 // const ColorCollection = ['#4C9FC8','#4CBCBD', '#86D3A3', '#F9C06E', '#E89E7B', '#9982B5'];
@@ -20,6 +21,7 @@ function Sidebar(props) {
   const { Sider } = Layout;
 
   const [visible, setVisible] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(true);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
@@ -176,6 +178,7 @@ function Sidebar(props) {
         {/* Modals triggered from sidebar */}
         <ModalLib visible={visible} handleCancel={handleCancel} />
         <UserSettings visible={ShowUserSettings} handleCancel={closeUserSettingsModal} />
+        <NewProject visible={showProjectModal} handleCancel={() => setShowProjectModal(false)} />
 
         <CreateNewProject
           visible={CreateNewProjectModal}
