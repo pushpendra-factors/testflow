@@ -4,36 +4,38 @@ import {
   Row, Col, Button, Input, Form, Select
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { useHistory } from 'react-router-dom';
-import { userdata } from '../../reducers/agentActions';
+import { signup } from 'Reducers/agentActions';
+import Congrats from './Congrats';
 
-function UserData(props) {
-  const [form] = Form.useForm();
-  const [dataLoading, setDataLoading] = useState(false);
-  const [errorInfo, seterrorInfo] = useState(null);
-  const history = useHistory();
+function UserData({ signup, data }) {
+    const [form] = Form.useForm();
+    const [dataLoading, setDataLoading] = useState(false);
+    const [errorInfo, seterrorInfo] = useState(null);
+    const [formData, setformData] = useState(null);
 
-  const UserDataFn = () => {
-    setDataLoading(true);
-    form.validateFields().then((value) => {
-      setDataLoading(true);
-      setTimeout(() => {
-        props.userdata(value.form_phone, value.form_website,form_estimateusers,form_teamsize)
-          .then(() => {
+    const SignUpFn = () => {
+        setDataLoading(true);
+        form.validateFields().then((values) => {
+            setDataLoading(true);
+            const filteredValues = Object.fromEntries(
+            Object.entries(data).filter(([key, value]) => key !== 'terms_and_conditions') );
+
+            const allData = {...filteredValues, ...values};
+            
+            signup(allData).then(() => {
+                setDataLoading(false);
+                setformData(allData);
+            }).catch((err) => {
             setDataLoading(false);
-            history.push('/');
-          }).catch((err) => {
+                form.resetFields();
+                seterrorInfo(err);
+            });
+        }).catch((info) => {
             setDataLoading(false);
             form.resetFields();
-            seterrorInfo(err);
-          });
-      }, 200);
-    }).catch((info) => {
-      setDataLoading(false);
-      form.resetFields();
-      seterrorInfo(info);
-    });
-  };
+            seterrorInfo(info);
+        });
+    };
 
   const onChange = () => {
     seterrorInfo(null);
@@ -41,6 +43,7 @@ function UserData(props) {
 
   return (
     <>
+    {!formData &&
       <div className={'fa-container'}>
             <Row justify={'center'}>
                 <Col span={12} >
@@ -52,6 +55,7 @@ function UserData(props) {
                                 </div>
                             </Col>
                         </Row>
+                        
                         <Row>
                             <Col span={24}>
                         <Form
@@ -59,7 +63,7 @@ function UserData(props) {
                         name="login"
                         validateTrigger
                         initialValues={{ remember: false }}
-                        onFinish={UserDataFn}
+                        onFinish={SignUpFn}
                         onChange={onChange}
                         >
                         <Row>
@@ -71,7 +75,7 @@ function UserData(props) {
                             <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-10 w-full'} >
                                         <Form.Item label={null}
-                                            name="form_phone"
+                                            name="phone"
                                             rules={[{ required: true, message: 'Please enter phone number' }]}
                                             >
                                             <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'} placeholder="Phone Number" />
@@ -81,7 +85,7 @@ function UserData(props) {
                             <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
                                             <Form.Item label={null}
-                                            name="form_website"
+                                            name="website_url"
                                             rules={[{ required: true, message: 'Please enter company website' }]}
                                             >
                                             <Input
@@ -96,7 +100,7 @@ function UserData(props) {
                             <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
                                             <Form.Item label={null}
-                                            name="form_estimateusers"
+                                            name="estimate_users"
                                             rules={[{ required: true, message: 'Please select estimated users' }]}
                                             >
                                             <Select
@@ -115,7 +119,7 @@ function UserData(props) {
                             <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
                                             <Form.Item label={null}
-                                            name="form_teamsize"
+                                            name="team_size"
                                             rules={[{ required: true, message: 'Please select team size' }]}
                                             >
                                             <Select
@@ -144,11 +148,6 @@ function UserData(props) {
                                 </div>
                             </Col>
                             }
-                            {/* <Col span={24}>
-                                <div className={'flex flex-col justify-center items-center mt-10'} >
-                                    <a disabled={dataLoading} type={'text'} size={'large'} onClick={() => routeChange('/forgotpassword')}>Forgot Password</a>
-                                </div>
-                            </Col> */}
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
                                 {/* <Text type={'paragraph'} mini color={'grey'}>Don’t have an account? <a disabled={dataLoading} onClick={() => routeChange('/signup')}> Sign Up</a></Text> */}
@@ -159,15 +158,19 @@ function UserData(props) {
                         </Form>
                         </Col>
                         </Row>
+                        
                     </div>
                 </Col>
             </Row>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
       </div>
-
-    </>
+        }
+        {formData &&
+            <Congrats signup={signup} data = {formData} />
+        }
+</>
 
   );
 }
 
-export default connect(null, { userdata })(UserData);
+export default connect(null, { signup })(UserData);
