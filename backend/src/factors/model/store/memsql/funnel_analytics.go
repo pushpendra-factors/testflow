@@ -747,6 +747,7 @@ func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEven
 				groupByUserProperties = true
 			}
 		}
+
 	}
 
 	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep, timezoneString)

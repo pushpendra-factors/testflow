@@ -198,6 +198,7 @@ type Configuration struct {
 	DevBox                                      bool
 	AllowSupportForUserPropertiesInIdentifyCall string
 	SkipEventNameStepByProjectID                string
+	SkipUserJoinInEventQueryByProjectID         string
 	AllowSupportForDateRangeInProfiles          string
 }
 
@@ -389,6 +390,26 @@ func SkipEventNameStepByProjectID(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.SkipEventNameStepByProjectID, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+func SkipUserJoinInEventQueryByProjectID(projectID uint64) bool {
+	if configuration.SkipUserJoinInEventQueryByProjectID == "" {
+		return false
+	}
+
+	if configuration.SkipUserJoinInEventQueryByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.SkipUserJoinInEventQueryByProjectID, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true

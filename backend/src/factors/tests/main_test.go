@@ -85,6 +85,7 @@ func TestMain(m *testing.M) {
 		AllowSupportForUserPropertiesInIdentifyCall: "*",
 		AllowSupportForDateRangeInProfiles:          "*",
 		SkipEventNameStepByProjectID:                "*",
+		SkipUserJoinInEventQueryByProjectID:         "*",
 	}
 	C.InitConf(config)
 

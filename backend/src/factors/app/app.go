@@ -120,6 +120,7 @@ func main() {
 		"Start timestamp of data available for filtering with parquet on memsql.")
 	devBox := flag.Bool("dev_box", false, "Is this going to be deployed on one box")
 	skipEventNameStepByProjectID := flag.String("skip_event_name_step_by_project_id", "", "")
+	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
 	allowSupportForDateRangeInProfiles := flag.String("allow_support_for_date_range_in_profiles", "", "")
 
 	flag.Parse()
@@ -201,6 +202,7 @@ func main() {
 		FilterPropertiesStartTimestamp:          *filterPropertiesStartTimestamp,
 		DevBox:                                  *devBox,
 		SkipEventNameStepByProjectID:            *skipEventNameStepByProjectID,
+		SkipUserJoinInEventQueryByProjectID:     *skipUserJoinInEventQueryByProjectID,
 		AllowSupportForDateRangeInProfiles:      *allowSupportForDateRangeInProfiles,
 	}
 	C.InitConf(config)

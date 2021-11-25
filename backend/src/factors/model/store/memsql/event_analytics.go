@@ -1908,9 +1908,18 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 			}
 		}
 
-		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
+		addJoinStmnt := ""
+		if C.SkipUserJoinInEventQueryByProjectID(projectID) {
+			if len(q.GlobalUserProperties) > 0 {
+				addJoinStmnt = "JOIN users ON events.user_id=users.id AND users.project_id = ?"
+				stepParams = append(stepParams, projectID)
+			}
+		} else {
+			addJoinStmnt = "JOIN users ON events.user_id=users.id AND users.project_id = ?"
+			stepParams = append(stepParams, projectID)
+		}
+
 		addJoinStmnt = addJoinStmnt + getUsersFilterJoinStatement(projectID, q.GlobalUserProperties)
-		stepParams = append(stepParams, projectID)
 		err := addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties)
 		if err != nil {
