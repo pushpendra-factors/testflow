@@ -757,6 +757,7 @@ func (pg *Postgres) GetEventNamesByNames(projectId uint64, names []string) ([]mo
 		}
 		return nil, http.StatusInternalServerError
 	}
+
 	return eventNames, http.StatusFound
 }
 

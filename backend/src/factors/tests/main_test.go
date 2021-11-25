@@ -84,6 +84,7 @@ func TestMain(m *testing.M) {
 		AllowedSalesforceGroupsByProjectIDs:         "*",
 		AllowSupportForUserPropertiesInIdentifyCall: "*",
 		AllowSupportForDateRangeInProfiles:          "*",
+		SkipEventNameStepByProjectID:                "*",
 	}
 	C.InitConf(config)
 

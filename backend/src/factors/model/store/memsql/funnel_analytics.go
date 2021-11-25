@@ -23,6 +23,10 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 		return nil, http.StatusBadRequest, model.ErrMsgMaxFunnelStepsExceeded
 	}
 
+	if C.SkipEventNameStepByProjectID(projectId) {
+		store.fillEventNameIDs(projectId, &query)
+	}
+
 	stmnt, params, err := BuildFunnelQuery(projectId, query)
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)

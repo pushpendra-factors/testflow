@@ -76,7 +76,28 @@ func (store *MemSQL) ExecuteEventsQuery(projectId uint64, query model.Query) (*m
 	return store.RunInsightsQuery(projectId, query)
 }
 
+func (store *MemSQL) fillEventNameIDs(projectID uint64, query *model.Query) {
+	for i := range query.EventsWithProperties {
+		eventNames, status := store.GetEventNamesByNames(projectID, []string{query.EventsWithProperties[i].Name})
+		if status != http.StatusFound {
+			log.WithFields(log.Fields{"project_id": projectID, "event_name": query.EventsWithProperties[i].Name}).
+				Error("Failed to get event names in fillEventNameIDs. Continuing with empty uuid.")
+			query.EventsWithProperties[i].EventNameIDs = []interface{}{""}
+			continue
+		}
+
+		for j := range eventNames {
+			query.EventsWithProperties[i].EventNameIDs = append(query.EventsWithProperties[i].EventNameIDs, eventNames[j].ID)
+		}
+	}
+
+}
+
 func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+	if C.SkipEventNameStepByProjectID(projectId) {
+		store.fillEventNameIDs(projectId, &query)
+	}
+
 	stmnt, params, err := store.BuildInsightsQuery(projectId, query)
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)

@@ -389,9 +389,10 @@ type QueryGroupByProperty struct {
 }
 
 type QueryEventWithProperties struct {
-	Name       string          `json:"na"`
-	AliasName  string          `json:"an"`
-	Properties []QueryProperty `json:"pr"`
+	Name         string          `json:"na"`
+	AliasName    string          `json:"an"`
+	Properties   []QueryProperty `json:"pr"`
+	EventNameIDs []interface{}   `json:"-"`
 }
 
 func (ewp *QueryEventWithProperties) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {

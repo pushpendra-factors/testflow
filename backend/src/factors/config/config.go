@@ -197,6 +197,7 @@ type Configuration struct {
 	AllowedSalesforceGroupsByProjectIDs         string
 	DevBox                                      bool
 	AllowSupportForUserPropertiesInIdentifyCall string
+	SkipEventNameStepByProjectID                string
 	AllowSupportForDateRangeInProfiles          string
 }
 
@@ -368,6 +369,26 @@ func IsAllowedSalesforceGroupsByProjectID(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.AllowedSalesforceGroupsByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+func SkipEventNameStepByProjectID(projectID uint64) bool {
+	if configuration.SkipEventNameStepByProjectID == "" {
+		return false
+	}
+
+	if configuration.SkipEventNameStepByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.SkipEventNameStepByProjectID, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true
