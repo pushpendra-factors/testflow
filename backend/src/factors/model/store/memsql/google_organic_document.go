@@ -540,10 +540,11 @@ func getGoogleOrganicFiltersWhereStatement(filters []model.ChannelFilterV1) stri
 		}
 		currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') %s '%s' ", filter.Property, filterOperator, filterValue)
 		if index == 0 {
-			resultStatement = " AND " + currentFilterStatement
+			resultStatement = " AND ( " + currentFilterStatement
 		} else {
 			resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
 		}
 	}
-	return resultStatement
+	return resultStatement + " )"
+
 }
