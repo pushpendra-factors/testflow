@@ -28,7 +28,7 @@ jobs:
     
     steps:
     - name: Setting Environment
-      if : ${{ github.event.inputs.env_value == 'staging' }}
+      if: ${{ github.events.inputs.env_value == 'staging' }}
       run: echo "Setting environment  ${{github.events.inputs.env_val}}"
            echo "GKE_CLUSTER=factors-staging" >> $GITHUB_ENV
            echo "GKE_ZONE=us-west1-b" >> $GITHUB_ENV
@@ -36,7 +36,7 @@ jobs:
 
           
     - name: Setting Environment
-      if : ${{ github.event.inputs.env_value == 'production' }}
+      if: ${{ github.events.inputs.env_value == 'production' }}
       run: echo "Setting environment  ${{github.events.inputs.env_val}}"
            echo "GKE_CLUSTER=factors-production" >> $GITHUB_ENV
            echo "GKE_ZONE=us-west1-b" >> $GITHUB_ENV
