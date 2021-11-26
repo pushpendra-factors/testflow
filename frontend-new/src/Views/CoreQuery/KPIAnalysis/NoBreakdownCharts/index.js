@@ -90,7 +90,7 @@ const NoBreakdownCharts = forwardRef(
           seriesData={data}
           section={section}
           chartType={chartType}
-          // durationObj={durationObj}
+          frequency={durationObj.frequency}
           categories={categories}
           sorter={sorter}
           handleSorting={handleSorting}
@@ -109,12 +109,12 @@ const NoBreakdownCharts = forwardRef(
               <ChartHeader
                 bgColor='#4D7DB4'
                 query={aggregateData[0].name}
-                total={_.round(aggregateData[0].total,1)}
+                total={_.round(aggregateData[0].total, 1)}
               />
             </div>
             <div className='w-3/4'>
               <SparkChart
-                frequency='date'
+                frequency={durationObj.frequency}
                 page='kpi'
                 event={aggregateData[0].name}
                 chartData={aggregateData[0].dataOverTime}
@@ -146,7 +146,7 @@ const NoBreakdownCharts = forwardRef(
                       />
                       <div className='mt-8'>
                         <SparkChart
-                          frequency='date'
+                          frequency={durationObj.frequency}
                           page='kpi'
                           event={chartData.name}
                           chartData={chartData.dataOverTime}
@@ -164,7 +164,7 @@ const NoBreakdownCharts = forwardRef(
       chart = (
         <div className='w-full'>
           <LineChart
-            frequency={'date'}
+            frequency={durationObj.frequency}
             categories={categories}
             data={data}
             showAllLegends={true}
