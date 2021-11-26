@@ -5,12 +5,16 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { createProject } from '../../../../reducers/global';
+import InviteMembers from './InviteMembers';
+const { Option } = Select;
 
 function BasicDetails({ createProject }) {
   const [form] = Form.useForm();
+  const [formData, setFormData] = useState(null);
 
   const onFinish = values => {
     createProject(values.projectName).then(() => {
+      setFormData(values);
       message.success('New Project Created!');
     }).catch((err) => {
       message.error('Oops! Something went wrong.');
@@ -18,12 +22,14 @@ function BasicDetails({ createProject }) {
     });
   };
 
-  const onReset = () => {
+  const onCancel = () => {
     form.resetFields();
+    setFormData(true)
   };
 
   return (
     <>
+    {!formData &&
       <div className={'fa-container'}>
             <Row justify={'center'}>
                 <Col span={7} >
@@ -58,7 +64,7 @@ function BasicDetails({ createProject }) {
                             <Form.Item
                                 label={null}
                                 name="timezone"
-                                rules={[{ required: true, message: 'Please selct timezone!' }]}
+                                rules={[{ required: true, message: 'Please select timezone' }]} className={'m-0'}
                             >
                             <Select
                                 defaultValue="US"
@@ -82,7 +88,7 @@ function BasicDetails({ createProject }) {
                         <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type={'text'} style={{width:'280px', height:'36px'}} htmlType="text" onClick={onReset}>
+                                    <Button size={'large'} type={'text'} style={{width:'280px', height:'36px'}} htmlType="text" onClick={onCancel}>
                                     Cancel
                                     </Button>
                                 </Form.Item>
@@ -101,7 +107,8 @@ function BasicDetails({ createProject }) {
             </Row>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
       </div>
-
+    }
+    {formData && <InviteMembers />}
     </>
 
   );
