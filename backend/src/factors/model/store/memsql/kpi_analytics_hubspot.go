@@ -1,8 +1,11 @@
 package memsql
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) GetKPIConfigsForHubspotContacts(projectID uint64, reqID string) (map[string]interface{}, int) {
@@ -30,6 +33,18 @@ func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID uint64, reqID
 		"category":         model.EventCategory,
 		"display_category": displayCategory,
 		"metrics":          model.GetMetricsForDisplayCategory(displayCategory),
-		"properties":       make([]string, 0),
+		"properties":       store.getPropertiesForHubspot(projectID, reqID),
 	}
+}
+
+func (store *MemSQL) getPropertiesForHubspot(projectID uint64, reqID string) []map[string]string {
+	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
+	properties, propertiesToDisplayNames, err := store.GetRequiredUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot properties. Internal error")
+		return make([]map[string]string, 0)
+	}
+
+	// transforming to kpi structure.
+	return model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$hubspot")
 }

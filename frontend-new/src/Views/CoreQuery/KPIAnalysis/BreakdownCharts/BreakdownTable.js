@@ -29,6 +29,7 @@ const BreakdownTable = ({
   handleDateSorting,
   visibleSeriesData,
   setVisibleSeriesData,
+  frequency = 'date',
 }) => {
   const [searchText, setSearchText] = useState('');
   const { userPropNames, eventPropNames } = useSelector(
@@ -62,7 +63,7 @@ const BreakdownTable = ({
         breakdown,
         dateSorter,
         handleDateSorting,
-        "date",
+        frequency,
         userPropNames,
         eventPropNames
       )

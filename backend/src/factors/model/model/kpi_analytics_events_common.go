@@ -136,10 +136,13 @@ func SplitKPIQueryToInternalKPIQueries(query Query, kpiQuery KPIQuery, metric st
 }
 
 func prependFiltersBasedOnInternalTransformation(filters []QueryProperty, eventsWithProperties []QueryEventWithProperties) []QueryEventWithProperties {
+	resultantEventsWithProperties := make([]QueryEventWithProperties, 1)
 	var filtersBasedOnMetric []QueryProperty
 	filtersBasedOnMetric = append(filtersBasedOnMetric, filters...)
-	eventsWithProperties[0].Properties = append(filtersBasedOnMetric, eventsWithProperties[0].Properties...)
-	return eventsWithProperties
+	resultantEventsWithProperties[0].Name = eventsWithProperties[0].Name
+	resultantEventsWithProperties[0].AliasName = eventsWithProperties[0].AliasName
+	resultantEventsWithProperties[0].Properties = append(filtersBasedOnMetric, eventsWithProperties[0].Properties...)
+	return resultantEventsWithProperties
 }
 
 // Functions supporting transforming eventResults to KPIresults

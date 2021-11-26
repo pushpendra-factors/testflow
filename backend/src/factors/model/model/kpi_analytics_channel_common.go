@@ -1,6 +1,9 @@
 package model
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 // Common/Util methods - to both adwords, facebook and all channels.
 func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperties []ChannelObjectAndProperties) []map[string]string {
@@ -10,8 +13,8 @@ func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperti
 	for _, channelAndProperties := range channelsWithProperties {
 		for _, property := range channelAndProperties.Properties {
 			tempPropertyConfig = map[string]string{
-				"name":         property.Name,
-				"display_name": property.Name,
+				"name":         channelAndProperties.Name + "_" + property.Name,
+				"display_name": channelAndProperties.Name + "_" + property.Name,
 				"data_type":    property.Type,
 				"object_type":  channelAndProperties.Name,
 				"entity":       EventEntity,
@@ -50,7 +53,7 @@ func transformGroupByKPIToChannelsV1(kpiGroupBys []KPIGroupBy) []ChannelGroupBy 
 	for _, kpiGroupBy := range kpiGroupBys {
 		tempChannelGroupBy = ChannelGroupBy{
 			Object:   kpiGroupBy.ObjectType,
-			Property: kpiGroupBy.PropertyName,
+			Property: strings.TrimPrefix(kpiGroupBy.PropertyName, kpiGroupBy.ObjectType+"_"),
 		}
 		resultChannelGroupBys = append(resultChannelGroupBys, tempChannelGroupBy)
 	}
@@ -63,7 +66,7 @@ func transformFiltersKPIToChannelsV1(kpiFilters []KPIFilter) []ChannelFilterV1 {
 	for _, kpiFilter := range kpiFilters {
 		tempChannelFilter = ChannelFilterV1{
 			Object:    kpiFilter.ObjectType,
-			Property:  kpiFilter.PropertyName,
+			Property:  strings.TrimPrefix(kpiFilter.PropertyName, kpiFilter.ObjectType+"_"),
 			Condition: kpiFilter.Condition,
 			Value:     kpiFilter.Value,
 			LogicalOp: kpiFilter.LogicalOp,
