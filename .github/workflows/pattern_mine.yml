@@ -1,19 +1,20 @@
-name: patternMine-setup-build-publish
+name: pattern-mine-setup-build-publish
 
 on:
   workflow_dispatch:
     inputs:
       image_id:
-        description: 'ID'
+        description: 'image_name'
         required: true
-        default: 'test'
+        default: ''
+      env_val:
+        description: 'environment'
+        required: true
+        default: 'staging'
 
 
     
 env:
-  PROJECT_ID: ${{ secrets.GKE_STAGING_PROJECT }}
-  GKE_CLUSTER: factors-staging    # TODO: update to cluster name
-  GKE_ZONE: us-west1-b   # TODO: update to cluster zone
   DEPLOYMENT_NAME: pattern_mine_job # TODO: update to deployment name
   PATH_TO_FACTORS : /home/runner/work/factors
   IMAGE: pattern_mine
@@ -26,6 +27,29 @@ jobs:
     environment: staging
 
     steps:
+    - name: "Set Environment"
+      if: ${{ github.events.input.env_val=='staging'}}
+      run: echo "Setting environment  ${{github.events.input.env_val}}"
+      env:
+        ENV: staging
+        PROJECT_ID: ${{ secrets.GKE_STAGING_PROJECT }}
+        GKE_CLUSTER: factors-staging
+        GKE_ZONE: us-west1-b 
+        GKE_SA_KEY: ${{ secrets.GKE_STAGING_SA_KEY }}
+        GKE_PROJECT: ${{ secrets.GKE_PRODUCTION_PROJECT }}
+
+    - name: "Set Environment"
+      if: ${{ github.events.input.env_val=='production'}}
+      run: echo "Setting environment  ${{github.events.input.env_val}}"
+      env:
+        ENV: 'production'
+        PROJECT_ID: ${{ secrets.GKE_PRODUCTION_PROJECT }}
+        GKE_CLUSTER: factors-production
+        GKE_ZONE: us-west1-b 
+        GKE_SA_KEY: ${{ secrets.GKE_PRODUCTION_SA_KEY }}
+        GKE_PROJECT: ${{ secrets.GKE_PRODUCTION_PROJECT }}
+
+
     - name: Checkout
       uses: actions/checkout@v2
       
@@ -39,8 +63,8 @@ jobs:
     # Setup gcloud CLI
     - uses: google-github-actions/setup-gcloud@v0.2.0
       with:
-        service_account_key: ${{ secrets.GKE_STAGING_SA_KEY }}
-        project_id: ${{ secrets.GKE_STAGING_PROJECT }}
+        service_account_key: $${{ env.GKE_SA_KEY}}
+        project_id: ${{ env.GKE_PROJECT }}
 
     # Configure Docker to use the gcloud command-line tool as a credential
     # helper for authentication
@@ -52,7 +76,8 @@ jobs:
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
         IMAGE_NAME: ${{ github.event.inputs.image_id}}
       working-directory: ${{ env.GOPATH}}/src
-      run : TAG=${{ env.IMAGE_NAME}} ENV=staging make pack-pattern-mine
+      run : TAG=${{ env.IMAGE_NAME}} ENV=${{ env.ENV }} make pack-pattern-mine
+
 
     - name: Publish Pattern Mine 
       env : 
