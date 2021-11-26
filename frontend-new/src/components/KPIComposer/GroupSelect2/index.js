@@ -3,6 +3,7 @@ import styles from './index.module.scss';
 import { Input, Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { CaretDownOutlined, CaretUpOutlined } from '@ant-design/icons';
+import _ from 'lodash'; 
 
 function GroupSelect2({
     groupedProperties, placeholder,
@@ -65,10 +66,10 @@ function GroupSelect2({
                 <div key={group.label} className={`fa-select-group-select--content`}>
                     {!hideTitle &&  <div className={'fa-select-group-select--option-group'}> 
                         <div>
-                            <SVG name={icon} color={'purple'} extraClass={'self-center'}></SVG>
-                            <Text level={8} type={'title'} extraClass={'m-0 ml-2'} weight={'bold'}>{getGroupLabel(group.label)}</Text>
+                            {/* <SVG name={icon} color={'purple'} extraClass={'self-center'}></SVG> */}
+                            <Text level={8} type={'title'} extraClass={'m-0 ml-2'} weight={'bold'}>{_.startCase(group.label)}</Text>
                         </div>
-                    </div>}
+                    </div>} 
 
                     <div className={styles.dropdown__filter_select__option_group_container_sec}>
                         {collState
@@ -80,7 +81,7 @@ function GroupSelect2({
                                             <div key={i} title={val[0]} className={`fa-select-group-select--options`}
                                                 onClick={() => optionClick(group.label, val, group?.category)} >
                                                 {searchTerm.length > 0}
-                                                <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>{val[0]}</Text>
+                                                <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>{_.startCase(val[0])}</Text>
                                             </div>
                                         );
                                     }
