@@ -49,7 +49,9 @@ export const formatData = (data, queries) => {
         );
         return {
           ...obj,
-          total: data[totalIndex].rows[0][aggregateIndex],
+          total: data[totalIndex].rows.length
+            ? data[totalIndex].rows[0][aggregateIndex]
+            : 0,
           dataOverTime: data[dateSplitIndex].rows.map((row) => {
             return {
               date: new Date(row[dateIndex]),
@@ -66,7 +68,7 @@ export const formatData = (data, queries) => {
     });
     return result;
   } catch (err) {
-    console.log("formatData -> err", err)
+    console.log('formatData -> err', err);
     return [];
   }
 };

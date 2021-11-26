@@ -23,6 +23,7 @@ const NoBreakdownTable = ({
   handleSorting,
   dateSorter,
   handleDateSorting,
+  frequency = 'date',
 }) => {
   const { eventNames } = useSelector((state) => state.coreQuery);
   const [searchText, setSearchText] = useState('');
@@ -33,7 +34,7 @@ const NoBreakdownTable = ({
 
   useEffect(() => {
     setColumns(
-      getTableColumns(queries, sorter, handleSorting, eventNames, 'date')
+      getTableColumns(queries, sorter, handleSorting, eventNames, frequency)
     );
   }, [queries, sorter, handleSorting, eventNames]);
 
@@ -48,7 +49,7 @@ const NoBreakdownTable = ({
         dateSorter,
         handleDateSorting,
         eventNames,
-        'date'
+        frequency
       )
     );
   }, [categories, dateSorter, handleDateSorting]);
@@ -60,7 +61,7 @@ const NoBreakdownTable = ({
         categories,
         searchText,
         dateSorter,
-        'date'
+        frequency
       )
     );
   }, [seriesData, searchText, dateSorter]);
