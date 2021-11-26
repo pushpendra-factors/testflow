@@ -24,16 +24,13 @@ jobs:
   setup-build-publish-deploy:
     name: Setup, Build, Publish
     runs-on: ubuntu-latest
-    environment: staging
-
+    
     steps:
     - name: Setting Environment
       if : ${{ github.event.inputs.env_value == 'staging' }}
       run: echo "Setting environment  ${{github.events.inputs.env_val}}"
            echo "GKE_CLUSTER=factors-staging" >> $GITHUB_ENV
            echo "GKE_ZONE=us-west1-b" >> $GITHUB_ENV
-           echo "GKE_SA_KEY=${{ secrets.GKE_STAGING_SA_KEY }}" >> $GITHUB_ENV
-           echo "GKE_PROJECT=${{ secrets.GKE_STAGING_PROJECT }}" >> $GITHUB_ENV
            echo "ENV=staging" >> $GITHUB_ENV
 
           
@@ -42,8 +39,6 @@ jobs:
       run: echo "Setting environment  ${{github.events.inputs.env_val}}"
            echo "GKE_CLUSTER=factors-production" >> $GITHUB_ENV
            echo "GKE_ZONE=us-west1-b" >> $GITHUB_ENV
-           echo "GKE_SA_KEY=${{ secrets.GKE_PRODUCTION_SA_KEY }}" >> $GITHUB_ENV
-           echo "GKE_PROJECT=${{ secrets.GKE_PRODUCTION_PROJECT }}" >> $GITHUB_ENV
            echo "ENV=production" >> $GITHUB_ENV
 
     - name : Environment used 
@@ -60,10 +55,20 @@ jobs:
     - run: go version
         
     # Setup gcloud CLI
+    - name : Setup glcoud CLI
+    - if : ${{ github.event.inputs.env_value == 'production' }}
     - uses: google-github-actions/setup-gcloud@v0.2.0
       with:
-        service_account_key: ${{ env.GKE_SA_KEY}}
-        project_id: ${{ env.GKE_PROJECT }}
+        service_account_key: ${{ env.GKE_PRODUCTION_SA_KEY}}
+        project_id: ${{ env.GKE_PRODUCTION_PROJECT }}
+
+    # Setup gcloud CLI
+    - if : ${{ github.event.inputs.env_value == 'staging' }}
+    - uses: google-github-actions/setup-gcloud@v0.2.0
+      with:
+        service_account_key: ${{ env.GKE_STAGING_SA_KEY}}
+        project_id: ${{ env.GKE_STAGING_PROJECT }}
+
 
     # Configure Docker to use the gcloud command-line tool as a credential
     # helper for authentication
