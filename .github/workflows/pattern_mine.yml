@@ -28,8 +28,8 @@ jobs:
 
     steps:
     - name: "Set Environment"
-      if: ${{ github.events.input.env_val=='staging'}}
-      run: echo "Setting environment  ${{github.events.input.env_val}}"
+      if: ${{ github.events.inputs.env_val=='staging'}}
+      run: echo "Setting environment  ${{github.events.inputs.env_val}}"
       env:
         ENV: staging
         PROJECT_ID: ${{ secrets.GKE_STAGING_PROJECT }}
@@ -39,8 +39,8 @@ jobs:
         GKE_PROJECT: ${{ secrets.GKE_PRODUCTION_PROJECT }}
 
     - name: "Set Environment"
-      if: ${{ github.events.input.env_val=='production'}}
-      run: echo "Setting environment  ${{github.events.input.env_val}}"
+      if: ${{ github.events.inputs.env_val=='production'}}
+      run: echo "Setting environment  ${{github.events.inputs.env_val}}"
       env:
         ENV: 'production'
         PROJECT_ID: ${{ secrets.GKE_PRODUCTION_PROJECT }}
@@ -76,7 +76,7 @@ jobs:
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
         IMAGE_NAME: ${{ github.event.inputs.image_id}}
       working-directory: ${{ env.GOPATH}}/src
-      run : TAG=${{ env.IMAGE_NAME}} ENV=${{ env.ENV }} make pack-pattern-mine
+      run : TAG=${{ env.IMAGE_NAME}} ENV=${{env.ENV}} make pack-pattern-mine
 
 
     - name: Publish Pattern Mine 
