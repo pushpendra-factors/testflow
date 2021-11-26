@@ -25,6 +25,7 @@ func (store *MemSQL) ExecuteKPIQueryForChannels(projectID uint64, reqID string, 
 	logCtx := log.WithField("projectId", projectID).WithField("reqId", reqID)
 	channelsV1Query, err := model.TransformKPIQueryToChannelsV1Query(kpiQuery)
 	queryResults := make([]model.QueryResult, 0)
+	groupByTimestampPresent := (channelsV1Query.GetGroupByTimestamp() != "")
 	var queryResult model.QueryResult
 	if err != nil {
 		logCtx.Warn(err)
@@ -32,7 +33,7 @@ func (store *MemSQL) ExecuteKPIQueryForChannels(projectID uint64, reqID string, 
 	}
 	resultHolder, statusCode := store.ExecuteChannelQueryV1(projectID, &channelsV1Query, reqID)
 	queryResult.Headers = model.GetTransformedHeadersForChannels(resultHolder.Headers)
-	queryResult.Rows = resultHolder.Rows
+	queryResult.Rows = model.TransformDateTypeValueForChannels(resultHolder.Headers, resultHolder.Rows, groupByTimestampPresent, channelsV1Query.Timezone)
 	queryResults = append(queryResults, queryResult)
 	return queryResults, statusCode
 }

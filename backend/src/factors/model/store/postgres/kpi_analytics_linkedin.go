@@ -17,5 +17,5 @@ func (pg *Postgres) GetKPIConfigsForLinkedin(projectID uint64, reqID string) (ma
 	config := model.GetKPIConfigsForLinkedin()
 	linkedinObjectsAndProperties := pg.buildObjectAndPropertiesForLinkedin(projectID, model.ObjectsForLinkedin)
 	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(linkedinObjectsAndProperties)
-	return model.GetKPIConfigsForLinkedin(), http.StatusOK
+	return config, http.StatusOK
 }

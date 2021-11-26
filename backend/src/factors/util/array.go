@@ -1,5 +1,9 @@
 package util
 
+import (
+	"strings"
+)
+
 const DefaultPrecision = 3
 
 func ContainsStringInArray(s []string, e string) bool {
@@ -47,4 +51,17 @@ func ConvertInternalToExternal(internalMetrics [][]interface{}) [][]interface{} 
 		externalMetrics = append(externalMetrics, externalRow)
 	}
 	return externalMetrics
+}
+
+func StringsWithMatchingPrefix(s []string, prefix string) []string {
+	finalStrings := make([]string, 0)
+	if len(s) == 0 {
+		return finalStrings
+	}
+	for _, a := range s {
+		if strings.HasPrefix(a, prefix) {
+			finalStrings = append(finalStrings, a)
+		}
+	}
+	return finalStrings
 }

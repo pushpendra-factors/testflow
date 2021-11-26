@@ -4,6 +4,7 @@ import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"strings"
+	"time"
 )
 
 const (
@@ -276,4 +277,23 @@ func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [
 		}
 	}
 	return groupByCombinations
+}
+
+func TransformDateTypeValueForChannels(headers []string, rows [][]interface{}, groupByTimestampPresent bool, timezoneString string) [][]interface{} {
+	indexForDateTime := -1
+	if !groupByTimestampPresent {
+		return rows
+	}
+	for index, header := range headers {
+		if header == "datetime" {
+			indexForDateTime = index
+			break
+		}
+	}
+
+	for _, row := range rows {
+		currentValueInTimeFormat, _ := row[indexForDateTime].(time.Time)
+		row[indexForDateTime] = U.GetTimestampAsStrWithTimezone(currentValueInTimeFormat, timezoneString)
+	}
+	return rows
 }

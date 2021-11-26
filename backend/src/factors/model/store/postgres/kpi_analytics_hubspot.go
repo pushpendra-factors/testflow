@@ -1,8 +1,11 @@
 package postgres
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (pg *Postgres) GetKPIConfigsForHubspotContacts(projectID uint64, reqID string) (map[string]interface{}, int) {
@@ -30,21 +33,21 @@ func (pg *Postgres) getConfigForSpecificHubspotCategory(projectID uint64, reqID 
 		"category":         model.EventCategory,
 		"display_category": displayCategory,
 		"metrics":          model.GetMetricsForDisplayCategory(displayCategory),
-		"properties":       make([]string, 0),
+		"properties":       pg.getPropertiesForHubspot(projectID, reqID),
 	}
 }
 
 // getRequiredUserProperties gives response in following format - each data_type with multiple property_names.
 // propertiesToDisplayNames - is having defined list of propertyNames to displaNames.
 // Using both the above to transform into name, display_name, cateogry.
-// func (pg *Postgres) getPropertiesForHubspot(projectID uint64, reqID string) []map[string]string {
-// 	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
-// 	properties, propertiesToDisplayNames, err := pg.GetRequiredUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
-// 	if err != nil {
-// 		logCtx.WithError(err).Error("Failed to get hubspot properties. Internal error")
-// 		return make([]map[string]string, 0)
-// 	}
+func (pg *Postgres) getPropertiesForHubspot(projectID uint64, reqID string) []map[string]string {
+	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
+	properties, propertiesToDisplayNames, err := pg.GetRequiredUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot properties. Internal error")
+		return make([]map[string]string, 0)
+	}
 
-// 	// transforming to kpi structure.
-// 	return model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames)
-// }
+	// transforming to kpi structure.
+	return model.TransformCRMPropertiesToKPIConfigProperties(properties, propertiesToDisplayNames, "$hubspot")
+}

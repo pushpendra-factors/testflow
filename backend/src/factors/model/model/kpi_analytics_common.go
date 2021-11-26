@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -389,8 +390,8 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_COUNT, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "2"},
 				},
 			},
 		},
@@ -398,8 +399,8 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_COUNT, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "2"},
 				},
 			},
 		},
@@ -407,15 +408,15 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
 				Filters: []QueryProperty{
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_COUNT, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "2"},
 				},
 			},
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_COUNT, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "2"},
 				},
 			},
 		},
@@ -434,7 +435,7 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		},
 		AvgPageViewsPerSession: []TransformQueryi{
 			{
-				Metrics: KpiToEventMetricRepr{Aggregation: "sum", Entity: EventEntity, Property: U.SP_PAGE_VIEWS, GroupByType: U.PropertyTypeNumerical, Operator: "Division"},
+				Metrics: KpiToEventMetricRepr{Aggregation: "sum", Entity: EventEntity, Property: U.SP_PAGE_COUNT, GroupByType: U.PropertyTypeNumerical, Operator: "Division"},
 			},
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
@@ -464,7 +465,7 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: "Division"},
 				Filters: []QueryProperty{
 					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_VIEWS, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "2"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_PAGE_COUNT, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "2"},
 				},
 			},
 			{
@@ -626,23 +627,25 @@ func AddObjectTypeToProperties(kpiConfig map[string]interface{}, value string) m
 	return kpiConfig
 }
 
-func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string) []map[string]string {
+func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string, prefix string) []map[string]string {
 	var resultantKPIConfigProperties []map[string]string
 	var tempKPIConfigProperty map[string]string
 	for data_type, propertyNames := range properties {
 		for _, propertyName := range propertyNames {
-			var displayName string
-			displayName, exists := propertiesToDisplayNames[propertyName]
-			if !exists {
-				displayName = propertyName
+			if strings.HasPrefix(propertyName, prefix) {
+				var displayName string
+				displayName, exists := propertiesToDisplayNames[propertyName]
+				if !exists {
+					displayName = propertyName
+				}
+				tempKPIConfigProperty = map[string]string{
+					"name":         propertyName,
+					"display_name": displayName,
+					"data_type":    data_type,
+					"entity":       UserEntity,
+				}
+				resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
 			}
-			tempKPIConfigProperty = map[string]string{
-				"name":         propertyName,
-				"display_name": displayName,
-				"data_type":    data_type,
-				"entity":       UserEntity,
-			}
-			resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)
 		}
 	}
 	return resultantKPIConfigProperties

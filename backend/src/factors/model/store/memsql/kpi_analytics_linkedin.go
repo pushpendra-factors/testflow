@@ -17,5 +17,5 @@ func (store *MemSQL) GetKPIConfigsForLinkedin(projectID uint64, reqID string) (m
 	config := model.GetKPIConfigsForLinkedin()
 	linkedinObjectsAndProperties := store.buildObjectAndPropertiesForLinkedin(projectID, model.ObjectsForLinkedin)
 	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(linkedinObjectsAndProperties)
-	return model.GetKPIConfigsForLinkedin(), http.StatusOK
+	return config, http.StatusOK
 }
