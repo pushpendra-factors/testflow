@@ -22,6 +22,7 @@ function KPIAnalysis({
         currentEventIndex={currMetricsValue}
         section={section}
         ref={renderedCompRef}
+        durationObj={durationObj}
       />
     );
   } else {
@@ -32,6 +33,7 @@ function KPIAnalysis({
         responseData={resultState.data}
         section={section}
         ref={renderedCompRef}
+        durationObj={durationObj}
       />
     );
   }
