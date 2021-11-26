@@ -122,6 +122,7 @@ func main() {
 	skipEventNameStepByProjectID := flag.String("skip_event_name_step_by_project_id", "", "")
 	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
 	allowSupportForDateRangeInProfiles := flag.String("allow_support_for_date_range_in_profiles", "", "")
+	enableEventLevelEventProperties := flag.String("enable_event_level_event_properties", "", "")
 
 	flag.Parse()
 
@@ -204,6 +205,7 @@ func main() {
 		SkipEventNameStepByProjectID:            *skipEventNameStepByProjectID,
 		SkipUserJoinInEventQueryByProjectID:     *skipUserJoinInEventQueryByProjectID,
 		AllowSupportForDateRangeInProfiles:      *allowSupportForDateRangeInProfiles,
+		EnableEventLevelEventProperties:         *enableEventLevelEventProperties,
 	}
 	C.InitConf(config)
 
