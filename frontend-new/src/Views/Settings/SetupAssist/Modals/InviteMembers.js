@@ -5,11 +5,13 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { projectAgentInvite, fetchProjectAgents } from 'Reducers/agentActions';
+import Brand from './Brand';
 const { Option } = Select;
 
 function BasicDetails(props) {
   const [errorInfo, seterrorInfo] = useState(null);
   const [form] = Form.useForm();
+  const [formData, setFormData] = useState(null);
   const [role, setRole]= useState('admin');
 
   const inviteUser = (payload) => {
@@ -18,7 +20,7 @@ function BasicDetails(props) {
     const data = {...payload, 'role':role}
     props.projectAgentInvite(props.activeProjectID, data).then(() => {
       props.fetchProjectAgents(props.activeProjectID);
-      props.onCancel();
+      setFormData(data);
       message.success('Invitation sent successfully!');
     }).catch((err) => {
       console.log('invite error', err);
@@ -30,9 +32,9 @@ function BasicDetails(props) {
     seterrorInfo(null);
   };
   const onReset = () => {
-    props.onCancel();
     seterrorInfo(null);
     form.resetFields();
+    setFormData(true);
   };
 
   const selectAfter = (
@@ -44,6 +46,7 @@ function BasicDetails(props) {
 
   return (
     <>
+    {!formData &&
       <div className={'fa-container'}>
             <Row justify={'center'}>
                 <Col span={7} >
@@ -86,7 +89,7 @@ function BasicDetails(props) {
                         <Col span={24}>
                             <div className={'mt-20 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type="primary" style={{width:'280px', height:'36px'}} className={'ml-2'} htmlType="submit">
+                                    <Button size={'large'} type="primary" style={{width:'400px', height:'36px'}} className={'ml-2'} htmlType="submit">
                                     Invite and Continue
                                     </Button>
                                 </Form.Item>
@@ -95,7 +98,7 @@ function BasicDetails(props) {
                         <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type={'text'} style={{width:'280px', height:'36px'}} htmlType="text" onClick={onReset}>
+                                    <Button size={'large'} type={'text'} style={{width:'400px', height:'36px'}} htmlType="text" onClick={onReset}>
                                     Skip now, I will invite later
                                     </Button>
                                 </Form.Item>
@@ -111,7 +114,8 @@ function BasicDetails(props) {
             </Row>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
       </div>
-
+      }
+      {formData && <Brand />}
     </>
 
   );
