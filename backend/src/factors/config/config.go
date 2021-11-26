@@ -200,6 +200,7 @@ type Configuration struct {
 	SkipEventNameStepByProjectID                string
 	SkipUserJoinInEventQueryByProjectID         string
 	AllowSupportForDateRangeInProfiles          string
+	EnableEventLevelEventProperties             string
 }
 
 type Services struct {
@@ -1367,6 +1368,28 @@ func AllowSupportForDateRangeInProfiles(projectID uint64) bool {
 	return false
 }
 
+// EnableEventLevelEventProperties is used to check if the event level properties
+// are to be enabled for a given (or list of) project
+func EnableEventLevelEventProperties(projectID uint64) bool {
+	if configuration.EnableEventLevelEventProperties == "" {
+		return false
+	}
+
+	if configuration.EnableEventLevelEventProperties == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.EnableEventLevelEventProperties, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
 func InitDataService(config *Configuration) error {
 	if !IsConfigInitialized() {
 		log.Fatal("Config not initialised on InitDataService.")
@@ -1960,4 +1983,8 @@ func UseUsersFilterPropertiesOptimisedLogic() bool {
 
 func IsDevBox() bool {
 	return configuration.DevBox
+}
+
+func SetEnableEventLevelEventProperties(projectId uint64) {
+	configuration.EnableEventLevelEventProperties = fmt.Sprintf("%d", projectId)
 }
