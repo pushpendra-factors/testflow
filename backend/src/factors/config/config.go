@@ -197,7 +197,10 @@ type Configuration struct {
 	AllowedSalesforceGroupsByProjectIDs         string
 	DevBox                                      bool
 	AllowSupportForUserPropertiesInIdentifyCall string
+	SkipEventNameStepByProjectID                string
+	SkipUserJoinInEventQueryByProjectID         string
 	AllowSupportForDateRangeInProfiles          string
+	EnableEventLevelEventProperties             string
 }
 
 type Services struct {
@@ -368,6 +371,46 @@ func IsAllowedSalesforceGroupsByProjectID(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.AllowedSalesforceGroupsByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+func SkipEventNameStepByProjectID(projectID uint64) bool {
+	if configuration.SkipEventNameStepByProjectID == "" {
+		return false
+	}
+
+	if configuration.SkipEventNameStepByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.SkipEventNameStepByProjectID, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+func SkipUserJoinInEventQueryByProjectID(projectID uint64) bool {
+	if configuration.SkipUserJoinInEventQueryByProjectID == "" {
+		return false
+	}
+
+	if configuration.SkipUserJoinInEventQueryByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.SkipUserJoinInEventQueryByProjectID, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true
@@ -1325,6 +1368,28 @@ func AllowSupportForDateRangeInProfiles(projectID uint64) bool {
 	return false
 }
 
+// EnableEventLevelEventProperties is used to check if the event level properties
+// are to be enabled for a given (or list of) project
+func EnableEventLevelEventProperties(projectID uint64) bool {
+	if configuration.EnableEventLevelEventProperties == "" {
+		return false
+	}
+
+	if configuration.EnableEventLevelEventProperties == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.EnableEventLevelEventProperties, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
 func InitDataService(config *Configuration) error {
 	if !IsConfigInitialized() {
 		log.Fatal("Config not initialised on InitDataService.")
@@ -1918,4 +1983,8 @@ func UseUsersFilterPropertiesOptimisedLogic() bool {
 
 func IsDevBox() bool {
 	return configuration.DevBox
+}
+
+func SetEnableEventLevelEventProperties(projectId uint64) {
+	configuration.EnableEventLevelEventProperties = fmt.Sprintf("%d", projectId)
 }

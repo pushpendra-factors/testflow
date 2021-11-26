@@ -119,7 +119,10 @@ func main() {
 	filterPropertiesStartTimestamp := flag.Int64("filter_properties_start_timestamp", -1,
 		"Start timestamp of data available for filtering with parquet on memsql.")
 	devBox := flag.Bool("dev_box", false, "Is this going to be deployed on one box")
+	skipEventNameStepByProjectID := flag.String("skip_event_name_step_by_project_id", "", "")
+	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
 	allowSupportForDateRangeInProfiles := flag.String("allow_support_for_date_range_in_profiles", "", "")
+	enableEventLevelEventProperties := flag.String("enable_event_level_event_properties", "", "")
 
 	flag.Parse()
 
@@ -199,7 +202,10 @@ func main() {
 		EnableFilterOptimisation:                *enableFilterOptimisation,
 		FilterPropertiesStartTimestamp:          *filterPropertiesStartTimestamp,
 		DevBox:                                  *devBox,
+		SkipEventNameStepByProjectID:            *skipEventNameStepByProjectID,
+		SkipUserJoinInEventQueryByProjectID:     *skipUserJoinInEventQueryByProjectID,
 		AllowSupportForDateRangeInProfiles:      *allowSupportForDateRangeInProfiles,
+		EnableEventLevelEventProperties:         *enableEventLevelEventProperties,
 	}
 	C.InitConf(config)
 

@@ -548,15 +548,29 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 
 	var eventNamesCacheStmnt string
 	eventNamesRef := "event_names"
-	if stepName != "" {
+	skipEventNameStep := C.SkipEventNameStepByProjectID(projectId)
+	if stepName != "" && !skipEventNameStep {
 		eventNamesRef = fmt.Sprintf("%s_names", stepName)
 		eventNamesCacheStmnt = as(eventNamesRef, "SELECT id, project_id, name FROM event_names WHERE project_id=? AND name=?")
 		*qParams = append(*qParams, projectId, qep.Name)
 	}
 
-	whereCond := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?"+
-		// select id of event_names from names step.
-		" "+"AND events.event_name_id IN (SELECT id FROM %s WHERE project_id=? AND name=?)", fromTimestamp, eventNamesRef)
+	whereCond := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?", fromTimestamp)
+	// select id of event_names from names step.
+	if !skipEventNameStep {
+		whereCond = whereCond + fmt.Sprintf(" "+"AND events.event_name_id IN (SELECT id FROM %s WHERE project_id=? AND name=?)", eventNamesRef)
+	} else {
+
+		eventNameIDsFilter := "events.event_name_id = ?"
+		if len(qep.EventNameIDs) > 1 {
+			for range qep.EventNameIDs[1:] {
+				eventNameIDsFilter += " " + "OR" + " " + "events.event_name_id = ?"
+			}
+		}
+
+		whereCond = whereCond + " " + "AND" + " " + " ( " + eventNameIDsFilter + " ) "
+	}
+
 	rStmnt = appendStatement(rStmnt, whereCond)
 
 	// adds params in order of '?'.
@@ -567,7 +581,13 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 	if from > 0 {
 		*qParams = append(*qParams, from)
 	}
-	*qParams = append(*qParams, to, projectId, qep.Name)
+
+	*qParams = append(*qParams, to)
+	if !skipEventNameStep {
+		*qParams = append(*qParams, projectId, qep.Name)
+	} else {
+		*qParams = append(*qParams, qep.EventNameIDs...)
+	}
 
 	// applying global user filter
 	gupStmt := ""
@@ -607,7 +627,7 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 		rStmnt = as(stepName, rStmnt)
 	}
 
-	if eventNamesCacheStmnt != "" {
+	if !skipEventNameStep && eventNamesCacheStmnt != "" {
 		rStmnt = joinWithComma(eventNamesCacheStmnt, rStmnt)
 	}
 

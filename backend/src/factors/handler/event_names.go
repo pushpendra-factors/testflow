@@ -150,8 +150,10 @@ func GetEventPropertiesHandler(c *gin.Context) {
 			C.GetLookbackWindowForEventUserCache())
 		toBeFiltered := false
 		propertyPrefixToRemove := ""
+
+		enableEventLevelEventProperties := C.EnableEventLevelEventProperties(projectId)
 		for eventPrefix, propertyPrefix := range BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES {
-			if strings.HasPrefix(eventName, eventPrefix) {
+			if strings.HasPrefix(eventName, eventPrefix) && !enableEventLevelEventProperties {
 				propertyPrefixToRemove = propertyPrefix
 				toBeFiltered = true
 				break

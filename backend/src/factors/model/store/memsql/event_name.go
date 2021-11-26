@@ -810,6 +810,11 @@ func (store *MemSQL) GetEventNamesByNames(projectId uint64, names []string) ([]m
 		}
 		return nil, http.StatusInternalServerError
 	}
+
+	if len(eventNames) < 1 {
+		return nil, http.StatusNotFound
+	}
+
 	return eventNames, http.StatusFound
 }
 
