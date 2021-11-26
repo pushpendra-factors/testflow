@@ -9,6 +9,8 @@ import GroupSelect2 from '../GroupSelect2';
 
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
+import _ from 'lodash';
+
 
 function GroupBlock({
   groupByState,
@@ -169,7 +171,7 @@ function GroupBlock({
     //   propertyName = eventPropNames[opt.property] ? eventPropNames[opt.property] : opt.property;
     // } 
     if (opt?.property) {
-      propertyName = opt.property;
+      propertyName =  _.startCase(opt.property);
     }
     if (!opt.property) {
       propertyName = 'Select user property';
@@ -205,9 +207,8 @@ function GroupBlock({
             ? (
               <div className={styles.group_block__event_selector__btn}>
                 <GroupSelect2 groupedProperties={filterOptions}
-                  placeholder="Select Property" 
-                  optionClick={(group, val) => onChange(group, val)}
-                  // optionClick={(group, val) => onChange([group, val], index)}
+                  placeholder="Select Property"  
+                  optionClick={(group, val) => onChange([group, val], index)}
                   onClickOutside={() => triggerDropDown(index, true)}
                   hideTitle={true}
                 ></GroupSelect2>
