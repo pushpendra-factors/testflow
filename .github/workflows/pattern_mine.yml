@@ -24,6 +24,7 @@ jobs:
   setup-build-publish-deploy:
     name: Setup, Build, Publish
     runs-on: ubuntu-latest
+    environment: staging
     
     steps:
     - name: Setting Environment
@@ -63,6 +64,7 @@ jobs:
         project_id: ${{ env.GKE_PRODUCTION_PROJECT }}
 
     # Setup gcloud CLI
+    - name : Setup glcoud CLI
     - if : ${{ github.event.inputs.env_value == 'staging' }}
     - uses: google-github-actions/setup-gcloud@v0.2.0
       with:
