@@ -1,4 +1,4 @@
-name: pattern-mine-setup-build-publish
+name: stage-pattern-mine-setup-build-publish
 
 on:
   workflow_dispatch:
