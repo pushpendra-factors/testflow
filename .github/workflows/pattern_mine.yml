@@ -7,7 +7,7 @@ on:
         description: 'image_name'
         required: true
         default: ''
-      env_val:
+      env_value:
         description: 'environment'
         required: true
         default: 'staging'
@@ -27,8 +27,8 @@ jobs:
     environment: staging
 
     steps:
-    - name: Set Environment
-      if: ${{ github.events.inputs.env_val=='staging'}}
+    - name: Setting Environment
+      if: ${{ github.events.inputs.env_value == 'staging' }}
       run: echo "Setting environment  ${{github.events.inputs.env_val}}"
            echo "GKE_CLUSTER=factors-staging" >> $GITHUB_ENV
            echo "GKE_ZONE=us-west1-b" >> $GITHUB_ENV
@@ -37,8 +37,8 @@ jobs:
            echo "ENV=staging" >> $GITHUB_ENV
 
           
-    - name: Set Environment
-      if: ${{ github.events.inputs.env_val=='production'}}
+    - name: Setting Environment
+      if: ${{ github.events.inputs.env_value == 'production' }}
       run: echo "Setting environment  ${{github.events.inputs.env_val}}"
            echo "GKE_CLUSTER=factors-production" >> $GITHUB_ENV
            echo "GKE_ZONE=us-west1-b" >> $GITHUB_ENV
@@ -47,7 +47,8 @@ jobs:
            echo "ENV=production" >> $GITHUB_ENV
 
     - name : Environment used 
-      run: echo "Using environment $env.ENV" 
+      run: echo "Using environment ${{ env.ENV }}" 
+
       
     - name: Checkout
       uses: actions/checkout@v2
@@ -72,14 +73,14 @@ jobs:
     - name: Build Pattern Mine 
       env : 
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
-        IMAGE_NAME: ${{ github.event.inputs.image_id}}
-      working-directory: ${{ env.GOPATH}}/src
-      run : TAG=${{ env.IMAGE_NAME}} ENV=${{env.ENV}} make pack-pattern-mine
+        IMAGE_NAME: ${{ github.event.inputs.image_id }}
+      working-directory: ${{ env.GOPATH }}/src
+      run : TAG=${{ env.IMAGE_NAME }} ENV=${{ env.ENV }} make pack-pattern-mine
 
 
     - name: Publish Pattern Mine 
       env : 
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
         IMAGE_NAME: ${{ github.event.inputs.image_id}}
-      working-directory: ${{ env.GOPATH}}/src
-      run : TAG=${{ env.IMAGE_NAME}} ENV=${{env.ENV}} make upload-pattern-mine
+      working-directory: ${{ env.GOPATH }}/src
+      run : TAG=${{ env.IMAGE_NAME}} ENV=${{ env.ENV }} make upload-pattern-mine
