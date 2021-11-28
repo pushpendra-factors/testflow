@@ -158,6 +158,7 @@ func prependUserFiltersBasedOnInternalTransformation(filters []QueryProperty, us
 					Property:  filter.Property,
 					Operator:  filter.Operator,
 					LogicalOp: filter.LogicalOp,
+					Value:     kpiQuery.PageUrl,
 				})
 			}
 		}
