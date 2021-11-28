@@ -477,13 +477,14 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		Entrances: []TransformQueryi{
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
-				Filters: []QueryProperty{{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_INITIAL_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}},
+				Filters: []QueryProperty{{Entity: UserEntity, Type: U.PropertyTypeCategorical, Property: U.SP_INITIAL_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}},
 			},
 		},
 		Exits: []TransformQueryi{
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
-				Filters: []QueryProperty{{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_INITIAL_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}}},
+				Filters: []QueryProperty{{Entity: UserEntity, Type: U.PropertyTypeCategorical, Property: U.SP_LATEST_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}},
+			},
 		},
 		PageViews: []TransformQueryi{
 			{
@@ -507,8 +508,8 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SCROLL_PERCENT, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "50"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SCROLL_PERCENT, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "50"},
 				},
 			},
 		},
@@ -516,8 +517,8 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
 				Filters: []QueryProperty{
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SPENT_TIME, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "10"},
-					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SCROLL_PERCENT, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "50"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SPENT_TIME, LogicalOp: "AND", Operator: GreaterThanOpStr, Value: "10"},
+					{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.EP_PAGE_SCROLL_PERCENT, LogicalOp: "OR", Operator: GreaterThanOpStr, Value: "50"},
 				},
 			},
 		},

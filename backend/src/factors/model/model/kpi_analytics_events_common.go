@@ -129,20 +129,42 @@ func SplitKPIQueryToInternalKPIQueries(query Query, kpiQuery KPIQuery, metric st
 		currentQuery.AggregateProperty = metricTransformation.Metrics.Property
 		currentQuery.AggregateEntity = metricTransformation.Metrics.Entity
 		currentQuery.AggregatePropertyType = metricTransformation.Metrics.GroupByType
-		currentQuery.EventsWithProperties = prependFiltersBasedOnInternalTransformation(metricTransformation.Filters, query.EventsWithProperties)
+		currentQuery.EventsWithProperties = prependEventFiltersBasedOnInternalTransformation(metricTransformation.Filters, query.EventsWithProperties)
+		currentQuery.GlobalUserProperties = prependUserFiltersBasedOnInternalTransformation(metricTransformation.Filters, query.GlobalUserProperties, kpiQuery, metric)
 		finalResultantQueries = append(finalResultantQueries, currentQuery)
 	}
 	return finalResultantQueries
 }
 
-func prependFiltersBasedOnInternalTransformation(filters []QueryProperty, eventsWithProperties []QueryEventWithProperties) []QueryEventWithProperties {
-	resultantEventsWithProperties := make([]QueryEventWithProperties, 1)
+func prependEventFiltersBasedOnInternalTransformation(filters []QueryProperty, eventsWithProperties []QueryEventWithProperties) []QueryEventWithProperties {
 	var filtersBasedOnMetric []QueryProperty
-	filtersBasedOnMetric = append(filtersBasedOnMetric, filters...)
-	resultantEventsWithProperties[0].Name = eventsWithProperties[0].Name
-	resultantEventsWithProperties[0].AliasName = eventsWithProperties[0].AliasName
-	resultantEventsWithProperties[0].Properties = append(filtersBasedOnMetric, eventsWithProperties[0].Properties...)
-	return resultantEventsWithProperties
+	for _, filter := range filters {
+		if filter.Entity == EventEntity {
+			filtersBasedOnMetric = append(filtersBasedOnMetric, filter)
+		}
+	}
+	eventsWithProperties[0].Properties = append(filtersBasedOnMetric, eventsWithProperties[0].Properties...)
+	return eventsWithProperties
+}
+
+func prependUserFiltersBasedOnInternalTransformation(filters []QueryProperty, userProperties []QueryProperty, kpiQuery KPIQuery, metric string) []QueryProperty {
+	if kpiQuery.DisplayCategory == PageViewsDisplayCategory && U.ContainsStringInArray([]string{Entrances, Exits}, metric) {
+		var filtersBasedOnMetric []QueryProperty
+		for _, filter := range filters {
+			if filter.Entity == UserEntity {
+				filtersBasedOnMetric = append(filtersBasedOnMetric, QueryProperty{
+					Entity:    "user_g",
+					Type:      filter.Type,
+					Property:  filter.Property,
+					Operator:  filter.Operator,
+					LogicalOp: filter.LogicalOp,
+				})
+			}
+		}
+		return filtersBasedOnMetric
+	} else {
+		return make([]QueryProperty, 0)
+	}
 }
 
 // Functions supporting transforming eventResults to KPIresults
