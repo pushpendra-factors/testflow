@@ -89,7 +89,7 @@ function BasicDetails({ createProject }) {
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
                                     <Button size={'large'} type={'text'} style={{width:'280px', height:'36px'}} htmlType="text" onClick={onCancel}>
-                                    Cancel
+                                    Skip
                                     </Button>
                                 </Form.Item>
                             </div>

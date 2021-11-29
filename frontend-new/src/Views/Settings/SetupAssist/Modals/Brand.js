@@ -1,20 +1,53 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import {
-  Row, Col, Progress, Skeleton, Avatar, Button
+  Row, Col, Progress, Button, Upload, message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 
 
 function Brand() {
-
+    const [imageUrl, setImageUrl] = useState('');
+    const [loading, setLoading] = useState(false);
     const history = useHistory();
 
     const handleCreate = (e) => {
         e.preventDefault();
         history.push('/project-setup');
     }
+
+    function getBase64(img, callback) {
+        const reader = new FileReader();
+        reader.addEventListener('load', () => callback(reader.result));
+        reader.readAsDataURL(img);
+      }
+      
+      function beforeUpload(file) {
+        const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
+        if (!isJpgOrPng) {
+          message.error('You can only upload JPG/PNG file!');
+        }
+        const isLt2M = file.size / 1024 / 1024 < 2;
+        if (!isLt2M) {
+          message.error('Image must smaller than 2MB!');
+        }
+        return isJpgOrPng && isLt2M;
+      }
+
+      const handleChange = info => {
+        if (info.file.status === 'uploading') {
+          setLoading(true);
+          return;
+        }
+        if (info.file.status === 'done') {
+          // Get this url from response in real world.
+          getBase64(info.file.originFileObj, imageUrl => {
+            setImageUrl(imageUrl);
+            setLoading(false);
+          });
+        }
+      };
 
   return (
     <>
@@ -31,7 +64,16 @@ function Brand() {
                         <Row className={'mt-2'}>
                             <Col>
                                 <Text type={'paragraph'} mini extraClass={'m-0 mt-1 mb-4'} color={'grey'} style={{marginLeft:'140px'}}>Project Thumbnail</Text>
-                                <img src='../../../../assets/avatar/ModalAvatar.png' style={{marginLeft:'150px'}}></img>
+                                <Upload
+                                    name="avatar"
+                                    accept={''}
+                                    showUploadList={false}
+                                    action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
+                                    beforeUpload={beforeUpload}
+                                    onChange={handleChange}
+                                >
+                                    {imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px',marginLeft:'150px'}} /> : <img src='../../../../assets/avatar/ModalAvatar.png' style={{marginLeft:'150px'}}></img>}
+                                </Upload>
                                 <Text type={'paragraph'} mini  extraClass={'m-0 mt-4'} color={'grey'} style={{marginLeft:'80px'}}>A logo helps personalise your Project</Text>
                             </Col>
                         </Row>

@@ -3,7 +3,7 @@ import { connect } from 'react-redux';
 import {
   Row, Col, Button, Input, Form, Progress, message, Select
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents';
 import { projectAgentInvite, fetchProjectAgents } from 'Reducers/agentActions';
 import Brand from './Brand';
@@ -14,12 +14,12 @@ function BasicDetails(props) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
   const [role, setRole]= useState('admin');
-  const [formValues, setFormValues] = useState([{email:'', role:role}]); 
 
   const inviteUser = (payload) => {
     // console.log('Success! payload values:', payload);
     seterrorInfo(null);
     const data = {...payload, 'role':role}
+    console.log(data);
     props.projectAgentInvite(props.activeProjectID, data).then(() => {
       props.fetchProjectAgents(props.activeProjectID);
       setFormData(data);
@@ -65,7 +65,7 @@ function BasicDetails(props) {
                     form={form}
                     name="inviteUser"
                     onFinish={inviteUser}
-                    onChange={onChange}
+                    // onChange={onChange}
                     >
                     <Row>
                         <Col span={24}>
@@ -73,6 +73,7 @@ function BasicDetails(props) {
                             <Form.Item
                                 label={null}
                                 name="email"
+                                validateTrigger={['onChange', 'onBlur']}
                                 rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                             >
                             <Input className={'fa-input'} size={'large'} addonAfter={selectAfter} placeholder={'Enter email address'} />
@@ -83,14 +84,58 @@ function BasicDetails(props) {
                             <Form.Item
                                 label={null}
                                 name="email1"
+                                validateTrigger={['onChange', 'onBlur']}
                                 rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                             >
                             <Input className={'fa-input'} size={'large'} addonAfter={selectAfter} placeholder={'Enter email address'} />
                             </Form.Item>
                         </Col>
-                        <Col span={24} className={'mt-6 ml-2'}>
-                          <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />}>Add another user</Button>
+                    <Form.List
+                      name="emails"
+                      rules={[
+                        {
+                          validator: async (_, names) => {
+                            if (!names || names.length < 2) {
+                              return Promise.reject(new Error('At least 2 users'));
+                            }
+                          },
+                        },
+                      ]}
+                    >
+                      {(fields, { add, remove }) => (
+                        <>
+                          {fields.map((field, index) => (
+                        <Col span={24}>
+                          <Form.Item
+                            required={false}
+                            key={field.key}
+                          >
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>Email</Text>
+                            <Form.Item
+                                label={null}
+                                {...field}
+                                // name="email"
+                                validateTrigger={['onChange', 'onBlur']}
+                                rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
+                            >
+                            <Input className={'fa-input'} size={'large'} addonAfter={selectAfter} placeholder={'Enter email address'} />
+                            </Form.Item>
+                            {fields.length > 0 ? (
+                              <MinusCircleOutlined
+                                className="dynamic-delete-button"
+                                onClick={() => remove(field.name)}
+                              />
+                            ) : null}
+                          </Form.Item>
                         </Col>
+                        ))}
+                        
+                        <Col span={24} className={'mt-6 ml-2'}>
+                          {fields.length === 3 ? null: <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />} onClick={() => add()}>Add another user</Button>}
+                        </Col>
+                        </>
+                        )}
+                        </Form.List>
                         <Col span={24}>
                             <div className={'mt-16 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
