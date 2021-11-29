@@ -742,7 +742,7 @@ func (pg *Postgres) GetSmartEventFilterEventNameByID(projectID uint64, id string
 	return &eventName, http.StatusFound
 }
 
-// returns list of EventNames objects for given names
+// GetEventNamesByNames returns list of EventNames objects for given names
 func (pg *Postgres) GetEventNamesByNames(projectId uint64, names []string) ([]model.EventName, int) {
 	var eventNames []model.EventName
 

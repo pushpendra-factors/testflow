@@ -27,6 +27,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	U.DeepCopy(queryOriginal, &query)
 	// supporting existing old/saved queries
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
+	model.AddDefaultMarketingEventTypeTacticOffer(query)
 
 	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// for existing queries and backward support
@@ -74,7 +75,10 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 	logCtx.Info("Done GetCoalesceIDFromUserIDs")
-	sessions := model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo)
+	sessions := make(map[string]map[string]model.UserSessionData)
+	model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo, &sessions)
+
+	pg.AppendOTPSessions(projectID, query, &sessions, logCtx)
 
 	if C.GetAttributionDebug() == 1 {
 		uniqUsers := len(sessions)
@@ -153,6 +157,26 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	result.Meta.Currency = currency
 	logCtx.Info("Done result")
 	return result, nil
+}
+
+func (pg *Postgres) AppendOTPSessions(projectID uint64, query *model.AttributionQuery,
+	sessions *map[string]map[string]model.UserSessionData, logCtx *log.Entry) {
+
+	otpEvent, err := pg.getOfflineEventData(projectID)
+	if err != nil {
+		logCtx.Info("no OTP events/sessions found. Skipping computation")
+		return
+	}
+
+	_sessionsOTP, sessionOTPUsers, err := pg.fetchOTPSessions(projectID, otpEvent.ID, query)
+
+	usersInfoOTP, err := pg.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID)
+	if err != nil {
+		logCtx.Info("no users found for OTP events/sessions found. Skipping computation")
+		return
+	}
+
+	model.UpdateSessionsMapWithCoalesceID(_sessionsOTP, usersInfoOTP, sessions)
 }
 
 func (pg *Postgres) FireAttribution(projectID uint64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
@@ -425,6 +449,20 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 	defer U.CloseReadQuery(rows, tx)
 
 	return model.ProcessEventRows(rows, query, logCtx, reports)
+}
+
+// getOfflineEventData returns  offline touch point event id
+func (pg *Postgres) getOfflineEventData(projectID uint64) (model.EventName, error) {
+
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
+	names := []string{U.EVENT_NAME_OFFLINE_TOUCH_POINT}
+
+	eventNames, errCode := pg.GetEventNamesByNames(projectID, names)
+	if errCode != http.StatusFound || len(eventNames) != 1 {
+		logCtx.Error("failed to find offline touch point event names")
+		return model.EventName{}, errors.New("failed to find offline touch point event names")
+	}
+	return eventNames[0], nil
 }
 
 // Return conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping

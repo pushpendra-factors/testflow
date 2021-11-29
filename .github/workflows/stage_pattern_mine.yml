@@ -1,0 +1,62 @@
+name: stage-pattern-mine-setup-build-publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_id:
+        description: 'IMAGE_TAG'
+        required: true
+        default: 'test'
+
+
+    
+env:
+  PROJECT_ID: ${{ secrets.GKE_STAGING_PROJECT }}
+  GKE_CLUSTER: factors-staging    # TODO: update to cluster name
+  GKE_ZONE: us-west1-b   # TODO: update to cluster zone
+  DEPLOYMENT_NAME: pattern_mine_job # TODO: update to deployment name
+  PATH_TO_FACTORS : /home/runner/work/factors
+  IMAGE: pattern_mine
+
+
+jobs:
+  setup-build-publish-deploy:
+    name: Setup, Build, Publish
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      
+      
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+    - run: go version
+        
+    # Setup gcloud CLI
+    - uses: google-github-actions/setup-gcloud@v0.2.0
+      with:
+        service_account_key: ${{ secrets.GKE_STAGING_SA_KEY }}
+        project_id: ${{ secrets.GKE_STAGING_PROJECT }}
+
+    # Configure Docker to use the gcloud command-line tool as a credential
+    # helper for authentication
+    - run: |-
+        gcloud --quiet auth configure-docker
+    
+    - name: Build Pattern Mine 
+      env : 
+        GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
+        IMAGE_NAME: ${{ github.event.inputs.image_id}}
+      working-directory: ${{ env.GOPATH}}/src
+      run : TAG=${{ env.IMAGE_NAME}} ENV=staging make pack-pattern-mine
+
+    - name: Publish Pattern Mine 
+      env : 
+        GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
+        IMAGE_NAME: ${{ github.event.inputs.image_id}}
+      working-directory: ${{ env.GOPATH}}/src
+      run : TAG=${{ env.IMAGE_NAME}} ENV=staging make upload-pattern-mine

@@ -27,6 +27,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	U.DeepCopy(queryOriginal, &query)
 	// supporting existing old/saved queries
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
+	model.AddDefaultMarketingEventTypeTacticOffer(query)
 
 	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery", "ProjectID": projectID, "Query": query})
 	// for existing queries and backward support
@@ -60,7 +61,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		return nil, err
 	}
 
-	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
+	// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
 	_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
 	logCtx.Info("Done getAllTheSessions 1 error not checked")
 	logCtx.Info(len(sessionUsers))
@@ -79,8 +80,16 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	}
 
 	logCtx.Info("Done GetCoalesceIDFromUserIDs")
-	sessions := model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo)
+	sessions := make(map[string]map[string]model.UserSessionData)
+	model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo, &sessions)
 	logCtx.Info("Done UpdateSessionsMapWithCoalesceID")
+
+	store.AppendOTPSessions(projectID, query, &sessions, logCtx)
+
+	if C.GetAttributionDebug() == 1 {
+		uniqUsers := len(sessions)
+		logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
+	}
 
 	attributionData, isCompare, err := store.FireAttribution(projectID, query, eventNameToIDList, sessions)
 
@@ -154,6 +163,26 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	result.Meta.Currency = currency
 	logCtx.Info("Done result")
 	return result, nil
+}
+
+func (store *MemSQL) AppendOTPSessions(projectID uint64, query *model.AttributionQuery,
+	sessions *map[string]map[string]model.UserSessionData, logCtx *log.Entry) {
+
+	otpEvent, err := store.getOfflineEventData(projectID)
+	if err != nil {
+		logCtx.Info("no OTP events/sessions found. Skipping computation")
+		return
+	}
+
+	_sessionsOTP, sessionOTPUsers, err := store.fetchOTPSessions(projectID, otpEvent.ID, query)
+
+	usersInfoOTP, err := store.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID)
+	if err != nil {
+		logCtx.Info("no users found for OTP events/sessions found. Skipping computation")
+		return
+	}
+
+	model.UpdateSessionsMapWithCoalesceID(_sessionsOTP, usersInfoOTP, sessions)
 }
 
 func (store *MemSQL) FireAttribution(projectID uint64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
@@ -431,6 +460,20 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	defer U.CloseReadQuery(rows, tx)
 	logCtx.Info("Attribution before ProcessEventRows")
 	return model.ProcessEventRows(rows, query, logCtx, reports)
+}
+
+// getOfflineEventData returns  offline touch point event id
+func (store *MemSQL) getOfflineEventData(projectID uint64) (model.EventName, error) {
+
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
+	names := []string{U.EVENT_NAME_OFFLINE_TOUCH_POINT}
+
+	eventNames, errCode := store.GetEventNamesByNames(projectID, names)
+	if errCode != http.StatusFound || len(eventNames) != 1 {
+		logCtx.Error("failed to find offline touch point event names")
+		return model.EventName{}, errors.New("failed to find offline touch point event names")
+	}
+	return eventNames[0], nil
 }
 
 // Return conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
