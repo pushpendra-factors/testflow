@@ -795,7 +795,7 @@ func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID uint64, id strin
 	return &eventName, http.StatusFound
 }
 
-// returns list of EventNames objects for given names
+// GetEventNamesByNames returns list of EventNames objects for given names
 func (store *MemSQL) GetEventNamesByNames(projectId uint64, names []string) ([]model.EventName, int) {
 	var eventNames []model.EventName
 
