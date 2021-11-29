@@ -4,9 +4,17 @@ import {
   Row, Col, Progress, Skeleton, Avatar, Button
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
+import { useHistory } from 'react-router-dom';
 
 
-function Brand(props) {
+function Brand() {
+
+    const history = useHistory();
+
+    const handleCreate = (e) => {
+        e.preventDefault();
+        history.push('/project-setup');
+    }
 
   return (
     <>
@@ -29,7 +37,7 @@ function Brand(props) {
                         </Row>
                         <Row className={'mt-20'}>
                             <Col>
-                                <Button size={'large'} type={'primary'} style={{width:'280px', height:'36px'}} className={'ml-16'}>Create</Button>
+                                <Button size={'large'} type={'primary'} style={{width:'280px', height:'36px'}} className={'ml-16'} onClick={handleCreate}>Create</Button>
                             </Col>
                         </Row>
                     </div>

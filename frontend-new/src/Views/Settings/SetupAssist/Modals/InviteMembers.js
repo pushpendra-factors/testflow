@@ -3,6 +3,7 @@ import { connect } from 'react-redux';
 import {
   Row, Col, Button, Input, Form, Progress, message, Select
 } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents';
 import { projectAgentInvite, fetchProjectAgents } from 'Reducers/agentActions';
 import Brand from './Brand';
@@ -13,6 +14,7 @@ function BasicDetails(props) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
   const [role, setRole]= useState('admin');
+  const [formValues, setFormValues] = useState([{email:'', role:role}]); 
 
   const inviteUser = (payload) => {
     // console.log('Success! payload values:', payload);
@@ -76,8 +78,8 @@ function BasicDetails(props) {
                             <Input className={'fa-input'} size={'large'} addonAfter={selectAfter} placeholder={'Enter email address'} />
                             </Form.Item>
                         </Col>
-                        {/* <Col span={24}>
-                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-6 mb-2'}>Email</Text>
+                        <Col span={24}>
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>Email</Text>
                             <Form.Item
                                 label={null}
                                 name="email1"
@@ -85,11 +87,14 @@ function BasicDetails(props) {
                             >
                             <Input className={'fa-input'} size={'large'} addonAfter={selectAfter} placeholder={'Enter email address'} />
                             </Form.Item>
-                        </Col> */}
+                        </Col>
+                        <Col span={24} className={'mt-6 ml-2'}>
+                          <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />}>Add another user</Button>
+                        </Col>
                         <Col span={24}>
-                            <div className={'mt-20 flex justify-center'}>
+                            <div className={'mt-16 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type="primary" style={{width:'400px', height:'36px'}} className={'ml-2'} htmlType="submit">
+                                    <Button size={'large'} type="primary" style={{width:'440px', height:'36px'}} className={'ml-2'} htmlType="submit">
                                     Invite and Continue
                                     </Button>
                                 </Form.Item>
@@ -98,7 +103,7 @@ function BasicDetails(props) {
                         <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type={'text'} style={{width:'400px', height:'36px'}} htmlType="text" onClick={onReset}>
+                                    <Button size={'large'} type={'text'} style={{width:'440px', height:'36px'}} htmlType="text" onClick={onReset}>
                                     Skip now, I will invite later
                                     </Button>
                                 </Form.Item>
