@@ -1272,18 +1272,18 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_CAMPAIGN, "campaign", campEventsMap, eventDetails, file, line); err != nil {
 			return CampaignEventLists{}, err
 		}
-		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_MEDIUM, "medium", mediumEventsMap, eventDetails, file, line); err != nil {
-			return CampaignEventLists{}, err
-		}
-		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_SOURCE, "source", sourceEventsMap, eventDetails, file, line); err != nil {
-			return CampaignEventLists{}, err
-		}
-		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.SP_INITIAL_REFERRER, "initial_referrer", referrerEventsMap, eventDetails, file, line); err != nil {
-			return CampaignEventLists{}, err
-		}
-		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_ADGROUP, "adgroup", AdgroupEventsMap, eventDetails, file, line); err != nil {
-			return CampaignEventLists{}, err
-		}
+		// if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_MEDIUM, "medium", mediumEventsMap, eventDetails, file, line); err != nil {
+		// 	return CampaignEventLists{}, err
+		// }
+		// if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_SOURCE, "source", sourceEventsMap, eventDetails, file, line); err != nil {
+		// 	return CampaignEventLists{}, err
+		// }
+		// if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.SP_INITIAL_REFERRER, "initial_referrer", referrerEventsMap, eventDetails, file, line); err != nil {
+		// 	return CampaignEventLists{}, err
+		// }
+		// if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_ADGROUP, "adgroup", AdgroupEventsMap, eventDetails, file, line); err != nil {
+		// 	return CampaignEventLists{}, err
+		// }
 
 	}
 	w.Flush()
