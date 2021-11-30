@@ -52,10 +52,10 @@ const countUDE = 20
 const countSME = 5
 const countStdEvents = -1 // all events
 const countCampaigns = 25
-const countSource = 10
-const countReferrer = 10
-const countMedium = 10
-const countAdgroup = 25
+const countSource = 0
+const countReferrer = 0
+const countMedium = 0
+const countAdgroup = 0
 const USER_PROP_MIN_SUPPORT = 2.0
 const EVENT_PROP_MIN_SUPPORT = 20.0
 
@@ -1272,18 +1272,18 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_CAMPAIGN, "campaign", campEventsMap, eventDetails, file, line); err != nil {
 			return CampaignEventLists{}, err
 		}
-		// if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_MEDIUM, "medium", mediumEventsMap, eventDetails, file, line); err != nil {
-		// 	return CampaignEventLists{}, err
-		// }
-		// if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_SOURCE, "source", sourceEventsMap, eventDetails, file, line); err != nil {
-		// 	return CampaignEventLists{}, err
-		// }
-		// if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.SP_INITIAL_REFERRER, "initial_referrer", referrerEventsMap, eventDetails, file, line); err != nil {
-		// 	return CampaignEventLists{}, err
-		// }
-		// if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_ADGROUP, "adgroup", AdgroupEventsMap, eventDetails, file, line); err != nil {
-		// 	return CampaignEventLists{}, err
-		// }
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_MEDIUM, "medium", mediumEventsMap, eventDetails, file, line); err != nil {
+			return CampaignEventLists{}, err
+		}
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_SOURCE, "source", sourceEventsMap, eventDetails, file, line); err != nil {
+			return CampaignEventLists{}, err
+		}
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.SP_INITIAL_REFERRER, "initial_referrer", referrerEventsMap, eventDetails, file, line); err != nil {
+			return CampaignEventLists{}, err
+		}
+		if err := writeEncodedEvent(U.EVENT_NAME_SESSION, U.EP_ADGROUP, "adgroup", AdgroupEventsMap, eventDetails, file, line); err != nil {
+			return CampaignEventLists{}, err
+		}
 
 	}
 	w.Flush()
