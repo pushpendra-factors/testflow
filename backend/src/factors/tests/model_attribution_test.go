@@ -1731,6 +1731,57 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 	}
 }
 
+func TestAddGrandTotalRow(t *testing.T) {
+
+	rows := make([][]interface{}, 0)
+	row1 := []interface{}{"Campaign1", int64(2), int64(2), float64(2),
+		// (CTR, AvgCPC, CPM, ClickConversionRate)
+		float64(2), float64(2), float64(2), float64(2),
+		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
+		int64(2), int64(2), float64(2), int64(2),
+		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
+		float64(2), float64(2), float64(2), float64(2), float64(2), float64(2)}
+	row2 := []interface{}{"Campaign2", int64(3), int64(3), float64(3),
+		// (CTR, AvgCPC, CPM, ClickConversionRate)
+		float64(3), float64(3), float64(3), float64(3),
+		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
+		int64(3), int64(3), float64(3), int64(3),
+		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
+		float64(3), float64(3), float64(3), float64(3), float64(3), float64(3)}
+	rows = append(rows, row1, row2)
+
+	row3 := []interface{}{"GrandTotal", int64(5), int64(5), float64(5),
+		// (CTR, AvgCPC, CPM, ClickConversionRate)
+		float64(100), float64(1), float64(1000), float64(100),
+		// Sessions, (users), (AvgSessionTime), (pageViews),
+		int64(5), int64(5), float64(5), int64(5),
+		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
+		float64(5), float64(1), float64(100), float64(5), float64(1), float64(100)}
+
+	resultWant := append([][]interface{}{row3}, rows...)
+	type args struct {
+		rows [][]interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want []interface{}
+	}{
+		{"SimpleX", args{rows}, resultWant[0]},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resultGot := model.AddGrandTotalRow(tt.args.rows, 0)
+			got := resultGot[0]
+			for colNo, _ := range got {
+				if got[colNo] != tt.want[colNo] {
+					t.Errorf("TestAddGrandTotalRow()col No: %v=,  = %v, want %v", colNo, got[colNo], tt.want[colNo])
+				}
+			}
+		})
+	}
+}
+
 func TestSortInteractionTime(t *testing.T) {
 	type args struct {
 		interactions []model.Interaction
