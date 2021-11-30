@@ -37,7 +37,7 @@ function NewProject(props) {
             </Row>
           </div>
 
-          <BasicDetails />
+          <BasicDetails handleCancel = {props.handleCancel}/>
 
       </Modal>  
 

@@ -8,7 +8,7 @@ import { createProject } from '../../../../reducers/global';
 import InviteMembers from './InviteMembers';
 const { Option } = Select;
 
-function BasicDetails({ createProject }) {
+function BasicDetails({ createProject, handleCancel }) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
 
@@ -108,7 +108,7 @@ function BasicDetails({ createProject }) {
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
       </div>
     }
-    {formData && <InviteMembers />}
+    {formData && <InviteMembers handleCancel = {handleCancel} />}
     </>
 
   );

@@ -10,41 +10,46 @@ import Brand from './Brand';
 const { Option } = Select;
 
 function BasicDetails(props) {
-  const [errorInfo, seterrorInfo] = useState(null);
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
-  const [role, setRole]= useState('admin');
 
   const inviteUser = (payload) => {
-    // console.log('Success! payload values:', payload);
-    seterrorInfo(null);
-    const data = {...payload, 'role':role}
-    console.log(data);
-    props.projectAgentInvite(props.activeProjectID, data).then(() => {
+
+    const filteredData = Object.fromEntries(
+      Object.entries(payload).filter(([key, value]) => key !== 'emails') );
+
+    const emailData = {};
+    let i = 2;
+
+    payload['emails'].forEach ((item) => {
+      emailData[i] = item; 
+      i++;
+    })
+
+    const finalData = {...filteredData, ...emailData}
+
+    props.projectAgentInvite(props.activeProjectID, finalData).then(() => {
       props.fetchProjectAgents(props.activeProjectID);
       setFormData(data);
       message.success('Invitation sent successfully!');
     }).catch((err) => {
       console.log('invite error', err);
       form.resetFields();
-      seterrorInfo(err); 
+      message.error(err);
     });
   }; 
-  const onChange = () => {
-    seterrorInfo(null);
-  };
+
   const onReset = () => {
-    seterrorInfo(null);
     form.resetFields();
     setFormData(true);
   };
 
-  const selectAfter = (
-    <Select defaultValue="admin" onChange={(value) => setRole(value)} className="select-after">
-      <Option value="admin">Admin</Option>
-      <Option value="user">User</Option>
-    </Select>
-  );
+  const RoleTypes =[
+    {value: 'admin', label: 'Admin'},
+    {value: 'user', lable: 'User'}
+  ];
+
+  const RoleTypeSelect = <Select options={RoleTypes} />;
 
   return (
     <>
@@ -65,29 +70,28 @@ function BasicDetails(props) {
                     form={form}
                     name="inviteUser"
                     onFinish={inviteUser}
-                    // onChange={onChange}
                     >
                     <Row>
                         <Col span={24}>
                             <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mb-2'}>Email</Text>
                             <Form.Item
                                 label={null}
-                                name="email"
+                                name={[0, "email"]}
                                 validateTrigger={['onChange', 'onBlur']}
                                 rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                             >
-                            <Input className={'fa-input'} size={'large'} addonAfter={selectAfter} placeholder={'Enter email address'} />
+                            <Input className={'fa-input'} size={'large'} addonAfter={<Form.Item name={[0, "role"]} noStyle initialValue="admin">{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
                         </Col>
                         <Col span={24}>
                             <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>Email</Text>
                             <Form.Item
                                 label={null}
-                                name="email1"
+                                name={[1, 'email']}
                                 validateTrigger={['onChange', 'onBlur']}
                                 rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                             >
-                            <Input className={'fa-input'} size={'large'} addonAfter={selectAfter} placeholder={'Enter email address'} />
+                            <Input className={'fa-input'} size={'large'} addonAfter={<Form.Item name={[1, "role"]} noStyle initialValue="admin">{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
                         </Col>
                     <Form.List
@@ -114,11 +118,11 @@ function BasicDetails(props) {
                             <Form.Item
                                 label={null}
                                 {...field}
-                                // name="email"
+                                name={[field.name, 'email']}
                                 validateTrigger={['onChange', 'onBlur']}
                                 rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                             >
-                            <Input className={'fa-input'} size={'large'} addonAfter={selectAfter} placeholder={'Enter email address'} />
+                            <Input className={'fa-input'} size={'large'}  addonAfter={<Form.Item name={[field.name, "role"]} noStyle initialValue="admin">{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
                             {fields.length > 0 ? (
                               <MinusCircleOutlined
@@ -165,7 +169,7 @@ function BasicDetails(props) {
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
       </div>
       }
-      {formData && <Brand />}
+      {formData && <Brand handleCancel = {props.handleCancel}/>}
     </>
 
   );

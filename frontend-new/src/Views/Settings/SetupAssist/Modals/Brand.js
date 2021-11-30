@@ -7,7 +7,7 @@ import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 
 
-function Brand() {
+function Brand({handleCancel}) {
     const [imageUrl, setImageUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const history = useHistory();
@@ -15,6 +15,7 @@ function Brand() {
     const handleCreate = (e) => {
         e.preventDefault();
         history.push('/project-setup');
+        handleCancel();
     }
 
     function getBase64(img, callback) {
