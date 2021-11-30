@@ -5,9 +5,10 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
+import { signup } from 'Reducers/agentActions';
 import UserData from './UserData';
 
-function SignUp() {
+function SignUp({ signup }) {
   const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
@@ -21,14 +22,24 @@ function SignUp() {
   const SignUpFn = () => {
     setDataLoading(true);
     form.validateFields().then((values) => {
-        setDataLoading(false);
-        setformData(values);
+        setDataLoading(true);
+        const filteredValues = Object.fromEntries(
+        Object.entries(values).filter(([key, value]) => key !== 'terms_and_conditions') );
+        
+        signup(filteredValues).then(() => {
+            setDataLoading(false);
+            setformData(filteredValues);
+        }).catch((err) => {
+            setDataLoading(false);
+            form.resetFields();
+            seterrorInfo(err);
+        });
     }).catch((info) => {
         setDataLoading(false);
         form.resetFields();
         seterrorInfo(info);
     });
-  };
+};
 
   const onChange = () => {
     seterrorInfo(null);
@@ -224,4 +235,4 @@ function SignUp() {
   );
 }
 
-export default connect(null, {  })(SignUp);
+export default connect(null, { signup })(SignUp);

@@ -30,7 +30,7 @@ function BasicDetails(props) {
 
     props.projectAgentInvite(props.activeProjectID, finalData).then(() => {
       props.fetchProjectAgents(props.activeProjectID);
-      setFormData(data);
+      setFormData(finalData);
       message.success('Invitation sent successfully!');
     }).catch((err) => {
       console.log('invite error', err);
@@ -39,7 +39,7 @@ function BasicDetails(props) {
     });
   }; 
 
-  const onReset = () => {
+  const onSkip = () => {
     form.resetFields();
     setFormData(true);
   };
@@ -152,7 +152,7 @@ function BasicDetails(props) {
                         <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type={'text'} style={{width:'440px', height:'36px'}} htmlType="text" onClick={onReset}>
+                                    <Button size={'large'} type={'text'} style={{width:'440px', height:'36px'}} htmlType="text" onClick={onSkip}>
                                     Skip now, I will invite later
                                     </Button>
                                 </Form.Item>

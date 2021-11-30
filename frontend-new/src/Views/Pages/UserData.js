@@ -13,23 +13,19 @@ function UserData({ signup, data }) {
     const [errorInfo, seterrorInfo] = useState(null);
     const [formData, setformData] = useState(null);
 
-    const SignUpFn = () => {
+    const UserDataFn =() => {
         setDataLoading(true);
         form.validateFields().then((values) => {
-            setDataLoading(true);
-            const filteredValues = Object.fromEntries(
-            Object.entries(data).filter(([key, value]) => key !== 'terms_and_conditions') );
-
-            const allData = {...filteredValues, ...values};
-            
-            signup(allData).then(() => {
-                setDataLoading(false);
-                setformData(allData);
-            }).catch((err) => {
             setDataLoading(false);
-                form.resetFields();
-                seterrorInfo(err);
-            });
+            setformData(values);
+            // signup(filteredValues).then(() => {
+            //     setDataLoading(false);
+            //     setformData(filteredValues);
+            // }).catch((err) => {
+            //     setDataLoading(false);
+            //     form.resetFields();
+            //     seterrorInfo(err);
+            // });
         }).catch((info) => {
             setDataLoading(false);
             form.resetFields();
@@ -63,7 +59,7 @@ function UserData({ signup, data }) {
                         name="login"
                         validateTrigger
                         initialValues={{ remember: false }}
-                        onFinish={SignUpFn}
+                        onFinish={UserDataFn}
                         onChange={onChange}
                         >
                         <Row>
@@ -100,18 +96,17 @@ function UserData({ signup, data }) {
                             <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
                                             <Form.Item label={null}
-                                            name="estimate_users"
-                                            rules={[{ required: true, message: 'Please select estimated users' }]}
+                                            name="monthly_tracked_users"
+                                            rules={[{ required: true, message: 'Please select Estimated monthly tracked users' }]}
                                             >
                                             <Select
                                                 placeholder="Estimated monthly tracked users"
-                                                // onChange={this.onGenderChange}
                                                 allowClear
                                             >
-                                                <Option value="10">Less then 10</Option>
-                                                <Option value="50">11-50</Option>
-                                                <Option value="100">51-100</Option>
-                                                <Option value="500">101-500</Option>
+                                                <Option value="Less than 5k">Less then 5k</Option>
+                                                <Option value="5k - 50k">5k - 50k</Option>
+                                                <Option value="50k - 200k">5k - 200k</Option>
+                                                <Option value="Greater than 200k">Greater than 200k</Option>
                                             </Select>
                                             </Form.Item>
                                     </div>
@@ -124,13 +119,16 @@ function UserData({ signup, data }) {
                                             >
                                             <Select
                                                 placeholder="Team Size"
-                                                // onChange={this.onGenderChange}
                                                 allowClear
                                             >
-                                                <Option value="10">Less then 10</Option>
-                                                <Option value="50">11-50</Option>
-                                                <Option value="100">51-100</Option>
-                                                <Option value="500">101-500</Option>
+                                                <Option value="1-10 employees">1-10 employees</Option>
+                                                <Option value="11-50 employees">11-50 employees</Option>
+                                                <Option value="51-200 employees">51-200 employees</Option>
+                                                <Option value="201-500 employees">201-500 employees</Option>
+                                                <Option value="501-1000 employees">501-1000 employees</Option>
+                                                <Option value="1001-5000 employees">1001-5000 employees</Option>
+                                                <Option value="5001-10000 employees">5001-10000 employees</Option>
+                                                <Option value="10001+ employees">10001+ employees</Option>
                                             </Select>
                                             </Form.Item>
                                     </div>
@@ -166,7 +164,7 @@ function UserData({ signup, data }) {
       </div>
         }
         {formData &&
-            <Congrats signup={signup} data = {formData} />
+            <Congrats signup={signup} data = {data} />
         }
 </>
 

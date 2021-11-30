@@ -22,7 +22,7 @@ function BasicDetails({ createProject, handleCancel }) {
     });
   };
 
-  const onCancel = () => {
+  const onSkip = () => {
     form.resetFields();
     setFormData(true)
   };
@@ -86,7 +86,7 @@ function BasicDetails({ createProject, handleCancel }) {
                         <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type={'text'} style={{width:'280px', height:'36px'}} htmlType="text" onClick={onCancel}>
+                                    <Button size={'large'} type={'text'} style={{width:'280px', height:'36px'}} htmlType="text" onClick={onSkip}>
                                     Skip
                                     </Button>
                                 </Form.Item>
