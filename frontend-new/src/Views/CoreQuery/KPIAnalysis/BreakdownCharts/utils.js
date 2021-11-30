@@ -18,12 +18,14 @@ import {
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 
 export const defaultSortProp = () => {
-  return {
-    order: 'descend',
-    key: 'value',
-    type: 'numerical',
-    subtype: null,
-  };
+  return [
+    {
+      order: 'descend',
+      key: 'value',
+      type: 'numerical',
+      subtype: null,
+    },
+  ];
 };
 
 export const getVisibleData = (aggregateData, sorter) => {

@@ -35,7 +35,9 @@ const BreakdownCharts = forwardRef(
       coreQueryState: { savedQuerySettings },
     } = useContext(CoreQueryContext);
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || defaultSortProp()
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : defaultSortProp()
     );
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [aggregateData, setAggregateData] = useState([]);

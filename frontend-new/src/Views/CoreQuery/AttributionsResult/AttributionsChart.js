@@ -75,7 +75,9 @@ const AttributionsChart = forwardRef(
     const [columns, setColumns] = useState([]);
     const [tableData, setTableData] = useState([]);
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || defaultSortProp()
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : defaultSortProp()
     );
     const [visibleIndices, setVisibleIndices] = useState([]);
 

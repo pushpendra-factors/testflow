@@ -18,7 +18,9 @@ const NoBreakdownCharts = forwardRef(
     } = useContext(CoreQueryContext);
 
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || defaultSortProp()
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : defaultSortProp()
     );
 
     const handleSorting = useCallback((prop) => {

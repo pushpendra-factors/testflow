@@ -17,24 +17,18 @@ import HorizontalBarChartCell from './HorizontalBarChartCell';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 
 export const defaultSortProp = () => {
-  return {
-    order: 'descend',
-    key: 'Event Count',
-    type: 'numerical',
-    subtype: null,
-  };
+  return [
+    {
+      order: 'descend',
+      key: 'Event Count',
+      type: 'numerical',
+      subtype: null,
+    },
+  ];
 };
 
 export const getVisibleData = (aggregateData, sorter) => {
   const result = SortResults(aggregateData, sorter).slice(
-    0,
-    MAX_ALLOWED_VISIBLE_PROPERTIES
-  );
-  return result;
-};
-
-export const getVisibleSeriesData = (data, sorter) => {
-  const result = SortResults(data, sorter).slice(
     0,
     MAX_ALLOWED_VISIBLE_PROPERTIES
   );
@@ -369,10 +363,12 @@ export const getDataInHorizontalBarChartFormat = (
   isDashboardWidget = false
 ) => {
   console.log('semb getDataInHorizontalBarChartFormat');
-  const sortedData = SortResults(aggregateData, {
-    key: 'value',
-    order: 'descend',
-  });
+  const sortedData = SortResults(aggregateData, [
+    {
+      key: 'value',
+      order: 'descend',
+    },
+  ]);
 
   const firstBreakdownKey = `${breakdown[0].pr} - 0`;
   const secondBreakdownKey = `${breakdown[1].pr} - 1`;
