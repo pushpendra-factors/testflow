@@ -63,13 +63,11 @@ function BasicDetails({ createProject, handleCancel }) {
                             <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-6 mb-2'}>Select Your timezone</Text>
                             <Form.Item
                                 label={null}
+                                initialValue={'US'}
                                 name="timezone"
                                 rules={[{ required: true, message: 'Please select timezone' }]} className={'m-0'}
                             >
-                            <Select
-                                defaultValue="US"
-                                allowClear
-                                >
+                            <Select>
                                 <Option value="US">US/Pacific</Option>
                                 <Option value="India">India</Option>
                                 <Option value="UK">UK</Option>
