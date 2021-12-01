@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -143,6 +144,9 @@ func createProject(project *model.Project) (*model.Project, int) {
 			break
 		}
 	}
+
+	project.HubspotTouchPoints = postgres.Jsonb{}
+	project.SalesforceTouchPoints = postgres.Jsonb{}
 	return project, http.StatusCreated
 }
 
