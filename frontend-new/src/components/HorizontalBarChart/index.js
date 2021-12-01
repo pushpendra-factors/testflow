@@ -61,14 +61,24 @@ function HorizontalBarChart({ series, categories, height, width, cardSize }) {
           enabled: false,
         },
         labels: {
+          useHTML: true,
           formatter: function () {
-            if (this.value.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
-              return (
-                this.value.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) +
-                '...'
-              );
-            }
-            return this.value;
+            return ReactDOMServer.renderToString(
+              <>
+                <Text
+                  color='grey-2'
+                  type='title'
+                  extraClass={`${styles.xAxisLabels} mb-0`}
+                >
+                  {this.value.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
+                    ? this.value.substr(
+                        0,
+                        BAR_CHART_XAXIS_TICK_LENGTH[cardSize]
+                      ) + '...'
+                    : this.value}
+                </Text>
+              </>
+            );
           },
         },
       },
@@ -101,7 +111,7 @@ function HorizontalBarChart({ series, categories, height, width, cardSize }) {
       },
       series,
     });
-  }, [series, categories, height, width]);
+  }, [series, categories, height, width, cardSize]);
 
   useEffect(() => {
     drawChart();
