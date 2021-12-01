@@ -398,6 +398,7 @@ function ReportContent({
           currMetricsValue={currMetricsValue}
           durationObj={durationObj}
           chartType={chartType}
+          renderedCompRef={renderedCompRef}
         />
       );
     }

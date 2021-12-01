@@ -80,7 +80,7 @@ function SingleEventMultipleBreakdownTable({
         breakdown,
         dateSorter,
         handleDateSorting,
-        'date',
+        durationObj.frequency,
         userPropNames,
         eventPropNames
       )

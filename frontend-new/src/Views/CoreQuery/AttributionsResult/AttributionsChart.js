@@ -114,8 +114,18 @@ const AttributionsChart = forwardRef(
             return newState;
           }
         });
+        if (option.enabled) {
+          const isSortedByThisOption = sorter.find(
+            (elem) => elem.key === option.title
+          );
+          if (isSortedByThisOption) {
+            setSorter((currentSorter) => {
+              return currentSorter.filter((elem) => elem.key !== option.title);
+            });
+          }
+        }
       },
-      [setAttributionMetrics]
+      [setAttributionMetrics, sorter]
     );
 
     const metricsOptionsPopover = useMemo(() => {
