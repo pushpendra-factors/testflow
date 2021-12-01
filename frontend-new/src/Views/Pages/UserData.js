@@ -26,11 +26,11 @@ function UserData({ signup, data }) {
                         "value": data.email
                     },
                     {
-                        "property": "first_name",
+                        "property": "firstname",
                         "value": data.first_name
                     },
                     {
-                        "property": "last_name",
+                        "property": "lastname",
                         "value": data.last_name
                     },
                     {
