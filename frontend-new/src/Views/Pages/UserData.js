@@ -6,6 +6,7 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import { signup } from 'Reducers/agentActions';
 import Congrats from './Congrats';
+const axios = require('axios').default;
 
 function UserData({ signup, data }) {
     const [form] = Form.useForm();
@@ -16,16 +17,55 @@ function UserData({ signup, data }) {
     const UserDataFn =() => {
         setDataLoading(true);
         form.validateFields().then((values) => {
-            setDataLoading(false);
-            setformData(values);
-            // signup(filteredValues).then(() => {
-            //     setDataLoading(false);
-            //     setformData(filteredValues);
-            // }).catch((err) => {
-            //     setDataLoading(false);
-            //     form.resetFields();
-            //     seterrorInfo(err);
-            // });
+            setDataLoading(true);
+
+            const jsonData = {
+                "properties": [
+                    {
+                        "property": "email",
+                        "value": data.email
+                    },
+                    {
+                        "property": "first_name",
+                        "value": data.first_name
+                    },
+                    {
+                        "property": "last_name",
+                        "value": data.last_name
+                    },
+                    {
+                        "property": "website",
+                        "value": values.website
+                    },
+                    {
+                        "property": "phone",
+                        "value": values.phone
+                    },
+                    {
+                        "property": "monthly_tracked_users",
+                        "value": values.monthly_tracked_users
+                    },
+                    {
+                        "property": "team_size",
+                        "value": values.team_size
+                    }                    
+                ]
+            }
+
+            const APIKEY = '69137c15-00a5-4d12-91e7-9641797e9572';
+            
+            axios.post(`https://api.hubapi.com/contacts/v1/contact/createOrUpdate/email/${data.email}/?hapikey=${APIKEY}`, jsonData)
+            .then(function (response) {
+                console.log(response);
+                setDataLoading(false);
+                setformData(values);
+            })
+            .catch(function (error) {
+                console.log(error);
+                setDataLoading(false);
+                form.resetFields();
+                seterrorInfo(err);
+            });
         }).catch((info) => {
             setDataLoading(false);
             form.resetFields();
@@ -81,7 +121,7 @@ function UserData({ signup, data }) {
                             <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
                                             <Form.Item label={null}
-                                            name="website_url"
+                                            name="website"
                                             rules={[{ required: true, message: 'Please enter company website' }]}
                                             >
                                             <Input
