@@ -4,22 +4,48 @@ import {
   Row, Col, Button, Input, Form, Progress, message, Select
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { createProject } from '../../../../reducers/global';
+import { createProject, udpateProjectDetails } from '../../../../reducers/global';
+import { TimeZoneOffsetValues } from 'Utils/constants'; 
 import InviteMembers from './InviteMembers';
 const { Option } = Select;
 
-function BasicDetails({ createProject, handleCancel }) {
+const getKeyByValue = (obj, value) =>  Object.keys(obj).find(key => obj[key]?.city === value);
+
+const TimeZoneName = 
+{
+  "IST":'IST',
+  "PT" :'PT (Pacific Time)',
+  "CT" :'CT (Central Time)',
+  "ET" :'ET (Eastern Time)',
+  "GMT" :'GMT',
+  "AEST" :'AEST (Australia Eastern Standard Time)', 
+}
+
+function BasicDetails({ createProject, activeProject, setEditMode, udpateProjectDetails, handleCancel }) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
 
   const onFinish = values => {
-    createProject(values.projectName).then(() => {
-      setFormData(values);
-      message.success('New Project Created!');
-    }).catch((err) => {
-      message.error('Oops! Something went wrong.');
-      console.log('createProject Failed:', err);
-    });
+      createProject(values.projectName).then(() => {
+        setFormData(values);
+        message.success('New Project Created!');
+      }).catch((err) => {
+        message.error('Oops! Something went wrong.');
+        console.log('createProject Failed:', err);
+      });
+
+    // let projectData = {
+    //     ...values,
+    //     time_zone: TimeZoneOffsetValues[values.time_zone]?.city
+    //   }; 
+  
+    //   udpateProjectDetails(activeProject.id, projectData).then(() => {
+    //     message.success('Project details updated!'); 
+    //     setEditMode(false);
+    //   }).catch((err) => {
+    //     console.log('err->', err);
+    //     message.error(err.data.error); 
+    //   });
   };
 
   const onSkip = () => {
@@ -41,12 +67,12 @@ function BasicDetails({ createProject, handleCancel }) {
                             </Col>
                         </Row>
                         <Row>
-                            <Col span={24}>
-                            <Form
-                    name="createNewProject"
-                    initialValues={{ remember: false }}
-                    onFinish={onFinish}
-                    form={form}
+                    <Col span={24}>
+                    <Form
+                        name="createNewProject"
+                        onFinish={onFinish}
+                        form={form}
+                        initialValues={{ time_zone: TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject?.time_zone)] }}
                     >
                     <Row>
                         <Col span={24}>
@@ -62,16 +88,18 @@ function BasicDetails({ createProject, handleCancel }) {
                         <Col span={24}>
                             <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-6 mb-2'}>Select Your timezone</Text>
                             <Form.Item
-                                label={null}
-                                initialValue={'US'}
-                                name="timezone"
-                                rules={[{ required: true, message: 'Please select timezone' }]} className={'m-0'}
+                                name="time_zone"
+                                className={'m-0'}
+                                rules={[{ required: true, message: 'Please choose an option' }]}
+                                // disabled={!activeProject?.is_multiple_project_timezone_enabled}
                             >
-                            <Select>
-                                <Option value="US">US/Pacific</Option>
-                                <Option value="India">India</Option>
-                                <Option value="UK">UK</Option>
-                            </Select>
+                                <Select 
+                                // disabled={!activeProject?.is_multiple_project_timezone_enabled}
+                                className={'fa-select'} placeholder={'Time Zone'} size={'large'}>
+                                { Object.keys(TimeZoneName).map((item)=>{
+                                    return  <Option value={item}>{TimeZoneName[item]}</Option> 
+                                })} 
+                                </Select>
                             </Form.Item>
                         </Col>
                         <Col span={24}>
@@ -112,4 +140,8 @@ function BasicDetails({ createProject, handleCancel }) {
   );
 }
 
-export default connect(null, { createProject })(BasicDetails);
+const mapStateToProps = (state) => ({
+    activeProject: state.global.active_project
+  });
+
+export default connect(mapStateToProps, { createProject, udpateProjectDetails })(BasicDetails);
