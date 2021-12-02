@@ -53,8 +53,9 @@ function UserData({ signup, data }) {
             }
 
             const APIKEY = '69137c15-00a5-4d12-91e7-9641797e9572';
+            const url = `https://api.hubapi.com/contacts/v1/contact/createOrUpdate/email/${data.email}/?hapikey=${APIKEY}`;
             
-            axios.post(`https://api.hubapi.com/contacts/v1/contact/createOrUpdate/email/${data.email}/?hapikey=${APIKEY}`, jsonData)
+            axios.post(url, jsonData)
             .then(function (response) {
                 console.log(response);
                 setDataLoading(false);
