@@ -159,6 +159,7 @@ function CoreQuery({
   updateSavedQuerySettings,
   setProfileQueries,
   fetchAgentInfo,
+  setAttributionMetrics,
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
@@ -386,7 +387,10 @@ function CoreQuery({
             }
           }
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_KPI) {
-          equivalentQuery = getKPIStateFromRequestQuery(record.query, kpiConfig);
+          equivalentQuery = getKPIStateFromRequestQuery(
+            record.query,
+            kpiConfig
+          );
           updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
         } else if (
           record.query.cl &&
@@ -401,6 +405,11 @@ function CoreQuery({
             newDateRange = { attr_dateRange: getDashboardDateRange() };
           }
           const usefulQuery = { ...equivalentQuery, ...newDateRange };
+          if (record.settings && record.settings.attributionMetrics) {
+            setAttributionMetrics(
+              JSON.parse(record.settings.attributionMetrics)
+            );
+          }
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_PROFILE) {

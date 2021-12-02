@@ -1302,6 +1302,7 @@ function CoreQuery({
                 setNavigatedFromDashboard={setNavigatedFromDashboard}
                 updateChartTypes={updateChartTypes}
                 updateSavedQuerySettings={updateSavedQuerySettings}
+                setAttributionMetrics={setAttributionMetrics}
               />
             )}
 
