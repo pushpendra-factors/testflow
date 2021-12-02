@@ -64,7 +64,7 @@ function Brand({handleCancel}) {
                         </Row>
                         <Row className={'mt-2'}>
                             <Col>
-                                <Text type={'paragraph'} mini extraClass={'m-0 mt-1 mb-4'} color={'grey'} style={{marginLeft:'140px'}}>Project Thumbnail</Text>
+                                <Text type={'paragraph'} mini extraClass={'m-0 mt-1 mb-4'} color={'grey'} style={{marginLeft:'145px'}}>Project Thumbnail</Text>
                                 <Upload
                                     name="avatar"
                                     accept={''}
@@ -73,14 +73,15 @@ function Brand({handleCancel}) {
                                     beforeUpload={beforeUpload}
                                     onChange={handleChange}
                                 >
-                                    {imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px',marginLeft:'150px'}} /> : <img src='../../../../assets/avatar/ModalAvatar.png' style={{marginLeft:'150px'}}></img>}
+                                    {imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px',marginLeft:'160px'}} /> : <img src='../../../../assets/avatar/ModalAvatar.png' style={{marginLeft:'150px'}}></img>}
                                 </Upload>
-                                <Text type={'paragraph'} mini  extraClass={'m-0 mt-4'} color={'grey'} style={{marginLeft:'80px'}}>A logo helps personalise your Project</Text>
+                                <Text type={'paragraph'} mini  extraClass={'m-0 mt-4'} color={'grey'} style={{marginLeft:'90px'}}>A logo helps personalise your Project</Text>
+                                <Text type={'paragraph'} mini  extraClass={'m-0 mt-8'} color={'red'} style={{ textAlign:'center'}}>Note: Upload images with a width and height of up to 105px, less than 2mb, in either a jpeg or png format.</Text>
                             </Col>
                         </Row>
-                        <Row className={'mt-20'}>
+                        <Row className={'mt-12'}>
                             <Col>
-                                <Button size={'large'} type={'primary'} style={{width:'280px', height:'36px'}} className={'ml-16'} onClick={handleCreate}>Create</Button>
+                                <Button size={'large'} type={'primary'} style={{width:'280px', height:'36px'}} className={'ml-20'} onClick={handleCreate}>Create</Button>
                             </Col>
                         </Row>
                     </div>

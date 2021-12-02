@@ -48,10 +48,10 @@ function BasicDetails({ createProject, activeProject, setEditMode, udpateProject
     //   });
   };
 
-  const onSkip = () => {
-    form.resetFields();
-    setFormData(true)
-  };
+//   const onSkip = () => {
+//     form.resetFields();
+//     setFormData(true)
+//   };
 
   return (
     <>
@@ -111,7 +111,7 @@ function BasicDetails({ createProject, activeProject, setEditMode, udpateProject
                                 </Form.Item>
                             </div>
                         </Col>
-                        <Col span={24}>
+                        {/* <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
                                     <Button size={'large'} type={'text'} style={{width:'280px', height:'36px'}} htmlType="text" onClick={onSkip}>
@@ -119,7 +119,7 @@ function BasicDetails({ createProject, activeProject, setEditMode, udpateProject
                                     </Button>
                                 </Form.Item>
                             </div>
-                        </Col>
+                        </Col> */}
                     </Row>
                     </Form>
                         

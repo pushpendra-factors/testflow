@@ -8,9 +8,9 @@ import { signup } from 'Reducers/agentActions';
 
 function Congrats({ signup, data }) {
 
-  const popBookDemo = () => {
-    if(Calendly){ Calendly.initPopupWidget({ url: 'https://calendly.com/factorsai/demo' }); }
-  };
+//   const popBookDemo = () => {
+//     if(Calendly){ Calendly.initPopupWidget({ url: 'https://calendly.com/factorsai/demo' }); }
+//   };
 
   const resendEmail = () => {
     console.log('resendEmail');
@@ -64,9 +64,9 @@ function Congrats({ signup, data }) {
                             </Col>
                            
                             <Col span={24}>
-                                <div className={'flex flex-col justify-center items-center mt-20'}>
-                                    <Text type={'title'} level={6} color={'grey'} align="center" lineHeight={'large'} extraClass={'m-0 mb-4 w-3/5'}>Our team would be happy to walk you through the product and answer any questions </Text>
-                                    <Button size={'large'} className={'w-full mt-4'} style={{ maxWidth: '280px' }} onClick={() => popBookDemo()}>Schedule a demo</Button>
+                                <div className={'flex flex-col justify-center items-center mt-10'}>
+                                    {/* <Text type={'title'} level={6} color={'grey'} align="center" lineHeight={'large'} extraClass={'m-0 mb-4 w-3/5'}>Our team would be happy to walk you through the product and answer any questions </Text>
+                                    <Button size={'large'} className={'w-full mt-4'} style={{ maxWidth: '280px' }} onClick={() => popBookDemo()}>Schedule a demo</Button> */}
                                     <Text type={'title'} level={7} align="center" extraClass={'m-0 mt-6'}>Didn’t get an email? <a onClick={() => resendEmail()} >Click to resend</a></Text>
                                 </div>
                             </Col>

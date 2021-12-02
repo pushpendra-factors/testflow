@@ -19,12 +19,14 @@ function BasicDetails(props) {
       Object.entries(payload).filter(([key, value]) => key !== 'emails') );
 
     const emailData = {};
-    let i = 2;
+    let i = 1;
 
-    payload['emails'].forEach ((item) => {
-      emailData[i] = item; 
-      i++;
-    })
+    if (payload['emails']) {
+      payload['emails'].forEach ((item) => {
+        emailData[i] = item; 
+        i++;
+      })
+    }
 
     const finalData = {...filteredData, ...emailData}
 
@@ -83,7 +85,7 @@ function BasicDetails(props) {
                             <Input className={'fa-input'} size={'large'} addonAfter={<Form.Item name={[0, "role"]} noStyle initialValue="admin">{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
                         </Col>
-                        <Col span={24}>
+                        {/* <Col span={24}>
                             <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>Email</Text>
                             <Form.Item
                                 label={null}
@@ -93,14 +95,14 @@ function BasicDetails(props) {
                             >
                             <Input className={'fa-input'} size={'large'} addonAfter={<Form.Item name={[1, "role"]} noStyle initialValue="admin">{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
-                        </Col>
+                        </Col> */}
                     <Form.List
                       name="emails"
                       rules={[
                         {
                           validator: async (_, names) => {
-                            if (!names || names.length < 2) {
-                              return Promise.reject(new Error('At least 2 users'));
+                            if (!names || names.length < 1) {
+                              return Promise.reject(new Error('At least 1 users'));
                             }
                           },
                         },
@@ -135,7 +137,7 @@ function BasicDetails(props) {
                         ))}
                         
                         <Col span={24} className={'mt-6 ml-2'}>
-                          {fields.length === 3 ? null: <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />} onClick={() => add()}>Add another user</Button>}
+                          {fields.length === 4 ? null: <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />} onClick={() => add()}>Add another user</Button>}
                         </Col>
                         </>
                         )}
