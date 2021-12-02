@@ -29,7 +29,6 @@ import {
   CHART_TYPE_SCATTER_PLOT,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   QUERY_TYPE_PROFILE,
-  TYPE_ALL_USERS,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 import { formatFilterDate } from '../../utils/dataFormatter';
@@ -159,7 +158,8 @@ const getProfileWithProperties = (queries) => {
       }
     });
     pwps.push({
-      ty: TYPE_ALL_USERS,
+      // an: ev.alias,
+      ty: ev.label,
       pr: filterProps,
       tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
     });
@@ -223,13 +223,27 @@ const getGlobalProfileFilters = (globalFilters = []) => {
   return filterProps;
 };
 
-export const getProfileQuery = (queries, groupBy, globalFilters = []) => {
+export const getProfileQuery = (
+  queries,
+  groupBy,
+  globalFilters = [],
+  dateRange
+) => {
   const query = {};
   query.cl = QUERY_TYPE_PROFILE;
-  // query_group.ty = TYPE_ALL_USERS;
 
   query.queries = getProfileWithProperties(queries);
   query.gup = getGlobalProfileFilters(globalFilters);
+
+  const period = {};
+  period.from = MomentTz(dateRange.from).utc().unix();
+  period.to =
+    MomentTz().format('dddd') === 'Sunday'
+      ? MomentTz().utc().unix()
+      : MomentTz().subtract(1, 'day').utc().unix();
+
+  query.from = period.from;
+  query.to = period.to;
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
   query.gbp = appliedGroupBy.map((opt) => {
@@ -455,7 +469,11 @@ export const getKPIQuery = (
   query.qG = getKPIqueryGroup(queries, eventGrpBy, period);
 
   const GlobalGrpBy = [...groupBy.global];
-  query.gGBy = getGroupByWithPropertiesKPI(GlobalGrpBy,null,queries[0]?.category); 
+  query.gGBy = getGroupByWithPropertiesKPI(
+    GlobalGrpBy,
+    null,
+    queries[0]?.category
+  );
 
   query.gFil = getEventsWithPropertiesKPI(
     queryOptions?.globalFilters,
@@ -1269,7 +1287,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
             Display Stacked Area Chart
           </Radio>
           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
-            Display Stacked Bar Chart
+            Display Stacked Column Chart
           </Radio>
           {commons}
         </>
@@ -1306,7 +1324,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
             Display Stacked Area Chart
           </Radio>
           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
-            Display Stacked Bar Chart
+            Display Stacked Column Chart
           </Radio>
           {commons}
         </>
@@ -1371,7 +1389,8 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
         );
       } else {
         const horizontalBarChart =
-          requestQuery[0].gbp.length <= 3 ? (
+          requestQuery[0].gbp.length <= 3 &&
+          requestQuery[0].ewp.length === 1 ? (
             <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
               Display Bar Chart
             </Radio>
@@ -1385,7 +1404,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
               Display Stacked Area Chart
             </Radio>
             <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
-              Display Stacked Bar Chart
+              Display Stacked Column Chart
             </Radio>
             {commons}
             {horizontalBarChart}

@@ -305,6 +305,7 @@ function ReportContent({
   }
 
   if (queryType === QUERY_TYPE_PROFILE) {
+    durationObj = queryOptions.date_range;
     if (queries.length > 1 && breakdown.length) {
       metricsDropdown = (
         <CampaignMetricsDropdown
