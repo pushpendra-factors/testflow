@@ -14,10 +14,30 @@ function UserData({ signup, data }) {
     const [errorInfo, seterrorInfo] = useState(null);
     const [formData, setformData] = useState(null);
 
+    const getOwner = () => {
+
+        const ownersData = [
+            {
+                "value" : 116046946,
+            },
+            {
+                "value" : 116047122,
+            },
+            {
+                "value" : 116053799,
+            }
+        ]
+        const index = Math.floor(Math.random()*3);
+        const data = ownersData[index];
+        return data;
+    }
+
     const UserDataFn =() => {
         setDataLoading(true);
         form.validateFields().then((values) => {
             setDataLoading(true);
+
+            const owner = getOwner();
 
             const jsonData = {
                 "properties": [
@@ -48,7 +68,11 @@ function UserData({ signup, data }) {
                     {
                         "property": "team_size",
                         "value": values.team_size
-                    }                    
+                    },
+                    {
+                        "property": "hubspot_owner_id",
+                        "value": owner.value
+                    }                     
                 ]
             }
 
