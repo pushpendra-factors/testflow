@@ -36,8 +36,19 @@ function UserData({ signup, data }) {
         setDataLoading(true);
         form.validateFields().then((values) => {
             setDataLoading(true);
+            const APIKEY = '69137c15-00a5-4d12-91e7-9641797e9572';
 
+            const isOwnerAvilable = false
+            let ownerData;
             const owner = getOwner();
+
+            axios.get(`https://api.hubapi.com/contacts/v1/contact/email/${data.email}/profile?hapikey=${APIKEY}`)
+            .then(response => response.json())
+            .then( data => {
+                ownerData = data['properties'].hubspot_owner_id.value;
+                isOwnerAvilable = data['properties'].hubspot_owner_id? true: false;
+            })
+
 
             const jsonData = {
                 "properties": [
@@ -71,12 +82,11 @@ function UserData({ signup, data }) {
                     },
                     {
                         "property": "hubspot_owner_id",
-                        "value": owner.value
+                        "value": isOwnerAvilable ? ownerData: owner.value
                     }                     
                 ]
             }
 
-            const APIKEY = '69137c15-00a5-4d12-91e7-9641797e9572';
             const url = `https://api.hubapi.com/contacts/v1/contact/createOrUpdate/email/${data.email}/?hapikey=${APIKEY}`;
             
             axios.post(url, jsonData)

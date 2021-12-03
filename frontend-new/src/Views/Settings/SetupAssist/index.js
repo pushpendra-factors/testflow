@@ -12,11 +12,27 @@ import OtherIntegrations from './OtherIntegrations';
 import { useHistory } from 'react-router-dom';
 import Lottie from 'react-lottie';
 import setupAssistData from '../../../assets/lottie/Setup assist1.json';
+const axios = require('axios').default;
 
-const SetupAssist = () => {
+const SetupAssist = ({agents}) => {
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
     const history = useHistory();
+
+    const APIKEY = '69137c15-00a5-4d12-91e7-9641797e9572';
+    let email;
+    let ownerData;
+    agents.map(agent => email = agent.email);
+
+    axios.get(`https://api.hubapi.com/contacts/v1/contact/email/${email}/profile?hapikey=${APIKEY}`)
+    .then(response => response.json())
+    .then( data => {
+        ownerData = data['properties'].hubspot_owner_id.value;
+    })
+
+    const meetLink = ownerData === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
+                    :ownerData === '116047122'? 'https://calendly.com/priyanka-267/30min'
+                    :ownerData === '116053799'? 'https://calendly.com/priyanka-267/30min': null;
 
     const defaultOptions = {
         loop: true,
@@ -52,7 +68,7 @@ const SetupAssist = () => {
                             <Col>
                                 <Text type={'title'} level={4} weight={'bold'} extraClass={'pb-4 m-0'}>Setup a call with a rep</Text>
                                 <Text type={'title'} level={6} extraClass={'pb-6 m-0'}>We are always happy to assist you</Text>
-                                <Button type={'primary'}>Setup Call</Button>
+                                <a href={meetLink} target='_blank' ><Button type={'primary'}>Setup Call</Button></a>
                                 <img src='../../assets/images/character-1.png' style={{width: '100%',maxWidth: '80px',marginLeft:'110px', marginTop:'-20px'}}/>
                             </Col>
                         </Row>
@@ -102,11 +118,8 @@ const SetupAssist = () => {
     );
 };
 
-const mapStateToProps = (state) => {
-    return ({
-        agent: state.agent.agent_details
-    }
-    );
-};
+const mapStateToProps = (state) => ({
+    agents: state.agent.agents
+});
 
 export default connect(mapStateToProps)(SetupAssist);
