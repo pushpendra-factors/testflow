@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS events (
     -- Additional constraint.
     -- Ref (project_id, session_id) -> events (project_id, id) WHERE event is session.
 );
+ALTER TABLE events AUTOSTATS_SAMPLING = OFF;
 
 CREATE TABLE IF NOT EXISTS users (
     id text NOT NULL, 
@@ -74,6 +75,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- Ref (project_id) -> projects(id)
     -- Ref (project_id, properties_id) -> user_properties(project_id, id)
 );
+ALTER TABLE users AUTOSTATS_SAMPLING = OFF;
 
 CREATE TABLE IF NOT EXISTS event_names (
     id text, -- UUID
