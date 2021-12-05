@@ -94,6 +94,10 @@ func (store *MemSQL) fillEventNameIDs(projectID uint64, query *model.Query) {
 }
 
 func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+	isTimezoneEnabled := false
+	if C.IsMultipleProjectTimezoneEnabled(projectId) {
+		isTimezoneEnabled = true
+	}
 	if C.SkipEventNameStepByProjectID(projectId) {
 		store.fillEventNameIDs(projectId, &query)
 	}
@@ -125,7 +129,7 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
-	err = SanitizeQueryResult(result, &query)
+	err = SanitizeQueryResult(result, &query, isTimezoneEnabled)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to sanitize query results.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -514,9 +518,9 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 }
 
 // SanitizeQueryResult Converts DB results into plottable query results.
-func SanitizeQueryResult(result *model.QueryResult, query *model.Query) error {
+func SanitizeQueryResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
 	if query.GetGroupByTimestamp() != "" {
-		if err := sanitizeGroupByTimestampResult(result, query); err != nil {
+		if err := sanitizeGroupByTimestampResult(result, query, isTimezoneEnabled); err != nil {
 			return err
 		}
 	}
@@ -537,7 +541,7 @@ func SanitizeQueryResult(result *model.QueryResult, query *model.Query) error {
 	return nil
 }
 
-func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Query) error {
+func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
 	aggrIndex, timeIndex, err := GetTimstampAndAggregateIndexOnQueryResult(result.Headers)
 	if err != nil {
 		return err
@@ -545,9 +549,9 @@ func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Quer
 
 	// Todo: Supports only date as timestamp, add support for hour and month.
 	if len(query.GroupByProperties) == 0 && len(query.EventsWithProperties) < 2 {
-		err = addMissingTimestampsOnResultWithoutGroupByProps(result, query, aggrIndex, timeIndex)
+		err = addMissingTimestampsOnResultWithoutGroupByProps(result, query, aggrIndex, timeIndex, isTimezoneEnabled)
 	} else {
-		err = addMissingTimestampsOnResultWithGroupByProps(result, query, aggrIndex, timeIndex)
+		err = addMissingTimestampsOnResultWithGroupByProps(result, query, aggrIndex, timeIndex, isTimezoneEnabled)
 	}
 
 	if err != nil {
@@ -566,30 +570,30 @@ func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
 	})
 }
 
-func getAllTimestampsBetweenByType(from, to int64, typ, timezone string) []time.Time {
+func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimezoneEnabled bool) []time.Time {
 	if typ == model.GroupByTimestampDate {
-		return U.GetAllDatesAsTimestamp(from, to, timezone)
+		return U.GetAllDatesAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampHour {
-		return U.GetAllHoursAsTimestamp(from, to, timezone)
+		return U.GetAllHoursAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampWeek {
-		return U.GetAllWeeksAsTimestamp(from, to, timezone)
+		return U.GetAllWeeksAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampMonth {
-		return U.GetAllMonthsAsTimestamp(from, to, timezone)
+		return U.GetAllMonthsAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 	if typ == model.GroupByTimestampQuarter {
-		return U.GetAllQuartersAsTimestamp(from, to, timezone)
+		return U.GetAllQuartersAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 	return []time.Time{}
 }
 
 func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
-	query *model.Query, aggrIndex int, timestampIndex int) error {
+	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 
 	rowsByTimestamp := make(map[string][]interface{}, 0)
 	for _, row := range result.Rows {
@@ -598,7 +602,7 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 	}
 
 	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
-		query.GetGroupByTimestamp(), query.Timezone)
+		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
 	filledResult := make([][]interface{}, 0, 0)
 	// range over timestamps between given from and to.
@@ -624,7 +628,7 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 // Fills missing timestamp between given from and to timestamp for all group key combinations,
 // on the limited result.
 func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
-	query *model.Query, aggrIndex int, timestampIndex int) error {
+	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 
 	gkStart, gkEnd, err := getGroupKeyIndexesForSlicing(result.Headers)
 	if err != nil {
@@ -652,7 +656,7 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 	}
 
 	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
-		query.GetGroupByTimestamp(), query.Timezone)
+		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
 	for _, row := range result.Rows {
 		for _, ts := range timestamps {

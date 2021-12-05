@@ -23,9 +23,11 @@ func (pg *Postgres) GetKPIConfigsForSalesforceOpportunities(projectID uint64, re
 func (pg *Postgres) GetKPIConfigsForSalesforce(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
 	salesforceProjectSettings, errCode := pg.GetAllSalesforceProjectSettingsForProject(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusOK {
+		log.WithField("projectId", projectID).WithField("reqID", reqID).Warn(" Failed in getting salesforce project settings.")
 		return nil, http.StatusOK
 	}
 	if len(salesforceProjectSettings) == 0 {
+		log.WithField("projectId", projectID).WithField("reqID", reqID).Warn("Salesforce integration is not available.")
 		return nil, http.StatusOK
 	}
 

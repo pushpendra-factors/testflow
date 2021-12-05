@@ -579,7 +579,7 @@ func (store *MemSQL) GetAllHubspotProjectSettingsForProjectID(projectID uint64) 
 
 	db := C.GetServices().Db
 	err := db.Table("project_settings").Where(
-		"int_hubspot='true' AND int_hubspot_api_key IS NOT NULL AND project_id IN (?)", projectID).Select(
+		"int_hubspot=true AND int_hubspot_api_key IS NOT NULL AND project_id IN (?)", projectID).Select(
 		"project_id, int_hubspot_api_key as api_key, int_hubspot_first_time_synced as is_first_time_synced," +
 			"int_hubspot_sync_info as sync_info").
 		Find(&hubspotProjectSettings).Error
