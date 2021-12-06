@@ -7,7 +7,7 @@ const (
 func GetKPIConfigsForLinkedin() map[string]interface{} {
 	config := map[string]interface{}{
 		"category":         ChannelCategory,
-		"display_category": FacebookDisplayCategory,
+		"display_category": LinkedinDisplayCategory,
 	}
 	config["metrics"] = GetMetricsForDisplayCategory(AllChannelsDisplayCategory)
 	return config

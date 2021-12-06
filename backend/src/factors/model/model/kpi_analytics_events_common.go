@@ -3,6 +3,7 @@ package model
 import (
 	U "factors/util"
 	"fmt"
+	"sort"
 )
 
 func ValidateKPIQuery(kpiQuery KPIQuery) bool {
@@ -139,7 +140,11 @@ func SplitKPIQueryToInternalKPIQueries(query Query, kpiQuery KPIQuery, metric st
 func prependEventFiltersBasedOnInternalTransformation(filters []QueryProperty, eventsWithProperties []QueryEventWithProperties) []QueryEventWithProperties {
 	resultantEventsWithProperties := make([]QueryEventWithProperties, 1)
 	var filtersBasedOnMetric []QueryProperty
-	filtersBasedOnMetric = append(filtersBasedOnMetric, filters...)
+	for _, filter := range filters {
+		if filter.Entity == EventEntity {
+			filtersBasedOnMetric = append(filtersBasedOnMetric, filter)
+		}
+	}
 	resultantEventsWithProperties[0].Name = eventsWithProperties[0].Name
 	resultantEventsWithProperties[0].AliasName = eventsWithProperties[0].AliasName
 	resultantEventsWithProperties[0].Properties = append(filtersBasedOnMetric, eventsWithProperties[0].Properties...)
@@ -176,7 +181,7 @@ func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bo
 		tmpResult = &QueryResult{}
 
 		tmpResult.Headers = getTransformedHeaders(result.Headers, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
-		tmpResult.Rows = getTransformedRows(result.Rows, hasGroupByTimestamp, hasAnyGroupBy)
+		tmpResult.Rows = GetTransformedRows(result.Rows, hasGroupByTimestamp, hasAnyGroupBy, len(result.Headers))
 		resultantResults = append(resultantResults, tmpResult)
 	}
 	return resultantResults
@@ -195,13 +200,27 @@ func getTransformedHeaders(headers []string, hasGroupByTimestamp bool, hasAnyGro
 	return currentHeaders
 }
 
-// append(row[1:2], row[3:]...))
-// TODO: validate if rows are there or not.
-func getTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGroupBy bool) [][]interface{} {
+func GetTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGroupBy bool, headersLen int) [][]interface{} {
 	var currentRows [][]interface{}
 	currentRows = make([][]interface{}, 0)
+	if len(rows) == 0 {
+		currentRow := make([]interface{}, headersLen)
+		for index := range currentRow[:len(currentRow)-1] {
+			currentRow[index] = ""
+		}
+		currentRow[len(currentRow)-1] = 0
+		currentRows = append(currentRows, currentRow)
+		return currentRows
+	}
 	for _, row := range rows {
-		if hasAnyGroupBy && hasGroupByTimestamp {
+		if len(row) == 0 {
+			currentRow := make([]interface{}, headersLen)
+			for index := range currentRow[:len(currentRow)-1] {
+				currentRow[index] = ""
+			}
+			currentRow[len(currentRow)-1] = 0
+			currentRows = append(currentRows, currentRow)
+		} else if hasAnyGroupBy && hasGroupByTimestamp {
 			currentRow := append(row[1:2], row[3:]...)
 			currentRows = append(currentRows, currentRow)
 		} else if !hasAnyGroupBy && hasGroupByTimestamp {
@@ -237,15 +256,21 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, transforma
 			resultAsMap = intermediateResultsAsMap
 		}
 	}
-	for _, value := range resultAsMap {
-		finalResultRows = append(finalResultRows, value)
+
+	keys := make([]string, 0)
+	for k, _ := range resultAsMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		finalResultRows = append(finalResultRows, resultAsMap[key])
 	}
 	finalResult.Headers = results[0].Headers
 	finalResult.Rows = finalResultRows
 	return finalResult
 }
 
-// TODO: Decide value when divided by 0.
 func getValueFromValuesAndOperator(value1 interface{}, value2 interface{}, operator string) float64 {
 	var result float64
 	value1InFloat := U.SafeConvertToFloat64(value1)
