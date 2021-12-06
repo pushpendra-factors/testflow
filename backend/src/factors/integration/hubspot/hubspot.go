@@ -1142,7 +1142,9 @@ func syncCompanyProperties(projectID uint64, groupID string, docID string, docum
 	var processEventTimestamps []int64
 	var err error
 	if documentAction == model.HubspotDocumentActionCreated {
-		companyUserID, err = store.GetStore().CreateOrUpdateCompanyGroupPropertiesBySource(projectID, groupID, "", userProperties, documentTimestmap, documentTimestmap, model.SmartCRMEventSourceHubspot)
+		companyUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, model.GROUP_NAME_HUBSPOT_COMPANY, groupID, "",
+			userProperties, documentTimestmap, documentTimestmap, model.SmartCRMEventSourceHubspot)
+
 		if err != nil {
 			return "", err
 		}
@@ -1165,7 +1167,8 @@ func syncCompanyProperties(projectID uint64, groupID string, docID string, docum
 			updateCreatedRecord = true
 		}
 
-		companyUserID, err = store.GetStore().CreateOrUpdateCompanyGroupPropertiesBySource(projectID, docID, createdDocument[0].UserId, userProperties, createdDocument[0].Timestamp, documentTimestmap, model.SmartCRMEventSourceHubspot)
+		companyUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, model.GROUP_NAME_HUBSPOT_COMPANY, groupID, createdDocument[0].UserId, userProperties,
+			createdDocument[0].Timestamp, documentTimestmap, model.SmartCRMEventSourceHubspot)
 		if err != nil {
 			return "", err
 		}

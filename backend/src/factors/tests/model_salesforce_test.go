@@ -18,7 +18,6 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -88,7 +87,7 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	// enrich job, create contact created and contact updated event.
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
 	eventNameCreated := fmt.Sprintf("$sf_%s_created", salesforceDocument.TypeAlias)
@@ -183,7 +182,7 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
 	// query count of unique users
@@ -895,7 +894,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	query := model.Query{
 		From: createdDate.Unix() - 500,
@@ -1533,7 +1532,7 @@ func TestSalesforceSmartEventPropertyDetails(t *testing.T) {
 
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2)
+	assert.Len(t, enrichStatus, 1)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 
 	configs := make(map[string]interface{})
@@ -1770,12 +1769,10 @@ func TestSalesforceCampaignTest(t *testing.T) {
 
 	enrichStatus, anyFailure := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, false, anyFailure)
-	assert.Len(t, enrichStatus, 5)
+	assert.Len(t, enrichStatus, 3) // only camapaing, lead and contact
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
 	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[2].Status)
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[3].Status)
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[4].Status)
 
 	query := model.Query{
 		From: campaign1CreatedTimestamp.Unix() - 500,
@@ -2379,7 +2376,7 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 	assert.Nil(t, err)
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 3)
+	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 
@@ -2550,7 +2547,6 @@ func TestSalesforcePerDayBatching(t *testing.T) {
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
-	assert.Equal(t, "success", enrichStatus[2].Status)
 
 	query = model.Query{
 		From: lead1CreatedDate.AddDate(0, 0, -1).Unix(),
@@ -2625,6 +2621,7 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 	assert.Len(t, enrichStatus, 3)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
+	assert.Equal(t, "success", enrichStatus[2].Status)
 
 	query := model.Query{
 		From: leadCreatedDate.AddDate(0, 0, -1).Unix(),
@@ -2653,6 +2650,7 @@ func TestSalesforceOpportunitySkipOnUnsyncedLead(t *testing.T) {
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Len(t, enrichStatus, 2)
 	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
 
 	analyzeResult, status, _ = store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, status)
@@ -2959,6 +2957,8 @@ func TestSalesforceGroups(t *testing.T) {
 
 	opportunityID1 := "acc1_opp1_" + getRandomName()
 	opportunityID2 := "acc2_opp1_" + getRandomName()
+	opportunityID3 := "acc1_opp2_" + getRandomName()
+	opportunityID4 := "acc2_opp2_" + getRandomName()
 
 	document = map[string]interface{}{
 		"Id":               opportunityID1,
@@ -2980,37 +2980,82 @@ func TestSalesforceGroups(t *testing.T) {
 	processRecords = append(processRecords, document)
 	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameOpportunity)
 
+	document = map[string]interface{}{
+		"Id":               opportunityID3,
+		"Name":             "opportunity3",
+		"AccountId":        accountID1,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameOpportunity)
+
+	document = map[string]interface{}{
+		"Id":               opportunityID4,
+		"Name":             "opportunity4",
+		"AccountId":        accountID2,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameOpportunity)
+
 	for i := range processRecords {
 		err = createDummySalesforceDocument(project.ID, processRecords[i], processRecordsType[i])
 		assert.Nil(t, err, fmt.Sprintf("doc_type %s", processRecordsType[i]))
 	}
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 5) // group account status
+	assert.Len(t, enrichStatus, 6) // group account status and group opportunity status
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 	assert.Equal(t, "success", enrichStatus[2].Status)
 	assert.Equal(t, "success", enrichStatus[3].Status)
 	assert.Equal(t, "success", enrichStatus[4].Status)
+	assert.Equal(t, "success", enrichStatus[5].Status)
 
+	account1GroupUserId := ""
+	account2GroupUserId := ""
+	opportunity1GroupUserId := ""
+	opportunity2GroupUserId := ""
+	opportunity3GroupUserId := ""
+	opportunity4GroupUserId := ""
 	for i := range processRecords {
 		docType := model.GetSalesforceDocTypeByAlias(processRecordsType[i])
 		documents, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(processRecords[i]["Id"])}, docType, 0)
 		assert.Equal(t, http.StatusFound, status)
 		assert.NotEmpty(t, documents[0].UserID)
-		if documents[0].Type == model.SalesforceDocumentTypeAccount {
+		if documents[0].Type == model.SalesforceDocumentTypeAccount || documents[0].Type == model.SalesforceDocumentTypeOpportunity {
 			assert.NotEqual(t, "", documents[0].GroupUserID)
 			assert.NotEqual(t, "", documents[0].UserID)
 			groupUser, _ := store.GetStore().GetUser(project.ID, documents[0].GroupUserID)
-			if strings.HasPrefix(documents[0].ID, "acc1_") {
-				assert.Equal(t, "account1", groupUser.Group1ID)
+			if documents[0].Type == model.SalesforceDocumentTypeOpportunity {
+				assert.Equal(t, "", groupUser.Group1ID)
+				assert.NotEqual(t, "", groupUser.ID)
+				if documents[0].ID == opportunityID1 {
+					opportunity1GroupUserId = groupUser.ID
+				} else if documents[0].ID == opportunityID2 {
+					opportunity2GroupUserId = groupUser.ID
+				} else if documents[0].ID == opportunityID3 {
+					opportunity3GroupUserId = groupUser.ID
+				} else {
+					opportunity4GroupUserId = groupUser.ID
+				}
 			} else {
-				assert.Equal(t, "account2", groupUser.Group1ID)
+				if documents[0].ID == accountID1 {
+					assert.Equal(t, "account1", groupUser.Group1ID)
+					account1GroupUserId = groupUser.ID
+				} else {
+					assert.Equal(t, "account2", groupUser.Group1ID)
+					account2GroupUserId = groupUser.ID
+				}
 			}
+
 		} else {
 			nonGroupUser, _ := store.GetStore().GetUser(project.ID, documents[0].UserID)
 			assert.Equal(t, false, *nonGroupUser.IsGroupUser)
-			if strings.HasPrefix(documents[0].ID, "acc1_") {
+			if documents[0].ID == contactID1 || documents[0].ID == leadID1 ||
+				documents[0].ID == opportunityID1 || documents[0].ID == opportunityID3 {
 				assert.Equal(t, "account1", nonGroupUser.Group1ID)
 			} else {
 				assert.Equal(t, "account2", nonGroupUser.Group1ID)
@@ -3061,6 +3106,24 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Equal(t, float64(2), result[accountID1])
 	assert.Equal(t, float64(2), result[accountID2])
 
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+		"$salesforce_opportunity_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 4)
+	assert.Equal(t, float64(1), result[opportunityID1])
+	assert.Equal(t, float64(1), result[opportunityID2])
+	assert.Equal(t, float64(1), result[opportunityID3])
+	assert.Equal(t, float64(1), result[opportunityID4])
+
+	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
+		"$salesforce_opportunity_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Len(t, result, 4)
+	assert.Equal(t, float64(2), result[opportunityID1])
+	assert.Equal(t, float64(2), result[opportunityID2])
+	assert.Equal(t, float64(2), result[opportunityID3])
+	assert.Equal(t, float64(2), result[opportunityID4])
+
 	// Two new update on the account. Account name will not be updated on group id
 	processRecords = []map[string]interface{}{}
 	processRecordsType = []string{}
@@ -3097,7 +3160,7 @@ func TestSalesforceGroups(t *testing.T) {
 
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 2) // group account status
+	assert.Len(t, enrichStatus, 2) // includes group account status
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 
@@ -3124,30 +3187,153 @@ func TestSalesforceGroups(t *testing.T) {
 		accountID2:     model.SalesforceDocumentTypeAccount,
 		opportunityID1: model.SalesforceDocumentTypeOpportunity,
 		opportunityID2: model.SalesforceDocumentTypeOpportunity,
+		opportunityID3: model.SalesforceDocumentTypeOpportunity,
+		opportunityID4: model.SalesforceDocumentTypeOpportunity,
 	} {
 		documents, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(id)}, docType, 0)
 		assert.Equal(t, http.StatusFound, status)
 		lasteDocument := documents[len(documents)-1]
-		if docType == model.SalesforceDocumentTypeAccount {
+		if docType == model.SalesforceDocumentTypeAccount || docType == model.SalesforceDocumentTypeOpportunity {
 			groupUser, status := store.GetStore().GetUser(project.ID, lasteDocument.GroupUserID)
 			assert.Equal(t, http.StatusFound, status)
 
-			if strings.HasPrefix(id, "acc1_") {
-				assert.Equal(t, "account1", groupUser.Group1ID)
+			if docType == model.SalesforceDocumentTypeOpportunity {
+				assert.Equal(t, "", groupUser.Group1ID)
+				assert.NotEqual(t, "", groupUser.ID)
+				if documents[0].ID == opportunityID1 {
+					assert.Equal(t, opportunity1GroupUserId, groupUser.ID)
+				} else if documents[0].ID == opportunityID2 {
+					assert.Equal(t, opportunity2GroupUserId, groupUser.ID)
+				} else if documents[0].ID == opportunityID3 {
+					assert.Equal(t, opportunity3GroupUserId, groupUser.ID)
+				} else {
+					assert.Equal(t, opportunity4GroupUserId, groupUser.ID)
+				}
 			} else {
-				assert.Equal(t, "account2", groupUser.Group1ID)
+				if documents[0].ID == accountID1 {
+					assert.Equal(t, "account1", groupUser.Group1ID)
+					assert.Equal(t, account1GroupUserId, groupUser.ID)
+				} else {
+					assert.Equal(t, "account2", groupUser.Group1ID)
+					assert.Equal(t, account2GroupUserId, groupUser.ID)
+				}
 			}
+
 		} else {
 			assert.Equal(t, "", lasteDocument.GroupUserID)
-			user, status := store.GetStore().GetUser(project.ID, lasteDocument.UserID)
+			nonGroupUser, status := store.GetStore().GetUser(project.ID, lasteDocument.UserID)
 			assert.Equal(t, http.StatusFound, status)
-			if strings.HasPrefix(id, "acc1_") {
-				assert.Equal(t, "account1", user.Group1ID)
+			if lasteDocument.ID == leadID1 || lasteDocument.ID == contactID1 {
+				assert.Equal(t, "account1", nonGroupUser.Group1ID)
 			} else {
-				assert.Equal(t, "account2", user.Group1ID)
+				assert.Equal(t, "account2", nonGroupUser.Group1ID)
+			}
+			assert.NotEqual(t, "", nonGroupUser.Group1UserID)
+		}
+	}
+
+	// Verify group relationships
+	for id, docType := range map[string]int{
+		accountID1:     model.SalesforceDocumentTypeAccount,
+		accountID2:     model.SalesforceDocumentTypeAccount,
+		opportunityID1: model.SalesforceDocumentTypeOpportunity,
+		opportunityID2: model.SalesforceDocumentTypeOpportunity,
+		opportunityID3: model.SalesforceDocumentTypeOpportunity,
+		opportunityID4: model.SalesforceDocumentTypeOpportunity,
+	} {
+		documents, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(id)},
+			docType, 0)
+		assert.Equal(t, http.StatusFound, status)
+
+		if docType == model.SalesforceDocumentTypeAccount {
+			groupRelationships, status := store.GetStore().GetGroupRelationshipByUserID(project.ID, documents[0].GroupUserID)
+			assert.Equal(t, http.StatusFound, status)
+			assert.Equal(t, 2, len(groupRelationships))
+			for i := range groupRelationships {
+				if groupRelationships[i].LeftGroupUserID == account1GroupUserId {
+					if groupRelationships[i].RightGroupUserID == opportunity1GroupUserId {
+
+					} else {
+						assert.Equal(t, groupRelationships[i].RightGroupUserID, opportunity3GroupUserId)
+					}
+				} else {
+					if groupRelationships[i].RightGroupUserID == opportunity2GroupUserId {
+
+					} else {
+						assert.Equal(t, groupRelationships[i].RightGroupUserID, opportunity4GroupUserId)
+					}
+				}
+			}
+
+		} else {
+			groupRelationships, status := store.GetStore().GetGroupRelationshipByUserID(project.ID, documents[0].GroupUserID)
+			assert.Equal(t, http.StatusFound, status)
+			assert.Equal(t, 1, len(groupRelationships))
+			assert.Equal(t, groupRelationships[0].LeftGroupUserID, documents[0].GroupUserID)
+			if documents[0].ID == opportunityID1 || documents[0].ID == opportunityID3 {
+				assert.Equal(t, groupRelationships[0].RightGroupUserID, account1GroupUserId)
+			} else {
+				assert.Equal(t, groupRelationships[0].RightGroupUserID, account2GroupUserId)
 			}
 		}
 	}
+
+	// Update already synced account record group status
+	accountID3 := "account3"
+	document = map[string]interface{}{
+		"Id":               accountID3,
+		"Name":             "account3",
+		"City":             "A",
+		"CreatedDate":      createdDate.AddDate(0, 0, -5).Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.AddDate(0, 0, -5).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameAccount)
+	assert.Nil(t, err)
+	salesforceDocument := model.SalesforceDocument{
+		ID:        accountID3,
+		ProjectID: project.ID,
+		Type:      model.SalesforceDocumentTypeAccount,
+		Action:    model.SalesforceDocumentCreated,
+		Timestamp: createdDate.AddDate(0, 0, -5).Unix(),
+	}
+	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, &salesforceDocument, "123", "1234", "", true)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	leadID3 := "lead3"
+	document = map[string]interface{}{
+		"Id":                 leadID3,
+		"Name":               "lead3",
+		"ConvertedAccountId": accountID3,
+		"City":               "A",
+		"CreatedDate":        createdDate.AddDate(0, 0, -2).Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate":   createdDate.AddDate(0, 0, -2).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 1)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{accountID3}, model.SalesforceDocumentTypeAccount, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEqual(t, "", documents[0].GroupUserID)
+	groupUser, status := store.GetStore().GetUser(project.ID, documents[0].GroupUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, true, *groupUser.IsGroupUser)
+	assert.Equal(t, "account3", groupUser.Group1ID)
+	assert.Equal(t, documents[0].GroupUserID, groupUser.ID)
+	account3GroupUserID := groupUser.ID
+
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{leadID3}, model.SalesforceDocumentTypeLead, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "", documents[0].GroupUserID)
+	groupUser, status = store.GetStore().GetUser(project.ID, documents[0].UserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, false, *groupUser.IsGroupUser)
+	assert.Equal(t, "account3", groupUser.Group1ID)
+	assert.Equal(t, account3GroupUserID, groupUser.Group1UserID)
 }
 
 func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
