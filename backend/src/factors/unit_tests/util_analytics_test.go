@@ -2,8 +2,8 @@ package unit_tests
 
 import (
 	U "factors/util"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestGetTimeFromTimestampStr(t *testing.T) {
@@ -12,9 +12,9 @@ func TestGetTimeFromTimestampStr(t *testing.T) {
 	assert.NotNil(t, time)
 }
 
-func TestGetAllDatesAsTimestamp(t *testing.T){
-	timestamp1:= 1637316219
-	timestamp2:= 1639908216
-	time:= U.GetAllDatesAsTimestamp(int64(timestamp1),int64(timestamp2),"")
-	assert.Len(t,time,31)
+func TestGetAllDatesAsTimestamp(t *testing.T) {
+	timestamp1 := 1637316219
+	timestamp2 := 1639908216
+	time := U.GetAllDatesAsTimestamp(int64(timestamp1), int64(timestamp2), "", false)
+	assert.Len(t, time, 31)
 }
