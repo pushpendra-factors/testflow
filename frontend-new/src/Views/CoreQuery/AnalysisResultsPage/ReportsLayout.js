@@ -61,7 +61,7 @@ function ReportsLayout({
     if (renderedCompRef.current && renderedCompRef.current.currentSorter) {
       return renderedCompRef.current.currentSorter;
     }
-    return {};
+    return [];
   }, []);
 
   function changeTab(key) {
@@ -115,36 +115,36 @@ function ReportsLayout({
     if (queryType === QUERY_TYPE_KPI) {
       return (
         <KPIComposer
-            // queries={rest.composerFunctions.queries}
-            // runQuery={rest.composerFunctions.runQuery}
-            // eventChange={rest.composerFunctions.queryChange}
-            // queryType={queryType}
-            // queryOptions={rest.queryOptions}
-            // setQueryOptions={rest.composerFunctions.setExtraOptions}
-            // runFunnelQuery={rest.composerFunctions.runFunnelQuery}
-            // activeKey={rest.composerFunctions.activeKey}
-            // collapse={rest.composerFunctions.showResult}
-            // setCollapse={() => setQueryOpen(false)}
+          // queries={rest.composerFunctions.queries}
+          // runQuery={rest.composerFunctions.runQuery}
+          // eventChange={rest.composerFunctions.queryChange}
+          // queryType={queryType}
+          // queryOptions={rest.queryOptions}
+          // setQueryOptions={rest.composerFunctions.setExtraOptions}
+          // runFunnelQuery={rest.composerFunctions.runFunnelQuery}
+          // activeKey={rest.composerFunctions.activeKey}
+          // collapse={rest.composerFunctions.showResult}
+          // setCollapse={() => setQueryOpen(false)}
 
-
-            queries={rest.composerFunctions.queries} 
-            setQueryOptions={rest.composerFunctions.setExtraOptions}
-            eventChange={rest.composerFunctions.queryChange}
-            queryType={queryType}
-            setQueryOptions={rest.composerFunctions.setExtraOptions}
-            activeKey={rest.composerFunctions.activeKey}
-            collapse={rest.composerFunctions.showResult}
-            setCollapse={() => setQueryOpen(false)}
-            handleRunQuery={rest.composerFunctions.runKPIQuery}
-            setQueries={rest.composerFunctions.setQueries}
-            queryOptions={rest.composerFunctions.queryOptions}
-            selectedMainCategory={rest.composerFunctions.selectedMainCategory}
-            setSelectedMainCategory={rest.composerFunctions.setSelectedMainCategory}
-            KPIConfigProps={rest.composerFunctions.KPIConfigProps}
-            />
-      )
+          queries={rest.composerFunctions.queries}
+          setQueryOptions={rest.composerFunctions.setExtraOptions}
+          eventChange={rest.composerFunctions.queryChange}
+          queryType={queryType}
+          setQueryOptions={rest.composerFunctions.setExtraOptions}
+          activeKey={rest.composerFunctions.activeKey}
+          collapse={rest.composerFunctions.showResult}
+          setCollapse={() => setQueryOpen(false)}
+          handleRunQuery={rest.composerFunctions.runKPIQuery}
+          setQueries={rest.composerFunctions.setQueries}
+          queryOptions={rest.composerFunctions.queryOptions}
+          selectedMainCategory={rest.composerFunctions.selectedMainCategory}
+          setSelectedMainCategory={
+            rest.composerFunctions.setSelectedMainCategory
+          }
+          KPIConfigProps={rest.composerFunctions.KPIConfigProps}
+        />
+      );
     }
-
 
     if (queryType === QUERY_TYPE_PROFILE) {
       return (
@@ -198,7 +198,7 @@ function ReportsLayout({
         breakdownType={breakdownType}
         changeTab={changeTab}
         activeTab={activeTab}
-        getCurrentSorter={() => getCurrentSorter()}
+        getCurrentSorter={getCurrentSorter}
         savedQueryId={savedQueryId}
       />
       <div className='mt-24 px-8'>

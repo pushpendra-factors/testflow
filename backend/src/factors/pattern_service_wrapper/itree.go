@@ -1736,7 +1736,6 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 			}
 		}
 	}
-	log.WithFields(log.Fields{"addedChildNodes": len(addedChildNodes)}).Errorf("addedChildNodes")
 	return addedChildNodes, nil, nil
 }
 

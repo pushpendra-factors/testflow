@@ -22,12 +22,14 @@ import {
 import { Popover } from 'antd';
 
 export const defaultSortProp = () => {
-  return {
-    order: 'descend',
-    key: 'Conversion',
-    type: 'numerical',
-    subtype: null,
-  };
+  return [
+    {
+      order: 'descend',
+      key: 'Conversion',
+      type: 'numerical',
+      subtype: null,
+    },
+  ];
 };
 
 export const getDifferentCampaingns = (data) => {

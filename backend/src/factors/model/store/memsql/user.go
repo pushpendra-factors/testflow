@@ -1825,8 +1825,6 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		return "", http.StatusInternalServerError
 	}
 
-	groupIndex := fmt.Sprintf("group_%d_id", group.ID)
-
 	isGroupUser := true
 	groupUser := &model.User{
 		ProjectId:                  user.ProjectId,
@@ -1836,15 +1834,21 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		JoinTimestamp:              user.JoinTimestamp,
 	}
 
-	processed, _, err := model.SetUserGroupFieldByColumnName(groupUser, groupIndex, groupID)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed process group id on group user.")
-		return "", http.StatusInternalServerError
-	}
+	if groupID != "" {
+		groupIndex := fmt.Sprintf("group_%d_id", group.ID)
+		processed, _, err := model.SetUserGroupFieldByColumnName(groupUser, groupIndex, groupID)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed process group id on group user.")
+			return "", http.StatusInternalServerError
+		}
 
-	if !processed {
-		logCtx.WithError(err).Error("Failed to process group_id on group user.")
-		return "", http.StatusInternalServerError
+		if !processed {
+			logCtx.WithError(err).Error("Failed to process group_id on group user.")
+			return "", http.StatusInternalServerError
+
+		}
+	} else {
+		logCtx.Warning("Skip associating group_id")
 	}
 
 	return store.CreateUser(groupUser)
@@ -1877,17 +1881,21 @@ func (store *MemSQL) UpdateUserGroup(projectID uint64, userID, groupName, groupI
 
 	isGroupUser := false
 	user.IsGroupUser = &isGroupUser
+	var IDUpdated, userIDUpdated, processed bool
+	var err error
+	if groupID != "" {
+		processed, IDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupIndex, groupID)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to update user by group id.")
+			return nil, http.StatusInternalServerError
+		}
+		if !processed {
+			logCtx.Error("Missing tag in struct for group id.")
+			return nil, http.StatusInternalServerError
+		}
+	}
 
-	processed, IDUpdated, err := model.SetUserGroupFieldByColumnName(user, groupIndex, groupID)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to update user by group id.")
-		return nil, http.StatusInternalServerError
-	}
-	if !processed {
-		logCtx.Error("Missing tag in struct for group id.")
-		return nil, http.StatusInternalServerError
-	}
-	processed, userIDUpdated, err := model.SetUserGroupFieldByColumnName(user, groupUserIndex, groupUserID)
+	processed, userIDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupUserIndex, groupUserID)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update user by group id.")
 		return nil, http.StatusInternalServerError

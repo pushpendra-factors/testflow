@@ -13,11 +13,13 @@ type Group struct {
 
 const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
 const GROUP_NAME_SALESFORCE_ACCOUNT = "$salesforce_account"
+const GROUP_NAME_SALESFORCE_OPPORTUNITY = "$salesforce_opportunity"
 
 // AllowedGroupNames list of allowed group names
 var AllowedGroupNames = map[string]bool{
-	GROUP_NAME_HUBSPOT_COMPANY:    true,
-	GROUP_NAME_SALESFORCE_ACCOUNT: true,
+	GROUP_NAME_HUBSPOT_COMPANY:        true,
+	GROUP_NAME_SALESFORCE_ACCOUNT:     true,
+	GROUP_NAME_SALESFORCE_OPPORTUNITY: true,
 }
 
 // AllowedGroups total groups allowed per project

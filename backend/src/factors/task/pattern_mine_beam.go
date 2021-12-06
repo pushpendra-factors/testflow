@@ -27,7 +27,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const batch_size_beam = 300
+const batch_size_beam = 1000
 
 type CPatternsBeam struct {
 	ProjectID         uint64     `json:"projectID"`

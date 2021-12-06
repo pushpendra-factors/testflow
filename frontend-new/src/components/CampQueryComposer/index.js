@@ -369,7 +369,7 @@ const CampQueryComposer = ({
           onSelect={setDateRange}
         />
         <Button size={'large'} type='primary' onClick={runCampaignsQuery}>
-          Run Query
+          Run Analysis
         </Button>
       </div>
     );

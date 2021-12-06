@@ -471,7 +471,13 @@ func (pg *Postgres) UpdateEventProperties(projectId uint64, id, userID string,
 
 	// NOTE: NOT USING user_id intentionally to use primary_key index for faster lookup on pg.
 	// user_id is added to function signature to optimise performance on MemSQL.
-	err = db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id).Update(updatedFields).Error
+	EnableOLTPQueriesMemSQLImprovements := C.EnableOLTPQueriesMemSQLImprovements(projectId)
+	if EnableOLTPQueriesMemSQLImprovements {
+		err = db.Model(&model.Event{}).Where("project_id = ? AND id = ? AND timestamp = ? AND event_name_id = ?",
+			projectId, id, event.Timestamp, event.EventNameId).Update(updatedFields).Error
+	} else {
+		err = db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id).Update(updatedFields).Error
+	}
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "id": id,
 			"update": updatedFields}).WithError(err).Error("Failed to update event properties.")
@@ -646,7 +652,9 @@ func filterEventsForSession(events []model.Event, endTimestamp int64) []*model.E
 }
 
 func (pg *Postgres) AssociateSessionByEventIds(projectId uint64,
-	userID string, eventIds []string, sessionId string) int {
+	userID string, events []*model.Event, sessionId string, sessionEventNameId string) int {
+
+	fromTimestamp, toTimestamp, eventIds, eventNameIds := model.GetEventsMinMaxTimestampsAndEventnameIds(events)
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"event_ids": eventIds, "session_id": sessionId})
@@ -659,9 +667,16 @@ func (pg *Postgres) AssociateSessionByEventIds(projectId uint64,
 
 	// Updates session_id to all events between given timestamp.
 	updateFields := map[string]interface{}{"session_id": sessionId}
+	EnableOLTPQueriesMemSQLImprovements := C.EnableOLTPQueriesMemSQLImprovements(projectId)
 	db := C.GetServices().Db
-	err := db.Model(&model.Event{}).Where("project_id = ? AND id = ANY(?)",
-		projectId, pq.Array(eventIds)).Update(updateFields).Error
+	var err error
+	if EnableOLTPQueriesMemSQLImprovements {
+		err = db.Model(&model.Event{}).Where("project_id = ? AND id = ANY(?) AND user_id = ? AND timestamp >= ? AND timestamp <= ? AND event_name_id != ? AND event_name_id IN (?)",
+			projectId, pq.Array(eventIds), userID, fromTimestamp, toTimestamp, sessionEventNameId, eventNameIds).Update(updateFields).Error
+	} else {
+		err = db.Model(&model.Event{}).Where("project_id = ? AND id = ANY(?)",
+			projectId, pq.Array(eventIds)).Update(updateFields).Error
+	}
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to associate session to events.")
 		return http.StatusInternalServerError
@@ -671,17 +686,11 @@ func (pg *Postgres) AssociateSessionByEventIds(projectId uint64,
 }
 
 func (pg *Postgres) associateSessionToEventsInBatch(projectId uint64, userID string, events []*model.Event,
-	sessionId string, batchSize int) int {
+	sessionId string, batchSize int, sessionEventNameId string) int {
 
-	eventIds := make([]string, 0, len(events))
-	for i := range events {
-		event := *events[i]
-		eventIds = append(eventIds, event.ID)
-	}
-
-	batchEventIds := U.GetStringListAsBatch(eventIds, batchSize)
+	batchEventIds := model.GetEventListAsBatch(events, batchSize)
 	for i := range batchEventIds {
-		errCode := pg.AssociateSessionByEventIds(projectId, userID, batchEventIds[i], sessionId)
+		errCode := pg.AssociateSessionByEventIds(projectId, userID, batchEventIds[i], sessionId, sessionEventNameId)
 		if errCode != http.StatusAccepted {
 			return errCode
 		}
@@ -965,7 +974,8 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			eventsOfSession := events[sessionStartIndex : sessionEndIndex+1]
 
 			// Update the session_id to all events between start index and end index + 1.
-			errCode := pg.associateSessionToEventsInBatch(projectId, userId, eventsOfSession, sessionEvent.ID, 100)
+			errCode := pg.associateSessionToEventsInBatch(projectId, userId, eventsOfSession, sessionEvent.ID,
+				100, sessionEventNameId)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed to associate session to events.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,

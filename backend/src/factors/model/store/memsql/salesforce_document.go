@@ -613,6 +613,10 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ i
 		return nil, http.StatusInternalServerError
 	}
 
+	if len(documents) < 1 {
+		return nil, http.StatusNotFound
+	}
+
 	return documents, http.StatusFound
 }
 

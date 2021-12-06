@@ -150,3 +150,94 @@ func TestUserGroups(t *testing.T) {
 	}
 
 }
+
+func TestGroupRelationship(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	groupName1 := "g1"
+	groupName2 := "g2"
+	user1 := getRandomName()
+	user2 := getRandomName()
+
+	// fail if group name does not exist
+	groupRelationship, status := store.GetStore().CreateGroupRelationship(project.ID, groupName1, user1, groupName2, user2)
+	assert.Equal(t, http.StatusBadRequest, status)
+	groupRelationships, status := store.GetStore().GetGroupRelationshipByUserID(project.ID, user1)
+	assert.Equal(t, http.StatusNotFound, status)
+	assert.Len(t, groupRelationships, 0)
+
+	allowedGroup := map[string]bool{
+		groupName1: true,
+		groupName2: true,
+	}
+
+	// Create groups for creating group relationships
+	_, status = store.GetStore().CreateGroup(project.ID, groupName1, allowedGroup)
+	assert.Equal(t, http.StatusCreated, status, fmt.Sprintf("failed creating group %s", groupName1))
+	_, status = store.GetStore().CreateGroup(project.ID, groupName2, allowedGroup)
+	assert.Equal(t, http.StatusCreated, status, fmt.Sprintf("failed creating group %s", groupName2))
+
+	groupRelationship, status = store.GetStore().CreateGroupRelationship(project.ID, groupName1, user1, groupName2, user2)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, 1, groupRelationship.LeftGroupNameID)
+	assert.Equal(t, user1, groupRelationship.LeftGroupUserID)
+	assert.Equal(t, 2, groupRelationship.RightGroupNameID)
+	assert.Equal(t, user2, groupRelationship.RightGroupUserID)
+
+	_, status = store.GetStore().CreateGroupRelationship(project.ID, groupName1, user1, groupName2, user2)
+	assert.Equal(t, http.StatusConflict, status)
+	groupRelationships, status = store.GetStore().GetGroupRelationshipByUserID(project.ID, user1)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, groupRelationships, 1)
+	assert.Equal(t, 1, groupRelationships[0].LeftGroupNameID)
+	assert.Equal(t, user1, groupRelationships[0].LeftGroupUserID)
+	assert.Equal(t, 2, groupRelationships[0].RightGroupNameID)
+	assert.Equal(t, user2, groupRelationships[0].RightGroupUserID)
+
+	//create reverse relationship
+	_, status = store.GetStore().CreateGroupRelationship(project.ID, groupName2, user2, groupName1, user1)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().CreateGroupRelationship(project.ID, groupName2, user2, groupName1, user1)
+	assert.Equal(t, http.StatusConflict, status)
+
+	// verify previous relation exists
+	groupRelationships, status = store.GetStore().GetGroupRelationshipByUserID(project.ID, user1)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 1, groupRelationships[0].LeftGroupNameID)
+	assert.Equal(t, user1, groupRelationships[0].LeftGroupUserID)
+	assert.Equal(t, 2, groupRelationships[0].RightGroupNameID)
+	assert.Equal(t, user2, groupRelationships[0].RightGroupUserID)
+
+	// verify new relationship
+	groupRelationships, status = store.GetStore().GetGroupRelationshipByUserID(project.ID, user2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, groupRelationships, 1)
+	assert.Equal(t, 2, groupRelationships[0].LeftGroupNameID)
+	assert.Equal(t, user2, groupRelationships[0].LeftGroupUserID)
+	assert.Equal(t, 1, groupRelationships[0].RightGroupNameID)
+	assert.Equal(t, user1, groupRelationships[0].RightGroupUserID)
+
+	// create multiple group relationship for user2
+	users := map[string]bool{getRandomName(): true, getRandomName(): true, getRandomName(): true, getRandomName(): true}
+	for userID := range users {
+		_, status = store.GetStore().CreateGroupRelationship(project.ID, groupName2, user2, groupName1, userID)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	groupRelationships, status = store.GetStore().GetGroupRelationshipByUserID(project.ID, user2)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, groupRelationships, 5)
+	groupRelationshipsMap := make(map[string]bool)
+	for i := range groupRelationships {
+		assert.Equal(t, 2, groupRelationships[i].LeftGroupNameID)
+		assert.Equal(t, user2, groupRelationships[i].LeftGroupUserID)
+		assert.Equal(t, 1, groupRelationships[i].RightGroupNameID)
+		groupRelationshipsMap[groupRelationships[i].RightGroupUserID] = true
+	}
+
+	assert.True(t, groupRelationshipsMap[user1])
+	for user := range users {
+		assert.True(t, groupRelationshipsMap[user])
+	}
+}

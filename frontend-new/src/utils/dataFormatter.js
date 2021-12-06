@@ -179,18 +179,21 @@ export const getClickableTitleSorter = (
   handleSorting,
   alignmentClass = 'items-center'
 ) => {
+  const sorterPropIndex = currentSorter.findIndex(
+    (elem) => elem.key === sorterProp.key
+  );
   return (
     <div
       onClick={() => handleSorting(sorterProp)}
       className={`flex ${alignmentClass} justify-between cursor-pointer h-full`}
     >
       <div className='mr-2 break-all'>{title}</div>
-      {currentSorter.key === sorterProp.key &&
-      currentSorter.order === 'descend' ? (
+      {sorterPropIndex > -1 &&
+      currentSorter[sorterPropIndex].order === 'descend' ? (
         <ArrowDownOutlined />
       ) : null}
-      {currentSorter.key === sorterProp.key &&
-      currentSorter.order === 'ascend' ? (
+      {sorterPropIndex > -1 &&
+      currentSorter[sorterPropIndex].order === 'ascend' ? (
         <ArrowUpOutlined />
       ) : null}
     </div>
@@ -535,19 +538,62 @@ export const shouldDataFetch = (durationObj) => {
 };
 
 export const getNewSorterState = (currentSorter, newSortProp) => {
-  if (currentSorter.key === newSortProp.key) {
-    return {
-      ...currentSorter,
-      order: currentSorter.order === 'ascend' ? 'descend' : 'ascend',
-    };
+  const newSortPropIndex = currentSorter.findIndex(
+    (elem) => elem.key === newSortProp.key
+  );
+  if (currentSorter.length === 3) {
+    // we already have three levels of sorting and user has applied sorting on fourth column then we will reset the sorting state and only kepp the newly selected one
+    if (newSortPropIndex === -1) {
+      return [
+        {
+          ...newSortProp,
+          order: 'descend',
+        },
+      ];
+    } else {
+      // we are editing existing level of sorting here
+      if (currentSorter[newSortPropIndex].order === 'ascend') {
+        return [
+          ...currentSorter.slice(0, newSortPropIndex),
+          ...currentSorter.slice(newSortPropIndex + 1),
+        ];
+      } else {
+        return [
+          ...currentSorter.slice(0, newSortPropIndex),
+          { ...newSortProp, order: 'ascend' },
+          ...currentSorter.slice(newSortPropIndex + 1),
+        ];
+      }
+    }
+  } else {
+    if (newSortPropIndex === -1) {
+      // we are inserting new level of sorting here
+      return [
+        ...currentSorter,
+        {
+          ...newSortProp,
+          order: 'descend',
+        },
+      ];
+    } else {
+      // we are editing existing level of sorting here
+      if (currentSorter[newSortPropIndex].order === 'ascend') {
+        return [
+          ...currentSorter.slice(0, newSortPropIndex),
+          ...currentSorter.slice(newSortPropIndex + 1),
+        ];
+      } else {
+        return [
+          ...currentSorter.slice(0, newSortPropIndex),
+          { ...newSortProp, order: 'ascend' },
+          ...currentSorter.slice(newSortPropIndex + 1),
+        ];
+      }
+    }
   }
-  return {
-    ...newSortProp,
-    order: 'ascend',
-  };
 };
 
-export const SortResults = (result, currentSorter) => {
+export const SortByKey = (result, currentSorter) => {
   if (currentSorter.key) {
     if (currentSorter.type === 'datetime') {
       if (
@@ -583,6 +629,77 @@ export const SortResults = (result, currentSorter) => {
     }
   }
   return result;
+};
+
+export const SortResults = (result, sortSelections) => {
+  if (!Array.isArray(sortSelections) || !sortSelections.length) {
+    return result;
+  }
+  const firstSortedResult = SortByKey(result, sortSelections[0]);
+  if (sortSelections.length === 1) {
+    return firstSortedResult;
+  }
+
+  const key1 = sortSelections[0].key;
+  let secondSortedResult = [];
+  let i = 0;
+  let j;
+
+  while (i < firstSortedResult.length) {
+    const key1Value = firstSortedResult[i][key1];
+    const elemsWithSameValueForKey1 = [firstSortedResult[i]];
+    j = i + 1;
+    while (j < firstSortedResult.length) {
+      if (firstSortedResult[j][key1] !== key1Value) {
+        break;
+      }
+      elemsWithSameValueForKey1.push(firstSortedResult[j]);
+      j++;
+    }
+    if (elemsWithSameValueForKey1.length === 1) {
+      secondSortedResult.push(elemsWithSameValueForKey1[0]);
+    } else {
+      secondSortedResult = secondSortedResult.concat(
+        SortByKey(elemsWithSameValueForKey1, sortSelections[1])
+      );
+    }
+    i = j;
+  }
+
+  if (sortSelections.length === 2) {
+    return secondSortedResult;
+  }
+
+  const key2 = sortSelections[1].key;
+  let thirdSortedResult = [];
+  i = 0;
+
+  while (i < secondSortedResult.length) {
+    const key1Value = secondSortedResult[i][key1];
+    const key2Value = secondSortedResult[i][key2];
+    const elemsWithSameValueForKey1AndKey2 = [secondSortedResult[i]];
+    j = i + 1;
+    while (j < secondSortedResult.length) {
+      if (
+        secondSortedResult[j][key1] !== key1Value ||
+        secondSortedResult[j][key2] !== key2Value
+      ) {
+        break;
+      }
+      elemsWithSameValueForKey1AndKey2.push(secondSortedResult[j]);
+      j++;
+    }
+    if (elemsWithSameValueForKey1AndKey2.length === 1) {
+      thirdSortedResult.push(elemsWithSameValueForKey1AndKey2[0]);
+    } else {
+      thirdSortedResult = thirdSortedResult.concat(
+        SortByKey(elemsWithSameValueForKey1AndKey2, sortSelections[2])
+      );
+    }
+    i = j;
+  }
+
+  return thirdSortedResult;
 };
 
 export const formatFilterDate = (selectedDates) => {

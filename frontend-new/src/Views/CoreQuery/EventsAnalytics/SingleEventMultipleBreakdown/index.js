@@ -11,7 +11,6 @@ import {
   formatDataInStackedAreaFormat,
   defaultSortProp,
   getVisibleData,
-  getVisibleSeriesData,
 } from './utils';
 import BarChart from '../../../../components/BarChart';
 import LineChart from '../../../../components/HCLineChart';
@@ -49,10 +48,16 @@ const SingleEventMultipleBreakdown = forwardRef(
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || defaultSortProp()
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : defaultSortProp()
     );
+
     const [dateSorter, setDateSorter] = useState(
-      savedQuerySettings.dateSorter || defaultSortProp()
+      savedQuerySettings.dateSorter &&
+        Array.isArray(savedQuerySettings.dateSorter)
+        ? savedQuerySettings.dateSorter
+        : defaultSortProp()
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -93,7 +98,7 @@ const SingleEventMultipleBreakdown = forwardRef(
     }, [aggregateData, sorter]);
 
     useEffect(() => {
-      setVisibleSeriesData(getVisibleSeriesData(data, dateSorter));
+      setVisibleSeriesData(getVisibleData(data, dateSorter));
     }, [data, dateSorter]);
 
     if (!visibleProperties.length) {
