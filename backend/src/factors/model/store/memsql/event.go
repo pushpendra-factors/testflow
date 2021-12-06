@@ -593,8 +593,15 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id, userID string,
 		updatedFields["user_properties"] = optionalEventUserProperties
 	}
 
+	EnableOLTPQueriesMemSQLImprovements := C.EnableOLTPQueriesMemSQLImprovements(projectId)
 	db := C.GetServices().Db
-	dbx := db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id)
+	var dbx *gorm.DB
+	if EnableOLTPQueriesMemSQLImprovements {
+		dbx = db.Model(&model.Event{}).Limit(1).Where("project_id = ? AND id = ? AND timestamp = ? AND event_name_id = ?",
+			projectId, id, event.Timestamp, event.EventNameId)
+	} else {
+		dbx = db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id)
+	}
 	if userID != "" {
 		dbx = dbx.Where("user_id = ?", userID)
 	}
@@ -779,8 +786,10 @@ func filterEventsForSession(events []model.Event, endTimestamp int64) []*model.E
 }
 
 func (store *MemSQL) AssociateSessionByEventIds(projectId uint64,
-	userID string, eventIds []string, sessionId string) int {
+	userID string, events []*model.Event, sessionId string, sessionEventNameId string) int {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
+
+	fromTimestamp, toTimestamp, eventIds, eventNameIds := model.GetEventsMinMaxTimestampsAndEventnameIds(events)
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "event_ids": eventIds,
 		"session_id": sessionId, "user_id": userID})
@@ -792,10 +801,18 @@ func (store *MemSQL) AssociateSessionByEventIds(projectId uint64,
 
 	// Updates session_id to all events between given timestamp.
 	updateFields := map[string]interface{}{"session_id": sessionId}
+	EnableOLTPQueriesMemSQLImprovements := C.EnableOLTPQueriesMemSQLImprovements(projectId)
 	db := C.GetServices().Db
-	err := db.Model(&model.Event{}).
-		Where("project_id = ? AND user_id = ? AND id IN (?)", projectId, userID, eventIds).
-		Update(updateFields).Error
+	var err error
+	if EnableOLTPQueriesMemSQLImprovements {
+		err = db.Model(&model.Event{}).
+			Where("project_id = ? AND user_id = ? AND id IN (?) AND timestamp >= ? AND timestamp <= ? AND event_name_id != ? AND event_name_id IN (?)",
+				projectId, userID, eventIds, fromTimestamp, toTimestamp, sessionEventNameId, eventNameIds).Update(updateFields).Error
+	} else {
+		err = db.Model(&model.Event{}).
+			Where("project_id = ? AND user_id = ? AND id IN (?)", projectId, userID, eventIds).
+			Update(updateFields).Error
+	}
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to associate session to events.")
 		return http.StatusInternalServerError
@@ -805,17 +822,11 @@ func (store *MemSQL) AssociateSessionByEventIds(projectId uint64,
 }
 
 func (store *MemSQL) associateSessionToEventsInBatch(projectId uint64, userID string, events []*model.Event,
-	sessionId string, batchSize int) int {
+	sessionId string, batchSize int, sessionEventNameId string) int {
 
-	eventIds := make([]string, 0, len(events))
-	for i := range events {
-		event := *events[i]
-		eventIds = append(eventIds, event.ID)
-	}
-
-	batchEventIds := U.GetStringListAsBatch(eventIds, batchSize)
-	for i := range batchEventIds {
-		errCode := store.AssociateSessionByEventIds(projectId, userID, batchEventIds[i], sessionId)
+	batchEvents := model.GetEventListAsBatch(events, batchSize)
+	for i := range batchEvents {
+		errCode := store.AssociateSessionByEventIds(projectId, userID, batchEvents[i], sessionId, sessionEventNameId)
 		if errCode != http.StatusAccepted {
 			return errCode
 		}
@@ -1100,7 +1111,7 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 
 			// Update the session_id to all events between start index and end index + 1.
 			errCode := store.associateSessionToEventsInBatch(projectId, userId,
-				eventsOfSession, sessionEvent.ID, 100)
+				eventsOfSession, sessionEvent.ID, 100, sessionEventNameId)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed to associate session to events.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,

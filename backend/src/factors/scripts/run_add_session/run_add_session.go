@@ -63,6 +63,7 @@ func main() {
 		"", "List of projects to allow channel property population in sesion events.")
 
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
+	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
 	flag.Parse()
 
 	if *env != "development" &&
@@ -101,15 +102,16 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore:                  *primaryDatastore,
-		RedisHost:                         *redisHost,
-		RedisPort:                         *redisPort,
-		RedisHostPersistent:               *redisHostPersistent,
-		RedisPortPersistent:               *redisPortPersistent,
-		SentryDSN:                         *sentryDSN,
-		CacheSortedSet:                    *cacheSortedSet,
-		AllowChannelGroupingForProjectIDs: *allowChannelGroupingForProjectIDs,
-		DisableRedisWrites:                disableRedisWrites,
+		PrimaryDatastore:                    *primaryDatastore,
+		RedisHost:                           *redisHost,
+		RedisPort:                           *redisPort,
+		RedisHostPersistent:                 *redisHostPersistent,
+		RedisPortPersistent:                 *redisPortPersistent,
+		SentryDSN:                           *sentryDSN,
+		CacheSortedSet:                      *cacheSortedSet,
+		AllowChannelGroupingForProjectIDs:   *allowChannelGroupingForProjectIDs,
+		DisableRedisWrites:                  disableRedisWrites,
+		EnableOLTPQueriesMemSQLImprovements: *enableOLTPQueriesMemSQLImprovements,
 	}
 
 	C.InitConf(config)

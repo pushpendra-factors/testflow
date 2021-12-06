@@ -90,6 +90,7 @@ func TestMain(m *testing.M) {
 		SkipUserJoinInEventQueryByProjectID:         "*",
 		EnableEventLevelEventProperties:             "",
 		LookbackWindowForEventUserCache:             *lookbackWindowForEventUserCache,
+		EnableOLTPQueriesMemSQLImprovements:         "*",
 	}
 	C.InitConf(config)
 

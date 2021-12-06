@@ -170,3 +170,48 @@ func GetChannelGroup(project Project, sessionPropertiesMap U.PropertiesMap) (str
 
 	return EvaluateChannelPropertyRules(channelGroupRules, sessionPropertiesMap, project.ID), ""
 }
+
+// GetEventListAsBatch - Returns list of events as batches of events list.
+func GetEventListAsBatch(list []*Event, batchSize int) [][]*Event {
+	batchList := make([][]*Event, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
+}
+
+func GetEventsMinMaxTimestampsAndEventnameIds(events []*Event) (int64, int64, []string, []string) {
+	fromTimestamp := int64(0)
+	toTimestamp := int64(0)
+
+	eventIds := make([]string, 0, 0)
+	uniqueEventNameIDs := make(map[string]bool, 0)
+	for i := range events {
+		event := *events[i]
+		eventIds = append(eventIds, event.ID)
+		uniqueEventNameIDs[event.EventNameId] = true
+
+		if toTimestamp == 0 || event.Timestamp > toTimestamp {
+			toTimestamp = event.Timestamp
+		}
+
+		if fromTimestamp == 0 || event.Timestamp < fromTimestamp {
+			fromTimestamp = event.Timestamp
+		}
+	}
+
+	eventNameIds := make([]string, 0, 0)
+	for k := range uniqueEventNameIDs {
+		eventNameIds = append(eventNameIds, k)
+	}
+
+	return fromTimestamp, toTimestamp, eventIds, eventNameIds
+}
