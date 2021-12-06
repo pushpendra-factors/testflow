@@ -19,9 +19,11 @@ func (store *MemSQL) GetKPIConfigsForHubspotCompanies(projectID uint64, reqID st
 func (store *MemSQL) GetKPIConfigsForHubspot(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
 	hubspotProjectSettings, errCode := store.GetAllHubspotProjectSettingsForProjectID(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusOK {
+		log.WithField("projectId", projectID).WithField("reqID", reqID).Warn(" Failed in getting hubspot project settings.")
 		return nil, http.StatusOK
 	}
 	if len(hubspotProjectSettings) == 0 {
+		log.WithField("projectId", projectID).WithField("reqID", reqID).Warn("Hubspot integration is not available.")
 		return nil, http.StatusOK
 	}
 
