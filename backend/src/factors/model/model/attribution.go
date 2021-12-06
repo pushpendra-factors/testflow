@@ -915,7 +915,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int) []in
 	row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64)     // Clicks.
 	row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
-	row1[keyIndex+10] = (row1[keyIndex+8].(float64)*row1[keyIndex+10].(float64) + row2[keyIndex+8].(float64)*row2[keyIndex+10].(float64)) / (row1[keyIndex+8].(float64) + row2[keyIndex+8].(float64)) //AvgSessionTime.
+	row1[keyIndex+10] = (float64(row1[keyIndex+8].(int64))*row1[keyIndex+10].(float64) + float64(row2[keyIndex+8].(int64))*row2[keyIndex+10].(float64)) / float64(row1[keyIndex+8].(int64)+row2[keyIndex+8].(int64)) //AvgSessionTime.
 
 	row1[keyIndex+8] = row1[keyIndex+8].(int64) + row2[keyIndex+8].(int64)        // Sessions.
 	row1[keyIndex+9] = row1[keyIndex+9].(int64) + row2[keyIndex+9].(int64)        // Users.
