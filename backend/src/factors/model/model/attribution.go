@@ -915,10 +915,10 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int) []in
 	row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64)     // Clicks.
 	row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
-	row1[keyIndex+8] = row1[keyIndex+8].(int64) + row2[keyIndex+8].(int64) // Sessions.
-	row1[keyIndex+9] = row1[keyIndex+9].(int64) + row2[keyIndex+9].(int64) // Users.
+	row1[keyIndex+10] = (row1[keyIndex+8].(float64)*row1[keyIndex+10].(float64) + row2[keyIndex+8].(float64)*row2[keyIndex+10].(float64)) / (row1[keyIndex+8].(float64) + row2[keyIndex+8].(float64)) //AvgSessionTime.
 
-	row1[keyIndex+10] = row1[keyIndex+10].(float64) + row2[keyIndex+10].(float64) // AvgSessionTime.
+	row1[keyIndex+8] = row1[keyIndex+8].(int64) + row2[keyIndex+8].(int64)        // Sessions.
+	row1[keyIndex+9] = row1[keyIndex+9].(int64) + row2[keyIndex+9].(int64)        // Users.
 	row1[keyIndex+11] = row1[keyIndex+11].(int64) + row2[keyIndex+11].(int64)     // PageViews.
 	row1[keyIndex+12] = row1[keyIndex+12].(float64) + row2[keyIndex+12].(float64) // Conversion.
 	row1[keyIndex+15] = row1[keyIndex+15].(float64) + row2[keyIndex+15].(float64) // Compare Conversion.
@@ -975,13 +975,13 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int) []in
 	for i := keyIndex + 18; i < len(row1); i += 3 {
 		row1[i] = row1[i].(float64) + row2[i].(float64)
 		if row1[i].(float64) > 0 && i < len(row1) {
-			row1[i+1] = spend / row1[i].(float64) // Funnel - Conversion - CPC.
+			row1[i+1] = spend / row1[i].(float64) // Funnel - Conversion - CPC. spend/conversion
 		} else {
 			row1[i+1] = float64(0) // Funnel - Conversion - CPC.
 		}
 
 		if row1[keyIndex+12].(float64) > 0 {
-			row1[i+2] = row1[i].(float64) / row1[keyIndex+12].(float64) // Funnel - User Conversion - CPC Rate
+			row1[i+2] = row1[i].(float64) / row1[keyIndex+12].(float64) // Funnel - User Conversion - CPC Rate   conversion/user count
 		} else {
 			row1[i+2] = float64(0) // Funnel - User Conversion Rate (%)
 		}
@@ -1031,9 +1031,10 @@ func AddGrandTotalRow(rows [][]interface{}, keyIndex int) [][]interface{} {
 	var grandTotalRow []interface{}
 
 	for j := 0; j <= keyIndex; j++ {
-		grandTotalRow = append(grandTotalRow, "GrandTotal")
+		grandTotalRow = append(grandTotalRow, "Grand Total")
 	}
 	// Name, impression, clicks, spend
+
 	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0),
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(0), float64(0), float64(0), float64(0),
@@ -1049,10 +1050,134 @@ func AddGrandTotalRow(rows [][]interface{}, keyIndex int) [][]interface{} {
 		grandTotalRow = append(grandTotalRow, float64(0))
 	}
 
+	clicksCTR := int64(0)      //4
+	impressionsCTR := int64(0) //4
+
+	conversionsClickConversionRate := float64(0) //7
+	clicksClickConversionRate := int64(0)        //7
+
+	spendAvgCPC := float64(0) //5
+	clickAvgCPC := int64(0)   //5
+
+	spendCPM := float64(0)     //6
+	impressionsCPM := int64(0) //6
+
+	AvgSessionTimeMultipliedSessionAST := float64(0) //10
+	SessionsAvgSessionTimeAST := int64(0)            //10
+
+	spendCPC := float64(0)       //13
+	conversionsCPC := float64(0) //13
+
+	var spendFunnelConversionCPC []float64      //linked funnel events
+	var conversionFunnelConversionCPC []float64 //linked funnel events
+	for i := keyIndex + 18; i < len(rows[0]); i += 3 {
+		spendFunnelConversionCPC = append(spendFunnelConversionCPC, float64(0))
+		conversionFunnelConversionCPC = append(conversionFunnelConversionCPC, float64(0))
+	}
+
 	for _, row := range rows {
-		grandTotalRow = MergeTwoDataRows(grandTotalRow, row, keyIndex)
+
+		grandTotalRow[keyIndex+1] = grandTotalRow[keyIndex+1].(int64) + row[keyIndex+1].(int64)     // Impressions.
+		grandTotalRow[keyIndex+2] = grandTotalRow[keyIndex+2].(int64) + row[keyIndex+2].(int64)     // Clicks.
+		grandTotalRow[keyIndex+3] = grandTotalRow[keyIndex+3].(float64) + row[keyIndex+3].(float64) // Spend.
+
+		grandTotalRow[keyIndex+8] = grandTotalRow[keyIndex+8].(int64) + row[keyIndex+8].(int64) // Sessions.
+		grandTotalRow[keyIndex+9] = grandTotalRow[keyIndex+9].(int64) + row[keyIndex+9].(int64) // Users.
+
+		grandTotalRow[keyIndex+11] = grandTotalRow[keyIndex+11].(int64) + row[keyIndex+11].(int64)     // PageViews.
+		grandTotalRow[keyIndex+12] = grandTotalRow[keyIndex+12].(float64) + row[keyIndex+12].(float64) // Conversion.
+		grandTotalRow[keyIndex+15] = grandTotalRow[keyIndex+15].(float64) + row[keyIndex+15].(float64) // Compare Conversion.
+
+		impressions := (row[keyIndex+1]).(int64)
+		clicks := (row[keyIndex+2]).(int64)
+		spend := row[keyIndex+3].(float64)
+
+		if impressions > 0 {
+			clicksCTR = clicksCTR + clicks
+			impressionsCTR = impressionsCTR + impressions
+			spendCPM = spendCPM + spend
+			impressionsCPM = impressionsCPM + impressions
+		}
+
+		if clicks > 0 {
+			spendAvgCPC = spendAvgCPC + spend
+			clickAvgCPC = clickAvgCPC + clicks
+			conversionsClickConversionRate = conversionsClickConversionRate + (row[keyIndex+12]).(float64)
+			clicksClickConversionRate = clicksClickConversionRate + clicks
+		}
+
+		if row[keyIndex+8].(int64) > 0 {
+			AvgSessionTimeMultipliedSessionAST = AvgSessionTimeMultipliedSessionAST + row[keyIndex+10].(float64)*float64(row[keyIndex+8].(int64))
+			SessionsAvgSessionTimeAST = SessionsAvgSessionTimeAST + row[keyIndex+8].(int64)
+
+		}
+
+		if spend > 0 {
+			spendCPC = spendCPC + spend
+			conversionsCPC = conversionsCPC + row[keyIndex+12].(float64)
+		}
+
+		// Remaining linked funnel events & CPCs
+		j := 0
+		for i := keyIndex + 18; i < len(grandTotalRow); i += 3 {
+			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
+			if spend > 0 && i < len(grandTotalRow) {
+				spendFunnelConversionCPC[j] = spendFunnelConversionCPC[j] + spend
+				conversionFunnelConversionCPC[j] = conversionFunnelConversionCPC[j] + grandTotalRow[i].(float64)
+			}
+
+			if grandTotalRow[keyIndex+12].(float64) > 0 {
+				grandTotalRow[i+2] = grandTotalRow[i].(float64) / grandTotalRow[keyIndex+12].(float64) // Funnel - User Conversion - CPC Rate
+			}
+			j += 1
+		}
 
 	}
+
+	if impressionsCTR > 0 {
+		grandTotalRow[keyIndex+4] = float64(100 * float64(clicksCTR) / float64(impressionsCTR))
+	}
+
+	if clickAvgCPC > 0 {
+		grandTotalRow[keyIndex+5] = float64(spendAvgCPC) / float64(clickAvgCPC)
+	}
+
+	if impressionsCPM > 0 {
+		grandTotalRow[keyIndex+6] = float64(1000*float64(spendCPM)) / float64(impressionsCPM)
+	}
+	if clicksClickConversionRate > 0 {
+		grandTotalRow[keyIndex+7] = 100 * float64(conversionsClickConversionRate) / float64(clicksClickConversionRate)
+	}
+
+	if SessionsAvgSessionTimeAST > 0 {
+		grandTotalRow[keyIndex+10] = float64(AvgSessionTimeMultipliedSessionAST) / float64(SessionsAvgSessionTimeAST)
+	}
+
+	if spendCPC > 0 {
+		grandTotalRow[keyIndex+13] = spendCPC / conversionsCPC
+	}
+
+	if grandTotalRow[keyIndex+9].(int64) > 0 {
+		grandTotalRow[keyIndex+14], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+12].(float64)/float64(grandTotalRow[keyIndex+9].(int64))*100, U.DefaultPrecision) //ConvUserRate
+	}
+
+	if grandTotalRow[keyIndex+15].(float64) > 0 {
+		grandTotalRow[keyIndex+16], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+3].(float64)/grandTotalRow[keyIndex+15].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
+	}
+
+	if grandTotalRow[keyIndex+9].(int64) > 0 {
+		grandTotalRow[keyIndex+17], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+15].(float64)/float64(grandTotalRow[keyIndex+9].(int64))*100, U.DefaultPrecision) // conversion rate
+	}
+
+	// Remaining linked funnel events & CPCs
+	k := 0
+	for i := keyIndex + 18; i < len(grandTotalRow); i += 3 {
+		if conversionFunnelConversionCPC[k] > 0 && i < len(grandTotalRow) {
+			grandTotalRow[i+1] = spendFunnelConversionCPC[k] / conversionFunnelConversionCPC[k] // Funnel - Conversion - CPC.
+		}
+		k += 1
+	}
+
 	rows = append([][]interface{}{grandTotalRow}, rows...)
 
 	return rows
