@@ -1702,7 +1702,7 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(100), float64(1), float64(1000), float64(100),
 		// Sessions, (users), (AvgSessionTime), (pageViews),
-		int64(5), int64(5), float64(5), int64(5),
+		int64(5), int64(5), float64(2.6), int64(5),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
 		float64(5), float64(1), float64(100), float64(5), float64(1), float64(100)}
 
