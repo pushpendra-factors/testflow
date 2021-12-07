@@ -1,15 +1,27 @@
-import { Anchor, Button } from 'antd';
-import React from 'react';
+import React, { useState } from 'react';
+import { Button } from 'antd';
 import { Link } from 'react-router-dom';
 // import NoDataChart from '../../../components/NoDataChart';
 import { SVG, Text } from '../../../components/factorsComponents';
-import { ArrowRightOutlined } from '@ant-design/icons'
+import { PlusOutlined } from '@ant-design/icons'
+import { FaErrorComp, FaErrorLog } from '../../../components/factorsComponents';
+import { ErrorBoundary } from 'react-error-boundary';
+import InviteUsers from '../../Settings/ProjectSettings/UserSettings/InviteUsers';
 
 function EmptyDashboard() {
+    const [visible, setVisible] = useState(false);
+
+    const handleClick = () => {
+        setVisible(true);
+    }
+
+    const onCancel = () => {
+        setVisible(false);
+    }
 
     return (
         <>
-            {/* <ErrorBoundary
+            <ErrorBoundary
                 fallback={
                 <FaErrorComp
                     size={'medium'}
@@ -20,11 +32,7 @@ function EmptyDashboard() {
                 />
                 }
                 onError={FaErrorLog}
-            > */}
-
-                {/* <div className='flex justify-center items-center w-full h-full'>
-                    <NoDataChart />
-                </div> */}
+            >
                 <div
                     style={{marginTop:'20em'}}
                     className={
@@ -38,13 +46,17 @@ function EmptyDashboard() {
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>
                         Few more steps to go
                     </Text>
-                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mb-4'}>
+                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
                         To Start moniter your metrics, complete setting using
                     </Text>
-                    <Link to='/project-setup' className={'text-base font-semibold'}>Setup Assist  <ArrowRightOutlined style={{fontSize:'20px'}}/></Link>
+                    <Link to='/project-setup' className={'text-base font-semibold'}>Setup Assist<span style={{fontSize:'30px'}}>→</span> </Link>
+                    <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />} onClick={handleClick}>Invite a teammate for help</Button>
                 </div>
+
+                {/* Trigger Invite Modal */}
+                <InviteUsers visible = {visible} onCancel = {onCancel} />
                 
-            {/* </ErrorBoundary> */}
+            </ErrorBoundary>
         </>
     );
 
