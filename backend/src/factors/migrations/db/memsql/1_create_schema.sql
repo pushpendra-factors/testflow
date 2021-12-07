@@ -761,7 +761,7 @@ CREATE TABLE IF NOT EXISTS group_relationships(
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (left_group_user_id),
     KEY (project_id, left_group_user_id) USING CLUSTERED COLUMNSTORE,
-    UNIQUE KEY(project_id, left_group_user_id,right_group_user_id)
+    UNIQUE KEY(project_id, left_group_user_id,right_group_user_id) USING HASH
 );
 
 
