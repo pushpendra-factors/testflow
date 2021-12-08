@@ -40,15 +40,15 @@ jobs:
         
       
     - name : set env - staging
-      if : ${{ github.event.inputs.env_name}}=='staging'
+      if : ${{ github.event.inputs.env_name=='staging'}}
       run: |
-           echo "GKE_PROJECT"=${{ secrets.GKE_STAGING_PROJECT }}" >> $GITHUB_ENV
+           echo "GKE_PROJECT=${{ secrets.GKE_STAGING_PROJECT }}" >> $GITHUB_ENV
            echo "GKE_ZONE=${{ secrets.GKE_STAGING_ZONE }}" >> $GITHUB_ENV
            echo "GKE_CLUSTER=${{ secrets.GKE_STAGING_CLUSTER }}" >> $GITHUB_ENV
            echo "GKE_SA_KEY=${{ toJSON(secrets.GKE_STAGING_SA_KEY) }}" >> $GITHUB_ENV
            
     - name : set env - production
-      if : ${{ github.event.inputs.env_name}}=='production'
+      if : ${{ github.event.inputs.env_name=='production'}}
       run: |
            echo "GKE_PROJECT=${{ secrets.GKE_PRODUCTION_PROJECT }}" >> $GITHUB_ENV
            echo "GKE_ZONE=${{ secrets.GKE_PRODUCTION_ZONE }}" >> $GITHUB_ENV
