@@ -1153,7 +1153,7 @@ func AddGrandTotalRow(rows [][]interface{}, keyIndex int) [][]interface{} {
 		grandTotalRow[keyIndex+10] = float64(AvgSessionTimeMultipliedSessionAST) / float64(SessionsAvgSessionTimeAST)
 	}
 
-	if spendCPC > 0 {
+	if conversionsCPC > 0 {
 		grandTotalRow[keyIndex+13] = spendCPC / conversionsCPC
 	}
 
