@@ -201,6 +201,7 @@ type Configuration struct {
 	SkipUserJoinInEventQueryByProjectID         string
 	AllowSupportForDateRangeInProfiles          string
 	EnableEventLevelEventProperties             string
+	EnableOLTPQueriesMemSQLImprovements         string
 }
 
 type Services struct {
@@ -1381,6 +1382,28 @@ func EnableEventLevelEventProperties(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.EnableEventLevelEventProperties, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+// EnableOLTPQueriesMemSQLImprovements is used to check if the OLTP queries performance improvements
+// for memsql are to be enabled for a given (or list of) project
+func EnableOLTPQueriesMemSQLImprovements(projectID uint64) bool {
+	if configuration.EnableOLTPQueriesMemSQLImprovements == "" {
+		return false
+	}
+
+	if configuration.EnableOLTPQueriesMemSQLImprovements == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.EnableOLTPQueriesMemSQLImprovements, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true

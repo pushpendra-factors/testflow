@@ -86,7 +86,8 @@ var (
 	allowChannelGroupingForProjectIDs = flag.String("allow_channel_grouping_for_projects",
 		"", "List of projects to allow channel property population in session events.")
 
-	disableRedisWrites = flag.Bool("disable_redis_writes", false, "To disable redis writes.")
+	disableRedisWrites                  = flag.Bool("disable_redis_writes", false, "To disable redis writes.")
+	enableOLTPQueriesMemSQLImprovements = flag.String("enable_OLTP_queries_memsql_improvements", "", "")
 )
 
 func registerStructs() {
@@ -677,15 +678,16 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore:                  *primaryDatastore,
-		RedisHost:                         *redisHost,
-		RedisPort:                         *redisPort,
-		RedisHostPersistent:               *redisHostPersistent,
-		RedisPortPersistent:               *redisPortPersistent,
-		SentryDSN:                         *sentryDSN,
-		CacheSortedSet:                    *cacheSortedSet,
-		AllowChannelGroupingForProjectIDs: *allowChannelGroupingForProjectIDs,
-		DisableRedisWrites:                disableRedisWrites,
+		PrimaryDatastore:                    *primaryDatastore,
+		RedisHost:                           *redisHost,
+		RedisPort:                           *redisPort,
+		RedisHostPersistent:                 *redisHostPersistent,
+		RedisPortPersistent:                 *redisPortPersistent,
+		SentryDSN:                           *sentryDSN,
+		CacheSortedSet:                      *cacheSortedSet,
+		AllowChannelGroupingForProjectIDs:   *allowChannelGroupingForProjectIDs,
+		DisableRedisWrites:                  disableRedisWrites,
+		EnableOLTPQueriesMemSQLImprovements: *enableOLTPQueriesMemSQLImprovements,
 	}
 
 	beam.PipelineOptions.Set("HealthchecksPingID", "0e224a5e-01bd-454c-b361-651d303562c6")

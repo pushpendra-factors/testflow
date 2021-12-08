@@ -65,6 +65,7 @@ type JobStatus struct {
 
 // OpportunityLeadID lead id in opportunity
 const OpportunityLeadID = "opportunity_to_lead"
+const OpportunityMultipleLeadID = "opportunity_to_multiple_lead"
 
 func buildSalesforceGETRequest(url, accessToken string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", url, nil)
@@ -534,18 +535,20 @@ func syncOpportunityPrimaryContact(projectID uint64, primaryContactIDs []string,
 }
 
 // getLeadIDForOpportunityRecords sync associated leads if missing and return all lead ids
-func getLeadIDForOpportunityRecords(projectID uint64, records []model.SalesforceRecord, accessToken, instanceURL string) (map[string]string, int, error) {
+func getLeadIDForOpportunityRecords(projectID uint64, records []model.SalesforceRecord, accessToken, instanceURL string) (map[string]string, map[string]map[string]bool, int, error) {
 	if len(records) < 1 {
-		return nil, 0, nil
+		return nil, nil, 0, nil
 	}
 
 	oppToLeadID := make(map[string]string, 0)
+	oppToMultipleLeadID := make(map[string]map[string]bool, 0)
 	oppIDs := make([]string, 0)
 	for i := range records {
 		oppID := util.GetPropertyValueAsString(records[i]["Id"])
 		if oppID != "" {
 			oppIDs = append(oppIDs, oppID)
 			oppToLeadID[oppID] = ""
+			oppToMultipleLeadID[oppID] = make(map[string]bool)
 		}
 	}
 
@@ -554,13 +557,13 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 	for bi := range batchedOppIDs {
 		salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
 		if err != nil {
-			return nil, 0, err
+			return nil, nil, 0, err
 		}
 
 		filterStmnt := "ConvertedOpportunityId IN (" + "'" + strings.Join(batchedOppIDs[bi], "','") + "')"
 		paginatedLeads, err := salesforceDataClient.getRecordByObjectNameANDFilter(model.SalesforceDocumentTypeNameLead, filterStmnt)
 		if err != nil {
-			return nil, 0, err
+			return nil, nil, 0, err
 		}
 
 		var objectRecords []model.SalesforceRecord
@@ -568,7 +571,7 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 		for !done {
 			objectRecords, done, err = paginatedLeads.getNextBatch()
 			if err != nil {
-				return nil, 0, err
+				return nil, nil, 0, err
 			}
 
 			for i := range objectRecords {
@@ -581,6 +584,7 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 						}
 
 						oppToLeadID[convertOppID] = leadID
+						oppToMultipleLeadID[convertOppID][leadID] = true
 					} else {
 						log.WithFields(log.Fields{"project_id": projectID}).Warn("Missing ConvertedOpportunityId on lead document")
 					}
@@ -598,7 +602,7 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 		leadIDForOpportunityRecordsAPICalls += paginatedLeads.APICall
 	}
 
-	return oppToLeadID, leadIDForOpportunityRecordsAPICalls, nil
+	return oppToLeadID, oppToMultipleLeadID, leadIDForOpportunityRecordsAPICalls, nil
 
 }
 
@@ -672,8 +676,9 @@ func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceUR
 		}
 
 		var oppToLeadIDs map[string]string
+		var oppToMultipleLeadID map[string]map[string]bool
 		if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
-			oppToLeadIDs, leadIDForOpportunityRecordsAPICalls, err = getLeadIDForOpportunityRecords(projectID, objectRecords, accessToken, instanceURL)
+			oppToLeadIDs, oppToMultipleLeadID, leadIDForOpportunityRecordsAPICalls, err = getLeadIDForOpportunityRecords(projectID, objectRecords, accessToken, instanceURL)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get lead converted opportunity id for opportunity sync.")
 			}
@@ -687,6 +692,10 @@ func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceUR
 					logCtx.WithFields(log.Fields{"opportunity_id": oppID}).Warn("Missing lead id for opportunity. Skipping adding lead id to opportunity.")
 				} else {
 					objectRecords[i][OpportunityLeadID] = leadID
+				}
+
+				if len(oppToMultipleLeadID[oppID]) > 0 {
+					objectRecords[i][OpportunityMultipleLeadID] = oppToMultipleLeadID[oppID]
 				}
 			}
 
@@ -967,16 +976,21 @@ func CreateOrGetSalesforceEventName(projectID uint64) int {
 		return http.StatusInternalServerError
 	}
 
-	for _, event_name := range []string{U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
-		U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED} {
+	_, status = store.GetStore().CreateGroup(projectID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
+	if status != http.StatusCreated && status != http.StatusConflict {
+		return http.StatusInternalServerError
+	}
+
+	for _, eventName := range []string{U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+		U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED} {
 		_, status = store.GetStore().CreateOrGetEventName(&model.EventName{
 			ProjectId: projectID,
-			Name:      event_name,
+			Name:      eventName,
 			Type:      model.TYPE_USER_CREATED_EVENT_NAME,
 		})
 
 		if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
-			logCtx.WithFields(log.Fields{"event_name": event_name}).Error("Failed to create salesforce group event name.")
+			logCtx.WithFields(log.Fields{"event_name": eventName}).Error("Failed to create salesforce group event name.")
 			return http.StatusInternalServerError
 		}
 	}

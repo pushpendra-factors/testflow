@@ -52,10 +52,15 @@ const MultipleEventsWithBreakdown = forwardRef(
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
     const { eventNames } = useSelector((state) => state.coreQuery);
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || defaultSortProp()
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : defaultSortProp()
     );
     const [dateSorter, setDateSorter] = useState(
-      savedQuerySettings.dateSorter || defaultSortProp()
+      savedQuerySettings.dateSorter &&
+        Array.isArray(savedQuerySettings.dateSorter)
+        ? savedQuerySettings.dateSorter
+        : defaultSortProp()
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);

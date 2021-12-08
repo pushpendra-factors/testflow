@@ -39,10 +39,15 @@ const NoBreakdownCharts = forwardRef(
     } = useContext(CoreQueryContext);
 
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || getDefaultSortProp(queries)
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : getDefaultSortProp(queries)
     );
     const [dateSorter, setDateSorter] = useState(
-      savedQuerySettings.dateSorter || getDefaultDateSortProp()
+      savedQuerySettings.dateSorter &&
+        Array.isArray(savedQuerySettings.dateSorter)
+        ? savedQuerySettings.dateSorter
+        : getDefaultDateSortProp()
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);

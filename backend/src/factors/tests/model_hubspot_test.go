@@ -2541,14 +2541,15 @@ func TestHubspotCustomerUserIDChange(t *testing.T) {
 				Properties: []model.QueryProperty{},
 			},
 		},
-		Class:           model.QueryClassInsights,
-		Type:            model.QueryTypeEventsOccurrence,
-		EventsCondition: model.EventCondAnyGivenEvent,
+		Class:             model.QueryClassInsights,
+		Type:              model.QueryTypeEventsOccurrence,
+		EventsCondition:   model.EventCondAnyGivenEvent,
+		AggregateFunction: model.DefaultAggrFunc,
 	}
 
 	result, status, _ := store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, status)
-	assert.Equal(t, "count", result.Headers[0])
+	assert.Equal(t, "aggregate", result.Headers[0])
 	assert.Equal(t, float64(1), result.Rows[0][0])
 }
 

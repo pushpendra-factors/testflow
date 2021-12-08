@@ -15,12 +15,14 @@ import { renderHorizontalBarChart } from '../SingleEventMultipleBreakdown/utils'
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 
 export const defaultSortProp = () => {
-  return {
-    order: 'descend',
-    key: 'Event Count',
-    type: 'numerical',
-    subtype: null,
-  };
+  return [
+    {
+      order: 'descend',
+      key: 'Event Count',
+      type: 'numerical',
+      subtype: null,
+    },
+  ];
 };
 
 export const getVisibleData = (aggregateData, sorter) => {
@@ -299,10 +301,12 @@ export const getDataInHorizontalBarChartFormat = (
   cardSize = 1,
   isDashboardWidget = false
 ) => {
-  const sortedData = SortResults(aggregateData, {
-    key: 'value',
-    order: 'descend',
-  });
+  const sortedData = SortResults(aggregateData, [
+    {
+      key: 'value',
+      order: 'descend',
+    },
+  ]);
 
   const firstBreakdownKey = breakdown[0].pr;
   const row = {};

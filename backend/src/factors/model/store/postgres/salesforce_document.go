@@ -583,6 +583,9 @@ func (pg *Postgres) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ in
 		return nil, http.StatusInternalServerError
 	}
 
+	if len(documents) < 1 {
+		return nil, http.StatusNotFound
+	}
 	return documents, http.StatusFound
 }
 

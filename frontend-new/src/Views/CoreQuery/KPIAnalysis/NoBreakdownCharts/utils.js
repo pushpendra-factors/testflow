@@ -9,23 +9,27 @@ import {
 
 export const getDefaultSortProp = (queries) => {
   if (Array.isArray(queries) && queries.length) {
-    return {
-      key: `${queries[0]} - 0`,
-      type: 'numerical',
-      subtype: null,
-      order: 'descend',
-    };
+    return [
+      {
+        key: `${queries[0]} - 0`,
+        type: 'numerical',
+        subtype: null,
+        order: 'descend',
+      },
+    ];
   }
-  return {};
+  return [];
 };
 
 export const getDefaultDateSortProp = () => {
-  return {
-    key: 'Overall',
-    type: 'numerical',
-    subtype: null,
-    order: 'descend',
-  };
+  return [
+    {
+      key: 'Overall',
+      type: 'numerical',
+      subtype: null,
+      order: 'descend',
+    },
+  ];
 };
 
 export const formatData = (data, queries) => {

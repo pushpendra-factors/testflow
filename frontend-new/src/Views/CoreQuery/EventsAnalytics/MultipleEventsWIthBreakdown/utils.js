@@ -14,12 +14,14 @@ import {
 } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
-  return {
-    order: 'descend',
-    key: 'Event Count',
-    type: 'numerical',
-    subtype: null,
-  };
+  return [
+    {
+      order: 'descend',
+      key: 'Event Count',
+      type: 'numerical',
+      subtype: null,
+    },
+  ];
 };
 
 export const getVisibleData = (aggregateData, sorter) => {

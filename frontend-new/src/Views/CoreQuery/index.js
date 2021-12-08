@@ -261,7 +261,9 @@ function CoreQuery({
         updateAppliedBreakdown();
       }
       if (queryType === QUERY_TYPE_PROFILE) {
-        setAppliedQueries(profileQueries.map((elem) => elem.label));
+        setAppliedQueries(
+          profileQueries.map((elem) => (elem.alias ? elem.alias : elem.label))
+        );
         updateAppliedBreakdown();
       }
     },
@@ -668,9 +670,17 @@ function CoreQuery({
   );
 
   const runProfileQuery = useCallback(
-    async (isQuerySaved) => {
+    async (isQuerySaved, durationObj) => {
       try {
-        const query = getProfileQuery(profileQueries, groupBy, globalFilters);
+        if (!durationObj) {
+          durationObj = dateRange;
+        }
+        const query = getProfileQuery(
+          profileQueries,
+          groupBy,
+          globalFilters,
+          durationObj
+        );
         configActionsOnRunningQuery(isQuerySaved);
         updateRequestQuery(query);
         updateResultState({ ...initialState, loading: true });
@@ -683,7 +693,6 @@ function CoreQuery({
         updateResultState({
           ...initialState,
           data: res.data.result || res.data,
-          // data: SampleResponse,
         });
       } catch (err) {
         console.log(err);
@@ -695,6 +704,7 @@ function CoreQuery({
       activeProject.id,
       groupBy,
       globalFilters,
+      dateRange,
       updateResultState,
       getDashboardConfigs,
     ]
@@ -716,7 +726,7 @@ function CoreQuery({
         if (queryType === QUERY_TYPE_EVENT) {
           runQuery(querySaved, appliedDateRange, true);
         }
-        if(queryType === QUERY_TYPE_KPI) {
+        if (queryType === QUERY_TYPE_KPI) {
           runKPIQuery(querySaved, appliedDateRange, true);
         }
       }
@@ -814,6 +824,10 @@ function CoreQuery({
         runCampaignsQuery(querySaved, payload);
       }
 
+      if (queryType === QUERY_TYPE_PROFILE) {
+        runProfileQuery(querySaved, payload);
+      }
+
       if (queryType === QUERY_TYPE_ATTRIBUTION) {
         if (!isCompareDate) {
           // set range in reducer only when original date is changed and not the comparisom date
@@ -831,6 +845,7 @@ function CoreQuery({
       dispatch,
       runCampaignsQuery,
       runAttributionQuery,
+      runProfileQuery,
     ]
   );
 
@@ -1219,15 +1234,18 @@ function CoreQuery({
     });
     let DDvalues = selGroup?.properties.map((item) => {
       if (item == null) return;
-      // let ddName = item.display_name ? (selGroup?.category == 'channels' ? `${_.startCase(item.object_type)} ${item.display_name}` : item.display_name)  : item.name;
-      let ddName = item.display_name ? item.display_name  : item.name;
-      let ddtype = selGroup?.category == 'channels' ? item.object_type : (item.entity ? item.entity : item.object_type)
-      return [
-        ddName,
-        item.name,
-        item.data_type,
-        ddtype
-      ];
+      let ddName = item.display_name
+        ? selGroup?.category == 'channels'
+          ? `${_.startCase(item.object_type)} ${item.display_name}`
+          : item.display_name
+        : item.name;
+      let ddtype =
+        selGroup?.category == 'channels'
+          ? item.object_type
+          : item.entity
+          ? item.entity
+          : item.object_type;
+      return [ddName, item.name, item.data_type, ddtype];
     });
     setKPIConfigProps(DDvalues);
   }, [selectedMainCategory]);
@@ -1284,6 +1302,7 @@ function CoreQuery({
                 setNavigatedFromDashboard={setNavigatedFromDashboard}
                 updateChartTypes={updateChartTypes}
                 updateSavedQuerySettings={updateSavedQuerySettings}
+                setAttributionMetrics={setAttributionMetrics}
               />
             )}
 
