@@ -319,7 +319,7 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 	U.EP_CAMPAIGN:               {EventEntity: {"name": U.EP_CAMPAIGN, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_CAMPAIGN], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.EP_ADGROUP:                {EventEntity: {"name": U.EP_ADGROUP, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_ADGROUP], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.EP_KEYWORD:                {EventEntity: {"name": U.EP_KEYWORD, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_KEYWORD], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.EP_CHANNEL:                {EventEntity: {"name": U.EP_CHANNEL, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_CHANNEL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	U.EP_CHANNEL:                {EventEntity: {"name": U.EP_CHANNEL, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_CHANNEL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.EP_CONTENT:                {EventEntity: {"name": U.EP_CONTENT, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_CONTENT], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.SP_INITIAL_PAGE_URL:       {EventEntity: {"name": U.SP_INITIAL_PAGE_URL, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_INITIAL_PAGE_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.SP_LATEST_PAGE_URL:        {EventEntity: {"name": U.SP_LATEST_PAGE_URL, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_LATEST_PAGE_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},

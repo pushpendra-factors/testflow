@@ -151,6 +151,7 @@ func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]in
 	delete(*properties, model.SalesforceChildRelationshipNameCampaignMembers) // delete child relationship data
 	delete(*properties, model.SalesforceChildRelationshipNameOpportunityContactRoles)
 	delete(*properties, OpportunityLeadID)
+	delete(*properties, OpportunityMultipleLeadID)
 }
 
 func getSalesforceAccountID(document *model.SalesforceDocument) (string, error) {
@@ -673,8 +674,9 @@ type RelationshipOpportunityContactRole struct {
 }
 
 type OpportunityChildRelationship struct {
-	OpportunityContactRole RelationshipOpportunityContactRole `json:"OpportunityContactRoles"`
-	OppLeadID              string                             `json:"opportunity_to_lead"`
+	OpportunityContactRole    RelationshipOpportunityContactRole `json:"OpportunityContactRoles"`
+	OppLeadID                 string                             `json:"opportunity_to_lead"`
+	OpportunityMultipleLeadID map[string]bool                    `json:"opportunity_to_multiple_lead"`
 }
 
 var errMissingOpportunityLeadAndContact = errors.New("missing lead and contact record for opportunity link")
@@ -713,6 +715,12 @@ func getOpportuntityLeadAndContactID(document *model.SalesforceDocument) ([]stri
 		if opportunityChildRelationship.OppLeadID != "" {
 			oppLeadID = opportunityChildRelationship.OppLeadID
 			oppLeadIDs = append(oppLeadIDs, oppLeadID)
+		}
+	}
+
+	for id := range opportunityChildRelationship.OpportunityMultipleLeadID {
+		if id != opportunityChildRelationship.OppLeadID {
+			oppLeadIDs = append(oppLeadIDs, id)
 		}
 	}
 
