@@ -692,8 +692,7 @@ func TestDashboardUnitEventForTimeZone(t *testing.T) {
 	}
 
 	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pl",
-	})
+		Presentation: "pl", QueryId: 4})
 	dashboardUnits, _ := store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
 
 	decChannelResult := struct {
@@ -750,8 +749,7 @@ func TestDashboardUnitChannelForTimeZone(t *testing.T) {
 		To:          1575224999,
 	}
 	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pc",
-	})
+		Presentation: "pc", QueryId: 5})
 	decChannelResult := struct {
 		Cache  bool                     `json:"cache"`
 		Result model.ChannelQueryResult `json:"result"`
@@ -783,8 +781,7 @@ func TestDashboardUnitChannelForTimeZone(t *testing.T) {
 			Filters: []model.ChannelFilterV1{}, GroupBy: []model.ChannelGroupBy{}}},
 	}
 	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pc",
-	})
+		Presentation: "pc", QueryId: 6})
 	decChannelResult1 := struct {
 		Cache  bool                       `json:"cache"`
 		Result model.ChannelResultGroupV1 `json:"result"`
