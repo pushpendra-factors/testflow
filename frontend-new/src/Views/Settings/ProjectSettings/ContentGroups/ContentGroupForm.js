@@ -8,16 +8,14 @@ import { connect } from 'react-redux';
 import {saveSmartEvents, fetchSmartEvents, fetchObjectPropertiesbySource, fetchSpecificPropertiesValue} from 'Reducers/events';
 import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware'; 
 import _ from 'lodash';
+import AddEditValue from './AddEditValue';
 const { TabPane } = Tabs; 
 const { Option, OptGroup } = Select;
 
 function ContentGroupsForm({smart_events, objPropertiesSource, specificPropertiesData, fetchSmartEvents, fetchSpecificPropertiesValue, fetchObjectPropertiesbySource, setShowSmartEventForm, saveSmartEvents, activeProject, events}) { 
     
     const [loading, setLoading] = useState(false); 
-    const [errorInfo, seterrorInfo] = useState(null);
-    const [dataObjectSource, setDataObjectSource] = useState(null);
-    const [dataObject, setDataObject] = useState(null);
-    const [dataObjectProperty, setDataObjectProperty] = useState('');
+    const [showAddValueModal, setshowAddValueModal] = useState(false);
     
     // Specific Rules
     const [currOperator, setCurrOperator] = useState('EQUAL'); 
@@ -164,7 +162,7 @@ function ContentGroupsForm({smart_events, objPropertiesSource, specificPropertie
                                 </Col>
                                 <Col span={4}>
                                     <div className={'flex justify-end border-top--thin pt-5 mt-5'}>
-                                        <Button type={'text'} size={'middle'} ><SVG name={'plus'} extraClass={'m-0'} size={18} />New value</Button>
+                                        <Button type={'text'} size={'middle'} onClick={()=> setshowAddValueModal(true)}><SVG name={'plus'} extraClass={'m-0'} size={18} />New value</Button>
                                     </div>
                                 </Col>
                             </Row>
@@ -185,6 +183,8 @@ function ContentGroupsForm({smart_events, objPropertiesSource, specificPropertie
         </Col> 
         </Row> 
         
+        {/* Add/Edit value modal */}
+        <AddEditValue visible={showAddValueModal} setshowAddValueModal={setshowAddValueModal}/>
     </> 
   );
 }
