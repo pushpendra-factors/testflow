@@ -1410,7 +1410,19 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 					case AttributionKeyChannel:
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].ChannelGroup
 					}
-					// Sessions
+
+					// Add Unique user count
+					(*attributionData)[key].Users = sessionKeyUserCount[key]
+
+					// Sessions: Session count, AvgSessionTime and PageViews is ZERO for OfflineTouchPoints
+					if strings.Contains(key, SessionChannelOTP) {
+						(*attributionData)[key].Sessions = 0
+						(*attributionData)[key].AvgSessionTime = float64(0)
+						(*attributionData)[key].PageViews = 0
+						continue
+					}
+
+					// Digital Sessions will have Session count, AvgSessionTime and PageViews
 					(*attributionData)[key].Sessions = sessionKeyCount[key]
 
 					// Add AvgSessionTime
@@ -1427,9 +1439,6 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 						totalPageCount = totalPageCount + v
 					}
 					(*attributionData)[key].PageViews = totalPageCount
-
-					// Add Unique user count
-					(*attributionData)[key].Users = sessionKeyUserCount[key]
 
 				}
 			}
