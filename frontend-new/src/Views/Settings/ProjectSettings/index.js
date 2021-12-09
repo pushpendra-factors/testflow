@@ -14,6 +14,7 @@ import { connect } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
+import ContentGroups from './ContentGroups';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -23,7 +24,8 @@ const MenuTabs = {
   EventAlias: 'Event Alias',
   Events:'Events',
   Properties: 'Properties',
-  MarketingInteractions: 'Marketing Touchpoints'
+  MarketingInteractions: 'Marketing Touchpoints',
+  ContentGroups: 'Content Groups'
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents }) {
@@ -78,6 +80,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               <Menu.Item key={MenuTabs.MarketingInteractions}>{MenuTabs.MarketingInteractions}</Menu.Item>
               <Menu.Item key={MenuTabs.Events}>{MenuTabs.Events}</Menu.Item>
               <Menu.Item key={MenuTabs.Properties}>{MenuTabs.Properties}</Menu.Item>
+              <Menu.Item key={MenuTabs.ContentGroups}>{MenuTabs.ContentGroups}</Menu.Item>
             </Menu>
 
           </Col>
@@ -89,6 +92,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
             {selectedMenu === MenuTabs.MarketingInteractions && <MarketingInteractions /> }
             {selectedMenu === MenuTabs.Events && <Events /> }
             {(selectedMenu === MenuTabs.Properties) && <Properties />}
+            {(selectedMenu === MenuTabs.ContentGroups) && <ContentGroups />}
           </Col>
         </Row>
       </div>
