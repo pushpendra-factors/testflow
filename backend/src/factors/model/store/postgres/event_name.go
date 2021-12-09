@@ -578,6 +578,11 @@ func (pg *Postgres) GetMostFrequentlyEventNamesByType(projectID uint64, limit in
 	}
 
 	for _, event := range eventsSorted {
+		if event.GroupName == U.MostRecent {
+			mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
+		}
+	}
+	for _, event := range eventsSorted {
 		if event.GroupName == U.FrequentlySeen {
 			mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
 		}
@@ -588,12 +593,17 @@ func (pg *Postgres) GetMostFrequentlyEventNamesByType(projectID uint64, limit in
 			mostFrequentEventNames = mostFrequentEventNames[0 : limit*2]
 		}
 	}
-
 	if dbResult := db.Where("type = ? AND name IN (?)", eventNameType, mostFrequentEventNames).Select("name").Limit(limit).Find(&finalEventNames); dbResult.Error != nil {
 		return nil, dbResult.Error
 	}
+	hashMapOfFinalEventNames := make(map[string]int)
 	for _, eventName := range finalEventNames {
-		result = append(result, eventName.Name)
+		hashMapOfFinalEventNames[eventName.Name] = 1
+	}
+	for _, event := range mostFrequentEventNames {
+		if _, ok := hashMapOfFinalEventNames[event]; ok {
+			result = append(result, event)
+		}
 	}
 	return result, nil
 }
