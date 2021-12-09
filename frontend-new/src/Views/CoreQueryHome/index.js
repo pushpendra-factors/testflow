@@ -186,6 +186,7 @@ function CoreQuery({
       channel_v1: 'campaigns_cq',
       attribution: 'attributions_cq',
       profiles: 'profiles_cq',
+      kpi: 'KPI_cq',
     };
     let svgName = '';
     Object.entries(queryTypeName).forEach(([k, v]) => {

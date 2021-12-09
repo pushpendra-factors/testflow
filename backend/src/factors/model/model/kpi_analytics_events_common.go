@@ -4,6 +4,11 @@ import (
 	U "factors/util"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func ValidateKPIQuery(kpiQuery KPIQuery) bool {
@@ -180,8 +185,11 @@ func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bo
 		var tmpResult *QueryResult
 		tmpResult = &QueryResult{}
 
+		log.WithField("result", result).Warn("kark1")
 		tmpResult.Headers = getTransformedHeaders(result.Headers, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
+		log.WithField("tmpResult.Headers", tmpResult.Headers).Warn("kark2")
 		tmpResult.Rows = GetTransformedRows(result.Rows, hasGroupByTimestamp, hasAnyGroupBy, len(result.Headers))
+		log.WithField("tmpResult.Rows", tmpResult.Rows).Warn("kark3")
 		resultantResults = append(resultantResults, tmpResult)
 	}
 	return resultantResults
@@ -235,40 +243,74 @@ func GetTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGr
 // Each KPI metric is internally converted to event analytics.
 // Considering all rows to be equal in size because of analytics response.
 // resultAsMap - key with groupByColumns, value as row.
-func HandlingEventResultsByApplyingOperations(results []*QueryResult, transformations []TransformQueryi) QueryResult {
-	resultAsMap := make(map[string][]interface{})
-	finalResultRows := make([][]interface{}, 0)
+func HandlingEventResultsByApplyingOperations(results []*QueryResult, transformations []TransformQueryi, timezone string, isTimezoneEnabled bool) QueryResult {
+	resultKeys := getAllKeysFromResults(results)
 	var finalResult QueryResult
+	finalResultRows := make([][]interface{}, 0)
 	for index, result := range results {
 		if index == 0 {
-			resultAsMap = makeHashWithKeyAsGroupBy(result.Rows)
+			resultKeys = addValuesToHashMap(resultKeys, result.Rows)
 		} else {
-			intermediateResultsAsMap := make(map[string][]interface{})
 			for _, row := range result.Rows {
 				key := getkeyFromRow(row)
-				value1 := resultAsMap[key][len(row)-1]
+				value1 := resultKeys[key]
 				value2 := row[len(row)-1]
 				operator := transformations[index-1].Metrics.Operator
 				result := getValueFromValuesAndOperator(value1, value2, operator)
-				row[len(row)-1] = result
-				intermediateResultsAsMap[key] = row
+				resultKeys[key] = result
 			}
-			resultAsMap = intermediateResultsAsMap
 		}
 	}
 
-	keys := make([]string, 0)
-	for k, _ := range resultAsMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		finalResultRows = append(finalResultRows, resultAsMap[key])
+	sortedKeys := getSortedKeys(resultKeys)
+	for _, sortedKey := range sortedKeys {
+		row := make([]interface{}, 0)
+		columns := strings.Split(sortedKey, ":;")
+		for _, column := range columns[:len(columns)-1] {
+			if strings.HasPrefix(column, "dat$") {
+				unixValue, _ := strconv.ParseInt(strings.TrimPrefix(column, "dat$"), 10, 64)
+				columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezone, isTimezoneEnabled)
+				row = append(row, columnValue)
+			} else {
+				row = append(row, column)
+			}
+		}
+		value := resultKeys[sortedKey]
+		row = append(row, value)
+		finalResultRows = append(finalResultRows, row)
 	}
 	finalResult.Headers = results[0].Headers
 	finalResult.Rows = finalResultRows
 	return finalResult
+}
+
+func getAllKeysFromResults(results []*QueryResult) map[string]interface{} {
+	resultKeys := make(map[string]interface{}, 0)
+	var key string
+	for _, result := range results {
+		for _, row := range result.Rows {
+			key = getkeyFromRow(row)
+			resultKeys[key] = 0
+		}
+	}
+	return resultKeys
+}
+
+func addValuesToHashMap(resultKeys map[string]interface{}, rows [][]interface{}) map[string]interface{} {
+	for _, row := range rows {
+		key := getkeyFromRow(row)
+		resultKeys[key] = row[len(row)-1]
+	}
+	return resultKeys
+}
+
+func getSortedKeys(hashMap map[string]interface{}) []string {
+	keys := make([]string, 0)
+	for k, _ := range hashMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func getValueFromValuesAndOperator(value1 interface{}, value2 interface{}, operator string) float64 {
@@ -300,7 +342,13 @@ func getkeyFromRow(row []interface{}) string {
 	}
 	var key string
 	for _, value := range row[:len(row)-1] {
-		key = fmt.Sprintf("%v", value) + ":"
+		if valueTime, ok := (value.(time.Time)); ok {
+			valueInUnix := valueTime.Unix()
+			key = key + fmt.Sprintf("dat$%v:;", valueInUnix)
+		} else {
+			key = key + fmt.Sprintf("%v", value) + ":;"
+		}
 	}
+
 	return key
 }
