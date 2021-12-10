@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Form, Input, Button, Tabs, Select, message, Radio, Menu, Dropdown
+  Row, Col, Form, Input, Button, Tabs, Select, message, Table, Menu, Dropdown
 } from 'antd'; 
 import { DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents'; 
@@ -49,6 +49,46 @@ function ContentGroupsForm({smart_events, objPropertiesSource, specificPropertie
         },
         "name": "string"
       };
+
+      const columns = [
+
+        {
+          title: 'Order',
+          dataIndex: 'name',
+          key: 'name', 
+          render: (text) => <span className={'capitalize'}>{text}</span>
+        },
+        {
+          title: 'Rule',
+          dataIndex: 'source',
+          key: 'source', 
+          render: (text) => <span className={'capitalize'}>{text}</span>
+        },
+        {
+          title: '',
+          dataIndex: 'actions',
+          key: 'actions',
+          render: (values) => (
+            <Dropdown overlay={() => menu(values)} trigger={['hover']}>
+              <Button type="text" icon={<MoreOutlined />} />
+            </Dropdown>
+          )
+        }
+      ];
+
+      const menu = (obj) => {
+        return (
+        <Menu>
+          {/* <Menu.Item key="0" onClick={() => confirmRemove(obj)}>
+            <a>Remove</a>
+          </Menu.Item>
+          <Menu.Item key="0" onClick={() => editProp(obj)}>
+            <a>Edit</a>
+          </Menu.Item> */}
+        </Menu>
+        );
+    };
+
 
     
     const onFinish = data => {
@@ -154,27 +194,36 @@ function ContentGroupsForm({smart_events, objPropertiesSource, specificPropertie
                             </Row>
 
                             <Row className={'mt-6'}>
-                                <Col span={18}>
+                                <Col span={12}>
                                     <div className={'border-top--thin pt-5 mt-5'}>
                                         <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Values</Text> 
 
                                     </div>
                                 </Col>
-                                <Col span={4}>
+                                <Col span={12}>
                                     <div className={'flex justify-end border-top--thin pt-5 mt-5'}>
                                         <Button type={'text'} size={'middle'} onClick={()=> setshowAddValueModal(true)}><SVG name={'plus'} extraClass={'m-0'} size={18} />New value</Button>
                                     </div>
                                 </Col>
                             </Row>
                             <Row className={'mt-8'}>
-                                <Col span={22}>
+                                <Col span={24}>
                                     <div className={'flex justify-center'}>
                                         <img src='assets/images/NoData.png' className={'w-20'}/>
                                     </div>
                                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 flex justify-center mt-4'}>Create Values that defines this content group</Text>
                                     <div className={'flex justify-center mt-4'}>
-                                        <Button size={'middle'} ><SVG name={'plus'} extraClass={'m-0'} size={18} />Add new value</Button>
+                                        <Button size={'middle'} onClick={()=> setshowAddValueModal(true)}><SVG name={'plus'} extraClass={'m-0'} size={18} />Add new value</Button>
                                     </div>
+                                </Col>
+                            </Row>
+                            <Row>
+                                <Col span={24}>
+                                <Table className="fa-table--basic mt-2" 
+                                columns={columns} 
+                                dataSource={null} 
+                                pagination={false}
+                                />
                                 </Col>
                             </Row>
                 

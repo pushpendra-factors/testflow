@@ -7,7 +7,7 @@ import { Text, SVG } from 'factorsComponents';
 
 
 function AddEditValue (props) {
-    const [radioValue, setRadioValue] = useState('and');
+    const [radioValue, setRadioValue] = useState('AND');
 
     const onFinishValues = (values) => {
         console.log(values);
@@ -55,23 +55,23 @@ function AddEditValue (props) {
                         </Col>
                     </Row>
                     <Row className={'mt-4'}>
-                        <Col span={14}>
+                        <Col span={12}>
                             <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Rules</Text>
                         </Col>
-                        <Col span={10} className={'flex justify-end'}>
-                            <Text
-                                type={'paragraph'}
-                                mini
-                                weight={'thin'}
-                                color={'grey-2'}
-                                extraClass={'m-0 mr-2 inline'}
+                        <Col span={12}>
+                            <div className={'flex justify-end items-baseline'}>
+                            <Text type={'title'} level={7} extraClass={'mr-2'}>Operator:</Text>
+                            <Form.Item
+                            name="combOperator"
+                            initialValue={'AND'}
+                            rules={[{ required: true, message: 'Select one value' }]}
                             >
-                                Operator: 
-                            </Text>
-                            <Radio.Group onChange={onRadioChange} value={radioValue}>
-                                <Radio value={'and'}>And</Radio>
-                                <Radio value={'or'}>Or</Radio>
-                            </Radio.Group>
+                                <Radio.Group onChange={onRadioChange} value={radioValue}>
+                                    <Radio value={'AND'}>And</Radio>
+                                    <Radio value={'OR'}>Or</Radio>
+                                </Radio.Group>
+                            </Form.Item>
+                            </div>
                         </Col>
                     </Row>
 
@@ -92,26 +92,29 @@ function AddEditValue (props) {
                                             <Option value={fieldKey===0?'page':radioValue}>{fieldKey===0?'Page':radioValue}</Option>
                                         </Select>
                                     </Form.Item>
-                                    <Form.Item
-                                    {...restField}
-                                    initialValue={'contains'}
-                                    name={[name, 'filter']}
-                                    fieldKey={[fieldKey, 'filter']}
-                                    rules={[{ required: true, message: 'Select any' }]}
-                                    >
-                                    <Select showArrow={false}>
-                                        <Option value="contains">Contains</Option>
-                                        <Option value="startsWith">Starts With</Option>
-                                        <Option value="endsWith">Ends With</Option>
-                                    </Select>
-                                    </Form.Item>
+                                    <div className={'w-24 fa-select'}>
+                                        <Form.Item
+                                        {...restField}
+                                        initialValue={'contains'}
+                                        name={[name, 'filter']}
+                                        fieldKey={[fieldKey, 'filter']}
+                                        rules={[{ required: true, message: 'Select any' }]}
+                                        >
+                                        
+                                            <Select showArrow={false}>
+                                                <Option value="contains">Contains</Option>
+                                                <Option value="startsWith">Starts With</Option>
+                                                <Option value="endsWith">Ends With</Option>
+                                            </Select>
+                                        </Form.Item>
+                                    </div>
                                     <Form.Item
                                     {...restField}
                                     name={[name, 'value']}
                                     fieldKey={[fieldKey, 'value']}
                                     rules={[{ required: true, message: 'Missing value' }]}
                                     >
-                                    <Input placeholder="value" />
+                                    <Input placeholder="value" className={'fa-input'}/>
                                     </Form.Item>
                                 <Button type={'text'} onClick={() => remove(name)}><SVG name={'Delete'} size={18} color='gray' /></Button>
                                 </Space>
