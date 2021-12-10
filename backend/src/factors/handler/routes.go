@@ -70,6 +70,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.Use(mid.SetLoggedInAgent())
 	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
+	authRouteGroup.Use(mid.SkipDemoProjectWriteAccess())
 
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
 
