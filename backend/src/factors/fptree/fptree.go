@@ -219,8 +219,9 @@ func InitTree() Tree {
 	tr.NumInsertion = make([]int, 1)
 	log.Debug("empty tree is initalized")
 
-	r := InitNode("", 0)
+	r := InitNode("@", 0)
 	r.IsRoot = true
+	r.ParentNode = nil
 	tr.Root = r
 	log.Debug("initalized root for tree")
 

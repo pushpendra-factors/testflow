@@ -4,11 +4,9 @@ import (
 	fp "factors/fptree"
 	"fmt"
 	"strings"
-
 	"testing"
 
 	log "github.com/sirupsen/logrus"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -141,5 +139,100 @@ func TestInsertTreeSimple(t *testing.T) {
 			assert.Nil(t, err, fmt.Sprintf("unable to insert transaction:%v", words))
 		}
 	}
+
+}
+
+func TestSerializeTree(t *testing.T) {
+	words := []string{"ABCD", "AD", "AC", "AK", "DKL"}
+	tr := fp.InitTree()
+
+	for _, word := range words {
+		trns := strings.Split(word, "")
+		err := tr.OrderAndInsertTrans(trns)
+		assert.Nil(t, err, fmt.Sprintf("unable to insert transaction:%v", words))
+	}
+	fmt.Println("*****------****", tr.Root)
+	_, err := tr.Serialize()
+	assert.Nil(t, err)
+	// fmt.Println(val_node_string)
+}
+
+func TestSerializeTree2(t *testing.T) {
+	words := []string{"ABCD", "AD", "AC", "AK", "CK", "DL"}
+	tr := fp.InitTree()
+
+	for _, word := range words {
+		trns := strings.Split(word, "")
+		err := tr.OrderAndInsertTrans(trns)
+		assert.Nil(t, err, fmt.Sprintf("unable to insert transaction:%v", words))
+	}
+	fmt.Println("*****------****", tr.Root)
+	_, err := tr.Serialize()
+	assert.Nil(t, err)
+	// fmt.Println(val_node_string)
+}
+
+func TestSerializeTreeTofile(t *testing.T) {
+	words := []string{"ABCD", "AD", "AC", "AK", "CK", "DL"}
+	tr := fp.InitTree()
+
+	for _, word := range words {
+		trns := strings.Split(word, "")
+		err := tr.OrderAndInsertTrans(trns)
+		assert.Nil(t, err, fmt.Sprintf("unable to insert transaction:%v", words))
+	}
+	nodeString, err := tr.Serialize()
+	assert.Nil(t, err)
+
+	fname := "/tmp/fptree/test2.txt"
+	err = fp.WriteTreeToFile(fname, nodeString)
+	assert.Nil(t, err)
+}
+
+func TestReadTreeFromFile(t *testing.T) {
+	words := []string{"ABCD", "AD", "AC", "AK", "CK", "DL"}
+	tr := fp.InitTree()
+
+	for _, word := range words {
+		trns := strings.Split(word, "")
+		err := tr.OrderAndInsertTrans(trns)
+		assert.Nil(t, err, fmt.Sprintf("unable to insert transaction:%v", words))
+	}
+	nodeString, err := tr.Serialize()
+	assert.Nil(t, err)
+
+	fname := "/tmp/fptree/test2.txt"
+	err = fp.WriteTreeToFile(fname, nodeString)
+	assert.Nil(t, err)
+	nodes, err := fp.ReadNodesFromFile(fname)
+	assert.Nil(t, err)
+	assert.Greater(t, len(nodes), 0)
+
+}
+
+func TestFptreeDeserialize(t *testing.T) {
+	words := []string{"ABCD", "AD", "AC", "AK", "CK", "DL"}
+	tr := fp.InitTree()
+
+	for _, word := range words {
+		trns := strings.Split(word, "")
+		err := tr.OrderAndInsertTrans(trns)
+		assert.Nil(t, err, fmt.Sprintf("unable to insert transaction:%v", words))
+	}
+	nodeString1, err := tr.Serialize()
+	assert.Nil(t, err)
+
+	fname := "/tmp/fptree/test2.txt"
+	err = fp.WriteTreeToFile(fname, nodeString1)
+	assert.Nil(t, err)
+	tree, err := fp.CreateTreeFromFile(fname)
+	assert.Nil(t, err)
+	assert.NotNil(t, tree)
+	nodeString2, err := tree.Serialize()
+	assert.Nil(t, err)
+
+	fname = "/tmp/fptree/test3.txt"
+	err = fp.WriteTreeToFile(fname, nodeString2)
+	log.Debugf("count map :%v", tree.CountMap)
 
 }
