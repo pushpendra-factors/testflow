@@ -14,6 +14,7 @@ import { connect } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
+import Touchpoints from './Touchpoints';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -23,7 +24,8 @@ const MenuTabs = {
   EventAlias: 'Event Alias',
   Events:'Events',
   Properties: 'Properties',
-  MarketingInteractions: 'Marketing Touchpoints'
+  MarketingInteractions: 'Marketing Touchpoints',
+  Touchpoints: 'Touchpoints'
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents }) {
@@ -76,6 +78,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item>
               <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
               <Menu.Item key={MenuTabs.MarketingInteractions}>{MenuTabs.MarketingInteractions}</Menu.Item>
+              <Menu.Item key={MenuTabs.Touchpoints}>{MenuTabs.Touchpoints}</Menu.Item>
               <Menu.Item key={MenuTabs.Events}>{MenuTabs.Events}</Menu.Item>
               <Menu.Item key={MenuTabs.Properties}>{MenuTabs.Properties}</Menu.Item>
             </Menu>
@@ -87,6 +90,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
             {selectedMenu === MenuTabs.Users && <UserSettings /> }
             {selectedMenu === MenuTabs.Integrations && <IntegrationSettings /> }
             {selectedMenu === MenuTabs.MarketingInteractions && <MarketingInteractions /> }
+            {selectedMenu == MenuTabs.Touchpoints && (<Touchpoints />)}
             {selectedMenu === MenuTabs.Events && <Events /> }
             {(selectedMenu === MenuTabs.Properties) && <Properties />}
           </Col>
