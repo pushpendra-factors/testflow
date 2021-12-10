@@ -250,9 +250,9 @@ const MarkTouchpointBlock = ({
         </Row>
         <Row className={`mt-2 ml-2`}>
           <Radio.Group onChange={setTouchpointRef} value={touchPointRef}>
-            <Radio value={`tactic`}>Tactics</Radio>
-            <Radio value={`offer`}>Offers</Radio>
-            <Radio value={`tactic_offer`}>Tactics and Offers</Radio>
+            <Radio value={`Tactic`}>Tactics</Radio>
+            <Radio value={`Offer`}>Offers</Radio>
+            <Radio value={`TacticOffer`}>Tactics and Offers</Radio>
           </Radio.Group>
 
         </Row>
