@@ -68,16 +68,16 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
                         filterObj.ty === 'datetime'
                             ? reverseDateOperatorMap[filterObj.op]
                             : reverseOperatorMap[filterObj.op],
-                    props: [filterObj.pr, filterObj.ty, filterObj.en],
+                    props: [filterObj.pr, filterObj.ty? filterObj.ty : 'categorical', filterObj.en? filterObj.en : 'event'],
                     values: [filterObj.va],
                 });
             } else {
                 filters[filters.length - 1].values.push(filterObj.va);
             }
         });
-        return filters.map((filt) => (<Row className={`mt-2`}>
+        return filters.map((filt) => (<div className={`mt-2 max-w-3xl` }>
             <FAFilterSelect filter={filt} disabled={true} applyFilter={() => {}}></FAFilterSelect>
-        </Row>));
+        </div>));
     }
 
     const renderPropertyMap = (obj) => {

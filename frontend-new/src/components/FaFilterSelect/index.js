@@ -221,7 +221,7 @@ const FAFilterSelect = ({
 
   const renderPropSelect = () => {
     return (
-      <div className={styles.filter__propContainer}>
+      <div className={`${styles.filter__propContainer} ${disabled? `fa-truncate-150` : ''}`}>
         <Tooltip title={renderGroupDisplayName(propState)}>
           <Button
             disabled={disabled}
@@ -532,7 +532,7 @@ const FAFilterSelect = ({
     }
 
     return (
-      <div className={`${styles.filter__propContainer} ml-2`}>
+      <div className={`${styles.filter__propContainer} ml-2 ${disabled? `fa-truncate-150` : ''}`}>
         {propState.type === 'categorical' ? (
           <>
             {' '}
