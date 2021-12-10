@@ -10,6 +10,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -80,10 +81,24 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 	}
 
-	hasFailed, errMsg, requestPayload := decodeAttributionPayload(r, logCtx)
-	if hasFailed {
-		logCtx.Error("Query failed. Json decode failed." + errMsg)
-		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed." + errMsg, true
+	queryIdString := c.Query("query_id")
+	if queryIdString == "" {
+		var hasFailed bool
+		var errMsg string
+		hasFailed, errMsg, requestPayload = decodeAttributionPayload(r, logCtx)
+		if hasFailed {
+			logCtx.Error("Query failed. Json decode failed." + errMsg)
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed." + errMsg, true
+		}
+	} else {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		var requestPayloadUnit model.AttributionQueryUnit
+		U.DecodePostgresJsonbToStructType(&query.Query, &requestPayloadUnit)
+		requestPayload.Query = requestPayloadUnit.Query
 	}
 
 	if requestPayload.Query.Timezone != "" {

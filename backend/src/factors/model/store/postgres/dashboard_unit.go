@@ -365,6 +365,22 @@ func (pg *Postgres) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dashb
 	return queryClass, savedQuery, ""
 }
 
+// GetQueryAndClassFromDashboardUnit returns query and query-class of dashboard unit.
+func (pg *Postgres) GetQueryAndClassFromQueryIdString(queryIdString string, projectId uint64) (queryClass string, queryInfo *model.Queries, errMsg string) {
+	savedQuery, errCode := pg.GetQueryWithQueryIdString(projectId, queryIdString)
+	if errCode != http.StatusFound {
+		errMsg = fmt.Sprintf("Failed to fetch query from query_id %v", queryIdString)
+		return "", nil, errMsg
+	}
+
+	queryClass, errMsg = pg.GetQueryClassFromQueries(*savedQuery)
+	if errMsg != "" {
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return "", nil, errMsg
+	}
+	return queryClass, savedQuery, ""
+}
+
 func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string) {
 	var tempQuery model.Query
 	var queryGroup model.QueryGroup

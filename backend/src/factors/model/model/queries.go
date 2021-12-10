@@ -9,7 +9,6 @@ import (
 type Queries struct {
 	// Composite primary key, id + project_id.
 	ID uint64 `gorm:"primary_key:true" json:"id"`
-	IdText string `gorm:"primary_key:true" json:"id_text"`
 	// Foreign key queries(project_id) ref projects(id).
 	ProjectID     uint64         `gorm:"primary_key:true" json:"project_id"`
 	Title         string         `gorm:"not null" json:"title"`
@@ -21,6 +20,7 @@ type Queries struct {
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	Settings      postgres.Jsonb `json:"settings"`
+	IdText        string         `json:"id_text"`
 }
 
 const (
