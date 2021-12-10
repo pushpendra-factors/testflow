@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Form, Input, Button, Modal, Radio
+  Row, Col, Form, Input, Button, Modal, Radio, Space, Select
 } from 'antd'; 
+import { PlusOutlined } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents';
 
 
 function AddEditValue (props) {
     const [radioValue, setRadioValue] = useState('and');
 
-    const onFinishValues = () => {
+    const onFinishValues = (values) => {
+        console.log(values);
 
     }
 
@@ -31,6 +33,7 @@ function AddEditValue (props) {
             visible={props.visible}
             closable={false}
             footer={null}
+            className={'fa-modal--regular'}
             >
                 <Form
                 // form={form}
@@ -69,6 +72,60 @@ function AddEditValue (props) {
                                 <Radio value={'and'}>And</Radio>
                                 <Radio value={'or'}>Or</Radio>
                             </Radio.Group>
+                        </Col>
+                    </Row>
+
+                    <Row className={'mt-4'}>
+                        <Col span={16}>
+                        <Form.List name="rules">
+                            {(fields, { add, remove }) => (
+                            <>
+                                {fields.map(({ key, name, fieldKey, ...restField }) => (
+                                <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                                    <Form.Item
+                                    {...restField}
+                                    initialValue={fieldKey===0?'page':radioValue}
+                                    name={[name, 'operator']}
+                                    fieldKey={[fieldKey, 'operator']}
+                                    >
+                                        <Select showArrow={false} open={false} bordered={false}>
+                                            <Option value={fieldKey===0?'page':radioValue}>{fieldKey===0?'Page':radioValue}</Option>
+                                        </Select>
+                                    </Form.Item>
+                                    <Form.Item
+                                    {...restField}
+                                    initialValue={'contains'}
+                                    name={[name, 'filter']}
+                                    fieldKey={[fieldKey, 'filter']}
+                                    rules={[{ required: true, message: 'Select any' }]}
+                                    >
+                                    <Select showArrow={false}>
+                                        <Option value="contains">Contains</Option>
+                                        <Option value="startsWith">Starts With</Option>
+                                        <Option value="endsWith">Ends With</Option>
+                                    </Select>
+                                    </Form.Item>
+                                    <Form.Item
+                                    {...restField}
+                                    name={[name, 'value']}
+                                    fieldKey={[fieldKey, 'value']}
+                                    rules={[{ required: true, message: 'Missing value' }]}
+                                    >
+                                    <Input placeholder="value" />
+                                    </Form.Item>
+                                <Button type={'text'} onClick={() => remove(name)}><SVG name={'Delete'} size={18} color='gray' /></Button>
+                                </Space>
+                                ))}
+                                <Form.Item>
+                                    <div className={'w-24'}>
+                                    <Button size={'middle'} onClick={() => add()} block icon={<PlusOutlined />}>
+                                        Add rule
+                                    </Button>
+                                    </div>
+                                </Form.Item>
+                            </>
+                            )}
+                        </Form.List>
                         </Col>
                     </Row>
 
