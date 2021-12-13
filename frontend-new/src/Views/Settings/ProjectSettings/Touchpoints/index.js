@@ -49,7 +49,7 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
     }
 
     useEffect(() => {
-        const touchpointObjs = activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
+        const touchpointObjs = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
         setTouchPointsData(touchpointObjs);
 
         getEventProperties(activeProject.id, '$hubspot_contact_updated')
@@ -162,8 +162,7 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
     }
 
     const onTchSave = (tchObj) => {
-        console.log(tchObj);
-        const tchPointRules = activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
+        const tchPointRules = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
         tchPointRules.push(tchObj);
         const projectDetails = { ...activeProject }
         udpateProjectDetails(activeProject.id, { 'hubspot_touch_points': {'hs_touch_point_rules': tchPointRules} });
