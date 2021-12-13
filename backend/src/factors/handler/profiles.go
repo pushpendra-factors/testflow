@@ -9,6 +9,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -71,12 +72,23 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		"projectID": projectID,
 	})
 	var profileQueryGroup model.ProfileQueryGroup
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&profileQueryGroup); err != nil {
-		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+	queryIdString := c.Query("query_id")
+	if queryIdString == "" {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&profileQueryGroup); err != nil {
+			logCtx.WithError(err).Error("Query failed. Json decode failed.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+	} else {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectID)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &profileQueryGroup)
 	}
+
 	if profileQueryGroup.Timezone != "" {
 		_, errCode := time.LoadLocation(string(profileQueryGroup.Timezone))
 		if errCode != nil {

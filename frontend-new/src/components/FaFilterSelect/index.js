@@ -28,6 +28,7 @@ const FAFilterSelect = ({
   setValuesByProps,
   applyFilter,
   filter,
+  disabled=false
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
@@ -220,9 +221,10 @@ const FAFilterSelect = ({
 
   const renderPropSelect = () => {
     return (
-      <div className={styles.filter__propContainer}>
+      <div className={`${styles.filter__propContainer} ${disabled? `fa-truncate-150` : ''}`}>
         <Tooltip title={renderGroupDisplayName(propState)}>
           <Button
+            disabled={disabled}
             icon={
               propState && propState.icon ? (
                 <SVG name={propState.icon} size={16} color={'purple'} />
@@ -256,6 +258,7 @@ const FAFilterSelect = ({
     return (
       <div className={styles.filter__propContainer}>
         <Button
+          disabled={disabled}
           className={`fa-button--truncate ml-2`}
           type='link'
           onClick={() => setOperSelectOpen(true)}
@@ -370,6 +373,7 @@ const FAFilterSelect = ({
           placement='topRight'
           range={rang}
           onSelect={(rng) => onDateSelect(rng)}
+          disabled={disabled}
         />
       );
     }
@@ -381,6 +385,7 @@ const FAFilterSelect = ({
           placement='topRight'
           range={rang}
           onSelect={(rng) => onDateSelect(rng)}
+          disabled={disabled}
         />
       );
     }
@@ -393,9 +398,11 @@ const FAFilterSelect = ({
             min={1}
             max={999}
             onChange={setDeltaNumber}
+            disabled={disabled}
           ></InputNumber>
 
           <Select
+            disabled={disabled}
             defaultValue=''
             value={parsedValues['gran']}
             className={'fa-select--ghost'}
@@ -417,6 +424,7 @@ const FAFilterSelect = ({
       selectorComponent = (
         <div className={`fa-filter-dateDeltaContainer`}>
           <Select
+            disabled={disabled}
             defaultValue=''
             value={parsedValues['gran']}
             className={'fa-select--ghost'}
@@ -436,6 +444,7 @@ const FAFilterSelect = ({
     if (datePicker.includes(operator)) {
       selectorComponent = (
         <DatePicker
+          disabled={disabled}
           disabledDate={(d) => !d || d.isAfter(MomentTz())}
           autoFocus={false}
           className={`fa-date-picker`}
@@ -517,12 +526,13 @@ const FAFilterSelect = ({
           value={valuesState}
           onBlur={emitFilter}
           onChange={setNumericalValue}
+          disabled={disabled}
         ></InputNumber>
       );
     }
 
     return (
-      <div className={`${styles.filter__propContainer} ml-2`}>
+      <div className={`${styles.filter__propContainer} ml-2 ${disabled? `fa-truncate-150` : ''}`}>
         {propState.type === 'categorical' ? (
           <>
             {' '}
@@ -536,6 +546,7 @@ const FAFilterSelect = ({
               <Button
                 className={`fa-button--truncate`}
                 type='link'
+                disabled={disabled}
                 onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
               >
                 {' '}

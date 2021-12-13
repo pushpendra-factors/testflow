@@ -1,8 +1,13 @@
 package util
 
 import (
+	"fmt"
+	"math/rand"
+	"runtime"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -130,4 +135,26 @@ func MakeUniqueTrans(trns []string) []string {
 		trnsSet = append(trnsSet, k)
 	}
 	return trnsSet
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandStringBytes(n int) string {
+	rand.Seed(time.Now().UnixNano())
+
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	c := string(b) + strconv.FormatInt(time.Now().UnixNano(), 32)
+	return c
+}
+
+func PrintStats(mem runtime.MemStats) {
+	runtime.ReadMemStats(&mem)
+	fmt.Println("mem.Alloc:", mem.Alloc)
+	fmt.Println("mem.TotalAlloc:", mem.TotalAlloc)
+	fmt.Println("mem.HeapAlloc:", mem.HeapAlloc)
+	fmt.Println("mem.NumGC:", mem.NumGC)
+	fmt.Println("-----")
 }

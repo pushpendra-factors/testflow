@@ -743,9 +743,35 @@ func TestEventAnalyticsQueryGroupSingleQueryHandler(t *testing.T) {
 		assert.NotNil(t, 1, len(resultGroup.Results))
 		result1 := resultGroup.Results[0]
 		assert.NotNil(t, result1)
-		assert.Equal(t, "count", result1.Headers[0])
+		assert.Equal(t, "aggregate", result1.Headers[0])
 		assert.Equal(t, float64(5), result1.Rows[0][0])
 
+		queryJson, err := json.Marshal(queryGroup)
+		w = sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: "TestSave",
+			Type:  model.QueryTypeSavedQuery,
+			Query: &postgres.Jsonb{queryJson}})
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		var queries model.Queries
+		decoder = json.NewDecoder(w.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&queries); err != nil {
+			assert.NotNil(t, nil, err)
+		}
+		assert.NotEqual(t, "", queries.IdText)
+
+		w = sendEventsQueryHandlerWithQueryId(r, project.ID, agent, queries.IdText)
+		assert.Equal(t, http.StatusOK, w.Code)
+		decoder = json.NewDecoder(w.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&resultGroup); err != nil {
+			assert.NotNil(t, nil, err)
+		}
+		assert.NotNil(t, 1, len(resultGroup.Results))
+		result1 = resultGroup.Results[0]
+		assert.NotNil(t, result1)
+		assert.Equal(t, "aggregate", result1.Headers[0])
+		assert.Equal(t, float64(5), result1.Rows[0][0])
 	})
 }
 
@@ -877,6 +903,29 @@ func sendEventsQueryHandler(r *gin.Engine, projectId uint64, agent *model.Agent,
 	}
 	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/query", projectId)).
 		WithPostParams(queryGroup).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error with request.")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func sendEventsQueryHandlerWithQueryId(r *gin.Engine, projectId uint64, agent *model.Agent, queryId string) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/query?query_id=%v", projectId, queryId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,

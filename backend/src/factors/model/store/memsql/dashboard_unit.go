@@ -378,6 +378,22 @@ func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dash
 	return queryClass, savedQuery, ""
 }
 
+// GetQueryAndClassFromDashboardUnit returns query and query-class of dashboard unit.
+func (store *MemSQL) GetQueryAndClassFromQueryIdString(queryIdString string, projectId uint64) (queryClass string, queryInfo *model.Queries, errMsg string) {
+	savedQuery, errCode := store.GetQueryWithQueryIdString(projectId, queryIdString)
+	if errCode != http.StatusFound {
+		errMsg = fmt.Sprintf("Failed to fetch query from query_id %v", queryIdString)
+		return "", nil, errMsg
+	}
+
+	queryClass, errMsg = store.GetQueryClassFromQueries(*savedQuery)
+	if errMsg != "" {
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return "", nil, errMsg
+	}
+	return queryClass, savedQuery, ""
+}
+
 func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string) {
 	var temp_query model.Query
 	var queryGroup model.QueryGroup

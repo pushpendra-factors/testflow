@@ -175,6 +175,7 @@ func TestAPISearchQueryHandler(t *testing.T) {
 		assert.NotNil(t, nil, err)
 	}
 	assert.Equal(t, 1, len(queries))
+	assert.NotEqual(t, "", queries[0].IdText)
 
 	w = sendSearchQueryReq(r, project.ID, "a", agent)
 	assert.Equal(t, http.StatusNotFound, w.Code)

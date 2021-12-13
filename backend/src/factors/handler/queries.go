@@ -105,6 +105,7 @@ func CreateQueryHandler(c *gin.Context) {
 		CreatedBy: agentUUID,
 		// To support empty settings value.
 		Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+		IdText:   U.RandomStringForSharableQuery(50),
 	}
 
 	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {

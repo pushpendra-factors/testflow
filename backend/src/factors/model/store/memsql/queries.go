@@ -135,6 +135,18 @@ func (store *MemSQL) GetQueryWithQueryId(projectID uint64, queryID uint64) (*mod
 	return store.getQueryWithQueryID(projectID, queryID, model.QueryTypeAllQueries)
 }
 
+func (store *MemSQL) GetQueryWithQueryIdString(projectID uint64, queryIDString string) (*model.Queries, int) {
+	db := C.GetServices().Db
+	var query model.Queries
+	var err error
+	err = db.Table("queries").Where("project_id = ? AND id_text=? AND is_deleted = ?",
+		projectID, queryIDString, false).Find(&query).Error
+	if err != nil {
+		return &model.Queries{}, http.StatusNotFound
+	}
+	return store.getQueryWithQueryID(projectID, query.ID, model.QueryTypeAllQueries)
+}
+
 func (store *MemSQL) getQueryWithQueryID(projectID uint64, queryID uint64, queryType int) (*model.Queries, int) {
 	db := C.GetServices().Db
 	var query model.Queries

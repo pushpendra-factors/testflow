@@ -16,6 +16,7 @@ import (
 type Project struct {
 	ID   uint64 `gorm:"primary_key:true;" json:"id"`
 	Name string `gorm:"not null;" json:"name"`
+	ProfilePicture string `json:"profile_picture"`
 	// An index created on token.
 	Token string `gorm:"size:32" json:"token"`
 	// An index created on private_token.

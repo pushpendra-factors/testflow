@@ -70,6 +70,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.Use(mid.SetLoggedInAgent())
 	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
+	authRouteGroup.Use(mid.SkipDemoProjectWriteAccess())
 
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
 
@@ -152,6 +153,7 @@ func InitAppRoutes(r *gin.Engine) {
 	// Scope this with Project Admin
 	authRouteGroup.GET("/:project_id/agents", GetProjectAgentsHandler)
 	authRouteGroup.POST("/:project_id/agents/invite", AgentInvite)
+	authRouteGroup.POST("/:project_id/agents/batchinvite", AgentInviteBatch)
 	authRouteGroup.PUT("/:project_id/agents/remove", RemoveProjectAgent)
 	authRouteGroup.PUT("/:project_id/agents/update", AgentUpdate)
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)

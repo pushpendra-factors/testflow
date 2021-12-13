@@ -13,6 +13,7 @@ export const SET_EVENT_GOAL = 'SET_EVENT_GOAL';
 export const SET_TOUCHPOINTS = 'SET_TOUCHPOINTS';
 export const SET_TOUCHPOINT_FILTERS = 'SET_TOUCHPOINT_FILTERS';
 export const SET_ATTR_QUERY_TYPE = 'SET_ATTR_QUERY_TYPE';
+export const SET_TACTIC_OFFER_TYPE = 'SET_TACTIC_OFFER_TYPE';
 export const SET_ATTRIBUTION_MODEL = 'SET_ATTRIBUTION_MODEL';
 export const SET_ATTRIBUTION_WINDOW = 'SET_ATTRIBUTION_WINDOW';
 export const SET_ATTR_LINK_EVENTS = 'SET_ATTR_LINK_EVENTS';
@@ -77,6 +78,10 @@ export const setTouchPointFiltersAction = (touchpointFilters) => {
 
 export const setAttributionQueryTypeAction = (attrQueryType) => {
   return { type: SET_ATTR_QUERY_TYPE, payload: attrQueryType};
+}
+
+export const setTacticOfferTypeAction = (tacticOfferType) => {
+  return { type: SET_TACTIC_OFFER_TYPE, payload: tacticOfferType};
 }
 
 export const setAttributionModelsAction = (models) => {

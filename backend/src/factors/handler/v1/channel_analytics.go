@@ -7,6 +7,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -108,12 +109,22 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 	logCtx = logCtx.WithField("project_id", projectId).WithField("reqId", reqID)
 
 	var queryPayload model.ChannelGroupQueryV1
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
+	queryIdString := c.Query("query_id")
+	if queryIdString == "" {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
 
-	if err := decoder.Decode(&queryPayload); err != nil {
-		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		if err := decoder.Decode(&queryPayload); err != nil {
+			logCtx.WithError(err).Error("Query failed. Json decode failed.")
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+	} else {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &queryPayload)
 	}
 
 	var commonQueryFrom int64
