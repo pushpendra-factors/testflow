@@ -9,6 +9,7 @@ import FaSelect from 'Components/FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
+import _ from 'lodash'; 
 
 import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
 
@@ -109,12 +110,15 @@ const GlobalFilterSelect = ({
     const renderDisplayName = (propState) => {
         // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
         let propertyName = '';
-        if(propState.name && (propState.icon === 'user' || propState.icon === 'user_g')) {
-          propertyName = userPropNames[propState.name]?  userPropNames[propState.name] : propState.name;
-        }
-        if(propState.name && propState.icon === 'event') {
-          propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
-        }
+        // if(propState.name && (propState.icon === 'user' || propState.icon === 'user_g')) {
+        //   propertyName = userPropNames[propState.name]?  userPropNames[propState.name] : propState.name;
+        // }
+        // if(propState.name && propState.icon === 'event') {
+        //   propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
+        // }
+
+        propertyName = _.startCase(propState?.name); 
+
         if(!propState.name) {
           propertyName = 'Select Property';
         }

@@ -205,6 +205,9 @@ export const getDateBasedColumns = (
     ),
     dataIndex: `Overall`,
     width: 150,
+    render: (d) => {
+      return <NumFormat number={d} />;
+    },
   };
   const result = [
     {
