@@ -10,6 +10,7 @@ import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
 import moment from 'moment';
+import _ from 'lodash'; 
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
  
@@ -173,12 +174,15 @@ const FAFilterSelect = ({
     const renderGroupDisplayName = (propState) => { 
         // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
         let propertyName = '';
-        if(propState.name && propState.icon === 'user') {
-          propertyName = userPropNames[propState.name]?  userPropNames[propState.name] : propState.name;
-        }
-        if(propState.name && propState.icon === 'event') {
-          propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
-        }
+        // if(propState.name && propState.icon === 'user') {
+        //   propertyName = userPropNames[propState.name]?  userPropNames[propState.name] : propState.name;
+        // }
+        // if(propState.name && propState.icon === 'event') {
+        //   propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
+        // }
+        
+        propertyName = _.startCase(propState?.name); 
+
         if(!propState.name) {
           propertyName = 'Select Property';
         }

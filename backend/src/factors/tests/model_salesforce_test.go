@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"testing"
 	"time"
 
@@ -3587,4 +3588,290 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	assert.Equal(t, exists, true)
 	assert.Equal(t, float64(timestampT2.Unix()), userPropertyValue)
 	assert.Equal(t, timestampT3.Unix(), user.PropertiesUpdatedTimestamp)
+}
+
+func TestSalesforceOpportunityLateIdentification(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	opportunityID := "1"
+	createdDate := time.Now().UTC().AddDate(0, 0, -3)
+	document := map[string]interface{}{
+		"Id":               opportunityID,
+		"Name":             "opportunity",
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameOpportunity)
+	assert.Nil(t, err)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 2)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[0].Status) // groups opportunity
+
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{opportunityID}, model.SalesforceDocumentTypeOpportunity, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+	assert.NotEqual(t, "", documents[0].UserID)
+	assert.NotEqual(t, "", documents[0].GroupUserID)
+
+	opportunityUserdID := documents[0].UserID
+	opportunityGroupUserdID := documents[0].GroupUserID
+	user, status := store.GetStore().GetUser(project.ID, opportunityUserdID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "", user.CustomerUserId)
+
+	contactID := "2"
+	contactEmail := getRandomEmail()
+	createdDate = time.Now().UTC().AddDate(0, 0, -3)
+	document = map[string]interface{}{
+		"Id":               contactID,
+		"Name":             "ContactUser",
+		"Email":            contactEmail,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameContact)
+	assert.Nil(t, err)
+
+	document = map[string]interface{}{
+		"Id":               opportunityID,
+		"Name":             "opportunity",
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+		model.SalesforceChildRelationshipNameOpportunityContactRoles: map[string]interface{}{
+			"records": []map[string]interface{}{
+				{
+					"ContactId": contactID,
+					"IsPrimary": true,
+				},
+			},
+		},
+	}
+
+	err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameOpportunity)
+	assert.Nil(t, err)
+
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 3)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[0].Status) // groups opportunity
+	assert.Equal(t, "success", enrichStatus[0].Status)
+
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{opportunityID}, model.SalesforceDocumentTypeOpportunity, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 2)
+	assert.Equal(t, opportunityUserdID, documents[0].UserID)
+	assert.Equal(t, opportunityGroupUserdID, documents[0].GroupUserID)
+
+	user, status = store.GetStore().GetUser(project.ID, opportunityUserdID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, contactEmail, user.CustomerUserId)
+}
+
+func TestSalesforceCampaignMemberCampaignAssociation(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	status := IntSalesforce.CreateOrGetSalesforceEventName(project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	// datetime property details
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, "$salesforce_campaignmember_createddate", U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, "$salesforce_campaignmember_createddate", U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, "$salesforce_campaignmember_lastmodifieddate", U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, "$salesforce_campaignmember_lastmodifieddate", U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	campaignID := "1"
+	campaignName := "campaign"
+	campaignMemberID := "campaignMember"
+	campaign1CreatedTimestamp := time.Now().AddDate(0, 0, -1)
+
+	for i := range []int{1, 2, 3, 4, 5, 6} {
+		document := map[string]interface{}{
+			"Id":   campaignID,
+			"Name": campaignName,
+			"CampaignMembers": IntSalesforce.RelationshipCampaignMember{
+				Records: []IntSalesforce.RelationshipCampaignMemberRecord{
+					{
+						ID: campaignMemberID,
+					},
+				},
+			},
+			"value":            i,
+			"CreatedDate":      campaign1CreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+			"LastModifiedDate": campaign1CreatedTimestamp.Add(time.Duration(i) * time.Hour).Format(model.SalesforceDocumentDateTimeLayout),
+		}
+
+		err = createDummySalesforceDocument(project.ID, document, model.SalesforceDocumentTypeNameCampaign)
+		assert.Nil(t, err)
+	}
+
+	contactID := "2"
+	contactEmail := getRandomEmail()
+	contactcreatedDate := time.Now().UTC().AddDate(0, 0, -3)
+	contact := map[string]interface{}{
+		"Id":               contactID,
+		"Name":             "ContactUser",
+		"Email":            contactEmail,
+		"CreatedDate":      contactcreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": contactcreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, contact, model.SalesforceDocumentTypeNameContact)
+	assert.Nil(t, err)
+
+	// campaign member timestamp 1 hour ahead of campaign
+	campaignMemberCreatedTimestamp := campaign1CreatedTimestamp.Add(1 * time.Hour)
+	campaignMember := map[string]interface{}{
+		"Id":               campaignMemberID,
+		"CampaignId":       campaignID,
+		"ContactId":        contactID,
+		"CreatedDate":      campaignMemberCreatedTimestamp.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": campaignMemberCreatedTimestamp.Add(3 * time.Hour).Add(20 * time.Minute).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, campaignMember, model.SalesforceDocumentTypeNameCampaignMember)
+	assert.Nil(t, err)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Len(t, enrichStatus, 2)
+	// campaign member and contact
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{campaignMemberID}, model.SalesforceDocumentTypeCampaignMember, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 1)
+	assert.NotEqual(t, "", documents[0].UserID)
+	campaignMemberUserID := documents[0].UserID
+
+	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{contactID}, model.SalesforceDocumentTypeContact, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, campaignMemberUserID, documents[0].UserID)
+
+	query := model.Query{
+		From: campaign1CreatedTimestamp.Unix() - 500,
+		To:   campaign1CreatedTimestamp.AddDate(0, 0, 1).Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class: model.QueryClassInsights,
+
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	// test using query
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	rows := result.Rows
+	sort.Slice(rows, func(i, j int) bool {
+		p1, _ := U.GetPropertyValueAsFloat64(rows[i][0])
+		p2, _ := U.GetPropertyValueAsFloat64(rows[j][0])
+		return p1 < p2
+	})
+	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, rows[0][0])
+	assert.Equal(t, float64(1), rows[0][1])
+	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, rows[1][0])
+	assert.Equal(t, float64(2), rows[1][1])
+
+	query = model.Query{
+		From: campaign1CreatedTimestamp.Unix() - 500,
+		To:   campaign1CreatedTimestamp.AddDate(0, 0, 1).Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: "$timestamp",
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: "$salesforce_campaignmember_createddate",
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: "$salesforce_campaignmember_lastmodifieddate",
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: "$salesforce_campaign_name",
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: "$salesforce_campaign_value",
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	rows = result.Rows
+	sort.Slice(rows, func(i, j int) bool {
+		eventNameI := U.GetPropertyValueAsString(rows[i][0])
+		eventNameJ := U.GetPropertyValueAsString(rows[j][0])
+		eventNameITimestamp, _ := U.GetPropertyValueAsFloat64(rows[i][1])
+		eventNameJTimestamp, _ := U.GetPropertyValueAsFloat64(rows[j][1])
+		if eventNameI < eventNameJ {
+			return true
+		}
+
+		if eventNameI > eventNameJ {
+			return false
+		}
+
+		return eventNameITimestamp < eventNameJTimestamp
+	})
+
+	campaign1CreatedTimestampStr := fmt.Sprintf("%d", campaignMemberCreatedTimestamp.Unix())
+	campaign1ModifiedTimestampStr := fmt.Sprintf("%d", campaignMemberCreatedTimestamp.Add(3*time.Hour).Add(20*time.Minute).Unix())
+	// campaign member created
+	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED, rows[0][0])
+	assert.Equal(t, campaign1CreatedTimestampStr, rows[0][1])
+	assert.Equal(t, campaign1CreatedTimestampStr, rows[0][2])
+	assert.Equal(t, campaign1ModifiedTimestampStr, rows[0][3])
+	assert.Equal(t, campaignName, rows[0][4])
+	assert.Equal(t, "4", rows[0][5])
+
+	// campaign member updated
+	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, rows[1][0])
+	assert.Equal(t, campaign1CreatedTimestampStr, rows[1][1])
+	assert.Equal(t, campaign1CreatedTimestampStr, rows[1][2])
+	assert.Equal(t, campaign1ModifiedTimestampStr, rows[1][3])
+	assert.Equal(t, campaignName, rows[0][4])
+	assert.Equal(t, "4", rows[1][5])
+
+	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED, rows[2][0])
+	assert.Equal(t, campaign1ModifiedTimestampStr, rows[2][1])
+	assert.Equal(t, campaign1CreatedTimestampStr, rows[2][2])
+	assert.Equal(t, campaign1ModifiedTimestampStr, rows[2][3])
+	assert.Equal(t, campaignName, rows[2][4])
+	assert.Equal(t, "4", rows[2][5])
 }
