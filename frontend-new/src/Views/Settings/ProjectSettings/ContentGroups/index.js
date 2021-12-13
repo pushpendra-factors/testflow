@@ -4,20 +4,13 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents'; 
 import { connect } from 'react-redux';
-import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
 import { MoreOutlined } from '@ant-design/icons';
-import {removeSmartEvents, fetchSmartEvents} from 'Reducers/events';
 import ContentGroupForm from './ContentGroupForm';
 
-const { TabPane } = Tabs;
 
+function ContentGroups() { 
 
-
-function ContentGroups({smart_events, fetchEventNames, activeProject, removeSmartEvents, fetchSmartEvents}) { 
-
-    const [smartEvents, setsmartEvents] = useState(null); 
-    const [showSmartEventForm, setShowSmartEventForm] = useState(false); 
-    const [seletedEvent, setSeletedEvent] = useState(null); 
+    const [showSmartForm, setShowSmartForm] = useState(false); 
 
 
     const menu = (values) => {
@@ -64,49 +57,22 @@ const columns = [
 
   const editEvent = (values) =>{
     setSeletedEvent(values); 
-    setShowSmartEventForm(true);
+    setShowSmartForm(true);
   }
 
-  const confirmRemove = (values) =>{ 
-    removeSmartEvents(values?.project_id, values?.id).then(()=>{
-      message.success("Custom Event removed!")
-      fetchSmartEvents(values?.project_id);
-    }).catch((err)=>{
-      message.error(err?.data?.error);
-      console.log('error in removing Smartevent:', err)
-    });
-    return false
-  }
-
-  useEffect(()=>{
-    fetchEventNames(activeProject.id);
-    if(smart_events){
-        let smartEventsArray = [];
-        smart_events?.map((item,index)=>{
-            smartEventsArray.push({
-                key: index,
-                name: item.name, 
-                source: item?.expr?.source, 
-                actions: item, 
-              });
-        });
-        setsmartEvents(smartEventsArray);
-
-    }
-  },[smart_events])
-  
+ 
 
   return (
     <>
         <div className={'mb-10 pl-4'}>
-        {!showSmartEventForm && <> 
+        {!showSmartForm && <> 
         <Row>
           <Col span={12}>
             <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Content Groups</Text>
           </Col>
           <Col span={12}>
             <div className={'flex justify-end'}>
-              <Button size={'large'} onClick={() =>   {setSeletedEvent(null);setShowSmartEventForm(true)}}><SVG name={'plus'} extraClass={'mr-2'} size={16} />Add New</Button>
+              <Button size={'large'} onClick={() =>   {setShowSmartForm(true)}}><SVG name={'plus'} extraClass={'mr-2'} size={16} />Add New</Button>
             </div>
           </Col>
         </Row>
@@ -118,7 +84,7 @@ const columns = [
                 
                 <Table className="fa-table--basic mt-4" 
                 columns={columns} 
-                dataSource={smartEvents} 
+                dataSource={null} 
                 pagination={false}
                 />
             </div>  
@@ -126,8 +92,8 @@ const columns = [
         </Row> 
         </>
         }
-        {showSmartEventForm && <>  
-                <ContentGroupForm seletedEvent={seletedEvent} setShowSmartEventForm={setShowSmartEventForm} /> 
+        {showSmartForm && <>  
+                <ContentGroupForm setShowSmartForm={setShowSmartForm} /> 
         </>
         }
       </div>
@@ -137,8 +103,7 @@ const columns = [
 }
 
 const mapStateToProps = (state) => ({
-    smart_events: state.events.smart_events,
     activeProject: state.global.active_project,
   });
 
-  export default connect(mapStateToProps, {fetchEventNames, removeSmartEvents, fetchSmartEvents})(ContentGroups); 
+  export default connect(mapStateToProps, {})(ContentGroups); 

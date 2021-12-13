@@ -4,39 +4,37 @@ import {
 } from 'antd'; 
 import { PlusOutlined } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents';
+const { Option, OptGroup } = Select;
 
 
-function AddEditValue (props) {
-    const [radioValue, setRadioValue] = useState('AND');
+function AddEditValue ({visible, handleCancel, submitValues}) {
+    const [modalForm] = Form.useForm();
+    const [comboOp, setComboOper] = useState('AND');
 
     const onFinishValues = (values) => {
-        console.log(values);
-
+        submitValues(values);
+        modalForm.resetFields();
     }
 
     const onChangeValue = () => {
 
     }
 
-    const onRadioChange = (e) => {
-        setRadioValue(e.target.value);
-    }
-
-    const handleCancel = () => {
-        props.setshowAddValueModal(false);
+    const onSelectCombinationOperator = (val) => {
+        setComboOper(val.target.value);
     }
 
     return (
         <>
             <Modal
             title={null}
-            visible={props.visible}
+            visible={visible}
             closable={false}
             footer={null}
             className={'fa-modal--regular'}
             >
                 <Form
-                // form={form}
+                form={modalForm}
                 onFinish={onFinishValues}
                 className={'w-full'}
                 onChange={onChangeValue}
@@ -47,7 +45,7 @@ function AddEditValue (props) {
                         <Col span={24}>
                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Value</Text>
                             <Form.Item
-                            name="value"
+                            name="content_group_value"
                             rules={[{ required: true, message: 'Please enter a value' }]}
                             >
                             <Input size="large" className={'fa-input w-full'} />
@@ -61,43 +59,37 @@ function AddEditValue (props) {
                         <Col span={12}>
                             <div className={'flex justify-end items-baseline'}>
                             <Text type={'title'} level={7} extraClass={'mr-2'}>Operator:</Text>
-                            <Form.Item
-                            name="combOperator"
-                            initialValue={'AND'}
-                            rules={[{ required: true, message: 'Select one value' }]}
-                            >
-                                <Radio.Group onChange={onRadioChange} value={radioValue}>
+                                <Radio.Group onChange={onSelectCombinationOperator} value={comboOp}>
                                     <Radio value={'AND'}>And</Radio>
                                     <Radio value={'OR'}>Or</Radio>
                                 </Radio.Group>
-                            </Form.Item>
                             </div>
                         </Col>
                     </Row>
 
                     <Row className={'mt-4'}>
                         <Col span={16}>
-                        <Form.List name="rules">
+                        <Form.List name="rule">
                             {(fields, { add, remove }) => (
                             <>
                                 {fields.map(({ key, name, fieldKey, ...restField }) => (
                                 <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
                                     <Form.Item
                                     {...restField}
-                                    initialValue={fieldKey===0?'page':radioValue}
-                                    name={[name, 'operator']}
-                                    fieldKey={[fieldKey, 'operator']}
+                                    initialValue={fieldKey===0?'URL':comboOp}
+                                    name={[name, 'lop']}
+                                    fieldKey={[fieldKey, 'lop']}
                                     >
                                         <Select showArrow={false} open={false} bordered={false}>
-                                            <Option value={fieldKey===0?'page':radioValue}>{fieldKey===0?'Page':radioValue}</Option>
+                                            <Option value={fieldKey===0?'URL':comboOp}>{fieldKey===0?'Page':comboOp}</Option>
                                         </Select>
                                     </Form.Item>
                                     <div className={'w-24 fa-select'}>
                                         <Form.Item
                                         {...restField}
                                         initialValue={'contains'}
-                                        name={[name, 'filter']}
-                                        fieldKey={[fieldKey, 'filter']}
+                                        name={[name, 'op']}
+                                        fieldKey={[fieldKey, 'op']}
                                         rules={[{ required: true, message: 'Select any' }]}
                                         >
                                         
@@ -110,8 +102,8 @@ function AddEditValue (props) {
                                     </div>
                                     <Form.Item
                                     {...restField}
-                                    name={[name, 'value']}
-                                    fieldKey={[fieldKey, 'value']}
+                                    name={[name, 'va']}
+                                    fieldKey={[fieldKey, 'va']}
                                     rules={[{ required: true, message: 'Missing value' }]}
                                     >
                                     <Input placeholder="value" className={'fa-input'}/>
