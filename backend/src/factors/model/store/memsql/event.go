@@ -597,7 +597,7 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id, userID string,
 	db := C.GetServices().Db
 	var dbx *gorm.DB
 	if EnableOLTPQueriesMemSQLImprovements {
-		dbx = db.Model(&model.Event{}).Limit(1).Where("project_id = ? AND id = ? AND timestamp = ? AND event_name_id = ?",
+		dbx = db.Model(&model.Event{}).Where("project_id = ? AND id = ? AND timestamp = ? AND event_name_id = ?",
 			projectId, id, event.Timestamp, event.EventNameId)
 	} else {
 		dbx = db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id)
