@@ -764,7 +764,20 @@ CREATE TABLE IF NOT EXISTS group_relationships(
     UNIQUE KEY(project_id, left_group_user_id,right_group_user_id) USING HASH
 );
 
-
+CREATE TABLE IF NOT EXISTS content_groups(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    content_group_name text,
+    content_group_description text,
+    rule json,
+    created_by text,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    is_deleted boolean,
+    SHARD KEY (project_id),
+    PRIMARY KEY (id, project_id),
+    UNIQUE KEY (project_id,content_group_name)
+);
 
 -- DOWN
 

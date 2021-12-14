@@ -132,6 +132,8 @@ const (
 	NotInCurrent            = "notInCurrent"
 	InPrevious              = "inPrevious"
 	NotInPrevious           = "notInPrevious"
+	StartsWith              = "startsWith"
+	EndsWith                = "endsWith"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.

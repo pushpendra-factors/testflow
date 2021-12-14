@@ -519,4 +519,12 @@ type Model interface {
 	//group_relationship
 	CreateGroupRelationship(projectID uint64, leftGroupName, leftGroupUserID, rightGroupName, rightGroupUserID string) (*model.GroupRelationship, int)
 	GetGroupRelationshipByUserID(projectID uint64, leftGroupUserID string) ([]model.GroupRelationship, int)
+
+	//Content-groups
+	GetAllContentGroups(projectID uint64) ([]model.ContentGroup, int)
+	GetContentGroupById(id string, projectID uint64) (model.ContentGroup, int)
+	CreateContentGroup(projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string)
+	DeleteContentGroup(id string, projectID uint64) (int, string)
+	UpdateContentGroup(id string, projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string)
+	CheckURLContentGroupValue(pageUrl string, projectID uint64) map[string]string
 }
