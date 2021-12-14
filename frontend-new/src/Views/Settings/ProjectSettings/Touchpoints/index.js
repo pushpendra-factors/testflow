@@ -11,11 +11,12 @@ import {
     Row, Col, Button, Tabs, Table, Dropdown, Menu, notification, Tooltip
 } from 'antd';
 import TouchpointView from './TouchPointView';
+import MarketingInteractions from '../MarketingInteractions';
 import FAFilterSelect from '../../../../components/FaFilterSelect';
 
 import {
     reverseOperatorMap, reverseDateOperatorMap
-  } from '../../../../Views/CoreQuery/utils';
+} from '../../../../Views/CoreQuery/utils';
 
 
 const { TabPane } = Tabs;
@@ -49,7 +50,7 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
     }
 
     useEffect(() => {
-        const touchpointObjs = activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
+        const touchpointObjs = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
         setTouchPointsData(touchpointObjs);
 
         getEventProperties(activeProject.id, '$hubspot_contact_updated')
@@ -68,15 +69,15 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
                         filterObj.ty === 'datetime'
                             ? reverseDateOperatorMap[filterObj.op]
                             : reverseOperatorMap[filterObj.op],
-                    props: [filterObj.pr, filterObj.ty? filterObj.ty : 'categorical', filterObj.en? filterObj.en : 'event'],
+                    props: [filterObj.pr, filterObj.ty ? filterObj.ty : 'categorical', filterObj.en ? filterObj.en : 'event'],
                     values: [filterObj.va],
                 });
             } else {
                 filters[filters.length - 1].values.push(filterObj.va);
             }
         });
-        return filters.map((filt) => (<div className={`mt-2 max-w-3xl` }>
-            <FAFilterSelect filter={filt} disabled={true} applyFilter={() => {}}></FAFilterSelect>
+        return filters.map((filt) => (<div className={`mt-2 max-w-3xl`}>
+            <FAFilterSelect filter={filt} disabled={true} applyFilter={() => { }}></FAFilterSelect>
         </div>));
     }
 
@@ -152,21 +153,22 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
     const renderTitleActions = () => {
         let titleAction = null;
         if (touchPointState === 'list') {
-            titleAction = (tabNo == 1 &&
-                <Button size={'large'} onClick={() => {
-                    setTouchPointState('add')
-                }}><SVG name={'plus'} extraClass={'mr-2'} size={16} />Add New</Button>)
+            if (tabNo === 1) {
+                titleAction = (
+                    <Button size={'large'} onClick={() => {
+                        setTouchPointState('add')
+                    }}><SVG name={'plus'} extraClass={'mr-2'} size={16} />Add New</Button>)
+            }
         }
 
         return titleAction;
     }
 
     const onTchSave = (tchObj) => {
-        console.log(tchObj);
-        const tchPointRules = activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
+        const tchPointRules = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
         tchPointRules.push(tchObj);
         const projectDetails = { ...activeProject }
-        udpateProjectDetails(activeProject.id, { 'hubspot_touch_points': {'hs_touch_point_rules': tchPointRules} });
+        udpateProjectDetails(activeProject.id, { 'hubspot_touch_points': { 'hs_touch_point_rules': tchPointRules } });
         fetchProjects();
         setTouchPointState('list');
     }
@@ -179,13 +181,19 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
         let touchPointContent = null;
         if (touchPointState === 'list') {
             touchPointContent = (<Tabs activeKey={`${tabNo}`} onChange={callback} >
-                <TabPane tab="Hubspot" key="1">
-                    <Table className="fa-table--basic mt-4"
-                        columns={columns}
-                        dataSource={touchPointsData}
-                        pagination={false}
-                        loading={false}
-                    />
+                <TabPane tab="Digital Marketing" key="1">
+                    <MarketingInteractions />
+                </TabPane>
+
+                <TabPane tab="Hubspot" key="2">
+                    <div className={`mb-10 pl-4 mt-10`}>
+                        <Table className="fa-table--basic mt-4"
+                            columns={columns}
+                            dataSource={touchPointsData}
+                            pagination={false}
+                            loading={false}
+                        />
+                    </div>
                 </TabPane>
             </Tabs>)
         }
