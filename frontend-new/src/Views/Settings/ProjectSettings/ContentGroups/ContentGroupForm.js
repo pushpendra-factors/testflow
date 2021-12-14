@@ -9,7 +9,7 @@ import {addContentGroup, updateContentGroup} from 'Reducers/global';
 import _ from 'lodash';
 import AddEditValue from './AddEditValue';
 
-function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, updateContentGroup}) { 
+function ContentGroupsForm({activeProject, selectedGroup, setShowSmartForm, addContentGroup, updateContentGroup}) { 
   const [form] = Form.useForm();
   const [formState, setFormState] = useState('add');
   const [showAddValueModal, setshowAddValueModal] = useState(false);
@@ -74,18 +74,43 @@ function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, up
         }
       ];
 
+
+      const editProp = (obj) => {
+        setSelectedRule(obj);
+        setshowAddValueModal(true);
+    }
+
+    const confirmRemove = (obj) => {
+        const rulesToUpdate = [...smartPropState.rule.filter((rule) => JSON.stringify(rule) !== JSON.stringify(obj))];
+        
+        if(formState!=='add') {
+            const smrtProp = Object.assign({}, smartPropState);
+            smrtProp.rule = rulesToUpdate;
+            updateForm(smrtProp);
+        }
+    }
+
+    useEffect(() => {
+        if(selectedGroup) {
+            setSmartPropState(selectedGroup);
+            setFormState('view');
+            setRulesState(selectedGroup.rule);
+        }
+    }, [selectedGroup])
+
       const menu = (obj) => {
         return (
         <Menu>
-          {/* <Menu.Item key="0" onClick={() => confirmRemove(obj)}>
+          <Menu.Item key="0" onClick={() => confirmRemove(obj)}>
             <a>Remove</a>
           </Menu.Item>
           <Menu.Item key="0" onClick={() => editProp(obj)}>
             <a>Edit</a>
-          </Menu.Item> */}
+          </Menu.Item>
         </Menu>
         );
     };
+
 
 
     
@@ -94,10 +119,10 @@ function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, up
             smrtProp.id = res.data.id;
             setSmartPropState({...smrtProp});
             setFormState('view');
-            setShowModalVisible(false);
+            setshowAddValueModal(false);
             notification.success({
                 message: "Success",
-                description: "Custom Dimension rules created successfully ",
+                description: "Content Group rules created successfully ",
                 duration: 5,
               });
         }, err => {
@@ -115,10 +140,10 @@ function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, up
             setSmartPropState({...smrtProp});
             setRulesState(smrtProp.rule);
             setFormState('view');
-            setShowModalVisible(false);
+            setshowAddValueModal(false);
             notification.success({
                 message: "Success",
-                description: "Custom Dimension rules updated successfully ",
+                description: "Content Group rules updated successfully ",
                 duration: 5,
               });
         }, err => {
@@ -134,7 +159,7 @@ function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, up
         if(data) {
             // Save with data
             // Close modal
-            const smrtProp = {project_id: activeProject.id, content_group_name: data.content_group_name, content_group_description: data.content_group_description, rule:rulesState};
+            const smrtProp = {id: smartPropState.id?smartPropState.id: '', project_id: activeProject.id, content_group_name: data.content_group_name, content_group_description: data.content_group_description, rule:rulesState};
             console.log(smrtProp);
             if(formState !== 'add') {
                 updateForm(smrtProp);
@@ -149,17 +174,22 @@ function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, up
     const onChange = () => {
     };
 
-    const handleValuesSubmit = (data) => {
-      const rule = {...data};
-      const rulesToUpdate = [...rulesState.filter((rl) => JSON.stringify(rl) !== JSON.stringify(data))];
-      rulesToUpdate.push(rule);
-      setRulesState(rulesToUpdate);
-      setshowAddValueModal(false);
-      console.log(data);
+    const handleValuesSubmit = (data, oldRule) => {
+        const rule = {...data};
+        const rulesToUpdate = [...rulesState.filter((rl) => JSON.stringify(rl) !== JSON.stringify(oldRule))];
+        rulesToUpdate.push(rule);
+        setRulesState(rulesToUpdate);
+        setshowAddValueModal(false);
+        setSelectedRule(null);
+        if(formState === 'view') {
+            const smrtProp = {id: smartPropState.id ,project_id: smartPropState.id, content_group_name: smartPropState.content_group_name, content_group_description: smartPropState.content_group_description, rule:rulesState};
+            updateForm(smrtProp);
+        }
     }
 
     const handleCancel = () => {
       setshowAddValueModal(false)
+      setSelectedRule(null);
     }
     
 
@@ -167,10 +197,60 @@ function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, up
       const columData = [];
       console.log(rulesData)
       rulesState.forEach((rl) => {
-          columData.push({value: rl.content_group_value, rule: rl.rule, actions: rl});
+          columData.push({content_group_value: rl.content_group_value, rule: rl.rule, actions: rl});
       })
       setRulesData(rulesState);
   }, [rulesState])
+
+  const renderContentGroupDeatails = () => {
+      return (
+          <>
+            <Row className={'mt-8'}>
+                <Col span={18}>
+                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Name</Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartPropState.content_group_name}</Text>
+                </Col> 
+            </Row>
+
+            <Row className={'mt-6'}>
+                <Col span={18}>
+                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Description </Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartPropState.content_group_description}</Text>
+                </Col> 
+            </Row>
+          </>
+      );
+  }
+
+  const renderContentGroupForm = () => {
+      return (
+          <>
+            <Row className={'mt-8'}>
+                <Col span={18}>
+                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Name</Text>
+                <Form.Item
+                        name="content_group_name"
+                        rules={[{ required: true, message: 'Please input display name.' }]}
+                >
+                <Input size="large" className={'fa-input w-full'} />
+                        </Form.Item>
+                </Col> 
+            </Row>
+
+            <Row className={'mt-6'}>
+                <Col span={18}>
+                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Description </Text>
+                <Form.Item
+                    name="content_group_description" 
+                    rules={[{ required: true, message: 'Please input description.' }]}
+                >
+                <Input size="large" className={'fa-input w-full'} />
+                </Form.Item>
+                </Col> 
+            </Row>
+          </>
+      );
+  }
 
   return (
     <>
@@ -183,6 +263,12 @@ function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, up
                         onFinish={onFinish}
                         className={'w-full'}
                         onChange={onChange}
+                        initialValues={
+                            {
+                            content_group_name: selectedGroup?.content_group_name? selectedGroup.content_group_name : '',
+                            content_group_description: selectedGroup?.content_group_description? selectedGroup.content_group_description : ''
+                        }
+                    }
                         >
                             <Row>
                                 <Col span={12}>
@@ -191,35 +277,17 @@ function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, up
                                 <Col span={12}>
                                     <div className={'flex justify-end'}>
                                     <Button size={'large'} onClick={() => setShowSmartForm(false)}>Cancel</Button>
+                                    {formState === 'view' ? 
+                                    <Button size={'large'} className={'ml-2'} type={'primary'}  onClick={() => setFormState('edit')}>Edit</Button>
+                                    : null}
+                                    {formState !== 'view' ? 
                                     <Button size={'large'} className={'ml-2'} type={'primary'}  htmlType="submit">Save</Button>
+                                    : null}
                                     </div>
                                 </Col>
                             </Row> 
-                                            
-                            <Row className={'mt-8'}>
-                                <Col span={18}>
-                                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Name</Text>
-                                <Form.Item
-                                        name="content_group_name"
-                                        rules={[{ required: true, message: 'Please input display name.' }]}
-                                >
-                                <Input size="large" className={'fa-input w-full'} />
-                                        </Form.Item>
-                                </Col> 
-                            </Row>
-
-                            <Row className={'mt-6'}>
-                                <Col span={18}>
-                                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Description </Text>
-                                <Form.Item
-                                    name="content_group_description" 
-                                    rules={[{ required: true, message: 'Please input description.' }]}
-                                >
-                                <Input size="large" className={'fa-input w-full'} />
-                                </Form.Item>
-                                </Col> 
-                            </Row>
-
+                        {formState !== 'view'? renderContentGroupForm(): renderContentGroupDeatails()}
+                            
                             <Row className={'mt-6'}>
                                 <Col span={12}>
                                     <div className={'border-top--thin pt-5 mt-5'}>
@@ -263,7 +331,7 @@ function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, up
         </Row> 
         
         {/* Add/Edit value modal */}
-        <AddEditValue visible={showAddValueModal} handleCancel={handleCancel} submitValues={handleValuesSubmit}/>
+        <AddEditValue visible={showAddValueModal} selectedRule={selectedRule} handleCancel={handleCancel} submitValues={handleValuesSubmit}/>
     </> 
   );
 }

@@ -520,7 +520,7 @@ export function addContentGroup(projectId, payload) {
 export function updateContentGroup(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      put(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup'+ payload.id, payload)
+      put(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup/'+ payload.id, payload)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'UPDATE_CONTENT_GROUP', payload: r.data});

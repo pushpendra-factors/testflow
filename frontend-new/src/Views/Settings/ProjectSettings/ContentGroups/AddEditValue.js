@@ -7,12 +7,12 @@ import { Text, SVG } from 'factorsComponents';
 const { Option, OptGroup } = Select;
 
 
-function AddEditValue ({visible, handleCancel, submitValues}) {
+function AddEditValue ({visible, selectedRule, handleCancel, submitValues}) {
     const [modalForm] = Form.useForm();
     const [comboOp, setComboOper] = useState('AND');
 
     const onFinishValues = (values) => {
-        submitValues(values);
+        submitValues(values, selectedRule);
         modalForm.resetFields();
     }
 
@@ -45,6 +45,7 @@ function AddEditValue ({visible, handleCancel, submitValues}) {
                         <Col span={24}>
                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Value</Text>
                             <Form.Item
+                            initialValue={selectedRule?.content_group_value? selectedRule.content_group_value : ""}
                             name="content_group_value"
                             rules={[{ required: true, message: 'Please enter a value' }]}
                             >
@@ -76,7 +77,7 @@ function AddEditValue ({visible, handleCancel, submitValues}) {
                                 <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
                                     <Form.Item
                                     {...restField}
-                                    initialValue={fieldKey===0?'URL':comboOp}
+                                    initialValue={selectedRule?.rule && selectedRule.rule[0].lop? selectedRule.rule[0].lop : fieldKey===0?'URL':comboOp}
                                     name={[name, 'lop']}
                                     fieldKey={[fieldKey, 'lop']}
                                     >
@@ -87,7 +88,7 @@ function AddEditValue ({visible, handleCancel, submitValues}) {
                                     <div className={'w-24 fa-select'}>
                                         <Form.Item
                                         {...restField}
-                                        initialValue={'contains'}
+                                        initialValue={selectedRule?.rule && selectedRule.rule[0].op? selectedRule.rule[0].op : 'contains'}
                                         name={[name, 'op']}
                                         fieldKey={[fieldKey, 'op']}
                                         rules={[{ required: true, message: 'Select any' }]}
@@ -102,6 +103,7 @@ function AddEditValue ({visible, handleCancel, submitValues}) {
                                     </div>
                                     <Form.Item
                                     {...restField}
+                                    initialValue={selectedRule?.rule && selectedRule.rule[0].va? selectedRule.rule[0].va : ''}
                                     name={[name, 'va']}
                                     fieldKey={[fieldKey, 'va']}
                                     rules={[{ required: true, message: 'Missing value' }]}

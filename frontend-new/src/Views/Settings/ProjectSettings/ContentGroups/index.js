@@ -14,6 +14,7 @@ function ContentGroups({fetchContentGroup, activeProject, contentGroup, agents, 
     const [showSmartForm, setShowSmartForm] = useState(false);
     const [tableLoading, setTableLoading] = useState(false);
     const [tableData, setTableData] = useState([]); 
+    const [selectedGroup, setSelectedGroup] = useState(null);
 
 
     useEffect(() => {
@@ -30,19 +31,19 @@ function ContentGroups({fetchContentGroup, activeProject, contentGroup, agents, 
     const dataColumn = [];
     contentGroup.forEach((prop) => {
         //harcoded type
-        dataColumn.push({ name: prop.content_group_name, description: prop.content_group_description, rule: prop.rule.length, actions: prop })
+        dataColumn.push({ content_group_name: prop.content_group_name, content_group_description: prop.content_group_description, rule: prop.rule.length, actions: prop })
     })
     setTableData(dataColumn);
 }, [contentGroup])
 
 
 
-    const menu = (values) => {
+    const menu = (obj) => {
       return (
       <Menu> 
-        <Menu.Item key="0" onClick={() => confirmRemove(values)}>
-          <a>Remove Event</a> 
-        </Menu.Item> 
+        <Menu.Item key="0" onClick={() => editProp(obj)}>
+            <a>Edit</a>
+          </Menu.Item>
       </Menu>
       );
     };
@@ -51,14 +52,14 @@ const columns = [
 
     {
       title: 'Title',
-      dataIndex: 'name',
-      key: 'name', 
+      dataIndex: 'content_group_name',
+      key: 'content_group_name', 
       render: (text) => <span className={'capitalize'}>{text}</span>
     },
     {
       title: 'Description',
-      dataIndex: 'description',
-      key: 'description', 
+      dataIndex: 'content_group_description',
+      key: 'content_group_description', 
       render: (text) => <span className={'capitalize'}>{text}</span>
     },
     {
@@ -71,18 +72,19 @@ const columns = [
       title: '',
       dataIndex: 'actions',
       key: 'actions',
-      render: (values) => (
-        <Dropdown overlay={() => menu(values)} trigger={['hover']}>
+      align: 'right',
+      render: (obj) => (
+        <Dropdown overlay={() => menu(obj)} trigger={['hover']}>
           <Button type="text" icon={<MoreOutlined />} />
         </Dropdown>
       )
     }
   ];
 
-  const editEvent = (values) =>{
-    setSeletedEvent(values); 
+  const editProp = (obj) => {
+    setSelectedGroup(obj);
     setShowSmartForm(true);
-  }
+}
 
  
 
@@ -117,7 +119,7 @@ const columns = [
         </>
         }
         {showSmartForm && <>  
-                <ContentGroupForm setShowSmartForm={setShowSmartForm} /> 
+                <ContentGroupForm selectedGroup={selectedGroup} setShowSmartForm={setShowSmartForm} /> 
         </>
         }
       </div>
