@@ -48,6 +48,8 @@ func main() {
 		"Enables filter optimisation changes for memsql implementation.")
 	filterPropertiesStartTimestamp := flag.Int64("filter_properties_start_timestamp", -1,
 		"Start timestamp of data available for filtering with parquet on memsql.")
+	skipEventNameStepByProjectID := flag.String("skip_event_name_step_by_project_id", "", "")
+	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -86,13 +88,15 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      taskID,
 		},
-		PrimaryDatastore:               *primaryDatastore,
-		RedisHost:                      *redisHost,
-		RedisPort:                      *redisPort,
-		SentryDSN:                      *sentryDSN,
-		EnableFilterOptimisation:       *enableFilterOptimisation,
-		FilterPropertiesStartTimestamp: *filterPropertiesStartTimestamp,
-		IsRunningForMemsql:             *runningForMemsql,
+		PrimaryDatastore:                    *primaryDatastore,
+		RedisHost:                           *redisHost,
+		RedisPort:                           *redisPort,
+		SentryDSN:                           *sentryDSN,
+		EnableFilterOptimisation:            *enableFilterOptimisation,
+		FilterPropertiesStartTimestamp:      *filterPropertiesStartTimestamp,
+		IsRunningForMemsql:                  *runningForMemsql,
+		SkipEventNameStepByProjectID:        *skipEventNameStepByProjectID,
+		SkipUserJoinInEventQueryByProjectID: *skipUserJoinInEventQueryByProjectID,
 	}
 	C.InitConf(config)
 
