@@ -240,7 +240,7 @@ func AgentInvite(c *gin.Context) {
 	resp["status"] = "success"
 	resp["agents"] = agentInfoMap
 	resp["project_agent_mappings"] = []model.ProjectAgentMapping{*pam}
-
+	
 	c.JSON(http.StatusCreated, resp)
 	return
 }
@@ -303,8 +303,8 @@ func AgentInviteBatch(c *gin.Context) {
 			}
 			invitedAgent = resp.Agent
 		}
-
 		newProjectAgentRole := uint64(model.AGENT)
+
 		if roleOfAgent == model.ADMIN {
 			newProjectAgentRole = uint64(model.ADMIN)
 		}
@@ -358,7 +358,6 @@ func AgentInviteBatch(c *gin.Context) {
 		}
 		pam = append(pam, *projectAgentMapping)
 	}
-
 	resp := make(map[string]interface{})
 	resp["status"] = "success"
 	resp["agents"] = agentInfoMap

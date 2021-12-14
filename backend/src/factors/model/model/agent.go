@@ -56,6 +56,7 @@ type AgentInfo struct {
 	IsEmailVerified bool       `json:"is_email_verified"`
 	LastLoggedIn    *time.Time `json:"last_logged_in"`
 	Phone           string     `json:"phone"`
+	IsOnboardingFlowSeen bool `json:"is_onboarding_flow_seen"`
 }
 
 const (
