@@ -6,11 +6,35 @@ import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
 import { MoreOutlined } from '@ant-design/icons';
 import ContentGroupForm from './ContentGroupForm';
+import { fetchContentGroup } from 'Reducers/global';
 
 
-function ContentGroups() { 
+function ContentGroups({fetchContentGroup, activeProject, contentGroup, agents, currentAgent}) { 
 
-    const [showSmartForm, setShowSmartForm] = useState(false); 
+    const [showSmartForm, setShowSmartForm] = useState(false);
+    const [tableLoading, setTableLoading] = useState(false);
+    const [tableData, setTableData] = useState([]); 
+
+
+    useEffect(() => {
+      if (activeProject?.id) {
+          setTableLoading(true);
+          fetchContentGroup(activeProject.id).then(() => {
+              setTableLoading(false);
+          })
+      }
+
+  }, [activeProject]);
+
+  useEffect(() => {
+    const dataColumn = [];
+    contentGroup.forEach((prop) => {
+        //harcoded type
+        dataColumn.push({ name: prop.content_group_name, description: prop.content_group_description, rule: prop.rule.length, actions: prop })
+    })
+    setTableData(dataColumn);
+}, [contentGroup])
+
 
 
     const menu = (values) => {
@@ -33,14 +57,14 @@ const columns = [
     },
     {
       title: 'Description',
-      dataIndex: 'source',
-      key: 'source', 
+      dataIndex: 'description',
+      key: 'description', 
       render: (text) => <span className={'capitalize'}>{text}</span>
     },
     {
         title: 'Values',
-        dataIndex: 'source',
-        key: 'source', 
+        dataIndex: 'rule',
+        key: 'rule', 
         render: (text) => <span className={'capitalize'}>{text}</span>
       },
     {
@@ -84,7 +108,7 @@ const columns = [
                 
                 <Table className="fa-table--basic mt-4" 
                 columns={columns} 
-                dataSource={null} 
+                dataSource={tableData} 
                 pagination={false}
                 />
             </div>  
@@ -104,6 +128,9 @@ const columns = [
 
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
+    contentGroup: state.global.contentGroup,
+    agents: state.agent.agents, 
+    currentAgent: state.agent.agent_details
   });
 
-  export default connect(mapStateToProps, {})(ContentGroups); 
+  export default connect(mapStateToProps, {fetchContentGroup})(ContentGroups); 

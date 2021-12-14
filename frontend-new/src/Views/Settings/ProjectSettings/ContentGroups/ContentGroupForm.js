@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Form, Input, Button, Tabs, Select, message, Table, Menu, Dropdown
+  Row, Col, Form, Input, Button, Tabs, Select, message, Table, Menu, Dropdown, notification
 } from 'antd'; 
 import { MoreOutlined, PlusOutlined } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents'; 
 import { connect } from 'react-redux'; 
+import {addContentGroup, updateContentGroup} from 'Reducers/global';
 import _ from 'lodash';
 import AddEditValue from './AddEditValue';
 
-function ContentGroupsForm({setShowSmartForm}) { 
+function ContentGroupsForm({activeProject, setShowSmartForm, addContentGroup, updateContentGroup}) { 
   const [form] = Form.useForm();
   const [formState, setFormState] = useState('add');
   const [showAddValueModal, setshowAddValueModal] = useState(false);
@@ -17,10 +18,6 @@ function ContentGroupsForm({setShowSmartForm}) {
   const [rulesState, setRulesState] = useState([]);
   const [rulesData, setRulesData] = useState([]);
      
-    const onChange = () => {
-        seterrorInfo(null);
-      };
-
 
       const renderRuleViewButtons = (rules) => {
         return rules.map((obj, i) => {
@@ -92,9 +89,65 @@ function ContentGroupsForm({setShowSmartForm}) {
 
 
     
-    const onFinish = data => {
-        
+    const createForm = (smrtProp) => {
+      addContentGroup(activeProject.id, smrtProp).then(res => {
+            smrtProp.id = res.data.id;
+            setSmartPropState({...smrtProp});
+            setFormState('view');
+            setShowModalVisible(false);
+            notification.success({
+                message: "Success",
+                description: "Custom Dimension rules created successfully ",
+                duration: 5,
+              });
+        }, err => {
+            notification.error({
+                message: "Error",
+                description: err.data.error,
+                duration: 5,
+              });
+        });
     }
+
+    const updateForm = (smrtProp) => {
+      updateContentGroup(activeProject.id, smrtProp).then(res => {
+            smrtProp.id = res.data.id;
+            setSmartPropState({...smrtProp});
+            setRulesState(smrtProp.rule);
+            setFormState('view');
+            setShowModalVisible(false);
+            notification.success({
+                message: "Success",
+                description: "Custom Dimension rules updated successfully ",
+                duration: 5,
+              });
+        }, err => {
+            notification.error({
+                message: "Error",
+                description: err.data.error,
+                duration: 5,
+              });
+        });
+    }
+
+    const onFinish = (data) => {
+        if(data) {
+            // Save with data
+            // Close modal
+            const smrtProp = {project_id: activeProject.id, content_group_name: data.content_group_name, content_group_description: data.content_group_description, rule:rulesState};
+            console.log(smrtProp);
+            if(formState !== 'add') {
+                updateForm(smrtProp);
+            } else {
+                delete smrtProp.id;
+                createForm(smrtProp)
+            }
+              
+        }
+    }
+
+    const onChange = () => {
+    };
 
     const handleValuesSubmit = (data) => {
       const rule = {...data};
@@ -147,7 +200,7 @@ function ContentGroupsForm({setShowSmartForm}) {
                                 <Col span={18}>
                                 <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Name</Text>
                                 <Form.Item
-                                        name="name"
+                                        name="content_group_name"
                                         rules={[{ required: true, message: 'Please input display name.' }]}
                                 >
                                 <Input size="large" className={'fa-input w-full'} />
@@ -159,7 +212,8 @@ function ContentGroupsForm({setShowSmartForm}) {
                                 <Col span={18}>
                                 <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Description </Text>
                                 <Form.Item
-                                    name="description" 
+                                    name="content_group_description" 
+                                    rules={[{ required: true, message: 'Please input description.' }]}
                                 >
                                 <Input size="large" className={'fa-input w-full'} />
                                 </Form.Item>
@@ -218,4 +272,4 @@ const mapStateToProps = (state) => ({
     activeProject: state.global.active_project, 
   });
 
-  export default connect(mapStateToProps, {})(ContentGroupsForm); 
+  export default connect(mapStateToProps, {addContentGroup, updateContentGroup})(ContentGroupsForm); 
