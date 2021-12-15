@@ -1,20 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Row, Col, Switch, Menu, Dropdown, Button, Tabs, Table, Tag, Space, message
+  Row, Col, Switch, Menu, Dropdown, Button, Tabs, Table, Tag, Space, message, notification
 } from 'antd';
 import { Text, SVG } from 'factorsComponents'; 
 import { connect } from 'react-redux';
 import { MoreOutlined } from '@ant-design/icons';
 import ContentGroupForm from './ContentGroupForm';
-import { fetchContentGroup } from 'Reducers/global';
+import { fetchContentGroup, deleteContentGroup } from 'Reducers/global';
+import ConfirmationModal from "../../../../components/ConfirmationModal";
 
 
-function ContentGroups({fetchContentGroup, activeProject, contentGroup, agents, currentAgent}) { 
+function ContentGroups({fetchContentGroup, deleteContentGroup, activeProject, contentGroup, agents, currentAgent}) { 
 
     const [showSmartForm, setShowSmartForm] = useState(false);
     const [tableLoading, setTableLoading] = useState(false);
     const [tableData, setTableData] = useState([]); 
     const [selectedGroup, setSelectedGroup] = useState(null);
+    const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
+    const [deleteApiCalled, setDeleteApiCalled] = useState(false);
 
 
     useEffect(() => {
@@ -41,9 +44,12 @@ function ContentGroups({fetchContentGroup, activeProject, contentGroup, agents, 
     const menu = (obj) => {
       return (
       <Menu> 
-        <Menu.Item key="0" onClick={() => editProp(obj)}>
-            <a>Edit</a>
-          </Menu.Item>
+        <Menu.Item key="0" onClick={() => showDeleteWidgetModal(obj.id)}>
+            <a>Remove</a>
+        </Menu.Item>
+        <Menu.Item key="1" onClick={() => editProp(obj)}>
+          <a>Edit</a>
+        </Menu.Item>
       </Menu>
       );
     };
@@ -86,7 +92,36 @@ const columns = [
     setShowSmartForm(true);
 }
 
- 
+  const confirmRemove = (id) => {
+    return deleteContentGroup(activeProject.id, id).then(res => {
+        fetchContentGroup(activeProject.id);
+        notification.success({
+            message: "Success",
+            description: "Deleted content group successfully ",
+            duration: 5,
+        })
+    }, err => {
+        notification.error({
+            message: "Error",
+            description: err.data.error,
+            duration: 5,
+        })
+    });
+  }
+
+  const confirmDelete = useCallback(async () => {
+    try {
+        setDeleteApiCalled(true);
+        await confirmRemove(deleteWidgetModal);
+        setDeleteApiCalled(false);
+        showDeleteWidgetModal(false);
+    } catch (err) {
+        console.log(err);
+        console.log(err.response);
+    }
+  }, [
+      deleteWidgetModal
+  ]);
 
   return (
     <>
@@ -112,6 +147,7 @@ const columns = [
                 columns={columns} 
                 dataSource={tableData} 
                 pagination={false}
+                loading={tableLoading}
                 />
             </div>  
         </Col> 
@@ -119,9 +155,23 @@ const columns = [
         </>
         }
         {showSmartForm && <>  
-                <ContentGroupForm selectedGroup={selectedGroup} setShowSmartForm={setShowSmartForm} /> 
+                <ContentGroupForm selectedGroup={selectedGroup} setShowSmartProperty={(showVal) => {
+                setShowSmartForm(showVal);
+                setSelectedGroup(null);
+                fetchContentGroup(activeProject.id);
+            }} /> 
         </>
         }
+        <ConfirmationModal
+            visible={deleteWidgetModal ? true : false}
+            confirmationText="Do you really want to remove this content group?"
+            onOk={confirmDelete}
+            onCancel={showDeleteWidgetModal.bind(this, false)}
+            title="Remove Content Group"
+            okText="Confirm"
+            cancelText="Cancel"
+            confirmLoading={deleteApiCalled}
+        />
       </div>
     </>
 
@@ -135,4 +185,4 @@ const mapStateToProps = (state) => ({
     currentAgent: state.agent.agent_details
   });
 
-  export default connect(mapStateToProps, {fetchContentGroup})(ContentGroups); 
+  export default connect(mapStateToProps, {fetchContentGroup, deleteContentGroup})(ContentGroups); 

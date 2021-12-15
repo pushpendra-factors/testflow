@@ -554,3 +554,22 @@ export function fetchContentGroup(projectId) {
     });
   };
 }
+
+export function deleteContentGroup(projectId, id) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup/'+ id, {})
+        .then((r) => {
+          if (r.ok) {
+            // dispatch({ type: 'DELETE_CONTENT_GROUP', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}

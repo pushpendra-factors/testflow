@@ -9,7 +9,7 @@ import {addContentGroup, updateContentGroup} from 'Reducers/global';
 import _ from 'lodash';
 import AddEditValue from './AddEditValue';
 
-function ContentGroupsForm({activeProject, selectedGroup, setShowSmartForm, addContentGroup, updateContentGroup}) { 
+function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, addContentGroup, updateContentGroup}) { 
   const [form] = Form.useForm();
   const [formState, setFormState] = useState('add');
   const [showAddValueModal, setshowAddValueModal] = useState(false);
@@ -276,7 +276,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartForm, addC
                                 </Col>
                                 <Col span={12}>
                                     <div className={'flex justify-end'}>
-                                    <Button size={'large'} onClick={() => setShowSmartForm(false)}>Cancel</Button>
+                                    <Button size={'large'} onClick={() => setShowSmartProperty(false)}>Cancel</Button>
                                     {formState === 'view' ? 
                                     <Button size={'large'} className={'ml-2'} type={'primary'}  onClick={() => setFormState('edit')}>Edit</Button>
                                     : null}
