@@ -8,6 +8,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -76,14 +77,29 @@ func ChannelQueryHandler(c *gin.Context) {
 		}
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&queryPayload); err != nil {
-		logCtx.WithError(err).Error("Channel query failed. Json decode failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"error": "Channel query failed. Json decode failed."})
-		return
+	queryIdString := c.Query("query_id")
+	if queryIdString == "" {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&queryPayload); err != nil {
+			logCtx.WithError(err).Error("Channel query failed. Json decode failed.")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "Channel query failed. Json decode failed."})
+			return
+		}
+	} else {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "Channel query failed. Json decode failed."})
+			return
+		}
+		var requestPayloadUnit model.ChannelQueryUnit
+		U.DecodePostgresJsonbToStructType(&query.Query, &requestPayloadUnit)
+		queryPayload = *requestPayloadUnit.Query
 	}
+
 	if queryPayload.Timezone != "" {
 		_, errCode := time.LoadLocation(string(queryPayload.Timezone))
 		if errCode != nil {

@@ -425,7 +425,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, "adwords", result.Rows[0][0])
+		assert.Equal(t, "adwords", result.Rows[1][0])
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
@@ -445,7 +445,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, "google", result.Rows[0][0])
+		assert.Equal(t, "google", result.Rows[1][0])
 
 	})
 
@@ -462,7 +462,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, "Paid Search", result.Rows[0][0])
+		assert.Equal(t, "Paid Search", result.Rows[1][0])
 	})
 
 	t.Run("AttributionWithMarketingPropertyAdgroup", func(t *testing.T) {
@@ -499,10 +499,10 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		// Added keys.
-		assert.Equal(t, "adwords", result.Rows[0][0])
-		assert.Equal(t, "Campaign_Adwords_100", result.Rows[0][1])
-		assert.Equal(t, "Adgroup_Adwords_200", result.Rows[0][2])
-		assert.Equal(t, "Broad", result.Rows[0][3])
+		assert.Equal(t, "adwords", result.Rows[1][0])
+		assert.Equal(t, "Campaign_Adwords_100", result.Rows[1][1])
+		assert.Equal(t, "Adgroup_Adwords_200", result.Rows[1][2])
+		assert.Equal(t, "Broad", result.Rows[1][3])
 		// Conversion.
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))

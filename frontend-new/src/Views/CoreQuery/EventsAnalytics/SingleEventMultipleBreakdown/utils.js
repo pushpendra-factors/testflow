@@ -83,7 +83,7 @@ export const getBreakDownGranularities = (breakDownSlice, breakdowns) => {
   const grns = [];
   let brks = [...breakdowns];
   breakDownSlice.forEach((h) => {
-    const brkIndex = brks.findIndex((x) => h === x.pr);
+    const brkIndex = brks.findIndex((x) => h === (x.pr ? x.pr : x.property));
     grns.push(brks[brkIndex]?.grn);
     brks.splice(brkIndex, 1);
   });

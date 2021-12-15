@@ -1,0 +1,2 @@
+ARG MEMSQL_VERSION
+FROM singlestore/cluster-in-a-box:$MEMSQL_VERSION

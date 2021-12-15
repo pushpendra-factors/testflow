@@ -18,6 +18,7 @@ import {
   QUERY_TYPE_PROFILE,
 } from './constants';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
+import { isArray } from 'lodash';
 
 const visualizationColors = [
   '#4D7DB4',
@@ -179,7 +180,8 @@ export const getClickableTitleSorter = (
   handleSorting,
   alignmentClass = 'items-center'
 ) => {
-  const sorterPropIndex = currentSorter.findIndex(
+  const sorter = isArray(currentSorter)? currentSorter : [currentSorter];
+  const sorterPropIndex = sorter.findIndex(
     (elem) => elem.key === sorterProp.key
   );
   return (
@@ -189,11 +191,11 @@ export const getClickableTitleSorter = (
     >
       <div className='mr-2 break-all'>{title}</div>
       {sorterPropIndex > -1 &&
-      currentSorter[sorterPropIndex].order === 'descend' ? (
+      sorter[sorterPropIndex].order === 'descend' ? (
         <ArrowDownOutlined />
       ) : null}
       {sorterPropIndex > -1 &&
-      currentSorter[sorterPropIndex].order === 'ascend' ? (
+      sorter[sorterPropIndex].order === 'ascend' ? (
         <ArrowUpOutlined />
       ) : null}
     </div>

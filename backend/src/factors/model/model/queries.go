@@ -20,6 +20,7 @@ type Queries struct {
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	Settings      postgres.Jsonb `json:"settings"`
+	IdText        string         `json:"id_text"`
 }
 
 const (

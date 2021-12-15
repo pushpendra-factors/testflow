@@ -226,12 +226,12 @@ const MartInt = ({activeProject, udpateProjectDetails}) => {
 
     return <>
         <div className={'mb-10 pl-4'}>
-            <Row>
+            {/* <Row>
                 <Col span={24}>
                     <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Marketing Touchpoints</Text>
                     <Text type={'title'} level={7} extraClass={'m-0'}>Define how your online marketing efforts should be tracked.</Text>
                 </Col>
-            </Row>
+            </Row> */}
 
             <Row className={'mt-4'}>
                 <Col span={24}>

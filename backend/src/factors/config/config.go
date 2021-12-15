@@ -171,6 +171,7 @@ type Configuration struct {
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []uint64
 	MultipleTimezoneEnabledProjects        []uint64
+	DemoProjectIds                         []uint64
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
@@ -178,6 +179,7 @@ type Configuration struct {
 	// Added as pointer to prevent accidental writes from
 	// other services while testing.
 	DisableDBWrites                             *bool
+	EnableDemoReadAccess                        *bool
 	DisableRedisWrites                          *bool
 	DisableQueryCache                           *bool
 	AllowedCampaignEnrichmentByProjectID        string
@@ -917,6 +919,13 @@ func DisableDBWrites() bool {
 		return *GetConfig().DisableDBWrites
 	}
 	return true
+}
+
+func EnableDemoReadAccess() bool {
+	if GetConfig().EnableDemoReadAccess != nil {
+		return *GetConfig().EnableDemoReadAccess
+	}
+	return false
 }
 
 // DisableMemSQLRedisWrites If redis writes are disabled. Defaults to true unless specified explicitly.
@@ -1957,6 +1966,15 @@ func IsMultipleProjectTimezoneEnabled(projectId uint64) bool {
 func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
 		if uuid == loggedInUUID {
+			return true
+		}
+	}
+	return false
+}
+
+func IsDemoProject(projectId uint64) bool {
+	for _, id := range configuration.DemoProjectIds {
+		if id == projectId {
 			return true
 		}
 	}

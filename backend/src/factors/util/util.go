@@ -116,7 +116,22 @@ func RandomString(n int) string {
 	}
 	return string(b)
 }
-
+func RandomStringForSharableQuery(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	timestamp := time.Now().Unix()
+	timestampstr:= strconv.FormatInt(timestamp,10)
+	var letter = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letter[rand.Intn(len(letter))]
+	}
+	result := string(b)
+	length:= int32(len(result))
+	randIndex:= rand.Int31n(length-1)
+	newResult:= result[:randIndex]+timestampstr+result[randIndex:]
+	return newResult
+}
 func RandomNumericString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 

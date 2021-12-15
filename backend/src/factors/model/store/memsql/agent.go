@@ -233,7 +233,7 @@ func (store *MemSQL) UpdateAgentVerificationDetails(agentUUID, password, firstNa
 	return updateAgent(agentUUID, options...)
 }
 
-func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string) int {
+func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string,isOnboardingFlowSeen bool) int {
 	if agentUUID == "" {
 		return http.StatusBadRequest
 	}
@@ -247,6 +247,7 @@ func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phon
 	if phone != "" {
 		updateParams = append(updateParams, model.Phone(phone))
 	}
+	updateParams = append(updateParams, model.IsOnboardingFlowSeen(isOnboardingFlowSeen))
 	return updateAgent(agentUUID, updateParams...)
 }
 

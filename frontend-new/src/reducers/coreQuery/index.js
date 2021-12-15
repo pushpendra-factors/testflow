@@ -11,6 +11,7 @@ import {
   SET_TOUCHPOINTS,
   SET_TOUCHPOINT_FILTERS,
   SET_ATTR_QUERY_TYPE,
+  SET_TACTIC_OFFER_TYPE,
   SET_ATTR_DATE_RANGE,
   SET_ATTRIBUTION_MODEL,
   SET_ATTRIBUTION_WINDOW,
@@ -63,6 +64,7 @@ const defaultState = {
   touchpoint: '',
   touchpoint_filters: [],
   attr_query_type: 'EngagementBased',
+  tacticOfferType: '',
   attr_dateRange: {
     ...DefaultDateRangeFormat,
     dateStr: '',
@@ -206,6 +208,12 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         attr_query_type: action.payload,
+      };
+    }
+    case SET_TACTIC_OFFER_TYPE: {
+      return {
+        ...state,
+        tacticOfferType: action.payload,
       };
     }
     case SET_ATTR_DATE_RANGE: {

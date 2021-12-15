@@ -71,7 +71,7 @@ const operatorMap = {
   since: 'since',
 };
 
-const reverseOperatorMap = {
+export const reverseOperatorMap = {
   equals: '=',
   notEqual: '!=',
   contains: 'contains',
@@ -82,7 +82,7 @@ const reverseOperatorMap = {
   greaterThanOrEqual: '>=',
 };
 
-const reverseDateOperatorMap = {
+export const reverseDateOperatorMap = {
   equals: '=',
   notEqual: '!=',
   between: 'between',
@@ -895,7 +895,7 @@ export const DashboardDefaultDateRangeFormat = {
   dateType: PREDEFINED_DATES.LAST_WEEK,
 };
 
-const getFilters = (filters) => {
+export const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
     if (filter.props[1] !== 'categorical') {
@@ -964,7 +964,8 @@ export const getAttributionQuery = (
   models,
   window,
   linkedEvents,
-  dateRange = {}
+  dateRange = {},
+  tacticOfferType
 ) => {
   const eventFilters = getFilters(eventGoal.filters);
   let touchPointFiltersQuery = [];
@@ -991,6 +992,7 @@ export const getAttributionQuery = (
       query_type: queryType,
       attribution_methodology: models[0],
       lbw: window,
+      tactic_offer_type: tacticOfferType
     },
   };
   if (dateRange.from && dateRange.to) {
@@ -1101,6 +1103,7 @@ export const getAttributionStateFromRequestQuery = (
     attr_dimensions,
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
+    tacticOfferType: requestQuery.tactic_offer_type
   };
 
   if (requestQuery.attribution_methodology_c) {

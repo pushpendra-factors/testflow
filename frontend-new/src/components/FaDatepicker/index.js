@@ -29,6 +29,7 @@ const FaDatepicker = ({
   className,
   comparison_supported = false,
   handleCompareWithClick,
+  disabled=false
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setdatePickerType] = useState('');
@@ -358,6 +359,7 @@ const FaDatepicker = ({
           {
             <>
               <Button
+                disabled={disabled}
                 className={className}
                 size={buttonSize ? buttonSize : null}
                 onClick={() => setShowDatePicker(true)}
@@ -404,12 +406,14 @@ const FaDatepicker = ({
         {
           <>
             <Dropdown
+              disabled={disabled}
               overlayClassName={'fa-custom-datepicker--dropdown'}
               overlay={menu}
               placement={placement}
               trigger={!showDatePicker ? ['click'] : []}
             >
               <Button
+                disabled={disabled}
                 className={className}
                 size={buttonSize ? buttonSize : null}
               >
@@ -420,6 +424,7 @@ const FaDatepicker = ({
                   <>
                     {datePickerType == 'custom' ? (
                       <RangePicker
+                        disabled={disabled}
                         format={'MMM DD YYYY'}
                         disabledDate={(d) => !d || d.isAfter(MomentTz())}
                         dropdownClassName={'fa-custom-datepicker--datepicker'}

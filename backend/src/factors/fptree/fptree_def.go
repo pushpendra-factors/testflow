@@ -53,3 +53,8 @@ type FrequentPropertiesStruct struct {
 	MaxFrequentProperties uint64
 	PropertyMap           map[PropertyNameType][]string
 }
+
+type TreeNode struct {
+	Item  string `json:"tni"`
+	Count int    `json:"tnc"`
+}
