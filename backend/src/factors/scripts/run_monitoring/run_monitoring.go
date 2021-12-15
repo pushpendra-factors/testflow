@@ -52,6 +52,10 @@ func main() {
 	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
 		false, "Enables SDK and Integration request queue duplication monitoring.")
 
+	enableAnalyzeTable := flag.Bool("enable_analyze_table", false, "Enables ANALYZE table if given.")
+	analyzeIntervalInMins := flag.Int("analyze_tables_interval", 45,
+		"Runs analyze for table, if not analyzed in given interval.")
+
 	flag.Parse()
 	defaultAppName := "monitoring_job"
 	defaultHealthcheckPingID := C.HealthcheckMonitoringJobPingID
@@ -118,6 +122,19 @@ func main() {
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
+	// ANALYZE TABLE hook for updating table estimates for query planning.
+	analyzeStatus := map[string]interface{}{}
+	if C.UseMemSQLDatabaseStore() && *enableAnalyzeTable {
+		status, failedTables := mqlStore.AnalyzeTableInAnInterval(*analyzeIntervalInMins)
+		if status == http.StatusInternalServerError {
+			analyzeStatus["status"] = "FAILED"
+			if len(failedTables) > 0 {
+				analyzeStatus["failedTables"] = failedTables
+			}
+		}
+		analyzeStatus["status"] = "SUCCESS"
+	}
+
 	sqlAdminSlowQueries, factorsSlowQueries, err := store.GetStore().MonitorSlowQueries()
 	if err != nil {
 		log.WithError(err).Panic("Failed to run monitoring query.")
@@ -167,6 +184,10 @@ func main() {
 	}
 	if C.UseMemSQLDatabaseStore() {
 		monitoringPayload["memsqlNodeUsageStats"] = nodeUsageStatsWithErrors
+	}
+
+	if len(analyzeStatus) > 0 {
+		analyzeStatus["analyzeStatus"] = analyzeStatus
 	}
 
 	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
