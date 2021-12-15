@@ -23,7 +23,7 @@ const { TabPane } = Tabs;
 
 const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties, fetchProjects, udpateProjectDetails }) => {
 
-    const [tabNo, setTabNo] = useState(1);
+    const [tabNo, setTabNo] = useState("1");
 
     const [touchPointsData, setTouchPointsData] = useState([]);
 
@@ -153,7 +153,7 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
     const renderTitleActions = () => {
         let titleAction = null;
         if (touchPointState === 'list') {
-            if (tabNo === 1) {
+            if (tabNo === "2") {
                 titleAction = (
                     <Button size={'large'} onClick={() => {
                         setTouchPointState('add')
