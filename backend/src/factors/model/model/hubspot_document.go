@@ -20,14 +20,15 @@ type HubspotDocument struct {
 	Type      int    `gorm:"primary_key:true;auto_increment:false" json:"type"`
 	Action    int    `gorm:"primary_key:true;auto_increment:false" json:"action"`
 	// created or updated timestamp from hubspot.
-	Timestamp int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
-	TypeAlias string          `gorm:"-" json:"type_alias"`
-	Value     *postgres.Jsonb `json:"value"`
-	Synced    bool            `gorm:"default:false;not null" json:"synced"`
-	SyncId    string          `gorm:"default:null" json:"sync_id"`
-	UserId    string          `gorm:"default:null" json:"user_id"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	Timestamp   int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
+	TypeAlias   string          `gorm:"-" json:"type_alias"`
+	Value       *postgres.Jsonb `json:"value"`
+	Synced      bool            `gorm:"default:false;not null" json:"synced"`
+	SyncId      string          `gorm:"default:null" json:"sync_id"`
+	UserId      string          `gorm:"default:null" json:"user_id"`
+	GroupUserId string          `gorm:"default:null" json:"group_user_id"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
 // HubspotLastSyncInfo doc type last sync info
