@@ -782,7 +782,8 @@ func getSelectTimestampByTypeAndPropertyName(timestampType, propertyName, timezo
 	} else {
 		selectTz = timezone
 	}
-	propertyToNum := "CONVERT(" + propertyName + ", DECIMAL(10))"
+
+	propertyToNum := "CONVERT(SUBSTRING(" + propertyName + "1,10), DECIMAL(10))"
 	var selectStr string
 	if timestampType == model.GroupByTimestampHour {
 		selectStr = fmt.Sprintf("date_trunc('hour', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
