@@ -67,7 +67,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
           render: (obj) => (
               <div className={`flex justify-end`}>
                   <Dropdown overlay={() => menu(obj)} trigger={['click']}>
-                  <Button size={'large'} type="text" icon={<MoreOutlined />} />
+                  <Button size={'large'} type="text" icon={<MoreOutlined rotate={90}/>} />
                   </Dropdown>
               </div>
             )
@@ -104,9 +104,9 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
           <Menu.Item key="0" onClick={() => confirmRemove(obj)}>
             <a>Remove</a>
           </Menu.Item>
-          <Menu.Item key="0" onClick={() => editProp(obj)}>
+          {/* <Menu.Item key="1" onClick={() => editProp(obj)}>
             <a>Edit</a>
-          </Menu.Item>
+          </Menu.Item> */}
         </Menu>
         );
     };
@@ -160,7 +160,6 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
             // Save with data
             // Close modal
             const smrtProp = {id: smartPropState.id?smartPropState.id: '', project_id: activeProject.id, content_group_name: data.content_group_name, content_group_description: data.content_group_description, rule:rulesState};
-            console.log(smrtProp);
             if(formState !== 'add') {
                 updateForm(smrtProp);
             } else {
@@ -175,15 +174,18 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
     };
 
     const handleValuesSubmit = (data, oldRule) => {
-        const rule = {...data};
-        const rulesToUpdate = [...rulesState.filter((rl) => JSON.stringify(rl) !== JSON.stringify(oldRule))];
-        rulesToUpdate.push(rule);
-        setRulesState(rulesToUpdate);
-        setshowAddValueModal(false);
-        setSelectedRule(null);
-        if(formState === 'view') {
-            const smrtProp = {id: smartPropState.id ,project_id: smartPropState.id, content_group_name: smartPropState.content_group_name, content_group_description: smartPropState.content_group_description, rule:rulesState};
-            updateForm(smrtProp);
+        if(data) {
+            const rule = {...data};
+            const rulesToUpdate = [...rulesState.filter((rl) => JSON.stringify(rl) !== JSON.stringify(oldRule))];
+            rulesToUpdate.push(rule);
+            setRulesState(rulesToUpdate);
+            setshowAddValueModal(false);
+            setSelectedRule(null);
+            if(formState === 'view') {
+                const smrtProp = {id: smartPropState.id ,project_id: smartPropState.project_id, content_group_name: smartPropState.content_group_name, content_group_description: smartPropState.content_group_description, rule:rulesToUpdate};
+                updateForm(smrtProp);
+            }
+
         }
     }
 
@@ -195,11 +197,10 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
 
     useEffect(() => {
       const columData = [];
-      console.log(rulesData)
       rulesState.forEach((rl) => {
           columData.push({content_group_value: rl.content_group_value, rule: rl.rule, actions: rl});
       })
-      setRulesData(rulesState);
+      setRulesData(columData);
   }, [rulesState])
 
   const renderContentGroupDeatails = () => {
@@ -331,7 +332,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
         </Row> 
         
         {/* Add/Edit value modal */}
-        <AddEditValue visible={showAddValueModal} selectedRule={selectedRule} handleCancel={handleCancel} submitValues={handleValuesSubmit}/>
+        {showAddValueModal && <AddEditValue selectedRule={selectedRule} handleCancel={handleCancel} submitValues={handleValuesSubmit}/>}
     </> 
   );
 }

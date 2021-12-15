@@ -561,7 +561,7 @@ export function deleteContentGroup(projectId, id) {
       del(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup/'+ id, {})
         .then((r) => {
           if (r.ok) {
-            // dispatch({ type: 'DELETE_CONTENT_GROUP', payload: r.data});
+            dispatch({ type: 'DELETE_CONTENT_GROUP_RESOLVED'});
             resolve(r);
           } else {
             reject(r);

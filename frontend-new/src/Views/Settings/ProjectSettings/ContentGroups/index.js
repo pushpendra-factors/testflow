@@ -81,7 +81,7 @@ const columns = [
       align: 'right',
       render: (obj) => (
         <Dropdown overlay={() => menu(obj)} trigger={['hover']}>
-          <Button type="text" icon={<MoreOutlined />} />
+          <Button type="text" icon={<MoreOutlined rotate={90}/>} />
         </Dropdown>
       )
     }
@@ -103,7 +103,7 @@ const columns = [
     }, err => {
         notification.error({
             message: "Error",
-            description: err.data.error,
+            description: err.data,
             duration: 5,
         })
     });

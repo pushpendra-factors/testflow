@@ -7,13 +7,12 @@ import { Text, SVG } from 'factorsComponents';
 const { Option, OptGroup } = Select;
 
 
-function AddEditValue ({visible, selectedRule, handleCancel, submitValues}) {
+function AddEditValue ({selectedRule, handleCancel, submitValues}) {
     const [modalForm] = Form.useForm();
     const [comboOp, setComboOper] = useState('AND');
 
     const onFinishValues = (values) => {
         submitValues(values, selectedRule);
-        modalForm.resetFields();
     }
 
     const onChangeValue = () => {
@@ -28,7 +27,7 @@ function AddEditValue ({visible, selectedRule, handleCancel, submitValues}) {
         <>
             <Modal
             title={null}
-            visible={visible}
+            visible={true}
             closable={false}
             footer={null}
             className={'fa-modal--regular'}
