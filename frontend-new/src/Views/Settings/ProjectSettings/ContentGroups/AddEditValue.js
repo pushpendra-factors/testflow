@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Form, Input, Button, Modal, Radio, Space, Select
+  Row, Col, Form, Input, Button, Modal, Radio, Space, Select, notification
 } from 'antd'; 
 import { PlusOutlined } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents';
@@ -12,7 +12,16 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
     const [comboOp, setComboOper] = useState('AND');
 
     const onFinishValues = (values) => {
-        submitValues(values, selectedRule);
+        if(values.content_group_value && values.rule){
+            submitValues(values, selectedRule);
+        } else {
+            notification.error({
+                message: "Error",
+                description: 'Please add or edit rule',
+                duration: 5,
+              });
+        }
+
     }
 
     const onChangeValue = () => {

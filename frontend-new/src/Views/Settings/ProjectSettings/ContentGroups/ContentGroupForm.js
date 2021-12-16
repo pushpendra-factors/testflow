@@ -233,8 +233,8 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
                         name="content_group_name"
                         rules={[{ required: true, message: 'Please input display name.' }]}
                 >
-                <Input size="large" className={'fa-input w-full'} />
-                        </Form.Item>
+                    <Input size="large" className={'fa-input w-full'} />
+                </Form.Item>
                 </Col> 
             </Row>
 

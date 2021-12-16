@@ -10,7 +10,7 @@ import { fetchContentGroup, deleteContentGroup } from 'Reducers/global';
 import ConfirmationModal from "../../../../components/ConfirmationModal";
 
 
-function ContentGroups({fetchContentGroup, deleteContentGroup, activeProject, contentGroup, agents, currentAgent}) { 
+function ContentGroups({fetchContentGroup, deleteContentGroup, activeProject, contentGroup}) { 
 
     const [showSmartForm, setShowSmartForm] = useState(false);
     const [tableLoading, setTableLoading] = useState(false);
@@ -80,7 +80,7 @@ const columns = [
       key: 'actions',
       align: 'right',
       render: (obj) => (
-        <Dropdown overlay={() => menu(obj)} trigger={['hover']}>
+        <Dropdown overlay={() => menu(obj)} trigger={['click']}>
           <Button type="text" icon={<MoreOutlined rotate={90} style={{color:'gray', fontSize:'18px'}}/>} />
         </Dropdown>
       )
