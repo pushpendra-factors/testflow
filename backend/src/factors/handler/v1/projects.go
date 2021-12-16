@@ -10,7 +10,10 @@ import (
 
 	mid "factors/middleware"
 
+	H "factors/handler/helpers"
+
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
 // Test command.
@@ -49,7 +52,7 @@ import (
 */
 
 func GetProjectsHandler(c *gin.Context) {
-	authorizedProjects := U.GetScopeByKey(c, "authorizedProjects")
+	authorizedProjects := U.GetScopeByKey(c, mid.SCOPE_AUTHORIZED_PROJECTS)
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projects, errCode := store.GetStore().GetProjectsByIDs(authorizedProjects.([]uint64))
 	if errCode == http.StatusInternalServerError {
@@ -76,6 +79,26 @@ func GetProjectsHandler(c *gin.Context) {
 	for _, project := range projects {
 		project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(project.ID)
 		resp[projectRoleMap[project.ID]] = append(resp[projectRoleMap[project.ID]], project)
+	}
+	if C.EnableDemoReadAccess() {
+		trimmedDemoProjects := make([]model.Project, 0)
+		demoProjects, _ := store.GetStore().GetProjectsByIDs(C.GetConfig().DemoProjectIds)
+		for _, project := range demoProjects {
+			project.Token = ""
+			project.PrivateToken = ""
+			project.InteractionSettings = postgres.Jsonb{}
+			project.SalesforceTouchPoints = postgres.Jsonb{}
+			project.HubspotTouchPoints = postgres.Jsonb{}
+			project.JobsMetadata = nil
+			project.ChannelGroupRules = postgres.Jsonb{}
+			trimmedDemoProjects = append(trimmedDemoProjects, project)
+		}
+		for _, project := range trimmedDemoProjects {
+			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]uint64), project.ID) {
+				project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(project.ID)
+				resp[1] = append(resp[projectRoleMap[project.ID]], project)
+			}
+		}
 	}
 	c.JSON(http.StatusOK, resp)
 	return

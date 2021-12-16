@@ -9,6 +9,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -61,12 +62,22 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		"reqId":     reqId,
 		"projectId": projectId,
 	})
+	queryIdString := c.Query("query_id")
 	var requestPayload model.QueryGroup
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&requestPayload); err != nil {
-		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+	if queryIdString == "" {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&requestPayload); err != nil {
+			logCtx.WithError(err).Error("Query failed. Json decode failed.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+	} else {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &requestPayload)
 	}
 
 	var commonQueryFrom int64
@@ -234,11 +245,21 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		}
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&requestPayload); err != nil {
-		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+	queryIdString := c.Query("query_id")
+	if queryIdString == "" {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&requestPayload); err != nil {
+			logCtx.WithError(err).Error("Query failed. Json decode failed.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+	} else {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectId)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &requestPayload.Query)
 	}
 
 	if requestPayload.Query.Timezone != "" {

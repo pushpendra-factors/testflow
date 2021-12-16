@@ -540,3 +540,8 @@ $cq-card-transition: transform .2s ease-in-out;
     height: 32px;
     width: 32px;
 }
+
+.fa-truncate-150 {
+    max-width: 150px;
+    overflow: hidden;
+}

@@ -100,6 +100,10 @@ func (pg *Postgres) executeForResults(projectID uint64, queries []model.Query, k
 	hasGroupByTimestamp := false
 	displayCategory := kpiQuery.DisplayCategory
 	var finalResult model.QueryResult
+	isTimezoneEnabled := false
+	if C.IsMultipleProjectTimezoneEnabled(projectID) {
+		isTimezoneEnabled = true
+	}
 	if kpiQuery.GroupByTimestamp != "" {
 		hasGroupByTimestamp = true
 	}
@@ -124,7 +128,7 @@ func (pg *Postgres) executeForResults(projectID uint64, queries []model.Query, k
 		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
-		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations)
+		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations, kpiQuery.Timezone, isTimezoneEnabled)
 	}
 	return finalResult
 }

@@ -30,7 +30,6 @@ var salesforceEnrichOrderByType = [...]int{
 	model.SalesforceDocumentTypeLead,
 	model.SalesforceDocumentTypeContact,
 	model.SalesforceDocumentTypeOpportunity,
-	model.SalesforceDocumentTypeCampaign,
 	model.SalesforceDocumentTypeCampaignMember,
 	model.SalesforceDocumentTypeAccount,
 }
@@ -151,6 +150,7 @@ func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]in
 	delete(*properties, model.SalesforceChildRelationshipNameCampaignMembers) // delete child relationship data
 	delete(*properties, model.SalesforceChildRelationshipNameOpportunityContactRoles)
 	delete(*properties, OpportunityLeadID)
+	delete(*properties, OpportunityMultipleLeadID)
 }
 
 func getSalesforceAccountID(document *model.SalesforceDocument) (string, error) {
@@ -673,8 +673,9 @@ type RelationshipOpportunityContactRole struct {
 }
 
 type OpportunityChildRelationship struct {
-	OpportunityContactRole RelationshipOpportunityContactRole `json:"OpportunityContactRoles"`
-	OppLeadID              string                             `json:"opportunity_to_lead"`
+	OpportunityContactRole    RelationshipOpportunityContactRole `json:"OpportunityContactRoles"`
+	OppLeadID                 string                             `json:"opportunity_to_lead"`
+	OpportunityMultipleLeadID map[string]bool                    `json:"opportunity_to_multiple_lead"`
 }
 
 var errMissingOpportunityLeadAndContact = errors.New("missing lead and contact record for opportunity link")
@@ -713,6 +714,12 @@ func getOpportuntityLeadAndContactID(document *model.SalesforceDocument) ([]stri
 		if opportunityChildRelationship.OppLeadID != "" {
 			oppLeadID = opportunityChildRelationship.OppLeadID
 			oppLeadIDs = append(oppLeadIDs, oppLeadID)
+		}
+	}
+
+	for id := range opportunityChildRelationship.OpportunityMultipleLeadID {
+		if id != opportunityChildRelationship.OppLeadID {
+			oppLeadIDs = append(oppLeadIDs, id)
 		}
 	}
 
@@ -1058,12 +1065,8 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 	}
 
 	if customerUserID != "" || userID != "" {
-		if userID != "" {
-			trackPayload.UserId = userID // will also handle opportunity updated event which is not stiched with other object
-			eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "", model.SalesforceDocumentTypeNameOpportunity)
-		} else {
-			eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID, model.SalesforceDocumentTypeNameOpportunity)
-		}
+		trackPayload.UserId = userID // user id will be used on the first document and customer user_id will used on any update. Updated document will use the created document user_id
+		eventID, eventUserID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID, model.SalesforceDocumentTypeNameOpportunity)
 
 		if err != nil {
 			logCtx.WithError(err).Error(
@@ -1403,13 +1406,26 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 		When CAMPAIGN is picked up for processing then, it will refer this document as for last campaign member.
 		Refer enrichCampaignToAllCampaignMembers function for opposite case
 	*/
-	campaignDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(campaignID)}, model.SalesforceDocumentTypeCampaign, endTimestamp)
-	if status != http.StatusFound { // log warning and don't mark it as synced. It will be processed when campaign is found
+	campaignDocuments, status := store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{util.GetPropertyValueAsString(campaignID)}, model.SalesforceDocumentTypeCampaign, true)
+	if status != http.StatusFound && len(campaignDocuments) < 1 {
 		logCtx.Warn("Failed to get campaign document for campaign member.")
-		return http.StatusOK
+		return http.StatusInternalServerError
 	}
 
-	enCampaignProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignDocuments[len(campaignDocuments)-1])
+	var associateCampaignUpdate *model.SalesforceDocument
+	for i := range campaignDocuments { // pick the campaign update which is before the campaign member update
+		if campaignDocuments[i].Timestamp <= document.Timestamp {
+			associateCampaignUpdate = &campaignDocuments[i]
+		} else {
+			break
+		}
+	}
+
+	if associateCampaignUpdate == nil { // use first document if non available
+		associateCampaignUpdate = &campaignDocuments[0]
+	}
+
+	enCampaignProperties, _, err := GetSalesforceDocumentProperties(project.ID, associateCampaignUpdate)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties for campaign member.")
 		return http.StatusInternalServerError

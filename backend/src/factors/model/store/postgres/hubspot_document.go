@@ -817,7 +817,7 @@ func (pg *Postgres) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, ob
 	return getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments, propertyName, 100)
 }
 
-func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int, syncId string, timestamp int64, action int, userID string) int {
+func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int {
 	logCtx := log.WithField("project_id", projectId).WithField("id", id)
 
 	updates := make(map[string]interface{}, 0)
@@ -828,6 +828,10 @@ func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, d
 
 	if userID != "" {
 		updates["user_id"] = userID
+	}
+
+	if groupUserID != "" {
+		updates["group_user_id"] = groupUserID
 	}
 
 	db := C.GetServices().Db

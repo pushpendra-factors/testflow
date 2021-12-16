@@ -105,8 +105,10 @@ func main() {
 	customerEnabledProjectsWeeklyInsights := flag.String("customer_enabled_projects_wi",
 		"", "List of projects customer enabled for Weekly Insights")
 	multipleTimezoneEnabledProjects := flag.String("timezone_enabled_projects", "", "List of projectIds where multiple timezones are enabled")
+	demoProjectIds := flag.String("demo_projects", "", "List of projectIds those are used for demo")
 	attributionDebug := flag.Int("attribution_debug", 0, "Enables debug logging for attribution queries")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
+	enableDemoReadAccess := flag.Bool("enable_demo_read_access", false, "Enable Admin API restrictions.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	disableDashboardQueryDBExecution := flag.Bool("disable_dashboard_query_db_execution", false,
@@ -193,6 +195,8 @@ func main() {
 		ProjectAnalyticsWhitelistedUUIds:        C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
 		CustomerEnabledProjectsWeeklyInsights:   C.GetTokensFromStringListAsUint64(*customerEnabledProjectsWeeklyInsights),
 		MultipleTimezoneEnabledProjects:         C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
+		DemoProjectIds:                          C.GetTokensFromStringListAsUint64(*demoProjectIds),
+		EnableDemoReadAccess:                    enableDemoReadAccess,
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableDBWrites:                         disableDBWrites,
 		DisableRedisWrites:                      disableRedisWrites,

@@ -132,6 +132,8 @@ const (
 	NotInCurrent            = "notInCurrent"
 	InPrevious              = "inPrevious"
 	NotInPrevious           = "notInPrevious"
+	StartsWith              = "startsWith"
+	EndsWith                = "endsWith"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
@@ -871,7 +873,7 @@ func SanitizeDateTypeRows(result *QueryResult, query *Query) {
 func sanitizeDateTypeForSpecificIndex(query *Query, rows [][]interface{}, indexToSanitize int) {
 
 	for index, row := range rows {
-		if (query.Class == QueryClassFunnel && index == 0) || row[indexToSanitize].(string) == "" ||
+		if (query.Class == QueryClassFunnel && index == 0) || row[indexToSanitize] == nil || row[indexToSanitize].(string) == "" ||
 			row[indexToSanitize].(string) == PropertyValueNone {
 			// For funnel queries, first row is $no_group query. Skip sanitization.
 			continue

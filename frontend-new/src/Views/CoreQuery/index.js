@@ -138,6 +138,7 @@ function CoreQuery({
     eventGoal: {},
     touchpoint: '',
     models: [],
+    tacticOfferType: '',
     linkedEvents: [],
     date_range: {},
     attr_dimensions: [],
@@ -161,6 +162,7 @@ function CoreQuery({
     eventGoal,
     touchpoint,
     touchpoint_filters,
+    tacticOfferType,
     attr_query_type,
     models,
     window,
@@ -467,7 +469,8 @@ function CoreQuery({
           models,
           window,
           linkedEvents,
-          durationObj
+          durationObj,
+          tacticOfferType
         );
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -479,6 +482,7 @@ function CoreQuery({
             models,
             linkedEvents,
             attr_dimensions,
+            tacticOfferType,
             date_range: { ...durationObj },
           });
         } else {
@@ -533,6 +537,7 @@ function CoreQuery({
       touchpoint,
       touchpoint_filters,
       attr_query_type,
+      tacticOfferType,
       window,
       attr_dateRange,
       updateResultState,
@@ -1232,21 +1237,15 @@ function CoreQuery({
     let selGroup = KPIlist.find((item) => {
       return item.display_category == selectedMainCategory?.group;
     });
-    let DDvalues = selGroup?.properties.map((item) => {
-      if (item == null) return;
-      let ddName = item.display_name
-        ? selGroup?.category == 'channels'
-          ? `${_.startCase(item.object_type)} ${item.display_name}`
-          : item.display_name
-        : item.name;
-      let ddtype =
-        selGroup?.category == 'channels'
-          ? item.object_type
-          : item.entity
-          ? item.entity
-          : item.object_type;
-      return [ddName, item.name, item.data_type, ddtype];
-    });
+
+    let DDvalues =  selGroup?.properties?.map((item)=>{
+      if (item == null) return
+      let ddName = item.display_name ? item.display_name  : item.name;
+      let ddtype = selGroup?.category == 'channels' ? item.object_type : (item.entity ? item.entity : item.object_type)
+      return [ddName, item.name, item.data_type, ddtype]
+    })
+
+
     setKPIConfigProps(DDvalues);
   }, [selectedMainCategory]);
 

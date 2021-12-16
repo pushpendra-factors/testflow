@@ -80,6 +80,7 @@ func main() {
 		"Map of project_id and customer_user_id to exclude identification on segment.")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
+	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
 
 	flag.Parse()
 
@@ -131,6 +132,7 @@ func main() {
 			*segmentExcludedCustomerUserIDByProject, "SegmentExcludedCustomerIDByProject"),
 		DisableRedisWrites:                          disableRedisWrites,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
+		EnableOLTPQueriesMemSQLImprovements:         *enableOLTPQueriesMemSQLImprovements,
 	}
 	C.InitConf(config)
 

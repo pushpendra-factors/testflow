@@ -116,6 +116,18 @@ func (pg *Postgres) GetQueryWithQueryId(projectID uint64, queryID uint64) (*mode
 	return pg.getQueryWithQueryID(projectID, queryID, 0)
 }
 
+func (pg *Postgres) GetQueryWithQueryIdString(projectID uint64, queryIDString string) (*model.Queries, int) {
+	db := C.GetServices().Db
+	var query model.Queries
+	var err error
+	err = db.Table("queries").Where("project_id = ? AND id_text=? AND is_deleted = ?",
+		projectID, queryIDString, false).Find(&query).Error
+	if err != nil {
+		return &model.Queries{}, http.StatusNotFound
+	}
+	return pg.getQueryWithQueryID(projectID, query.ID, model.QueryTypeAllQueries)
+}
+
 func (pg *Postgres) getQueryWithQueryID(projectID uint64, queryID uint64, queryType int) (*model.Queries, int) {
 	db := C.GetServices().Db
 	var query model.Queries

@@ -325,8 +325,8 @@ const (
 	SecsInADay             = int64(86400)
 	LookbackCapInDays      = 180
 	UserBatchSize          = 3000
-	QueryRangeLimit        = 90
-	LookBackWindowLimit    = 90
+	QueryRangeLimit        = 93
+	LookBackWindowLimit    = 93
 )
 
 // LookbackAdjustedFrom Returns the effective From timestamp considering lookback days
@@ -915,7 +915,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int) []in
 	row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64)     // Clicks.
 	row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
 
-	row1[keyIndex+10] = (row1[keyIndex+8].(float64)*row1[keyIndex+10].(float64) + row2[keyIndex+8].(float64)*row2[keyIndex+10].(float64)) / (row1[keyIndex+8].(float64) + row2[keyIndex+8].(float64)) //AvgSessionTime.
+	row1[keyIndex+10], _ = U.FloatRoundOffWithPrecision((float64(row1[keyIndex+8].(int64))*row1[keyIndex+10].(float64)+float64(row2[keyIndex+8].(int64))*row2[keyIndex+10].(float64))/float64(row1[keyIndex+8].(int64)+row2[keyIndex+8].(int64)), U.DefaultPrecision) //AvgSessionTime.
 
 	row1[keyIndex+8] = row1[keyIndex+8].(int64) + row2[keyIndex+8].(int64)        // Sessions.
 	row1[keyIndex+9] = row1[keyIndex+9].(int64) + row2[keyIndex+9].(int64)        // Users.
@@ -943,7 +943,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int) []in
 
 	// Normal conversion [12, 13, 14] = [Conversion, CPC, Rate]
 	if row1[keyIndex+12].(float64) > 0 {
-		row1[keyIndex+13] = spend / row1[keyIndex+12].(float64) // Conversion - CPC.
+		row1[keyIndex+13], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+12].(float64), U.DefaultPrecision) // Conversion - CPC.
 	} else {
 		row1[keyIndex+12] = float64(0)
 		row1[keyIndex+13] = float64(0) // Conversion - CPC.
@@ -975,13 +975,13 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int) []in
 	for i := keyIndex + 18; i < len(row1); i += 3 {
 		row1[i] = row1[i].(float64) + row2[i].(float64)
 		if row1[i].(float64) > 0 && i < len(row1) {
-			row1[i+1] = spend / row1[i].(float64) // Funnel - Conversion - CPC. spend/conversion
+			row1[i+1], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
 		} else {
 			row1[i+1] = float64(0) // Funnel - Conversion - CPC.
 		}
 
 		if row1[keyIndex+12].(float64) > 0 {
-			row1[i+2] = row1[i].(float64) / row1[keyIndex+12].(float64) // Funnel - User Conversion - CPC Rate   conversion/user count
+			row1[i+2], _ = U.FloatRoundOffWithPrecision(row1[i].(float64)/row1[keyIndex+12].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate   conversion/user count
 		} else {
 			row1[i+2] = float64(0) // Funnel - User Conversion Rate (%)
 		}
@@ -1127,7 +1127,7 @@ func AddGrandTotalRow(rows [][]interface{}, keyIndex int) [][]interface{} {
 			}
 
 			if grandTotalRow[keyIndex+12].(float64) > 0 {
-				grandTotalRow[i+2] = grandTotalRow[i].(float64) / grandTotalRow[keyIndex+12].(float64) // Funnel - User Conversion - CPC Rate
+				grandTotalRow[i+2], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+12].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate
 			}
 			j += 1
 		}
@@ -1135,26 +1135,26 @@ func AddGrandTotalRow(rows [][]interface{}, keyIndex int) [][]interface{} {
 	}
 
 	if impressionsCTR > 0 {
-		grandTotalRow[keyIndex+4] = float64(100 * float64(clicksCTR) / float64(impressionsCTR))
+		grandTotalRow[keyIndex+4], _ = U.FloatRoundOffWithPrecision(float64(100*float64(clicksCTR)/float64(impressionsCTR)), U.DefaultPrecision)
 	}
 
 	if clickAvgCPC > 0 {
-		grandTotalRow[keyIndex+5] = float64(spendAvgCPC) / float64(clickAvgCPC)
+		grandTotalRow[keyIndex+5], _ = U.FloatRoundOffWithPrecision(float64(spendAvgCPC)/float64(clickAvgCPC), U.DefaultPrecision)
 	}
 
 	if impressionsCPM > 0 {
-		grandTotalRow[keyIndex+6] = float64(1000*float64(spendCPM)) / float64(impressionsCPM)
+		grandTotalRow[keyIndex+6], _ = U.FloatRoundOffWithPrecision(float64(1000*float64(spendCPM))/float64(impressionsCPM), U.DefaultPrecision)
 	}
 	if clicksClickConversionRate > 0 {
-		grandTotalRow[keyIndex+7] = 100 * float64(conversionsClickConversionRate) / float64(clicksClickConversionRate)
+		grandTotalRow[keyIndex+7], _ = U.FloatRoundOffWithPrecision(100*float64(conversionsClickConversionRate)/float64(clicksClickConversionRate), U.DefaultPrecision)
 	}
 
 	if SessionsAvgSessionTimeAST > 0 {
-		grandTotalRow[keyIndex+10] = float64(AvgSessionTimeMultipliedSessionAST) / float64(SessionsAvgSessionTimeAST)
+		grandTotalRow[keyIndex+10], _ = U.FloatRoundOffWithPrecision(float64(AvgSessionTimeMultipliedSessionAST)/float64(SessionsAvgSessionTimeAST), U.DefaultPrecision)
 	}
 
-	if spendCPC > 0 {
-		grandTotalRow[keyIndex+13] = spendCPC / conversionsCPC
+	if conversionsCPC > 0 {
+		grandTotalRow[keyIndex+13], _ = U.FloatRoundOffWithPrecision(spendCPC/conversionsCPC, U.DefaultPrecision)
 	}
 
 	if grandTotalRow[keyIndex+9].(int64) > 0 {
@@ -1173,7 +1173,7 @@ func AddGrandTotalRow(rows [][]interface{}, keyIndex int) [][]interface{} {
 	k := 0
 	for i := keyIndex + 18; i < len(grandTotalRow); i += 3 {
 		if conversionFunnelConversionCPC[k] > 0 && i < len(grandTotalRow) {
-			grandTotalRow[i+1] = spendFunnelConversionCPC[k] / conversionFunnelConversionCPC[k] // Funnel - Conversion - CPC.
+			grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[k]/conversionFunnelConversionCPC[k], U.DefaultPrecision) // Funnel - Conversion - CPC.
 		}
 		k += 1
 	}
@@ -1410,7 +1410,19 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 					case AttributionKeyChannel:
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].ChannelGroup
 					}
-					// Sessions
+
+					// Add Unique user count
+					(*attributionData)[key].Users = sessionKeyUserCount[key]
+
+					// Sessions: Session count, AvgSessionTime and PageViews is ZERO for OfflineTouchPoints
+					if strings.Contains(key, SessionChannelOTP) {
+						(*attributionData)[key].Sessions = 0
+						(*attributionData)[key].AvgSessionTime = float64(0)
+						(*attributionData)[key].PageViews = 0
+						continue
+					}
+
+					// Digital Sessions will have Session count, AvgSessionTime and PageViews
 					(*attributionData)[key].Sessions = sessionKeyCount[key]
 
 					// Add AvgSessionTime
@@ -1419,7 +1431,7 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 						totalTime = totalTime + v
 					}
 					if totalTime != 0 && len(sessionKeySessionTimes[key]) != 0 {
-						(*attributionData)[key].AvgSessionTime = totalTime / float64(len(sessionKeySessionTimes[key]))
+						(*attributionData)[key].AvgSessionTime, _ = U.FloatRoundOffWithPrecision(totalTime/float64(len(sessionKeySessionTimes[key])), U.DefaultPrecision)
 					}
 					// Add PageViews
 					totalPageCount := int64(0)
@@ -1427,9 +1439,6 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 						totalPageCount = totalPageCount + v
 					}
 					(*attributionData)[key].PageViews = totalPageCount
-
-					// Add Unique user count
-					(*attributionData)[key].Users = sessionKeyUserCount[key]
 
 				}
 			}
@@ -1566,12 +1575,12 @@ func ComputeAdditionalMetrics(attributionData *map[string]*AttributionData) {
 		(*attributionData)[k].AvgCPC = 0
 		(*attributionData)[k].ClickConversionRate = 0
 		if v.Impressions > 0 {
-			(*attributionData)[k].CTR = 100 * float64(v.Clicks) / float64(v.Impressions)
-			(*attributionData)[k].CPM = 1000 * float64(v.Spend) / float64(v.Impressions)
+			(*attributionData)[k].CTR, _ = U.FloatRoundOffWithPrecision(100*float64(v.Clicks)/float64(v.Impressions), U.DefaultPrecision)
+			(*attributionData)[k].CPM, _ = U.FloatRoundOffWithPrecision(1000*float64(v.Spend)/float64(v.Impressions), U.DefaultPrecision)
 		}
 		if v.Clicks > 0 {
-			(*attributionData)[k].AvgCPC = float64(v.Spend) / float64(v.Clicks)
-			(*attributionData)[k].ClickConversionRate = 100 * float64(v.ConversionEventCount) / float64(v.Clicks)
+			(*attributionData)[k].AvgCPC, _ = U.FloatRoundOffWithPrecision(float64(v.Spend)/float64(v.Clicks), U.DefaultPrecision)
+			(*attributionData)[k].ClickConversionRate, _ = U.FloatRoundOffWithPrecision(100*float64(v.ConversionEventCount)/float64(v.Clicks), U.DefaultPrecision)
 		}
 	}
 }

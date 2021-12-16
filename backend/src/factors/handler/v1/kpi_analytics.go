@@ -8,6 +8,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -164,10 +165,20 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	}
 	logCtx = logCtx.WithField("project_id", projectID).WithField("reqId", reqID)
 
+	queryIdString := c.Query("query_id")
 	request := model.KPIQueryGroup{}
-	err := c.BindJSON(&request)
-	if err != nil {
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during validation of execute KPIQuery.", true
+	if queryIdString == "" {
+		err := c.BindJSON(&request)
+		if err != nil {
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Error during validation of execute KPIQuery.", true
+		}
+	} else {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectID)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &request)
 	}
 
 	dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err := getDashboardRelatedInformationFromRequest(request,

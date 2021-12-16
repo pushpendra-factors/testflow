@@ -85,10 +85,11 @@ function updateEventProperties(eventId, properties={}) {
 /**
  * Identify user with original userId from the application.
  * @param {string} customerUserId Actual id of the user from the application.
+ * @param {Object} userProperties Optional - Traits of the users.
  */
-function identify(customerUserId) {
+function identify(customerUserId, userProperties={}) {
     try {
-        app.identify(customerUserId)
+        app.identify(customerUserId, userProperties)
             .catch(app.handleError);
     } catch(e) {
         app.handleError(e);

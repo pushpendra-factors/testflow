@@ -6,7 +6,6 @@ import BasicSettings from './BasicSettings';
 import SDKSettings from './SDKSettings';
 import UserSettings from './UserSettings';
 import IntegrationSettings from './IntegrationSettings';
-import MarketingInteractions from './MarketingInteractions';
 import Events from './Events';
 import Properties from './PropertySettings';
 import { fetchSmartEvents } from 'Reducers/events';
@@ -15,6 +14,7 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
 import ContentGroups from './ContentGroups';
+import Touchpoints from './Touchpoints';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -25,7 +25,8 @@ const MenuTabs = {
   Events:'Events',
   Properties: 'Properties',
   MarketingInteractions: 'Marketing Touchpoints',
-  ContentGroups: 'Content Groups'
+  ContentGroups: 'Content Groups',
+  Touchpoints: 'Touchpoints'
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents }) {
@@ -58,14 +59,14 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
  <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Settings Error'} subtitle={'We are facing trouble loading project settings. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
 
  
-      <div className={'fa-container'}>
-        <Row gutter={[24, 24]} justify={'center'} className={'pt-16 pb-2 m-0 '}>
-          <Col span={20}>
+      <div className={'ml-12 mt-24'}>
+        <Row gutter={[24, 24]}>
+          <Col span={20} className={`px-24`}>
             <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Project Settings</Text>
             <Text type={'title'} level={6} weight={'regular'} extraClass={'m-0'} color={'grey'}>{activeProject.name}</Text>
           </Col>
         </Row>
-        <Row gutter={[24, 24]} justify={'center'}>
+        <Row gutter={[24, 24]}>
           <Col span={5}>
 
             <Menu
@@ -77,7 +78,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               <Menu.Item key={MenuTabs.SDK}>{MenuTabs.SDK}</Menu.Item>
               <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item>
               <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
-              <Menu.Item key={MenuTabs.MarketingInteractions}>{MenuTabs.MarketingInteractions}</Menu.Item>
+              <Menu.Item key={MenuTabs.Touchpoints}>{MenuTabs.Touchpoints}</Menu.Item>
               <Menu.Item key={MenuTabs.Events}>{MenuTabs.Events}</Menu.Item>
               <Menu.Item key={MenuTabs.Properties}>{MenuTabs.Properties}</Menu.Item>
               <Menu.Item key={MenuTabs.ContentGroups}>{MenuTabs.ContentGroups}</Menu.Item>
@@ -89,7 +90,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
             {selectedMenu === MenuTabs.SDK && <SDKSettings /> }
             {selectedMenu === MenuTabs.Users && <UserSettings /> }
             {selectedMenu === MenuTabs.Integrations && <IntegrationSettings /> }
-            {selectedMenu === MenuTabs.MarketingInteractions && <MarketingInteractions /> }
+            {selectedMenu == MenuTabs.Touchpoints && (<Touchpoints />)}
             {selectedMenu === MenuTabs.Events && <Events /> }
             {(selectedMenu === MenuTabs.Properties) && <Properties />}
             {(selectedMenu === MenuTabs.ContentGroups) && <ContentGroups />}

@@ -32,6 +32,7 @@ import {
 } from '../../utils/constants';
 import { Radio } from 'antd';
 import { formatFilterDate } from '../../utils/dataFormatter';
+import _ from 'lodash'; 
 
 export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
@@ -70,7 +71,7 @@ const operatorMap = {
   since: 'since',
 };
 
-const reverseOperatorMap = {
+export const reverseOperatorMap = {
   equals: '=',
   notEqual: '!=',
   contains: 'contains',
@@ -81,7 +82,7 @@ const reverseOperatorMap = {
   greaterThanOrEqual: '>=',
 };
 
-const reverseDateOperatorMap = {
+export const reverseDateOperatorMap = {
   equals: '=',
   notEqual: '!=',
   between: 'between',
@@ -460,7 +461,7 @@ export const getKPIQuery = (
     period.frequency = date_range.frequency || 'date';
   }
 
-  console.clear();
+  // console.clear();
   console.log('KPIQuery debugging...');
   console.log('KPIQuery --> queries, time-period', queries, period);
   console.log('KPIQuery --> groupBy, queryOptions', groupBy, queryOptions);
@@ -894,7 +895,7 @@ export const DashboardDefaultDateRangeFormat = {
   dateType: PREDEFINED_DATES.LAST_WEEK,
 };
 
-const getFilters = (filters) => {
+export const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
     if (filter.props[1] !== 'categorical') {
@@ -963,7 +964,8 @@ export const getAttributionQuery = (
   models,
   window,
   linkedEvents,
-  dateRange = {}
+  dateRange = {},
+  tacticOfferType
 ) => {
   const eventFilters = getFilters(eventGoal.filters);
   let touchPointFiltersQuery = [];
@@ -990,6 +992,7 @@ export const getAttributionQuery = (
       query_type: queryType,
       attribution_methodology: models[0],
       lbw: window,
+      tactic_offer_type: tacticOfferType
     },
   };
   if (dateRange.from && dateRange.to) {
@@ -1100,6 +1103,7 @@ export const getAttributionStateFromRequestQuery = (
     attr_dimensions,
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
+    tacticOfferType: requestQuery.tactic_offer_type
   };
 
   if (requestQuery.attribution_methodology_c) {
@@ -1538,6 +1542,8 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
 };
 
 export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
+  console.log('requestQuery-->>',requestQuery);
+  console.log('requestQuery kpiConfig-->>',kpiConfig);
   const queryType = requestQuery.cl;
   const queries = [];
   for (let i = 0; i < requestQuery.qG.length; i = i + 2) {
@@ -1546,16 +1552,58 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     const metric = config
       ? config.metrics.find((m) => m.name === q.me[0])
       : null;
+
+    let eventFilters = []
+    q?.fil?.forEach((pr) => {
+      if (pr.lOp === 'AND') {
+        let val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
+        let DNa = _.startCase(pr.prNa);
+        let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en
+        eventFilters.push({
+          operator:
+            pr.prDaTy === 'datetime'
+              ? reverseDateOperatorMap[pr.co]
+              : reverseOperatorMap[pr.co],
+          props: [DNa, pr.prDaTy, isCamp],
+          values: val,
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp], 
+        });
+      } else if (pr.prDaTy === 'categorical') {
+        eventFilters[eventFilters.length - 1].values.push(pr.va);
+      }
+    });
+
     queries.push({
       category: q.ca,
       group: q.dc,
       metric: q.me[0],
       label: metric ? metric.display_name : q.me[0],
-      filters: [],
+      filters: eventFilters,
       alias: '',
     });
   }
   const globalFilters = [];
+
+  const filters = [];
+  requestQuery.gFil.forEach((pr) => {
+    if (pr.lOp === 'AND') {
+      let val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
+      let DNa = _.startCase(pr.prNa);
+      let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en
+      filters.push({
+        operator:
+          pr.prDaTy === 'datetime'
+            ? reverseDateOperatorMap[pr.co]
+            : reverseOperatorMap[pr.co],
+        props: [DNa, pr.prDaTy, isCamp],
+        values: val,
+        extra: [DNa, pr.prNa, pr.prDaTy, isCamp], 
+      });
+    } else if (pr.prDaTy === 'categorical') {
+      filters[filters.length - 1].values.push(pr.va);
+    }
+  });
+
   const globalBreakdown = requestQuery.gGBy.map((opt) => {
     return {
       property: opt.prNa,
@@ -1572,7 +1620,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
   const result = {
     events: queries,
     queryType,
-    globalFilters,
+    globalFilters: filters,
     breakdown: groupBy,
   };
   return result;

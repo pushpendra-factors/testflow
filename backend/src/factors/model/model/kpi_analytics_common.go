@@ -253,8 +253,8 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED},
 	},
 	HubspotCompaniesDisplayCategory: {
-		CountOfCompaniesCreated: {"display_name": "Companies created", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_CREATED},
-		CountOfCompaniesUpdated: {"display_name": "Companies updated", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_UPDATED},
+		CountOfCompaniesCreated: {"display_name": "Companies created", "object_type": U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED},
+		CountOfCompaniesUpdated: {"display_name": "Companies updated", "object_type": U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED},
 	},
 	// HubspotDealsDisplayCategory: {
 	// 	CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_CREATED},
@@ -319,7 +319,7 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 	U.EP_CAMPAIGN:               {EventEntity: {"name": U.EP_CAMPAIGN, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_CAMPAIGN], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.EP_ADGROUP:                {EventEntity: {"name": U.EP_ADGROUP, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_ADGROUP], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.EP_KEYWORD:                {EventEntity: {"name": U.EP_KEYWORD, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_KEYWORD], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
-	U.EP_CHANNEL:                {EventEntity: {"name": U.EP_CHANNEL, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_CHANNEL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
+	U.EP_CHANNEL:                {EventEntity: {"name": U.EP_CHANNEL, "display_name": U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES[U.EP_CHANNEL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.EP_CONTENT:                {EventEntity: {"name": U.EP_CONTENT, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.EP_CONTENT], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.SP_INITIAL_PAGE_URL:       {EventEntity: {"name": U.SP_INITIAL_PAGE_URL, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_INITIAL_PAGE_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
 	U.SP_LATEST_PAGE_URL:        {EventEntity: {"name": U.SP_LATEST_PAGE_URL, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.SP_LATEST_PAGE_URL], "data_type": U.PropertyTypeCategorical, "entity": EventEntity}},
