@@ -76,7 +76,7 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
                                 <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
                                     <Form.Item
                                     {...restField}
-                                    initialValue={selectedRule?.rule && selectedRule.rule[0].lop? selectedRule.rule[0].lop : fieldKey===0?'URL':comboOp}
+                                    initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].lop? selectedRule.rule[fieldKey].lop : fieldKey===0?'URL':comboOp}
                                     name={[name, 'lop']}
                                     fieldKey={[fieldKey, 'lop']}
                                     >
@@ -87,7 +87,7 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
                                     <div className={'w-24 fa-select'}>
                                         <Form.Item
                                         {...restField}
-                                        initialValue={selectedRule?.rule && selectedRule.rule[0].op? selectedRule.rule[0].op : 'contains'}
+                                        initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].op? selectedRule.rule[fieldKey].op : 'contains'}
                                         name={[name, 'op']}
                                         fieldKey={[fieldKey, 'op']}
                                         rules={[{ required: true, message: 'Select any' }]}
@@ -102,7 +102,7 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
                                     </div>
                                     <Form.Item
                                     {...restField}
-                                    initialValue={selectedRule?.rule && selectedRule.rule[0].va? selectedRule.rule[0].va : ''}
+                                    initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].va? selectedRule.rule[fieldKey].va : ''}
                                     name={[name, 'va']}
                                     fieldKey={[fieldKey, 'va']}
                                     rules={[{ required: true, message: 'Missing value' }]}

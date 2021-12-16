@@ -51,7 +51,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
           title: 'Order',
           dataIndex: 'content_group_value',
           key: 'content_group_value', 
-          render: (text) => <span className={'capitalize'}>{text}</span>
+          render: (text) => <span className={'capitalize text-gray-600 text-sm font-bold'}>{text}</span>
         },
         {
           title: 'Rule',
@@ -104,9 +104,9 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
           <Menu.Item key="0" onClick={() => confirmRemove(obj)}>
             <a>Remove</a>
           </Menu.Item>
-          {/* <Menu.Item key="1" onClick={() => editProp(obj)}>
+          <Menu.Item key="1" onClick={() => editProp(obj)}>
             <a>Edit</a>
-          </Menu.Item> */}
+          </Menu.Item>
         </Menu>
         );
     };
@@ -273,7 +273,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
                         >
                             <Row>
                                 <Col span={12}>
-                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}><PlusOutlined style={{color:'grey', fontSize:'16px',marginRight:'8px'}}/> New Content Group</Text>
+                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>{formState === 'add'?<PlusOutlined style={{color:'grey', fontSize:'16px',marginRight:'8px'}}/>:null}{formState === 'add'? 'New Content Group' : 'Content Group Details' }</Text>
                                 </Col>
                                 <Col span={12}>
                                     <div className={'flex justify-end'}>
@@ -309,7 +309,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
                                         <img src='assets/images/NoData.png' className={'w-20'}/>
                                     </div>
                                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 flex justify-center mt-4'}>Create Values that defines this content group</Text>
-                                    <div className={'flex justify-center mt-4'}>
+                                    <div className={'flex justify-center mt-8'}>
                                         <Button size={'middle'} onClick={()=> setshowAddValueModal(true)}><SVG name={'plus'} extraClass={'m-0'} size={18} />Add new value</Button>
                                     </div>
                                 </Col>

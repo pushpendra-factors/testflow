@@ -6,7 +6,7 @@ import {
   CREATE_PROJECT_FULFILLED,
   FETCH_PROJECTS_REJECTED,
 } from './types';
-import { get, getHostUrl, post, put } from '../utils/request';
+import { get, getHostUrl, post, put, del } from '../utils/request';
 
 var host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : host + '/';
@@ -556,19 +556,13 @@ export function fetchContentGroup(projectId) {
 }
 
 export function deleteContentGroup(projectId, id) {
-  return function (dispatch) {
+  return (dispatch) => {
     return new Promise((resolve, reject) => {
-      del(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup/'+ id, {})
-        .then((r) => {
-          if (r.ok) {
-            dispatch({ type: 'DELETE_CONTENT_GROUP_RESOLVED'});
-            resolve(r);
-          } else {
-            reject(r);
-          }
-        })
-        .catch((err) => {
-          reject(err);
+      del(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup/' + id)
+      .then((res) => {
+            resolve(res);
+        }).catch((err) => {
+            reject(err);
         });
     });
   };

@@ -60,19 +60,19 @@ const columns = [
       title: 'Title',
       dataIndex: 'content_group_name',
       key: 'content_group_name', 
-      render: (text) => <span className={'capitalize'}>{text}</span>
+      render: (text) => <span className={'capitalize font-medium'}>{text}</span>
     },
     {
       title: 'Description',
       dataIndex: 'content_group_description',
       key: 'content_group_description', 
-      render: (text) => <span className={'capitalize'}>{text}</span>
+      render: (text) => <span className={'capitalize text-gray-700'}>{text}</span>
     },
     {
         title: 'Values',
         dataIndex: 'rule',
         key: 'rule', 
-        render: (text) => <span className={'capitalize'}>{text}</span>
+        render: (text) => <span className={'capitalize ml-3 text-gray-700'}>{text}</span>
       },
     {
       title: '',
@@ -81,7 +81,7 @@ const columns = [
       align: 'right',
       render: (obj) => (
         <Dropdown overlay={() => menu(obj)} trigger={['hover']}>
-          <Button type="text" icon={<MoreOutlined rotate={90}/>} />
+          <Button type="text" icon={<MoreOutlined rotate={90} style={{color:'gray', fontSize:'18px'}}/>} />
         </Dropdown>
       )
     }
@@ -141,9 +141,9 @@ const columns = [
             <Col span={24}>  
             <div className={'mt-6'}>
                 <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0'}>A content group refers to a collection of logically related URLs that makes up your overall website’s content. For example a collection of blog articles written with a specific intend on your blog. By defining a content group to identify all such pages on the site, you can analyse common traits across many such pages at one go. You can define upto 3 content groups. Learn <a href='#'>more</a></Text>
-                <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0 mt-2'}>Currently, content groups can be used to drill down the factors default event <code>Website Session</code></Text>
+                <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0 mt-4'}>Currently, content groups can be used to drill down the factors default event <span style={{background:'#F5F6F8',color:'#0E2647',padding:'2px',marginLeft:'4px'}}>Website Session</span></Text>
                 
-                <Table className="fa-table--basic mt-4" 
+                <Table className="fa-table--basic mt-8" 
                 columns={columns} 
                 dataSource={tableData} 
                 pagination={false}
