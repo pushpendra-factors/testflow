@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -119,7 +120,7 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		}
 		request.DisplayCategory = currentChannel
 		channelsFilterValues, errCode := storeSelected.GetChannelFilterValuesV1(projectID, request.DisplayCategory, request.ObjectType,
-			request.PropertyName, reqID)
+			strings.TrimPrefix(request.PropertyName, request.ObjectType+"_"), reqID)
 		if errCode != http.StatusOK && errCode != http.StatusFound {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
 		}
