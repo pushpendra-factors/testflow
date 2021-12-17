@@ -317,6 +317,7 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 		Name:            smartEventPayload.Name,
 		SmartEventType:  hubspotSmartEventName.Type,
 		UserId:          userID,
+		RequestSource:   model.UserSourceHubspot,
 	}
 
 	timestampReferenceField := hubspotSmartEventName.Filter.TimestampReferenceField
@@ -693,6 +694,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 		EventProperties: *enProperties,
 		UserProperties:  *enProperties,
 		Timestamp:       getEventTimestamp(document.Timestamp),
+		RequestSource:   model.UserSourceHubspot,
 	}
 
 	logCtx = logCtx.WithField("action", document.Action).WithField(
@@ -705,7 +707,8 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 		createdUserID, status := store.GetStore().CreateUser(&model.User{
 			ProjectId:      project.ID,
 			JoinTimestamp:  getEventTimestamp(document.Timestamp),
-			CustomerUserId: customerUserID})
+			CustomerUserId: customerUserID,
+			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot)})
 		if status != http.StatusCreated {
 			logCtx.WithField("status", status).Error("Failed to create user for hubspot contact created event.")
 			return http.StatusInternalServerError
@@ -764,7 +767,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 
 		if customerUserID != "" {
 			status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{
-				UserId: userID, CustomerUserId: customerUserID}, false)
+				UserId: userID, CustomerUserId: customerUserID, RequestSource: model.UserSourceHubspot}, false)
 			if status != http.StatusOK {
 				logCtx.WithField("customer_user_id", customerUserID).Error(
 					"Failed to identify user on hubspot contact sync.")
@@ -881,6 +884,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		EventProperties: eventProperties,
 		UserId:          trackPayload.UserId,
 		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+		RequestSource:   trackPayload.RequestSource,
 	}
 
 	var timestamp int64
@@ -1481,10 +1485,11 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 	for i := range processEventNames {
 
 		trackPayload := &SDK.TrackPayload{
-			Name:      processEventNames[i],
-			ProjectId: projectID,
-			Timestamp: getEventTimestamp(processEventTimestamps[i]),
-			UserId:    groupUserID,
+			Name:          processEventNames[i],
+			ProjectId:     projectID,
+			Timestamp:     getEventTimestamp(processEventTimestamps[i]),
+			UserId:        groupUserID,
+			RequestSource: model.UserSourceHubspot,
 		}
 		docTypeAlias := model.GetHubspotTypeAliasByType(document.Type)
 
@@ -1689,6 +1694,7 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 			EventProperties: *enProperties,
 			UserProperties:  *enProperties,
 			Timestamp:       getEventTimestamp(document.Timestamp),
+			RequestSource:   model.UserSourceHubspot,
 		}
 
 		// Track deal stage change only if, deal with same id and

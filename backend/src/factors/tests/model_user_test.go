@@ -31,7 +31,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	start := time.Now()
 
 	// Test successful create user.
-	createUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId})
+	createUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	user, errCode := store.GetStore().GetUser(projectId, createUserID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -73,7 +73,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	// Test successful create user with customer_user_id and properties.
 	customerUserId := "customer_id"
 	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "paid": true}`))}
-	createUserID, errCode = store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: customerUserId, Properties: properties})
+	createUserID, errCode = store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: customerUserId, Properties: properties, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	user, errCode = store.GetStore().GetUser(projectId, createUserID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -97,7 +97,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	// Creating again with the same customer_user_id with no properties.
 	// Should respond with last user of customer_user instead of creating.
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
-	createUserID, newUserErrorCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: rCustomerUserId})
+	createUserID, newUserErrorCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: rCustomerUserId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, newUserErrorCode)
 	lastUser, lastUserErrorCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, rCustomerUserId)
 	assert.Equal(t, http.StatusFound, lastUserErrorCode)
@@ -111,13 +111,13 @@ func TestDBCreateAndGetUser(t *testing.T) {
 
 	// Test external UUID as id.
 	uuid := U.GetUUID()
-	createUserID, errCode = store.GetStore().CreateUser(&model.User{ID: uuid, ProjectId: projectId})
+	createUserID, errCode = store.GetStore().CreateUser(&model.User{ID: uuid, ProjectId: projectId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	// User should be create with given id.
 	assert.Equal(t, uuid, createUserID)
 
 	// Use an existing user_id to create. Should get and return the user.
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ID: uuid, ProjectId: projectId})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ID: uuid, ProjectId: projectId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, createUserID, createdUserID2)
 }
@@ -140,7 +140,7 @@ func TestDBGetUsers(t *testing.T) {
 	var users []model.User
 	numUsers := 100
 	for i := 0; i < numUsers; i++ {
-		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode)
 		user, errCode := store.GetStore().GetUser(projectId, createdUserID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -197,7 +197,7 @@ func TestDBGetUserLatestByCustomerUserId(t *testing.T) {
 
 	// Test latest user return for the customer_user.
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
-	createUserID1, latestUserErrCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId})
+	createUserID1, latestUserErrCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, latestUserErrCode)
 	getUser, getUserErrCode := store.GetStore().GetUserLatestByCustomerUserId(project.ID, rCustomerUserId)
 	assert.Equal(t, http.StatusFound, getUserErrCode)
@@ -212,11 +212,11 @@ func TestDBGetUserLatestByCustomerUserId(t *testing.T) {
 	assert.NotEqual(t, http.StatusFound, errCode)
 
 	sameCustomerId := "user_1"
-	createUserID1, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId})
+	createUserID1, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createUserID1)
-	createUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId})
+	createUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createUserID2)
-	createUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId})
+	createUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createUserID3)
 	luser, errCode := store.GetStore().GetUserLatestByCustomerUserId(project.ID, sameCustomerId)
 	assert.Equal(t, createUserID3, luser.ID) // Should be the latest user with same customer_user_id.
@@ -451,11 +451,11 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	// No seg_aid but c_uid provided. should create new user without c_uid.
 	// Later user will be identified with SDK.Identify.
 	customerUserID := U.RandomLowerAphaNumString(15) + "@example.com"
-	user, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, "", customerUserID, time.Now().Unix())
+	user, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, "", customerUserID, time.Now().Unix(), model.UserSourceWeb)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user)
 	assert.NotEmpty(t, user.CustomerUserId)
-	status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user.ID, CustomerUserId: customerUserID}, false)
+	status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user.ID, CustomerUserId: customerUserID, RequestSource: model.UserSourceWeb}, false)
 	assert.Equal(t, http.StatusOK, status)
 	user, errCode = store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -467,14 +467,14 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 
 	// no customer uid. create new user with seg_aid.
 	segAid := U.RandomLowerAphaNumString(15)
-	user1, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix())
+	user1, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix(), model.UserSourceWeb)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user1)
 	assert.Equal(t, segAid, user1.SegmentAnonymousId)
 	assert.Empty(t, user1.CustomerUserId)
 
 	// exist return same user. using same segAid.
-	user2, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix())
+	user2, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix(), model.UserSourceWeb)
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user2)
 	assert.Equal(t, user1.ID, user2.ID)
@@ -483,11 +483,11 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 
 	// both provided. c_uid is empty. identify
 	custId := U.RandomLowerAphaNumString(15) + "@example.com"
-	user3, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, custId, time.Now().Unix())
+	user3, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, custId, time.Now().Unix(), model.UserSourceWeb)
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user3)
 	assert.Equal(t, user1.ID, user3.ID)
-	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user3.ID, CustomerUserId: custId}, false)
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user3.ID, CustomerUserId: custId, RequestSource: model.UserSourceWeb}, false)
 	assert.Equal(t, http.StatusOK, status)
 	user3, errCode = store.GetStore().GetUser(project.ID, user3.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -498,14 +498,14 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	assert.Equal(t, user3.CustomerUserId, (*userProperties)[U.UP_EMAIL])
 
 	// both seg_aid and c_uid matches.
-	user4, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, user3.CustomerUserId, time.Now().Unix())
+	user4, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, user3.CustomerUserId, time.Now().Unix(), model.UserSourceWeb)
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user4)
 	assert.Equal(t, user3.ID, user4.ID)
 
 	// c_uid mismatch with existing seg_aid. should not update c_uid.
 	custId1 := U.RandomLowerAphaNumString(15)
-	user5, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, custId1, time.Now().Unix())
+	user5, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, custId1, time.Now().Unix(), model.UserSourceWeb)
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user5)
 	assert.Equal(t, user4.ID, user5.ID)                         // Should return existing user.
@@ -513,7 +513,7 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 
 	// user by seg_aid doesn't exist, but user exist with given c_uid.
 	segAid1 := U.RandomLowerAphaNumString(15)
-	user6, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid1, user4.CustomerUserId, time.Now().Unix()) // new seg_aid.
+	user6, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid1, user4.CustomerUserId, time.Now().Unix(), model.UserSourceWeb) // new seg_aid.
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user6)
 	assert.Equal(t, user4.ID, user6.ID) // Should not use existing user with same c_uid.
@@ -521,11 +521,11 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	// user by seg_aid and c_uid doesn't exist.
 	custId2 := U.RandomLowerAphaNumString(15) + "@example.com"
 	segAid2 := U.RandomLowerAphaNumString(15)
-	user7, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid2, custId2, time.Now().Unix())
+	user7, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid2, custId2, time.Now().Unix(), model.UserSourceWeb)
 	assert.Equal(t, http.StatusCreated, errCode)
 	// new user with new seg_aid and identified with cuid.
 	assert.Equal(t, segAid2, user7.SegmentAnonymousId)
-	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user7.ID, CustomerUserId: custId2}, false)
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user7.ID, CustomerUserId: custId2, RequestSource: model.UserSourceWeb}, false)
 	assert.Equal(t, http.StatusOK, status)
 	user7, errCode = store.GetStore().GetUser(project.ID, user7.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -546,8 +546,8 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	// Test successful CreateEvent.
 	props1 := json.RawMessage(`{"prop1": "value1", "prop2": 1}`)
 	props2 := json.RawMessage(`{"prop3": "value2", "prop4": 2}`)
-	createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
-	createdUserID2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	createdUserID2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode1)
 	assert.Equal(t, http.StatusCreated, errCode2)
 
@@ -601,8 +601,8 @@ func TestGetRecentUserPropertyValues(t *testing.T) {
 	// Test successful CreateEvent.
 	props1 := json.RawMessage(`{"prop1": "value1", "prop2": 1}`)
 	props2 := json.RawMessage(`{"prop3": "value2", "prop4": 2}`)
-	createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
-	createdUserID2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	createdUserID2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode1)
 	assert.Equal(t, http.StatusCreated, errCode2)
 
@@ -640,7 +640,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	assert.Nil(t, err)
 
 	t.Run("UserWithoutProperties", func(t *testing.T) {
-		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
 			U.UP_EMAIL: "xxx@example.com",
@@ -656,7 +656,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 
 	t.Run("FormSubmitWithEmailAndUserPropertiesWithSameEmail", func(t *testing.T) {
 		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
-			Properties: postgres.Jsonb{json.RawMessage(`{"$email": "xxx@example.com"}`)}})
+			Properties: postgres.Jsonb{json.RawMessage(`{"$email": "xxx@example.com"}`)}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
 			U.UP_EMAIL:   "xxx@example.com",
@@ -676,7 +676,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 
 	t.Run("FormSubmitWithEmailAndUserPropertiesWithDifferentEmail", func(t *testing.T) {
 		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
-			Properties: postgres.Jsonb{json.RawMessage(`{"$email": "yyy@example.com"}`)}})
+			Properties: postgres.Jsonb{json.RawMessage(`{"$email": "yyy@example.com"}`)}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
 			U.UP_EMAIL:   "xxx@example.com",
@@ -693,7 +693,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 
 	t.Run("FormSubmitWithPhoneAndUserPropertiesWithSamePhone", func(t *testing.T) {
 		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
-			Properties: postgres.Jsonb{json.RawMessage(`{"$phone": "99999999999"}`)}})
+			Properties: postgres.Jsonb{json.RawMessage(`{"$phone": "99999999999"}`)}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
 			U.UP_EMAIL:   "xxx@example.com",
@@ -712,7 +712,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 
 	t.Run("FormSubmitWithPhoneAndUserPropertiesWithDifferentPhone", func(t *testing.T) {
 		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
-			Properties: postgres.Jsonb{json.RawMessage(`{"$phone": "99999999999"}`)}})
+			Properties: postgres.Jsonb{json.RawMessage(`{"$phone": "99999999999"}`)}, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
 			U.UP_EMAIL:   "xxx@example.com",
@@ -728,7 +728,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	})
 
 	t.Run("FormSubmitWithCaseSensitiveEmailAndLeadingZeroPhoneNo", func(t *testing.T) {
-		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
 			U.UP_EMAIL:   "Xyz@Example.com",
@@ -775,6 +775,7 @@ func TestUserIdentityPropertiesOnCreateUser(t *testing.T) {
 		ProjectId:      project.ID,
 		CustomerUserId: cuid,
 		Properties:     postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"city":"city1"}`))},
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 	assert.Equal(t, http.StatusCreated, status)
 	properties, status := store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, createdUserID1)
@@ -800,6 +801,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		Name:            U.EVENT_NAME_FORM_SUBMITTED,
 		Timestamp:       timestamp,
 		EventProperties: properties,
+		RequestSource:   model.UserSourceWeb,
 	}
 
 	status, response := SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
@@ -823,6 +825,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: properties,
 		UserId:          userId,
+		RequestSource:   model.UserSourceWeb,
 	}
 
 	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
@@ -848,6 +851,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: properties,
 		UserId:          userId,
+		RequestSource:   model.UserSourceWeb,
 	}
 
 	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
@@ -871,6 +875,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: properties,
 		UserId:          userId,
+		RequestSource:   model.UserSourceWeb,
 	}
 
 	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
@@ -896,6 +901,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		Name:            U.EVENT_NAME_FORM_SUBMITTED,
 		Timestamp:       timestamp,
 		EventProperties: properties,
+		RequestSource:   model.UserSourceWeb,
 	}
 
 	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
@@ -922,6 +928,7 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: properties,
 		UserId:          userId,
+		RequestSource:   model.UserSourceWeb,
 	}
 
 	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK, "")
@@ -960,36 +967,36 @@ func TestUsersUniquenessConstraints(t *testing.T) {
 	assert.Nil(t, err)
 
 	segAid := "seg_anon_id_1"
-	createdUser1, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix()-2)
+	createdUser1, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix()-2, model.UserSourceWeb)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// Should not create new user. Should return same user_id.
-	createdUser2, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix()-2)
+	createdUser2, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix()-2, model.UserSourceWeb)
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, createdUser1.ID, createdUser2.ID)
 
 	ampUserID := "amp_user_id_1"
-	createdUserID11, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampUserID, time.Now().Unix()-2)
+	createdUserID11, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampUserID, time.Now().Unix()-2, model.UserSourceWeb)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// Should not create new user. Should return same user_id.
-	createdUserID12, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampUserID, time.Now().Unix()-2)
+	createdUserID12, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampUserID, time.Now().Unix()-2, model.UserSourceWeb)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, createdUserID11, createdUserID12)
 
 	userID := U.GetUUID()
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// Should not create new user. Should return same user_id.
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, createdUserID1, createdUserID2)
 
-	_, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID, SegmentAnonymousId: segAid})
+	_, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID, SegmentAnonymousId: segAid, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 
-	_, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID, AMPUserId: ampUserID})
+	_, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID, AMPUserId: ampUserID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 }
 
@@ -1003,13 +1010,13 @@ func TestUserPropertySkipOnMerge(t *testing.T) {
 	joinTimestamp := time.Now().AddDate(0, 0, -11)
 
 	// Test user-1 lead guid1 user-2 no lead guid
-	user1, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cUID1, JoinTimestamp: joinTimestamp.Unix()})
+	user1, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cUID1, JoinTimestamp: joinTimestamp.Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, status)
 
 	properties := &postgres.Jsonb{RawMessage: []byte(fmt.Sprintf(`{"%s":"%s","%s":"%s"}`, model.UserPropertyHubspotContactLeadGUID, leadGUID1, "$hubspot_contact_id", "1"))}
 	_, status = store.GetStore().UpdateUserProperties(project.ID, user1, properties, joinTimestamp.Unix()+1)
 
-	user2, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cUID1, JoinTimestamp: joinTimestamp.Unix() + 2})
+	user2, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cUID1, JoinTimestamp: joinTimestamp.Unix() + 2, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, status)
 
 	user, status := store.GetStore().GetUser(project.ID, user2)
@@ -1026,7 +1033,7 @@ func TestUserPropertySkipOnMerge(t *testing.T) {
 	assert.Equal(t, leadGUID1, (*userProperties)[model.UserPropertyHubspotContactLeadGUID])
 
 	// Test user-3 lead guid2, same customer user id
-	user3, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cUID1, JoinTimestamp: joinTimestamp.Unix()})
+	user3, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cUID1, JoinTimestamp: joinTimestamp.Unix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, status)
 
 	properties = &postgres.Jsonb{RawMessage: []byte(fmt.Sprintf(`{"%s":"%s"}`, model.UserPropertyHubspotContactLeadGUID, leadGUID2))}
@@ -1045,27 +1052,29 @@ func TestIdentifiersSkipOnMerge(t *testing.T) {
 	cuid := getRandomEmail()
 	userID1, status := store.GetStore().CreateUser(&model.User{
 		ProjectId: project.ID,
+		Source:    model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 	assert.Equal(t, http.StatusCreated, status)
 
 	status, _ = sdk.Identify(project.ID, &SDK.IdentifyPayload{
-		UserId: userID1, CustomerUserId: cuid, Source: sdk.SourceJSSDK,
+		UserId: userID1, CustomerUserId: cuid, Source: sdk.SourceJSSDK, RequestSource: model.UserSourceWeb,
 	}, true)
 	assert.Equal(t, http.StatusOK, status)
 
 	cuid2 := getRandomEmail()
 	userID2, status := store.GetStore().CreateUser(&model.User{
 		ProjectId: project.ID,
+		Source:    model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 	assert.Equal(t, http.StatusCreated, status)
 
 	status, _ = sdk.Identify(project.ID, &SDK.IdentifyPayload{
-		UserId: userID2, CustomerUserId: cuid2, Source: sdk.SourceJSSDK,
+		UserId: userID2, CustomerUserId: cuid2, Source: sdk.SourceJSSDK, RequestSource: model.UserSourceWeb,
 	}, true)
 	assert.Equal(t, http.StatusOK, status)
 
 	status, _ = sdk.Identify(project.ID, &SDK.IdentifyPayload{
-		UserId: userID2, CustomerUserId: cuid, Source: sdk.SourceJSSDK,
+		UserId: userID2, CustomerUserId: cuid, Source: sdk.SourceJSSDK, RequestSource: model.UserSourceWeb,
 	}, true)
 	assert.Equal(t, http.StatusOK, status)
 	user1, status := store.GetStore().GetUser(project.ID, userID1)
@@ -1104,7 +1113,7 @@ func TestGetSelectedUsersByCustomerUserID(t *testing.T) {
 	var users []model.User
 	customer_id := "Taashish"
 	for i := 0; i < int(limit); i++ {
-		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: customer_id})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: customer_id, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode)
 		lastUser, lastUserErrorCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, customer_id)
 		assert.Equal(t, http.StatusFound, lastUserErrorCode)
@@ -1135,6 +1144,7 @@ func TestUserIntialPropertiesOnOldTimestamp(t *testing.T) {
 		ProjectId:      project.ID,
 		CustomerUserId: cuid,
 		JoinTimestamp:  u1JointTimestamp.Unix(),
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 	assert.Equal(t, http.StatusCreated, status)
 
@@ -1145,6 +1155,7 @@ func TestUserIntialPropertiesOnOldTimestamp(t *testing.T) {
 		ProjectId:      project.ID,
 		CustomerUserId: cuid,
 		JoinTimestamp:  u2JointTimestamp.Unix(),
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 	assert.Equal(t, http.StatusCreated, status)
 
@@ -1293,7 +1304,7 @@ func TestUserGroupsPropertiesUpdate(t *testing.T) {
 	timestamp := time.Now().AddDate(0, 0, -1)
 
 	groupUserID, status := store.GetStore().CreateGroupUser(&model.User{
-		ProjectId: project.ID, JoinTimestamp: timestamp.Unix() - 10,
+		ProjectId: project.ID, JoinTimestamp: timestamp.Unix() - 10, Source: model.GetRequestSourcePointer(model.UserSourceHubspot),
 	}, groupName, groupID)
 	assert.Equal(t, http.StatusCreated, status)
 	_, status = store.GetStore().UpdateUserGroupProperties(project.ID, groupUserID, &postgres.Jsonb{json.RawMessage([]byte(`{"hour":1,"count":2,"city":"Bengalore"}`))}, timestamp.Unix())
@@ -1338,6 +1349,7 @@ func TestUserGroupsPropertiesUpdate(t *testing.T) {
 	docID := "1"
 	userID, status := store.GetStore().CreateUser(&model.User{
 		ProjectId: project.ID,
+		Source:    model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 	assert.Equal(t, http.StatusCreated, status)
 	_, status = store.GetStore().UpdateUserGroup(project.ID, userID, groupName, docID, groupUserID)
@@ -1346,4 +1358,69 @@ func TestUserGroupsPropertiesUpdate(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.NotNil(t, user.IsGroupUser)
 	assert.Equal(t, false, *user.IsGroupUser)
+}
+
+func TestUserSourceColumn(t *testing.T) {
+	// Initialize a project for the user.
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	projectId := project.ID
+
+	// Test successful create user, with source value getting successfully stored
+	createUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	user, errCode := store.GetStore().GetUser(projectId, createUserID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, model.UserSourceWeb, *user.Source)
+
+	// Test un-successful create user when source is not passed
+	_, errCode = store.GetStore().CreateUser(&model.User{ProjectId: projectId})
+	assert.Equal(t, http.StatusInternalServerError, errCode)
+
+	// Test for successfull create group user
+	groupName := "g1"
+	groupID := "g1ID"
+	allowedGroupsMap := map[string]bool{groupName: true}
+	group, status := store.GetStore().CreateGroup(project.ID, groupName, allowedGroupsMap)
+	assert.Equal(t, http.StatusCreated, status, fmt.Sprintf("failed creating group %s", groupName))
+	assert.Equal(t, 1, group.ID)
+	timestamp := time.Now().AddDate(0, 0, -1)
+	groupUserID, status := store.GetStore().CreateGroupUser(&model.User{
+		ProjectId: project.ID, JoinTimestamp: timestamp.Unix() - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb),
+	}, groupName, groupID)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().UpdateUserGroupProperties(project.ID, groupUserID, &postgres.Jsonb{json.RawMessage([]byte(`{"hour":1,"count":2,"city":"Bengalore"}`))}, timestamp.Unix())
+	assert.Equal(t, http.StatusAccepted, status)
+	user, status = store.GetStore().GetUser(project.ID, groupUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, model.UserSourceWeb, *user.Source)
+
+	// Test for successfull CreateOrGetAMPUser
+	userAgentStr := "Mozilla/5.0 (Linux; Android 8.0.0; SM-G960F Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.84 Mobile Safari/537.36"
+	ampClientId := "amp-1xxAGEAL-irIHu4qMW8j3A"
+	payload := &SDK.AMPTrackPayload{
+		ClientID:      ampClientId,
+		SourceURL:     "abcd.com/",
+		Title:         "Test",
+		Timestamp:     time.Now().Unix(),
+		UserAgent:     userAgentStr,
+		ClientIP:      "10.10.0.1",
+		RequestSource: model.UserSourceWeb,
+	}
+	errCode, _ = SDK.AMPTrackByToken(project.Token, payload)
+	assert.Equal(t, errCode, http.StatusOK)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload.Timestamp, model.UserSourceWeb)
+	assert.Equal(t, errCode, http.StatusFound)
+	user, status = store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, model.UserSourceWeb, *user.Source)
+
+	// Test for successfull CreateOrGetSegmentUser
+	customerUserID := U.RandomLowerAphaNumString(15) + "@example.com"
+	user, errCode = store.GetStore().CreateOrGetSegmentUser(project.ID, "", customerUserID, time.Now().Unix(), model.UserSourceWeb)
+	assert.Equal(t, http.StatusCreated, errCode)
+	user, status = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, model.UserSourceWeb, *user.Source)
 }

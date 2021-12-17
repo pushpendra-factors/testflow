@@ -127,6 +127,7 @@ func GetTrackDetailsFromCheckoutObject(
 			user = &model.User{ProjectId: projectId,
 				CustomerUserId: custUserId,
 				JoinTimestamp:  eventTimestamp,
+				Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 			}
 			_, errCode := store.GetStore().CreateUser(user)
 			if errCode != http.StatusCreated {
@@ -283,6 +284,7 @@ func GetTrackDetailsFromOrderObject(
 			user = &model.User{ProjectId: projectId,
 				CustomerUserId: custUserId,
 				JoinTimestamp:  eventTimestamp,
+				Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 			}
 			_, errCode := store.GetStore().CreateUser(user)
 			if errCode != http.StatusCreated {

@@ -378,8 +378,8 @@ type Model interface {
 
 	// user
 	CreateUser(user *model.User) (string, int)
-	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64) (string, int)
-	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int)
+	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64, requestSource int) (string, int)
+	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64, requestSource int) (*model.User, int)
 	GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID uint64, id string) (*model.User, int)
 	GetUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int)

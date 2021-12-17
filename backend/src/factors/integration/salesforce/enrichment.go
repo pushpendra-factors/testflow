@@ -248,6 +248,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 				ProjectId:      projectID,
 				CustomerUserId: customerUserID,
 				JoinTimestamp:  createdTimestamp,
+				Source:         model.GetRequestSourcePointer(model.UserSourceSalesforce),
 			})
 
 			if status != http.StatusCreated {
@@ -258,6 +259,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 
 		finalPayload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentCreated)
 		finalPayload.Timestamp = createdTimestamp
+		finalPayload.RequestSource = model.UserSourceSalesforce
 
 		status, trackResponse := SDK.Track(projectID, &finalPayload, true, SDK.SourceSalesforce, objectType)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -298,6 +300,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 					UserId:         event.UserId,
 					CustomerUserId: customerUserID,
 					Timestamp:      lastModifiedTimestamp,
+					RequestSource:  model.UserSourceSalesforce,
 				}, false)
 
 				if status != http.StatusOK {
@@ -310,6 +313,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		}
 
 		finalPayload.UserId = userID
+		finalPayload.RequestSource = model.UserSourceSalesforce
 
 		status, trackResponse := SDK.Track(projectID, &finalPayload, true, SDK.SourceSalesforce, objectType)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -327,6 +331,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		payload.Timestamp = lastModifiedTimestamp
 		payload.UserId = userID
 		payload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
+		payload.RequestSource = model.UserSourceSalesforce
 		status, _ := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce, objectType)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			return "", "", finalPayload, fmt.Errorf("updated event for different timestamp track failed for doc type %d", document.Type)
@@ -405,6 +410,7 @@ func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesfo
 		ProjectId:       projectID,
 		EventProperties: *enProperties,
 		UserProperties:  *enProperties,
+		RequestSource:   model.UserSourceSalesforce,
 	}
 
 	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
@@ -481,6 +487,7 @@ func enrichContact(projectID uint64, document *model.SalesforceDocument, salesfo
 		ProjectId:       projectID,
 		EventProperties: *enProperties,
 		UserProperties:  *enProperties,
+		RequestSource:   model.UserSourceSalesforce,
 	}
 
 	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
@@ -628,6 +635,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 		Name:            smartEventPayload.Name,
 		SmartEventType:  salesforceSmartEventName.Type,
 		UserId:          userID,
+		RequestSource:   model.UserSourceSalesforce,
 	}
 
 	timestampReferenceField := salesforceSmartEventName.Filter.TimestampReferenceField
@@ -875,10 +883,11 @@ func createOrUpdateSalesforceGroupsProperties(projectID uint64, document *model.
 	for i := range processEventNames {
 
 		trackPayload := &SDK.TrackPayload{
-			Name:      processEventNames[i],
-			ProjectId: projectID,
-			Timestamp: processEventTimestamps[i],
-			UserId:    groupUserID,
+			Name:          processEventNames[i],
+			ProjectId:     projectID,
+			Timestamp:     processEventTimestamps[i],
+			UserId:        groupUserID,
+			RequestSource: model.UserSourceSalesforce,
 		}
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceSalesforce, "")
@@ -1000,6 +1009,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 		ProjectId:       projectID,
 		EventProperties: *enProperties,
 		UserProperties:  *enProperties,
+		RequestSource:   model.UserSourceSalesforce,
 	}
 
 	var eventID string
@@ -1061,7 +1071,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 	}
 
 	if userID == "" && customerUserID == "" && !assocationPresent {
-		customerUserID, userID = getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
+		customerUserID, _ = getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	}
 
 	if customerUserID != "" || userID != "" {
@@ -1170,6 +1180,7 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 		ProjectId:       projectID,
 		EventProperties: *enProperties,
 		UserProperties:  *enProperties,
+		RequestSource:   model.UserSourceSalesforce,
 	}
 
 	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
@@ -1319,6 +1330,7 @@ func enrichCampaignToAllCampaignMembers(project *model.Project, document *model.
 			ProjectId:       project.ID,
 			EventProperties: *enMemberProperties, // no user properties for campaign members
 			UserId:          existingUserID,
+			RequestSource:   model.UserSourceSalesforce,
 		}
 
 		eventID, userID, finalTrackPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, &referenceDocument, "", "")
@@ -1445,6 +1457,7 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 		ProjectId:       project.ID,
 		EventProperties: *enCampaignMemberProperties,
 		UserId:          existingUserID,
+		RequestSource:   model.UserSourceSalesforce,
 	}
 
 	eventID, userID, finalTrackPayload, err := TrackSalesforceEventByDocumentType(project.ID, trackPayload, document, "", "")
@@ -1548,6 +1561,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		EventProperties: eventProperties,
 		UserId:          trackPayload.UserId,
 		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+		RequestSource:   trackPayload.RequestSource,
 	}
 
 	var timestamp int64

@@ -37,11 +37,11 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	userID2 := U.RandomLowerAphaNumString(5)
 	userID3 := U.RandomLowerAphaNumString(5)
 	cuid := U.RandomLowerAphaNumString(5)
-	_, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, CustomerUserId: cuid})
+	_, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, CustomerUserId: cuid, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID2, CustomerUserId: cuid})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID2, CustomerUserId: cuid, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID3, CustomerUserId: cuid})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID3, CustomerUserId: cuid, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 	assert.Equal(t, http.StatusCreated, status)
 
 	createdAt := time.Now().AddDate(0, 0, -11)
@@ -328,6 +328,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 		ProjectId:      project.ID,
 		JoinTimestamp:  firstPropTimestamp,
 		CustomerUserId: cuID,
+		Source:         model.GetRequestSourcePointer(model.UserSourceHubspot),
 	})
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotEmpty(t, createdUserID)
@@ -3215,6 +3216,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	user, status := store.GetStore().GetUser(project.ID, companyDocuments[0].GroupUserId)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, "testcompany2.com", user.Group1ID)
+	assert.Equal(t, model.UserSourceHubspot, *user.Source)
 	userProperties, err := util.DecodePostgresJsonb(&user.Properties)
 	assert.Equal(t, "lead", (*userProperties)["$hubspot_company_lifecyclestage"])
 
@@ -3420,9 +3422,10 @@ func TestHubspotOfflineTouchPoint(t *testing.T) {
 		UserProperties:  *enProperties,
 		Name:            U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
 		Timestamp:       getEventTimestamp(hubspotDocument.Timestamp),
+		RequestSource:   model.UserSourceHubspot,
 	}
 	userID1 := U.RandomLowerAphaNumString(5)
-	createdUserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, CustomerUserId: cuid, JoinTimestamp: getEventTimestamp(hubspotDocument.Timestamp)})
+	createdUserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, CustomerUserId: cuid, JoinTimestamp: getEventTimestamp(hubspotDocument.Timestamp), Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 	assert.Equal(t, http.StatusCreated, status)
 
 	trackPayload.UserId = createdUserID
@@ -3775,7 +3778,7 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	}
 
 	// Create normal user U2 (createUserU2) with same email property as that of createDocumentIDU1 ("email": cuid_first)
-	userU2, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cuid_first, JoinTimestamp: timestampT3})
+	userU2, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cuid_first, JoinTimestamp: timestampT3, Source: model.GetRequestSourcePointer(model.UserSourceHubspot)})
 	assert.Equal(t, http.StatusCreated, errCode1)
 
 	// Verify lastmodifieddate user property of userU2 to be timestampT1, which is same as createDocumentIDU1

@@ -26,12 +26,12 @@ func TestProfiles(t *testing.T) {
 	properties2 := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "us", "age": 20, "paid": true}`))}
 	joinTime := time.Now().Unix()
 
-	createUserID1, newUserErrorCode := store.GetStore().CreateUser(&model.User{ProjectId: projectID, CustomerUserId: rCustomerUserId, Properties: properties1, JoinTimestamp: joinTime})
+	createUserID1, newUserErrorCode := store.GetStore().CreateUser(&model.User{ProjectId: projectID, CustomerUserId: rCustomerUserId, Properties: properties1, JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, newUserErrorCode)
 	assert.NotEqual(t, "", createUserID1)
 
 	nextUserJoinTime := joinTime + 86400
-	createUserID2, nextUserErrCode := store.GetStore().CreateUser(&model.User{ProjectId: projectID, Properties: properties2, JoinTimestamp: nextUserJoinTime})
+	createUserID2, nextUserErrCode := store.GetStore().CreateUser(&model.User{ProjectId: projectID, Properties: properties2, JoinTimestamp: nextUserJoinTime, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, nextUserErrCode)
 	assert.NotEqual(t, "", createUserID2)
 

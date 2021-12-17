@@ -397,7 +397,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 	}
 
 	user, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, event.AnonymousID,
-		event.UserId, requestTimestamp)
+		event.UserId, requestTimestamp, model.UserSourceWeb)
 	if errCode != http.StatusOK && errCode != http.StatusCreated {
 		response.Error = "Invalid user"
 		return errCode, response
@@ -412,7 +412,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 				UserId:         user.ID,
 				CustomerUserId: event.UserId,
 				Timestamp:      requestTimestamp,
-			}, false)
+				RequestSource:  model.UserSourceWeb}, false)
 		// Log and continue to track, if identification fails.
 		if status != http.StatusOK {
 			logCtx.WithField("customer_user_id", event.UserId).
@@ -465,6 +465,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			Timestamp:       requestTimestamp,
 			ClientIP:        event.Context.IP,
 			UserAgent:       event.Context.UserAgent,
+			RequestSource:   model.UserSourceWeb,
 		}
 
 		status, trackResponse := SDK.Track(project.ID, request, false, SDK.SourceSegment, "")
@@ -512,6 +513,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			Timestamp:       requestTimestamp,
 			ClientIP:        event.Context.IP,
 			UserAgent:       event.Context.UserAgent,
+			RequestSource:   model.UserSourceWeb,
 		}
 
 		status, trackResponse := SDK.Track(project.ID, request, false, SDK.SourceSegment, "")
@@ -553,6 +555,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			Timestamp:       requestTimestamp,
 			ClientIP:        event.Context.IP,
 			UserAgent:       event.Context.UserAgent,
+			RequestSource:   model.UserSourceWeb,
 		}
 
 		status, trackResponse := SDK.Track(project.ID, request, false, SDK.SourceSegment, "")

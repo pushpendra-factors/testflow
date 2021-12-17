@@ -31,7 +31,8 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 			"$page_raw_url": pageURL,
 			"authorName":    "author1",
 		},
-		Timestamp: timestamp,
+		Timestamp:     timestamp,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -49,6 +50,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 			"$page_raw_url": pageURL,
 			"authorName":    "author1",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -133,7 +135,8 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 			"$page_raw_url": pageURL,
 			"authorName":    "author1",
 		},
-		Timestamp: timestamp + 1,
+		Timestamp:     timestamp + 1,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -149,8 +152,9 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 			"$page_raw_url": pageURL1,
 			"authorName":    "author2",
 		},
-		Timestamp: timestamp + 2,
-		UserId:    response.UserId,
+		Timestamp:     timestamp + 2,
+		UserId:        response.UserId,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -205,7 +209,8 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 			"$page_raw_url": pageURL,
 			"authorName":    "author1",
 		},
-		Timestamp: timestamp + 3,
+		Timestamp:     timestamp + 3,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)

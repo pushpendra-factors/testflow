@@ -107,6 +107,7 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableSalesforceGroupsByProjectIDs := flag.String("salesforce_groups_by_project_ids", "", "Enable salesforce groups by projects.")
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -163,6 +164,7 @@ func main() {
 		DisableRedisWrites:                     disableRedisWrites,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
 		AllowedSalesforceGroupsByProjectIDs:    *enableSalesforceGroupsByProjectIDs,
+		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 	}
 
 	C.InitConf(config)

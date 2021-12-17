@@ -267,7 +267,7 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 }
 
 func eventToDb(event denEvent, project *model.Project) int {
-	userID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: event.UserId})
+	userID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: event.UserId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	if errCode != http.StatusCreated && errCode != http.StatusOK {
 		log.Errorf("failed to create user status: %d", errCode)
 		return errCode

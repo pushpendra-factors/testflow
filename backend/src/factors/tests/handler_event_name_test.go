@@ -210,7 +210,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names.
 	assert.Len(t, eventNames.EventNames, 0)
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID)
 	assert.Equal(t, http.StatusCreated, errCode)
 

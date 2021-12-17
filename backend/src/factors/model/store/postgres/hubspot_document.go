@@ -916,11 +916,19 @@ func (pg *Postgres) CreateOrUpdateGroupPropertiesBySource(projectID uint64, grou
 		return groupUserID, nil
 	}
 
+	var requestSource int
+	if source == model.SmartCRMEventSourceHubspot {
+		requestSource = model.UserSourceHubspot
+	} else {
+		requestSource = model.UserSourceSalesforce
+	}
+
 	isGroupUser := true
 	userID, status := pg.CreateGroupUser(&model.User{
 		ProjectId:     projectID,
 		IsGroupUser:   &isGroupUser,
 		JoinTimestamp: createdTimestamp,
+		Source:        &requestSource,
 	}, groupName, groupID)
 	if status != http.StatusCreated {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create group user.")

@@ -37,7 +37,7 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 		}
 		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 
-		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotEmpty(t, createdUserID)
 
@@ -92,7 +92,7 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 		}
 		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 
-		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotEmpty(t, createdUserID)
 
@@ -156,7 +156,7 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 		}
 		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 
-		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotEmpty(t, createdUserID)
 
@@ -218,7 +218,7 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 		}
 		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 
-		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotEmpty(t, createdUserID)
 
@@ -288,11 +288,11 @@ func TestAnalyticsFunnelWithUserIdentification(t *testing.T) {
 	eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 	trackURI := "/sdk/event/track"
 
-	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID3)
 
-	createdUserID4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID4)
 
@@ -360,7 +360,7 @@ func TestAnalyticsFunnelQueryWithFilterConditionNumericalProperty(t *testing.T) 
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID)
 
@@ -442,7 +442,7 @@ func TestInsightsAnalyticsQueryGroupingMultipleFilters(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID)
 
@@ -534,7 +534,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID)
 
@@ -749,7 +749,7 @@ func TestAnalyticsFunnelQueryRepeatedEvents(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
@@ -766,7 +766,7 @@ func TestAnalyticsFunnelQueryRepeatedEvents(t *testing.T) {
 		stepTimestamp = stepTimestamp + 10
 	}
 
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID2)
 	payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
@@ -853,7 +853,7 @@ func TestAnalyticsFunnelQueryCRMEventsWithSameTimestamp(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
@@ -867,7 +867,7 @@ func TestAnalyticsFunnelQueryCRMEventsWithSameTimestamp(t *testing.T) {
 	response := DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID2)
 	payload2 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
@@ -946,7 +946,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID)
 
@@ -1719,13 +1719,13 @@ func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID2)
-	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID3)
 
@@ -1983,13 +1983,13 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID2)
-	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID3)
 
@@ -2337,7 +2337,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 		numPropertyRangeStart := 1
 		numPropertyRangeEnd := 100
 		for i := numPropertyRangeStart; i <= numPropertyRangeEnd; i++ {
-			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
 				eventName1, icreatedUserID, startTimestamp+10, i, i)
@@ -2347,7 +2347,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 
 		// Add "bad_number" string for numerical page_load_time and numerical_property.
 		// Should get filteted out and existing tests should pass as is.
-		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"$page_load_time":"%s"},"user_properties":{"numerical_property":"%s"}}`,
 			eventName1, icreatedUserID, startTimestamp+10, "bad_number", "bad_number")
@@ -2437,7 +2437,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			User property numerical_property set as empty ($none).
 			Will create 11 buckets. including 1 $none.
 		*/
-		icreatedUserID, _ = store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		icreatedUserID, _ = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":""}}`,
 			eventName1, icreatedUserID, startTimestamp+10, 0)
@@ -2478,7 +2478,7 @@ func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
 		// nonPercentileBucketRange := (upperPercentileValue - lowerPercentileValue) / (model.NumericalGroupByBuckets - 2)
 
 		for i := numPropertyRangeStart; i <= numPropertyRangeEnd; i++ {
-			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
 				eventName1, icreatedUserID, startTimestamp+10, i, i)
@@ -2563,7 +2563,7 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 	t.Run("FunnelSingleBreakdown", func(t *testing.T) {
 		// 20 events with single incremented value.
 		eventName1 := "event1"
-		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"date_property":%d},"user_properties":{"date_property":%d}}`,
 			eventName1, icreatedUserID, startTimestamp+10, startTimestamp, startTimestamp)
@@ -2777,7 +2777,7 @@ func TestNumericalBucketingRegex(t *testing.T) {
 
 	for _, numericValue := range []float64{1, 1.2, 1.4678, -2, -2.86, 0} {
 		eventName := U.RandomString(5)
-		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"numerical_property":%f}}`,
 			eventName, icreatedUserID, startTimestamp+10, numericValue)

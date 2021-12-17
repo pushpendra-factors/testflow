@@ -44,7 +44,7 @@ func TestKpiAnalytics(t *testing.T) {
 		return
 	}
 
-	createdUserID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
@@ -278,7 +278,6 @@ func sendKPIAnalyticsQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent, k
 	return w
 }
 
-
 func TestKpiFilterValuesHandler(t *testing.T) {
 	a := gin.Default()
 	H.InitAppRoutes(a)
@@ -289,11 +288,11 @@ func TestKpiFilterValuesHandler(t *testing.T) {
 	project, agent, _ := SetupProjectWithAgentDAO()
 	assert.NotNil(t, project)
 
-	filterValueRequest := v1.KPIFilterValuesRequest {
-		Category: "events",
-		ObjectType: "$session",
+	filterValueRequest := v1.KPIFilterValuesRequest{
+		Category:     "events",
+		ObjectType:   "$session",
 		PropertyName: "$medium",
-		Entity: "event",
+		Entity:       "event",
 	}
 
 	sendKPIFilterValuesReq(a, project.ID, agent, filterValueRequest)
