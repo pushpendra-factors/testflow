@@ -342,34 +342,31 @@ export const getFunnelQuery = (
   return query;
 };
 
-const getEventsWithPropertiesKPI = (filters, category) => {
+const getEventsWithPropertiesKPI = (filters, category) => { 
   const filterProps = [];
-  filters.forEach((fil) => {
-    console.log('getEventsWithPropertiesKPI filters', fil);
+  // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
+  filters.forEach((fil) => { 
     if (Array.isArray(fil.values)) {
       fil.values.forEach((val, index) => {
         filterProps.push({
-          prNa: fil?.extra[1],
-          prDaTy: fil?.extra[2],
+          prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+          prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: !index ? 'AND' : 'OR',
-          en: category == 'channels' ? '' : fil?.extra[3],
-          objTy: category == 'channels' ? fil?.extra[3] : '',
+          en: category == 'channels' ? '' : (fil?.extra ? fil?.extra[3] : 'event'),
+          objTy: category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
           va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
         });
       });
     } else {
       filterProps.push({
-        prNa: fil?.extra[1],
-        prDaTy: fil?.extra[2],
+        prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+        prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
         co: operatorMap[fil.operator],
         lOp: 'AND',
-        en: category == 'channels' ? '' : fil?.extra[3],
-        objTy: category == 'channels' ? fil?.extra[3] : '',
-        va:
-          fil.props[1] === 'datetime'
-            ? formatFilterDate(fil.values)
-            : fil.values,
+        en: category == 'channels' ? '' : (fil?.extra ? fil?.extra[3] : 'event'),
+        objTy: category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+        va: fil.props[1] === 'datetime' ? formatFilterDate(fil.values) : fil.values,
       });
     }
   });
@@ -1603,16 +1600,25 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       filters[filters.length - 1].values.push(pr.va);
     }
   });
+ 
 
-  const globalBreakdown = requestQuery.gGBy.map((opt) => {
-    return {
+  const globalBreakdown = requestQuery.gGBy.map((opt, index) => {
+    let appGbp = {};
+    appGbp = {
       property: opt.prNa,
-      prop_type: opt.prDaTy,
-      eventName: '$present',
-      eventIndex: 0,
+      prop_type: opt.prDaTy, 
+      overAllIndex: index,
       prop_category: opt.en || opt.objTy,
     };
+    if (opt.prDaTy === 'datetime') {
+      opt.grn ? (appGbp['grn'] = opt.grn) : (appGbp['grn'] = 'day');
+    }
+    if (opt.prDaTy === 'numerical') {
+      opt.gbty ? (appGbp['gbty'] = opt.gbty) : (appGbp['gbty'] = '');
+    }
+    return appGbp;
   });
+
   const groupBy = {
     global: globalBreakdown,
     event: [], //will be added later
