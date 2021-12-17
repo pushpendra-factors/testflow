@@ -17,7 +17,7 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
         } else {
             notification.error({
                 message: "Error",
-                description: 'Please add or edit rule',
+                description: 'Please add atleast one rule',
                 duration: 5,
               });
         }

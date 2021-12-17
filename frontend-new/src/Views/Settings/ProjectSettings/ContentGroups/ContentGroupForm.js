@@ -21,12 +21,12 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
 
       const renderRuleViewButtons = (rules) => {
         return rules.map((obj, i) => {
-            return (<div className={`flex justify-center ${i > 0 && 'mt-4'}`}>
+            return (<div className={`flex justify-start -ml-4 ${i > 0 && 'mt-4'}`}>
             <Button 
                 type={'text'}
                 size={'large'}
                 style={{color:'gray'}}
-                className={`fa-button--truncate pointer-events-none`} 
+                className={`fa-button--truncate pointer-events-none w-16`} 
                 > {obj?.lop} 
             </Button>
     
@@ -57,7 +57,6 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
           title: 'Rule',
           dataIndex: 'rule',
           key: 'rule',
-          align: 'center', 
           render: (rules) => renderRuleViewButtons(rules)
         },
         {
