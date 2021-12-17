@@ -15,7 +15,7 @@ func DataServiceFacebookGetProjectSettings(c *gin.Context) {
 	projects, _ := store.GetStore().GetProjectsByIDs(facebookIDs)
 	for _, project := range projects {
 		for index := range facebookProjectSettings {
-			if facebookProjectSettings[index].ProjectId == project.ID {
+			if facebookProjectSettings[index].ProjectId == project.ID && facebookProjectSettings[index].Timezone == "" {
 				facebookProjectSettings[index].Timezone = project.TimeZone
 			}
 		}
