@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS users (
     group_4_user_id text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    source int,
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, id) USING CLUSTERED COLUMNSTORE,
