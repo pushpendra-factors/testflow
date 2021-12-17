@@ -97,6 +97,7 @@ func (store *MemSQL) CreateContentGroup(projectID uint64, contentGroup model.Con
 		return model.ContentGroup{}, http.StatusBadRequest, "Limit Exceeded"
 	}
 	contentGroupRecord := model.ContentGroup{
+		ID:                      U.GetUUID(),
 		ProjectID:               projectID,
 		ContentGroupName:        contentGroup.ContentGroupName,
 		ContentGroupDescription: contentGroup.ContentGroupDescription,
