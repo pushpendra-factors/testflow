@@ -204,6 +204,7 @@ type Configuration struct {
 	AllowSupportForDateRangeInProfiles          string
 	EnableEventLevelEventProperties             string
 	EnableOLTPQueriesMemSQLImprovements         string
+	CaptureSourceInUsersTable                   string
 }
 
 type Services struct {

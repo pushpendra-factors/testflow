@@ -1077,6 +1077,14 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 				isFirstSession := sessionEventCount == 0
 				sessionPropertiesMap := U.GetSessionProperties(isFirstSession,
 					&firstEventPropertiesMap, &userPropertiesMap)
+
+				initialPageUrl, exists := (*sessionPropertiesMap)[U.SP_INITIAL_PAGE_URL]
+				if exists {
+					contentGroups := store.CheckURLContentGroupValue(initialPageUrl.(string), projectId)
+					for key, value := range contentGroups {
+						(*sessionPropertiesMap)[key] = value
+					}
+				}
 				sessionPropertiesEncoded := map[string]interface{}(*sessionPropertiesMap)
 
 				sessionPropertiesJsonb, err := U.EncodeToPostgresJsonb(&sessionPropertiesEncoded)

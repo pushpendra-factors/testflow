@@ -40,6 +40,7 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$hubspot_contact_lead_guid": "lead-guid1"}`,
 		))},
 		JoinTimestamp: timestamp,
+		Source:        model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 
 	timestamp = timestamp + 1
@@ -59,6 +60,7 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$hubspot_contact_lead_guid": "lead-guid2"}`, // Empty. Should not overwrite.
 		))},
 		JoinTimestamp: timestamp,
+		Source:        model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 
 	user1DB, _ := store.GetStore().GetUser(project.ID, createUserID1)
@@ -180,6 +182,7 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$session_spent_time": 4.5}`,
 		))},
 		JoinTimestamp: timestamp,
+		Source:        model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 
 	// Call merge on user3.

@@ -50,7 +50,7 @@ func SetupProjectUserReturnDAO() (*model.Project, *model.User, error) {
 		return nil, nil, err
 	}
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	if errCode != http.StatusCreated {
 		return nil, nil, errors.New("user creation failure")
 	}
@@ -75,7 +75,7 @@ func SetupProjectUserEventName() (uint64, string, string, error) {
 	if err != nil {
 		return projectId, userId, eventNameId, err
 	}
-	createdUserID, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	if err_code != http.StatusCreated {
 		return projectId, userId, eventNameId, fmt.Errorf("User Creation failed.")
 	}
@@ -97,7 +97,7 @@ func SetupProjectUserEventNameReturnDAO() (*model.Project, *model.User, *model.E
 		return nil, nil, nil, err
 	}
 
-	createdUserID, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	if err_code != http.StatusCreated {
 		return nil, nil, nil, fmt.Errorf("User Creation failed.")
 	}
@@ -152,7 +152,7 @@ func SetupProjectUserEventNameAgentReturnDAO() (*model.Project, *model.User, *mo
 		return nil, nil, nil, nil, err
 	}
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	if errCode != http.StatusCreated {
 		return nil, nil, nil, nil, fmt.Errorf("User Creation failed.")
 	}

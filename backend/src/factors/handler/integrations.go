@@ -523,6 +523,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -558,6 +559,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -593,6 +595,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -627,6 +630,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -661,6 +665,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -696,6 +701,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -731,6 +737,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {

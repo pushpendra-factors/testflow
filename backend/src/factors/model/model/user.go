@@ -48,6 +48,8 @@ type User struct {
 	JoinTimestamp int64     `json:"join_timestamp"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	// source of the user record (1 = WEB, 2 = HUBSPOT, 3 = SALESFORCE)
+	Source *int `json:"source"`
 }
 
 type LatestUserPropertiesFromSession struct {
@@ -101,6 +103,17 @@ type IdentifyMeta struct {
 
 // UserPropertiesMeta is a map for customer_user_id to IdentifyMeta
 type UserPropertiesMeta map[string]IdentifyMeta
+
+const (
+	UserSourceWeb        = 1
+	UserSourceHubspot    = 2
+	UserSourceSalesforce = 3
+)
+
+func GetRequestSourcePointer(requestSource int) *int {
+	var requestSourcePointer = requestSource
+	return &requestSourcePointer
+}
 
 func GetIdentifiedUserProperties(customerUserId string) (map[string]interface{}, error) {
 	if customerUserId == "" {

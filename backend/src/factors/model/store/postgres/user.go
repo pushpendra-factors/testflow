@@ -35,6 +35,16 @@ func (pg *Postgres) createUserWithError(user *model.User) (*model.User, error) {
 		return nil, errors.New("invalid project_id")
 	}
 
+	if user.Source == nil {
+		logCtx.Error("Failed to create user. User source not provided.")
+		return nil, errors.New("user source missing")
+	}
+
+	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(C.GetConfig().CaptureSourceInUsersTable, "")
+	if !allProjects && !projectIDsMap[user.ProjectId] {
+		user.Source = nil
+	}
+
 	// Add id with our uuid generator, if not given.
 	if user.ID == "" {
 		user.ID = U.GetUUID()
@@ -762,7 +772,8 @@ func (pg *Postgres) GetAllUserIDByCustomerUserID(projectID uint64, customerUserI
 
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
-func (pg *Postgres) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int) {
+func (pg *Postgres) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, requestTimestamp int64,
+	requestSource int) (*model.User, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId,
 		"provided_c_uid": custUserId})
 
@@ -801,7 +812,7 @@ func (pg *Postgres) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUser
 			}
 		}
 
-		cUser := &model.User{ProjectId: projectId, JoinTimestamp: requestTimestamp}
+		cUser := &model.User{ProjectId: projectId, JoinTimestamp: requestTimestamp, Source: &requestSource}
 		// add seg_aid, if provided and not exist already.
 		if segAnonId != "" {
 			cUser.SegmentAnonymousId = segAnonId
@@ -879,7 +890,7 @@ func (pg *Postgres) GetUserIDByAMPUserID(projectId uint64, ampUserId string) (st
 	return user.ID, http.StatusFound
 }
 
-func (pg *Postgres) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (string, int) {
+func (pg *Postgres) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64, requestSource int) (string, int) {
 	if projectId == 0 || ampUserId == "" {
 		return "", http.StatusBadRequest
 	}
@@ -897,7 +908,7 @@ func (pg *Postgres) CreateOrGetAMPUser(projectId uint64, ampUserId string, times
 	}
 
 	user, err := pg.createUserWithError(&model.User{ProjectId: projectId,
-		AMPUserId: ampUserId, JoinTimestamp: timestamp})
+		AMPUserId: ampUserId, JoinTimestamp: timestamp, Source: &requestSource})
 	if err != nil {
 		// Get and return error is duplicate error.
 		if U.IsPostgresUniqueIndexViolationError(uniqueIndexProjectIdAmpUserId, err) {
@@ -1746,6 +1757,7 @@ func (pg *Postgres) CreateGroupUser(user *model.User, groupName, groupID string)
 		Properties:                 user.Properties,
 		PropertiesUpdatedTimestamp: user.PropertiesUpdatedTimestamp,
 		JoinTimestamp:              user.JoinTimestamp,
+		Source:                     user.Source,
 	}
 
 	if groupID != "" {

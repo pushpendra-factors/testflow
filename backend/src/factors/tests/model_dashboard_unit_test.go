@@ -659,7 +659,7 @@ func TestDashboardUnitEventForTimeZone(t *testing.T) {
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
-	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	event_timestamp := 1575138601
 
 	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", userID1, event_timestamp, "A", 1234)
@@ -1139,7 +1139,7 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
-	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	event_timestamp := time.Now().AddDate(0, -1, 0).Unix()
 	timezoneString, _ := store.GetStore().GetTimezoneForProject(project.ID)
 

@@ -921,7 +921,7 @@ func (store *MemSQL) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64,
 }
 
 func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int,
-	syncId string, timestamp int64, action int, userID string) int {
+	syncId string, timestamp int64, action int, userID, groupUserID string) int {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(),
 		&log.Fields{"project_id": projectId, "doc_type": docType, "id": id,
@@ -937,6 +937,10 @@ func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, 
 
 	if userID != "" {
 		updates["user_id"] = userID
+	}
+
+	if groupUserID != "" {
+		updates["group_user_id"] = groupUserID
 	}
 
 	db := C.GetServices().Db
@@ -1024,11 +1028,19 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID uint64, gro
 		return groupUserID, nil
 	}
 
+	var requestSource int
+	if source == model.SmartCRMEventSourceHubspot {
+		requestSource = model.UserSourceHubspot
+	} else {
+		requestSource = model.UserSourceSalesforce
+	}
+
 	isGroupUser := true
 	userID, status := store.CreateGroupUser(&model.User{
 		ProjectId:     projectID,
 		IsGroupUser:   &isGroupUser,
 		JoinTimestamp: createdTimestamp,
+		Source:        &requestSource,
 	}, groupName, groupID)
 	if status != http.StatusCreated {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create group user.")

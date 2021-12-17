@@ -817,7 +817,7 @@ func (pg *Postgres) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, ob
 	return getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments, propertyName, 100)
 }
 
-func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int, syncId string, timestamp int64, action int, userID string) int {
+func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int {
 	logCtx := log.WithField("project_id", projectId).WithField("id", id)
 
 	updates := make(map[string]interface{}, 0)
@@ -828,6 +828,10 @@ func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, d
 
 	if userID != "" {
 		updates["user_id"] = userID
+	}
+
+	if groupUserID != "" {
+		updates["group_user_id"] = groupUserID
 	}
 
 	db := C.GetServices().Db
@@ -912,11 +916,19 @@ func (pg *Postgres) CreateOrUpdateGroupPropertiesBySource(projectID uint64, grou
 		return groupUserID, nil
 	}
 
+	var requestSource int
+	if source == model.SmartCRMEventSourceHubspot {
+		requestSource = model.UserSourceHubspot
+	} else {
+		requestSource = model.UserSourceSalesforce
+	}
+
 	isGroupUser := true
 	userID, status := pg.CreateGroupUser(&model.User{
 		ProjectId:     projectID,
 		IsGroupUser:   &isGroupUser,
 		JoinTimestamp: createdTimestamp,
+		Source:        &requestSource,
 	}, groupName, groupID)
 	if status != http.StatusCreated {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create group user.")

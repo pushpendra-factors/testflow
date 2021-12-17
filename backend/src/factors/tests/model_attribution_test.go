@@ -47,6 +47,7 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 		Timestamp:       timestamp - 1, // session is created OneSec before the event.
 		UserId:          userId,
 		EventProperties: properties,
+		RequestSource:   model.UserSourceWeb,
 	}
 	_, response := SDK.Track(projectId, &trackPayload, false, SDK.SourceJSSDK, "")
 	TaskSession.AddSession([]uint64{projectId}, timestamp-60, 0, 0, 0, 0, 1)
@@ -133,15 +134,15 @@ func TestAttributionModel(t *testing.T) {
 
 	// Creating 3 users
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -275,15 +276,15 @@ func TestAttributionEngagementModel(t *testing.T) {
 
 	// Creating 3 users
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -394,15 +395,15 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 	// Creating 3 users
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -830,7 +831,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	user1Properties[U.UP_LATEST_CAMPAIGN] = 123456
 	user1PropertiesBytes, _ := json.Marshal(user1Properties)
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{RawMessage: user1PropertiesBytes},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
@@ -881,11 +882,11 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID2)
 
@@ -979,11 +980,11 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID2)
 

@@ -91,6 +91,7 @@ func TestMain(m *testing.M) {
 		EnableEventLevelEventProperties:             "",
 		LookbackWindowForEventUserCache:             *lookbackWindowForEventUserCache,
 		EnableOLTPQueriesMemSQLImprovements:         "*",
+		CaptureSourceInUsersTable:                   "*",
 	}
 	C.InitConf(config)
 

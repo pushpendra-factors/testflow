@@ -263,11 +263,11 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	userID2 := U.RandomLowerAphaNumString(5)
 	userID3 := U.RandomLowerAphaNumString(5)
 	cuid := U.RandomLowerAphaNumString(5)
-	_, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, CustomerUserId: cuid})
+	_, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, CustomerUserId: cuid, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID2, CustomerUserId: cuid})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID2, CustomerUserId: cuid, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID3, CustomerUserId: cuid})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID3, CustomerUserId: cuid, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
 
 	createdAt := time.Now().AddDate(0, 0, -11)
@@ -419,17 +419,17 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	userID4 := U.RandomLowerAphaNumString(5)
 	userID5 := U.RandomLowerAphaNumString(5)
 	userID6 := U.RandomLowerAphaNumString(5)
-	_, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1})
+	_, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID2})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID2, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID3})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID3, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID4})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID4, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID5})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID5, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID6})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID6, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
 
 	userIDs := []string{userID1, userID2, userID3, userID4, userID5, userID6}
@@ -741,7 +741,7 @@ func TestSalesforceSameUserSmartEvent(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	userID1 := U.RandomLowerAphaNumString(5)
-	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1})
+	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, status)
 	eventID1 := U.RandomLowerAphaNumString(10)
 	store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocumentPrev, eventID1, userID1, "", true)
@@ -865,6 +865,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 		ProjectId:      project.ID,
 		JoinTimestamp:  firstPropTimestamp,
 		CustomerUserId: cuID,
+		Source:         model.GetRequestSourcePointer(model.UserSourceSalesforce),
 	})
 	assert.Equal(t, http.StatusCreated, status)
 	assert.NotEmpty(t, createdUserID)
@@ -2781,6 +2782,7 @@ func TestSalesforceOfflineTouchPoint(t *testing.T) {
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       project.ID,
 		EventProperties: *enCampaignMemberProperties,
+		RequestSource:   model.UserSourceSalesforce,
 	}
 
 	filter1 := model.TouchPointFilter{
@@ -3030,6 +3032,7 @@ func TestSalesforceGroups(t *testing.T) {
 			assert.NotEqual(t, "", documents[0].GroupUserID)
 			assert.NotEqual(t, "", documents[0].UserID)
 			groupUser, _ := store.GetStore().GetUser(project.ID, documents[0].GroupUserID)
+			assert.Equal(t, model.UserSourceSalesforce, *groupUser.Source)
 			if documents[0].Type == model.SalesforceDocumentTypeOpportunity {
 				assert.Equal(t, "", groupUser.Group1ID)
 				assert.NotEqual(t, "", groupUser.ID)
@@ -3197,6 +3200,7 @@ func TestSalesforceGroups(t *testing.T) {
 		if docType == model.SalesforceDocumentTypeAccount || docType == model.SalesforceDocumentTypeOpportunity {
 			groupUser, status := store.GetStore().GetUser(project.ID, lasteDocument.GroupUserID)
 			assert.Equal(t, http.StatusFound, status)
+			assert.Equal(t, model.UserSourceSalesforce, *groupUser.Source)
 
 			if docType == model.SalesforceDocumentTypeOpportunity {
 				assert.Equal(t, "", groupUser.Group1ID)
@@ -3325,6 +3329,7 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Equal(t, true, *groupUser.IsGroupUser)
 	assert.Equal(t, "account3", groupUser.Group1ID)
 	assert.Equal(t, documents[0].GroupUserID, groupUser.ID)
+	assert.Equal(t, model.UserSourceSalesforce, *groupUser.Source)
 	account3GroupUserID := groupUser.ID
 
 	documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{leadID3}, model.SalesforceDocumentTypeLead, false)
@@ -3523,7 +3528,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	}
 
 	// Create normal user U2 (createUserU2) with same email property as that of createDocumentIDU1 ("email": cuid_first)
-	userU2, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cuid_first, JoinTimestamp: timestampT1.Unix()})
+	userU2, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: cuid_first, JoinTimestamp: timestampT1.Unix(), Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
 	assert.Equal(t, http.StatusCreated, errCode1)
 
 	// Verify lastmodifieddate user property of userU2 to be timestampT1, which is same as createDocumentIDU1

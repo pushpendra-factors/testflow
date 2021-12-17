@@ -260,7 +260,7 @@ type Model interface {
 	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
-	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID string) int
+	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
 	GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
 	GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{}
 
@@ -378,8 +378,8 @@ type Model interface {
 
 	// user
 	CreateUser(user *model.User) (string, int)
-	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64) (string, int)
-	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int)
+	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64, requestSource int) (string, int)
+	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64, requestSource int) (*model.User, int)
 	GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID uint64, id string) (*model.User, int)
 	GetUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int)
@@ -519,4 +519,12 @@ type Model interface {
 	//group_relationship
 	CreateGroupRelationship(projectID uint64, leftGroupName, leftGroupUserID, rightGroupName, rightGroupUserID string) (*model.GroupRelationship, int)
 	GetGroupRelationshipByUserID(projectID uint64, leftGroupUserID string) ([]model.GroupRelationship, int)
+
+	//Content-groups
+	GetAllContentGroups(projectID uint64) ([]model.ContentGroup, int)
+	GetContentGroupById(id string, projectID uint64) (model.ContentGroup, int)
+	CreateContentGroup(projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string)
+	DeleteContentGroup(id string, projectID uint64) (int, string)
+	UpdateContentGroup(id string, projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string)
+	CheckURLContentGroupValue(pageUrl string, projectID uint64) map[string]string
 }
