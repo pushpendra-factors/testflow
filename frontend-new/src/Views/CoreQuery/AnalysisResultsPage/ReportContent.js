@@ -64,47 +64,40 @@ function ReportContent({
     durationObj = {},
     metricsDropdown = <div className='mr-0'></div>;
 
-  // const KPIBreakdown = useMemo(() => {
-  //   return breakdown.length ? ['$browser_version', '$source', '$medium'] : [];
-  // }, [breakdown]);
-  // const KPIQueries = useMemo(() => {
-  //   return ['$session', '$form_submitted'];
-  // }, []);
-
   const {
     coreQueryState: { chartTypes, navigatedFromDashboard },
   } = useContext(CoreQueryContext);
 
   const chartType = useMemo(() => {
-    let key;
     if (queryType === QUERY_TYPE_FUNNEL) {
-      key = breakdown.length ? 'breakdown' : 'no_breakdown';
+      const key = breakdown.length ? 'breakdown' : 'no_breakdown';
       return chartTypes[queryType][key] === CHART_TYPE_TABLE
         ? CHART_TYPE_BARCHART
         : chartTypes[queryType][key];
     }
-    if (queryType === QUERY_TYPE_KPI) {
-      key = breakdown.length ? 'breakdown' : 'no_breakdown';
+
+    if (
+      queryType === QUERY_TYPE_EVENT ||
+      queryType === QUERY_TYPE_PROFILE ||
+      queryType === QUERY_TYPE_KPI
+    ) {
+      const key = breakdown.length ? 'breakdown' : 'no_breakdown';
+      if (
+        breakdown.length &&
+        breakdown.length > 3 &&
+        chartTypes[queryType][key] === CHART_TYPE_HORIZONTAL_BAR_CHART
+      ) {
+        return CHART_TYPE_BARCHART;
+      }
       return chartTypes[queryType][key] === CHART_TYPE_TABLE
         ? breakdown.length
           ? CHART_TYPE_BARCHART
           : CHART_TYPE_SPARKLINES
         : chartTypes[queryType][key];
     }
-    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_PROFILE) {
-      key = breakdown.length ? 'breakdown' : 'no_breakdown';
-      if (breakdown.length >= 1) {
-        return chartTypes[queryType][key] === CHART_TYPE_TABLE
-          ? CHART_TYPE_BARCHART
-          : chartTypes[queryType][key];
-      }
-      return chartTypes[queryType][key] === CHART_TYPE_TABLE
-        ? CHART_TYPE_SPARKLINES
-        : chartTypes[queryType][key];
-    }
 
     if (queryType === QUERY_TYPE_CAMPAIGN) {
-      key = campaignState.group_by.length ? 'breakdown' : 'no_breakdown';
+      const key = campaignState.group_by.length ? 'breakdown' : 'no_breakdown';
       if (campaignState.group_by.length >= 1) {
         return chartTypes[queryType][key] === CHART_TYPE_TABLE
           ? CHART_TYPE_BARCHART
@@ -116,7 +109,7 @@ function ReportContent({
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      key =
+      const key =
         attributionsState.models.length === 1
           ? 'single_touch_point'
           : 'dual_touch_point';

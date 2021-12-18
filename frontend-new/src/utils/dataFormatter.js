@@ -344,11 +344,13 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
         key: CHART_TYPE_STACKED_BAR,
         name: 'Stacked Column',
       },
-      {
+    ];
+    if (breakdownLength <= 3) {
+      menuItems.push({
         key: CHART_TYPE_HORIZONTAL_BAR_CHART,
         name: 'Bars',
-      },
-    ];
+      });
+    }
   }
 
   if (queryType === QUERY_TYPE_PROFILE && breakdownLength) {
