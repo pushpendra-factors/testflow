@@ -141,9 +141,6 @@ func (store *MemSQL) IsValidRule(contentGroup model.ContentGroup) (bool, string)
 	if len(contentGroupRule) == 0 {
 		return false, "Minimum one value required"
 	}
-	if len(contentGroupRule) == 1 {
-		return true, ""
-	}
 	ruleValuesName := make(map[string]bool)
 	rules := make([]model.ContentGroupRuleFilters, 0)
 	if err == nil {
