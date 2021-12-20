@@ -690,9 +690,16 @@ func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, confi
 	return true
 }
 
-func GetTransformedHeadersForChannels(headers []string) []string {
+func GetTransformedHeadersForChannels(headers []string, hasAnyGroupByTimestamp bool, hasAnyGroupBy bool) []string {
 	currentHeaders := headers
 	size := len(currentHeaders)
 	currentHeaders[size-1] = AliasAggr
+	if hasAnyGroupBy && hasAnyGroupByTimestamp {
+		resultantHeaders := make([]string, 0)
+		resultantHeaders = append(resultantHeaders, currentHeaders[size-2])
+		resultantHeaders = append(resultantHeaders, currentHeaders[:size-2]...)
+		resultantHeaders = append(resultantHeaders, currentHeaders[size-1])
+		currentHeaders = resultantHeaders
+	}
 	return currentHeaders
 }

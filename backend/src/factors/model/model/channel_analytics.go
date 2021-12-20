@@ -279,7 +279,7 @@ func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [
 	return groupByCombinations
 }
 
-func TransformDateTypeValueForChannels(headers []string, rows [][]interface{}, groupByTimestampPresent bool, timezoneString string) [][]interface{} {
+func TransformDateTypeValueForChannels(headers []string, rows [][]interface{}, groupByTimestampPresent bool, hasAnyGroupBy bool, timezoneString string) [][]interface{} {
 	indexForDateTime := -1
 	if !groupByTimestampPresent {
 		return rows
@@ -295,5 +295,17 @@ func TransformDateTypeValueForChannels(headers []string, rows [][]interface{}, g
 		currentValueInTimeFormat, _ := row[indexForDateTime].(time.Time)
 		row[indexForDateTime] = U.GetTimestampAsStrWithTimezone(currentValueInTimeFormat, timezoneString)
 	}
+
+	if hasAnyGroupBy && groupByTimestampPresent {
+		for index, row := range rows {
+			size := len(row)
+			resultantRow := make([]interface{}, 0)
+			resultantRow = append(resultantRow, row[size-2])
+			resultantRow = append(resultantRow, row[:size-2]...)
+			resultantRow = append(resultantRow, row[size-1])
+			rows[index] = resultantRow
+		}
+	}
+
 	return rows
 }
