@@ -5,11 +5,11 @@ import {
 } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents';
-import { projectAgentInvite, fetchProjectAgents } from 'Reducers/agentActions';
+import { projectAgentBatchInvite, fetchProjectAgents } from 'Reducers/agentActions';
 import Brand from './Brand';
 const { Option } = Select;
 
-function BasicDetails(props) {
+function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite, activeProjectID}) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
 
@@ -28,10 +28,15 @@ function BasicDetails(props) {
       })
     }
 
-    const finalData = {...filteredData, ...emailData}
+    const data = {...filteredData, ...emailData}
+    
+    let finalData = [];
+    for(let val in data) {
+      finalData[val] = data[val];
+    }
 
-    props.projectAgentInvite(props.activeProjectID, finalData).then(() => {
-      props.fetchProjectAgents(props.activeProjectID);
+    projectAgentBatchInvite(activeProjectID, finalData).then(() => {
+      fetchProjectAgents(activeProjectID);
       setFormData(finalData);
       message.success('Invitation sent successfully!');
     }).catch((err) => {
@@ -47,8 +52,8 @@ function BasicDetails(props) {
   };
 
   const RoleTypes =[
-    {value: 'admin', label: 'Admin'},
-    {value: 'user', lable: 'User'}
+    {value: 2, label: 'Admin'},
+    {value: 1, label: 'User'}
   ];
 
   const RoleTypeSelect = <Select options={RoleTypes} />;
@@ -82,7 +87,7 @@ function BasicDetails(props) {
                                 validateTrigger={['onChange', 'onBlur']}
                                 rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                             >
-                            <Input className={'fa-input'} size={'large'} addonAfter={<Form.Item name={[0, "role"]} noStyle initialValue="admin">{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
+                            <Input className={'fa-input'} size={'large'} addonAfter={<Form.Item name={[0, "role"]} noStyle initialValue={2}>{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
                         </Col>
                         {/* <Col span={24}>
@@ -124,7 +129,7 @@ function BasicDetails(props) {
                                 validateTrigger={['onChange', 'onBlur']}
                                 rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                             >
-                            <Input className={'fa-input'} size={'large'}  addonAfter={<Form.Item name={[field.name, "role"]} noStyle initialValue="admin">{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
+                            <Input className={'fa-input'} size={'large'}  addonAfter={<Form.Item name={[field.name, "role"]} noStyle initialValue={2}>{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
                             {fields.length > 0 ? (
                               <MinusCircleOutlined
@@ -171,7 +176,7 @@ function BasicDetails(props) {
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
       </div>
       }
-      {formData && <Brand handleCancel = {props.handleCancel}/>}
+      {formData && <Brand handleCancel = {handleCancel}/>}
     </>
 
   );
@@ -179,4 +184,4 @@ function BasicDetails(props) {
 const mapStateToProps = (state) => ({
     activeProjectID: state.global.active_project.id
 });
-export default connect(mapStateToProps, { projectAgentInvite, fetchProjectAgents })(BasicDetails);
+export default connect(mapStateToProps, { projectAgentBatchInvite, fetchProjectAgents })(BasicDetails);

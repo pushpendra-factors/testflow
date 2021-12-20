@@ -41,6 +41,19 @@ export default function (state = defaultState, action) {
         projectsError: action.payload,
       };
     }
+    case 'CREATE_PROJECT_TIMEZONE_FULFILLED': {
+      let _state = { ...state };
+      _state.projects = [..._state.projects, action.payload];
+      // Set currentProjectId to this newly created project
+      _state.active_project = action.payload;
+      //Update timezone
+      if (_state.currentProjectSettings)
+        _state.currentProjectSettings = {
+          ..._state.currentProjectSettings,
+          ...action.payload.time_zone,
+        };
+      return _state;
+    }
     case 'UPDATE_PROJECT_SETTINGS_FULFILLED': {
       let _state = { ...state };
       if (_state.currentProjectSettings)
@@ -195,6 +208,30 @@ export function createProject(projectName) {
         })
         .catch((err) => {
           dispatch({ type: 'CREATE_PROJECT_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function createProjectWithTimeZone(data) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'projects', data)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'CREATE_PROJECT_TIMEZONE_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({
+              type: 'CREATE_PROJECT_TIMEZONE_REJECTED',
+              payload: 'Failed to create project.',
+            });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'CREATE_PROJECT_TIMEZONE_REJECTED', payload: err });
           reject(err);
         });
     });

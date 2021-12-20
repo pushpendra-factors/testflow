@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import {
   Row, Col, Button, Input, Form, Progress, message, Select
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { createProject, udpateProjectDetails } from '../../../../reducers/global';
+import { createProjectWithTimeZone } from 'Reducers/global';
+import { fetchAgentInfo, updateAgentInfo} from 'Reducers/agentActions';
 import { TimeZoneOffsetValues } from 'Utils/constants'; 
 import InviteMembers from './InviteMembers';
 const { Option } = Select;
@@ -21,32 +22,41 @@ const TimeZoneName =
   "AEST" :'AEST (Australia Eastern Standard Time)', 
 }
 
-function BasicDetails({ createProject, activeProject, setEditMode, udpateProjectDetails, handleCancel }) {
+function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, fetchAgentInfo, agentDetails, updateAgentInfo }) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
 
   const onFinish = values => {
-      createProject(values.projectName).then(() => {
-        setFormData(values);
+       let projectData = {
+        name: values.projectName,
+        time_zone: TimeZoneOffsetValues[values.time_zone]?.city
+      }; 
+      createProjectWithTimeZone(projectData).then(() => {
+        setFormData(projectData);
         message.success('New Project Created!');
       }).catch((err) => {
         message.error('Oops! Something went wrong.');
         console.log('createProject Failed:', err);
       });
-
-    // let projectData = {
-    //     ...values,
-    //     time_zone: TimeZoneOffsetValues[values.time_zone]?.city
-    //   }; 
-  
-    //   udpateProjectDetails(activeProject.id, projectData).then(() => {
-    //     message.success('Project details updated!'); 
-    //     setEditMode(false);
-    //   }).catch((err) => {
-    //     console.log('err->', err);
-    //     message.error(err.data.error); 
-    //   });
   };
+
+  useEffect(() => {
+     fetchAgentInfo().then(() => {
+        if(agentDetails.is_onboarding_flow_seen) {
+            handleCancel();
+        } else {
+            let agentData = { ...agentDetails, is_onboarding_flow_seen: true};
+            updateAgentInfo(agentData).then(() => {
+                console.log('agent updated info success');
+            }).catch((err) => {
+                console.log('agent updated info error', err);
+            })
+        }
+        console.log('fetched agent info success');
+     }).catch((err) => {
+        console.log('fetched agent info error',err);
+     })
+  }, [])
 
 //   const onSkip = () => {
 //     form.resetFields();
@@ -141,7 +151,8 @@ function BasicDetails({ createProject, activeProject, setEditMode, udpateProject
 }
 
 const mapStateToProps = (state) => ({
-    activeProject: state.global.active_project
+    activeProject: state.global.active_project,
+    agentDetails: state.agent.agent_details
   });
 
-export default connect(mapStateToProps, { createProject, udpateProjectDetails })(BasicDetails);
+export default connect(mapStateToProps, { createProjectWithTimeZone, fetchAgentInfo, updateAgentInfo})(BasicDetails);
