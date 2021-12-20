@@ -32,7 +32,7 @@ const SetupAssist = ({agents}) => {
 
     const meetLink = ownerData === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
                     :ownerData === '116047122'? 'https://calendly.com/priyanka-267/30min'
-                    :ownerData === '116053799'? 'https://calendly.com/priyanka-267/30min': null;
+                    :ownerData === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': null;
 
     const defaultOptions = {
         loop: true,

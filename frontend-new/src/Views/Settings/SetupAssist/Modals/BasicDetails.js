@@ -5,7 +5,6 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { createProjectWithTimeZone } from 'Reducers/global';
-import { fetchAgentInfo, updateAgentInfo} from 'Reducers/agentActions';
 import { TimeZoneOffsetValues } from 'Utils/constants'; 
 import InviteMembers from './InviteMembers';
 const { Option } = Select;
@@ -22,7 +21,7 @@ const TimeZoneName =
   "AEST" :'AEST (Australia Eastern Standard Time)', 
 }
 
-function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, fetchAgentInfo, agentDetails, updateAgentInfo }) {
+function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
 
@@ -39,24 +38,6 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
         console.log('createProject Failed:', err);
       });
   };
-
-  useEffect(() => {
-     fetchAgentInfo().then(() => {
-        if(agentDetails.is_onboarding_flow_seen) {
-            handleCancel();
-        } else {
-            let agentData = { ...agentDetails, is_onboarding_flow_seen: true};
-            updateAgentInfo(agentData).then(() => {
-                console.log('agent updated info success');
-            }).catch((err) => {
-                console.log('agent updated info error', err);
-            })
-        }
-        console.log('fetched agent info success');
-     }).catch((err) => {
-        console.log('fetched agent info error',err);
-     })
-  }, [])
 
 //   const onSkip = () => {
 //     form.resetFields();
@@ -152,7 +133,6 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
 
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
-    agentDetails: state.agent.agent_details
   });
 
-export default connect(mapStateToProps, { createProjectWithTimeZone, fetchAgentInfo, updateAgentInfo})(BasicDetails);
+export default connect(mapStateToProps, { createProjectWithTimeZone })(BasicDetails);
