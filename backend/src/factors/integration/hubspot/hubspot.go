@@ -1438,7 +1438,7 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 	createdEventName, updatedEventName := getGroupEventName(document.Type)
 	if document.Action == model.HubspotDocumentActionCreated {
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
-			enProperties, document.Timestamp, document.Timestamp, model.SmartCRMEventSourceHubspot)
+			enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.SmartCRMEventSourceHubspot)
 
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot created group properties.")
@@ -1466,7 +1466,7 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 
 		groupUser := getGroupUserID(createdDocument)
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID,
-			groupUser, enProperties, createdDocument.Timestamp, document.Timestamp,
+			groupUser, enProperties, getEventTimestamp(createdDocument.Timestamp), getEventTimestamp(document.Timestamp),
 			model.SmartCRMEventSourceHubspot)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot updated group properties.")
