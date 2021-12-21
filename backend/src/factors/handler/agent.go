@@ -8,11 +8,12 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"time"
 )
 
 type signInParams struct {
@@ -94,6 +95,7 @@ func Signout(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resp)
 }
+
 type agentInviteParams struct {
 	Email string `json:"email" binding:"required"`
 	Role  int64  `json:"role"`
@@ -240,7 +242,7 @@ func AgentInvite(c *gin.Context) {
 	resp["status"] = "success"
 	resp["agents"] = agentInfoMap
 	resp["project_agent_mappings"] = []model.ProjectAgentMapping{*pam}
-	
+
 	c.JSON(http.StatusCreated, resp)
 	return
 }
@@ -265,7 +267,7 @@ func AgentInviteBatch(c *gin.Context) {
 	}
 	agentInfoMap := make(map[string]*model.AgentInfo)
 	pam := []model.ProjectAgentMapping{}
-	failedToInviteAgentIndexes:= make(map[int]bool)
+	failedToInviteAgentIndexes := make(map[int]bool)
 	for idx, agentDetail := range *params {
 		emailOfAgentToInvite := agentDetail.Email
 		roleOfAgent := agentDetail.Role
@@ -344,7 +346,6 @@ func AgentInviteBatch(c *gin.Context) {
 		}
 
 		invitedAgentInfo := model.CreateAgentInfo(invitedAgent)
-		
 
 		agentInfoMap[invitedAgentInfo.UUID] = invitedAgentInfo
 
@@ -858,10 +859,10 @@ func UpdateAgentBillingAccount(c *gin.Context) {
 }
 
 type updateAgentParams struct {
-	FirstName             string `json:"first_name"`
-	LastName              string `json:"last_name"`
-	Phone                 string `json:"phone"`
-	IsOnboardingFlowSeen bool   `json:"is_onboarding_flow_seen"`
+	FirstName            string `json:"first_name"`
+	LastName             string `json:"last_name"`
+	Phone                string `json:"phone"`
+	IsOnboardingFlowSeen *bool  `json:"is_onboarding_flow_seen"`
 }
 
 func getUpdateAgentParams(c *gin.Context) (*updateAgentParams, error) {

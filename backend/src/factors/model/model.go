@@ -40,7 +40,7 @@ type Model interface {
 	UpdateAgentIntSalesforce(uuid, refreshToken string, instanceURL string) int
 	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
-	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen bool) int
+	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
 
