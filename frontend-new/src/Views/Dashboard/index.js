@@ -19,10 +19,19 @@ function Dashboard() {
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
-  const { dashboards } = useSelector(
-    (state) => state.dashboard
-  );
+  const { dashboards } = useSelector((state) => state.dashboard);
+  const integration = useSelector((state) => state.global.currentProjectSettings);
   const dispatch = useDispatch();
+
+  const checkIntegration = integration.int_segment || 
+  integration.int_adwords_enabled_agent_uuid ||
+  integration.int_linkedin_agent_uuid ||
+  integration.int_facebook_user_id ||
+  integration.int_hubspot ||
+  integration.int_salesforce_enabled_agent_uuid ||
+  integration.int_drift ||
+  integration.int_google_organic_enabled_agent_uuid ||
+  integration.int_clear_bit;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -109,26 +118,31 @@ function Dashboard() {
   );
   } else {
     return (
-      <EmptyDashboard />
-      // <>
-      //   <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal}/>
-      //   {dashboards.data.length?
-      //     <ProjectTabs
-      //           handleEditClick={handleEditClick}
-      //           setaddDashboardModal={setaddDashboardModal}
-      //           durationObj={durationObj}
-      //           handleDurationChange={handleDurationChange}
-      //           refreshClicked={refreshClicked}
-      //           setRefreshClicked={setRefreshClicked}
-      //         />
-      //   : null}
-      //     <AddDashboard
-      //         setEditDashboard={setEditDashboard}
-      //         editDashboard={editDashboard}
-      //         addDashboardModal={addDashboardModal}
-      //         setaddDashboardModal={setaddDashboardModal}
-      //       />
-      //   </>
+      <>
+      {checkIntegration?
+      <>
+        <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal}/>
+        {dashboards.data.length?
+          <ProjectTabs
+                handleEditClick={handleEditClick}
+                setaddDashboardModal={setaddDashboardModal}
+                durationObj={durationObj}
+                handleDurationChange={handleDurationChange}
+                refreshClicked={refreshClicked}
+                setRefreshClicked={setRefreshClicked}
+              />
+        : null}
+          <AddDashboard
+              setEditDashboard={setEditDashboard}
+              editDashboard={editDashboard}
+              addDashboardModal={addDashboardModal}
+              setaddDashboardModal={setaddDashboardModal}
+            />
+      </>
+      :
+        <EmptyDashboard />
+      } 
+    </>
     );
   }
 }

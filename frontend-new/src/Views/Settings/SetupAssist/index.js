@@ -14,7 +14,7 @@ import Lottie from 'react-lottie';
 import setupAssistData from '../../../assets/lottie/Setup assist1.json';
 const axios = require('axios').default;
 
-const SetupAssist = ({agents}) => {
+const SetupAssist = ({agents, integration}) => {
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
     const history = useHistory();
@@ -43,17 +43,29 @@ const SetupAssist = ({agents}) => {
         }
     };
 
+    const checkIntegration = integration.int_segment || 
+    integration.int_adwords_enabled_agent_uuid ||
+    integration.int_linkedin_agent_uuid ||
+    integration.int_facebook_user_id ||
+    integration.int_hubspot ||
+    integration.int_salesforce_enabled_agent_uuid ||
+    integration.int_drift ||
+    integration.int_google_organic_enabled_agent_uuid ||
+    integration.int_clear_bit;
+
     return (
         <>
             <div className={'fa-container'}>
                 <Row gutter={[24, 24]} justify={'center'} className={'pt-24 pb-12 mt-0 '}>
-                    <Col span={17}>
+                    <Col span={ checkIntegration ? 17 : 20}>
                         <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'}>Congratulations, Let's get started</Text>
                         <Text type={'title'} level={6} weight={'regular'} extraClass={'m-0'} color={'grey'}>The first step to get up and running with Factors is to get data into your project:</Text>
                         <img src='../../assets/images/Illustration=pop gift.png' style={{width: '100%',maxWidth: '80px', marginLeft:'650px',marginTop:'-80px'}}/>
                     </Col>
                     <Col>
-                        <Button type="default" size={'large'} style={{borderColor:'#1E89FF', color:'#1E89FF', background:'#fff'}} onClick={() => setShowModal(true)}><QrcodeOutlined style={{color:'#1E89FF'}} />Go to Dashboards</Button>
+                    { checkIntegration ?
+                        <Button type="default" size={'large'} style={{borderColor:'#1E89FF', color:'#1E89FF', background:'#fff', marginTop:'1rem'}} onClick={() => setShowModal(true)}><QrcodeOutlined style={{color:'#1E89FF'}} />Go to Dashboards</Button>
+                    : null}
                     </Col>
                 </Row>
                 <Row gutter={[24, 24]} justify={'center'}>
@@ -119,7 +131,8 @@ const SetupAssist = ({agents}) => {
 };
 
 const mapStateToProps = (state) => ({
-    agents: state.agent.agents
+    agents: state.agent.agents,
+    integration: state.global.currentProjectSettings
 });
 
 export default connect(mapStateToProps)(SetupAssist);

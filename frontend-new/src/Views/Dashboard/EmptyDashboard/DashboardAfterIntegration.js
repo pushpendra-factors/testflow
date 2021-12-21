@@ -5,10 +5,8 @@ import { FaErrorComp, FaErrorLog } from '../../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button } from 'antd';
 import Header from '../../AppLayout/Header';
-import AddDashboard from '../AddDashboard';
 
 function DashboardAfterIntegration({setaddDashboardModal}) {
-    // const [addDashboardModal, setaddDashboardModal] = useState(false);
     const [dataLoading, setdataLoading] = useState(true);
 
     useEffect(() => {
@@ -16,10 +14,6 @@ function DashboardAfterIntegration({setaddDashboardModal}) {
             setdataLoading(false)
         },3000);
     }, []);
-
-    // const addDashboard = () => {
-    //     setaddDashboardModal(true);
-    // }
 
     return (
         <>
@@ -86,12 +80,6 @@ function DashboardAfterIntegration({setaddDashboardModal}) {
                     </div>
                     }
                 </div>
-
-                {/* Add dashboard modal */}
-                {/* <AddDashboard
-                    addDashboardModal={addDashboardModal}
-                    setaddDashboardModal={setaddDashboardModal}
-                /> */}
                 
             </ErrorBoundary>
         </>

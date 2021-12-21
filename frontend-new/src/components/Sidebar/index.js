@@ -7,6 +7,7 @@ import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject } from 'Reducers/global';
+import { updateAgentInfo, fetchAgentInfo } from 'Reducers/agentActions';
 import { signout } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
@@ -21,7 +22,7 @@ function Sidebar(props) {
   const { Sider } = Layout;
 
   const [visible, setVisible] = useState(false);
-  const [showProjectModal, setShowProjectModal] = useState(true);
+  const [showProjectModal, setShowProjectModal] = useState(null);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
@@ -33,6 +34,21 @@ function Sidebar(props) {
   const searchProject = (e) => {
     setsearchProjectName(e.target.value);
   };
+
+  useEffect(() => {
+    if (props.currentAgent.is_onboarding_flow_seen) {
+        setShowProjectModal(false);
+    } else {
+      setShowProjectModal(true);
+        props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
+            props.fetchAgentInfo().then(() => {
+                console.log('Profile details updated!');
+            });
+        }).catch((err) => {
+            console.log('updateAgentInfo failed-->', err);
+        });
+    }
+  }, [])
 
   const popOvercontent = () => {
     return (
@@ -226,4 +242,4 @@ const mapStateToProps = (state) => {
     currentAgent: state.agent.agent_details
   };
 };
-export default connect(mapStateToProps, { setActiveProject, signout })(Sidebar);
+export default connect(mapStateToProps, { setActiveProject, signout, updateAgentInfo, fetchAgentInfo })(Sidebar);
