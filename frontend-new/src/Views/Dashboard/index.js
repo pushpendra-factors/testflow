@@ -4,19 +4,24 @@ import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import ProjectTabs from './ProjectTabs';
 import AddDashboard from './AddDashboard';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
 import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { setItemToLocalStorage } from '../../utils/dataFormatter';
 import { getDashboardDateRange } from './utils';
 import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
+import EmptyDashboard from './EmptyDashboard';
+import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration'
 
 function Dashboard() {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
+  const { dashboards } = useSelector(
+    (state) => state.dashboard
+  );
   const dispatch = useDispatch();
 
   const handleEditClick = useCallback((dashboard) => {
@@ -61,6 +66,7 @@ function Dashboard() {
     };
   }, [dispatch]);
 
+  if (dashboards.data.length) {
   return (
     <>
       <ErrorBoundary
@@ -101,6 +107,30 @@ function Dashboard() {
       </ErrorBoundary>
     </>
   );
+  } else {
+    return (
+      <EmptyDashboard />
+      // <>
+      //   <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal}/>
+      //   {dashboards.data.length?
+      //     <ProjectTabs
+      //           handleEditClick={handleEditClick}
+      //           setaddDashboardModal={setaddDashboardModal}
+      //           durationObj={durationObj}
+      //           handleDurationChange={handleDurationChange}
+      //           refreshClicked={refreshClicked}
+      //           setRefreshClicked={setRefreshClicked}
+      //         />
+      //   : null}
+      //     <AddDashboard
+      //         setEditDashboard={setEditDashboard}
+      //         editDashboard={editDashboard}
+      //         addDashboardModal={addDashboardModal}
+      //         setaddDashboardModal={setaddDashboardModal}
+      //       />
+      //   </>
+    );
+  }
 }
 
 export default Dashboard;

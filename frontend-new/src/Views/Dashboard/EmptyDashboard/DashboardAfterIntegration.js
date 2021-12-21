@@ -7,7 +7,7 @@ import { Button } from 'antd';
 import Header from '../../AppLayout/Header';
 import AddDashboard from '../AddDashboard';
 
-function DashboardAfterIntegration() {
+function DashboardAfterIntegration({setaddDashboardModal}) {
     // const [addDashboardModal, setaddDashboardModal] = useState(false);
     const [dataLoading, setdataLoading] = useState(true);
 
@@ -78,7 +78,7 @@ function DashboardAfterIntegration() {
                     </div>
                     :
                     <div className={'mt-6'}>
-                        <Button type={'primary'} size={'large'} className={'w-full'}>Create your first dashboard</Button>
+                        <Button type={'primary'} size={'large'} className={'w-full'} onClick={() => setaddDashboardModal(true)}>Create your first dashboard</Button>
                         <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>
                             or
                         </Text>
