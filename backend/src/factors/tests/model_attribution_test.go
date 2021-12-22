@@ -1732,7 +1732,10 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 }
 
 func TestAddGrandTotalRow(t *testing.T) {
-
+	headers := []string{"Campaign", "Impressions", "Clicks", "Spend",
+		"CTR(%)", "Average CPC", "CPM", "ClickConversionRate(%)",
+		"Sessions", "Users", "Average Session Time", "PageViews",
+		"$session - Users", "Cost Per Conversion", "UserConversionRate(%)", "Compare - Users", "Compare Cost Per Conversion", "Compare UserConversionRate(%)"}
 	rows := make([][]interface{}, 0)
 	// Name, impression, clicks, spend
 	row1 := []interface{}{"Campaign1", int64(2), int64(2), float64(2),
@@ -1761,18 +1764,19 @@ func TestAddGrandTotalRow(t *testing.T) {
 
 	resultWant := append([][]interface{}{row3}, rows...)
 	type args struct {
-		rows [][]interface{}
+		headers []string
+		rows    [][]interface{}
 	}
 	tests := []struct {
 		name string
 		args args
 		want []interface{}
 	}{
-		{"SimpleX", args{rows}, resultWant[0]},
+		{"SimpleX", args{headers, rows}, resultWant[0]},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resultGot := model.AddGrandTotalRow(tt.args.rows, 0)
+			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0)
 			got := resultGot[0]
 			for colNo, _ := range got {
 				if got[colNo] != tt.want[colNo] {
