@@ -149,6 +149,12 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", responseWrapper(UpdateSmartPropertyRulesHandler))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", responseWrapper(DeleteSmartPropertyRulesHandler))
 
+	// content groups
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", responseWrapper(V1.CreateContentGroupHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", responseWrapper(V1.GetContentGroupHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", responseWrapper(V1.GetContentGroupByIDHandler))
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", responseWrapper(V1.UpdateContentGroupHandler))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", responseWrapper(V1.DeleteContentGroupHandler))
 	// TODO
 	// Scope this with Project Admin
 	authRouteGroup.GET("/:project_id/agents", GetProjectAgentsHandler)

@@ -376,7 +376,7 @@ func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	userID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	userID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, userID)
 	assert.Equal(t, http.StatusCreated, status)
 

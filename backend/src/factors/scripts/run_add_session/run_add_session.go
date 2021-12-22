@@ -64,6 +64,8 @@ func main() {
 
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -112,6 +114,7 @@ func main() {
 		AllowChannelGroupingForProjectIDs:   *allowChannelGroupingForProjectIDs,
 		DisableRedisWrites:                  disableRedisWrites,
 		EnableOLTPQueriesMemSQLImprovements: *enableOLTPQueriesMemSQLImprovements,
+		CaptureSourceInUsersTable:           *captureSourceInUsersTable,
 	}
 
 	C.InitConf(config)

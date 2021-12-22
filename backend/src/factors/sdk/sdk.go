@@ -41,6 +41,8 @@ type TrackPayload struct {
 	ClientIP        string          `json:"client_ip"`
 	UserAgent       string          `json:"user_agent"`
 	SmartEventType  string          `json:"smart_event"`
+	// source of the user record (1 = WEB, 2 = HUBSPOT, 3 = SALESFORCE)
+	RequestSource int `json:"request_source"`
 }
 
 type TrackResponse struct {
@@ -68,6 +70,8 @@ type IdentifyPayload struct {
 	// identify overwrite info
 	PageURL string `json:"page_url"`
 	Source  string `json:"source"`
+	// source of the user record (1 = WEB, 2 = HUBSPOT, 3 = SALESFORCE)
+	RequestSource int `json:"request_source"`
 }
 
 // AMPIdentifyPayload holds required fields for AMP identification
@@ -75,6 +79,7 @@ type AMPIdentifyPayload struct {
 	CustomerUserID string `json:"customer_user_id"`
 	ClientID       string `json:"client_id"`
 	Timestamp      int64  `json:"timestamp"`
+	RequestSource  int    `json:"request_source"`
 }
 
 type IdentifyResponse struct {
@@ -86,10 +91,11 @@ type IdentifyResponse struct {
 type AddUserPropertiesPayload struct {
 	UserId string `json:"user_id"`
 	// if create_user is true, create user with given id.
-	CreateUser bool            `json:"create_user"`
-	Timestamp  int64           `json:"timestamp"`
-	Properties U.PropertiesMap `json:"properties"`
-	ClientIP   string          `json:"client_ip"`
+	CreateUser    bool            `json:"create_user"`
+	Timestamp     int64           `json:"timestamp"`
+	Properties    U.PropertiesMap `json:"properties"`
+	ClientIP      string          `json:"client_ip"`
+	RequestSource int             `json:"request_source"`
 }
 
 type AddUserPropertiesResponse struct {
@@ -99,11 +105,12 @@ type AddUserPropertiesResponse struct {
 }
 
 type UpdateEventPropertiesPayload struct {
-	UserId     string          `json:"user_id"`
-	EventId    string          `json:"event_id"`
-	Properties U.PropertiesMap `json:"properties"`
-	Timestamp  int64           `json:"timestamp"`
-	UserAgent  string          `json:"user_agent"`
+	UserId        string          `json:"user_id"`
+	EventId       string          `json:"event_id"`
+	Properties    U.PropertiesMap `json:"properties"`
+	Timestamp     int64           `json:"timestamp"`
+	UserAgent     string          `json:"user_agent"`
+	RequestSource int             `json:"request_source"`
 }
 
 type UpdateEventPropertiesResponse struct {
@@ -594,7 +601,7 @@ func Track(projectId uint64, request *TrackPayload,
 
 	var existingUserProperties *map[string]interface{}
 	if request.CreateUser || request.UserId == "" {
-		newUser := &model.User{ProjectId: projectId}
+		newUser := &model.User{ProjectId: projectId, Source: &request.RequestSource}
 
 		// create user with given id.
 		if request.CreateUser {
@@ -666,7 +673,7 @@ func Track(projectId uint64, request *TrackPayload,
 			pageURL := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
 			errCode, _ := Identify(projectId, &IdentifyPayload{
-				UserId: request.UserId, CustomerUserId: customerUserID, Timestamp: request.Timestamp, PageURL: pageURL, Source: sdkRequestTypeEventTrack}, true)
+				UserId: request.UserId, CustomerUserId: customerUserID, Timestamp: request.Timestamp, PageURL: pageURL, Source: sdkRequestTypeEventTrack, RequestSource: request.RequestSource}, true)
 			if errCode != http.StatusOK {
 				log.WithFields(log.Fields{"projectId": projectId, "userId": request.UserId,
 					"customerUserId": customerUserID}).Error("Failed to identify user on form submit event.")
@@ -924,6 +931,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 			ProjectId:      projectId,
 			CustomerUserId: request.CustomerUserId,
 			JoinTimestamp:  request.JoinTimestamp,
+			Source:         &request.RequestSource,
 		}
 
 		if overwrite {
@@ -973,6 +981,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 				ProjectId:      projectId,
 				CustomerUserId: request.CustomerUserId,
 				JoinTimestamp:  request.JoinTimestamp,
+				Source:         &request.RequestSource,
 			}
 
 			if userProperties != nil {
@@ -1018,6 +1027,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 			ProjectId:      projectId,
 			CustomerUserId: request.CustomerUserId,
 			JoinTimestamp:  request.JoinTimestamp,
+			Source:         &request.RequestSource,
 		}
 
 		// create user with given user id.
@@ -1098,6 +1108,7 @@ func AddUserProperties(projectId uint64,
 		newUser := &model.User{
 			ProjectId:  projectId,
 			Properties: postgres.Jsonb{propertiesJSON},
+			Source:     &request.RequestSource,
 		}
 
 		// create user with given user id.
@@ -1276,7 +1287,7 @@ func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *Ide
 		return http.StatusUnauthorized, &IdentifyResponse{Error: "Identify failed. Invalid project id."}
 	}
 
-	userID, errCode := store.GetStore().CreateOrGetAMPUser(projectID, reqPayload.ClientID, reqPayload.Timestamp)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(projectID, reqPayload.ClientID, reqPayload.Timestamp, reqPayload.RequestSource)
 	if errCode != http.StatusCreated && errCode != http.StatusFound {
 		log.WithField("project_id", projectID).Error("Identify failed. Failed to CreateOrGetAMPUser.")
 		return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
@@ -1286,6 +1297,7 @@ func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *Ide
 		UserId:         userID,
 		CustomerUserId: reqPayload.CustomerUserID,
 		Timestamp:      reqPayload.Timestamp,
+		RequestSource:  reqPayload.RequestSource,
 	}
 
 	return Identify(projectID, identifyPayload, false)
@@ -1597,9 +1609,10 @@ type AMPTrackPayload struct {
 	CustomProperties   map[string]interface{} `json:"custom_properties"`
 
 	// internal
-	Timestamp int64  `json:"timestamp"`
-	UserAgent string `json:"user_agent"`
-	ClientIP  string `json:"client_ip"`
+	Timestamp     int64  `json:"timestamp"`
+	UserAgent     string `json:"user_agent"`
+	ClientIP      string `json:"client_ip"`
+	RequestSource int    `json:"request_source"`
 }
 type AMPUpdateEventPropertiesPayload struct {
 	ClientID          string  `json:"client_id"` // amp user_id
@@ -1608,8 +1621,9 @@ type AMPUpdateEventPropertiesPayload struct {
 	PageSpentTime     float64 `json:"page_spent_time"`
 
 	// internal
-	Timestamp int64  `json:"timestamp"`
-	UserAgent string `json:"user_agent"`
+	Timestamp     int64  `json:"timestamp"`
+	UserAgent     string `json:"user_agent"`
+	RequestSource int    `json:"request_source"`
 }
 type AMPTrackResponse struct {
 	Message string `json:"message"`
@@ -1688,7 +1702,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 	logCtx := log.WithField("project_id", projectID).WithField("client_id", reqPayload.ClientID)
 
 	var isNewUser bool
-	userID, errCode := store.GetStore().CreateOrGetAMPUser(projectID, reqPayload.ClientID, reqPayload.Timestamp)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(projectID, reqPayload.ClientID, reqPayload.Timestamp, reqPayload.RequestSource)
 	if errCode != http.StatusFound && errCode != http.StatusCreated {
 		return errCode, &Response{Error: "Invalid user"}
 	}
@@ -1765,6 +1779,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		ClientIP:        reqPayload.ClientIP,
 		UserAgent:       reqPayload.UserAgent,
 		Timestamp:       reqPayload.Timestamp,
+		RequestSource:   model.UserSourceWeb,
 	}
 
 	// Support for custom event_name.

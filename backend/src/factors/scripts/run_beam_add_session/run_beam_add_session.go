@@ -88,6 +88,7 @@ var (
 
 	disableRedisWrites                  = flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableOLTPQueriesMemSQLImprovements = flag.String("enable_OLTP_queries_memsql_improvements", "", "")
+	captureSourceInUsersTable           = flag.String("capture_source_in_users_table", "", "")
 )
 
 func registerStructs() {
@@ -688,6 +689,7 @@ func main() {
 		AllowChannelGroupingForProjectIDs:   *allowChannelGroupingForProjectIDs,
 		DisableRedisWrites:                  disableRedisWrites,
 		EnableOLTPQueriesMemSQLImprovements: *enableOLTPQueriesMemSQLImprovements,
+		CaptureSourceInUsersTable:           *captureSourceInUsersTable,
 	}
 
 	beam.PipelineOptions.Set("HealthchecksPingID", "0e224a5e-01bd-454c-b361-651d303562c6")

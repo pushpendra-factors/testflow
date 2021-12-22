@@ -253,8 +253,8 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED},
 	},
 	HubspotCompaniesDisplayCategory: {
-		CountOfCompaniesCreated: {"display_name": "Companies created", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_CREATED},
-		CountOfCompaniesUpdated: {"display_name": "Companies updated", "object_type": U.EVENT_NAME_HUBSPOT_COMPANY_UPDATED},
+		CountOfCompaniesCreated: {"display_name": "Companies created", "object_type": U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED},
+		CountOfCompaniesUpdated: {"display_name": "Companies updated", "object_type": U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED},
 	},
 	// HubspotDealsDisplayCategory: {
 	// 	CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_CREATED},

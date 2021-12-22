@@ -1,6 +1,7 @@
 package tests
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -226,4 +228,17 @@ func TestNextSessionStartTimestampForProject(t *testing.T) {
 	gotTimestampAfterUpdate, errCode := store.GetStore().GetNextSessionStartTimestampForProject(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, newTimestamp, gotTimestampAfterUpdate)
+}
+
+func TestProjectSettingIngestionTimezoneFetch(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	projectSetting := model.ProjectSetting{}
+	db := C.GetServices().Db
+	db.Table("project_settings").Where("project_id = ?", project.ID).First(&projectSetting)
+
+	projectSetting.IntGoogleIngestionTimezone = "Australia"
+	db.Save(projectSetting)
+	_, projectSettings, _ := store.GetStore().GetFacebookEnabledIDsAndProjectSettingsForProject([]uint64{project.ID})
+	log.Warn(projectSettings)
 }
