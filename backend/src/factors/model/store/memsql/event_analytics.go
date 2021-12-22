@@ -927,7 +927,7 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 		if query.AggregatePropertyType == U.PropertyTypeNumerical {
 			noneSelectCase := fmt.Sprintf("CASE WHEN %s.%s = '%s' THEN 0.0 ", refStep, aggregatePropertyDetails.Property, model.PropertyValueNone)
 			emptySelectCase := fmt.Sprintf("WHEN %s.%s = '' THEN 0.0 ", refStep, aggregatePropertyDetails.Property)
-			defaultCase := fmt.Sprintf("ELSE CAST(%s.%s AS DECIMAL) END AS %s ", refStep, aggregatePropertyDetails.Property, model.AliasAggr)
+			defaultCase := fmt.Sprintf("ELSE %s.%s END AS %s ", refStep, aggregatePropertyDetails.Property, model.AliasAggr)
 			aggregateSelect = noneSelectCase + emptySelectCase + defaultCase
 		} else {
 			aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, query.Timezone)
@@ -1844,7 +1844,7 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 			if query.AggregatePropertyType == U.PropertyTypeNumerical {
 				noneSelectCase := fmt.Sprintf("CASE WHEN %s.%s = '%s' THEN 0.0 ", step, model.AliasAggr, model.PropertyValueNone)
 				emptySelectCase := fmt.Sprintf("WHEN %s.%s = '' THEN 0.0 ", step, model.AliasAggr)
-				defaultCase := fmt.Sprintf("ELSE CAST(%s.%s AS DECIMAL) END as %s ", step, model.AliasAggr, model.AliasAggr)
+				defaultCase := fmt.Sprintf("ELSE %s.%s END as %s ", step, model.AliasAggr, model.AliasAggr)
 				selectStr = selectStr + ", " + noneSelectCase + emptySelectCase + defaultCase
 			} else {
 				selectStr = selectStr + ", " + fmt.Sprintf("%s.%s as %s", step, model.AliasAggr, model.AliasAggr)
@@ -2104,7 +2104,7 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 		aggregateGroupBys = joinWithComma(model.AliasEventName, aggregateGroupBys)
 	}
 	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(CAST(%s AS DECIMAL)) as %s FROM %s",
+		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(%s) as %s FROM %s",
 			query.AggregateFunction, model.AliasAggr, model.AliasAggr, aggregateFromStepName)
 	} else {
 		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(event_id) AS %s FROM %s",
