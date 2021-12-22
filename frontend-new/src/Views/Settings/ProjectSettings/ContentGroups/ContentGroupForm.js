@@ -27,7 +27,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
                 size={'large'}
                 style={{color:'gray'}}
                 className={`fa-button--truncate pointer-events-none w-16`} 
-                > {obj?.lop} 
+                > {i==0?'URL':obj?.lop} 
             </Button>
     
             <Button 
@@ -140,7 +140,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
             setSmartPropState({...smrtProp});
             setRulesState(smrtProp.rule);
             setFormState('view');
-            setShowSmartProperty(false);
+            // setShowSmartProperty(false);
             setshowAddValueModal(false);
             notification.success({
                 message: "Success",

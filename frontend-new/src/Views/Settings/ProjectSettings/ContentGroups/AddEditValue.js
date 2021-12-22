@@ -85,12 +85,12 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
                                 <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
                                     <Form.Item
                                     {...restField}
-                                    initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].lop? selectedRule.rule[fieldKey].lop : fieldKey===0?'URL':comboOp}
+                                    initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].lop? selectedRule.rule[fieldKey].lop : comboOp}
                                     name={[name, 'lop']}
                                     fieldKey={[fieldKey, 'lop']}
                                     >
                                         <Select showArrow={false} open={false} bordered={false}>
-                                            <Option value={fieldKey===0?'URL':comboOp}>{fieldKey===0?'Page':comboOp}</Option>
+                                            <Option value={comboOp}>{fieldKey===0?'Page':comboOp}</Option>
                                         </Select>
                                     </Form.Item>
                                     <div className={'w-24 fa-select'}>
