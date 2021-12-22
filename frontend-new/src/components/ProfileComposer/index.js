@@ -1,18 +1,20 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { connect, useSelector } from "react-redux";
-import { bindActionCreators } from "redux";
-import { Button, Collapse, Select } from "antd";
-import { SVG, Text } from "../factorsComponents";
-import styles from "./index.module.scss";
-import ProfileBlock from "./ProfileBlock";
-import GroupBlock from "./GroupBlock";
-import { QUERY_TYPE_PROFILE } from "../../utils/constants";
-import ComposerBlock from "../QueryCommons/ComposerBlock";
+import React, { useState, useEffect, useCallback } from 'react';
+import { connect, useSelector } from 'react-redux';
+import { bindActionCreators } from 'redux';
+import { Button, Collapse, Select, DatePicker } from 'antd';
+import { SVG, Text } from '../factorsComponents';
+import styles from './index.module.scss';
+import ProfileBlock from './ProfileBlock';
+import GroupBlock from './GroupBlock';
+import { QUERY_TYPE_PROFILE } from '../../utils/constants';
+import ComposerBlock from '../QueryCommons/ComposerBlock';
 import {
   fetchEventNames,
   getUserProperties,
-} from "Reducers/coreQuery/middleware";
-import GLobalFilter from "./GlobalFilter";
+} from 'Reducers/coreQuery/middleware';
+import GLobalFilter from './GlobalFilter';
+import MomentTz from 'Components/MomentTz';
+import moment from 'moment';
 
 const { Option } = Select;
 
@@ -32,6 +34,8 @@ function ProfileComposer({
   setCollapse,
 }) {
   // const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDatePickerStr, setShowDatePickerStr] = useState('Select Date');
 
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
 
@@ -61,7 +65,7 @@ function ProfileComposer({
 
     if (queries.length < 6) {
       blockList.push(
-        <div key={"init"} className={styles.composer_body__query_block}>
+        <div key={'init'} className={styles.composer_body__query_block}>
           <ProfileBlock
             queryType={queryType}
             index={queries.length + 1}
@@ -89,13 +93,13 @@ function ProfileComposer({
       }
       return (
         <ComposerBlock
-          blockTitle={"FILTER BY"}
+          blockTitle={'FILTER BY'}
           isOpen={filterBlockOpen}
           showIcon={true}
           onClick={() => setFilterBlockOpen(!filterBlockOpen)}
           extraClass={`no-padding-l no-padding-r`}
         >
-          <div key={0} className={"fa--query_block borderless no-padding "}>
+          <div key={0} className={'fa--query_block borderless no-padding '}>
             <GLobalFilter
               filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
@@ -121,13 +125,13 @@ function ProfileComposer({
       }
       return (
         <ComposerBlock
-          blockTitle={"BREAKDOWN"}
+          blockTitle={'BREAKDOWN'}
           isOpen={groupBlockOpen}
           showIcon={true}
           onClick={() => setGroupBlockOpen(!groupBlockOpen)}
           extraClass={`no-padding-l no-padding-r`}
         >
-          <div key={0} className={"fa--query_block borderless no-padding "}>
+          <div key={0} className={'fa--query_block borderless no-padding '}>
             <GroupBlock queryType={queryType} events={queries}></GroupBlock>
           </div>
         </ComposerBlock>
@@ -135,6 +139,18 @@ function ProfileComposer({
     } catch (err) {
       console.log(err);
     }
+  };
+
+  const setDateSince = (val) => {
+    let dateT;
+    let dateValue = {};
+    const queryOptionsState = Object.assign({}, queryOptions);
+    dateT = MomentTz(val).startOf('day');
+    dateValue['from'] = dateT.toDate().getTime();
+    queryOptionsState.date_range.from = dateValue.from;
+    setShowDatePickerStr(MomentTz(val).format('MMM DD, YYYY'));
+    setQueryOptions(queryOptionsState);
+    setShowDatePicker(false);
   };
 
   const handleRunQuery = useCallback(() => {
@@ -155,20 +171,54 @@ function ProfileComposer({
             }
           >
             {!collapse ? (
-              <Button
-                className={``}
-                size={"large"}
-                type={"default"}
-                style={{ pointerEvents: "none" }}
-              >
-                <SVG name={`calendar`} size={20} extraClass={`mr-1`}></SVG>
-                All Time
-              </Button>
+              <div className={'flex items-center'}>
+                <Text
+                  type={'title'}
+                  level={7}
+                  weight={'bold'}
+                  extraClass={'m-0 mr-2'}
+                >
+                  Created Since
+                </Text>
+                <div className={`fa-custom-datepicker`}>
+                  {!showDatePicker ? (
+                    <Button
+                      onClick={() => {
+                        setShowDatePicker(true);
+                      }}
+                    >
+                      <SVG name={'calendar'} size={16} extraClass={'mr-1'} />
+                      {showDatePickerStr}
+                    </Button>
+                  ) : (
+                    <Button>
+                      <SVG name={'calendar'} size={16} extraClass={'mr-1'} />
+                      <DatePicker
+                        format={'MMM DD YYYY'}
+                        style={{ width: '96px' }}
+                        disabledDate={(d) => !d || d.isAfter(MomentTz())}
+                        dropdownClassName={'fa-custom-datepicker--datepicker'}
+                        size={'small'}
+                        suffixIcon={null}
+                        showToday={false}
+                        bordered={false}
+                        autoFocus={true}
+                        allowClear={false}
+                        open={true}
+                        onOpenChange={() => {
+                          setShowDatePicker(false);
+                        }}
+                        onChange={setDateSince}
+                      />
+                    </Button>
+                  )}
+                </div>
+              </div>
             ) : (
               <Button
                 className={`mr-2`}
-                size={"large"}
-                type={"default"}
+                size={'large'}
+                type={'default'}
                 onClick={() => setCollapse(false)}
               >
                 <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>
@@ -177,11 +227,11 @@ function ProfileComposer({
             )}
             <Button
               className={`ml-2`}
-              size={"large"}
-              type="primary"
+              size={'large'}
+              type='primary'
               onClick={handleRunQuery}
             >
-              Run Query
+              Run Analysis
             </Button>
           </div>
         );
@@ -196,7 +246,7 @@ function ProfileComposer({
     try {
       return (
         <ComposerBlock
-          blockTitle={"Profiles to Analyse"}
+          blockTitle={'Profiles to Analyse'}
           isOpen={profileBlockOpen}
           showIcon={true}
           onClick={() => setProfileBlockOpen(!profileBlockOpen)}

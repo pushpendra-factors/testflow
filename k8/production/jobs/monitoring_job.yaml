@@ -24,6 +24,14 @@ spec:
             image: us.gcr.io/factors-production/monitoring:v0.15_eeb2024b
             imagePullPolicy: IfNotPresent
             args:
+            - --sdk_queue_threshold
+            - "15000"
+            - --integration_queue_threshold
+            - "20000"
+            - --slow_queries_threshold
+            - "75"
+            - --delayed_task_threshold
+            - "2000"
             - --env
             - $(ENV)
             - --db_host
@@ -36,18 +44,6 @@ spec:
             - $(POSTGRES_USER)
             - --db_pass
             - $(POSTGRES_PASSWORD)
-            - --memsql_host
-            - $(MEMSQL_HOST)
-            - --memsql_port
-            - $(MEMSQL_PORT)
-            - --memsql_name
-            - $(MEMSQL_DB)
-            - --memsql_user
-            - $(MEMSQL_ADMIN_USER)
-            - --memsql_pass
-            - $(MEMSQL_ADMIN_PASSWORD)
-            - --memsql_cert
-            - $(MEMSQL_CERTIFICATE)
             - --queue_redis_host
             - $(QUEUE_REDIS_HOST)
             - --queue_redis_port
@@ -62,11 +58,7 @@ spec:
             - configMapRef:
                 name: config-postgres
             - configMapRef:
-                name: config-memsql
-            - configMapRef:
                 name: config-queue-redis
             - secretRef:
                 name: secret-postgres
-            - secretRef:
-                name: secret-memsql
           restartPolicy: OnFailure

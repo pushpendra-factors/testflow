@@ -817,7 +817,7 @@ func (pg *Postgres) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, ob
 	return getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments, propertyName, 100)
 }
 
-func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int, syncId string, timestamp int64, action int, userID string) int {
+func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int {
 	logCtx := log.WithField("project_id", projectId).WithField("id", id)
 
 	updates := make(map[string]interface{}, 0)
@@ -828,6 +828,10 @@ func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, d
 
 	if userID != "" {
 		updates["user_id"] = userID
+	}
+
+	if groupUserID != "" {
+		updates["group_user_id"] = groupUserID
 	}
 
 	db := C.GetServices().Db
@@ -870,9 +874,13 @@ func (pg *Postgres) GetLastSyncedHubspotDocumentByID(projectID uint64, docID str
 	return &document[0], http.StatusFound
 }
 
-func (pg *Postgres) CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint64, companyID, companyUserID string, enProperties *map[string]interface{}, companyCreatedTimestamp, updateTimestamp int64, source string) (string, error) {
+func (pg *Postgres) CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
+	enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error) {
 
-	if projectID < 1 || enProperties == nil || companyCreatedTimestamp == 0 {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName,
+		"group_id": groupUserID, "created_timestamp": createdTimestamp, "updated_timestamp": updatedTimestamp})
+	if projectID < 1 || enProperties == nil || createdTimestamp == 0 || updatedTimestamp == 0 {
+		logCtx.Error("Invalid parameters on CreateOrUpdateGroupPropertiesBySource.")
 		return "", errors.New("invalid parameters")
 	}
 
@@ -881,7 +889,7 @@ func (pg *Postgres) CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint6
 	}
 
 	newGroupUser := false
-	if companyUserID == "" {
+	if groupUserID == "" {
 		newGroupUser = true
 	}
 
@@ -891,7 +899,7 @@ func (pg *Postgres) CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint6
 	}
 
 	if !newGroupUser {
-		user, status := pg.GetUser(projectID, companyUserID)
+		user, status := pg.GetUser(projectID, groupUserID)
 		if status != http.StatusFound {
 			return "", errors.New("failed to get user")
 		}
@@ -900,32 +908,34 @@ func (pg *Postgres) CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint6
 			return "", errors.New("user is not group user")
 		}
 
-		_, status = pg.UpdateUserGroupProperties(projectID, companyUserID, pJSONProperties, updateTimestamp)
+		_, status = pg.UpdateUserGroupProperties(projectID, groupUserID, pJSONProperties, updatedTimestamp)
 		if status != http.StatusAccepted {
+			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user group properties.")
 			return "", errors.New("failed to update company group properties")
 		}
-		return companyUserID, nil
+		return groupUserID, nil
+	}
+
+	var requestSource int
+	if source == model.SmartCRMEventSourceHubspot {
+		requestSource = model.UserSourceHubspot
+	} else {
+		requestSource = model.UserSourceSalesforce
 	}
 
 	isGroupUser := true
-
-	groupName := ""
-	if source == model.SmartCRMEventSourceHubspot {
-		groupName = model.GROUP_NAME_HUBSPOT_COMPANY
-	} else {
-		groupName = model.GROUP_NAME_SALESFORCE_ACCOUNT
-	}
-
 	userID, status := pg.CreateGroupUser(&model.User{
 		ProjectId:     projectID,
 		IsGroupUser:   &isGroupUser,
-		JoinTimestamp: companyCreatedTimestamp,
-	}, groupName, companyID)
+		JoinTimestamp: createdTimestamp,
+		Source:        &requestSource,
+	}, groupName, groupID)
 	if status != http.StatusCreated {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create group user.")
 		return userID, errors.New("failed to create company group user")
 	}
 
-	_, status = pg.UpdateUserGroupProperties(projectID, userID, pJSONProperties, updateTimestamp)
+	_, status = pg.UpdateUserGroupProperties(projectID, userID, pJSONProperties, updatedTimestamp)
 	if status != http.StatusAccepted {
 		return userID, errors.New("failed to update company group properties")
 	}

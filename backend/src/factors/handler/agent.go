@@ -69,7 +69,15 @@ func Signin(c *gin.Context) {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.SecondsInOneMonth*time.Second)
 
 	domain := C.GetCookieDomian()
-	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, C.UseSecureCookie(), C.UseHTTPOnlyCookie())
+
+	cookie := C.UseSecureCookie()
+	httpOnly := C.UseHTTPOnlyCookie()
+	if C.IsDevBox() {
+		cookie = true
+		httpOnly = true
+		c.SetSameSite(http.SameSiteNoneMode)
+	}
+	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, cookie, httpOnly)
 	resp := map[string]string{
 		"status": "success",
 	}
@@ -95,6 +103,14 @@ type agentInviteParams struct {
 
 func getAgentInviteParams(c *gin.Context) (*agentInviteParams, error) {
 	params := agentInviteParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+func getAgentBatchInviteParams(c *gin.Context) (*[]agentInviteParams, error) {
+	params := []agentInviteParams{}
 	err := c.BindJSON(&params)
 	if err != nil {
 		return nil, err
@@ -227,6 +243,127 @@ func AgentInvite(c *gin.Context) {
 	resp["agents"] = agentInfoMap
 	resp["project_agent_mappings"] = []model.ProjectAgentMapping{*pam}
 
+	c.JSON(http.StatusCreated, resp)
+	return
+}
+func AgentInviteBatch(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	params, err := getAgentBatchInviteParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse AgentInviteParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	invitedByAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	project, errCode := store.GetStore().GetProject(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	agentInfoMap := make(map[string]*model.AgentInfo)
+	pam := []model.ProjectAgentMapping{}
+	failedToInviteAgentIndexes := make(map[int]bool)
+	for idx, agentDetail := range *params {
+		emailOfAgentToInvite := agentDetail.Email
+		roleOfAgent := agentDetail.Role
+
+		createProjectAgentMapping, errCode := store.GetStore().IsNewProjectAgentMappingCreationAllowed(projectId, emailOfAgentToInvite)
+		if errCode != http.StatusOK {
+			failedToInviteAgentIndexes[idx] = true
+			continue
+		}
+
+		if !createProjectAgentMapping {
+			failedToInviteAgentIndexes[idx] = true
+			continue
+		}
+
+		invitedAgent, errCode := store.GetStore().GetAgentByEmail(emailOfAgentToInvite)
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to GetAgentByEmail")
+			failedToInviteAgentIndexes[idx] = true
+			continue
+		}
+
+		createNewAgent := errCode == http.StatusNotFound
+
+		if createNewAgent {
+			createAgentParams := model.CreateAgentParams{
+				Agent:    &model.Agent{Email: emailOfAgentToInvite, InvitedBy: &invitedByAgentUUID},
+				PlanCode: model.FreePlanCode,
+			}
+			resp, errCode := store.GetStore().CreateAgentWithDependencies(&createAgentParams)
+			if errCode == http.StatusInternalServerError {
+				logCtx.Error("Failed to CreateAgent")
+				failedToInviteAgentIndexes[idx] = true
+				continue
+			}
+			invitedAgent = resp.Agent
+		}
+		newProjectAgentRole := uint64(model.AGENT)
+
+		if roleOfAgent == model.ADMIN {
+			newProjectAgentRole = uint64(model.ADMIN)
+		}
+		projectAgentMapping, errCode := store.GetStore().CreateProjectAgentMappingWithDependencies(
+			&model.ProjectAgentMapping{
+				ProjectID: projectId,
+				AgentUUID: invitedAgent.UUID,
+				InvitedBy: &invitedByAgentUUID,
+				Role:      newProjectAgentRole,
+			})
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to createProjectAgentMapping")
+			failedToInviteAgentIndexes[idx] = true
+			continue
+		} else if errCode == http.StatusFound {
+			//c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "User is already mapped to project"})
+			failedToInviteAgentIndexes[idx] = true
+			continue
+		}
+
+		sendVerifyProfileLink := createNewAgent
+
+		// Send email
+		// You have been added to this project
+		link := ""
+		if sendVerifyProfileLink {
+			authToken, err := helpers.GetAuthData(invitedAgent.Email, invitedAgent.UUID, invitedAgent.Salt, helpers.SecondsInFifteenDays*time.Second)
+			if err != nil {
+				wrapErr := errors.Wrap(err, "Failed to create auth token for invited agent")
+				logCtx.WithError(wrapErr).Error("Failed to create auth token for invited agent")
+				failedToInviteAgentIndexes[idx] = true
+				continue
+			}
+			fe_host := C.GetProtocol() + C.GetAPPDomain()
+			link = fmt.Sprintf("%s/activate?token=%s", fe_host, authToken)
+			logCtx.WithField("link", link).Debugf("Verification LInk")
+		}
+
+		invitedAgentInfo := model.CreateAgentInfo(invitedAgent)
+
+		agentInfoMap[invitedAgentInfo.UUID] = invitedAgentInfo
+
+		sub, text, html := U.CreateAgentInviteTemplate(project.Name, link)
+		err = C.GetServices().Mailer.SendMail(invitedAgent.Email, C.GetFactorsSenderEmail(), sub, html, text)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to send activation email")
+			//c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "Failed to send invitation email"})
+			failedToInviteAgentIndexes[idx] = true
+			continue
+		}
+		pam = append(pam, *projectAgentMapping)
+	}
+	resp := make(map[string]interface{})
+	resp["status"] = "success"
+	resp["agents"] = agentInfoMap
+	resp["project_agent_mappings"] = pam
+	resp["failed_to_invite_agent_idx"] = failedToInviteAgentIndexes
 	c.JSON(http.StatusCreated, resp)
 	return
 }
@@ -722,9 +859,10 @@ func UpdateAgentBillingAccount(c *gin.Context) {
 }
 
 type updateAgentParams struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Phone     string `json:"phone"`
+	FirstName            string `json:"first_name"`
+	LastName             string `json:"last_name"`
+	Phone                string `json:"phone"`
+	IsOnboardingFlowSeen *bool  `json:"is_onboarding_flow_seen"`
 }
 
 func getUpdateAgentParams(c *gin.Context) (*updateAgentParams, error) {
@@ -748,7 +886,7 @@ func UpdateAgentInfo(c *gin.Context) {
 		return
 	}
 
-	errCode := store.GetStore().UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName, params.Phone)
+	errCode := store.GetStore().UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName, params.Phone, params.IsOnboardingFlowSeen)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return

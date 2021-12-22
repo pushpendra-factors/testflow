@@ -50,7 +50,7 @@ services:
                 -  REDIS_HOST=redis
                 -  ETCD=etcd:2379
                 -  PS=patternserver
-            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --etcd=etcd:2379"]
+            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --dev_box"]
             image: testing/api:1.0
             restart: always
             ports:
@@ -63,14 +63,20 @@ services:
                 - redis
                 - etcd
         memsql:
-            image: 'memsql/cluster-in-a-box'
+            build:
+                context: .
+                dockerfile: Dockerfile.memsql.testing
+                args:
+                    - MEMSQL_VERSION=centos-7.3.10-6c220bccfc-3.2.8-1.11.4
+            image: testing/memsql:1.0
+            restart: always
+            environment:
+                - LICENSE_KEY=$MEMSQL_LICENSE_KEY
+                - ROOT_PASSWORD=$ROOT_PASSWORD
+                - START_AFTER_INIT='Y'
             ports:
                 - 3306:3306
                 - 8040:8080
-            environment:
-                LICENSE_KEY: $MEMSQL_LICENSE_KEY
-                ROOT_PASSWORD: $ROOT_PASSWORD
-                START_AFTER_INIT: 'Y'
         sdkserver:
             build:
                 context: ../

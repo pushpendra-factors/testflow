@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, memo } from 'react';
 import { Text, Number as NumFormat } from '../factorsComponents';
 import styles from './styles.module.scss';
 import ReactDOMServer from 'react-dom/server';
@@ -146,4 +146,4 @@ function StackedAreaChart({
   );
 }
 
-export default StackedAreaChart;
+export default memo(StackedAreaChart);

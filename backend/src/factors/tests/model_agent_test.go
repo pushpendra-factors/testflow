@@ -247,14 +247,14 @@ func TestUpdateAgentInformation(t *testing.T) {
 	agent, errCode := SetupAgentReturnDAO(email, "+13425354765")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	store.GetStore().UpdateAgentInformation(agent.UUID, "A", "B", "")
+	store.GetStore().UpdateAgentInformation(agent.UUID, "A", "B", "",false)
 	updatedAgent, errCode := store.GetStore().GetAgentByEmail(email)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, "A", updatedAgent.FirstName)
 	assert.Equal(t, "B", updatedAgent.LastName)
 	assert.Equal(t, "+13425354765", updatedAgent.Phone)
 
-	store.GetStore().UpdateAgentInformation(agent.UUID, "", "", "+13425354567")
+	store.GetStore().UpdateAgentInformation(agent.UUID, "", "", "+13425354567",false)
 	updatedAgent, errCode = store.GetStore().GetAgentByEmail(email)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, "A", updatedAgent.FirstName)

@@ -35,18 +35,44 @@ function BreakdownTable({
   const [tableData, setTableData] = useState([]);
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
   const [dateBasedTableData, setDateBasedTableData] = useState([]);
-  const [dateSorter, setDateSorter] = useState({});
+  const [dateSorter, setDateSorter] = useState([]);
   const [searchText, setSearchText] = useState('');
 
   const handleSorting = useCallback((prop) => {
     setSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
+      if (currentSorter[0].key === prop.key) {
+        return [
+          {
+            ...currentSorter[0],
+            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend',
+          },
+        ];
+      }
+      return [
+        {
+          ...prop,
+          order: 'ascend',
+        },
+      ];
     });
   }, []);
 
   const handleDateSorting = useCallback((prop) => {
     setDateSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
+      if (currentSorter[0].key === prop.key) {
+        return [
+          {
+            ...currentSorter[0],
+            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend',
+          },
+        ];
+      }
+      return [
+        {
+          ...prop,
+          order: 'ascend',
+        },
+      ];
     });
   }, []);
 
@@ -55,14 +81,7 @@ function BreakdownTable({
   }, [arrayMapper, breakdown, sorter, handleSorting]);
 
   useEffect(() => {
-    setTableData(
-      getTableData(
-        chartsData,
-        breakdown,
-        searchText,
-        sorter
-      )
-    );
+    setTableData(getTableData(chartsData, breakdown, searchText, sorter));
   }, [
     chartsData,
     breakdown,

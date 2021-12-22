@@ -105,8 +105,10 @@ func main() {
 	customerEnabledProjectsWeeklyInsights := flag.String("customer_enabled_projects_wi",
 		"", "List of projects customer enabled for Weekly Insights")
 	multipleTimezoneEnabledProjects := flag.String("timezone_enabled_projects", "", "List of projectIds where multiple timezones are enabled")
+	demoProjectIds := flag.String("demo_projects", "", "List of projectIds those are used for demo")
 	attributionDebug := flag.Int("attribution_debug", 0, "Enables debug logging for attribution queries")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
+	enableDemoReadAccess := flag.Bool("enable_demo_read_access", false, "Enable Admin API restrictions.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	disableDashboardQueryDBExecution := flag.Bool("disable_dashboard_query_db_execution", false,
@@ -118,6 +120,11 @@ func main() {
 		"Enables filter optimisation changes for memsql implementation.")
 	filterPropertiesStartTimestamp := flag.Int64("filter_properties_start_timestamp", -1,
 		"Start timestamp of data available for filtering with parquet on memsql.")
+	devBox := flag.Bool("dev_box", false, "Is this going to be deployed on one box")
+	skipEventNameStepByProjectID := flag.String("skip_event_name_step_by_project_id", "", "")
+	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
+	allowSupportForDateRangeInProfiles := flag.String("allow_support_for_date_range_in_profiles", "", "")
+	enableEventLevelEventProperties := flag.String("enable_event_level_event_properties", "", "")
 
 	flag.Parse()
 
@@ -188,6 +195,8 @@ func main() {
 		ProjectAnalyticsWhitelistedUUIds:        C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
 		CustomerEnabledProjectsWeeklyInsights:   C.GetTokensFromStringListAsUint64(*customerEnabledProjectsWeeklyInsights),
 		MultipleTimezoneEnabledProjects:         C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
+		DemoProjectIds:                          C.GetTokensFromStringListAsUint64(*demoProjectIds),
+		EnableDemoReadAccess:                    enableDemoReadAccess,
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableDBWrites:                         disableDBWrites,
 		DisableRedisWrites:                      disableRedisWrites,
@@ -196,6 +205,11 @@ func main() {
 		DisableDashboardQueryDBExecution:        *disableDashboardQueryDBExecution,
 		EnableFilterOptimisation:                *enableFilterOptimisation,
 		FilterPropertiesStartTimestamp:          *filterPropertiesStartTimestamp,
+		DevBox:                                  *devBox,
+		SkipEventNameStepByProjectID:            *skipEventNameStepByProjectID,
+		SkipUserJoinInEventQueryByProjectID:     *skipUserJoinInEventQueryByProjectID,
+		AllowSupportForDateRangeInProfiles:      *allowSupportForDateRangeInProfiles,
+		EnableEventLevelEventProperties:         *enableEventLevelEventProperties,
 	}
 	C.InitConf(config)
 

@@ -84,6 +84,7 @@ func TestAddSessionLatestUserProperties(t *testing.T) {
 		Timestamp:       timestampUnix,
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, res := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -108,6 +109,7 @@ func TestAddSessionLatestUserProperties(t *testing.T) {
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
 		UserId:          userID,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, _ = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -135,6 +137,7 @@ func TestAddSessionLatestUserProperties(t *testing.T) {
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
 		UserId:          userID,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, _ = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -191,6 +194,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -232,6 +236,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties1,
 		UserProperties:  trackUserProperties1,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -270,6 +275,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties2,
 		UserProperties:  trackUserProperties2,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -308,6 +314,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties3,
 		UserProperties:  trackUserProperties3,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -346,6 +353,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties4,
 		UserProperties:  trackUserProperties4,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -384,6 +392,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties5,
 		UserProperties:  trackUserProperties5,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -422,6 +431,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties6,
 		UserProperties:  trackUserProperties6,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -460,6 +470,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties7,
 		UserProperties:  trackUserProperties7,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -498,6 +509,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties8,
 		UserProperties:  trackUserProperties8,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -535,6 +547,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties9,
 		UserProperties:  trackUserProperties9,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -572,6 +585,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties10,
 		UserProperties:  trackUserProperties10,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -609,6 +623,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties11,
 		UserProperties:  trackUserProperties11,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -646,6 +661,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties12,
 		UserProperties:  trackUserProperties12,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -683,6 +699,7 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties13,
 		UserProperties:  trackUserProperties13,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -728,6 +745,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -741,9 +759,10 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 
 	timestamp = timestamp + 2
 	trackPayload = SDK.TrackPayload{
-		Name:      "non_web_event",
-		Timestamp: timestamp,
-		UserId:    userId,
+		Name:          "non_web_event",
+		Timestamp:     timestamp,
+		UserId:        userId,
+		RequestSource: model.UserSourceWeb,
 	}
 	// skip session event.
 	status, response = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK, "")
@@ -814,6 +833,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: trackEventProperties1,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -832,6 +852,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: trackEventProperties2,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -851,6 +872,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: trackEventProperties3,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -858,9 +880,10 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 
 	timestamp = timestamp + 2
 	trackPayload = SDK.TrackPayload{
-		Name:      "non_web_event",
-		Timestamp: timestamp,
-		UserId:    userId,
+		Name:          "non_web_event",
+		Timestamp:     timestamp,
+		UserId:        userId,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK, "") // skip session.
 	assert.Equal(t, http.StatusOK, status)
@@ -879,6 +902,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: trackEventProperties4,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -947,6 +971,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "summer_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -956,10 +981,11 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	timestamp = timestamp + 2
 	randomEventName = RandomURL()
 	trackPayload = SDK.TrackPayload{
-		Auto:      true,
-		Name:      randomEventName,
-		Timestamp: timestamp,
-		UserId:    userId,
+		Auto:          true,
+		Name:          randomEventName,
+		Timestamp:     timestamp,
+		UserId:        userId,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -993,6 +1019,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -1036,9 +1063,10 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1048,10 +1076,11 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1060,10 +1089,11 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1122,9 +1152,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// This event should not be considered for session
 		// creation as it is beyond the max lookback.
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1134,10 +1165,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1173,9 +1205,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1185,10 +1218,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1197,10 +1231,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1244,6 +1279,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			EventProperties: U.PropertiesMap{
 				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
 			},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1265,10 +1301,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1277,10 +1314,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1315,9 +1353,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1339,10 +1378,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1375,9 +1415,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1406,6 +1447,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			EventProperties: U.PropertiesMap{
 				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
 			},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1439,9 +1481,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1463,10 +1506,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + (32 * 60) + 2
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1500,9 +1544,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 1
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1519,6 +1564,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			EventProperties: U.PropertiesMap{
 				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
 			},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1527,10 +1573,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 6
 		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1569,9 +1616,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1588,6 +1636,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			EventProperties: U.PropertiesMap{
 				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
 			},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1597,10 +1646,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + (31 * 60) + 2
 		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1609,10 +1659,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1657,9 +1708,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1670,10 +1722,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + (31 * 60) + 2
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1682,10 +1735,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1732,6 +1786,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			EventProperties: U.PropertiesMap{
 				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
 			},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1766,9 +1821,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1778,10 +1834,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1796,7 +1853,8 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			EventProperties: U.PropertiesMap{
 				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
 			},
-			UserId: userId,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1841,6 +1899,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			EventProperties: U.PropertiesMap{
 				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
 			},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1862,10 +1921,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + (32 * 60) + 2
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1898,9 +1958,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1918,6 +1979,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			EventProperties: U.PropertiesMap{
 				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
 			},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1928,9 +1990,10 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + (32 * 60) + 2
 		randomEventName = U.RandomLowerAphaNumString(5)
 		trackPayload2 = SDK.TrackPayload{
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1939,10 +2002,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1982,8 +2046,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
-			Name:      randomEventName,
-			Timestamp: timestamp,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -1993,10 +2058,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -2005,10 +2071,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		timestamp = timestamp + 2
 		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
-			Auto:      true,
-			Name:      randomEventName,
-			Timestamp: timestamp,
-			UserId:    userId,
+			Auto:          true,
+			Name:          randomEventName,
+			Timestamp:     timestamp,
+			UserId:        userId,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -2061,6 +2128,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			Timestamp:       timestamp,
 			EventProperties: trackEventProperties,
 			UserProperties:  trackUserProperties,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -2100,6 +2168,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 			Timestamp:       timestamp,
 			UserId:          userId,
 			EventProperties: trackEventProperties,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -2137,9 +2206,10 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 	randomEventName := RandomURL()
 	trackPayload := SDK.TrackPayload{
-		Auto:      true,
-		Name:      randomEventName,
-		Timestamp: timestamp,
+		Auto:          true,
+		Name:          randomEventName,
+		Timestamp:     timestamp,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "") // true: skips session.
 	assert.Equal(t, http.StatusOK, status)
@@ -2149,10 +2219,11 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 
 	timestamp = U.UnixTimeBeforeDuration(time.Minute * 15)
 	trackPayload = SDK.TrackPayload{
-		Auto:      true,
-		Name:      randomEventName,
-		Timestamp: timestamp,
-		UserId:    userId,
+		Auto:          true,
+		Name:          randomEventName,
+		Timestamp:     timestamp,
+		UserId:        userId,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "") // true: skips session.
 	assert.Equal(t, http.StatusOK, status)
@@ -2160,10 +2231,11 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 
 	timestamp = time.Now().Unix()
 	trackPayload = SDK.TrackPayload{
-		Auto:      true,
-		Name:      randomEventName,
-		Timestamp: timestamp,
-		UserId:    userId,
+		Auto:          true,
+		Name:          randomEventName,
+		Timestamp:     timestamp,
+		UserId:        userId,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "") // true: skips session.
 	assert.Equal(t, http.StatusOK, status)
@@ -2241,6 +2313,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2254,9 +2327,10 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 
 	timestamp = timestamp + 2
 	trackPayload = SDK.TrackPayload{
-		Name:      "non_web_event",
-		Timestamp: timestamp,
-		UserId:    userId,
+		Name:          "non_web_event",
+		Timestamp:     timestamp,
+		UserId:        userId,
+		RequestSource: model.UserSourceWeb,
 	}
 	// skip session event.
 	status, response = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK, "")
@@ -2328,6 +2402,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: trackEventProperties1,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2346,6 +2421,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: trackEventProperties2,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2365,6 +2441,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: trackEventProperties3,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2372,9 +2449,10 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 
 	timestamp = timestamp + 2
 	trackPayload = SDK.TrackPayload{
-		Name:      "non_web_event",
-		Timestamp: timestamp,
-		UserId:    userId,
+		Name:          "non_web_event",
+		Timestamp:     timestamp,
+		UserId:        userId,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, true, SDK.SourceJSSDK, "") // skip session.
 	assert.Equal(t, http.StatusOK, status)
@@ -2393,6 +2471,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: trackEventProperties4,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2463,6 +2542,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "summer_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
@@ -2472,10 +2552,11 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	timestamp = timestamp + 2
 	randomEventName = RandomURL()
 	trackPayload = SDK.TrackPayload{
-		Auto:      true,
-		Name:      randomEventName,
-		Timestamp: timestamp,
-		UserId:    userId,
+		Auto:          true,
+		Name:          randomEventName,
+		Timestamp:     timestamp,
+		UserId:        userId,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2509,6 +2590,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale1",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2524,6 +2606,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale2",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2539,6 +2622,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale3",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2602,6 +2686,7 @@ func TestAddSessionMergingEventsOnDifferentMarketingProperty(t *testing.T) {
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2622,6 +2707,7 @@ func TestAddSessionMergingEventsOnDifferentMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale1",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2637,6 +2723,7 @@ func TestAddSessionMergingEventsOnDifferentMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale2",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2652,6 +2739,7 @@ func TestAddSessionMergingEventsOnDifferentMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale3",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2702,6 +2790,7 @@ func TestAddSessionMergingEventsOnSameMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2718,6 +2807,7 @@ func TestAddSessionMergingEventsOnSameMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2733,6 +2823,7 @@ func TestAddSessionMergingEventsOnSameMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2783,6 +2874,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale4",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2799,6 +2891,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale5",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2814,6 +2907,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale6",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2829,6 +2923,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2844,6 +2939,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2859,6 +2955,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2926,6 +3023,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale1",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2942,6 +3040,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale2",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2957,6 +3056,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale3",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2972,6 +3072,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale4",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2987,6 +3088,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale4",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3002,6 +3104,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale4",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3017,6 +3120,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale7",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3032,6 +3136,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale8",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3047,6 +3152,7 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale9",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3128,6 +3234,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale1",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3144,6 +3251,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale2",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3159,6 +3267,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale3",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3174,6 +3283,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale4",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3189,6 +3299,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale4",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3204,6 +3315,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale4",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3219,6 +3331,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale7",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3234,6 +3347,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale8",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3249,6 +3363,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale9",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3263,6 +3378,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale91",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3278,6 +3394,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale92",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3293,6 +3410,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale93",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3308,6 +3426,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale94",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3323,6 +3442,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale94",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3338,6 +3458,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale94",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3353,6 +3474,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale97",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3368,6 +3490,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale98",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3383,6 +3506,7 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "same_winter_sale99",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3510,6 +3634,7 @@ func TestAddSessionMergingEventsOnMissedMarketingProperty(t *testing.T) {
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3526,6 +3651,7 @@ func TestAddSessionMergingEventsOnMissedMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3541,6 +3667,7 @@ func TestAddSessionMergingEventsOnMissedMarketingProperty(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup": "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3553,6 +3680,7 @@ func TestAddSessionMergingEventsOnMissedMarketingProperty(t *testing.T) {
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: U.PropertiesMap{},
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3568,6 +3696,7 @@ func TestAddSessionMergingEventsOnMissedMarketingProperty(t *testing.T) {
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3629,6 +3758,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3645,6 +3775,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3660,6 +3791,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup": "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3672,6 +3804,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 		Timestamp:       timestamp,
 		UserId:          userId,
 		EventProperties: U.PropertiesMap{},
+		RequestSource:   model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3687,6 +3820,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3701,6 +3835,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3768,6 +3903,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3785,6 +3921,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3801,6 +3938,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "",
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3815,6 +3953,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 		EventProperties: U.PropertiesMap{
 			U.QUERY_PARAM_UTM_PREFIX + "keyword": "",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3831,6 +3970,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
 			U.QUERY_PARAM_UTM_PREFIX + "keyword":  "",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -3845,6 +3985,7 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
 			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)

@@ -34,7 +34,7 @@ func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *model.
 
 	project, agent, _ := SetupProjectWithAgentDAO()
 
-	createdUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 
 	rEventName := "event1"
 	_ = ServePostRequestWithHeaders(r, uri,

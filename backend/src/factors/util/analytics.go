@@ -28,7 +28,13 @@ func GetTimestampAsStrWithTimezone(t time.Time, timezone string) string {
 		t.Month(), t.Day(), t.Hour(), getTimezoneOffsetFromString(timezone))
 }
 
-func getTimeFromUnixTimestampWithZone(unix int64, timezone string) (time.Time, error) {
+// This relies on fact of above parse.
+func GetTimeFromParseTimeStr(timestampStr string) time.Time {
+	ts, _ := time.Parse("2006-01-02T15:04:05-07:00", timestampStr)
+	return ts
+}
+
+func GetTimeFromUnixTimestampWithZone(unix int64, timezone string, isTimezoneEnabled bool) (time.Time, error) {
 	// if timezone is "", uses UTC.
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
@@ -36,20 +42,26 @@ func getTimeFromUnixTimestampWithZone(unix int64, timezone string) (time.Time, e
 			unix).Error("invalid unix timestamp with timezone.")
 		return time.Time{}, err
 	}
+	if isTimezoneEnabled {
+		curr_time := time.Unix(unix, 0).UTC().In(loc)
+		parsedTimestamp := GetTimestampAsStrWithTimezone(curr_time, timezone)
+		return GetTimeFromTimestampStr(parsedTimestamp), nil
+	} else {
+		return time.Unix(unix, 0).UTC().In(loc), nil
+	}
 
-	return time.Unix(unix, 0).UTC().In(loc), nil
 }
 
-func GetAllDatesAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
+func GetAllDatesAsTimestamp(fromUnix int64, toUnix int64, timezone string, isTimezoneEnabled bool) []time.Time {
 	rTimestamps := make([]time.Time, 0, 0)
 
-	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	from, err := GetTimeFromUnixTimestampWithZone(fromUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}
 	from = now.New(from).BeginningOfDay()
 
-	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	to, err := GetTimeFromUnixTimestampWithZone(toUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}
@@ -67,16 +79,16 @@ func GetAllDatesAsTimestamp(fromUnix int64, toUnix int64, timezone string) []tim
 }
 
 // GetAllQuartersAsTimestamp buckets the days into start of quarter
-func GetAllQuartersAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
+func GetAllQuartersAsTimestamp(fromUnix int64, toUnix int64, timezone string, isTimezoneEnabled bool) []time.Time {
 	rTimestamps := make([]time.Time, 0, 0)
 
-	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	from, err := GetTimeFromUnixTimestampWithZone(fromUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}
 	from = now.New(from).BeginningOfQuarter()
 
-	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	to, err := GetTimeFromUnixTimestampWithZone(toUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}
@@ -96,16 +108,16 @@ func GetAllQuartersAsTimestamp(fromUnix int64, toUnix int64, timezone string) []
 
 // GetAllMonthsAsTimestamp buckets the days into start of weeks i.e.
 // returns list of Sundays for from to to
-func GetAllMonthsAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
+func GetAllMonthsAsTimestamp(fromUnix int64, toUnix int64, timezone string, isTimezoneEnabled bool) []time.Time {
 	rTimestamps := make([]time.Time, 0, 0)
 
-	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	from, err := GetTimeFromUnixTimestampWithZone(fromUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}
 	from = now.New(from).BeginningOfMonth()
 
-	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	to, err := GetTimeFromUnixTimestampWithZone(toUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}
@@ -125,16 +137,16 @@ func GetAllMonthsAsTimestamp(fromUnix int64, toUnix int64, timezone string) []ti
 
 // GetAllWeeksAsTimestamp buckets the days into start of weeks i.e.
 // returns list of Sundays for from to to
-func GetAllWeeksAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
+func GetAllWeeksAsTimestamp(fromUnix int64, toUnix int64, timezone string, isTimezoneEnabled bool) []time.Time {
 	rTimestamps := make([]time.Time, 0, 0)
 
-	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	from, err := GetTimeFromUnixTimestampWithZone(fromUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}
 	from = now.New(from).BeginningOfWeek()
 
-	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	to, err := GetTimeFromUnixTimestampWithZone(toUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}
@@ -150,16 +162,16 @@ func GetAllWeeksAsTimestamp(fromUnix int64, toUnix int64, timezone string) []tim
 	return rTimestamps
 }
 
-func GetAllHoursAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
+func GetAllHoursAsTimestamp(fromUnix int64, toUnix int64, timezone string, isTimezoneEnabled bool) []time.Time {
 	rTimestamps := make([]time.Time, 0, 0)
 
-	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	from, err := GetTimeFromUnixTimestampWithZone(fromUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}
 	from = now.New(from).BeginningOfHour()
 
-	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	to, err := GetTimeFromUnixTimestampWithZone(toUnix, timezone, isTimezoneEnabled)
 	if err != nil {
 		return rTimestamps
 	}

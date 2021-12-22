@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, memo } from 'react';
 import * as d3 from 'd3';
 import styles from '../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index.module.scss';
 import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPage/utils';
@@ -281,4 +281,4 @@ function BarChart({
   );
 }
 
-export default BarChart;
+export default memo(BarChart);

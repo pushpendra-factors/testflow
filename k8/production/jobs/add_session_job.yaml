@@ -40,28 +40,27 @@ spec:
             - $(REDIS_HOST)
             - --redis_port
             - $(REDIS_PORT)
-            - --project_ids
-            - "*"
             - --num_project_routines
             - $(ADD_SESSION_PROJECT_ROUTINES)
             - --num_user_routines
             - $(ADD_SESSION_USER_ROUTINES)
             - --max_lookback_hours
             - $(ADD_SESSION_MAX_LOOKBACK_HOURS)
-            - --start_timestamp
-            - "0"
-            - --end_timestamp
-            - "0"
+            - --sentry_dsn
+            - $(SENTRY_DSN)
             - --redis_host_ps
             - $(PERSISTENT_REDIS_HOST)
             - --redis_port_ps
             - $(PERSISTENT_REDIS_PORT)
-            - --sentry_dsn
-            - $(SENTRY_DSN)
             - --gcp_project_id
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
+            - --project_ids
+            - "398"
+            - --allow_channel_grouping_for_projects
+            - '*'
+            - --cache_with_sorted_set
             envFrom:
             - configMapRef:
                 name: config-env

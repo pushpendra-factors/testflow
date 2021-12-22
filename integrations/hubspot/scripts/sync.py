@@ -24,7 +24,7 @@ parser.add_option("--enable_deleted_projectIDs", dest="enable_deleted_projectIDs
 
 
 APP_NAME = "hubspot_sync"
-PAGE_SIZE = 50
+PAGE_SIZE = 100
 DOC_TYPES = [ "contact", "company", "deal", "form", "form_submission" ]
 
 METRIC_TYPE_INCR = "incr"

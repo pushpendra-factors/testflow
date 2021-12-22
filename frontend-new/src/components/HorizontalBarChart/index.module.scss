@@ -6,6 +6,14 @@
     text-overflow: ellipsis;
     white-space: break-spaces;
   }
+
+  .xAxisLabels {
+    font-size: 14px;
+    width: 120px;
+    font-family: 'Work Sans', sans-serif;
+    text-align: right;
+  }
+
   :global(.highcharts-tick) {
     display: none;
   }

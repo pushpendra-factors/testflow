@@ -26,23 +26,27 @@ export const getNoGroupingTableData = (data, arrayMapper, currentSorter) => {
 
 export const getDefaultSortProp = (arrayMapper) => {
   if (Array.isArray(arrayMapper) && arrayMapper.length) {
-    return {
-      key: arrayMapper[0]?.mapper,
-      type: 'numerical',
-      subtype: null,
-      order: 'descend',
-    };
+    return [
+      {
+        key: arrayMapper[0]?.mapper,
+        type: 'numerical',
+        subtype: null,
+        order: 'descend',
+      },
+    ];
   }
-  return {};
+  return [];
 };
 
 export const getDefaultDateSortProp = () => {
-  return {
-    key: 'Overall',
-    type: 'numerical',
-    subtype: null,
-    order: 'descend',
-  };
+  return [
+    {
+      key: 'Overall',
+      type: 'numerical',
+      subtype: null,
+      order: 'descend',
+    },
+  ];
 };
 
 export const getColumns = (

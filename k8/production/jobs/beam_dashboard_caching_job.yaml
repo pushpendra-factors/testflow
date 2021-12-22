@@ -58,10 +58,18 @@ spec:
             - $(BEAM_WORKER_HARNESS_IMAGE)
             - --subnetwork
             - $(BEAM_SUBNETWORK)
+            - --worker_machine_type
+            - n2-highmem-4
+            - --num_workers
+            - "4"
             - --max_num_workers
-            - "10"
+            - "25"
             - --project_id
-            - "2"
+            - '*'
+            - --exclude_project_id
+            - 398,576
+            - --timezone_enabled_projects
+            - "446"
             envFrom:
             - configMapRef:
                 name: config-env

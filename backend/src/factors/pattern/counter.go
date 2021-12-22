@@ -8,7 +8,10 @@ import (
 	U "factors/util"
 	"fmt"
 	"math"
+	"os"
+	"path"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -560,6 +563,7 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern,
 	shouldCountOccurence bool, countVersion int) error {
 	var seenUsers map[string]bool = make(map[string]bool)
+	var mem runtime.MemStats
 
 	var prEventTimeStamp int64
 	var prvUserId string
@@ -629,17 +633,75 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 	time_elapsed := end_time.UnixNano() - start_time.UnixNano()
 	log.Infof("Avg time taken to insert each line:%v", float64(time_elapsed)/float64(lineNum))
 	log.Infof("num of patterns to mine:%d", len(patterns))
+	basePathUser := path.Join("/", "tmp", "fptree", "user")
+	basePathEvent := path.Join("/", "tmp", "fptree", "event")
+	err := os.MkdirAll(basePathUser, os.ModePerm)
+	if err != nil {
+		log.Fatal("unable to create temp user directory")
+	}
+	err = os.MkdirAll(basePathEvent, os.ModePerm)
+	if err != nil {
+		log.Fatal("unable to create temp event directory")
+	}
 
 	if countVersion == 2 {
+
+		for _, pt := range patterns {
+			ptName := U.RandStringBytes(5) + ".json"
+			treePathUser := path.Join(basePathUser, ptName)
+			pt.userTreePath = treePathUser
+			log.Infof("Writing pattern user tree to path:%s , %v", treePathUser, pt.EventNames)
+
+			tr := pt.userTree
+			err := fp.SerializeTreeToFile(tr, treePathUser)
+			if err != nil {
+				log.Errorf("unable to Write pattern user tree to path:%s", treePathUser)
+				return err
+			}
+
+			treePathEvent := path.Join(basePathEvent, ptName)
+			pt.eventTreePath = treePathEvent
+			tr = pt.eventTree
+			err = fp.SerializeTreeToFile(tr, treePathEvent)
+			if err != nil {
+				log.Errorf("unable to Write pattern event tree to path:%s", treePathEvent)
+				return err
+			}
+			pt.eventTree = fp.Tree{}
+			pt.userTree = fp.Tree{}
+
+			log.Infof("Done writing all trees to file")
+		}
+
+		// calling garbage collector to free memory
+		U.PrintStats(mem)
+		time.Sleep(3 * time.Second)
+		runtime.GC()
+		U.PrintStats(mem)
+
 		num_patterns := 0
 		for _, p := range patterns {
 			num_patterns += 1
+			var err error
+			log.Infof("reading user  tree from: %d,%s ,%v", num_patterns, p.userTreePath, p.EventNames)
+			p.userTree, err = fp.CreateTreeFromFile(p.userTreePath)
+			if err != nil {
+				log.Errorf("Unable to reconstruct user tree :%v", p.EventNames)
+			}
+			log.Infof("mining user tree from:%s ,%v", p.userTreePath, p.EventNames)
+
 			cpUser, err := fp.MineTree(p.userTree, topK_patterns)
 			if err != nil {
 				return err
 			}
 			p.UserPropertiesPatterns = cpUser
 
+			log.Infof("reading event tree from:%d, %s ,%v", num_patterns, p.eventTreePath, p.EventNames)
+			p.eventTree, err = fp.CreateTreeFromFile(p.eventTreePath)
+			if err != nil {
+				log.Errorf("Unable to reconstruct user tree :%v", p.EventNames)
+			}
+			log.Infof("mining event tree from:%s ,%v", p.eventTreePath, p.EventNames)
 			cpEvent, err := fp.MineTree(p.eventTree, topK_patterns)
 			if err != nil {
 				return err
@@ -649,9 +711,24 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 				log.Infof("num of patterns mined:%d", num_patterns)
 			}
 
-			p.eventTree = fp.InitTree()
-			p.userTree = fp.InitTree()
+			p.eventTree = fp.Tree{}
+			p.userTree = fp.Tree{}
 
+			e := os.Remove(p.userTreePath)
+			if e != nil {
+				log.Fatal(e)
+			}
+			e = os.Remove(p.eventTreePath)
+			if e != nil {
+				log.Fatal(e)
+			}
+
+			if num_patterns%100 == 0 {
+				U.PrintStats(mem)
+				time.Sleep(1 * time.Second)
+				runtime.GC()
+				U.PrintStats(mem)
+			}
 		}
 	}
 

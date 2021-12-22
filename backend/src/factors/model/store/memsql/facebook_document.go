@@ -111,6 +111,7 @@ var objectToValueInFacebookFiltersMappingWithFacebookDocuments = map[string]stri
 var facebookMetricsToAggregatesInReportsMapping = map[string]string{
 	"impressions":                   "SUM(JSON_EXTRACT_STRING(value,'impressions'))",
 	"clicks":                        "SUM(JSON_EXTRACT_STRING(value,'clicks'))",
+	"link_clicks":                   "SUM(JSON_EXTRACT_STRING(value,'inline_link_clicks'))",
 	"spend":                         "SUM(JSON_EXTRACT_STRING(value,'spend'))",
 	"video_p50_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p50_watched_actions'))",
 	"video_p25_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p25_watched_actions'))",

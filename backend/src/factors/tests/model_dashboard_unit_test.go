@@ -659,7 +659,7 @@ func TestDashboardUnitEventForTimeZone(t *testing.T) {
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
-	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	event_timestamp := 1575138601
 
 	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", userID1, event_timestamp, "A", 1234)
@@ -692,8 +692,7 @@ func TestDashboardUnitEventForTimeZone(t *testing.T) {
 	}
 
 	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pl",
-	})
+		Presentation: "pl", QueryId: 4})
 	dashboardUnits, _ := store.GetStore().GetDashboardUnits(project.ID, agent.UUID, dashboard.ID)
 
 	decChannelResult := struct {
@@ -750,8 +749,7 @@ func TestDashboardUnitChannelForTimeZone(t *testing.T) {
 		To:          1575224999,
 	}
 	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pc",
-	})
+		Presentation: "pc", QueryId: 5})
 	decChannelResult := struct {
 		Cache  bool                     `json:"cache"`
 		Result model.ChannelQueryResult `json:"result"`
@@ -783,8 +781,7 @@ func TestDashboardUnitChannelForTimeZone(t *testing.T) {
 			Filters: []model.ChannelFilterV1{}, GroupBy: []model.ChannelGroupBy{}}},
 	}
 	sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pc",
-	})
+		Presentation: "pc", QueryId: 6})
 	decChannelResult1 := struct {
 		Cache  bool                       `json:"cache"`
 		Result model.ChannelResultGroupV1 `json:"result"`
@@ -1142,7 +1139,7 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
-	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	event_timestamp := time.Now().AddDate(0, -1, 0).Unix()
 	timezoneString, _ := store.GetStore().GetTimezoneForProject(project.ID)
 

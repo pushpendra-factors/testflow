@@ -921,7 +921,7 @@ func (store *MemSQL) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64,
 }
 
 func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, docType int,
-	syncId string, timestamp int64, action int, userID string) int {
+	syncId string, timestamp int64, action int, userID, groupUserID string) int {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(),
 		&log.Fields{"project_id": projectId, "doc_type": docType, "id": id,
@@ -937,6 +937,10 @@ func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, 
 
 	if userID != "" {
 		updates["user_id"] = userID
+	}
+
+	if groupUserID != "" {
+		updates["group_user_id"] = groupUserID
 	}
 
 	db := C.GetServices().Db
@@ -981,18 +985,23 @@ func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID uint64, docID st
 	return &document[0], http.StatusFound
 }
 
-func (store *MemSQL) CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint64, companyID, companyUserID string, enProperties *map[string]interface{}, companyCreatedTimestamp, updateTimestamp int64, source string) (string, error) {
+func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
+	enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error) {
 
-	if projectID < 1 || enProperties == nil || companyCreatedTimestamp == 0 {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName,
+		"group_id": groupUserID, "created_timestamp": createdTimestamp, "updated_timestamp": updatedTimestamp})
+	if projectID < 1 || enProperties == nil || createdTimestamp == 0 || updatedTimestamp == 0 {
+		logCtx.Error("Invalid parameters on CreateOrUpdateGroupPropertiesBySource.")
 		return "", errors.New("invalid parameters")
 	}
 
 	if source != model.SmartCRMEventSourceHubspot && source != model.SmartCRMEventSourceSalesforce {
+		logCtx.Error("Invalid source.")
 		return "", errors.New("invalid source")
 	}
 
 	newGroupUser := false
-	if companyUserID == "" {
+	if groupUserID == "" {
 		newGroupUser = true
 	}
 
@@ -1002,7 +1011,7 @@ func (store *MemSQL) CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint
 	}
 
 	if !newGroupUser {
-		user, status := store.GetUser(projectID, companyUserID)
+		user, status := store.GetUser(projectID, groupUserID)
 		if status != http.StatusFound {
 			return "", errors.New("failed to get user")
 		}
@@ -1011,32 +1020,34 @@ func (store *MemSQL) CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint
 			return "", errors.New("user is not group user")
 		}
 
-		_, status = store.UpdateUserGroupProperties(projectID, companyUserID, pJSONProperties, updateTimestamp)
+		_, status = store.UpdateUserGroupProperties(projectID, groupUserID, pJSONProperties, updatedTimestamp)
 		if status != http.StatusAccepted {
+			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user group properties.")
 			return "", errors.New("failed to update company group properties")
 		}
-		return companyUserID, nil
+		return groupUserID, nil
+	}
+
+	var requestSource int
+	if source == model.SmartCRMEventSourceHubspot {
+		requestSource = model.UserSourceHubspot
+	} else {
+		requestSource = model.UserSourceSalesforce
 	}
 
 	isGroupUser := true
-
-	groupName := ""
-	if source == model.SmartCRMEventSourceHubspot {
-		groupName = model.GROUP_NAME_HUBSPOT_COMPANY
-	} else {
-		groupName = model.GROUP_NAME_SALESFORCE_ACCOUNT
-	}
-
 	userID, status := store.CreateGroupUser(&model.User{
 		ProjectId:     projectID,
 		IsGroupUser:   &isGroupUser,
-		JoinTimestamp: companyCreatedTimestamp,
-	}, groupName, companyID)
+		JoinTimestamp: createdTimestamp,
+		Source:        &requestSource,
+	}, groupName, groupID)
 	if status != http.StatusCreated {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create group user.")
 		return userID, errors.New("failed to create company group user")
 	}
 
-	_, status = store.UpdateUserGroupProperties(projectID, userID, pJSONProperties, updateTimestamp)
+	_, status = store.UpdateUserGroupProperties(projectID, userID, pJSONProperties, updatedTimestamp)
 	if status != http.StatusAccepted {
 		return userID, errors.New("failed to update company group properties")
 	}

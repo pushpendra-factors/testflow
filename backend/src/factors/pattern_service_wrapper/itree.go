@@ -107,6 +107,10 @@ const MAX_PROPERTIES_IN_GRAPH_NODE = 10
 const OTHER_PROPERTY_VALUES_LABEL = "Other"
 const NONE_PROPERTY_VALUES_LABEL = "None"
 
+var MAX_CAT_PROPERTIES_EVALUATED int
+var MAX_CAT_VALUES_EVALUATED int
+var MAX_NUM_PROPERTIES_EVALUATED int
+
 var log2Value float64 = math.Log(2)
 
 // events in "*" are blacklisted for any goal
@@ -1276,6 +1280,15 @@ func BuildNewItreeV1(reqId string,
 		return nil, fmt.Errorf("missing end event"), nil
 	}
 
+	if projectId == 659 {
+		MAX_CAT_PROPERTIES_EVALUATED = 20
+		MAX_CAT_VALUES_EVALUATED = 20
+		MAX_NUM_PROPERTIES_EVALUATED = 20
+	} else {
+		MAX_CAT_PROPERTIES_EVALUATED = 100
+		MAX_CAT_VALUES_EVALUATED = 100
+		MAX_NUM_PROPERTIES_EVALUATED = 100
+	}
 	debugCounts = make(map[string]int)
 	itreeNodes := []*ItreeNode{}
 	itree := Itree{
@@ -1611,8 +1624,6 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 
 	// Add children by splitting on constraints on categorical properties.
 	pLen = len(parentPattern.EventNames)
-	MAX_CAT_PROPERTIES_EVALUATED := 100
-	MAX_CAT_VALUES_EVALUATED := 100
 	CATEGORICAL_PROPERTY_REPETATION_THRESHOLD := int64(3)
 	NUMERICAL_PROPERTY_REPETATION_THRESHOLD := int64(1)
 	debugKey = fmt.Sprintf("itree_attribute_totaleventCategorical_level%v", level)
@@ -1654,7 +1665,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	}
 	// Add children by splitting on constraints on categorical properties.
 	pLen = len(parentPattern.EventNames)
-	MAX_NUM_PROPERTIES_EVALUATED := 100
+
 	if pLen > 1 {
 		child := it.buildNumericalPropertyChildNodesV1(reqId,
 			eventNumProperties, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
@@ -1736,7 +1747,6 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 			}
 		}
 	}
-	log.WithFields(log.Fields{"addedChildNodes": len(addedChildNodes)}).Errorf("addedChildNodes")
 	return addedChildNodes, nil, nil
 }
 

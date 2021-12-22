@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -143,6 +144,9 @@ func createProject(project *model.Project) (*model.Project, int) {
 			break
 		}
 	}
+
+	project.HubspotTouchPoints = postgres.Jsonb{}
+	project.SalesforceTouchPoints = postgres.Jsonb{}
 	return project, http.StatusCreated
 }
 
@@ -166,7 +170,9 @@ func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int
 	if project.TimeZone != "" {
 		updateFields["time_zone"] = project.TimeZone
 	}
-
+	if project.ProfilePicture != ""{
+		updateFields["profile_picture"] = project.ProfilePicture
+	}
 	_, errCode := time.LoadLocation(string(project.TimeZone))
 	if errCode != nil {
 		log.WithField("projectId", project.ID).Error("This project hasnt been given with wrong timezone")

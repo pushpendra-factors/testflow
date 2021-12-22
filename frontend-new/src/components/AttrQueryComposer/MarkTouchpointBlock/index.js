@@ -6,10 +6,10 @@ import { bindActionCreators } from 'redux';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import AttrFilterBlock from '../AttrFilterBlock';
 
-import { setTouchPointFilters } from '../../../reducers/coreQuery/middleware';
+import { setTouchPointFilters, setTacticOfferType } from '../../../reducers/coreQuery/middleware';
 
-import { Button } from 'antd';
-import { SVG } from '../../factorsComponents';
+import { Button, Radio, Row } from 'antd';
+import { SVG, Text } from '../../factorsComponents';
 import TouchPointDimensions from './TouchPointDimensions';
 import FaSelect from 'Components/FaSelect';
 
@@ -21,6 +21,8 @@ const MarkTouchpointBlock = ({
   activeProject,
   setTouchPointFilters,
   filters,
+  setTacticOfferType,
+  touchPointRef
 }) => {
   const [tpDimensionsSelection, setTPDimensionsSelection] = useState(false);
   const [selectVisible, setSelectVisible] = useState(false);
@@ -148,7 +150,7 @@ const MarkTouchpointBlock = ({
 
             {moreOptions ? <FaSelect
               options={[[`Filter By`, 'filter']]}
-              optionClick={(val) => {addFilterBlock(); setMoreOptions(false)}}
+              optionClick={(val) => { addFilterBlock(); setMoreOptions(false) }}
               onClickOutside={() => setMoreOptions(false)}
             ></FaSelect> : false}
           </div>
@@ -236,19 +238,46 @@ const MarkTouchpointBlock = ({
     );
   };
 
+  const setTouchpointRef = (val) => {
+    setTacticOfferType(val.target.value);
+  }
+
   return (
-    <div className={styles.block}>
-      {touchPoint?.length
-        ? renderMarkTouchpointBlockContent()
-        : renderTouchPointSelect()}
-      {touchPoint?.length ? renderFilterBlock() : null}
-    </div>
+    <>
+      <div className={styles.block}>
+        <Row className={`mt-2`}>
+          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-2'}>Select Type</Text>
+        </Row>
+        <Row className={`mt-2 ml-2`}>
+          <Radio.Group onChange={setTouchpointRef} value={touchPointRef}>
+            <Radio value={`Tactic`}>Tactics</Radio>
+            <Radio value={`Offer`}>Offers</Radio>
+            <Radio value={`TacticOffer`}>Tactics and Offers</Radio>
+          </Radio.Group>
+
+        </Row>
+      </div>
+      <div className={`${styles.block} mt-4`}>
+        <Row className={`mt-2`}>
+          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-2'}>Select Property</Text>
+        </Row>
+
+        <Row className={`mt-2 ml-2`}>
+          {touchPoint?.length
+            ? renderMarkTouchpointBlockContent()
+            : renderTouchPointSelect()}
+          {touchPoint?.length ? renderFilterBlock() : null}
+        </Row>
+
+      </div>
+    </>
   );
 };
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   touchPointOptions: state.coreQuery.touchpointOptions,
+  touchPointRef: state.coreQuery.tacticOfferType,
   filters: state.coreQuery.touchpoint_filters,
   campaign_config: state.coreQuery.campaign_config,
 });
@@ -257,6 +286,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setTouchPointFilters,
+      setTacticOfferType
     },
     dispatch
   );

@@ -50,8 +50,9 @@ const EventGroupBlock = ({
     }) 
     let DDvalues =  selGroup?.properties?.map((item)=>{
       if (item == null) return
-      let ddName = item.display_name ? (selGroup?.category == 'channels' ? `${_.startCase(item.object_type)} ${item.display_name}` : item.display_name)  : item.name;
-      return [ddName, item.name, item.data_type, item.entity ? item.entity : item.object_type]
+      let ddName = item.display_name ? item.display_name  : item.name;
+      let ddtype = selGroup?.category == 'channels' ? item.object_type : (item.entity ? item.entity : item.object_type)
+      return [ddName, item.name, item.data_type, ddtype]
     })  
 
     filterOpts[0].values = DDvalues; 

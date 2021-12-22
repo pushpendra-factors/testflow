@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 )
 
 type valueBoolTuple struct {
@@ -124,6 +125,9 @@ func GetEventDecorators(eventName string, segmentProbMap SegmentProbMap) map[str
 		for item, element := range segmentProbMap.EventDecoratorProbMap[eventName] {
 			decorators[item] = GetRandomValueWithProbablity(element, fmt.Sprintf("Decorator-%s-%s", eventName, item))
 		}
+	}
+	if strings.HasPrefix(eventName, "www") {
+		decorators["$page_url"] = strings.Split(eventName, "?")[0]
 	}
 	return decorators
 }

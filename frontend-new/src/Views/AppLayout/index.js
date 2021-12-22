@@ -11,31 +11,40 @@ import {
   Route,
   Switch,
   useHistory,
-} from "react-router-dom";
-import { fetchProjects, setActiveProject } from "Reducers/global";
-import { fetchQueries, fetchSmartPropertyRules } from "../../reducers/coreQuery/services";
-import { getUserProperties, getEventProperties, fetchEventNames } from "../../reducers/coreQuery/middleware";
-import { fetchDashboards } from "../../reducers/dashboard/services";
-import PageSuspenseLoader from "../../components/SuspenseLoaders/PageSuspenseLoader";
+} from 'react-router-dom';
+import { fetchProjects, setActiveProject } from 'Reducers/global';
+import {
+  fetchQueries,
+  fetchSmartPropertyRules,
+} from '../../reducers/coreQuery/services';
+import {
+  getUserProperties,
+  getEventProperties,
+  fetchEventNames,
+} from '../../reducers/coreQuery/middleware';
+import { fetchDashboards } from '../../reducers/dashboard/services';
+import PageSuspenseLoader from '../../components/SuspenseLoaders/PageSuspenseLoader';
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
-import {ErrorBoundary} from 'react-error-boundary';
-import {fetchWeeklyIngishtsMetaData} from 'Reducers/insights'; 
+import { ErrorBoundary } from 'react-error-boundary';
+import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
+import { fetchKPIConfig, fetchPageUrls } from '../../reducers/kpi';
 
-const CoreQuery = lazyWithRetry(() => import("../CoreQuery"));
-const Dashboard = lazyWithRetry(() => import("../Dashboard"));
-const Factors = lazyWithRetry(() => import("../Factors"));
+const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
+const Dashboard = lazyWithRetry(() => import('../Dashboard'));
+const Factors = lazyWithRetry(() => import('../Factors'));
 
 // import CoreQuery from "../CoreQuery";
 // import Dashboard from "../Dashboard";
 // import Factors from "../Factors";
 
-function AppLayout({ fetchProjects, 
+function AppLayout({
+  fetchProjects,
   fetchEventNames,
   getEventProperties,
   getUserProperties,
   fetchWeeklyIngishtsMetaData,
-  setActiveProject
+  setActiveProject,
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const { Content } = Layout;
@@ -60,20 +69,22 @@ function AppLayout({ fetchProjects,
     asyncCallOnLoad();
   }, [asyncCallOnLoad]);
 
-  useEffect(() => {  
+  useEffect(() => {
     if (projects.length && _.isEmpty(active_project)) {
       let activeItem = projects?.filter(
         (item) => item.id == localStorage.getItem('activeProject')
-        );
-        let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0]; 
+      );
+      let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0];
       setActiveProject(projectDetails);
     }
   }, [projects]);
 
-  useEffect(() => { 
+  useEffect(() => {
     if (active_project && active_project.id) {
       dispatch(fetchDashboards(active_project.id));
       dispatch(fetchQueries(active_project.id));
+      dispatch(fetchKPIConfig(active_project.id));
+      dispatch(fetchPageUrls(active_project.id));
       fetchEventNames(active_project.id);
       getUserProperties(active_project.id);
       dispatch(fetchSmartPropertyRules(active_project.id));
@@ -82,20 +93,20 @@ function AppLayout({ fetchProjects,
   }, [dispatch, active_project]);
 
   if (!isAgentLoggedIn) {
-    history.push("/login");
+    history.push('/login');
     return null;
   }
 
-  let contentClassName = "fa-content-container";
+  let contentClassName = 'fa-content-container';
 
   if (show_analytics_result) {
-    contentClassName = "fa-content-container no-sidebar";
+    contentClassName = 'fa-content-container no-sidebar';
   }
 
   return (
     <>
       {dataLoading ? (
-        <Spin size={"large"} className={"fa-page-loader"} />
+        <Spin size={'large'} className={'fa-page-loader'} />
       ) : (
         <Layout>
           <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Bundle Error:01'} subtitle={ "We are facing trouble loading App Bundles. Drop us a message on the in-app chat."} />} onError={FaErrorLog}> 
@@ -138,7 +149,7 @@ const mapDispatchToProps = (dispatch) =>
       getEventProperties,
       getUserProperties,
       fetchWeeklyIngishtsMetaData,
-      setActiveProject
+      setActiveProject,
     },
     dispatch
   );

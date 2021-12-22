@@ -102,18 +102,6 @@ func IntSegmentPlatformHandler(c *gin.Context) {
 	IntSegmentHandler(c)
 }
 
-// Verifies agent access to projects using middlewares.
-func IsAgentAuthorizedToAccessProject(projectId uint64, c *gin.Context) bool {
-	agentAuthorizedProjectIds := U.GetScopeByKey(c, mid.SCOPE_AUTHORIZED_PROJECTS)
-	for _, authorizedProjectId := range agentAuthorizedProjectIds.([]uint64) {
-		if projectId == authorizedProjectId {
-			return true
-		}
-	}
-
-	return false
-}
-
 type AdwordsAddRefreshTokenPayload struct {
 	// project_id conv from string to uint64 explicitly.
 	ProjectId    string `json:"project_id"`
@@ -535,6 +523,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -570,6 +559,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -605,6 +595,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -639,6 +630,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -673,6 +665,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -708,6 +701,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -743,6 +737,7 @@ func IntShopifyHandler(c *gin.Context) {
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
+			RequestSource:   model.UserSourceWeb,
 		}
 		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify, "")
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {

@@ -9,23 +9,27 @@ import {
 
 export const getDefaultSortProp = (queries) => {
   if (Array.isArray(queries) && queries.length) {
-    return {
-      key: `${queries[0]} - 0`,
-      type: 'numerical',
-      subtype: null,
-      order: 'descend',
-    };
+    return [
+      {
+        key: `${queries[0]} - 0`,
+        type: 'numerical',
+        subtype: null,
+        order: 'descend',
+      },
+    ];
   }
-  return {};
+  return [];
 };
 
 export const getDefaultDateSortProp = () => {
-  return {
-    key: 'Overall',
-    type: 'numerical',
-    subtype: null,
-    order: 'descend',
-  };
+  return [
+    {
+      key: 'Overall',
+      type: 'numerical',
+      subtype: null,
+      order: 'descend',
+    },
+  ];
 };
 
 export const formatData = (data, queries) => {
@@ -49,7 +53,9 @@ export const formatData = (data, queries) => {
         );
         return {
           ...obj,
-          total: data[totalIndex].rows[0][aggregateIndex],
+          total: data[totalIndex].rows.length
+            ? data[totalIndex].rows[0][aggregateIndex]
+            : 0,
           dataOverTime: data[dateSplitIndex].rows.map((row) => {
             return {
               date: new Date(row[dateIndex]),
@@ -66,7 +72,7 @@ export const formatData = (data, queries) => {
     });
     return result;
   } catch (err) {
-    console.log("formatData -> err", err)
+    console.log('formatData -> err', err);
     return [];
   }
 };
@@ -199,6 +205,9 @@ export const getDateBasedColumns = (
     ),
     dataIndex: `Overall`,
     width: 150,
+    render: (d) => {
+      return <NumFormat number={d} />;
+    },
   };
   const result = [
     {

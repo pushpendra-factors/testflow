@@ -54,38 +54,44 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 10
         args:
-          - --env
-          - $(ENV)
-          - --port
-          - "8089"
-          - --app_name
-          - "dataserver_memsql"
-          - --memsql_host
-          - $(MEMSQL_HOST)
-          - --memsql_port
-          - $(MEMSQL_PORT)
-          - --memsql_name
-          - $(MEMSQL_DB)
-          - --memsql_user
-          - $(MEMSQL_USER)
-          - --memsql_pass
-          - $(MEMSQL_PASSWORD)
-          - --memsql_cert
-          - $(MEMSQL_CERTIFICATE)
-          - --memsql_resource_pool
-          - $(MEMSQL_RPOOL_SOFT_CPU_50)
-          - --primary_datastore
-          - "memsql"
-          - --redis_host
-          - $(REDIS_HOST)
-          - --redis_port
-          - $(REDIS_PORT)
-          - --sentry_dsn
-          - $(SENTRY_DSN)
-          - --gcp_project_id
-          - $(GCP_PROJECT_ID)
-          - --gcp_project_location
-          - $(GCP_PROJECT_LOCATION)
+        - --redis_host_ps
+        - $(PERSISTENT_REDIS_HOST)
+        - --redis_port_ps
+        - $(PERSISTENT_REDIS_PORT)
+        - --env
+        - $(ENV)
+        - --port
+        - "8089"
+        - --app_name
+        - dataserver_memsql
+        - --memsql_host
+        - $(MEMSQL_HOST)
+        - --memsql_port
+        - $(MEMSQL_PORT)
+        - --memsql_name
+        - $(MEMSQL_DB)
+        - --memsql_user
+        - $(MEMSQL_OLTP_USER)
+        - --memsql_pass
+        - $(MEMSQL_PASSWORD)
+        - --memsql_cert
+        - $(MEMSQL_CERTIFICATE)
+        - --primary_datastore
+        - memsql
+        - --memsql_max_open_connections
+        - "100"
+        - --memsql_max_idle_connections
+        - "0"
+        - --redis_host
+        - $(REDIS_HOST)
+        - --redis_port
+        - $(REDIS_PORT)
+        - --sentry_dsn
+        - $(SENTRY_DSN)
+        - --gcp_project_id
+        - $(GCP_PROJECT_ID)
+        - --gcp_project_location
+        - $(GCP_PROJECT_LOCATION)
         envFrom:
         - configMapRef:
             name: config-env
@@ -93,6 +99,8 @@ spec:
             name: config-memsql
         - configMapRef:
             name: config-redis
+        - configMapRef:
+            name: config-persistent-redis
         - secretRef:
             name: secret-memsql
         - secretRef:

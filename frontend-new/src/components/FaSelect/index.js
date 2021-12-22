@@ -16,6 +16,7 @@ const FaSelect = ({
   posRight = false,
   children,
   extraClass = '',
+  disabled=false
 }) => {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');

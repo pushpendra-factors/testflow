@@ -52,10 +52,15 @@ const BreakdownCharts = forwardRef(
     const [visibleProperties, setVisibleProperties] = useState([]);
     const [visibleSeriesData, setVisibleSeriesData] = useState([]);
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || defaultSortProp()
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : defaultSortProp()
     );
     const [dateSorter, setDateSorter] = useState(
-      savedQuerySettings.dateSorter || defaultSortProp()
+      savedQuerySettings.dateSorter &&
+        Array.isArray(savedQuerySettings.dateSorter)
+        ? savedQuerySettings.dateSorter
+        : defaultSortProp()
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -85,7 +90,7 @@ const BreakdownCharts = forwardRef(
         responseData,
         aggData,
         currentEventIndex,
-        'date',
+        durationObj.frequency,
         breakdown
       );
       setAggregateData(aggData);
@@ -120,7 +125,7 @@ const BreakdownCharts = forwardRef(
           chartType={chartType}
           setVisibleProperties={setVisibleProperties}
           visibleProperties={visibleProperties}
-          // durationObj={durationObj}
+          frequency={durationObj.frequency}
           categories={categories}
           sorter={sorter}
           handleSorting={handleSorting}
@@ -153,7 +158,7 @@ const BreakdownCharts = forwardRef(
       chart = (
         <div className='w-full'>
           <LineChart
-            frequency={'date'}
+            frequency={durationObj.frequency}
             categories={categories}
             data={visibleSeriesData}
             showAllLegends={true}
@@ -164,7 +169,7 @@ const BreakdownCharts = forwardRef(
       chart = (
         <div className='w-full'>
           <StackedAreaChart
-            frequency={'date'}
+            frequency={durationObj.frequency}
             categories={categories}
             data={visibleSeriesData}
             showAllLegends={true}
@@ -175,7 +180,7 @@ const BreakdownCharts = forwardRef(
       chart = (
         <div className='w-full'>
           <StackedBarChart
-            frequency={'date'}
+            frequency={durationObj.frequency}
             categories={categories}
             data={visibleSeriesData}
             showAllLegends={true}

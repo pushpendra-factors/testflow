@@ -65,7 +65,7 @@ function QueryBlock({
   
   const setPageURL = (value) => { 
     const newEvent = Object.assign({}, event);
-    newEvent.pageViewVal = value[1];
+    newEvent.pageViewVal = value[1] ? value[1] : value[0];
     eventChange(newEvent, index - 1, 'filters_updated'); 
     setPageUrlDD(false); 
   }
@@ -162,7 +162,7 @@ function QueryBlock({
               </div>
         }
         {pageUrlDD ? (
-          <div className={styles.query_block__event_selector__btn}>
+          <div style={{position: 'absolute', top: '-8px', left: '35px'}}>
             <FaSelect
               options={pageURLs || []}
               placeholder='Select Event'
@@ -272,7 +272,7 @@ function QueryBlock({
 
           {moreOptions ? <FaSelect
             // options={[['Filter By', 'filter'], ['Breakdown', 'groupby'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
-            options={[['Filter By', 'filter'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
+            options={[['Filter By', 'filter']]}
             optionClick={(val) => setAdditionalactions(val)}
             onClickOutside={() => setMoreOptions(false)}
           ></FaSelect> : false}
@@ -440,7 +440,7 @@ function QueryBlock({
           <div className="max-w-7xl">
             <Tooltip title={eventNames[event.label] ? eventNames[event.label] : event.label}>
               <Button
-                icon={<SVG name='mouseevent' size={16} color={'purple'} />}
+                // icon={<SVG name='mouseevent' size={16} color={'purple'} />}
                 className={``}
                 type='link'
                 onClick={triggerDropDown}
@@ -451,7 +451,7 @@ function QueryBlock({
               {selectEvents()}
             </Tooltip>
           </div>
-              {event?.pageViewVal && selectPageUrls()}
+              {(event?.pageViewVal || event?.group == 'page_views') && selectPageUrls()}
           {additionalActions()}
         </div>
       </div>

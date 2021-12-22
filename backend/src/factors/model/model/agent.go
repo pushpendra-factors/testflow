@@ -21,11 +21,11 @@ type Agent struct {
 	Password          string     `gorm:"type:varchar(100)" json:"-"`
 	PasswordCreatedAt *time.Time `json:"password_created_at"`
 
-	InvitedBy *string `gorm:"type:uuid" json:"invited_by"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	IsDeleted bool      `json:"is_deleted"`
+	InvitedBy            *string   `gorm:"type:uuid" json:"invited_by"`
+	IsOnboardingFlowSeen bool      `json:"is_onboarding_flow_seen"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+	IsDeleted            bool      `json:"is_deleted"`
 
 	LastLoggedInAt *time.Time `json:"last_logged_in_at"`
 	LoginCount     uint64     `json:"login_count"`
@@ -49,13 +49,14 @@ type CreateAgentResponse struct {
 }
 
 type AgentInfo struct {
-	UUID            string     `json:"uuid"`
-	Email           string     `json:"email"`
-	FirstName       string     `json:"first_name"`
-	LastName        string     `json:"last_name"`
-	IsEmailVerified bool       `json:"is_email_verified"`
-	LastLoggedIn    *time.Time `json:"last_logged_in"`
-	Phone           string     `json:"phone"`
+	UUID                 string     `json:"uuid"`
+	Email                string     `json:"email"`
+	FirstName            string     `json:"first_name"`
+	LastName             string     `json:"last_name"`
+	IsEmailVerified      bool       `json:"is_email_verified"`
+	LastLoggedIn         *time.Time `json:"last_logged_in"`
+	Phone                string     `json:"phone"`
+	IsOnboardingFlowSeen bool       `json:"is_onboarding_flow_seen"`
 }
 
 const (
@@ -67,13 +68,14 @@ func CreateAgentInfo(agent *Agent) *AgentInfo {
 		return nil
 	}
 	return &AgentInfo{
-		FirstName:       agent.FirstName,
-		LastName:        agent.LastName,
-		Email:           agent.Email,
-		UUID:            agent.UUID,
-		IsEmailVerified: agent.IsEmailVerified,
-		LastLoggedIn:    agent.LastLoggedInAt,
-		Phone:           agent.Phone,
+		FirstName:            agent.FirstName,
+		LastName:             agent.LastName,
+		Email:                agent.Email,
+		UUID:                 agent.UUID,
+		IsEmailVerified:      agent.IsEmailVerified,
+		LastLoggedIn:         agent.LastLoggedInAt,
+		Phone:                agent.Phone,
+		IsOnboardingFlowSeen: agent.IsOnboardingFlowSeen,
 	}
 }
 
@@ -107,6 +109,11 @@ func Phone(phone string) Option {
 	}
 }
 
+func IsOnboardingFlowSeen(status bool) Option {
+	return func(fields FieldsToUpdate) {
+		fields["is_onboarding_flow_seen"] = status
+	}
+}
 func PasswordAndPasswordCreatedAt(password string, ts time.Time) Option {
 	return func(fields FieldsToUpdate) {
 		fields["password"] = password

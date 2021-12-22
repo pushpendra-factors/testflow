@@ -354,6 +354,17 @@ pack-copy-user-properties-migration:
 upload-copy-user-properties-migration:
 	docker push us.gcr.io/factors-$(ENV)/copy-user-properties-migration:$(TAG)
 
+pack-pull-test-data:
+	docker build -t us.gcr.io/factors-$(ENV)/pull-test-data-job:$(TAG) -f Dockerfile.pull_test_data_job .
+upload-pull-test-data: export IMAGE_NAME=pull-test-data-job
+upload-pull-test-data: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/pull-test-data-job:$(TAG)
+
+pack-ingest-test-data:
+	docker build -t us.gcr.io/factors-$(ENV)/ingest-test-data-job:$(TAG) -f Dockerfile.ingest_test_data_job .
+upload-ingest-test-data: export IMAGE_NAME=ingest-test-data-job
+upload-ingest-test-data: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/ingest-test-data-job:$(TAG)
 pack-memsql-hubspot-sync-fields:
 	docker build -t us.gcr.io/factors-$(ENV)/fix-memsql-hubspot-sync-fields:$(TAG) -f Dockerfile.fix_memsql_hubspot_sync_fields .
 

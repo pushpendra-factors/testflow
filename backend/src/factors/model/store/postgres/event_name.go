@@ -578,6 +578,11 @@ func (pg *Postgres) GetMostFrequentlyEventNamesByType(projectID uint64, limit in
 	}
 
 	for _, event := range eventsSorted {
+		if event.GroupName == U.MostRecent {
+			mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
+		}
+	}
+	for _, event := range eventsSorted {
 		if event.GroupName == U.FrequentlySeen {
 			mostFrequentEventNames = append(mostFrequentEventNames, event.Name)
 		}
@@ -588,12 +593,24 @@ func (pg *Postgres) GetMostFrequentlyEventNamesByType(projectID uint64, limit in
 			mostFrequentEventNames = mostFrequentEventNames[0 : limit*2]
 		}
 	}
-
 	if dbResult := db.Where("type = ? AND name IN (?)", eventNameType, mostFrequentEventNames).Select("name").Limit(limit).Find(&finalEventNames); dbResult.Error != nil {
 		return nil, dbResult.Error
 	}
+	hashMapOfFinalEventNames := make(map[string]int)
 	for _, eventName := range finalEventNames {
-		result = append(result, eventName.Name)
+		hashMapOfFinalEventNames[eventName.Name] = 1
+	}
+
+	if typeOfEvent == model.PageViewsDisplayCategory {
+		if _, ok := hashMapOfFinalEventNames[U.EVENT_NAME_FORM_SUBMITTED]; ok {
+			delete(hashMapOfFinalEventNames, U.EVENT_NAME_FORM_SUBMITTED)
+		}
+	}
+
+	for _, event := range mostFrequentEventNames {
+		if _, ok := hashMapOfFinalEventNames[event]; ok {
+			result = append(result, event)
+		}
 	}
 	return result, nil
 }
@@ -742,7 +759,7 @@ func (pg *Postgres) GetSmartEventFilterEventNameByID(projectID uint64, id string
 	return &eventName, http.StatusFound
 }
 
-// returns list of EventNames objects for given names
+// GetEventNamesByNames returns list of EventNames objects for given names
 func (pg *Postgres) GetEventNamesByNames(projectId uint64, names []string) ([]model.EventName, int) {
 	var eventNames []model.EventName
 
@@ -757,6 +774,7 @@ func (pg *Postgres) GetEventNamesByNames(projectId uint64, names []string) ([]mo
 		}
 		return nil, http.StatusInternalServerError
 	}
+
 	return eventNames, http.StatusFound
 }
 

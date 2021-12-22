@@ -30,7 +30,11 @@ const GroupedChart = forwardRef(
       coreQueryState: { savedQuerySettings },
     } = useContext(CoreQueryContext);
     const [visibleProperties, setVisibleProperties] = useState([]);
-    const [sorter, setSorter] = useState(savedQuerySettings.sorter || {});
+    const [sorter, setSorter] = useState(
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : []
+    );
     const [eventsData, setEventsData] = useState([]);
     const [groups, setGroups] = useState([]);
 

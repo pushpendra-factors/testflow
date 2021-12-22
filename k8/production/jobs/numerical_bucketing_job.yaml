@@ -23,6 +23,20 @@ spec:
             image: us.gcr.io/factors-production/numerical-bucketing-job:v1.8-577bcc3-706
             imagePullPolicy: IfNotPresent
             args:
+            - --primary_datastore
+            - memsql
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
             - --env
             - $(ENV)
             - --bucket_name
@@ -40,10 +54,10 @@ spec:
             - --db_pass
             - $(POSTGRES_PASSWORD)
             - --project_ids
-            - "519"
-            - --weekly_enabled 
-            - --lookback 
-            - "13" 
+            - "399"
+            - --weekly_enabled
+            - --lookback
+            - "12"
             envFrom:
             - configMapRef:
                 name: config-env
@@ -53,4 +67,8 @@ spec:
                 name: config-postgres
             - secretRef:
                 name: secret-postgres
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
           restartPolicy: OnFailure

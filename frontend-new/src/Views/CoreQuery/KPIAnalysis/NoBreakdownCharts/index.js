@@ -27,6 +27,7 @@ import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../../components/SparkLineChart/Chart';
 import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
+import _ from 'lodash';
 
 const NoBreakdownCharts = forwardRef(
   (
@@ -38,10 +39,15 @@ const NoBreakdownCharts = forwardRef(
     } = useContext(CoreQueryContext);
 
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || getDefaultSortProp(queries)
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : getDefaultSortProp(queries)
     );
     const [dateSorter, setDateSorter] = useState(
-      savedQuerySettings.dateSorter || getDefaultDateSortProp()
+      savedQuerySettings.dateSorter &&
+        Array.isArray(savedQuerySettings.dateSorter)
+        ? savedQuerySettings.dateSorter
+        : getDefaultDateSortProp()
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -89,7 +95,7 @@ const NoBreakdownCharts = forwardRef(
           seriesData={data}
           section={section}
           chartType={chartType}
-          // durationObj={durationObj}
+          frequency={durationObj.frequency}
           categories={categories}
           sorter={sorter}
           handleSorting={handleSorting}
@@ -108,12 +114,12 @@ const NoBreakdownCharts = forwardRef(
               <ChartHeader
                 bgColor='#4D7DB4'
                 query={aggregateData[0].name}
-                total={aggregateData[0].total}
+                total={_.round(aggregateData[0].total, 1)}
               />
             </div>
             <div className='w-3/4'>
               <SparkChart
-                frequency='date'
+                frequency={durationObj.frequency}
                 page='kpi'
                 event={aggregateData[0].name}
                 chartData={aggregateData[0].dataOverTime}
@@ -145,7 +151,7 @@ const NoBreakdownCharts = forwardRef(
                       />
                       <div className='mt-8'>
                         <SparkChart
-                          frequency='date'
+                          frequency={durationObj.frequency}
                           page='kpi'
                           event={chartData.name}
                           chartData={chartData.dataOverTime}
@@ -163,7 +169,7 @@ const NoBreakdownCharts = forwardRef(
       chart = (
         <div className='w-full'>
           <LineChart
-            frequency={'date'}
+            frequency={durationObj.frequency}
             categories={categories}
             data={data}
             showAllLegends={true}

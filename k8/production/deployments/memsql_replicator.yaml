@@ -51,8 +51,6 @@ spec:
           - $(POSTGRES_USER)
           - --db_pass
           - $(POSTGRES_PASSWORD)
-          - --sentry_dsn
-          - $(SENTRY_DSN)
           - --memsql_host
           - $(MEMSQL_HOST)
           - --memsql_port
@@ -60,21 +58,23 @@ spec:
           - --memsql_name
           - $(MEMSQL_DB)
           - --memsql_user
-          - $(MEMSQL_USER)
+          - $(MEMSQL_OLTP_USER)
           - --memsql_pass
           - $(MEMSQL_PASSWORD)
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)
-          - --memsql_resource_pool
-          - $(MEMSQL_RPOOL_SOFT_CPU_50)
+          - --sentry_dsn
+          - $(SENTRY_DSN)
           - --project_ids
-          - "*"
+          - '*'
+          - --include_tables
+          - '*'
           - --exclude_tables
           - $(MEMESQL_REPLICATOR_EXCLUDED_TABLES)
-          - --page_size
-          - "10000"
           - --routines_heavy
           - "20"
+          - --page_size
+          - "10000"
           - --skip_dedupe_tables
           - adwords_documents,google_organic_documents
           - --disable_sync_column
@@ -90,9 +90,9 @@ spec:
         - secretRef:
             name: secret-postgres
         - secretRef:
-            name: secret-sentry
-        - secretRef:
             name: secret-memsql
+        - secretRef:
+            name: secret-sentry
       volumes:
       - name: workdir
         emptyDir: {}

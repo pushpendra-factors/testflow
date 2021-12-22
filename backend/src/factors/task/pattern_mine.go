@@ -52,10 +52,10 @@ const countUDE = 20
 const countSME = 5
 const countStdEvents = -1 // all events
 const countCampaigns = 25
-const countSource = 10
-const countReferrer = 10
-const countMedium = 10
-const countAdgroup = 25
+const countSource = 0
+const countReferrer = 0
+const countMedium = 0
+const countAdgroup = 0
 const USER_PROP_MIN_SUPPORT = 2.0
 const EVENT_PROP_MIN_SUPPORT = 20.0
 
@@ -1340,12 +1340,12 @@ func writeEncodedEvent(eventName string, property string, propertyName string, p
 	return nil
 }
 
-func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string, map[string]string, map[string]map[string]int, map[string]map[string]int, map[string]string, map[string]string, error) {
+func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64, countsVersion int) ([]string, map[string]string, map[string]map[string]int, map[string]map[string]int, map[string]string, map[string]string, error) {
 	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, err
 	}
-	eventNames, upCount, epCount, upCatg, epCatg, err := GetEventNamesFromFile(scanner, projectId)
+	eventNames, upCount, epCount, upCatg, epCatg, err := GetEventNamesFromFile(scanner, projectId, countsVersion)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": tmpEventsFilePath}).Error("Failed to read event names from file")
 		return nil, nil, nil, nil, nil, nil, err
@@ -1531,7 +1531,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 	tmpEventsFilepath := efTmpPath + efTmpName
 	mineLog.Info("Successfuly downloaded events file from cloud.", tmpEventsFilepath, efTmpPath, efTmpName)
-	eventNames, eventNamesWithType, upCount, epCount, upCatg, epCatg, err := GetEventNamesAndType(tmpEventsFilepath, projectId)
+	eventNames, eventNamesWithType, upCount, epCount, upCatg, epCatg, err := GetEventNamesAndType(tmpEventsFilepath, projectId, countsVersion)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
 		return 0, err
@@ -2293,22 +2293,16 @@ func GetEventNamesFromFile_(scanner *bufio.Scanner, projectId uint64) ([]string,
 }
 
 // GetEventNamesFromFile read unique eventNames from Event file
-func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64) ([]string, map[string]map[string]int, map[string]map[string]int, map[string]string, map[string]string, error) {
+func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64, countsVersion int) ([]string, map[string]map[string]int, map[string]map[string]int, map[string]string, map[string]string, error) {
 	logCtx := log.WithField("project_id", projectId)
 	scanner.Split(bufio.ScanLines)
 	var txtline string
 	eventNames := make([]string, 0)
-	// userPropKey := make(map[string]int)
-	// eventPropKey := make(map[string]int)
 	userPropCatgMap := make(map[string]string)
 	eventPropCatgMap := make(map[string]string)
 
 	eventUserPropMap := make(map[string]map[string]int)
 	eventEventPropMap := make(map[string]map[string]int)
-
-	// blacklist := []string{"$salesforce_lead_last_email_validated_date__c",
-	// 	"$salesforce_lead_lastactivitydate",
-	// 	"$salesforce_lead_lastname", "$salesforce_lead_firstname"}
 
 	blacklist := []string{}
 
@@ -2381,21 +2375,24 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64) ([]string, 
 		return nil, nil, nil, nil, nil, err
 	}
 
-	// filter based on min Support
-	topk := 15
-	userKeys := 0
-	eventKeys := 0
-	for _, v := range eventUserPropMap {
-		U.FilterOnFrequency(v, topk)
-		userKeys += len(v)
-	}
-	for _, v := range eventEventPropMap {
-		U.FilterOnFrequency(v, topk)
-		eventKeys += len(v)
-	}
+	if countsVersion == 2 {
+		mineLog.Info("Filtering based on topK")
+		// filter based on min Support
+		topk := 15
+		userKeys := 0
+		eventKeys := 0
+		for _, v := range eventUserPropMap {
+			U.FilterOnFrequency(v, topk)
+			userKeys += len(v)
+		}
+		for _, v := range eventEventPropMap {
+			U.FilterOnFrequency(v, topk)
+			eventKeys += len(v)
+		}
 
-	mineLog.Infof("Total number of user properties key,values after filtering:%d", userKeys)
-	mineLog.Infof("Total number of event properties key,values after filtering:%d", eventKeys)
+		mineLog.Infof("Total number of user properties key,values after filtering:%d", userKeys)
+		mineLog.Infof("Total number of event properties key,values after filtering:%d", eventKeys)
+	}
 	return eventNames, eventUserPropMap, eventEventPropMap, userPropCatgMap, eventPropCatgMap, nil
 }
 

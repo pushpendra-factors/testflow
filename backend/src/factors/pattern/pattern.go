@@ -34,8 +34,10 @@ type Pattern struct {
 	// Number of users the pattern was counted on.
 	TotalUserCount uint `json:"uc"`
 
-	userTree  Fp.Tree
-	eventTree Fp.Tree
+	userTree      Fp.Tree
+	eventTree     Fp.Tree
+	userTreePath  string
+	eventTreePath string
 
 	UserPropertiesPatterns  []Fp.ConditionalPattern `json:"ufp"`
 	EventPropertiesPatterns []Fp.ConditionalPattern `json:"efp"`

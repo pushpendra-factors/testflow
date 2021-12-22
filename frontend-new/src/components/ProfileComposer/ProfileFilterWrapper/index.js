@@ -669,7 +669,7 @@ export default function ProfileFilterWrapper({
           {index >= 1 ? "...and" : "Filter By"}
         </Text>
       }
-      <div className={`relative flex flex-grow ${filter ? "ml-2" : ""}`}>
+      <div className={`relative flex flex-grow`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>
     </div>

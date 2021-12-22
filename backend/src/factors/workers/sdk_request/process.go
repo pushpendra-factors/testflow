@@ -61,6 +61,8 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
+	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -109,6 +111,8 @@ func main() {
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 		DisableRedisWrites:                             disableRedisWrites,
 		AllowSupportForUserPropertiesInIdentifyCall:    *allowSupportForUserPropertiesInIdentifyCall,
+		CaptureSourceInUsersTable:                      *captureSourceInUsersTable,
+		EnableOLTPQueriesMemSQLImprovements:            *enableOLTPQueriesMemSQLImprovements,
 	}
 	C.InitConf(config)
 

@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS events (
     -- Additional constraint.
     -- Ref (project_id, session_id) -> events (project_id, id) WHERE event is session.
 );
+ALTER TABLE events AUTOSTATS_SAMPLING = OFF;
 
 CREATE TABLE IF NOT EXISTS users (
     id text NOT NULL, 
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS users (
     group_4_user_id text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    source int,
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, id) USING CLUSTERED COLUMNSTORE,
@@ -74,6 +76,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- Ref (project_id) -> projects(id)
     -- Ref (project_id, properties_id) -> user_properties(project_id, id)
 );
+ALTER TABLE users AUTOSTATS_SAMPLING = OFF;
 
 CREATE TABLE IF NOT EXISTS event_names (
     id text, -- UUID
@@ -326,6 +329,7 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
     synced boolean NOT NULL DEFAULT FALSE,
     sync_id text,
     user_id text,
+    group_user_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
@@ -476,6 +480,7 @@ CREATE TABLE IF NOT EXISTS salesforce_documents (
     synced boolean NOT NULL DEFAULT FALSE,
     sync_id text, 
     user_id text,
+    group_user_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
@@ -749,8 +754,33 @@ CREATE ROWSTORE TABLE IF NOT EXISTS groups(
     UNIQUE KEY (project_id,id)
 );
 
+CREATE TABLE IF NOT EXISTS group_relationships(
+    project_id bigint NOT NULL,
+    left_group_name_id int NOT NULL,
+    left_group_user_id text NOT NULL,
+    right_group_name_id int NOT NULL,
+    right_group_user_id text NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (left_group_user_id),
+    KEY (project_id, left_group_user_id) USING CLUSTERED COLUMNSTORE,
+    UNIQUE KEY(project_id, left_group_user_id,right_group_user_id) USING HASH
+);
 
-
+CREATE TABLE IF NOT EXISTS content_groups(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    content_group_name text,
+    content_group_description text,
+    rule json,
+    created_by text,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    is_deleted boolean,
+    SHARD KEY (project_id),
+    PRIMARY KEY (id, project_id),
+    UNIQUE KEY (project_id,content_group_name)
+);
 
 -- DOWN
 

@@ -46,6 +46,21 @@ spec:
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
+            - --primary_datastore
+            - memsql
+            - --enable_mql_redis_writes
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
             envFrom:
             - configMapRef:
                 name: config-env
@@ -55,6 +70,10 @@ spec:
                 name: config-redis
             - configMapRef:
                 name: config-persistent-redis
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
             - secretRef:
                 name: secret-postgres
             - secretRef:

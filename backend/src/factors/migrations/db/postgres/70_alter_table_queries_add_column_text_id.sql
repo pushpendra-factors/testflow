@@ -1,0 +1,1 @@
+ALTER TABLE queries ADD COLUMN id_text text;

@@ -16,7 +16,7 @@ var KPIPropertiesForWebsiteSessions = []map[string]string{
 	MapOfKPIPropertyNameToData[U.EP_KEYWORD][EventEntity],
 	MapOfKPIPropertyNameToData[U.EP_CONTENT][EventEntity],
 	MapOfKPIPropertyNameToData[U.EP_CHANNEL][EventEntity],
-	MapOfKPIPropertyNameToData[U.EP_REFERRER_URL][EventEntity],
+	MapOfKPIPropertyNameToData[U.UP_INITIAL_REFERRER_URL][EventEntity],
 	MapOfKPIPropertyNameToData[U.SP_INITIAL_PAGE_URL][EventEntity],
 	MapOfKPIPropertyNameToData[U.SP_LATEST_PAGE_URL][EventEntity],
 	MapOfKPIPropertyNameToData[U.UP_OS][EventEntity],

@@ -43,6 +43,16 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		return nil, errors.New("invalid project_id")
 	}
 
+	if user.Source == nil {
+		logCtx.Error("Failed to create user. User source not provided.")
+		return nil, errors.New("user source missing")
+	}
+
+	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(C.GetConfig().CaptureSourceInUsersTable, "")
+	if !allProjects && !projectIDsMap[user.ProjectId] {
+		user.Source = nil
+	}
+
 	// Add id with our uuid generator, if not given.
 	if user.ID == "" {
 		user.ID = U.GetUUID()
@@ -430,7 +440,7 @@ func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID uint64, customerUser
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
 func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string,
-	requestTimestamp int64) (*model.User, int) {
+	requestTimestamp int64, requestSource int) (*model.User, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId,
@@ -472,7 +482,7 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 			}
 		}
 
-		cUser := &model.User{ProjectId: projectId, JoinTimestamp: requestTimestamp}
+		cUser := &model.User{ProjectId: projectId, JoinTimestamp: requestTimestamp, Source: &requestSource}
 		// add seg_aid, if provided and not exist already.
 		if segAnonId != "" {
 			cUser.SegmentAnonymousId = segAnonId
@@ -538,7 +548,7 @@ func (store *MemSQL) GetUserIDByAMPUserID(projectId uint64, ampUserId string) (s
 	return user.ID, http.StatusFound
 }
 
-func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (string, int) {
+func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64, requestSource int) (string, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if projectId == 0 || ampUserId == "" {
@@ -558,7 +568,7 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 	}
 
 	user, err := store.createUserWithError(&model.User{ProjectId: projectId,
-		AMPUserId: ampUserId, JoinTimestamp: timestamp})
+		AMPUserId: ampUserId, JoinTimestamp: timestamp, Source: &requestSource})
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to create user by amp user id on CreateOrGetAMPUser")
@@ -1825,8 +1835,6 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		return "", http.StatusInternalServerError
 	}
 
-	groupIndex := fmt.Sprintf("group_%d_id", group.ID)
-
 	isGroupUser := true
 	groupUser := &model.User{
 		ProjectId:                  user.ProjectId,
@@ -1834,17 +1842,24 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		Properties:                 user.Properties,
 		PropertiesUpdatedTimestamp: user.PropertiesUpdatedTimestamp,
 		JoinTimestamp:              user.JoinTimestamp,
+		Source:                     user.Source,
 	}
 
-	processed, _, err := model.SetUserGroupFieldByColumnName(groupUser, groupIndex, groupID)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed process group id on group user.")
-		return "", http.StatusInternalServerError
-	}
+	if groupID != "" {
+		groupIndex := fmt.Sprintf("group_%d_id", group.ID)
+		processed, _, err := model.SetUserGroupFieldByColumnName(groupUser, groupIndex, groupID)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed process group id on group user.")
+			return "", http.StatusInternalServerError
+		}
 
-	if !processed {
-		logCtx.WithError(err).Error("Failed to process group_id on group user.")
-		return "", http.StatusInternalServerError
+		if !processed {
+			logCtx.WithError(err).Error("Failed to process group_id on group user.")
+			return "", http.StatusInternalServerError
+
+		}
+	} else {
+		logCtx.Warning("Skip associating group_id")
 	}
 
 	return store.CreateUser(groupUser)
@@ -1877,17 +1892,21 @@ func (store *MemSQL) UpdateUserGroup(projectID uint64, userID, groupName, groupI
 
 	isGroupUser := false
 	user.IsGroupUser = &isGroupUser
+	var IDUpdated, userIDUpdated, processed bool
+	var err error
+	if groupID != "" {
+		processed, IDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupIndex, groupID)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to update user by group id.")
+			return nil, http.StatusInternalServerError
+		}
+		if !processed {
+			logCtx.Error("Missing tag in struct for group id.")
+			return nil, http.StatusInternalServerError
+		}
+	}
 
-	processed, IDUpdated, err := model.SetUserGroupFieldByColumnName(user, groupIndex, groupID)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to update user by group id.")
-		return nil, http.StatusInternalServerError
-	}
-	if !processed {
-		logCtx.Error("Missing tag in struct for group id.")
-		return nil, http.StatusInternalServerError
-	}
-	processed, userIDUpdated, err := model.SetUserGroupFieldByColumnName(user, groupUserIndex, groupUserID)
+	processed, userIDUpdated, err = model.SetUserGroupFieldByColumnName(user, groupUserIndex, groupUserID)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update user by group id.")
 		return nil, http.StatusInternalServerError

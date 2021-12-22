@@ -18,8 +18,10 @@ export const  DEFAULT_OPERATOR_PROPS = {
     "datetime": [
       'between',
       'not between',
-      "in the last",
-      "not in the last",
+      'in the current',
+      'not in the current',
+      "in the previous",
+      "not in the previous",
       "before",
       "since"
     ]

@@ -18,6 +18,7 @@ import {
   getAttributionStateFromRequestQuery,
   getCampaignStateFromRequestQuery,
   getProfileQueryFromRequestQuery,
+  getKPIStateFromRequestQuery,
 } from '../CoreQuery/utils';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import ConfirmationModal from '../../components/ConfirmationModal';
@@ -50,7 +51,6 @@ import {
   SET_SHOW_CRITERIA,
   SET_PERFORMANCE_CRITERIA,
 } from '../../reducers/analyticsQuery';
-import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { getDashboardDateRange } from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
 import { fetchWeeklyIngishts } from '../../reducers/insights';
@@ -58,16 +58,16 @@ import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
 import { fetchAgentInfo } from 'Reducers/agentActions';
 
-const whiteListedAccounts_KPI = [  
-  'jitesh@factors.ai', 
+const whiteListedAccounts_KPI = [
+  'jitesh@factors.ai',
   'kartheek@factors.ai',
-  'baliga@factors.ai', 
+  'baliga@factors.ai',
   'praveenr@factors.ai',
   'sonali@factors.ai',
   'solutions@factors.ai',
   'praveen@factors.ai',
   'ashwin@factors.ai',
-]; 
+];
 
 const coreQueryoptions = [
   {
@@ -158,24 +158,24 @@ function CoreQuery({
   activeAccount,
   updateSavedQuerySettings,
   setProfileQueries,
-  fetchAgentInfo
+  fetchAgentInfo,
+  setAttributionMetrics,
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
   const dispatch = useDispatch();
   const { attr_dimensions } = useSelector((state) => state.coreQuery);
-  const history = useHistory();
+  const { config: kpiConfig } = useSelector((state) => state.kpi);
   const { metadata } = useSelector((state) => state.insights);
   const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
 
   useEffect(() => {
     const getData = async () => {
-      await fetchAgentInfo(); 
+      await fetchAgentInfo();
     };
     getData();
   }, [activeProject]);
-
 
   const getFormattedRow = (q) => {
     const requestQuery = q.query;
@@ -186,6 +186,7 @@ function CoreQuery({
       channel_v1: 'campaigns_cq',
       attribution: 'attributions_cq',
       profiles: 'profiles_cq',
+      kpi: 'KPI_cq',
     };
     let svgName = '';
     Object.entries(queryTypeName).forEach(([k, v]) => {
@@ -232,7 +233,7 @@ function CoreQuery({
     showDeleteModal(true);
   }, []);
 
-  const handleViewResult = useCallback((row, event) => { 
+  const handleViewResult = useCallback((row, event) => {
     event.stopPropagation();
     event.preventDefault();
     getWeeklyIngishts(row);
@@ -288,7 +289,7 @@ function CoreQuery({
   );
 
   const getWeeklyIngishts = (record) => {
-    if (metadata?.QueryWiseResult) { 
+    if (metadata?.QueryWiseResult) {
       const insightsItem = metadata?.QueryWiseResult[record.key];
       if (insightsItem) {
         dispatch({
@@ -342,10 +343,10 @@ function CoreQuery({
             const usefulQuery = { ...equivalentQuery, ...newDateRange };
             delete usefulQuery.queryType;
             dispatch({ type: INITIALIZE_CAMPAIGN_STATE, payload: usefulQuery });
-          } 
+          }
           // else if(queryType === QUERY_TYPE_KPI) {
           //  // Vishnu convert backend formatted query to  our local state query
-          // } 
+          // }
           else {
             equivalentQuery = getStateQueryFromRequestQuery(
               record.query.query_group[0]
@@ -386,6 +387,12 @@ function CoreQuery({
               }
             }
           }
+        } else if (record.query.cl && record.query.cl === QUERY_TYPE_KPI) {
+          equivalentQuery = getKPIStateFromRequestQuery(
+            record.query,
+            kpiConfig
+          );
+          updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
         } else if (
           record.query.cl &&
           record.query.cl === QUERY_TYPE_ATTRIBUTION
@@ -399,6 +406,11 @@ function CoreQuery({
             newDateRange = { attr_dateRange: getDashboardDateRange() };
           }
           const usefulQuery = { ...equivalentQuery, ...newDateRange };
+          if (record.settings && record.settings.attributionMetrics) {
+            setAttributionMetrics(
+              JSON.parse(record.settings.attributionMetrics)
+            );
+          }
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_PROFILE) {
@@ -420,7 +432,7 @@ function CoreQuery({
         console.log(err);
       }
     },
-    [updateEventFunnelsState, attr_dimensions]
+    [updateEventFunnelsState, attr_dimensions, kpiConfig]
   );
 
   const getMenu = (row) => {
@@ -529,7 +541,7 @@ function CoreQuery({
       });
     }
   };
-  
+
   return (
     <>
       <ErrorBoundary
@@ -583,8 +595,11 @@ function CoreQuery({
           <Row gutter={[24, 24]} justify='center' className={'mt-10'}>
             <Col span={20}>
               <div className={'flex'}>
-                {coreQueryoptions.map((item, index) => { 
-                  if (item.title === 'KPIs' && !whiteListedAccounts_KPI.includes(activeAccount)) {
+                {coreQueryoptions.map((item, index) => {
+                  if (
+                    item.title === 'KPIs' &&
+                    !whiteListedAccounts_KPI.includes(activeAccount)
+                  ) {
                     return null;
                   }
                   return (
@@ -690,4 +705,7 @@ const mapStateToProps = (state) => ({
   activeAccount: state.agent?.agent_details?.email,
 });
 
-export default connect(mapStateToProps, { fetchWeeklyIngishts, fetchAgentInfo })(CoreQuery);
+export default connect(mapStateToProps, {
+  fetchWeeklyIngishts,
+  fetchAgentInfo,
+})(CoreQuery);

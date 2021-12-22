@@ -128,6 +128,12 @@ const (
 	SinceStr                = "since"
 	InLastStr               = "inLast"
 	NotInLastStr            = "notInLast"
+	InCurrent               = "inCurrent"
+	NotInCurrent            = "notInCurrent"
+	InPrevious              = "inPrevious"
+	NotInPrevious           = "notInPrevious"
+	StartsWith              = "startsWith"
+	EndsWith                = "endsWith"
 )
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
@@ -335,10 +341,22 @@ func (qp *QueryProperty) TransformDateTypeFilters(timezoneString U.TimeZoneStrin
 		}
 		dateTimeValue.From = transformedFrom
 		dateTimeValue.To = transformedTo
-		if qp.Operator == InLastStr || qp.Operator == NotInLastStr {
-			lastXthDay := U.GetDateBeforeXPeriod(dateTimeValue.Number, dateTimeValue.Granularity, timezoneString)
-			dateTimeValue.From = lastXthDay
+		if qp.Operator == InCurrent || qp.Operator == NotInCurrent {
+			startTime, _, err := U.GetDynamicRangesForCurrentBasedOnGranularity(dateTimeValue.Granularity, timezoneString)
+			if err != nil {
+				return err
+			}
+			dateTimeValue.From = startTime
 		}
+		if qp.Operator == InPrevious || qp.Operator == NotInPrevious || qp.Operator == InLastStr || qp.Operator == NotInLastStr {
+			startTime, endTime, err := U.GetDynamicPreviousRanges(dateTimeValue.Granularity, dateTimeValue.Number, timezoneString)
+			if err != nil {
+				return err
+			}
+			dateTimeValue.From = startTime
+			dateTimeValue.To = endTime
+		}
+
 		transformedValue, _ := json.Marshal(dateTimeValue)
 		qp.Value = string(transformedValue)
 	}
@@ -373,9 +391,10 @@ type QueryGroupByProperty struct {
 }
 
 type QueryEventWithProperties struct {
-	Name       string          `json:"na"`
-	AliasName  string          `json:"an"`
-	Properties []QueryProperty `json:"pr"`
+	Name         string          `json:"na"`
+	AliasName    string          `json:"an"`
+	Properties   []QueryProperty `json:"pr"`
+	EventNameIDs []interface{}   `json:"-"`
 }
 
 func (ewp *QueryEventWithProperties) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
@@ -854,7 +873,7 @@ func SanitizeDateTypeRows(result *QueryResult, query *Query) {
 func sanitizeDateTypeForSpecificIndex(query *Query, rows [][]interface{}, indexToSanitize int) {
 
 	for index, row := range rows {
-		if (query.Class == QueryClassFunnel && index == 0) || row[indexToSanitize].(string) == "" ||
+		if (query.Class == QueryClassFunnel && index == 0) || row[indexToSanitize] == nil || row[indexToSanitize].(string) == "" ||
 			row[indexToSanitize].(string) == PropertyValueNone {
 			// For funnel queries, first row is $no_group query. Skip sanitization.
 			continue

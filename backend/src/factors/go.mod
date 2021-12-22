@@ -14,7 +14,7 @@ require (
 	github.com/RichardKnop/redsync v1.2.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/apache/beam v2.21.0+incompatible
-	github.com/aws/aws-sdk-go v1.23.20
+	github.com/aws/aws-sdk-go v1.34.28
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/campoy/embedmd v0.0.0-20171205015432-c59ce00e0296 // indirect
@@ -105,7 +105,7 @@ require (
 	github.com/xdg/stringprep v1.0.1-0.20180714160509-73f8eece6fdc // indirect
 	github.com/xuri/efp v0.0.0-20200605144744-ba689101faaf // indirect
 	go.etcd.io/etcd v3.3.10+incompatible
-	go.mongodb.org/mongo-driver v1.3.0
+	go.mongodb.org/mongo-driver v1.5.1
 	go.opencensus.io v0.22.4
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect

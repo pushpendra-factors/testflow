@@ -9,7 +9,12 @@ import (
 	U "factors/util"
 	"net/http"
 
+	C "factors/config"
+
+	H "factors/handler/helpers"
+
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -130,7 +135,7 @@ func EditProjectHandler(c *gin.Context) {
 // @Success 200 {string} json "{"projects": []Project}"
 // @Router / [get]
 func GetProjectsHandler(c *gin.Context) {
-	authorizedProjects := U.GetScopeByKey(c, "authorizedProjects")
+	authorizedProjects := U.GetScopeByKey(c, mid.SCOPE_AUTHORIZED_PROJECTS)
 
 	projects, errCode := store.GetStore().GetProjectsByIDs(authorizedProjects.([]uint64))
 	if errCode == http.StatusInternalServerError {
@@ -142,7 +147,28 @@ func GetProjectsHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, resp)
 		return
 	}
+
 	resp := make(map[string]interface{})
+	if C.EnableDemoReadAccess() {
+		trimmedDemoProjects := make([]model.Project, 0)
+		demoProjects, _ := store.GetStore().GetProjectsByIDs(C.GetConfig().DemoProjectIds)
+		for _, project := range demoProjects {
+			project.Token = ""
+			project.PrivateToken = ""
+			project.InteractionSettings = postgres.Jsonb{}
+			project.SalesforceTouchPoints = postgres.Jsonb{}
+			project.HubspotTouchPoints = postgres.Jsonb{}
+			project.JobsMetadata = nil
+			project.ChannelGroupRules = postgres.Jsonb{}
+			trimmedDemoProjects = append(trimmedDemoProjects, project)
+		}
+
+		for _, project := range trimmedDemoProjects {
+			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]uint64), project.ID) {
+				projects = append(projects, project)
+			}
+		}
+	}
 	resp["projects"] = projects
 	c.JSON(http.StatusOK, resp)
 	return

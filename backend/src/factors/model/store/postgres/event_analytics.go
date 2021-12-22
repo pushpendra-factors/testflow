@@ -81,6 +81,10 @@ func (pg *Postgres) ExecuteEventsQuery(projectId uint64, query model.Query) (*mo
 func (pg *Postgres) RunInsightsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
 	stmnt, params, err := pg.BuildInsightsQuery(projectId, query)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+	isTimezoneEnabled := false
+	if C.IsMultipleProjectTimezoneEnabled(projectId) {
+		isTimezoneEnabled = true
+	}
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -107,7 +111,7 @@ func (pg *Postgres) RunInsightsQuery(projectId uint64, query model.Query) (*mode
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
-	err = SanitizeQueryResult(result, &query)
+	err = SanitizeQueryResult(result, &query, isTimezoneEnabled)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to sanitize query results.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -325,6 +329,61 @@ func transformResultsForEachEventQuery(oldResult *model.QueryResult, query model
 
 	updateEventNameInHeaderAndAddMeta(newResult)
 
+	// Below piece of transformation re-orders the result w.r.t to the query order of events.
+	// This uses MetaEventInfo, which is a prior meta of result stating the order of events in query and in result.
+	metaMetricsEventMeta := model.HeaderRows{}
+	for _, val := range newResult.Meta.MetaMetrics {
+		if val.Title == MetaEventInfo {
+			metaMetricsEventMeta = val
+		}
+	}
+	if metaMetricsEventMeta.Title == MetaEventInfo {
+
+		queryIndexToName := make(map[int]string)
+		minEventIndex := 100000
+		for _, row := range metaMetricsEventMeta.Rows {
+			// "HeaderIndex(current res order)", "EventIndex(query event order)", "EventName"
+			queryIndexToName[row[1].(int)] = row[2].(string)
+			if minEventIndex > row[0].(int) {
+				minEventIndex = row[0].(int)
+			}
+		}
+
+		finalIndexToOldIndexMap := make(map[int]int)
+		// Copy non-event index which will remain same
+		for i := 0; i < minEventIndex; i++ {
+			finalIndexToOldIndexMap[i] = i
+		}
+		for _, row := range metaMetricsEventMeta.Rows {
+			finalIndexToOldIndexMap[row[1].(int)+minEventIndex] = row[0].(int)
+		}
+
+		var finalResultHeaders []string
+		finalResultRows := make([][]interface{}, 0, 0)
+		// transform the headers w.r.t the events order in query
+		for idx, _ := range newResultHeaders {
+			finalResultHeaders = append(finalResultHeaders, newResultHeaders[finalIndexToOldIndexMap[idx]])
+		}
+
+		// copying the data to finalResultRows
+		for _, row := range newResultRows {
+			newRow := make([]interface{}, 0, 0)
+			for _, colValue := range row {
+				newRow = append(newRow, colValue)
+			}
+			finalResultRows = append(finalResultRows, newRow)
+		}
+
+		// Rearranging the data to final Result
+		for rowNo, row := range newResultRows {
+			for colNo, _ := range row {
+				finalResultRows[rowNo][colNo] = newResultRows[rowNo][finalIndexToOldIndexMap[colNo]]
+			}
+		}
+		finalResult := &model.QueryResult{Headers: finalResultHeaders, Rows: finalResultRows, Meta: newResult.Meta}
+		return finalResult, nil
+	}
+
 	return newResult, nil
 }
 
@@ -495,9 +554,9 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 }
 
 // SanitizeQueryResult Converts DB results into plottable query results.
-func SanitizeQueryResult(result *model.QueryResult, query *model.Query) error {
+func SanitizeQueryResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
 	if query.GetGroupByTimestamp() != "" {
-		if err := sanitizeGroupByTimestampResult(result, query); err != nil {
+		if err := sanitizeGroupByTimestampResult(result, query, isTimezoneEnabled); err != nil {
 			return err
 		}
 	}
@@ -518,7 +577,7 @@ func SanitizeQueryResult(result *model.QueryResult, query *model.Query) error {
 	return nil
 }
 
-func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Query) error {
+func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
 	aggrIndex, timeIndex, err := GetTimstampAndAggregateIndexOnQueryResult(result.Headers)
 	if err != nil {
 		return err
@@ -526,9 +585,9 @@ func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Quer
 
 	// Todo: Supports only date as timestamp, add support for hour and month.
 	if len(query.GroupByProperties) == 0 && len(query.EventsWithProperties) < 2 {
-		err = addMissingTimestampsOnResultWithoutGroupByProps(result, query, aggrIndex, timeIndex)
+		err = addMissingTimestampsOnResultWithoutGroupByProps(result, query, aggrIndex, timeIndex, isTimezoneEnabled)
 	} else {
-		err = addMissingTimestampsOnResultWithGroupByProps(result, query, aggrIndex, timeIndex)
+		err = addMissingTimestampsOnResultWithGroupByProps(result, query, aggrIndex, timeIndex, isTimezoneEnabled)
 	}
 
 	if err != nil {
@@ -547,31 +606,31 @@ func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
 	})
 }
 
-func getAllTimestampsBetweenByType(from, to int64, typ, timezone string) []time.Time {
+func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimezoneEnabled bool) []time.Time {
 	if typ == model.GroupByTimestampDate {
-		return U.GetAllDatesAsTimestamp(from, to, timezone)
+		return U.GetAllDatesAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampHour {
-		return U.GetAllHoursAsTimestamp(from, to, timezone)
+		return U.GetAllHoursAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampWeek {
-		return U.GetAllWeeksAsTimestamp(from, to, timezone)
+		return U.GetAllWeeksAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampMonth {
-		return U.GetAllMonthsAsTimestamp(from, to, timezone)
+		return U.GetAllMonthsAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 
 	if typ == model.GroupByTimestampQuarter {
-		return U.GetAllQuartersAsTimestamp(from, to, timezone)
+		return U.GetAllQuartersAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
 	return []time.Time{}
 }
 
 func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
-	query *model.Query, aggrIndex int, timestampIndex int) error {
+	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 
 	rowsByTimestamp := make(map[string][]interface{}, 0)
 	for _, row := range result.Rows {
@@ -580,7 +639,7 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 	}
 
 	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
-		query.GetGroupByTimestamp(), query.Timezone)
+		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
 	filledResult := make([][]interface{}, 0, 0)
 	// range over timestamps between given from and to.
@@ -606,7 +665,7 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 // Fills missing timestamp between given from and to timestamp for all group key combinations,
 // on the limited result.
 func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
-	query *model.Query, aggrIndex int, timestampIndex int) error {
+	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 
 	gkStart, gkEnd, err := getGroupKeyIndexesForSlicing(result.Headers)
 	if err != nil {
@@ -634,7 +693,7 @@ func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 	}
 
 	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
-		query.GetGroupByTimestamp(), query.Timezone)
+		query.GetGroupByTimestamp(), query.Timezone, isTimezoneEnabled)
 
 	for _, row := range result.Rows {
 		for _, ts := range timestamps {

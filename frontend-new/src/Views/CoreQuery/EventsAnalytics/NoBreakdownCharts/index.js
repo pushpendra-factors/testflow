@@ -1,4 +1,10 @@
-import React, { useState, useMemo, forwardRef, useContext, useImperativeHandle } from 'react';
+import React, {
+  useState,
+  useMemo,
+  forwardRef,
+  useContext,
+  useImperativeHandle,
+} from 'react';
 import {
   formatData,
   getDataInLineChartFormat,
@@ -35,11 +41,16 @@ const NoBreakdownCharts = forwardRef(
     } = useContext(CoreQueryContext);
 
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || getDefaultSortProp(arrayMapper)
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : getDefaultSortProp(arrayMapper)
     );
 
     const [dateSorter, setDateSorter] = useState(
-      savedQuerySettings.dateSorter || getDefaultDateSortProp()
+      savedQuerySettings.dateSorter &&
+        Array.isArray(savedQuerySettings.dateSorter)
+        ? savedQuerySettings.dateSorter
+        : getDefaultDateSortProp()
     );
 
     useImperativeHandle(ref, () => {

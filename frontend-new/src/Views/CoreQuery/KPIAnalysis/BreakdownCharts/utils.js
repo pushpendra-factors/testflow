@@ -18,12 +18,14 @@ import {
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 
 export const defaultSortProp = () => {
-  return {
-    order: 'descend',
-    key: 'value',
-    type: 'numerical',
-    subtype: null,
-  };
+  return [
+    {
+      order: 'descend',
+      key: 'value',
+      type: 'numerical',
+      subtype: null,
+    },
+  ];
 };
 
 export const getVisibleData = (aggregateData, sorter) => {
@@ -215,10 +217,9 @@ export const getDataInHorizontalBarChartFormat = (
     breakdownMapper: firstBreakdownMapper,
   } = getBreakdownDataMapperWithUniqueValues(sortedData, firstBreakdownKey);
 
-  let secondBreakdownKey;
+  const secondBreakdownKey = `${breakdown[1].property} - 1`;
 
   if (breakdown.length === 2) {
-    secondBreakdownKey = `${breakdown[1].property} - 1`;
     const result = uniqueFirstBreakdownValues.map((bValue) => {
       const row = {};
       row.index = bValue;
@@ -237,7 +238,9 @@ export const getDataInHorizontalBarChartFormat = (
       return [result[0]];
     }
     return result;
-  } else if (breakdown.length === 3) {
+  }
+
+  if (breakdown.length === 3) {
     const thirdBreakdownKey = `${breakdown[2].property} - 2`;
     const result = [];
     uniqueFirstBreakdownValues.forEach((bValue) => {

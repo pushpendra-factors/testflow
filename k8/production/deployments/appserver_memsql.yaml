@@ -62,10 +62,12 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 10
         args:          
+          - --customer_enabled_projects_wi
+          - 399,594,559,628,616,645,640,641,695,699
           - --env
           - $(ENV)
           - --app_name
-          - "appserver_memsql"
+          - appserver_memsql
           - --api_http_port
           - $(API_HTTP_PORT)
           - --etcd
@@ -77,23 +79,25 @@ spec:
           - --memsql_name
           - $(MEMSQL_DB)
           - --memsql_user
-          - $(MEMSQL_USER)
+          - $(MEMSQL_OLAP_USER)
           - --memsql_pass
           - $(MEMSQL_PASSWORD)
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)
-          - --memsql_resource_pool
-          - $(MEMSQL_RPOOL_TIMEOUT_5M)
           - --primary_datastore
-          - "memsql"
+          - memsql
+          - --memsql_max_open_connections
+          - "500"
+          - --memsql_max_idle_connections
+          - "0"
           - --redis_host
-          - $(REDIS_HOST_2)
+          - $(REDIS_HOST)
           - --redis_port
-          - $(REDIS_PORT_2)
+          - $(REDIS_PORT)
           - --redis_host_ps
-          - $(REDIS_HOST_2)
+          - $(PERSISTENT_REDIS_HOST)
           - --redis_port_ps
-          - $(REDIS_PORT_2)
+          - $(PERSISTENT_REDIS_PORT)
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
           - --api_domain
@@ -116,16 +120,18 @@ spec:
           - $(ADMIN_LOGIN_EMAIL)
           - --admin_login_token
           - $(ADMIN_LOGIN_TOKEN)
+          - --skip_track_project_ids
+          - $(SKIP_TRACK_PROJECT_IDS)
           - --facebook_app_id
           - $(FACEBOOK_APP_ID)
           - --facebook_app_secret
           - $(FACEBOOK_APP_SECRET)
-          - --salesforce_app_id
-          - $(SALESFORCE_APP_ID)
           - --linkedin_client_id
           - $(LINKEDIN_CLIENT_ID)
           - --linkedin_client_secret
           - $(LINKEDIN_CLIENT_SECRET)
+          - --salesforce_app_id
+          - $(SALESFORCE_APP_ID)
           - --salesforce_app_secret
           - $(SALESFORCE_APP_SECRET)
           - --device_detector_path
@@ -137,20 +143,21 @@ spec:
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
           - --blocked_sdk_request_project_tokens
-          - "5w62sncn48ohs9nl9fymkad3ewcked23"
+          - 5w62sncn48ohs9nl9fymkad3ewcked23
           - --cache_look_up_range_projects
-          - "336:20190930"
+          - 336:20190930
           - --lookback_window_event_user_cache
           - "20"
-          - --project_analytics_whitelisted_uuids
-          - "1b993a1b-8a76-4ddd-a827-fa3c579ba8b9"
-          - --show_smart_properties_allowed_projects
-          - "446,386"
           - --attribution_debug
-          - 0
-          - --disable_mql_db_writes
-          - --disable_mql_redis_writes
+          - "0"
+          - --timezone_enabled_projects
+          - "446"
+          - --project_analytics_whitelisted_uuids
+          - 1b993a1b-8a76-4ddd-a827-fa3c579ba8b9
           - --allow_smart_event_rule_creation
+          - --bucket_name
+          - $(BUCKET_NAME)
+          - --disable_dashboard_query_db_execution
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -165,6 +172,8 @@ spec:
         - configMapRef:
             name: config-env
         - configMapRef:
+            name: config-postgres
+        - configMapRef:
             name: config-memsql
         - configMapRef:
             name: config-redis
@@ -173,11 +182,11 @@ spec:
         - configMapRef:
             name: config-add-session-job
         - secretRef:
+            name: secret-postgres
+        - secretRef:
             name: secret-memsql
         - secretRef:
             name: secret-aws
-        - secretRef:
-            name: secret-login-token
         - secretRef:
             name: secret-facebook
         - secretRef:
@@ -185,7 +194,11 @@ spec:
         - secretRef:
             name: secret-salesforce
         - secretRef:
+            name: secret-login-token
+        - secretRef:
             name: secret-sentry
+        - configMapRef:
+            name: config-bucket
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine

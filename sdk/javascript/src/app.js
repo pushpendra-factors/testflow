@@ -635,7 +635,7 @@ App.prototype.page = function(afterCallback, force=false) {
     return Promise.resolve(this.autoTrack(this.getConfig("auto_track"), force, afterCallback));
 }
 
-App.prototype.identify = function(customerUserId) {
+App.prototype.identify = function(customerUserId, userProperties={}) {
     if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
     
     customerUserId = util.validatedStringArg("customer_user_id", customerUserId);
@@ -643,6 +643,7 @@ App.prototype.identify = function(customerUserId) {
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
     payload.c_uid = customerUserId;
+    if (Object.keys(userProperties).length > 0) payload.user_properties = userProperties;
     
     return this.client.identify(payload)
         .then(updateCookieIfUserIdInResponse);

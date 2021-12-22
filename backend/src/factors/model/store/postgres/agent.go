@@ -218,7 +218,7 @@ func (pg *Postgres) UpdateAgentVerificationDetails(agentUUID, password, firstNam
 	return updateAgent(agentUUID, options...)
 }
 
-func (pg *Postgres) UpdateAgentInformation(agentUUID, firstName, lastName, phone string) int {
+func (pg *Postgres) UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int {
 	if agentUUID == "" {
 		return http.StatusBadRequest
 	}
@@ -231,6 +231,9 @@ func (pg *Postgres) UpdateAgentInformation(agentUUID, firstName, lastName, phone
 	}
 	if phone != "" {
 		updateParams = append(updateParams, model.Phone(phone))
+	}
+	if isOnboardingFlowSeen != nil {
+		updateParams = append(updateParams, model.IsOnboardingFlowSeen(*isOnboardingFlowSeen))
 	}
 	return updateAgent(agentUUID, updateParams...)
 }
