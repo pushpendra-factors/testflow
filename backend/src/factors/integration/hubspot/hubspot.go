@@ -1654,9 +1654,9 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 				continue
 			}
 
-			groupUserID, _, err = syncGroupCompany(projectID, document, &userProperties)
+			groupUserID, _, err = syncGroupCompany(projectID, &documents[i], &userProperties)
 			if err != nil {
-				logCtx.WithFields(log.Fields{"document": documents[i]}).Error("Missing group user id in company record in sync deal groups.")
+				logCtx.WithFields(log.Fields{"document": documents[i]}).WithError(err).Error("Missing group user id in company record in sync deal groups.")
 				continue
 			}
 		}
