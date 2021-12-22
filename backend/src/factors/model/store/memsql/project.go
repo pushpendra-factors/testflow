@@ -170,7 +170,9 @@ func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int
 	if project.TimeZone != "" {
 		updateFields["time_zone"] = project.TimeZone
 	}
-
+	if project.ProfilePicture != ""{
+		updateFields["profile_picture"] = project.ProfilePicture
+	}
 	_, errCode := time.LoadLocation(string(project.TimeZone))
 	if errCode != nil {
 		log.WithField("projectId", project.ID).Error("This project hasnt been given with wrong timezone")
