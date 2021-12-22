@@ -1,21 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { connect } from 'react-redux';
 import {
   Row, Col, Progress, Button, Upload, message
 } from 'antd';
+import { udpateProjectDetails } from 'Reducers/global';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 
 
-function Brand({handleCancel}) {
+function Brand({handleCancel, udpateProjectDetails, activeProject}) {
     const [imageUrl, setImageUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const history = useHistory();
 
-    const handleCreate = (e) => {
-        e.preventDefault();
-        history.push('/project-setup');
-        handleCancel();
+    const handleCreate = () => {
+      console.log({'profile_picture':imageUrl})
+        udpateProjectDetails(activeProject.id, {'profile_picture':imageUrl}).then(() => {
+          message.success('Profile Image Uploaded')
+          handleCancel();
+          history.push('/project-setup');
+        }).catch((err) => {
+          message.error('error:',err)
+        })
     }
 
     function getBase64(img, callback) {
@@ -38,6 +44,7 @@ function Brand({handleCancel}) {
 
       const handleChange = info => {
         if (info.file.status === 'uploading') {
+          message.warning('Image Uploading...')
           setLoading(true);
           return;
         }
@@ -95,4 +102,8 @@ function Brand({handleCancel}) {
   );
 }
 
-export default connect(null, { })(Brand);
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+});
+
+export default connect(mapStateToProps, { udpateProjectDetails })(Brand);
