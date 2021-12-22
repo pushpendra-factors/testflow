@@ -58,7 +58,7 @@ function SortableCards({
         });
       }, 300);
     },
-    [activeDashboard.id, active_project.id, dispatch]
+    [activeDashboard?.id, active_project.id, dispatch]
   );
 
   const activeUnits = useMemo(

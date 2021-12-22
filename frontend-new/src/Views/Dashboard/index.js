@@ -122,16 +122,6 @@ function Dashboard() {
       {checkIntegration?
       <>
         <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal}/>
-        {dashboards.data.length?
-          <ProjectTabs
-                handleEditClick={handleEditClick}
-                setaddDashboardModal={setaddDashboardModal}
-                durationObj={durationObj}
-                handleDurationChange={handleDurationChange}
-                refreshClicked={refreshClicked}
-                setRefreshClicked={setRefreshClicked}
-              />
-        : null}
           <AddDashboard
               setEditDashboard={setEditDashboard}
               editDashboard={editDashboard}
