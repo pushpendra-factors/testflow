@@ -44,7 +44,6 @@ function Brand({handleCancel, udpateProjectDetails, activeProject}) {
 
       const handleChange = info => {
         if (info.file.status === 'uploading') {
-          message.warning('Image Uploading...')
           setLoading(true);
           return;
         }
