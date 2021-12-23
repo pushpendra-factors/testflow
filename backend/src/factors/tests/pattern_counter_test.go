@@ -75,7 +75,7 @@ func TestCountPatterns(t *testing.T) {
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
 
-	countVersion := 0
+	countVersion := 1
 	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
 	assert.Nil(t, erronFalse)
 
@@ -612,7 +612,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	pC, _ := P.NewPattern([]string{"C"}, &userAndEventsInfo)
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
-	countVersion := 0
+	countVersion := 1
 	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
 	assert.Nil(t, erronFalse)
 
@@ -1261,7 +1261,7 @@ func TestCollectAndCountEventsWithPropertiesWithOccurenceFalse(t *testing.T) {
 	pC, _ := P.NewPattern([]string{"C"}, &userAndEventsInfo)
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
-	countVersion := 0
+	countVersion := 1
 	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
 	assert.Nil(t, erronFalse)
 
@@ -1742,7 +1742,7 @@ func TestCountPatternsWithOccurenceFalse(t *testing.T) {
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
 
-	countVersion := 0
+	countVersion := 1
 	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
 	assert.Nil(t, erronFalse)
 
@@ -1994,7 +1994,7 @@ func TestCountPatternsWithSameTimeStamp(t *testing.T) {
 
 	patterns := []*P.Pattern{pABC, pCAB, pACB, pAB, pBA, pBC, pAC, pA, pB, pC}
 
-	countVersion := 0
+	countVersion := 1
 	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
 	assert.Nil(t, erronFalse)
 
@@ -2071,7 +2071,7 @@ func TestCountPatternsWithSameTimeStamp2(t *testing.T) {
 		pAB, pAC, pBA, pBC, pCA, pCB, pABC,
 		pACB, pBAC, pBCA, pCAB, pCBA}
 
-	countVersion := 0
+	countVersion := 1
 	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
 	assert.Nil(t, erronFalse)
 
@@ -2141,7 +2141,7 @@ func TestCountPatternsWithSameTimeStamp3(t *testing.T) {
 	patterns := []*P.Pattern{pA, pB, pC, pAB, pAC, pBA, pBC, pCA, pCB, pABC, pACB,
 		pBAC, pBCA, pCAB, pCBA, pD, pABD, pACD, pBCD, pAD, pBD, pCD}
 
-	countVersion := 0
+	countVersion := 1
 	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
 	assert.Nil(t, erronFalse)
 
@@ -2212,7 +2212,7 @@ func TestCountPatternsWithSameTimeStamp4(t *testing.T) {
 		pAB, pAC, pBA, pBC, pCA, pCB, pABC,
 		pACB, pBAC, pBCA, pCAB, pCBA}
 
-	countVersion := 0
+	countVersion := 1
 	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
 	assert.Nil(t, erronFalse)
 
