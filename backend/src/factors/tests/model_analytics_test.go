@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	H "factors/handler"
@@ -359,13 +360,12 @@ func TestAnalyticsFunnelQueryWithFilterConditionNumericalProperty(t *testing.T) 
 
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID)
-
 	timestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	startTimestamp := timestamp
+
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID)
 
 	payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 5}, "user_properties": {"value": 5}}`,
 		"s0", timestamp)
@@ -429,7 +429,7 @@ func TestAnalyticsFunnelQueryWithFilterConditionNumericalProperty(t *testing.T) 
 	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, errCode)
 
-	assert.Equal(t, "count", result.Headers[0])
+	assert.Equal(t, "aggregate", result.Headers[0])
 	assert.Equal(t, float64(4), result.Rows[0][0])
 }
 
@@ -441,12 +441,11 @@ func TestInsightsAnalyticsQueryGroupingMultipleFilters(t *testing.T) {
 
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID)
-
-	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 
 	payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"day": "Monday"}, "user_properties": {"hour": 5}}`,
 		"s0", startTimestamp)
@@ -520,7 +519,7 @@ func TestInsightsAnalyticsQueryGroupingMultipleFilters(t *testing.T) {
 	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, errCode)
 
-	assert.Equal(t, "count", result.Headers[0])
+	assert.Equal(t, "aggregate", result.Headers[0])
 	assert.Equal(t, float64(1), result.Rows[0][0])
 
 }
@@ -1674,7 +1673,7 @@ func TestAnalyticsInsightsQuery(t *testing.T) {
 		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(5), result.Rows[0][0])
 
 		// Query count of events: page_spent_time > 11
@@ -1705,7 +1704,7 @@ func TestAnalyticsInsightsQuery(t *testing.T) {
 		result2, errCode, _ := store.GetStore().Analyze(project.ID, query2)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
-		assert.Equal(t, "count", result2.Headers[0])
+		assert.Equal(t, "aggregate", result2.Headers[0])
 		assert.Equal(t, float64(15), result2.Rows[0][0])
 
 	})
@@ -1718,19 +1717,18 @@ func TestAnalyticsInsightsQueryForAliasName(t *testing.T) {
 
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID1)
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID2)
-	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID3)
-
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
+
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID3)
 
 	/*
 		user1 -> event www.factors.ai with property1 -> www.factors.ai with property2 -> www.factors.ai/pricing with propterty2
@@ -1983,18 +1981,18 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID1)
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID2)
-	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID3)
-
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
+
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID3)
 
 	/*
 		user1 -> event s0 with property1 -> s0 with property2 -> s1 with propterty2
@@ -2077,7 +2075,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		//unique user count should return 2 for s0 to s1 with fliter property2
@@ -2085,7 +2083,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query = model.Query{
@@ -2116,7 +2114,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "$initial_source", result.Headers[0])
-		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "aggregate", result.Headers[1])
 		assert.Equal(t, "B", result.Rows[0][0])
 		assert.Equal(t, float64(2), result.Rows[0][1])
 		assert.Equal(t, "A", result.Rows[1][0])
@@ -2153,14 +2151,14 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query.EventsWithProperties[0].Properties[0].Value = "4321"
 		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query = model.Query{
@@ -2235,7 +2233,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
-		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "aggregate", result.Headers[1])
 		assert.Equal(t, "s0", result.Rows[0][0])
 		assert.Equal(t, float64(2), result.Rows[0][1])
 		assert.Equal(t, "s1", result.Rows[1][0])
@@ -2272,7 +2270,7 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
-		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "aggregate", result.Headers[1])
 		assert.Equal(t, "s0", result.Rows[0][0])
 		assert.Equal(t, float64(2), result.Rows[0][1])
 		assert.Equal(t, "s1", result.Rows[1][0])
@@ -2563,7 +2561,7 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 	t.Run("FunnelSingleBreakdown", func(t *testing.T) {
 		// 20 events with single incremented value.
 		eventName1 := "event1"
-		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"date_property":%d},"user_properties":{"date_property":%d}}`,
 			eventName1, icreatedUserID, startTimestamp+10, startTimestamp, startTimestamp)
@@ -2622,10 +2620,11 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 				timestmapYesterdayIndex = index
 			}
 		}
+		log.WithField("noneIndex", noneIndex).WithField("startTimestampString", startTimestampString).WithField("startTimestampStringYesterday", startTimestampStringYesterday).WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "$none", result.Rows[noneIndex][0])
-		assert.Equal(t, startTimestampStringYesterday, result.Rows[timestmapYesterdayIndex][0])
 		assert.Equal(t, startTimestampString, result.Rows[timestmapIndex][0])
+		assert.Equal(t, startTimestampStringYesterday, result.Rows[timestmapYesterdayIndex][0])
 		assert.Equal(t, float64(2), result.Rows[noneIndex][1])
 		assert.Equal(t, float64(2), result.Rows[timestmapYesterdayIndex][1])
 		assert.Equal(t, float64(1), result.Rows[timestmapIndex][1])

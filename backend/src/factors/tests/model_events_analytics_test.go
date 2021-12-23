@@ -89,7 +89,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(5), result.Rows[0][0])
 
 		// Query count of events: page_spent_time > 11
@@ -120,7 +120,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 		result2, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query2)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
-		assert.Equal(t, "count", result2.Headers[0])
+		assert.Equal(t, "aggregate", result2.Headers[0])
 		assert.Equal(t, float64(15), result2.Rows[0][0])
 
 	})
@@ -250,19 +250,18 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID1)
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID2)
-	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID3)
-
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
+
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID3)
 
 	/*
 		user1 -> event s0 with property1 -> s0 with property2 -> s1 with property2
@@ -345,7 +344,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		//unique user count should return 2 for s0 to s1 with filter property2
@@ -353,7 +352,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query = model.Query{
@@ -384,7 +383,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "$initial_source", result.Headers[0])
-		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "aggregate", result.Headers[1])
 		assert.Equal(t, "B", result.Rows[0][0])
 		assert.Equal(t, float64(2), result.Rows[0][1])
 		assert.Equal(t, "A", result.Rows[1][0])
@@ -421,14 +420,14 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query.EventsWithProperties[0].Properties[0].Value = "4321"
 		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query = model.Query{
@@ -502,7 +501,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
-		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "aggregate", result.Headers[1])
 		assert.Equal(t, "s0", result.Rows[0][0])
 		assert.Equal(t, float64(2), result.Rows[0][1])
 		assert.Equal(t, "s1", result.Rows[1][0])
@@ -539,7 +538,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
-		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "aggregate", result.Headers[1])
 		assert.Equal(t, "s0", result.Rows[0][0])
 		assert.Equal(t, float64(2), result.Rows[0][1])
 		assert.Equal(t, "s1", result.Rows[1][0])
@@ -604,7 +603,7 @@ func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
 		numPropertyRangeStart := 1
 		numPropertyRangeEnd := 100
 		for i := numPropertyRangeStart; i <= numPropertyRangeEnd; i++ {
-			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
 				eventName1, icreatedUserID, startTimestamp+10, i, i)
@@ -642,7 +641,7 @@ func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
 			User property numerical_property set as empty ($none).
 			Will create 11 buckets. including 1 $none.
 		*/
-		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":""}}`,
 			eventName1, icreatedUserID, startTimestamp+10, 0)
@@ -884,12 +883,12 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 
 		result1 := resultGroup.Results[0]
 		assert.NotNil(t, result1)
-		assert.Equal(t, "count", result1.Headers[0])
+		assert.Equal(t, "aggregate", result1.Headers[0])
 		assert.Equal(t, float64(5), result1.Rows[0][0])
 
 		result2 := resultGroup.Results[1]
 		assert.NotNil(t, result2)
-		assert.Equal(t, "count", result2.Headers[0])
+		assert.Equal(t, "aggregate", result2.Headers[0])
 		assert.Equal(t, float64(15), result2.Rows[0][0])
 
 	})
@@ -1565,29 +1564,28 @@ func TestCoalUniqueUsersEachEventQuerySingleUserMultiEvents(t *testing.T) {
 	assert.Nil(t, err)
 
 	customerIDUser1 := "customerIDUser1"
-
-	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID1)
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID2)
-	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID3)
-	createdUserID4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID4_1)
-	createdUserID5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID5_2)
-	createdUserID6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID6_3)
-
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
+
+	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID3)
+	createdUserID4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID4_1)
+	createdUserID5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID5_2)
+	createdUserID6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID6_3)
 
 	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
 	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
@@ -1785,7 +1783,7 @@ func TestCoalUniqueUsersEachEventQuerySingleUserMultiEvents(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(1), result.Rows[0][0])
 	})
 
@@ -1832,7 +1830,7 @@ func TestCoalUniqueUsersEachEventQuerySingleUserMultiEvents(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(1), result.Rows[0][0])
 	})
 }
@@ -1849,29 +1847,28 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEvents(t *testing.T) {
 	customerIDUser1 := "customerIDUser1"
 	customerIDUser2 := "customerIDUser2"
 	customerIDUser3 := "customerIDUser3"
-
-	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID1)
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID2)
-	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID3)
-	createdUserID4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID4_1)
-	createdUserID5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID5_2)
-	createdUserID6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, createdUserID6_3)
-
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
+
+	// here createdUserID1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID3)
+	createdUserID4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID4_1)
+	createdUserID5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID5_2)
+	createdUserID6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3, JoinTimestamp: startTimestamp - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID6_3)
 
 	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
 	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
@@ -2052,7 +2049,7 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEvents(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(3), result.Rows[0][0])
 	})
 	t.Run("TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsUserAll", func(t *testing.T) {
@@ -2086,7 +2083,7 @@ func TestCoalUniqueUsersEachEventQueryMultiUserMultiEvents(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(0), result.Rows[0][0])
 	})
 }
@@ -2806,7 +2803,7 @@ func TestGlobalFilterChanges(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 	})
 	t.Run("TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsUserAll", func(t *testing.T) {
@@ -2849,7 +2846,7 @@ func TestGlobalFilterChanges(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, "aggregate", result.Headers[0])
 		assert.Equal(t, float64(0), result.Rows[0][0])
 	})
 }
