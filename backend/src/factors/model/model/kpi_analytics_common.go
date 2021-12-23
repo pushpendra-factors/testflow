@@ -261,8 +261,8 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 	// 	CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED},
 	// },
 	SalesforceUsersDisplayCategory: {
-		CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_SALESFORCE_CONTACT_CREATED},
-		CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED},
+		CountOfContactsCreated: {"display_name": "Leads created", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_CREATED},
+		CountOfContactsUpdated: {"display_name": "Leads updated", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_UPDATED},
 	},
 	SalesforceAccountsDisplayCategory: {
 		CountOfLeadsCreated: {"display_name": "Leads created", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_CREATED},
