@@ -61,9 +61,9 @@ ReactDOM.render(
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <ErrorBoundary>
-          <TourProvider steps={steps}>
+          {/* <TourProvider steps={steps}> */}
             <App /> 
-          </TourProvider>
+          {/* </TourProvider> */}
         </ErrorBoundary>
       </PersistGate>
     </Provider>
