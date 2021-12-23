@@ -856,8 +856,8 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 
 		for _, rule := range rules {
 
-			// check if rule is applicable
-			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, logCtx) {
+			// Check if rule is applicable & the record has changed property w.r.t filters
+			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, document, logCtx) {
 				continue
 			}
 
@@ -939,8 +939,7 @@ func canCreateHSTouchPoint(documentActionType int) bool {
 	}
 	return true
 }
-
-func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, logCtx *log.Entry) bool {
 
 	filtersPassed := 0
 	for _, filter := range rule.Filters {
@@ -971,7 +970,47 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, lo
 			continue
 		}
 	}
-	return filtersPassed != 0 && filtersPassed == len(rule.Filters)
+
+	// Once filters passed, now check for the existing properties
+	if filtersPassed != 0 && filtersPassed == len(rule.Filters) {
+		prevDoc, status := store.GetStore().GetLastSyncedHubspotDocumentByID(document.ProjectId, document.ID, document.Type)
+		if status != http.StatusFound {
+			// In case no prev properties exist continue creating OTP
+			return true
+		}
+
+		var err error
+		var prevProperties *map[string]interface{}
+
+		if document.Type == model.HubspotDocumentTypeContact {
+			prevProperties, _, err = GetContactProperties(document.ProjectId, prevDoc)
+		}
+
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to GetHubspotDocumentProperties - Offline touch point. Continuing.")
+			// In case of err with previous properties, log error but continue creating OTP
+			return true
+		}
+
+		samePropertyMatchingScore := 0
+		for _, filter := range rule.Filters {
+			if val1, exists1 := trackPayload.EventProperties[filter.Property]; exists1 {
+				if val2, exists2 := (*prevProperties)[filter.Property]; exists2 {
+					if val1 == val2 {
+						samePropertyMatchingScore++
+					}
+				}
+			}
+		}
+		// If all filter properties matches with that of the previous found properties, skip and fail
+		if samePropertyMatchingScore == len(rule.Filters) {
+			return false
+		} else {
+			return true
+		}
+	}
+	// When neither filters matched nor (filters matched but values are same)
+	return false
 }
 
 func getDealUserID(projectID uint64, deal *Deal) string {

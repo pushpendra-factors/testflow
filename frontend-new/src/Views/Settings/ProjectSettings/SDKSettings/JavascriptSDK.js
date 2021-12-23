@@ -39,8 +39,8 @@ const ViewSetup = ({ activeProject }) => {
             </code>
             </pre>
           </Col>
-          <Col span={24}>
-            <Text type={'paragraph'} extraClass={'m-0 mt-2'}>For detailed instructions on how to install and initialize the JavaScript SDK please refer to our <a className={'fa-anchor'} href="https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website" target='_blank'>JavaScript developer documentation.</a></Text>
+          <Col span={24}> 
+            <Text type={'paragraph'} extraClass={'m-0 mt-2'}>For detailed instructions on how to install and initialize the JavaScript SDK please refer to our <a className={'fa-anchor'} href="https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website" target='_blank'>JavaScript developer documentation.</a></Text> 
           </Col>
     </Row>
   );
