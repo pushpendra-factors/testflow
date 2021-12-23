@@ -73,7 +73,7 @@ func TestAttributionModelFile(t *testing.T) {
 	for _, user := range users {
 		userIDTemp, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 			CustomerUserId: user.CustomerUserID, Properties: postgres.Jsonb{},
-			JoinTimestamp: user.JoinTimestamp})
+			JoinTimestamp: user.JoinTimestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		userTemp, errCode := store.GetStore().GetUser(project.ID, userIDTemp)

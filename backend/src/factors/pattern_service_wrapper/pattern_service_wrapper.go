@@ -1002,6 +1002,7 @@ type FactorsInsights struct {
 	FactorsMultiplierIncreaseFlag bool                    `json:"factors_multiplier_increase_flag"`
 	FactorsInsightsType           string                  `json:"factors_insights_type"`
 	FactorsSubInsights            []*FactorsInsights      `json:"factors_sub_insights"`
+	FactorsInsightsRank           uint64                  `json:"factors_insights_rank"`
 }
 
 func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0GoalPercentage float64,
@@ -1020,10 +1021,11 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0Go
 	levelInsightsMap := make(map[int][]parentInsightsTuple)
 	indexLevelMap := make(map[int]int)
 	indexLevelMap[0] = 0
+
 	for _, node := range nodes {
 		indexLevelMap[node.Index] = indexLevelMap[node.ParentIndex] + 1
 	}
-	for _, node := range nodes {
+	for rank, node := range nodes {
 		// Dedup results to show more novel results as user scrolls down.
 		if shouldFilterResult(node, &seenPropertyConstraints, &seenEvents) {
 			continue
@@ -1037,6 +1039,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0Go
 		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY || node.NodeType == NODE_TYPE_CAMPAIGN {
 			PLen := len(node.Pattern.EventNames)
 			var insights FactorsInsights
+			insights.FactorsInsightsRank = uint64(rank) // adding rank
 			if node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY {
 				attributes := make([]FactorsAttributeTuple, 0)
 				for _, attribute := range node.AddedConstraint.EPNumericConstraints {
@@ -1099,12 +1102,12 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0Go
 		FactorsInsightsPercentage: Level0GoalPercentage,
 	}
 	for i := 2; i >= 1; i-- {
-		prevLevelMap:= make(map[interface{}]bool)
-		for _,insight := range levelInsightsMap[i-1] {
+		prevLevelMap := make(map[interface{}]bool)
+		for _, insight := range levelInsightsMap[i-1] {
 			insig := indexLevelInsightsMap[insight.index]
-			if insig.FactorsInsightsType == ""	{
+			if insig.FactorsInsightsType == "" {
 				continue
-			}	else if insig.FactorsInsightsType == ATTRIBUTETYPE{
+			} else if insig.FactorsInsightsType == ATTRIBUTETYPE {
 				prevLevelMap[insig.FactorsInsightsAttribute[len(insig.FactorsInsightsAttribute)-1]] = true
 			} else {
 				prevLevelMap[insig.FactorsInsightsKey] = true
@@ -1127,14 +1130,13 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0Go
 			if parent.FactorsInsightsType == "" || isValidInsightTransition(parent.FactorsInsightsType, child.FactorsInsightsType) {
 				subInsights := parent.FactorsSubInsights
 				subInsights = append(subInsights, trimChildNode(parent.FactorsInsightsType, child.FactorsInsightsType, parent, child))
-        parent.FactorsSubInsights = rearrangeSubinsights(subInsights, prevLevelMap)
-        indexLevelInsightsMap[insight.parentIndex] = parent
+				parent.FactorsSubInsights = rearrangeSubinsights(subInsights, prevLevelMap)
+				indexLevelInsightsMap[insight.parentIndex] = parent
 			}
 		}
 	}
 	return indexLevelInsightsMap[0].FactorsSubInsights
 }
-
 
 func rearrangeSubinsights(subInsights []*FactorsInsights, prevLevelMap map[interface{}]bool) []*FactorsInsights {
 
@@ -1167,7 +1169,7 @@ func rearrangeSubinsights(subInsights []*FactorsInsights, prevLevelMap map[inter
 		}
 	}
 
-	final := make([]*FactorsInsights,0)
+	final := make([]*FactorsInsights, 0)
 	final = append(final, others...)
 	final = append(final, withMultiplier1...)
 	final = append(final, numerical...)
@@ -1228,8 +1230,11 @@ func FactorV1(reqId string, projectId uint64, startEvent string,
 	rootNode := &ItreeNode{}
 	iPatternNodesUnsorted := []*ItreeNode{}
 	var debugData interface{}
+	includedEventProperties := make(map[string]bool)
+	includedUserProperties := make(map[string]bool)
+	includedEvents := make(map[string]bool)
 	if itree, err, debugInfo := BuildNewItreeV1(reqId, startEvent, startEventConstraints,
-		endEvent, endEventConstraints, pw, countType, debugKey, debugParams, projectId); err != nil {
+		endEvent, endEventConstraints, pw, countType, debugKey, debugParams, projectId, includedEventProperties, includedUserProperties, includedEvents); err != nil {
 		log.Error(err)
 		return Factors{}, err, nil
 	} else {

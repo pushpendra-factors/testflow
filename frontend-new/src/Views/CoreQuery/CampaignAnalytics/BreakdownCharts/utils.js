@@ -7,12 +7,14 @@ import {
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 
 export const getDefaultSorterState = (arrayMapper, currentEventIndex) => {
-  return {
-    key: arrayMapper[currentEventIndex].eventName,
-    type: 'numerical',
-    subtype: null,
-    order: 'descend',
-  };
+  return [
+    {
+      key: arrayMapper[currentEventIndex].eventName,
+      type: 'numerical',
+      subtype: null,
+      order: 'descend',
+    },
+  ];
 };
 
 export const getBreakdownIndices = (data, breakdown) => {
@@ -119,12 +121,7 @@ export const getTableColumns = (
   return [...breakdownCols, ...eventCols];
 };
 
-export const getTableData = (
-  data,
-  breakdown,
-  searchText,
-  currentSorter
-) => {
+export const getTableData = (data, breakdown, searchText, currentSorter) => {
   console.log('campaigns getTableData');
   const filteredData = data.filter(
     (d) => d.label.toLowerCase().indexOf(searchText.toLowerCase()) > -1

@@ -1,7 +1,6 @@
 package model
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
@@ -10,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type EventName struct {
@@ -64,8 +61,10 @@ var AllowedEventNamesForHubspot = []string{
 	U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
 	U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
 	U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
-	U.EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-	U.EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+	U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+	U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+	U.GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED,
+	U.GROUP_EVENT_NAME_HUBSPOT_DEAL_UPDATED,
 }
 
 // NOTE: This is currently being used only in kpi though.
@@ -803,38 +802,6 @@ func FillEventPropertiesByFilterExpr(eventProperties *U.PropertiesMap,
 	}
 
 	return nil
-}
-
-// GetEventNamesFromFile read unique eventNames from Event file
-func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64) ([]string, error) {
-	logCtx := log.WithField("project_id", projectId)
-	scanner.Split(bufio.ScanLines)
-	var txtline string
-	eventNames := make([]string, 0)
-	var dat map[string]interface{}
-	s := map[string]bool{}
-
-	for scanner.Scan() {
-		txtline = scanner.Text()
-		if err := json.Unmarshal([]byte(txtline), &dat); err != nil {
-			logCtx.Error("Unable to decode line")
-		}
-		eventNameString := dat["en"].(string)
-		_, ok := s[eventNameString]
-		if ok != true {
-			eventNames = append(eventNames, eventNameString)
-			s[eventNameString] = true
-		}
-
-	}
-	err := scanner.Err()
-	logCtx.Info("Extraced Unique EventNames from file")
-
-	if err != nil {
-		return []string{}, err
-	}
-
-	return eventNames, nil
 }
 
 func isCachePrefixTypeSmartEvent(prefix string) bool {

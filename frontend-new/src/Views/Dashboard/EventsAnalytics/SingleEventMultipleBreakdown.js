@@ -4,7 +4,6 @@ import {
   formatDataInStackedAreaFormat,
   defaultSortProp,
   getVisibleData,
-  getVisibleSeriesData,
 } from '../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import LineChart from '../../../components/HCLineChart';
@@ -76,7 +75,7 @@ function SingleEventMultipleBreakdown({
   }, [aggregateData, sorter]);
 
   useEffect(() => {
-    setVisibleSeriesData(getVisibleSeriesData(data, dateSorter));
+    setVisibleSeriesData(getVisibleData(data, dateSorter));
   }, [data, dateSorter]);
 
   if (!visibleProperties.length) {

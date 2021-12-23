@@ -65,6 +65,8 @@ var (
 		"Enables filter optimisation changes for memsql implementation.")
 	filterPropertiesStartTimestamp = flag.Int64("filter_properties_start_timestamp", -1,
 		"Start timestamp of data available for filtering with parquet on memsql.")
+	skipEventNameStepByProjectID        = flag.String("skip_event_name_step_by_project_id", "", "")
+	skipUserJoinInEventQueryByProjectID = flag.String("skip_user_join_in_event_query_by_project_id", "", "")
 )
 
 func registerStructs() {
@@ -120,13 +122,15 @@ func main() {
 			ResourcePool: *memSQLResourcePool,
 			AppName:      appName,
 		},
-		PrimaryDatastore:                *primaryDatastore,
-		RedisHost:                       *redisHost,
-		RedisPort:                       *redisPort,
-		SentryDSN:                       *sentryDSN,
-		MultipleTimezoneEnabledProjects: C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
-		EnableFilterOptimisation:        *enableFilterOptimisation,
-		FilterPropertiesStartTimestamp:  *filterPropertiesStartTimestamp,
+		PrimaryDatastore:                    *primaryDatastore,
+		RedisHost:                           *redisHost,
+		RedisPort:                           *redisPort,
+		SentryDSN:                           *sentryDSN,
+		MultipleTimezoneEnabledProjects:     C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
+		EnableFilterOptimisation:            *enableFilterOptimisation,
+		FilterPropertiesStartTimestamp:      *filterPropertiesStartTimestamp,
+		SkipEventNameStepByProjectID:        *skipEventNameStepByProjectID,
+		SkipUserJoinInEventQueryByProjectID: *skipUserJoinInEventQueryByProjectID,
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", healthcheckPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))

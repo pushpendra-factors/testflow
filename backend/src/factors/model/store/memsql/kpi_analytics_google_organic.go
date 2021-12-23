@@ -13,5 +13,8 @@ func (store *MemSQL) GetKPIConfigsForGoogleOrganic(projectID uint64, reqID strin
 	if len(settings) == 0 {
 		return nil, http.StatusOK
 	}
-	return model.GetKPIConfigsForGoogleOrganic(), http.StatusOK
+	config := model.GetKPIConfigsForGoogleOrganic()
+	organicObjectsAndProperties := store.buildObjectAndPropertiesForGoogleOrganic(model.ObjectsForGoogleOrganic)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(organicObjectsAndProperties)
+	return config, http.StatusOK
 }

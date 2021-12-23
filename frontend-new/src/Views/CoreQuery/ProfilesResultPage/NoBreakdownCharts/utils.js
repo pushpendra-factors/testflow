@@ -11,12 +11,14 @@ import HorizontalBarChartCell from '../../EventsAnalytics/SingleEventMultipleBre
 import { ProfileUsersMapper } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
-  return {
-    order: 'descend',
-    key: 'value',
-    type: 'numerical',
-    subtype: null,
-  };
+  return [
+    {
+      order: 'descend',
+      key: 'value',
+      type: 'numerical',
+      subtype: null,
+    },
+  ];
 };
 
 export const getTableColumns = (currentSorter, handleSorting) => {

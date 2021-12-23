@@ -5,10 +5,12 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
+	IntHubspot "factors/integration/hubspot"
 	"factors/model/model"
 	"factors/model/store"
 	"factors/task/event_user_cache"
 	TaskSession "factors/task/session"
+	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -20,6 +22,7 @@ import (
 	V1 "factors/handler/v1"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -207,7 +210,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names.
 	assert.Len(t, eventNames.EventNames, 0)
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID)
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -274,7 +277,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 15)
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 17)
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Website Session")
 
 	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "$session", DisplayName: "Test1"}, agent, project.ID)
@@ -301,7 +304,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Most Recent"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 15)
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 17)
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Test1")
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$hubspot_contact_created"], "Test2")
 
@@ -323,4 +326,280 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Equal(t, properties.DisplayNames["$joinTime"], "Test3")
 	assert.Equal(t, properties.DisplayNames["Dummy"], "Test6-1")
 	assert.Equal(t, properties.DisplayNames["$hubspot_contact_createdddate"], "Hubspot Contact Created Date1")
+}
+
+func TestEnableEventLevelProperties(t *testing.T) {
+	// test case with new projectID (-ve test case)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	status := IntHubspot.CreateOrGetHubspotEventName(project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	createdDate := time.Now().Unix()
+	eventNameCreated := U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
+
+	eventNameUpdated := U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
+	dtPropertyName1 := "last_visit"
+	dtPropertyValue1 := createdDate * 1000
+	dtPropertyName2 := "next_visit"
+	dtPropertyValue2 := createdDate * 1000
+
+	numPropertyName1 := "vists"
+	numPropertyValue1 := 15
+	numPropertyName2 := "views"
+	numPropertyValue2 := 10
+
+	// datetime property
+	dtEnKey1 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceHubspot,
+		model.HubspotDocumentTypeNameContact,
+		U.GetPropertyValueAsString(dtPropertyName1),
+	)
+	dtEnKey2 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceHubspot,
+		model.HubspotDocumentTypeNameContact,
+		U.GetPropertyValueAsString(dtPropertyName2),
+	)
+
+	// numerical property
+	numEnKey1 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceHubspot,
+		model.HubspotDocumentTypeNameContact,
+		U.GetPropertyValueAsString(numPropertyName1),
+	)
+	numEnKey2 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceHubspot,
+		model.HubspotDocumentTypeNameContact,
+		U.GetPropertyValueAsString(numPropertyName2),
+	)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey1, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey2, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, numEnKey1, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, numEnKey2, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numEnKey1, U.PropertyTypeNumerical, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numEnKey2, U.PropertyTypeNumerical, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, numEnKey1, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, numEnKey2, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// create new hubspot document
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		"createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" },
+		  "%s":{"value":"%d"},
+		  "%s":{"value":"%d"},
+		  "%s":{"value":"%d"},
+		  "%s":{"value":"%d"}
+		},
+		"identity-profiles": [
+		  {
+			"vid": %d,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	documentID := 2
+	cuid := U.RandomLowerAphaNumString(5)
+	updatedTime := createdDate*1000 + 100
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdDate*1000, createdDate*1000, updatedTime, "lead", dtPropertyName1, dtPropertyValue1, dtPropertyName2, dtPropertyValue2, numPropertyName1, numPropertyValue1, numPropertyName2, numPropertyValue2, documentID, cuid, "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdDate*1000, hubspotDocument.Timestamp)
+
+	// execute sync job
+	allStatus, _ := IntHubspot.Sync(project.ID, 3)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	// execute DoRollUpSortedSet
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
+	eventEncoded := b64.StdEncoding.EncodeToString([]byte(eventNameCreated))
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	assert.Equal(t, err, nil)
+
+	// invoke event name handler
+	var propertyValues map[string][]string
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/event_names/%s/properties", project.ID, eventEncoded)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	assert.Equal(t, err, nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Nil(t, err)
+
+	// compare the returned properties
+	assert.NotContains(t, propertyValues[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2)
+	assert.NotContains(t, propertyValues[U.PropertyTypeNumerical], numEnKey1, numEnKey2)
+
+	// test case for which event level properties are enabled (+ve test case)
+	project, agent, err = SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	C.SetEnableEventLevelEventProperties(project.ID)
+
+	status = IntHubspot.CreateOrGetHubspotEventName(project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey1, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey2, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, numEnKey1, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, numEnKey2, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numEnKey1, U.PropertyTypeNumerical, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numEnKey2, U.PropertyTypeNumerical, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, numEnKey1, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, numEnKey2, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// create new hubspot document
+	jsonContactModel = `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		"createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" },
+		  "%s":{"value":"%d"},
+		  "%s":{"value":"%d"},
+		  "%s":{"value":"%d"},
+		  "%s":{"value":"%d"}
+		},
+		"identity-profiles": [
+		  {
+			"vid": %d,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	documentID = 2
+	cuid = U.RandomLowerAphaNumString(5)
+	updatedTime = createdDate*1000 + 100
+	jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdDate*1000, createdDate*1000, updatedTime, "lead", dtPropertyName1, dtPropertyValue1, dtPropertyName2, dtPropertyValue2, numPropertyName1, numPropertyValue1, numPropertyName2, numPropertyValue2, documentID, cuid, "123-45")
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// execute sync job
+	allStatus, _ = IntHubspot.Sync(project.ID, 3)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	// execute DoRollUpSortedSet
+	configs = make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
+	eventEncoded = b64.StdEncoding.EncodeToString([]byte(eventNameCreated))
+	cookieData, err = helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	assert.Equal(t, err, nil)
+
+	// invoke event name handler
+	rb = C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/event_names/%s/properties", project.ID, eventEncoded)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err = rb.Build()
+	assert.Equal(t, err, nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &propertyValues)
+	assert.Nil(t, err)
+
+	// compare the returned properties
+	assert.Contains(t, propertyValues[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2)
+	assert.Contains(t, propertyValues[U.PropertyTypeNumerical], numEnKey1, numEnKey2)
+
 }

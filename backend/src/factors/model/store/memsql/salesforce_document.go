@@ -149,7 +149,7 @@ func getSalesforceDocumentID(document *model.SalesforceDocument) (string, error)
 
 // GetSyncedSalesforceDocumentByType return salesforce_documents by doc type which are synced
 func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID uint64, ids []string,
-	docType int) ([]model.SalesforceDocument, int) {
+	docType int, includeUnSynced bool) ([]model.SalesforceDocument, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "ids": ids,
 		"type": docType})
@@ -160,9 +160,13 @@ func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID uint64, ids []s
 		return nil, http.StatusBadRequest
 	}
 
+	stmnt := "project_id = ? AND id IN (?) AND type = ?"
+	if !includeUnSynced {
+		stmnt = stmnt + " AND " + "synced=true "
+	}
+
 	db := C.GetServices().Db
-	err := db.Order("timestamp").Where(
-		"project_id = ? AND id IN (?) AND type = ? AND synced = true",
+	err := db.Order("timestamp").Where(stmnt,
 		projectID, ids, docType).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get salesforce documents.")
@@ -250,7 +254,7 @@ func (store *MemSQL) CreateSalesforceDocument(projectID uint64, document *model.
 
 			return status
 		}
-		UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"salesforce")
+		UpdateCountCacheByDocumentType(projectID, &document.CreatedAt, "salesforce")
 		return http.StatusCreated
 	}
 
@@ -262,7 +266,7 @@ func (store *MemSQL) CreateSalesforceDocument(projectID uint64, document *model.
 
 		return status
 	}
-	UpdateCountCacheByDocumentType(projectID,&document.CreatedAt,"salesforce")
+	UpdateCountCacheByDocumentType(projectID, &document.CreatedAt, "salesforce")
 	return http.StatusCreated
 }
 
@@ -522,18 +526,25 @@ func (store *MemSQL) GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(pro
 	return &document[0], http.StatusFound
 }
 
-// UpdateSalesforceDocumentAsSynced inserts syncID and updates the status of the document as synced
-func (store *MemSQL) UpdateSalesforceDocumentAsSynced(projectID uint64, document *model.SalesforceDocument, syncID, userID string) int {
+// UpdateSalesforceDocumentBySyncStatus inserts syncID and updates the status of the document as synced
+func (store *MemSQL) UpdateSalesforceDocumentBySyncStatus(projectID uint64, document *model.SalesforceDocument, syncID, userID, groupUserID string, synced bool) int {
 	logCtx := log.WithField("project_id", projectID).WithField("id", document.ID)
 
 	updates := make(map[string]interface{}, 0)
-	updates["synced"] = true
+	if synced {
+		updates["synced"] = synced
+	}
+
 	if syncID != "" {
 		updates["sync_id"] = syncID
 	}
 
 	if userID != "" {
 		updates["user_id"] = userID
+	}
+
+	if groupUserID != "" {
+		updates["group_user_id"] = groupUserID
 	}
 
 	db := C.GetServices().Db
@@ -600,6 +611,10 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ i
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get salesforce documents by type.")
 		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) < 1 {
+		return nil, http.StatusNotFound
 	}
 
 	return documents, http.StatusFound

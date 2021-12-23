@@ -19,3 +19,12 @@ func IsAdmin(ProjectID uint64, loggedInAgentUUID string) bool {
 	}
 	return true
 }
+
+func IsDemoProjectInAuthorizedProjects(authorizedProjects []uint64, id uint64) bool {
+	for _, project := range authorizedProjects {
+		if project == id {
+			return true
+		}
+	}
+	return false
+}

@@ -2,6 +2,7 @@ export const QUERY_TYPE_FUNNEL = 'funnel';
 export const QUERY_TYPE_EVENT = 'events';
 export const QUERY_TYPE_ATTRIBUTION = 'attribution';
 export const QUERY_TYPE_CAMPAIGN = 'channel_v1';
+export const QUERY_TYPE_KPI = 'kpi';
 export const QUERY_TYPE_TEMPLATE = 'templates';
 export const QUERY_TYPE_WEB = 'web';
 export const NAMED_QUERY = 'named_query';
@@ -54,6 +55,7 @@ export const EVENT_BREADCRUMB = {
   [QUERY_TYPE_FUNNEL]: 'Funnel',
   [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
   [QUERY_TYPE_CAMPAIGN]: 'Campaigns',
+  [QUERY_TYPE_KPI]: 'KPI',
   [QUERY_TYPE_PROFILE]: 'Profiles',
 };
 
@@ -397,6 +399,10 @@ export const DefaultChartTypes = {
     no_breakdown: CHART_TYPE_SPARKLINES,
     breakdown: CHART_TYPE_BARCHART,
   },
+  [QUERY_TYPE_KPI]: {
+    no_breakdown: CHART_TYPE_SPARKLINES,
+    breakdown: CHART_TYPE_BARCHART,
+  },
   [QUERY_TYPE_ATTRIBUTION]: {
     single_touch_point: CHART_TYPE_BARCHART,
     dual_touch_point: CHART_TYPE_BARCHART,
@@ -416,6 +422,7 @@ export const QUERY_TYPE_TEXT = {
   [QUERY_TYPE_FUNNEL]: 'Funnels',
   [QUERY_TYPE_CAMPAIGN]: 'Campaigns',
   [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
+  [QUERY_TYPE_KPI]: 'KPI',
   [QUERY_TYPE_PROFILE]: 'Profiles',
 };
 

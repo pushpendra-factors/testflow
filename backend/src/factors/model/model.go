@@ -40,7 +40,7 @@ type Model interface {
 	UpdateAgentIntSalesforce(uuid, refreshToken string, instanceURL string) int
 	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
-	UpdateAgentInformation(agentUUID, firstName, lastName, phone string) int
+	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
 
@@ -92,8 +92,11 @@ type Model interface {
 	GetKPIConfigsForWebsiteSessions(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForPageViews(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForFormSubmissions(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForHubspot(projectID uint64, reqID string) (map[string]interface{}, int)
-	GetKPIConfigsForSalesforce(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForHubspotContacts(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForHubspotCompanies(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForSalesforceUsers(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForSalesforceAccounts(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForSalesforceOpportunities(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForAdwords(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForGoogleOrganic(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForFacebook(projectID uint64, reqID string) (map[string]interface{}, int)
@@ -127,6 +130,8 @@ type Model interface {
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map)
 	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
+	GetQueryAndClassFromQueryIdString(queryIdString string, projectId uint64) (queryClass string, queryInfo *model.Queries, errMsg string)
+	GetQueryWithQueryIdString(projectID uint64, queryIDString string) (*model.Queries, int)
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string, model.CachingUnitReport)
 	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map)
 
@@ -147,6 +152,7 @@ type Model interface {
 
 	// Profile
 	RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID uint64) (model.ResultGroup, int)
+	ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string)
 
 	// event_name
 	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
@@ -203,7 +209,7 @@ type Model interface {
 	GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int)
 	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int
-	AssociateSessionByEventIds(projectId uint64, userID string, eventIds []string, sessionId string) int
+	AssociateSessionByEventIds(projectId uint64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
@@ -254,7 +260,7 @@ type Model interface {
 	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
-	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID string) int
+	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
 	GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
 	GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{}
 
@@ -331,11 +337,11 @@ type Model interface {
 	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)
 	GetSalesforceObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
 	GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.SalesforceDocument, int)
-	UpdateSalesforceDocumentAsSynced(projectID uint64, document *model.SalesforceDocument, syncID, userID string) int
+	UpdateSalesforceDocumentBySyncStatus(projectID uint64, document *model.SalesforceDocument, syncID, userID, groupUserID string, synced bool) int
 	BuildAndUpsertDocument(projectID uint64, objectName string, value model.SalesforceRecord) error
 	CreateSalesforceDocument(projectID uint64, document *model.SalesforceDocument) int
 	CreateSalesforceDocumentByAction(projectID uint64, document *model.SalesforceDocument, action model.SalesforceAction) int
-	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int) ([]model.SalesforceDocument, int)
+	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int, includeUnSynced bool) ([]model.SalesforceDocument, int)
 	GetSalesforceObjectValuesByPropertyName(ProjectID uint64, objectType string, propertyName string) []interface{}
 	GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int, from, to int64) ([]model.SalesforceDocument, int)
 	GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int, maxTimestamp int64) ([]model.SalesforceDocument, int)
@@ -372,8 +378,8 @@ type Model interface {
 
 	// user
 	CreateUser(user *model.User) (string, int)
-	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64) (string, int)
-	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int)
+	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64, requestSource int) (string, int)
+	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64, requestSource int) (*model.User, int)
 	GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID uint64, id string) (*model.User, int)
 	GetUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int)
@@ -507,4 +513,18 @@ type Model interface {
 	//Group
 	CreateGroup(projectID uint64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
 	GetGroup(projectID uint64, groupName string) (*model.Group, int)
+	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
+		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
+
+	//group_relationship
+	CreateGroupRelationship(projectID uint64, leftGroupName, leftGroupUserID, rightGroupName, rightGroupUserID string) (*model.GroupRelationship, int)
+	GetGroupRelationshipByUserID(projectID uint64, leftGroupUserID string) ([]model.GroupRelationship, int)
+
+	//Content-groups
+	GetAllContentGroups(projectID uint64) ([]model.ContentGroup, int)
+	GetContentGroupById(id string, projectID uint64) (model.ContentGroup, int)
+	CreateContentGroup(projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string)
+	DeleteContentGroup(id string, projectID uint64) (int, string)
+	UpdateContentGroup(id string, projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string)
+	CheckURLContentGroupValue(pageUrl string, projectID uint64) map[string]string
 }

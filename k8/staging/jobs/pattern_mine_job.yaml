@@ -41,6 +41,8 @@ spec:
             - $(POSTGRES_PASSWORD)
             - --project_ids
             - "2,51"
+            - --count_version
+            - "0"
             envFrom:
             - configMapRef:
                 name: config-env

@@ -1,6 +1,6 @@
-import React from "react";
-import NoBreakdownCharts from "./NoBreakdownCharts";
-import BreakdownCharts from "./BreakdownCharts";
+import React from 'react';
+import NoBreakdownCharts from './NoBreakdownCharts';
+import BreakdownCharts from './BreakdownCharts';
 
 function CampaignAnalytics({
   resultState,
@@ -9,10 +9,10 @@ function CampaignAnalytics({
   chartType,
   currMetricsValue,
   section,
-  durationObj
+  durationObj,
 }) {
   const { group_by: breakdown } = campaignState;
-  
+
   let content = null;
 
   if (breakdown.length) {

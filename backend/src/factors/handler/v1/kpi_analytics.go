@@ -8,8 +8,10 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,11 +19,12 @@ import (
 )
 
 type KPIFilterValuesRequest struct {
-	Category     string `json:"category"`
-	ObjectType   string `json:"object_type"`
-	PropertyName string `json:"property_name"`
-	Entity       string `json:"entity"`
-	Metric string `json:"me"`
+	Category        string `json:"category"`
+	DisplayCategory string `json:"display_category"`
+	ObjectType      string `json:"object_type"`
+	PropertyName    string `json:"property_name"`
+	Entity          string `json:"entity"`
+	Metric          string `json:"me"`
 }
 
 func (req *KPIFilterValuesRequest) isValid() bool {
@@ -60,7 +63,11 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		storeSelected.GetKPIConfigsForWebsiteSessions,
 		storeSelected.GetKPIConfigsForPageViews,
 		storeSelected.GetKPIConfigsForFormSubmissions,
-		storeSelected.GetKPIConfigsForHubspot, storeSelected.GetKPIConfigsForSalesforce,
+		storeSelected.GetKPIConfigsForHubspotContacts,
+		// storeSelected.GetKPIConfigsForHubspotCompanies,
+		storeSelected.GetKPIConfigsForSalesforceUsers,
+		// storeSelected.GetKPIConfigsForSalesforceAccounts,
+		// storeSelected.GetKPIConfigsForSalesforceOpportunities,
 		storeSelected.GetKPIConfigsForAdwords, storeSelected.GetKPIConfigsForGoogleOrganic,
 		storeSelected.GetKPIConfigsForFacebook, storeSelected.GetKPIConfigsForLinkedin,
 		storeSelected.GetKPIConfigsForAllChannels,
@@ -107,8 +114,13 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 	logCtx = logCtx.WithField("request", request)
 
 	if request.Category == model.ChannelCategory {
-		channelsFilterValues, errCode := storeSelected.GetChannelFilterValuesV1(projectID, request.Category, request.ObjectType,
-			request.PropertyName, reqID)
+		currentChannel, err := model.GetChannelFromKPIQuery(request.DisplayCategory)
+		if err != nil {
+			return nil, http.StatusBadRequest, PROCESSING_FAILED, "Input display category is wrong", true
+		}
+		request.DisplayCategory = currentChannel
+		channelsFilterValues, errCode := storeSelected.GetChannelFilterValuesV1(projectID, request.DisplayCategory, request.ObjectType,
+			strings.TrimPrefix(request.PropertyName, request.ObjectType+"_"), reqID)
 		if errCode != http.StatusOK && errCode != http.StatusFound {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI FilterValues Data.", true
 		}
@@ -154,10 +166,20 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	}
 	logCtx = logCtx.WithField("project_id", projectID).WithField("reqId", reqID)
 
+	queryIdString := c.Query("query_id")
 	request := model.KPIQueryGroup{}
-	err := c.BindJSON(&request)
-	if err != nil {
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during validation of execute KPIQuery.", true
+	if queryIdString == "" {
+		err := c.BindJSON(&request)
+		if err != nil {
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Error during validation of execute KPIQuery.", true
+		}
+	} else {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectID)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &request)
 	}
 
 	dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err := getDashboardRelatedInformationFromRequest(request,

@@ -70,6 +70,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.Use(mid.SetLoggedInAgent())
 	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
+	authRouteGroup.Use(mid.SkipDemoProjectWriteAccess())
 
 	authRouteGroup.PUT("/:project_id", EditProjectHandler)
 
@@ -148,10 +149,17 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", responseWrapper(UpdateSmartPropertyRulesHandler))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", responseWrapper(DeleteSmartPropertyRulesHandler))
 
+	// content groups
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", responseWrapper(V1.CreateContentGroupHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup", responseWrapper(V1.GetContentGroupHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", responseWrapper(V1.GetContentGroupByIDHandler))
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", responseWrapper(V1.UpdateContentGroupHandler))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/contentgroup/:id", responseWrapper(V1.DeleteContentGroupHandler))
 	// TODO
 	// Scope this with Project Admin
 	authRouteGroup.GET("/:project_id/agents", GetProjectAgentsHandler)
 	authRouteGroup.POST("/:project_id/agents/invite", AgentInvite)
+	authRouteGroup.POST("/:project_id/agents/batchinvite", AgentInviteBatch)
 	authRouteGroup.PUT("/:project_id/agents/remove", RemoveProjectAgent)
 	authRouteGroup.PUT("/:project_id/agents/update", AgentUpdate)
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
@@ -170,6 +178,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/factors/tracked_event", V1.CreateFactorsTrackedEventsHandler)
 	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_event/remove", V1.RemoveFactorsTrackedEventsHandler)
 	authRouteGroup.GET("/:project_id/v1/factors/tracked_event", V1.GetAllFactorsTrackedEventsHandler)
+	authRouteGroup.GET("/:project_id/v1/factors/grouped_tracked_event", V1.GetAllGroupedFactorsTrackedEventsHandler)
 
 	// Tracked User Property
 	authRouteGroup.POST("/:project_id/v1/factors/tracked_user_property", V1.CreateFactorsTrackedUserPropertyHandler)

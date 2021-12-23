@@ -10,6 +10,7 @@ import events from './events';
 import settingsReducer from './settings';
 import templates from './templates';
 import insights from './insights';
+import kpi from './kpi';
 
 const rootReducer = combineReducers({
   global: GlobalReducer,
@@ -22,7 +23,8 @@ const rootReducer = combineReducers({
   factors,
   events,
   templates,
-  insights
+  insights,
+  kpi
 });
 
 export default rootReducer;

@@ -1,6 +1,8 @@
 package model
 
-import C "factors/config"
+import (
+	C "factors/config"
+)
 
 // Salesforce required fields per project
 var (
@@ -104,6 +106,14 @@ var (
 		"Whatsapp_Opt_IN__c":                true,
 		"MobileYM__c":                       true,
 		"Customer_WhatsApp_OptIN__c":        true,
+		"Design_User_Name__c":               true,
+		"Design_User__c":                    true,
+		"Industry":                          true,
+		"Old_Source__c":                     true,
+		"Client_Site_visit__c":              true,
+		"Client_s_Budget__c":                true,
+		"DC_Home_Visit__c":                  true,
+		"Property_Name__c":                  true,
 	}
 
 	designcafeOpportunityAllowedFields = map[string]bool{
@@ -166,6 +176,31 @@ var (
 		"Payment_Mode__c":                true,
 		"Packages__c":                    true,
 		"MobileYM__c":                    true,
+		"Design_User_Name__c":            true,
+		"Design_User__c":                 true,
+		"Opportunity_status__c":          true,
+		"CampaignId":                     true,
+		"LastActivityDate":               true,
+		"DSA_Code__c":                    true,
+		"Interior_work_needed_for__c":    true,
+		"Lead_Id__c":                     true,
+		"Referral_Code__c":               true,
+		"Referred_By__c":                 true,
+		"Requirement_Details__c":         true,
+		"ST_Referee_Name__c":             true,
+		"ST_Referee_Code__c":             true,
+		"Whatsapp_Opt_IN__c":             true,
+		"RUP_Signup_Amount__c":           true,
+		"Proposal_Sent_Date__c":          true,
+		"Alternate_Phone__c":             true,
+		"DC_Home_Visit__c":               true,
+		"Proposed_Value_Dis_Incl_GST__c": true,
+		"Reason__c":                      true,
+		"Campaign_ID__c":                 true,
+		"Ad_Group_ID__c":                 true,
+		"Followup_Date_Time__c":          true,
+		"Referee_Email_ID__c":            true,
+		"Country_Code__c":                true,
 	}
 
 	designcafeAllowedObjects = map[string]map[string]bool{

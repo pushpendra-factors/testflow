@@ -31,15 +31,16 @@ type User struct {
 	PropertiesUpdatedTimestamp int64          `json:"properties_updated_timestamp"`
 	SegmentAnonymousId         string         `gorm:"type:varchar(200);default:null" json:"seg_aid"`
 	AMPUserId                  string         `gorm:"default:null" json:"amp_user_id"`
-	IsGroupUser                *bool          `gorm:"default:null" json:"is_group_user"`
-	Group1ID                   string         `gorm:"default:null;column:group_1_id" json:"group_1_id"`
-	Group1UserID               string         `gorm:"default:null;column:group_1_user_id" json:"group_1_user_id"`
-	Group2ID                   string         `gorm:"default:null;column:group_2_id" json:"group_2_id"`
-	Group2UserID               string         `gorm:"default:null;column:group_2_user_id" json:"group_2_user_id"`
-	Group3ID                   string         `gorm:"default:null;column:group_3_id" json:"group_3_id"`
-	Group3UserID               string         `gorm:"default:null;column:group_3_user_id" json:"group_3_user_id"`
-	Group4ID                   string         `gorm:"default:null;column:group_4_id" json:"group_4_id"`
-	Group4UserID               string         `gorm:"default:null;column:group_4_user_id" json:"group_4_user_id"`
+	// Avoid updating group field tags
+	IsGroupUser  *bool  `gorm:"default:null" json:"is_group_user"`
+	Group1ID     string `gorm:"default:null;column:group_1_id" json:"group_1_id"`
+	Group1UserID string `gorm:"default:null;column:group_1_user_id" json:"group_1_user_id"`
+	Group2ID     string `gorm:"default:null;column:group_2_id" json:"group_2_id"`
+	Group2UserID string `gorm:"default:null;column:group_2_user_id" json:"group_2_user_id"`
+	Group3ID     string `gorm:"default:null;column:group_3_id" json:"group_3_id"`
+	Group3UserID string `gorm:"default:null;column:group_3_user_id" json:"group_3_user_id"`
+	Group4ID     string `gorm:"default:null;column:group_4_id" json:"group_4_id"`
+	Group4UserID string `gorm:"default:null;column:group_4_user_id" json:"group_4_user_id"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
 	CustomerUserId string `gorm:"type:varchar(255);default:null" json:"c_uid"`
@@ -47,6 +48,8 @@ type User struct {
 	JoinTimestamp int64     `json:"join_timestamp"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	// source of the user record (1 = WEB, 2 = HUBSPOT, 3 = SALESFORCE)
+	Source *int `json:"source"`
 }
 
 type LatestUserPropertiesFromSession struct {
@@ -100,6 +103,17 @@ type IdentifyMeta struct {
 
 // UserPropertiesMeta is a map for customer_user_id to IdentifyMeta
 type UserPropertiesMeta map[string]IdentifyMeta
+
+const (
+	UserSourceWeb        = 1
+	UserSourceHubspot    = 2
+	UserSourceSalesforce = 3
+)
+
+func GetRequestSourcePointer(requestSource int) *int {
+	var requestSourcePointer = requestSource
+	return &requestSourcePointer
+}
 
 func GetIdentifiedUserProperties(customerUserId string) (map[string]interface{}, error) {
 	if customerUserId == "" {
@@ -625,10 +639,12 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 		}
 
 		overwriteProperties := false
+		var overwritePropertiesError bool
 		if useSourcePropertyOverwrite {
 			overwriteProperties, err = CheckForCRMUserPropertiesOverwrite(source, objectType, *userProperties, mergedUserProperties)
 			if err != nil {
 				logCtx.WithField("error", err.Error()).Error("Failed to get overwriteProperties flag value.")
+				overwritePropertiesError = true
 			}
 		}
 
@@ -641,7 +657,7 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 
 			_, isInitialProperty := initialPropertiesVisitedMap[property]
 			if !isInitialProperty {
-				if useSourcePropertyOverwrite {
+				if useSourcePropertyOverwrite && !overwritePropertiesError {
 					if (source == SmartCRMEventSourceHubspot && strings.HasPrefix(property, U.HUBSPOT_PROPERTY_PREFIX)) ||
 						(source == SmartCRMEventSourceSalesforce && strings.HasPrefix(property, U.SALESFORCE_PROPERTY_PREFIX)) {
 						if overwriteProperties {
@@ -677,6 +693,25 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 	return &mergedUserProperties, http.StatusOK
 }
 
+func getCRMTimestampValue(value interface{}) (int64, error) {
+	fValue, err := util.GetPropertyValueAsFloat64(value)
+	if err != nil {
+		timestamp, err := GetSalesforceDocumentTimestamp(value) // make sure timezone info is loaded to the container
+		if err != nil {
+			return 0, err
+		}
+
+		return timestamp, nil
+	}
+
+	timestamp := int64(fValue)
+	if timestamp >= 10000000000 { // hubspot old millisecond timestamp
+		return timestamp / 1000, nil
+	}
+
+	return timestamp, nil
+}
+
 func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomingProperties map[string]interface{},
 	currentProperties map[string]interface{}) (bool, error) {
 	logCtx := log.WithField("source", source).
@@ -693,16 +728,16 @@ func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomi
 
 	propertySuffix := GetPropertySuffix(source, objectType)
 	lastmodifieddateProperty := GetCRMEnrichPropertyKeyByType(source, objectType, propertySuffix)
-	incomingPropertyValue, err := util.GetPropertyValueAsFloat64(incomingProperties[lastmodifieddateProperty])
+	incomingPropertyValue, err := getCRMTimestampValue(incomingProperties[lastmodifieddateProperty])
 	if err != nil {
-		logCtx.WithField("mergedUserProperties", incomingProperties).WithField("error", err.Error()).
-			Error("Failed to convert lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
+		logCtx.WithField("mergedUserProperties", incomingProperties).WithError(err).
+			Error("Failed to convert incoming lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
 		return overwriteProperties, err
 	}
-	currentPropertyValue, err := util.GetPropertyValueAsFloat64(currentProperties[lastmodifieddateProperty])
+	currentPropertyValue, err := getCRMTimestampValue(currentProperties[lastmodifieddateProperty])
 	if err != nil {
-		logCtx.WithField("userProperties", currentProperties).WithField("error", err.Error()).
-			Error("Failed to convert lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
+		logCtx.WithField("userProperties", currentProperties).WithError(err).
+			Error("Failed to convert current lastmodifieddate property value to float64 inside CheckForCRMUserPropertiesOverwrite.")
 		return overwriteProperties, err
 	}
 	if currentPropertyValue < incomingPropertyValue {
@@ -779,4 +814,40 @@ func SetUserGroupFieldByColumnName(user *User, columnName, value string) (bool, 
 	}
 
 	return processed, updated, nil
+}
+
+func GetUserGroupID(user *User) (string, error) {
+	if !(*user.IsGroupUser) {
+		return "", errors.New("not a group user")
+	}
+
+	refUserVal := reflect.ValueOf(user)
+	refUserTyp := refUserVal.Elem().Type()
+
+	value := ""
+	for i := 0; i < refUserVal.Elem().NumField(); i++ {
+		refField := refUserTyp.Field(i)
+		if tagName := refField.Tag.Get("json"); strings.HasPrefix(tagName, "group_") {
+			field := refUserVal.Elem().Field(i)
+			if field.Kind() != reflect.String {
+				continue
+			}
+
+			fieldValue := field.String()
+			if fieldValue != "" { // group user won't have multiple id associated and group user id are empty
+				if value != "" {
+					return "", errors.New("more than 1 field value found")
+				}
+				value = fieldValue
+			}
+
+		}
+
+	}
+
+	if value == "" {
+		return "", errors.New("failed to get group id for user")
+	}
+
+	return value, nil
 }

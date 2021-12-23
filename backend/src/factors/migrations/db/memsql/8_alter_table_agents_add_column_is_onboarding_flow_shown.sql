@@ -1,0 +1,1 @@
+ALTER TABLE agents ADD COLUMN is_onboarding_flow_seen boolean;

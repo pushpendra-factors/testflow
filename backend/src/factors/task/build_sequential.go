@@ -4,9 +4,8 @@ import (
 	"factors/filestore"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
-	"math/rand"
-
 	"factors/util"
+	"math/rand"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -42,7 +41,7 @@ func BuildSequential(projectId uint64, configs map[string]interface{}) (map[stri
 	startTimestamp := configs["startTimestamp"].(int64)
 	endTimestamp := configs["endTimestamp"].(int64)
 	beamConfig := configs["beamConfig"].(*RunBeamConfig)
-
+	countsVersion := configs["countsVersion"].(int)
 	status := make(map[string]interface{})
 	defer util.NotifyOnPanic(taskID, env)
 
@@ -65,7 +64,7 @@ func BuildSequential(projectId uint64, configs map[string]interface{}) (map[stri
 	startAt := time.Now().UnixNano()
 	numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
 		bucketName, noOfPatternWorkers, projectId, modelId, modelType,
-		startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit, beamConfig)
+		startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit, beamConfig, countsVersion)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to mine patterns.")
 		status["error"] = "Failed to mine patterns."

@@ -47,6 +47,7 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 		Timestamp:       timestamp - 1, // session is created OneSec before the event.
 		UserId:          userId,
 		EventProperties: properties,
+		RequestSource:   model.UserSourceWeb,
 	}
 	_, response := SDK.Track(projectId, &trackPayload, false, SDK.SourceJSSDK, "")
 	TaskSession.AddSession([]uint64{projectId}, timestamp-60, 0, 0, 0, 0, 1)
@@ -133,15 +134,15 @@ func TestAttributionModel(t *testing.T) {
 
 	// Creating 3 users
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -275,15 +276,15 @@ func TestAttributionEngagementModel(t *testing.T) {
 
 	// Creating 3 users
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -394,15 +395,15 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 	// Creating 3 users
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -425,7 +426,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, "adwords", result.Rows[0][0])
+		assert.Equal(t, "adwords", result.Rows[1][0])
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
@@ -445,7 +446,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, "google", result.Rows[0][0])
+		assert.Equal(t, "google", result.Rows[1][0])
 
 	})
 
@@ -462,7 +463,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, "Paid Search", result.Rows[0][0])
+		assert.Equal(t, "Paid Search", result.Rows[1][0])
 	})
 
 	t.Run("AttributionWithMarketingPropertyAdgroup", func(t *testing.T) {
@@ -499,10 +500,10 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		// Added keys.
-		assert.Equal(t, "adwords", result.Rows[0][0])
-		assert.Equal(t, "Campaign_Adwords_100", result.Rows[0][1])
-		assert.Equal(t, "Adgroup_Adwords_200", result.Rows[0][2])
-		assert.Equal(t, "Broad", result.Rows[0][3])
+		assert.Equal(t, "adwords", result.Rows[1][0])
+		assert.Equal(t, "Campaign_Adwords_100", result.Rows[1][1])
+		assert.Equal(t, "Adgroup_Adwords_200", result.Rows[1][2])
+		assert.Equal(t, "Broad", result.Rows[1][3])
 		// Conversion.
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
@@ -830,7 +831,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	user1Properties[U.UP_LATEST_CAMPAIGN] = 123456
 	user1PropertiesBytes, _ := json.Marshal(user1Properties)
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{RawMessage: user1PropertiesBytes},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
@@ -881,11 +882,11 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID2)
 
@@ -979,11 +980,11 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID2)
 
@@ -1702,7 +1703,7 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(100), float64(1), float64(1000), float64(100),
 		// Sessions, (users), (AvgSessionTime), (pageViews),
-		int64(5), int64(5), float64(5), int64(5),
+		int64(5), int64(5), float64(2.6), int64(5),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
 		float64(5), float64(1), float64(100), float64(5), float64(1), float64(100)}
 
@@ -1725,6 +1726,62 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 					if got[rowNo][colNo] != tt.want[rowNo][colNo] {
 						t.Errorf("MergeDataRowsHavingSameKey()col No: %v=,  = %v, want %v", colNo, got[rowNo][colNo], tt.want[rowNo][colNo])
 					}
+				}
+			}
+		})
+	}
+}
+
+func TestAddGrandTotalRow(t *testing.T) {
+	headers := []string{"Campaign", "Impressions", "Clicks", "Spend",
+		"CTR(%)", "Average CPC", "CPM", "ClickConversionRate(%)",
+		"Sessions", "Users", "Average Session Time", "PageViews",
+		"$session - Users", "Cost Per Conversion", "UserConversionRate(%)", "Compare - Users", "Compare Cost Per Conversion", "Compare UserConversionRate(%)"}
+	rows := make([][]interface{}, 0)
+	// Name, impression, clicks, spend
+	row1 := []interface{}{"Campaign1", int64(2), int64(2), float64(2),
+		// (CTR, AvgCPC, CPM, ClickConversionRate)
+		float64(2), float64(2), float64(2), float64(2),
+		// Sessions, (users), (AvgSessionTime), (pageViews),
+		int64(2), int64(2), float64(2), int64(2),
+		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
+		float64(2), float64(2), float64(2), float64(2), float64(2), float64(2)}
+	row2 := []interface{}{"Campaign2", int64(3), int64(3), float64(3),
+		// (4_CTR, 5_AvgCPC, 6_CPM, 7_ClickConversionRate)
+		float64(3), float64(3), float64(3), float64(3),
+		// 8_Sessions, 9_(users), 10_(AvgSessionTime), 11_(pageViews)
+		int64(3), int64(3), float64(3), int64(3),
+		// 12_ConversionEventCount, 13_CostPerConversion, 14_ConvUserRate, 15_ConversionEventCompareCount, 16_CostPerConversionCompareCount, 17_compareConvUserRate
+		float64(3), float64(3), float64(3), float64(3), float64(3), float64(3)}
+	rows = append(rows, row1, row2)
+
+	row3 := []interface{}{"Grand Total", int64(5), int64(5), float64(5),
+		// (CTR, AvgCPC, CPM, ClickConversionRate)
+		float64(100), float64(1), float64(1000), float64(100),
+		// Sessions, (users), (AvgSessionTime), (pageViews),
+		int64(5), int64(5), float64(2.6), int64(5),
+		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
+		float64(5), float64(1), float64(100), float64(5), float64(1), float64(100)}
+
+	resultWant := append([][]interface{}{row3}, rows...)
+	type args struct {
+		headers []string
+		rows    [][]interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want []interface{}
+	}{
+		{"SimpleX", args{headers, rows}, resultWant[0]},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0)
+			got := resultGot[0]
+			for colNo, _ := range got {
+				if got[colNo] != tt.want[colNo] {
+					t.Errorf("TestAddGrandTotalRow()col No: %v=,  = %v, want %v", colNo, got[colNo], tt.want[colNo])
 				}
 			}
 		})

@@ -1,0 +1,86 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: shared-persistent-pool
+  name: beam-dashboard-caching-job-heavy
+spec:
+  schedule: "30 2-14/3,19 * * *" # In UTC. Every 6 hours.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: shared-persistent-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: shared-persistent-pool
+          containers:
+          - name: beam-dashboard-caching-job-heavy
+            image: us.gcr.io/factors-production/beam-dashboard-caching-job:v0.50-d5b8ae8
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --redis_host
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port
+            - $(PERSISTENT_REDIS_PORT)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            - --runner
+            - $(BEAM_RUNNER)
+            - --project
+            - $(BEAM_PROJECT)
+            - --region
+            - $(BEAM_REGION)
+            - --zone
+            - $(BEAM_ZONE)
+            - --temp_location
+            - $(BEAM_TEMP_LOCATION)
+            - --staging_location
+            - $(BEAM_STAGIN_LOCATION)
+            - --worker_harness_container_image
+            - $(BEAM_WORKER_HARNESS_IMAGE)
+            - --subnetwork
+            - $(BEAM_SUBNETWORK)
+            - --worker_machine_type
+            - n2-highmem-4
+            - --max_num_workers
+            - "4"
+            - --project_id
+            - "398"
+            - --healthcheck_ping_id
+            - 08c28d53-4460-4254-865a-39a0126652c0
+            - --app_name
+            - beam_dashboard_caching_heavy
+            - --timezone_enabled_projects
+            - "446"
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-persistent-redis
+            - configMapRef:
+                name: config-postgres
+            - configMapRef:
+                name: config-beamondataflow
+            - secretRef:
+                name: secret-postgres
+            - secretRef:
+                name: secret-sentry
+          restartPolicy: OnFailure

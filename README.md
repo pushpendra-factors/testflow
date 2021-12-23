@@ -1,4 +1,13 @@
-# Development Setup (Mac)
+
+# Development Setup Using Docker
+
+https://github.com/Slashbit-Technologies/factors/wiki/Development-Setup
+
+
+## -------  Below setup on localhost is outdated. Use above Docker setup -------------
+
+
+## Development Setup (Mac)
 
 ## Golang (Version 1.14.x)
 https://golang.org/dl/ - go for default installation using installer. Not the custom installation using source.

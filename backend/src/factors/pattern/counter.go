@@ -3,14 +3,18 @@ package pattern
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
-	"math"
-	"reflect"
-	"sort"
-	"strings"
-
+	fp "factors/fptree"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
+	"math"
+	"os"
+	"path"
+	"reflect"
+	"runtime"
+	"sort"
+	"strings"
+	"time"
 
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -54,6 +58,7 @@ type EvSameTs struct {
 }
 
 const CURRENT_MODEL_VERSION = 2.0
+const topK_patterns = 50
 
 func NewUserAndEventsInfo() *UserAndEventsInfo {
 	eMap := make(map[string]*PropertiesInfo)
@@ -467,9 +472,24 @@ func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEven
 	return &allProps, nil
 }
 
-func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner, pattern *Pattern) error {
+func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner, pattern *Pattern, countsVersion int) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 	numEventsProcessed := 0
+	var countUsers uint
+	if pattern.PatternVersion == 2 {
+		// set all histogram to null
+		pattern.userTree = fp.InitTree()
+		pattern.PerOccurrenceEventNumericProperties = nil
+		pattern.PerOccurrenceEventCategoricalProperties = nil
+		pattern.GenericPropertiesHistogram = nil
+		pattern.PerOccurrenceUserNumericProperties = nil
+		pattern.PerUserUserNumericProperties = nil
+		pattern.PerUserEventNumericProperties = nil
+		pattern.PerUserUserCategoricalProperties = nil
+		pattern.PerUserEventCategoricalProperties = nil
+		pattern.PerOccurrenceUserCategoricalProperties = nil
+
+	}
 	for scanner.Scan() {
 		line := scanner.Text()
 		var eventDetails CounterEventFormat
@@ -487,28 +507,63 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 
 		_, isSeenUser := seenUsers[userId]
 		if !isSeenUser {
-			nMap := make(map[string]float64)
-			cMap := make(map[string]string)
-			// Histogram of all user properties as seen in their first event is tracked.
-			AddNumericAndCategoricalProperties(projectID, eventDetails.EventName, 0, userProperties, nMap, cMap, true)
-			if err := pattern.PerUserUserNumericProperties.AddMap(nMap); err != nil {
-				return err
+			countUsers += 1
+			if countsVersion == 1 {
+				nMap := make(map[string]float64)
+				cMap := make(map[string]string)
+
+				// Histogram of all user properties as seen in their first event is tracked.
+				AddNumericAndCategoricalProperties(projectID, eventDetails.EventName, 0, userProperties, nMap, cMap, true)
+				if err := pattern.PerUserUserNumericProperties.AddMap(nMap); err != nil {
+					return err
+				}
+				if err := pattern.PerUserUserCategoricalProperties.AddMap(cMap); err != nil {
+					return err
+				}
 			}
-			if err := pattern.PerUserUserCategoricalProperties.AddMap(cMap); err != nil {
-				return err
+			if countsVersion == 2 {
+				userCatProperties := FilterCategoricalProperties(projectID, eventDetails.EventName, 0, userProperties, true)
+				if len(userCatProperties) > 0 {
+					err := pattern.userTree.OrderAndInsertTrans(userCatProperties)
+					if err != nil {
+						log.Infof("err inserting user properties into tree:%v", err)
+					}
+				}
 			}
+
 		}
 		seenUsers[userId] = true
 	}
-	count := uint(pattern.PerUserUserCategoricalProperties.Count())
-	pattern.TotalUserCount = count
-	pattern.PerUserCount = count
-	pattern.PerOccurrenceCount = count
+
+	if countsVersion == 2 {
+		cpUser, err := fp.MineTree(pattern.userTree, topK_patterns)
+		if err != nil {
+			return err
+		}
+		pattern.UserPropertiesPatterns = cpUser
+		pattern.userTree = fp.InitTree()
+
+	}
+	if countsVersion == 1 {
+		count := uint(pattern.PerUserUserCategoricalProperties.Count())
+		pattern.TotalUserCount = count
+		pattern.PerUserCount = count
+		pattern.PerOccurrenceCount = count
+
+	} else {
+		count := countUsers
+		pattern.TotalUserCount = count
+		pattern.PerUserCount = count
+		pattern.PerOccurrenceCount = count
+
+	}
 	return nil
 }
 
-func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern, shouldCountOccurence bool) error {
+func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern,
+	shouldCountOccurence bool, countVersion int) error {
 	var seenUsers map[string]bool = make(map[string]bool)
+	var mem runtime.MemStats
 
 	var prEventTimeStamp int64
 	var prvUserId string
@@ -516,6 +571,7 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 	eventToPatternsMap := make(map[string][]*Pattern)
 	// Initialize.
 	for _, p := range patterns {
+		p.PatternVersion = countVersion
 		for _, event := range p.EventNames {
 			if _, ok := eventToPatternsMap[event]; !ok {
 				eventToPatternsMap[event] = []*Pattern{}
@@ -526,8 +582,12 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 	}
 	prEventTimeStamp = 0
 	eventDetailsList := make([]CounterEventFormat, 0)
+	lineNum := 0
+	start_time := time.Now()
+
 	for scanner.Scan() {
 		line := scanner.Text()
+		lineNum += 1
 		var eventDetails CounterEventFormat
 		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
@@ -537,9 +597,11 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 		if (prEventTimeStamp != eventDetails.EventTimestamp && prEventTimeStamp != 0) || (strings.Compare(prvUserId, eventDetails.UserId) != 0 && prvUserId != "") {
 			// check if eventTimeStamp are same and put all same event time stamp in same container to process
 			// break if userId is same, else break and process container
+
 			err := CountPatternsWithTS(projectID, eventDetailsList, &numEventsProcessed, seenUsers, patterns,
-				eventToPatternsMap, shouldCountOccurence)
+				eventToPatternsMap, shouldCountOccurence, countVersion)
 			if err != nil {
+				log.Errorf("Error processing line:%d, %v", lineNum, err)
 				return err
 			}
 			eventDetailsList = make([]CounterEventFormat, 0)
@@ -553,13 +615,120 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 
 		}
 
+		if lineNum%1000 == 0 {
+			log.Infof("Read lines :%d", lineNum)
+		}
+
 	}
 	if len(eventDetailsList) > 0 {
 		// process the last event
 		err := CountPatternsWithTS(projectID, eventDetailsList, &numEventsProcessed, seenUsers, patterns,
-			eventToPatternsMap, shouldCountOccurence)
+			eventToPatternsMap, shouldCountOccurence, countVersion)
 		if err != nil {
+			log.Errorf("Error processing line:%d", lineNum)
 			return err
+		}
+	}
+	end_time := time.Now()
+	time_elapsed := end_time.UnixNano() - start_time.UnixNano()
+	log.Infof("Avg time taken to insert each line:%v", float64(time_elapsed)/float64(lineNum))
+	log.Infof("num of patterns to mine:%d", len(patterns))
+	basePathUser := path.Join("/", "tmp", "fptree", "user")
+	basePathEvent := path.Join("/", "tmp", "fptree", "event")
+	err := os.MkdirAll(basePathUser, os.ModePerm)
+	if err != nil {
+		log.Fatal("unable to create temp user directory")
+	}
+	err = os.MkdirAll(basePathEvent, os.ModePerm)
+	if err != nil {
+		log.Fatal("unable to create temp event directory")
+	}
+
+	if countVersion == 2 {
+
+		for _, pt := range patterns {
+			ptName := U.RandStringBytes(5) + ".json"
+			treePathUser := path.Join(basePathUser, ptName)
+			pt.userTreePath = treePathUser
+			log.Infof("Writing pattern user tree to path:%s , %v", treePathUser, pt.EventNames)
+
+			tr := pt.userTree
+			err := fp.SerializeTreeToFile(tr, treePathUser)
+			if err != nil {
+				log.Errorf("unable to Write pattern user tree to path:%s", treePathUser)
+				return err
+			}
+
+			treePathEvent := path.Join(basePathEvent, ptName)
+			pt.eventTreePath = treePathEvent
+			tr = pt.eventTree
+			err = fp.SerializeTreeToFile(tr, treePathEvent)
+			if err != nil {
+				log.Errorf("unable to Write pattern event tree to path:%s", treePathEvent)
+				return err
+			}
+			pt.eventTree = fp.Tree{}
+			pt.userTree = fp.Tree{}
+
+			log.Infof("Done writing all trees to file")
+		}
+
+		// calling garbage collector to free memory
+		U.PrintStats(mem)
+		time.Sleep(3 * time.Second)
+		runtime.GC()
+		U.PrintStats(mem)
+
+		num_patterns := 0
+		for _, p := range patterns {
+			num_patterns += 1
+			var err error
+			log.Infof("reading user  tree from: %d,%s ,%v", num_patterns, p.userTreePath, p.EventNames)
+			p.userTree, err = fp.CreateTreeFromFile(p.userTreePath)
+			if err != nil {
+				log.Errorf("Unable to reconstruct user tree :%v", p.EventNames)
+			}
+			log.Infof("mining user tree from:%s ,%v", p.userTreePath, p.EventNames)
+
+			cpUser, err := fp.MineTree(p.userTree, topK_patterns)
+			if err != nil {
+				return err
+			}
+			p.UserPropertiesPatterns = cpUser
+
+			log.Infof("reading event tree from:%d, %s ,%v", num_patterns, p.eventTreePath, p.EventNames)
+			p.eventTree, err = fp.CreateTreeFromFile(p.eventTreePath)
+			if err != nil {
+				log.Errorf("Unable to reconstruct user tree :%v", p.EventNames)
+			}
+			log.Infof("mining event tree from:%s ,%v", p.eventTreePath, p.EventNames)
+			cpEvent, err := fp.MineTree(p.eventTree, topK_patterns)
+			if err != nil {
+				return err
+			}
+			p.EventPropertiesPatterns = cpEvent
+			if num_patterns%1000 == 0 {
+				log.Infof("num of patterns mined:%d", num_patterns)
+			}
+
+			p.eventTree = fp.Tree{}
+			p.userTree = fp.Tree{}
+
+			e := os.Remove(p.userTreePath)
+			if e != nil {
+				log.Fatal(e)
+			}
+			e = os.Remove(p.eventTreePath)
+			if e != nil {
+				log.Fatal(e)
+			}
+
+			if num_patterns%100 == 0 {
+				U.PrintStats(mem)
+				time.Sleep(1 * time.Second)
+				runtime.GC()
+				U.PrintStats(mem)
+			}
 		}
 	}
 
@@ -574,13 +743,32 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 		}
 	}
 
+	if countVersion == 2 {
+		if countVersion == 2 {
+			for _, p := range patterns {
+				// set all histogram properties to null
+				p.PerOccurrenceEventNumericProperties = nil
+				p.PerOccurrenceEventCategoricalProperties = nil
+				p.GenericPropertiesHistogram = nil
+				p.PerOccurrenceUserNumericProperties = nil
+				p.PerUserUserNumericProperties = nil
+				p.PerUserEventNumericProperties = nil
+				p.PerUserUserCategoricalProperties = nil
+				p.PerUserEventCategoricalProperties = nil
+				p.PerOccurrenceUserCategoricalProperties = nil
+			}
+
+		}
+	}
+
 	log.Infof("Total number of events Processed: %d", numEventsProcessed)
 
 	return nil
 }
 
 func CountPatternsWithTS(projectID uint64, eventsList []CounterEventFormat, numEventsProcessed *int64,
-	seenUsers map[string]bool, patterns []*Pattern, eventToPatternsMap map[string][]*Pattern, shouldCountOccurence bool) error {
+	seenUsers map[string]bool, patterns []*Pattern, eventToPatternsMap map[string][]*Pattern,
+	shouldCountOccurence bool, countVersion int) error {
 
 	// process all events with same timeStamp and userId
 	var eventPatterns []*Pattern
@@ -618,17 +806,18 @@ func CountPatternsWithTS(projectID uint64, eventsList []CounterEventFormat, numE
 	_, isSeenUser := seenUsers[userId]
 	if !isSeenUser {
 		for _, p := range patterns {
-
 			if err := p.ResetForNewUser(userId, userJoinTimestamp); err != nil {
 				log.Fatal(err)
 			}
+
 		}
 	}
 
 	for _, p := range uniqueEventPatterns {
-		if err := p.CountForEvent(projectID, userId, userJoinTimestamp, shouldCountOccurence, ets); err != nil {
+		if err := p.CountForEvent(projectID, userId, userJoinTimestamp, shouldCountOccurence, ets, countVersion); err != nil {
 			log.Error("Error when counting event")
 		}
+
 	}
 	seenUsers[userId] = true
 

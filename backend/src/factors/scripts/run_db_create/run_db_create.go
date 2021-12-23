@@ -25,6 +25,8 @@ func main() {
 	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
 	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
+	isDevSetup := flag.Bool("dev_setup", false, "")
+
 	flag.Parse()
 
 	defer util.NotifyOnPanic("Task#DbCreate", *env)
@@ -138,6 +140,11 @@ func main() {
 		log.WithFields(log.Fields{"err": err}).Error("event_names table creation failed.")
 	} else {
 		log.Info("Created event_names table")
+		if err := db.Exec("ALTER TABLE event_names ALTER COLUMN id TYPE bigint USING id::bigint;").Error; err != nil {
+			log.WithError(err).Error("Failed to alter type of id on event_names.")
+		} else {
+			log.Info("Altered type of id of event_names table.")
+		}
 	}
 	// Add foreign key constraints.
 	if err := db.Model(&model.EventName{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
@@ -739,15 +746,21 @@ func main() {
 		log.Info("Altered type of event_name_id of property_details table.")
 	}
 
-	if err := db.Exec("ALTER TABLE event_names ALTER COLUMN id TYPE bigint USING id::bigint;").Error; err != nil {
-		log.WithError(err).Error("Failed to alter type of id on event_names.")
+	// Adding auto increment to event_names
+	if err := db.Exec("CREATE SEQUENCE public.event_names_id_seq INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;").Error; err != nil {
+		log.WithError(err).Error("Failed to create event_names sequence")
 	} else {
-		log.Info("Altered type of id of event_names table.")
-	}
-	if err := db.Exec("ALTER TABLE property_details ADD CONSTRAINT property_details_project_id_event_name_id_event_names_project_id_id_foreign_key FOREIGN KEY (project_id, event_name_id) REFERENCES event_names(project_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT;;").Error; err != nil {
-		log.WithError(err).Error("Failed to add constraint back to event_names.")
-	} else {
-		log.Info("Added foreign key constraint to event_names")
+		log.Info("Create event_names sequence success")
+		if err := db.Exec("alter table event_names drop column id cascade").Error; err != nil {
+			log.WithError(err).Error("dropping id column failed")
+		} else {
+			log.Info("dropping id column")
+		}
+		if err := db.Exec("alter table event_names add id bigint NOT NULL DEFAULT nextval('event_names_id_seq'::regclass)").Error; err != nil {
+			log.WithError(err).Error("event_names id - attach sequence failed")
+		} else {
+			log.Info("event_names id - attach sequence")
+		}
 	}
 
 	// Create Groups Table
@@ -756,4 +769,72 @@ func main() {
 	} else {
 		log.Info("Created Groups table.")
 	}
+
+	if *isDevSetup {
+		InitialiseDevSetup()
+	}
 }
+func InitialiseDevSetup() {
+	db := C.GetServices().Db
+	defer db.Close()
+	// inserting data to agents table for (dev setup purpose only)
+	if err := db.Exec("insert into agents ( uuid, first_name, last_name, email, is_email_verified, phone, salt, password, password_created_at, invited_by, created_at, updated_at, is_deleted, last_logged_in_at, login_count, int_adwords_refresh_token, int_salesforce_instance_url, int_salesforce_refresh_token, company_url, subscribe_newsletter, int_google_organic_refresh_token ) values ( '058aa637-5846-4309-b961-267970e6a939', 'Test', 'Test', 'test@factors.ai', TRUE, '1234567890', 'mwTMiEQNeIoIOO8qVhPTHpg6ZA3JrrRO', '$2a$14$5ALo.F9YdJYPGB36D6iFEufTs04fW4rqY5UGXrcB1QTTMEYNOKC46', '2021-10-21 06:21:16.694155+00 ', NULL, ' 2021-10-21 06:20:45.149699+00 ', ' 2021-10-21 06:21:25.074638+00 ', FALSE, ' 2021-10-21 06:21:25.072506+00 ', 1, '', '', '', '', FALSE, '' );").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("creating agent account failed")
+	} else {
+		log.Info("created account email: test@factors.ai pwd: Factors123")
+	}
+
+	// insert agent data to billing accounts (dev setup)
+	if err := db.Exec("insert into billing_accounts (id,plan_id,agent_uuid,organization_name,billing_address,pincode,phone_no,created_at,updated_at) values ('c9cb0bde-1f87-477b-a224-1704111c0f97',1,'058aa637-5846-4309-b961-267970e6a939','','','','','2021-10-21 06:20:45.211408+00','2021-10-21 06:20:45.211408+00');").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create billing account record")
+	} else {
+		log.Info("created billing account ")
+	}
+
+	// create project
+	if err := db.Exec("INSERT INTO projects (name,token,private_token,created_at,updated_at,project_uri,time_format,date_format,time_zone, jobs_metadata) VALUES ('My Project','78ycpg9dsgok7o4dbk58jtl2rgt0tg0o','kstyafhqje219c59utjwzivhwrfy3lgn','2021-10-29 08:23:29','2021-10-29 08:23:29','','','','Asia/Kolkata','{\"next_session_start_timestamp\":1548844122}');").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create project")
+	} else {
+		log.Info("created project test with project id = 1 ")
+	}
+
+	// map project to agent
+	if err := db.Exec("insert into project_agent_mappings (agent_uuid,project_id,role) values('058aa637-5846-4309-b961-267970e6a939',1,2);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to map agent to project")
+	} else {
+		log.Info("mapped agent to project_id =1  ")
+	}
+
+	// adding project settings
+	if err := db.Exec("insert into project_settings (project_id, auto_track, exclude_bot,int_adwords_enabled_agent_uuid,int_adwords_customer_account_id,int_facebook_agent_uuid,int_facebook_ad_account,int_linkedin_ad_account) values(1, true, true,'058aa637-5846-4309-b961-267970e6a939','2368493227','058aa637-5846-4309-b961-267970e6a939','act_2737160626567083','508557389');").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to add project settings ")
+	} else {
+		log.Info("added project settings for project_id =1  ")
+	}
+	// mapping project to billing account
+	if err := db.Exec("insert into project_billing_account_mappings (project_id,billing_account_id) values (1,'c9cb0bde-1f87-477b-a224-1704111c0f97');").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to map project to billing accounts ")
+	} else {
+		log.Info("mapped project to billing accounts  ")
+	}
+
+	if err := db.Exec("INSERT INTO dashboards (project_id,agent_uuid,name,description,type,class,units_position,created_at,updated_at) VALUES ('1','058aa637-5846-4309-b961-267970e6a939','My Dashboard','No Description','pr','user_created',NULL,'2021-10-29 08:23:29','2021-10-29 08:23:29');").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to map project to billing accounts ")
+	} else {
+		log.Info("dashboard inserted")
+	}
+
+	if err := db.Exec("insert into task_details (id, task_id, task_name, frequency, frequency_interval, skip_start_index, skip_end_index, offset_start_minutes, recurrence, is_project_enabled, created_at, updated_at) values ('c54ad9f9-dc7b-4a59-afd4-0112fcb4a73e', 1, 'RollUpSortedSet', 2, 1, 0, -1, 0, true, false, now(), now() );").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to insert into task_details ")
+	} else {
+		log.Info("inserted task-details")
+	}
+
+	if err := db.Exec("insert into project_model_metadata (id,project_id,model_id,model_type,start_time,end_time,chunks,created_at,updated_at) values ('c54ad9f9-dc7b-4a59-afd4-0112fcb4a73e', 1, 1596524994039, 'w', 1612656000, 1613260799, '1', now(), now());").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to insert into project_model_metadata ")
+	} else {
+		log.Info("inserted project_model_metadata")
+	}
+
+}
+

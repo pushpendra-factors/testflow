@@ -59,6 +59,7 @@ func main() {
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableHubspotGroupsByProjectID := flag.String("enable_hubspot_groups_by_project_id", "", "Enable hubspot groups for projects.")
 	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -107,6 +108,7 @@ func main() {
 		DisableRedisWrites:                     disableRedisWrites,
 		AllowedHubspotGroupsByProjectIDs:       *enableHubspotGroupsByProjectID,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
+		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 	}
 
 	C.InitConf(config)

@@ -25,23 +25,51 @@ function NoBreakdownTable({
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
   const [dateBasedTableData, setDateBasedTableData] = useState([]);
   const [searchText, setSearchText] = useState('');
-  const [sorter, setSorter] = useState({
-    key: chartsData[0].name,
-    type: 'numerical',
-    subtype: null,
-    order: 'descend',
-  });
-  const [dateSorter, setDateSorter] = useState({});
+  const [sorter, setSorter] = useState([
+    {
+      key: chartsData[0].name,
+      type: 'numerical',
+      subtype: null,
+      order: 'descend',
+    },
+  ]);
+  const [dateSorter, setDateSorter] = useState([]);
 
   const handleSorting = useCallback((prop) => {
     setSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
+      if (currentSorter[0].key === prop.key) {
+        return [
+          {
+            ...currentSorter[0],
+            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend',
+          },
+        ];
+      }
+      return [
+        {
+          ...prop,
+          order: 'ascend',
+        },
+      ];
     });
   }, []);
 
   const handleDateSorting = useCallback((prop) => {
     setDateSorter((currentSorter) => {
-      return getNewSorterState(currentSorter, prop);
+      if (currentSorter[0].key === prop.key) {
+        return [
+          {
+            ...currentSorter[0],
+            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend',
+          },
+        ];
+      }
+      return [
+        {
+          ...prop,
+          order: 'ascend',
+        },
+      ];
     });
   }, []);
 

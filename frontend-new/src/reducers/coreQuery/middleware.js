@@ -11,6 +11,7 @@ import {
   setAttrDateRangeAction, setCampDateRangeAction, 
   setDefaultStateAction, setTouchPointFiltersAction,
   setAttributionQueryTypeAction,
+  setTacticOfferTypeAction,
   setEventsDisplayAction,
   setUserPropertiesNamesAction,
   setEventPropertiesNamesAction
@@ -114,6 +115,14 @@ export const setattrQueryType = (attrQueryType) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setAttributionQueryTypeAction(attrQueryType)));
+    })
+  }
+}
+
+export const setTacticOfferType = (tacticOfferType) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setTacticOfferTypeAction(tacticOfferType)));
     })
   }
 }

@@ -75,7 +75,9 @@ const AttributionsChart = forwardRef(
     const [columns, setColumns] = useState([]);
     const [tableData, setTableData] = useState([]);
     const [sorter, setSorter] = useState(
-      savedQuerySettings.sorter || defaultSortProp()
+      savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
+        ? savedQuerySettings.sorter
+        : defaultSortProp()
     );
     const [visibleIndices, setVisibleIndices] = useState([]);
 
@@ -112,8 +114,18 @@ const AttributionsChart = forwardRef(
             return newState;
           }
         });
+        if (option.enabled) {
+          const isSortedByThisOption = sorter.find(
+            (elem) => elem.key === option.title
+          );
+          if (isSortedByThisOption) {
+            setSorter((currentSorter) => {
+              return currentSorter.filter((elem) => elem.key !== option.title);
+            });
+          }
+        }
       },
-      [setAttributionMetrics]
+      [setAttributionMetrics, sorter]
     );
 
     const metricsOptionsPopover = useMemo(() => {

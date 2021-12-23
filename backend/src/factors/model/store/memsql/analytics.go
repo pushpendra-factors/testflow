@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -192,6 +193,15 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 	return rStmnt, rParams, nil
 }
 
+// from = t1, to = t2
+// before = < t2
+// since = > t1
+// between = t1 to t2
+// notBetween = ~(t1 to t2)
+// inPrev == inLast = t1 to t2
+// notInPrev == notInLast = ~(t1 to t2)
+// inCurr = >t1
+// notinCurr = <t1
 func GetDateFilter(qP model.QueryProperty, propertyEntity string, property string) (string, []interface{}, error) {
 	var stmt string
 	var resultParams []interface{}
@@ -203,16 +213,16 @@ func GetDateFilter(qP model.QueryProperty, propertyEntity string, property strin
 	if qP.Operator == model.BeforeStr {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) < ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.To)
-	} else if qP.Operator == model.NotInLastStr {
+	} else if qP.Operator == model.NotInCurrent {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) < ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From)
-	} else if qP.Operator == model.SinceStr || qP.Operator == model.InLastStr {
+	} else if qP.Operator == model.SinceStr || qP.Operator == model.InCurrent {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) >= ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From)
-	} else if qP.Operator == model.EqualsOpStr || qP.Operator == model.BetweenStr { // equals - Backward Compatible of Between
+	} else if qP.Operator == model.EqualsOpStr || qP.Operator == model.BetweenStr || qP.Operator == model.InPrevious || qP.Operator == model.InLastStr { // equals - Backward Compatible of Between
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) BETWEEN ? AND ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From, dateTimeValue.To)
-	} else if qP.Operator == model.NotInBetweenStr {
+	} else if qP.Operator == model.NotInBetweenStr || qP.Operator == model.NotInPrevious || qP.Operator == model.NotInLastStr {
 		stmt = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) NOT BETWEEN ? AND ?)", propertyEntity)
 		resultParams = append(resultParams, property, dateTimeValue.From, dateTimeValue.To)
 	}
@@ -538,15 +548,29 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 
 	var eventNamesCacheStmnt string
 	eventNamesRef := "event_names"
-	if stepName != "" {
+	skipEventNameStep := C.SkipEventNameStepByProjectID(projectId)
+	if stepName != "" && !skipEventNameStep {
 		eventNamesRef = fmt.Sprintf("%s_names", stepName)
 		eventNamesCacheStmnt = as(eventNamesRef, "SELECT id, project_id, name FROM event_names WHERE project_id=? AND name=?")
 		*qParams = append(*qParams, projectId, qep.Name)
 	}
 
-	whereCond := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?"+
-		// select id of event_names from names step.
-		" "+"AND events.event_name_id IN (SELECT id FROM %s WHERE project_id=? AND name=?)", fromTimestamp, eventNamesRef)
+	whereCond := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?", fromTimestamp)
+	// select id of event_names from names step.
+	if !skipEventNameStep {
+		whereCond = whereCond + fmt.Sprintf(" "+"AND events.event_name_id IN (SELECT id FROM %s WHERE project_id=? AND name=?)", eventNamesRef)
+	} else {
+
+		eventNameIDsFilter := "events.event_name_id = ?"
+		if len(qep.EventNameIDs) > 1 {
+			for range qep.EventNameIDs[1:] {
+				eventNameIDsFilter += " " + "OR" + " " + "events.event_name_id = ?"
+			}
+		}
+
+		whereCond = whereCond + " " + "AND" + " " + " ( " + eventNameIDsFilter + " ) "
+	}
+
 	rStmnt = appendStatement(rStmnt, whereCond)
 
 	// adds params in order of '?'.
@@ -557,7 +581,13 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 	if from > 0 {
 		*qParams = append(*qParams, from)
 	}
-	*qParams = append(*qParams, to, projectId, qep.Name)
+
+	*qParams = append(*qParams, to)
+	if !skipEventNameStep {
+		*qParams = append(*qParams, projectId, qep.Name)
+	} else {
+		*qParams = append(*qParams, qep.EventNameIDs...)
+	}
 
 	// applying global user filter
 	gupStmt := ""
@@ -597,7 +627,7 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 		rStmnt = as(stepName, rStmnt)
 	}
 
-	if eventNamesCacheStmnt != "" {
+	if !skipEventNameStep && eventNamesCacheStmnt != "" {
 		rStmnt = joinWithComma(eventNamesCacheStmnt, rStmnt)
 	}
 
@@ -752,7 +782,8 @@ func getSelectTimestampByTypeAndPropertyName(timestampType, propertyName, timezo
 	} else {
 		selectTz = timezone
 	}
-	propertyToNum := "CONVERT(" + propertyName + ", DECIMAL(10))"
+
+	propertyToNum := "CONVERT(SUBSTRING(" + propertyName + ",1,10), DECIMAL(10))"
 	var selectStr string
 	if timestampType == model.GroupByTimestampHour {
 		selectStr = fmt.Sprintf("date_trunc('hour', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
@@ -1117,15 +1148,21 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	// For query: ...where id in ($1) where $1 is passed as a slice, convert to pq.Array()
 	stmnt, params = model.ExpandArrayWithIndividualValues(stmnt, params)
 
+	logFields := log.Fields{
+		"anaytics":       true,
+		"expanded_query": U.DBDebugPreparedStatement(stmnt, params),
+		"original_query": stmnt,
+		"params":         params,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
 	// Prefix application name for in comment for debugging.
 	stmnt = fmt.Sprintf("/*!%s*/ ", C.GetConfig().AppName) + stmnt
 
 	// Set resource pool before query.
-	C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx)
+	C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx, C.MemSQLResourcePoolOLAP)
 	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
-	log.WithError(err).
-		WithFields(log.Fields{"Query": U.DBDebugPreparedStatement(stmnt, params)}).
-		Info("Exec query with context")
+	log.WithError(err).WithFields(logFields).Info("Exec query with context")
 
 	return rows, tx, err
 }

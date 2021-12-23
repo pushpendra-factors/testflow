@@ -18,6 +18,7 @@ import {
   getAttributionStateFromRequestQuery,
   getCampaignStateFromRequestQuery,
   getProfileQueryFromRequestQuery,
+  getKPIStateFromRequestQuery,
 } from '../CoreQuery/utils';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import ConfirmationModal from '../../components/ConfirmationModal';
@@ -27,6 +28,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_KPI,
   QUERY_TYPE_TEMPLATE,
   TYPE_EVENTS_OCCURRENCE,
   TOTAL_EVENTS_CRITERIA,
@@ -49,12 +51,23 @@ import {
   SET_SHOW_CRITERIA,
   SET_PERFORMANCE_CRITERIA,
 } from '../../reducers/analyticsQuery';
-import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { getDashboardDateRange } from '../Dashboard/utils';
 import TemplatesModal from '../CoreQuery/Templates';
 import { fetchWeeklyIngishts } from '../../reducers/insights';
 import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
+import { fetchAgentInfo } from 'Reducers/agentActions';
+
+const whiteListedAccounts_KPI = [
+  'jitesh@factors.ai',
+  'kartheek@factors.ai',
+  'baliga@factors.ai',
+  'praveenr@factors.ai',
+  'sonali@factors.ai',
+  'solutions@factors.ai',
+  'praveen@factors.ai',
+  'ashwin@factors.ai',
+];
 
 const coreQueryoptions = [
   {
@@ -66,6 +79,11 @@ const coreQueryoptions = [
     title: 'Funnels',
     icon: 'funnels_cq',
     desc: 'Find how users are navigating a defined path',
+  },
+  {
+    title: 'KPIs',
+    icon: 'KPI_cq',
+    desc: 'Access your key marketing metrics',
   },
   {
     title: 'Campaigns',
@@ -140,15 +158,24 @@ function CoreQuery({
   activeAccount,
   updateSavedQuerySettings,
   setProfileQueries,
+  fetchAgentInfo,
+  setAttributionMetrics,
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
   const dispatch = useDispatch();
   const { attr_dimensions } = useSelector((state) => state.coreQuery);
-  const history = useHistory();
+  const { config: kpiConfig } = useSelector((state) => state.kpi);
   const { metadata } = useSelector((state) => state.insights);
   const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
+
+  useEffect(() => {
+    const getData = async () => {
+      await fetchAgentInfo();
+    };
+    getData();
+  }, [activeProject]);
 
   const getFormattedRow = (q) => {
     const requestQuery = q.query;
@@ -159,6 +186,7 @@ function CoreQuery({
       channel_v1: 'campaigns_cq',
       attribution: 'attributions_cq',
       profiles: 'profiles_cq',
+      kpi: 'KPI_cq',
     };
     let svgName = '';
     Object.entries(queryTypeName).forEach(([k, v]) => {
@@ -206,7 +234,6 @@ function CoreQuery({
   }, []);
 
   const handleViewResult = useCallback((row, event) => {
-    console.log('row id-->>', row);
     event.stopPropagation();
     event.preventDefault();
     getWeeklyIngishts(row);
@@ -263,7 +290,6 @@ function CoreQuery({
 
   const getWeeklyIngishts = (record) => {
     if (metadata?.QueryWiseResult) {
-      // console.log('saved query unit id-->>', record);
       const insightsItem = metadata?.QueryWiseResult[record.key];
       if (insightsItem) {
         dispatch({
@@ -317,7 +343,11 @@ function CoreQuery({
             const usefulQuery = { ...equivalentQuery, ...newDateRange };
             delete usefulQuery.queryType;
             dispatch({ type: INITIALIZE_CAMPAIGN_STATE, payload: usefulQuery });
-          } else {
+          }
+          // else if(queryType === QUERY_TYPE_KPI) {
+          //  // Vishnu convert backend formatted query to  our local state query
+          // }
+          else {
             equivalentQuery = getStateQueryFromRequestQuery(
               record.query.query_group[0]
             );
@@ -357,6 +387,12 @@ function CoreQuery({
               }
             }
           }
+        } else if (record.query.cl && record.query.cl === QUERY_TYPE_KPI) {
+          equivalentQuery = getKPIStateFromRequestQuery(
+            record.query,
+            kpiConfig
+          );
+          updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
         } else if (
           record.query.cl &&
           record.query.cl === QUERY_TYPE_ATTRIBUTION
@@ -370,6 +406,11 @@ function CoreQuery({
             newDateRange = { attr_dateRange: getDashboardDateRange() };
           }
           const usefulQuery = { ...equivalentQuery, ...newDateRange };
+          if (record.settings && record.settings.attributionMetrics) {
+            setAttributionMetrics(
+              JSON.parse(record.settings.attributionMetrics)
+            );
+          }
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_PROFILE) {
@@ -391,7 +432,7 @@ function CoreQuery({
         console.log(err);
       }
     },
-    [updateEventFunnelsState, attr_dimensions]
+    [updateEventFunnelsState, attr_dimensions, kpiConfig]
   );
 
   const getMenu = (row) => {
@@ -472,6 +513,18 @@ function CoreQuery({
       setQueryType(QUERY_TYPE_ATTRIBUTION);
     }
 
+    if (item.title === 'KPIs') {
+      setQueryType(QUERY_TYPE_KPI);
+      setQueries([]);
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: {
+          global: [],
+          event: [],
+        },
+      });
+    }
+
     if (item.title === 'Campaigns') {
       setQueryType(QUERY_TYPE_CAMPAIGN);
     }
@@ -543,6 +596,12 @@ function CoreQuery({
             <Col span={20}>
               <div className={'flex'}>
                 {coreQueryoptions.map((item, index) => {
+                  if (
+                    item.title === 'KPIs' &&
+                    !whiteListedAccounts_KPI.includes(activeAccount)
+                  ) {
+                    return null;
+                  }
                   return (
                     <div
                       key={index}
@@ -646,4 +705,7 @@ const mapStateToProps = (state) => ({
   activeAccount: state.agent?.agent_details?.email,
 });
 
-export default connect(mapStateToProps, { fetchWeeklyIngishts })(CoreQuery);
+export default connect(mapStateToProps, {
+  fetchWeeklyIngishts,
+  fetchAgentInfo,
+})(CoreQuery);

@@ -41,6 +41,8 @@ func TestMain(m *testing.M) {
 
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
 	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
+	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
+		30, "look back window in cache for event/user cache")
 
 	flag.Parse()
 
@@ -77,10 +79,19 @@ func TestMain(m *testing.M) {
 		// Test is not 100% backward compatible. Only some of the unit tests
 		// have flag based cases for both backward and forward compatibility.
 		// So kept on-table user_properties as primary.
-		AllowedCampaignEnrichmentByProjectID:   *allowedCampaignEnrichmentByProjectID,
-		UseOpportunityAssociationByProjectID:   "*",
-		AllowedHubspotGroupsByProjectIDs:       "*",
-		UseSourcePropertyOverwriteByProjectIDs: "*",
+		AllowedCampaignEnrichmentByProjectID:        *allowedCampaignEnrichmentByProjectID,
+		UseOpportunityAssociationByProjectID:        "*",
+		AllowedHubspotGroupsByProjectIDs:            "*",
+		UseSourcePropertyOverwriteByProjectIDs:      "*",
+		AllowedSalesforceGroupsByProjectIDs:         "*",
+		AllowSupportForUserPropertiesInIdentifyCall: "*",
+		AllowSupportForDateRangeInProfiles:          "*",
+		SkipEventNameStepByProjectID:                "*",
+		SkipUserJoinInEventQueryByProjectID:         "*",
+		EnableEventLevelEventProperties:             "",
+		LookbackWindowForEventUserCache:             *lookbackWindowForEventUserCache,
+		EnableOLTPQueriesMemSQLImprovements:         "*",
+		CaptureSourceInUsersTable:                   "*",
 	}
 	C.InitConf(config)
 

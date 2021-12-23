@@ -13,6 +13,7 @@ import {
   SVG,
 } from '../../../components/factorsComponents';
 import QueryComposer from '../../../components/QueryComposer';
+import KPIComposer from '../../../components/KPIComposer';
 import AttrQueryComposer from '../../../components/AttrQueryComposer';
 import { ErrorBoundary } from 'react-error-boundary';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
@@ -25,6 +26,7 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
 } from '../../../utils/constants';
 
@@ -59,7 +61,7 @@ function ReportsLayout({
     if (renderedCompRef.current && renderedCompRef.current.currentSorter) {
       return renderedCompRef.current.currentSorter;
     }
-    return {};
+    return [];
   }, []);
 
   function changeTab(key) {
@@ -109,6 +111,41 @@ function ReportsLayout({
         />
       );
     }
+
+    if (queryType === QUERY_TYPE_KPI) {
+      return (
+        <KPIComposer
+          // queries={rest.composerFunctions.queries}
+          // runQuery={rest.composerFunctions.runQuery}
+          // eventChange={rest.composerFunctions.queryChange}
+          // queryType={queryType}
+          // queryOptions={rest.queryOptions}
+          // setQueryOptions={rest.composerFunctions.setExtraOptions}
+          // runFunnelQuery={rest.composerFunctions.runFunnelQuery}
+          // activeKey={rest.composerFunctions.activeKey}
+          // collapse={rest.composerFunctions.showResult}
+          // setCollapse={() => setQueryOpen(false)}
+
+          queries={rest.composerFunctions.queries}
+          setQueryOptions={rest.composerFunctions.setExtraOptions}
+          eventChange={rest.composerFunctions.queryChange}
+          queryType={queryType}
+          setQueryOptions={rest.composerFunctions.setExtraOptions}
+          activeKey={rest.composerFunctions.activeKey}
+          collapse={rest.composerFunctions.showResult}
+          setCollapse={() => setQueryOpen(false)}
+          handleRunQuery={rest.composerFunctions.runKPIQuery}
+          setQueries={rest.composerFunctions.setQueries}
+          queryOptions={rest.composerFunctions.queryOptions}
+          selectedMainCategory={rest.composerFunctions.selectedMainCategory}
+          setSelectedMainCategory={
+            rest.composerFunctions.setSelectedMainCategory
+          }
+          KPIConfigProps={rest.composerFunctions.KPIConfigProps}
+        />
+      );
+    }
+
     if (queryType === QUERY_TYPE_PROFILE) {
       return (
         <ProfileComposer
@@ -130,6 +167,7 @@ function ReportsLayout({
       queryType === QUERY_TYPE_FUNNEL ||
       queryType === QUERY_TYPE_EVENT ||
       queryType === QUERY_TYPE_ATTRIBUTION ||
+      queryType === QUERY_TYPE_KPI ||
       queryType === QUERY_TYPE_PROFILE
     ) {
       return (
@@ -160,7 +198,7 @@ function ReportsLayout({
         breakdownType={breakdownType}
         changeTab={changeTab}
         activeTab={activeTab}
-        getCurrentSorter={() => getCurrentSorter()}
+        getCurrentSorter={getCurrentSorter}
         savedQueryId={savedQueryId}
       />
       <div className='mt-24 px-8'>

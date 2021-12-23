@@ -150,9 +150,7 @@ func ReportOverallJobSummary(commonKey uint64, values func(*CacheResponse) bool)
 		"Top5SlowProjects":     slowProjects,
 	}
 
-	log.WithFields(log.Fields{
-		"Method": "reportOverallJobSummary",
-	}).Info(message)
+	log.WithFields(log.Fields{"Method": "reportOverallJobSummary", "Report": "finalReporting"}).Info(status)
 	if overallStats[BeamCacheTypeDashboardUnits]["FailedCount"] > 0 || overallStats[BeamCacheTypeWebAnalytics]["FailedCount"] > 0 {
 		C.PingHealthcheckForFailure(beam.PipelineOptions.Get("HealthchecksPingID"), status)
 	} else {

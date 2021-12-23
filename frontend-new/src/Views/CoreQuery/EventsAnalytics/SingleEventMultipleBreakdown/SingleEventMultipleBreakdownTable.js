@@ -103,7 +103,7 @@ function SingleEventMultipleBreakdownTable({
 
   const getCSVData = () => {
     const activeTableData =
-      chartType === CHART_TYPE_BARCHART ? tableData : dateBasedTableData;
+      chartType === isSeriesChart(chartType) ? dateBasedTableData : tableData;
     return {
       fileName: `${reportTitle}.csv`,
       data: activeTableData.map(({ index, ...rest }) => {

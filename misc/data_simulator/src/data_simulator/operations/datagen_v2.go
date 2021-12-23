@@ -5,18 +5,28 @@ This file contains all core operations for probablity based event generation
 */
 
 import (
+	"bytes"
 	"data_simulator/config"
 	"data_simulator/constants"
 	Log "data_simulator/logger"
 	"data_simulator/registration"
 	"data_simulator/utils"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 )
 
+var events = make([]EventOutput, 0)
+var eventsArrayMutex = &sync.Mutex{}
 var userAttributeMutex = &sync.Mutex{}
+var clientUserIdToUserIdMap = make(map[string]string)
 
-func OperateV2(env string) {
+func OperateV2(env string, endpoint *string, authToken *string) {
 	//Declaring WaitGroup for SegmentLevel and newUser Concurrency
 	var segmentWg sync.WaitGroup
 	var newUserWg sync.WaitGroup
@@ -69,6 +79,7 @@ func OperateV2(env string) {
 		segmentWg.Add(1)
 		segmentStatus[item] = false
 		go OperateOnSegment(
+			env,
 			&segmentWg,
 			probMap,
 			item,
@@ -101,6 +112,7 @@ func OperateV2(env string) {
 			Log.Debug.Printf("Getting User %v - %v to the system with Segment %s", i, end, seg)
 			newUserWg.Add(1)
 			go OperateOnSegment(
+				env,
 				&newUserWg,
 				probMap,
 				seg, config.ConfigV2.User_segments[seg],
@@ -122,12 +134,20 @@ func OperateV2(env string) {
 	Log.Debug.Printf("Global Timer - Exit !!!")
 	Log.Debug.Printf("Main - Done !!!")
 	Log.Debug.Printf("Starting Upload to Cloud storage")
-	if env != "development" {
+	if env != "development" && env != "docker" {
 		UploadData()
+	}
+	if env == "docker" {
+		for _, event := range events {
+			event = trimUrlParams(event)
+			event.UserId, _ = getUserId(event.UserId, (int64)(event.Timestamp), endpoint, authToken)
+		}
+		IngestData(events, endpoint, authToken)
+
 	}
 }
 
-func OperateOnSegment(segmentWg *sync.WaitGroup, probMap ProbMap,
+func OperateOnSegment(env string, segmentWg *sync.WaitGroup, probMap ProbMap,
 	segmentName string, segment config.UserSegmentV2,
 	segmentProbMap SegmentProbMap, userRangeStart int,
 	userRangeEnd int, segmentStatus map[string]bool,
@@ -165,6 +185,7 @@ func OperateOnSegment(segmentWg *sync.WaitGroup, probMap ProbMap,
 		}
 		userAttributeMutex.Unlock()
 		go GenerateEvents(
+			env,
 			&wg,
 			probMap,
 			segment,
@@ -179,7 +200,7 @@ func OperateOnSegment(segmentWg *sync.WaitGroup, probMap ProbMap,
 	Log.Debug.Printf("Main: %s Completed for user Range %v - %v", segmentName, userRangeStart, userRangeEnd)
 }
 
-func GenerateEvents(wg *sync.WaitGroup, probMap ProbMap, segmentConfig config.UserSegmentV2, totalActivityDuration int, userId string, segmentProbMap SegmentProbMap) {
+func GenerateEvents(env string, wg *sync.WaitGroup, probMap ProbMap, segmentConfig config.UserSegmentV2, totalActivityDuration int, userId string, segmentProbMap SegmentProbMap) {
 
 	defer wg.Done()
 	var lastKnownGoodState string
@@ -218,6 +239,13 @@ func GenerateEvents(wg *sync.WaitGroup, probMap ProbMap, segmentConfig config.Us
 			userAttributesWithDecorators := utils.AppendMaps(userAttributes, userdecorators)
 			timeStamp, counter := ComputeActivityTimestamp(segmentConfig, i, realTimeWait)
 			op := FormatOutput(timeStamp, userId, event, userAttributesWithDecorators, eventAttributesWithDecorators, segmentConfig.Smart_events)
+			if env == "docker" {
+				eventsArrayMutex.Lock()
+				var eventObj EventOutput
+				json.Unmarshal([]byte(op), &eventObj)
+				events = append(events, eventObj)
+				eventsArrayMutex.Unlock()
+			}
 			registration.WriterInstance.WriteOutput(op)
 			i = i + counter
 			WaitIfRealTime(realTimeWait)
@@ -233,4 +261,75 @@ func GenerateEvents(wg *sync.WaitGroup, probMap ProbMap, segmentConfig config.Us
 
 func UploadData() {
 	utils.CopyFilesToCloud(constants.LOCALOUTPUTFOLDER, constants.UNPROCESSEDFILESCLOUD, constants.BUCKETNAME, true)
+}
+
+func IngestData(obj interface{}, endpoint *string, authToken *string) {
+	reqBody, _ := json.Marshal(obj)
+	url := fmt.Sprintf("%s%s", *endpoint, "/sdk/event/track/bulk")
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBody))
+	if err != nil {
+		Log.Error.Fatal(err)
+	}
+	req.Header.Add(constants.AUTHHEADERNAME, *authToken)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		//TODO: Janani Handle Retry
+		Log.Error.Fatal(err)
+	}
+	Log.Debug.Printf("%v", resp)
+}
+
+func trimUrlParams(op EventOutput) EventOutput {
+	var event string
+	if !(strings.HasPrefix(op.Event, "http") || strings.HasPrefix(op.Event, "https")) {
+		event = "http://" + op.Event
+	}
+	_, err := url.ParseRequestURI(event)
+	if err != nil {
+		return op
+	}
+	u, _ := url.Parse(event)
+	op.Event = u.Host + u.Path
+	return op
+}
+
+func getUserId(clientUserId string, eventTimestamp int64, endpoint *string, authToken *string) (string, error) {
+	var userId string
+	var found bool
+	userId, found = clientUserIdToUserIdMap[clientUserId]
+
+	if !found {
+		// Create a user.
+		userRequestMap := make(map[string]interface{})
+		userRequestMap["c_uid"] = clientUserId
+		userRequestMap["join_timestamp"] = eventTimestamp
+
+		reqBody, _ := json.Marshal(userRequestMap)
+		url := fmt.Sprintf("%s%s", *endpoint, "/sdk/user/identify")
+		client := &http.Client{}
+		req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBody))
+		if err != nil {
+			Log.Error.Fatal(err)
+		}
+		req.Header.Add(constants.AUTHHEADERNAME, *authToken)
+		resp, err := client.Do(req)
+		if err != nil {
+			Log.Error.Fatal(fmt.Sprintf(
+				"Http Post user creation failed. Url: %s, reqBody: %s, response: %+v, error: %+v", url, reqBody, resp, err))
+			return "", err
+		}
+		// always close the response-body, even if content is not required
+		defer resp.Body.Close()
+		jsonResponse, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			Log.Error.Fatal("Unable to parse http user create response.")
+			return "", err
+		}
+		var jsonResponseMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+		userId = jsonResponseMap["user_id"].(string)
+		clientUserIdToUserIdMap[clientUserId] = userId
+	}
+	return userId, nil
 }

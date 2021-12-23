@@ -258,7 +258,7 @@ function QueryComposer({
             />: <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(false)}>
             <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse all</Button>}
           <Button className={`ml-2`} size={'large'} type='primary' onClick={handleRunQuery}>
-              Run Query
+              Run Analysis
           </Button>
           </div>
         );

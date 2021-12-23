@@ -110,7 +110,7 @@ func PostFactorsHandler(c *gin.Context) {
 		projectId, params.StartEvent, startConstraints,
 		params.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams); err != nil {
 		logCtx.WithError(err).Error("Factors failed.")
-		if err.Error() == "Root node not found or frequency 0" {
+		if err.Error() == "root node not found or frequency 0" {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 		}
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -125,6 +125,19 @@ func PostFactorsHandler(c *gin.Context) {
 		return
 
 	}
+}
+
+type UserDistributionInput struct {
+	Events []CreateFactorsGoalParams `json:"events"`
+}
+
+func GetUserDistributionParams(c *gin.Context) ([]CreateFactorsGoalParams, error) {
+	params := UserDistributionInput{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return params.Events, nil
 }
 
 func GetFactorsHandler(c *gin.Context) {
@@ -149,16 +162,11 @@ func GetFactorsHandler(c *gin.Context) {
 			return
 		}
 	}
-	event := c.Query("event")
-	basePropertyKey := c.Query("basePropertyKey")
-	basePropertyValue := c.Query("basePropertyValue")
-	basePropertyOperator := false
-	if c.Query("basePropertyOperator") == "=" {
-		basePropertyOperator = true
+	ipParams, err := GetUserDistributionParams(c)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
-	basePropertyType := c.Query("basePropertyType")
-	distributionProperty := c.Query("distributionProperty")
-
 	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
 	if err != nil {
 		logCtx.WithError(err).Error("Pattern Service initialization failed.")
@@ -168,39 +176,122 @@ func GetFactorsHandler(c *gin.Context) {
 		})
 		return
 	}
+	params1 := MapRule(ipParams[0].Rule)
+	startConstraints1, endConstraints1 := parseConstraints(params1.Rule)
+	params2 := MapRule(ipParams[1].Rule)
+	startConstraints2, endConstraints2 := parseConstraints(params2.Rule)
+	type EventComparison struct {
+		First  uint `json:"first"`
+		Second uint `json:"second"`
+	}
 	type EventDistribution struct {
-		Base   interface{} `json:"base"`
-		After  interface{} `json:"after"`
-		Before interface{} `json:"before"`
+		Base   EventComparison            `json:"base"`
+		After  map[string]EventComparison `json:"after"`
+		Before map[string]EventComparison `json:"before"`
+	}
+	type PropDistribution struct {
+		Base EventComparison            `json:"base"`
+		Prop map[string]EventComparison `json:"prop"`
 	}
 	if patternMode == "EventDistribution" {
-		res, res2, res3, _ := PW.BuildUserDistribution("", event, ps)
+		base1, before1, after1, _ := PW.BuildUserDistribution("", params1.EndEvent, endConstraints1, ps)
+		base2, before2, after2 := uint(0), make(map[string]uint), make(map[string]uint)
+		if params2.EndEvent != "" {
+			base2, before2, after2, _ = PW.BuildUserDistribution("", params2.EndEvent, endConstraints2, ps)
+		}
 		finalResult := EventDistribution{
-			Base:   res,
-			Before: res2,
-			After:  res3,
+			Base: EventComparison{
+				First:  base1,
+				Second: base2,
+			},
+			After:  make(map[string]EventComparison),
+			Before: make(map[string]EventComparison),
+		}
+		for key, value := range before1 {
+			data, exists := finalResult.Before[key]
+			if !exists {
+				finalResult.Before[key] = EventComparison{}
+			}
+			data.First = value
+			finalResult.Before[key] = data
+		}
+		if params2.EndEvent != "" {
+			for key, value := range before2 {
+				data, exists := finalResult.Before[key]
+				if !exists {
+					finalResult.Before[key] = EventComparison{}
+				}
+				data.Second = value
+				finalResult.Before[key] = data
+			}
+		}
+		for key, value := range after1 {
+			data, exists := finalResult.After[key]
+			if !exists {
+				finalResult.After[key] = EventComparison{}
+			}
+			data.First = value
+			finalResult.After[key] = data
+		}
+		if params2.EndEvent != "" {
+			for key, value := range after2 {
+				data, exists := finalResult.After[key]
+				if !exists {
+					finalResult.After[key] = EventComparison{}
+				}
+				data.Second = value
+				finalResult.After[key] = data
+			}
 		}
 		c.JSON(http.StatusOK, finalResult)
 		return
 	}
-	if patternMode == "EventDistributionWithProperties" {
-		distributionProperties := make(map[string]string)
-		if distributionProperty != "" {
-			distributionProperties[distributionProperty] = "categorical"
+	if patternMode == "UserDistribution" {
+		events1 := make([]string, 0)
+		if params1.StartEvent != "" {
+			events1 = append(events1, params1.StartEvent)
 		}
-		baseProperty := P.EventConstraints{}
-		if basePropertyType == "numerical" {
-
+		if params1.EndEvent != "" {
+			events1 = append(events1, params1.EndEvent)
 		}
-		if basePropertyType == "categorical" {
-			baseProperty.UPCategoricalConstraints = append(baseProperty.UPCategoricalConstraints, P.CategoricalConstraint{
-				PropertyName:  basePropertyKey,
-				PropertyValue: basePropertyValue,
-				Operator:      extractOperator(basePropertyOperator),
-			})
+		overall1, propDist1, _ := PW.BuildUserDistributionWithProperties("", events1, startConstraints1, endConstraints1, ps)
+		overall2, propDist2 := uint(0), make(map[string]uint)
+		events2 := make([]string, 0)
+		if params2.StartEvent != "" {
+			events2 = append(events2, params2.StartEvent)
 		}
-		res, _ := PW.BuildUserDistributionWithProperties("", event, baseProperty, distributionProperties, ps)
-		c.JSON(http.StatusOK, res)
+		if params2.EndEvent != "" {
+			events2 = append(events2, params2.EndEvent)
+		}
+		if params2.EndEvent != "" {
+			overall2, propDist2, _ = PW.BuildUserDistributionWithProperties("", events2, startConstraints2, endConstraints2, ps)
+		}
+		finalResult := PropDistribution{
+			Base: EventComparison{
+				First:  overall1,
+				Second: overall2,
+			},
+			Prop: make(map[string]EventComparison),
+		}
+		for key, value := range propDist1 {
+			data, exists := finalResult.Prop[key]
+			if !exists {
+				finalResult.Prop[key] = EventComparison{}
+			}
+			data.First = value
+			finalResult.Prop[key] = data
+		}
+		if params2.EndEvent != "" {
+			for key, value := range propDist2 {
+				data, exists := finalResult.Prop[key]
+				if !exists {
+					finalResult.Prop[key] = EventComparison{}
+				}
+				data.Second = value
+				finalResult.Prop[key] = data
+			}
+		}
+		c.JSON(http.StatusOK, finalResult)
 		return
 	}
 }
@@ -266,7 +357,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			projectId, params.StartEvent, startConstraints,
 			params.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps1, "", nil); err != nil {
 			logCtx.WithError(err).Error("Factors failed.")
-			if err.Error() == "Root node not found or frequency 0" {
+			if err.Error() == "root node not found or frequency 0" {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 			}
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -289,7 +380,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			projectId, params.StartEvent, startConstraints,
 			params.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps2, "", nil); err != nil {
 			logCtx.WithError(err).Error("Factors failed.")
-			if err.Error() == "Root node not found or frequency 0" {
+			if err.Error() == "root node not found or frequency 0" {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 			}
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -336,7 +427,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			projectId, params1.StartEvent, startConstraints,
 			params1.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, "", nil); err != nil {
 			logCtx.WithError(err).Error("Factors failed.")
-			if err.Error() == "Root node not found or frequency 0" {
+			if err.Error() == "root node not found or frequency 0" {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 			}
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -350,7 +441,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			projectId, params2.StartEvent, startConstraints,
 			params2.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, "", nil); err != nil {
 			logCtx.WithError(err).Error("Factors failed.")
-			if err.Error() == "Root node not found or frequency 0" {
+			if err.Error() == "root node not found or frequency 0" {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 			}
 			c.AbortWithStatus(http.StatusBadRequest)

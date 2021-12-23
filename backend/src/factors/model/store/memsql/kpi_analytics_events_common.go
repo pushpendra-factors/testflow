@@ -6,6 +6,8 @@ import (
 	U "factors/util"
 	"net/http"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
@@ -65,8 +67,9 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID uint64
 		}
 	}
 	waitGroup.Wait()
-	for _, result := range queryResults {
+	for index, result := range queryResults {
 		if result.Headers == nil || result.Headers[0] == model.AliasError {
+			log.WithField("kpiQuery", kpiQuery).WithField("queryResults", queryResults).WithField("index", index).Error("Failed in executing following KPI Query.")
 			return queryResults, http.StatusPartialContent
 		}
 	}
@@ -98,21 +101,35 @@ func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, 
 	hasGroupByTimestamp := false
 	displayCategory := kpiQuery.DisplayCategory
 	var finalResult model.QueryResult
+	isTimezoneEnabled := false
+	if C.IsMultipleProjectTimezoneEnabled(projectID) {
+		isTimezoneEnabled = true
+	}
 	if kpiQuery.GroupByTimestamp != "" {
 		hasGroupByTimestamp = true
 	}
 	if len(queries) == 1 {
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results[0], _, _ = store.RunInsightsQuery(projectID, queries[0])
+		if results[0].Headers == nil || results[0].Headers[0] == model.AliasError {
+			finalResult = model.QueryResult{}
+			finalResult.Headers = results[0].Headers
+			return finalResult
+		}
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
 		finalResult = *results[0]
 	} else {
 		for i, query := range queries {
 			results[i], _, _ = store.RunInsightsQuery(projectID, query)
+			if results[i].Headers == nil || results[i].Headers[0] == model.AliasError {
+				finalResult = model.QueryResult{}
+				finalResult.Headers = results[i].Headers
+				return finalResult
+			}
 		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
-		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations)
+		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations, kpiQuery.Timezone, isTimezoneEnabled)
 	}
 	return finalResult
 }

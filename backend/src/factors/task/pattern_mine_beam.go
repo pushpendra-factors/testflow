@@ -20,13 +20,14 @@ import (
 	"time"
 
 	"github.com/apache/beam/sdks/go/pkg/beam"
-	beamlog "github.com/apache/beam/sdks/go/pkg/beam/log"
-	"github.com/apache/beam/sdks/go/pkg/beam/x/beamx"
-
 	"github.com/apache/beam/sdks/go/pkg/beam/io/filesystem"
 	_ "github.com/apache/beam/sdks/go/pkg/beam/io/filesystem/local"
+	beamlog "github.com/apache/beam/sdks/go/pkg/beam/log"
+	"github.com/apache/beam/sdks/go/pkg/beam/x/beamx"
 	log "github.com/sirupsen/logrus"
 )
+
+const batch_size_beam = 1000
 
 type CPatternsBeam struct {
 	ProjectID         uint64     `json:"projectID"`
@@ -34,12 +35,11 @@ type CPatternsBeam struct {
 	PtEnames          [][]string `json:"penames"`
 	ModEventsFilepath string     `json:"fpath"`
 	CountOccurence    bool       `json:"countOccurence"`
-	// UserEventsinfo    *P.UserAndEventsInfo `json:"uEinfo"`
-	// ChunkDir   string `json:"chunkDir"`
-	BucketName string `json:"bucketName"`
-	ObjectName string `json:"objectName"`
-	ScopeName  string `json:"ScopeName"`
-	Env        string `json:"Env"`
+	CountsVersion     int        `json:"cntvr"`
+	BucketName        string     `json:"bucketName"`
+	ObjectName        string     `json:"objectName"`
+	ScopeName         string     `json:"ScopeName"`
+	Env               string     `json:"Env"`
 }
 
 type RunBeamConfig struct {
@@ -99,7 +99,7 @@ func InitConfBeam(config *C.Configuration) {
 // }
 
 func countPatternsWorkerBeam(ctx context.Context, projectID uint64, filepath string,
-	patterns []*P.Pattern, countOccurence bool) {
+	patterns []*P.Pattern, countOccurence bool, countsVersion int) {
 
 	log.Infof("Reading file from :%s", filepath)
 	file, err := os.Open(filepath)
@@ -111,7 +111,7 @@ func countPatternsWorkerBeam(ctx context.Context, projectID uint64, filepath str
 	buf := make([]byte, P.MAX_PATTERN_BYTES)
 	scanner.Buffer(buf, P.MAX_PATTERN_BYTES)
 	log.Infof("Number of pattens to CounPatterns :%d", len(patterns))
-	P.CountPatterns(projectID, scanner, patterns, countOccurence)
+	P.CountPatterns(projectID, scanner, patterns, countOccurence, countsVersion)
 	file.Close()
 }
 
@@ -158,11 +158,11 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 	filepathString string, patterns []*P.Pattern, numRoutines int,
 	userAndEventsInfo *P.UserAndEventsInfo, countOccurence bool,
 	efTmpPath string,
-	scopeName string) (string, error) {
+	scopeName string, countsVersion int) (string, error) {
 
 	numPatterns := len(patterns)
 	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
-	batchSize := 1000 //600 too long , will have issue in len three stage
+	batchSize := batch_size_beam //600 too long , will have issue in len three stage
 
 	numRoutines = int(math.Ceil(float64(numPatterns) / float64(batchSize)))
 
@@ -188,7 +188,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 
 		t, err := json.Marshal(CPatternsBeam{
-			projectId, modelId, patternEnames[low:high], filepathString, countOccurence,
+			projectId, modelId, patternEnames[low:high], filepathString, countOccurence, countsVersion,
 			bucketName, modelpath, scopeName, beamStruct.Env})
 		if err != nil {
 			return "", fmt.Errorf("unable to encode string : %v", err)
@@ -275,7 +275,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 	} else {
 		itrFname = `gs://` + bucketName + `/` + modelpathDir + fileNameIntermediate
 	}
-	countPatternsExecutor(s, scopeName, configEncodedString, itrFname)
+	countPatternsExecutor(s, scopeName, configEncodedString, itrFname, countsVersion)
 	err = beamx.Run(ctx, p)
 	if err != nil {
 		mineLog.Fatalf("unable to run beam pipeline :  %s", err)
@@ -290,7 +290,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 
 // ------------------Pardo Fn - Beam build seq----------------
 func countPatternsExecutor(s beam.Scope, scopeName string, config_ string,
-	itrFname string) {
+	itrFname string, countsVersion int) {
 
 	s = s.Scope(scopeName)
 	cPatternsPcol := Read(s, itrFname)
@@ -338,6 +338,7 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 	modelId := cp.ModelId
 	scopeName := cp.ScopeName
 	envFlag := cp.Env
+	countsVersion := cp.CountsVersion
 	log.Infof("Project Id : %d  ", projectID)
 	log.Infof("Model Id : %d  ", modelId)
 	log.Infof("BucketName: %s  ", bucketName)
@@ -428,7 +429,7 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 
 	eventsFilePath = eventsTmpFile.Name()
 	beamlog.Info(ctx, "calling  countPatternsWorkerBeam")
-	countPatternsWorkerBeam(ctx, projectID, eventsFilePath, patterns, countOccurence)
+	countPatternsWorkerBeam(ctx, projectID, eventsFilePath, patterns, countOccurence, countsVersion)
 	//-------write as part files---------
 	key := time.Now().Nanosecond()
 	patternTmpFileLocal, err := ioutil.TempFile("", "patterns_computed_")

@@ -11,15 +11,17 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
-  CHART_TYPE_SPARKLINES,
   presentationObj,
+  CHART_TYPE_SPARKLINES,
   CHART_TYPE_STACKED_BAR,
-  CHART_TYPE_LINECHART
+  CHART_TYPE_LINECHART,
+  CHART_TYPE_TABLE,
 } from '../../../utils/constants';
 import { Spin } from 'antd';
 import FunnelsResultPage from '../FunnelsResultPage';
@@ -32,6 +34,7 @@ import EventsAnalytics from '../EventsAnalytics';
 import WebsiteAnalyticsTable from '../../Dashboard/WebsiteAnalytics/WebsiteAnalyticsTable';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import { Text, SVG } from '../../../components/factorsComponents';
+import KPIAnalysis from '../KPIAnalysis';
 import ProfilesResultPage from '../ProfilesResultPage';
 
 function ReportContent({
@@ -66,42 +69,60 @@ function ReportContent({
   } = useContext(CoreQueryContext);
 
   const chartType = useMemo(() => {
-    let key;
     if (queryType === QUERY_TYPE_FUNNEL) {
-      key = breakdown.length ? 'breakdown' : 'no_breakdown';
-      return chartTypes[queryType][key] === 'table'? CHART_TYPE_BARCHART : chartTypes[queryType][key];
+      const key = breakdown.length ? 'breakdown' : 'no_breakdown';
+      return chartTypes[queryType][key] === CHART_TYPE_TABLE
+        ? CHART_TYPE_BARCHART
+        : chartTypes[queryType][key];
     }
-    if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_PROFILE) {
-      key = breakdown.length ? 'breakdown' : 'no_breakdown';
+
+    if (
+      queryType === QUERY_TYPE_EVENT ||
+      queryType === QUERY_TYPE_PROFILE ||
+      queryType === QUERY_TYPE_KPI
+    ) {
+      const key = breakdown.length ? 'breakdown' : 'no_breakdown';
       if (
-        breakdown.length >= 1
+        breakdown.length &&
+        breakdown.length > 3 &&
+        chartTypes[queryType][key] === CHART_TYPE_HORIZONTAL_BAR_CHART
       ) {
-        return chartTypes[queryType][key] === 'table'? CHART_TYPE_BARCHART : chartTypes[queryType][key];
+        return CHART_TYPE_BARCHART;
       }
-      return chartTypes[queryType][key] === 'table'? CHART_TYPE_SPARKLINES : chartTypes[queryType][key];
+      return chartTypes[queryType][key] === CHART_TYPE_TABLE
+        ? breakdown.length
+          ? CHART_TYPE_BARCHART
+          : CHART_TYPE_SPARKLINES
+        : chartTypes[queryType][key];
     }
+
     if (queryType === QUERY_TYPE_CAMPAIGN) {
-      key = campaignState.group_by.length ? 'breakdown' : 'no_breakdown';
-      if (
-        campaignState.group_by.length >= 1
-      ) {
-        return chartTypes[queryType][key] === 'table'? CHART_TYPE_BARCHART : chartTypes[queryType][key];
+      const key = campaignState.group_by.length ? 'breakdown' : 'no_breakdown';
+      if (campaignState.group_by.length >= 1) {
+        return chartTypes[queryType][key] === CHART_TYPE_TABLE
+          ? CHART_TYPE_BARCHART
+          : chartTypes[queryType][key];
       }
-      return ((chartTypes[queryType][key] === 'table')? CHART_TYPE_SPARKLINES : chartTypes[queryType][key]);
+      return chartTypes[queryType][key] === CHART_TYPE_TABLE
+        ? CHART_TYPE_SPARKLINES
+        : chartTypes[queryType][key];
     }
+
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      key =
+      const key =
         attributionsState.models.length === 1
           ? 'single_touch_point'
           : 'dual_touch_point';
-      return ((chartTypes[queryType][key] === 'table')? CHART_TYPE_BARCHART : chartTypes[queryType][key]);
+      return chartTypes[queryType][key] === CHART_TYPE_TABLE
+        ? CHART_TYPE_BARCHART
+        : chartTypes[queryType][key];
     }
   }, [
     breakdown,
     campaignState.group_by,
     chartTypes,
     queryType,
-    attributionsState.models
+    attributionsState.models,
   ]);
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
@@ -113,7 +134,8 @@ function ReportContent({
       if (
         queryType === QUERY_TYPE_EVENT ||
         queryType === QUERY_TYPE_FUNNEL ||
-        queryType === QUERY_TYPE_PROFILE
+        queryType === QUERY_TYPE_PROFILE ||
+        queryType === QUERY_TYPE_KPI
       ) {
         changedKey = breakdown.length ? 'breakdown' : 'no_breakdown';
       }
@@ -156,9 +178,15 @@ function ReportContent({
 
   useEffect(() => {
     let items = [];
+
     if (queryType === QUERY_TYPE_CAMPAIGN) {
       items = getChartTypeMenuItems(queryType, campaignState.group_by.length);
     }
+
+    if (queryType === QUERY_TYPE_KPI) {
+      items = getChartTypeMenuItems(queryType, breakdown.length);
+    }
+
     if (
       (queryType === QUERY_TYPE_EVENT && breakdownType === EACH_USER_TYPE) ||
       queryType === QUERY_TYPE_FUNNEL
@@ -216,6 +244,15 @@ function ReportContent({
       .join(', ');
   }
 
+  if (queryType === QUERY_TYPE_KPI) {
+    durationObj = queryOptions.date_range;
+    queryDetail = arrayMapper
+      .map((elem) => {
+        return elem.eventName;
+      })
+      .join(', ');
+  }
+
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
     queryDetail = attributionsState.eventGoal.label;
     durationObj = attributionsState.date_range;
@@ -250,7 +287,18 @@ function ReportContent({
     }
   }
 
+  if (queryType === QUERY_TYPE_KPI && breakdown.length && queries.length > 1) {
+    metricsDropdown = (
+      <CampaignMetricsDropdown
+        metrics={queries.map((q) => q)}
+        currValue={currMetricsValue}
+        onChange={setCurrMetricsValue}
+      />
+    );
+  }
+
   if (queryType === QUERY_TYPE_PROFILE) {
+    durationObj = queryOptions.date_range;
     if (queries.length > 1 && breakdown.length) {
       metricsDropdown = (
         <CampaignMetricsDropdown
@@ -333,6 +381,22 @@ function ReportContent({
         />
       );
     }
+
+    if (queryType === QUERY_TYPE_KPI) {
+      content = (
+        <KPIAnalysis
+          resultState={resultState}
+          queries={queries}
+          breakdown={breakdown}
+          section={section}
+          currMetricsValue={currMetricsValue}
+          durationObj={durationObj}
+          chartType={chartType}
+          renderedCompRef={renderedCompRef}
+        />
+      );
+    }
+
     if (queryType === QUERY_TYPE_PROFILE) {
       content = (
         <ProfilesResultPage

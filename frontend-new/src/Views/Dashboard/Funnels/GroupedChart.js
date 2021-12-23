@@ -26,7 +26,7 @@ function GroupedChart({
   const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
   const { handleEditQuery } = useContext(DashboardContext);
-  const [sorter, setSorter] = useState({});
+  const [sorter, setSorter] = useState([]);
 
   useEffect(() => {
     const { groups: appliedGroups, events } = formatData(

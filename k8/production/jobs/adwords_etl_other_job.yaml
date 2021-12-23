@@ -32,15 +32,15 @@ spec:
             - --developer_token
             - $(GOOGLE_ADWORDS_DEVELOPER_TOKEN)
             - --data_service_host
-            - $(DATA_SERVICE_HOST_URL)
+            - $(DATA_SERVICE_MEMSQL_HOST_URL)
             - --dry
             - "False"
             - --skip_today
             - "False"
             - --exclude_project_id
             - 518,517,520,550,519
-            - --timezone            
-            - "Other"
+            - --timezone
+            - Other
             envFrom:
             - configMapRef:
                 name: config-pythonappserver

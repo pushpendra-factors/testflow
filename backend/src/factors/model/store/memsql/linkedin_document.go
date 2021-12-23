@@ -74,7 +74,7 @@ var mapOfTypeToLinkedinJobCTEAlias = map[string]string{
 
 var errorEmptyLinkedinDocument = errors.New("empty linked document")
 
-const linkedinFilterQueryStr = "SELECT DISTINCT LCASE(JSON_EXTRACT_STRING(value, ?) as filter_value FROM linkedin_documents WHERE project_id = ? AND" +
+const linkedinFilterQueryStr = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM linkedin_documents WHERE project_id = ? AND" +
 	" " + "customer_ad_account_id = ? AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
 
 const fromLinkedinDocuments = " FROM linkedin_documents "

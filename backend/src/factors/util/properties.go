@@ -33,8 +33,6 @@ const EVENT_NAME_FORM_SUBMITTED = "$form_submitted"
 const EVENT_NAME_HUBSPOT_CONTACT_CREATED = "$hubspot_contact_created"
 const EVENT_NAME_HUBSPOT_CONTACT_UPDATED = "$hubspot_contact_updated"
 const EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED = "$hubspot_deal_state_changed"
-const EVENT_NAME_HUBSPOT_COMPANY_CREATED = "$hubspot_company_created"
-const EVENT_NAME_HUBSPOT_COMPANY_UPDATED = "$hubspot_company_updated"
 
 // Integration: Salesforce event names.
 const EVENT_NAME_SALESFORCE_CONTACT_CREATED = "$sf_contact_created"
@@ -47,6 +45,14 @@ const EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED = "$sf_opportunity_created"
 const EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$sf_opportunity_updated"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED = "$sf_campaign_member_created"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED = "$sf_campaign_member_updated"
+const GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED = "$hubspot_company_created"
+const GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED = "$hubspot_company_updated"
+const GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED = "$hubspot_deal_created"
+const GROUP_EVENT_NAME_HUBSPOT_DEAL_UPDATED = "$hubspot_deal_updated"
+const GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED = "$salesforce_account_created"
+const GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED = "$salesforce_account_updated"
+const GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED = "$salesforce_opportunity_created"
+const GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$salesforce_opportunity_updated"
 
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
@@ -63,8 +69,10 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_HUBSPOT_CONTACT_CREATED,
 	EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
 	EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
-	EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-	EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+	GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+	GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+	GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED,
+	GROUP_EVENT_NAME_HUBSPOT_DEAL_UPDATED,
 	EVENT_NAME_SHOPIFY_CHECKOUT_CREATED,
 	EVENT_NAME_SHOPIFY_CHECKOUT_UPDATED,
 	EVENT_NAME_SHOPIFY_ORDER_CREATED,
@@ -82,6 +90,10 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
 	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
+	GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+	GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+	GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+	GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
 }
 
 // Factors API constants
@@ -175,6 +187,16 @@ var EP_DAY_OF_WEEK string = "$day_of_week"
 var EP_SESSION_COUNT string = "$session_count"
 var EP_TERM string = "$term"
 var EP_CHANNEL string = "$channel" // added at runtime.
+var EP_TYPE string = "$type"
+
+// Event Form meta attributes properties
+var EP_FORM_ID string = "$form_id"
+var EP_FORM_NAME string = "$form_name"
+var EP_FORM_CLASS string = "$form_class"
+var EP_FORM_TYPE string = "$form_type"
+var EP_FORM_METHOD string = "$form_method"
+var EP_FORM_TARGET string = "$form_target"
+var EP_FORM_ACTION string = "$form_action"
 
 // User Properties
 var UP_INITIAL_PAGE_EVENT_ID string = "$initial_page_event_id" // internal. id of initial page event.
@@ -368,6 +390,10 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_REVENUE,
 	EP_TERM,
 
+	// event properties part of offline touch points
+	EP_CHANNEL,
+	EP_TYPE,
+
 	// user_properties captured on event. i.e form_submit.
 	UP_EMAIL,
 	UP_PHONE,
@@ -375,6 +401,15 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	UP_NAME,
 	UP_FIRST_NAME,
 	UP_LAST_NAME,
+
+	// Form meta properties
+	EP_FORM_ID,
+	EP_FORM_NAME,
+	EP_FORM_CLASS,
+	EP_FORM_TYPE,
+	EP_FORM_METHOD,
+	EP_FORM_TARGET,
+	EP_FORM_ACTION,
 }
 
 var FORM_SUBMIT_USER_PROPERTIES = [...]string{
@@ -1101,12 +1136,16 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$sf_campaign_member_updated": "Campaign Member Updated",
 	"$session":                    "Website Session",
 	"$form_submitted":             "Form Submit",
+	"$hubspot_company_created":    "Company Created",
+	"$hubspot_company_updated":    "Company Updated",
 }
 
 var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
 	"$hubspot_contact_created":    "Hubspot",
 	"$hubspot_contact_updated":    "Hubspot",
 	"$hubspot_deal_state_changed": "Hubspot",
+	"$hubspot_company_created":    "Hubspot",
+	"$hubspot_company_updated":    "Hubspot",
 	"$sf_contact_created":         "Salesforce",
 	"$sf_contact_updated":         "Salesforce",
 	"$sf_lead_created":            "Salesforce",
@@ -1156,6 +1195,13 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_CHANNEL:                "Channel",
 	UP_POSTAL_CODE:            "Postal Code",
 	UP_CONTINENT:              "Continent",
+	EP_FORM_ID:                "Form Id",
+	EP_FORM_NAME:              "Form Name",
+	EP_FORM_CLASS:             "Form Class",
+	EP_FORM_TARGET:            "Form Target",
+	EP_FORM_METHOD:            "Form Method",
+	EP_FORM_ACTION:            "Form Action",
+	EP_FORM_TYPE:              "Form Type",
 }
 
 var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{

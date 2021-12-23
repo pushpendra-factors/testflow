@@ -15,9 +15,15 @@ services:
             restart: always
             ports:
                 - '5432:5432'
+        redis:  
+            build:
+                context: ../
+                dockerfile: Dockerfile.redis
+            image: testing/redis:1.0
+            restart: always
+            ports:
+                - "6379:6379"
         builddb:
-            depends_on:
-                - postgres
             build:
                 context: ../
                 dockerfile: docker-development-setup/Dockerfile.db_create.testing
@@ -26,28 +32,14 @@ services:
             image: testing/builddb:1.0
             links:
                 - postgres
-        redis:
-            build:
-                context: ../
-                dockerfile: Dockerfile.redis
-            image: testing/redis:1.0
-            restart: always
-            ports:
-                - "6379:6379"
         etcd:
-            build:
-                context: ../
-                dockerfile: docker-development-setup/Dockerfile.etcd.testing
-                args:
-                    - ETCD_VERSION=3
-            image: testing/etcd:1.0
-            restart: always
+            image: 'bitnami/etcd:latest'
             environment:
                 - ALLOW_NONE_AUTHENTICATION=yes
                 - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
             ports:
-                - "2379:2379"
-                - "2380:2380"
+                - 2379:2379
+                - 2380:2380
         api:
             build:
                 context: ../
@@ -58,7 +50,7 @@ services:
                 -  REDIS_HOST=redis
                 -  ETCD=etcd:2379
                 -  PS=patternserver
-            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host=redis --etcd=etcd:2379"]
+            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --dev_box"]
             image: testing/api:1.0
             restart: always
             ports:
@@ -66,42 +58,95 @@ services:
             volumes: 
                 - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
                 - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
+            links:
+                - postgres
+                - redis
+                - etcd
+        memsql:
+            build:
+                context: .
+                dockerfile: Dockerfile.memsql.testing
+                args:
+                    - MEMSQL_VERSION=centos-7.3.10-6c220bccfc-3.2.8-1.11.4
+            image: testing/memsql:1.0
+            restart: always
+            environment:
+                - LICENSE_KEY=$MEMSQL_LICENSE_KEY
+                - ROOT_PASSWORD=$ROOT_PASSWORD
+                - START_AFTER_INIT='Y'
+            ports:
+                - 3306:3306
+                - 8040:8080
+        sdkserver:
+            build:
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.sdkserver.testing
+            environment:
+                -  GOPATH=/go/src/factors
+                -  DB_HOST=postgres
+                -  REDIS_HOST=redis
+            image: testing/sdk:1.0
+            ports:
+                - "8085:8085"
+            restart: always
+            volumes: 
+                - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
+                - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
+            links:
+                - postgres
+                - redis
         patternserver:
             build:
                 context: ../
-                dockerfile: Dockerfile.patternserver
+                dockerfile: docker-development-setup/Dockerfile.patternserver.testing
             environment:
                 -   GOPATH=/go/src/factors
                 -   ETCD=etcd:2379
+                -   DB_HOST=postgres
             image: testing/pattern-server:1.0
-            entrypoint: ["sh", "-c", "/go/bin/pattern-app --etcd=etcd:2379"]
-            volumes: 
-                - ${BUCKET_DIR}:/usr/local/var/factors
             ports:
                 - "8100:8100"
-        dataserver:
-            depends_on:
+            links:
                 - postgres
-            build:
-                context: ../
-                dockerfile: Dockerfile.dataserver
-            environment:
-                -   GOPATH=/go/src/factors
-                -   DB_HOST=postgres
-            entrypoint: ["sh","-c", "/go/bin/dataserver --db_host=postgres"]
-            image: testing/dataserver:1.0
-            restart: always
-            ports:
-                -  "8089:8089"
         frontend:
             build: 
-                context: ../../../frontend
-                dockerfile: docker-development-setup/Dockerfile.frontend.testing
+                context: ../../../frontend-new
+                dockerfile: Dockerfile.frontend.testing
             image: testing/frontend:1.0
             ports: 
-                - "127.0.0.1:3000:3000"
-            
-
-
-        
-            
+                - "3000:3000"
+        datagen:
+            build:
+                context: ../../../misc/data_simulator/src/
+                dockerfile: Dockerfile.data_gen.testing
+            environment:
+                - CONFIG=acme_com
+                - DB_HOST=postgres
+                - AUTH_TOKEN=78ycpg9dsgok7o4dbk58jtl2rgt0tg0o
+                - SDK_HOST=sdkserver
+                - ENV=docker
+                - SEED_DATE=$SEED_DATE
+            image: testing/datagen:1.0
+        session:
+            build:
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.session.testing
+            environment:
+                - REDIS_HOST=redis
+                - DB_HOST=postgres
+            image: testing/session:1.0
+        rollupcache:
+            build:
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.rollup_cache.testing
+            environment:
+                - REDIS_HOST=redis
+                - DB_HOST=postgres
+            image: testing/rollupcache:1.0
+        documentdatagen:
+            build:
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.documentdatagen.testing
+            environment:
+                - DB_HOST=postgres
+            image: testing/documentdatagen:1.0

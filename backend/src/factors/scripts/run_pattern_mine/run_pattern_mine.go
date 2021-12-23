@@ -10,14 +10,13 @@ import (
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
+	taskWrapper "factors/task/task_wrapper"
 	"factors/util"
 	"flag"
 	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
-
-	taskWrapper "factors/task/task_wrapper"
 
 	"github.com/apache/beam/sdks/go/pkg/beam"
 	_ "github.com/jinzhu/gorm"
@@ -60,6 +59,7 @@ func main() {
 	numActiveFactorsTrackedUserPropertiesLimit := flag.Int("max_user_properties", 50, "Max numbr of Tracked user properties")
 	numCampaignsLimit := flag.Int("max_campaigns_limit", -1, "Max number of campaigns")
 	runBeam := flag.Int("run_beam", 1, "run build seq on beam ")
+	countsVersion := flag.Int("count_version", 1, "run fp tree code")
 
 	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
 	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
@@ -228,6 +228,9 @@ func main() {
 	configs["countOccurence"] = *shouldCountOccurence
 	configs["numCampaignsLimit"] = *numCampaignsLimit
 	configs["beamConfig"] = &beamConfig
+	configs["countsVersion"] = *countsVersion
+
+	// profiling
 
 	// This job has dependency on pull_events
 	if *isWeeklyEnabled {
@@ -247,4 +250,5 @@ func main() {
 		status := taskWrapper.TaskFuncWithProjectId("PatternMineQuarterly", *lookback, projectIdsArray, T.BuildSequential, configs)
 		log.Info(status)
 	}
+
 }

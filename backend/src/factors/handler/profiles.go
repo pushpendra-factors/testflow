@@ -9,6 +9,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -71,12 +72,23 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		"projectID": projectID,
 	})
 	var profileQueryGroup model.ProfileQueryGroup
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&profileQueryGroup); err != nil {
-		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+	queryIdString := c.Query("query_id")
+	if queryIdString == "" {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&profileQueryGroup); err != nil {
+			logCtx.WithError(err).Error("Query failed. Json decode failed.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+	} else {
+		_, query, err := store.GetStore().GetQueryAndClassFromQueryIdString(queryIdString, projectID)
+		if err != "" {
+			logCtx.Error(fmt.Sprintf("Query from queryIdString failed - %v", err))
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
+		}
+		U.DecodePostgresJsonbToStructType(&query.Query, &profileQueryGroup)
 	}
+
 	if profileQueryGroup.Timezone != "" {
 		_, errCode := time.LoadLocation(string(profileQueryGroup.Timezone))
 		if errCode != nil {
@@ -91,10 +103,24 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
 		}
 	}
+
+	allowSupportForDateRangeInProfiles := C.AllowSupportForDateRangeInProfiles(projectID)
+
+	if allowSupportForDateRangeInProfiles && (profileQueryGroup.From == 0 || profileQueryGroup.To == 0) {
+		logCtx.WithError(err).Error("Query failed. Invalid date range provided.")
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid date range provided.", true
+	}
+
 	// copying global filters and groupby into sparate queries and datetime transformations
 	for index, _ := range profileQueryGroup.Queries {
 		profileQueryGroup.Queries[index].Filters = append(profileQueryGroup.Queries[index].Filters, profileQueryGroup.GlobalFilters...)
 		profileQueryGroup.Queries[index].GroupBys = append(profileQueryGroup.Queries[index].GroupBys, profileQueryGroup.GlobalGroupBys...)
+
+		// passing date range
+		if allowSupportForDateRangeInProfiles {
+			profileQueryGroup.Queries[index].From = profileQueryGroup.From
+			profileQueryGroup.Queries[index].To = profileQueryGroup.To
+		}
 
 		// setting up the timezone for individual queries from the global value
 		profileQueryGroup.Queries[index].SetTimeZone(timezoneString)

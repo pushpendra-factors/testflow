@@ -1,6 +1,9 @@
 package model
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 // Common/Util methods - to both adwords, facebook and all channels.
 func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperties []ChannelObjectAndProperties) []map[string]string {
@@ -10,8 +13,8 @@ func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperti
 	for _, channelAndProperties := range channelsWithProperties {
 		for _, property := range channelAndProperties.Properties {
 			tempPropertyConfig = map[string]string{
-				"name":         property.Name,
-				"display_name": property.Name,
+				"name":         channelAndProperties.Name + "_" + property.Name,
+				"display_name": channelAndProperties.Name + "_" + property.Name,
 				"data_type":    property.Type,
 				"object_type":  channelAndProperties.Name,
 				"entity":       EventEntity,
@@ -24,7 +27,7 @@ func TransformChannelsPropertiesConfigToKpiPropertiesConfig(channelsWithProperti
 
 func TransformKPIQueryToChannelsV1Query(kpiQuery KPIQuery) (ChannelQueryV1, error) {
 	var currentChannel string
-	var exists bool
+	var err error
 	channelSelectMetrics := make([]string, 0)
 	channelSelectMetrics = append(channelSelectMetrics, kpiQuery.Metrics...)
 	channelQueryV1 := ChannelQueryV1{
@@ -36,8 +39,9 @@ func TransformKPIQueryToChannelsV1Query(kpiQuery KPIQuery) (ChannelQueryV1, erro
 	}
 	channelQueryV1.GroupBy = transformGroupByKPIToChannelsV1(kpiQuery.GroupBy)
 	channelQueryV1.Filters = transformFiltersKPIToChannelsV1(kpiQuery.Filters)
-	if currentChannel, exists = MapOfCategoryToChannel[kpiQuery.DisplayCategory]; !exists {
-		return ChannelQueryV1{}, errors.New("wrong Display Category given for channels")
+	currentChannel, err = GetChannelFromKPIQuery(kpiQuery.DisplayCategory)
+	if err != nil {
+		return ChannelQueryV1{}, err
 	}
 	channelQueryV1.Channel = currentChannel
 	return channelQueryV1, nil
@@ -49,7 +53,7 @@ func transformGroupByKPIToChannelsV1(kpiGroupBys []KPIGroupBy) []ChannelGroupBy 
 	for _, kpiGroupBy := range kpiGroupBys {
 		tempChannelGroupBy = ChannelGroupBy{
 			Object:   kpiGroupBy.ObjectType,
-			Property: kpiGroupBy.PropertyName,
+			Property: strings.TrimPrefix(kpiGroupBy.PropertyName, kpiGroupBy.ObjectType+"_"),
 		}
 		resultChannelGroupBys = append(resultChannelGroupBys, tempChannelGroupBy)
 	}
@@ -62,7 +66,7 @@ func transformFiltersKPIToChannelsV1(kpiFilters []KPIFilter) []ChannelFilterV1 {
 	for _, kpiFilter := range kpiFilters {
 		tempChannelFilter = ChannelFilterV1{
 			Object:    kpiFilter.ObjectType,
-			Property:  kpiFilter.PropertyName,
+			Property:  strings.TrimPrefix(kpiFilter.PropertyName, kpiFilter.ObjectType+"_"),
 			Condition: kpiFilter.Condition,
 			Value:     kpiFilter.Value,
 			LogicalOp: kpiFilter.LogicalOp,
@@ -70,4 +74,13 @@ func transformFiltersKPIToChannelsV1(kpiFilters []KPIFilter) []ChannelFilterV1 {
 		resultChannelFilters = append(resultChannelFilters, tempChannelFilter)
 	}
 	return resultChannelFilters
+}
+
+func GetChannelFromKPIQuery(displayCategory string) (string, error) {
+	var currentChannel string
+	var exists bool
+	if currentChannel, exists = MapOfCategoryToChannel[displayCategory]; !exists {
+		return "", errors.New("wrong Display Category given for channels")
+	}
+	return currentChannel, nil
 }

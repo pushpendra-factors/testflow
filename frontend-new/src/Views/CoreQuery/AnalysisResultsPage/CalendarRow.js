@@ -1,4 +1,4 @@
-import React, { useCallback, useContext } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import FaDatepicker from '../../../components/FaDatepicker';
 import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import {
@@ -7,13 +7,16 @@ import {
   QUERY_TYPE_CAMPAIGN,
   REPORT_SECTION,
   QUERY_TYPE_PROFILE,
+  QUERY_TYPE_KPI,
 } from '../../../utils/constants';
 import styles from './index.module.scss';
-import { Button } from 'antd';
-import { SVG, Spiner } from '../../../components/factorsComponents';
+import { Button, DatePicker } from 'antd';
+import { SVG, Text, Spiner } from '../../../components/factorsComponents';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import { isSeriesChart } from '../../../utils/dataFormatter';
 import GranularityOptions from '../../../components/GranularityOptions';
+import MomentTz from 'Components/MomentTz';
+import moment from 'moment';
 
 function CalendarRow({
   durationObj,
@@ -38,12 +41,22 @@ function CalendarRow({
     handleCompareWithClick,
   } = useContext(CoreQueryContext);
 
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const setDateRange = useCallback(
     (range) => {
       handleDurationChange(range);
     },
     [handleDurationChange]
   );
+
+  const setDateSince = (date) => {
+    let setDate = {
+      startDate: date,
+    };
+    handleDurationChange(setDate);
+    setShowDatePicker(false);
+  };
 
   const setCompareDateRange = useCallback(
     (range) => {
@@ -105,7 +118,9 @@ function CalendarRow({
   let granularity = null;
 
   if (
-    (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) &&
+    (queryType === QUERY_TYPE_EVENT ||
+      queryType === QUERY_TYPE_CAMPAIGN ||
+      queryType === QUERY_TYPE_KPI) &&
     section === REPORT_SECTION &&
     isSeriesChart(chartType)
   ) {
@@ -125,14 +140,44 @@ function CalendarRow({
 
   if (queryType === QUERY_TYPE_PROFILE) {
     calendarWidget = (
-      <Button
-        className={``}
-        size={'large'}
-        type={'default'}
-        style={{ pointerEvents: 'none' }}
-      >
-        <SVG name={`calendar`} size={20} extraClass={`mr-1`}></SVG>All Time
-      </Button>
+      <div className={'flex items-center'}>
+        <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 mr-2'}>
+          Created Since
+        </Text>
+        <div className={`fa-custom-datepicker`}>
+          {!showDatePicker ? (
+            <Button
+              onClick={() => {
+                setShowDatePicker(true);
+              }}
+            >
+              <SVG name={'calendar'} size={16} extraClass={'mr-1'} />
+              {MomentTz(durationObj.from).format('MMM DD, YYYY')}
+            </Button>
+          ) : (
+            <Button>
+              <SVG name={'calendar'} size={16} extraClass={'mr-1'} />
+              <DatePicker
+                format={'MMM DD YYYY'}
+                style={{ width: '96px' }}
+                disabledDate={(d) => !d || d.isAfter(MomentTz())}
+                dropdownClassName={'fa-custom-datepicker--datepicker'}
+                size={'small'}
+                suffixIcon={null}
+                showToday={false}
+                bordered={false}
+                autoFocus={true}
+                allowClear={false}
+                open={true}
+                onOpenChange={() => {
+                  setShowDatePicker(false);
+                }}
+                onChange={setDateSince}
+              />
+            </Button>
+          )}
+        </div>
+      </div>
     );
   } else {
     calendarWidget = (

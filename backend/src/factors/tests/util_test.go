@@ -5,8 +5,10 @@ import (
 	C "factors/config"
 	"factors/util"
 	U "factors/util"
+	"fmt"
 	"testing"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -138,4 +140,14 @@ func TestCheckOrConvertStandardTimestamp(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConvertPostgresJSONBToMap(t *testing.T) {
+	name := U.RandomLowerAphaNumString(7)
+	email := getRandomEmail()
+	sourceJsonb := postgres.Jsonb{[]byte(fmt.Sprintf(`{"name": "%s", "email": "%s"}`, name, email))}
+	targetMap, err := U.ConvertPostgresJSONBToMap(sourceJsonb)
+	assert.Nil(t, err)
+	assert.Equal(t, targetMap["name"], name)
+	assert.Equal(t, targetMap["email"], email)
 }

@@ -1,6 +1,7 @@
 package pattern
 
 import (
+	Fp "factors/fptree"
 	Hist "factors/histogram"
 	"factors/model/store"
 	U "factors/util"
@@ -24,6 +25,7 @@ type Pattern struct {
 	PerOccurrenceEventCategoricalProperties *Hist.CategoricalHistogramStruct `json:"oecp"`
 	PerOccurrenceUserNumericProperties      *Hist.NumericHistogramStruct     `json:"ounp"`
 	PerOccurrenceUserCategoricalProperties  *Hist.CategoricalHistogramStruct `json:"oucp"`
+	PatternVersion                          int                              `json:"pv"`
 	// The total number of times this pattern occurs allowing multiple counts
 	// per user.
 	PerOccurrenceCount uint `json:"c"`
@@ -32,6 +34,15 @@ type Pattern struct {
 	// Number of users the pattern was counted on.
 	TotalUserCount uint `json:"uc"`
 
+	userTree      Fp.Tree
+	eventTree     Fp.Tree
+	userTreePath  string
+	eventTreePath string
+
+	UserPropertiesPatterns  []Fp.ConditionalPattern `json:"ufp"`
+	EventPropertiesPatterns []Fp.ConditionalPattern `json:"efp"`
+
+	FreqProps *Fp.FrequentPropertiesStruct
 	// Private variables.
 	waitIndex                       int
 	currentUserId                   string
@@ -145,6 +156,10 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		currentUPropertiesNMap:                  make(map[string]float64),
 		currentUPropertiesCMap:                  make(map[string]string),
 	}
+
+	pattern.userTree = Fp.InitTree()
+	pattern.eventTree = Fp.InitTree()
+
 	if userAndEventsInfo == nil {
 		return &pattern, nil
 	}
@@ -398,6 +413,22 @@ func clipCategoricalValue(catValue string) string {
 	return catValue[:MAX_CATEGORICAL_STRING_LENGTH]
 }
 
+func FilterCategoricalProperties(projectID uint64, eventName string,
+	eventIndex int, properties map[string]interface{}, isUserProperty bool) []string {
+	catProperties := make([]string, 0)
+	for key, value := range properties {
+		propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, key, value, isUserProperty)
+		if propertyType == U.PropertyTypeCategorical {
+			categoricalValue := U.GetPropertyValueAsString(value)
+			categoricalValue = clipCategoricalValue(categoricalValue)
+			catValueString := strings.Join([]string{key, categoricalValue}, "::")
+			catProperties = append(catProperties, catValueString)
+
+		}
+	}
+	return catProperties
+}
+
 func AddNumericAndCategoricalProperties(projectID uint64, eventName string,
 	eventIndex int, properties map[string]interface{},
 	nMap map[string]float64, cMap map[string]string, isUserProperty bool) {
@@ -427,7 +458,7 @@ func AddNumericAndCategoricalProperties(projectID uint64, eventName string,
 // Further the distribution of timestamps, event properties and number of occurrences
 // are stored with the patterns.
 func (p *Pattern) CountForEvent(projectID uint64, userId string,
-	userJoinTimestamp int64, shouldCountOccurence bool, ets EvSameTs) error {
+	userJoinTimestamp int64, shouldCountOccurence bool, ets EvSameTs, countVersion int) error {
 	eventNames := ets.EventsNames
 	evMap := ets.EventsMap
 	eventTimestamp := ets.EventTimestamp
@@ -512,7 +543,6 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 		e := evMap[eventName]
 		eventProperties := e.EventProperties
 		userProperties := e.UserProperties
-
 		AddNumericAndCategoricalProperties(projectID, eventName,
 			p.waitIndex, eventProperties, p.currentEPropertiesNMap, p.currentEPropertiesCMap, false)
 		AddNumericAndCategoricalProperties(projectID, "",
@@ -527,6 +557,7 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 			// Record the pattern occurrence.
 			if shouldCountOccurence {
 				p.PerOccurrenceCount += 1
+
 				// Update properties histograms.
 				if p.PerOccurrenceEventNumericProperties != nil {
 					if err := p.PerOccurrenceEventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
@@ -552,25 +583,47 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 			if p.currentUserOccurrenceCount == 1 {
 				p.PerUserCount += 1
 
-				// Update properties histograms.
-				if p.PerUserEventNumericProperties != nil {
-					if err := p.PerUserEventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
-						return err
+				if countVersion == 2 {
+					userCatProperties := FilterCategoricalProperties(projectID, eventName, p.waitIndex, userProperties, true)
+					eventCatProperties := FilterCategoricalProperties(projectID, eventName, p.waitIndex, eventProperties, false)
+
+					if len(userCatProperties) > 0 {
+						err := p.userTree.OrderAndInsertTrans(userCatProperties)
+						if err != nil {
+							log.Errorf("err inserting user properties into tree:%v", err)
+						}
 					}
-				}
-				if p.PerUserEventCategoricalProperties != nil {
-					if err := p.PerUserEventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
-						return err
+
+					if len(eventCatProperties) > 0 {
+						err = p.eventTree.OrderAndInsertTrans(eventCatProperties)
+						if err != nil {
+							log.Errorf("counts map :%v", p.eventTree.CountMap)
+							log.Errorf("err inserting event properties into tree:%s,%v", eventName, err)
+						}
 					}
-				}
-				if p.PerUserUserNumericProperties != nil {
-					if err := p.PerUserUserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
-						return err
+
+				} else if countVersion == 1 {
+
+					// Update properties histograms.
+					if p.PerUserEventNumericProperties != nil {
+						if err := p.PerUserEventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
+							return err
+						}
 					}
-				}
-				if p.PerUserUserCategoricalProperties != nil {
-					if err := p.PerUserUserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
-						return err
+					if p.PerUserEventCategoricalProperties != nil {
+						if err := p.PerUserEventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
+							return err
+						}
+					}
+					if p.PerUserUserNumericProperties != nil {
+						if err := p.PerUserUserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
+							return err
+						}
+					}
+					if p.PerUserUserCategoricalProperties != nil {
+						if err := p.PerUserUserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -597,112 +650,154 @@ func (p *Pattern) GetPerUserCount(
 		log.Error(errorString)
 		return 0, fmt.Errorf(errorString)
 	}
-	EPNMapUpperBounds := make(map[string]float64)
-	EPNMapLowerBounds := make(map[string]float64)
-	EPCMapEquality := make(map[string]string)
-	UPNMapUpperBounds := make(map[string]float64)
-	UPNMapLowerBounds := make(map[string]float64)
-	UPCMapEquality := make(map[string]string)
-	GPMapUpperBounds := make(map[string]float64)
-	GPMapLowerBounds := make(map[string]float64)
-	for i, ecs := range patternConstraints {
-		for _, ncs := range ecs.EPNumericConstraints {
-			if U.IsGenericEventProperty(&ncs.PropertyName) {
-				key := PatternPropertyKey(i, ncs.PropertyName)
-				GPMapLowerBounds[key] = ncs.LowerBound
-				GPMapUpperBounds[key] = ncs.UpperBound
-			} else {
-				key := PatternPropertyKey(i, ncs.PropertyName)
-				EPNMapLowerBounds[key] = ncs.LowerBound
-				EPNMapUpperBounds[key] = ncs.UpperBound
+	if p.PatternVersion == 2 {
+		//p.GenFrequentProperties()
+
+		epf, upf := int(p.PerUserCount), int(p.PerUserCount)
+		var err error
+		for _, ecs := range patternConstraints {
+
+			if len(ecs.EPCategoricalConstraints) != 0 {
+				pntv := Fp.PropertyMapType{}
+				pntv.PropertyType = "event"
+				PropMap := make(map[string]string)
+				for _, ccs := range ecs.EPCategoricalConstraints {
+					PropMap[ccs.PropertyName] = ccs.PropertyValue
+				}
+				pntv.PropertyMap = PropMap
+				epf, err = p.FreqProps.GetFrequency(pntv)
+				if err != nil {
+					log.Error(p.EventNames, err)
+					return 0, nil
+				}
+			}
+
+			if len(ecs.UPCategoricalConstraints) != 0 {
+				pntv := Fp.PropertyMapType{}
+				pntv.PropertyType = "user"
+				PropMap := make(map[string]string)
+				for _, ccs := range ecs.UPCategoricalConstraints {
+					PropMap[ccs.PropertyName] = ccs.PropertyValue
+				}
+				pntv.PropertyMap = PropMap
+				epf, err = p.FreqProps.GetFrequency(pntv)
+				if err != nil {
+					log.Error(p.EventNames, err)
+					return 0, nil
+				}
 			}
 		}
-		for _, ccs := range ecs.EPCategoricalConstraints {
-			key := PatternPropertyKey(i, ccs.PropertyName)
-			EPCMapEquality[key] = appendPropertyValues(EPCMapEquality[key], ccs.PropertyValue, ccs.Operator)
-		}
+		num := uint(epf * upf)
+		return num / p.PerUserCount, nil //APPROXIMATION USED
 
-		for _, ncs := range ecs.UPNumericConstraints {
-			if U.IsGenericUserProperty(&ncs.PropertyName) {
-				key := ncs.PropertyName
-				GPMapLowerBounds[key] = ncs.LowerBound
-				GPMapUpperBounds[key] = ncs.UpperBound
-			} else {
-				key := PatternPropertyKey(i, ncs.PropertyName)
-				UPNMapLowerBounds[key] = ncs.LowerBound
-				UPNMapUpperBounds[key] = ncs.UpperBound
+	} else {
+		EPNMapUpperBounds := make(map[string]float64)
+		EPNMapLowerBounds := make(map[string]float64)
+		EPCMapEquality := make(map[string]string)
+		UPNMapUpperBounds := make(map[string]float64)
+		UPNMapLowerBounds := make(map[string]float64)
+		UPCMapEquality := make(map[string]string)
+		GPMapUpperBounds := make(map[string]float64)
+		GPMapLowerBounds := make(map[string]float64)
+		for i, ecs := range patternConstraints {
+			for _, ncs := range ecs.EPNumericConstraints {
+				if U.IsGenericEventProperty(&ncs.PropertyName) {
+					key := PatternPropertyKey(i, ncs.PropertyName)
+					GPMapLowerBounds[key] = ncs.LowerBound
+					GPMapUpperBounds[key] = ncs.UpperBound
+				} else {
+					key := PatternPropertyKey(i, ncs.PropertyName)
+					EPNMapLowerBounds[key] = ncs.LowerBound
+					EPNMapUpperBounds[key] = ncs.UpperBound
+				}
+			}
+			for _, ccs := range ecs.EPCategoricalConstraints {
+				key := PatternPropertyKey(i, ccs.PropertyName)
+				EPCMapEquality[key] = appendPropertyValues(EPCMapEquality[key], ccs.PropertyValue, ccs.Operator)
+			}
+
+			for _, ncs := range ecs.UPNumericConstraints {
+				if U.IsGenericUserProperty(&ncs.PropertyName) {
+					key := ncs.PropertyName
+					GPMapLowerBounds[key] = ncs.LowerBound
+					GPMapUpperBounds[key] = ncs.UpperBound
+				} else {
+					key := PatternPropertyKey(i, ncs.PropertyName)
+					UPNMapLowerBounds[key] = ncs.LowerBound
+					UPNMapUpperBounds[key] = ncs.UpperBound
+				}
+			}
+			for _, ccs := range ecs.UPCategoricalConstraints {
+				key := PatternPropertyKey(i, ccs.PropertyName)
+				UPCMapEquality[key] = appendPropertyValues(UPCMapEquality[key], ccs.PropertyValue, ccs.Operator)
 			}
 		}
-		for _, ccs := range ecs.UPCategoricalConstraints {
-			key := PatternPropertyKey(i, ccs.PropertyName)
-			UPCMapEquality[key] = appendPropertyValues(UPCMapEquality[key], ccs.PropertyValue, ccs.Operator)
+
+		GPNumericUpperCDF := 1.0
+		GPNumericLowerCDF := 0.0
+		if p.GenericPropertiesHistogram != nil && len(GPMapLowerBounds) > 0 {
+			GPNumericUpperCDF = p.GenericPropertiesHistogram.CDFFromMap(GPMapUpperBounds)
+			GPNumericLowerCDF = p.GenericPropertiesHistogram.CDFFromMap(GPMapLowerBounds)
 		}
-	}
 
-	GPNumericUpperCDF := 1.0
-	GPNumericLowerCDF := 0.0
-	if p.GenericPropertiesHistogram != nil && len(GPMapLowerBounds) > 0 {
-		GPNumericUpperCDF = p.GenericPropertiesHistogram.CDFFromMap(GPMapUpperBounds)
-		GPNumericLowerCDF = p.GenericPropertiesHistogram.CDFFromMap(GPMapLowerBounds)
-	}
-
-	EPNumericUpperCDF := 1.0
-	EPNumericLowerCDF := 0.0
-	if p.PerUserEventNumericProperties != nil && len(EPNMapLowerBounds) > 0 {
-		EPNumericUpperCDF = p.PerUserEventNumericProperties.CDFFromMap(EPNMapUpperBounds)
-		EPNumericLowerCDF = p.PerUserEventNumericProperties.CDFFromMap(EPNMapLowerBounds)
-	}
-	EPCategoricalPDF := 1.0
-	if p.PerUserEventCategoricalProperties != nil && len(EPCMapEquality) > 0 {
-		var err error
-		EPCategoricalPDF, err = p.PerUserEventCategoricalProperties.PDFFromMap(EPCMapEquality)
-		if err != nil {
-			return 0, err
+		EPNumericUpperCDF := 1.0
+		EPNumericLowerCDF := 0.0
+		if p.PerUserEventNumericProperties != nil && len(EPNMapLowerBounds) > 0 {
+			EPNumericUpperCDF = p.PerUserEventNumericProperties.CDFFromMap(EPNMapUpperBounds)
+			EPNumericLowerCDF = p.PerUserEventNumericProperties.CDFFromMap(EPNMapLowerBounds)
 		}
-	}
-
-	UPNumericUpperCDF := 1.0
-	UPNumericLowerCDF := 0.0
-	if p.PerUserUserNumericProperties != nil && len(UPNMapLowerBounds) > 0 {
-		UPNumericUpperCDF = p.PerUserUserNumericProperties.CDFFromMap(UPNMapUpperBounds)
-		UPNumericLowerCDF = p.PerUserUserNumericProperties.CDFFromMap(UPNMapLowerBounds)
-	}
-	UPCategoricalPDF := 1.0
-	if p.PerUserUserCategoricalProperties != nil && len(UPCMapEquality) > 0 {
-		var err error
-		UPCategoricalPDF, err = p.PerUserUserCategoricalProperties.PDFFromMap(UPCMapEquality)
-		if err != nil {
-			return 0, err
+		EPCategoricalPDF := 1.0
+		if p.PerUserEventCategoricalProperties != nil && len(EPCMapEquality) > 0 {
+			var err error
+			EPCategoricalPDF, err = p.PerUserEventCategoricalProperties.PDFFromMap(EPCMapEquality)
+			if err != nil {
+				return 0, err
+			}
 		}
-	}
 
-	count := (float64(p.PerUserCount) *
-		(GPNumericUpperCDF - GPNumericLowerCDF) *
-		(EPNumericUpperCDF - EPNumericLowerCDF) *
-		EPCategoricalPDF *
-		(UPNumericUpperCDF - UPNumericLowerCDF) *
-		UPCategoricalPDF)
+		UPNumericUpperCDF := 1.0
+		UPNumericLowerCDF := 0.0
+		if p.PerUserUserNumericProperties != nil && len(UPNMapLowerBounds) > 0 {
+			UPNumericUpperCDF = p.PerUserUserNumericProperties.CDFFromMap(UPNMapUpperBounds)
+			UPNumericLowerCDF = p.PerUserUserNumericProperties.CDFFromMap(UPNMapLowerBounds)
+		}
+		UPCategoricalPDF := 1.0
+		if p.PerUserUserCategoricalProperties != nil && len(UPCMapEquality) > 0 {
+			var err error
+			UPCategoricalPDF, err = p.PerUserUserCategoricalProperties.PDFFromMap(UPCMapEquality)
+			if err != nil {
+				return 0, err
+			}
+		}
 
-	if count < 0 {
-		log.WithFields(log.Fields{
-			"GPNumericUpperCDF":  GPNumericUpperCDF,
-			"GPNumericLowerCDF":  GPNumericLowerCDF,
-			"EPNumericUpperCDF":  EPNumericUpperCDF,
-			"EPNumericLowerCDF":  EPNumericLowerCDF,
-			"EPCategoricalPDF":   EPCategoricalPDF,
-			"UPNumericUpperCDF":  UPNumericUpperCDF,
-			"UPNumericLowerCDF":  UPNumericLowerCDF,
-			"UPCategoricalPDF":   UPCategoricalPDF,
-			"pattern":            p.String(),
-			"patternConstraints": patternConstraints,
-			"patternCount":       p.PerUserCount,
-			"finalCount":         count,
-		}).Info("Computed CDF's and PDF's")
-		errorString := "final count is less than 0"
-		log.Error(errorString)
-		return 0, fmt.Errorf(errorString)
+		count := (float64(p.PerUserCount) *
+			(GPNumericUpperCDF - GPNumericLowerCDF) *
+			(EPNumericUpperCDF - EPNumericLowerCDF) *
+			EPCategoricalPDF *
+			(UPNumericUpperCDF - UPNumericLowerCDF) *
+			UPCategoricalPDF)
+
+		if count < 0 {
+			log.WithFields(log.Fields{
+				"GPNumericUpperCDF":  GPNumericUpperCDF,
+				"GPNumericLowerCDF":  GPNumericLowerCDF,
+				"EPNumericUpperCDF":  EPNumericUpperCDF,
+				"EPNumericLowerCDF":  EPNumericLowerCDF,
+				"EPCategoricalPDF":   EPCategoricalPDF,
+				"UPNumericUpperCDF":  UPNumericUpperCDF,
+				"UPNumericLowerCDF":  UPNumericLowerCDF,
+				"UPCategoricalPDF":   UPCategoricalPDF,
+				"pattern":            p.String(),
+				"patternConstraints": patternConstraints,
+				"patternCount":       p.PerUserCount,
+				"finalCount":         count,
+			}).Info("Computed CDF's and PDF's")
+			errorString := "final count is less than 0"
+			log.Error(errorString)
+			return 0, fmt.Errorf(errorString)
+		}
+		return uint(count), nil
 	}
-	return uint(count), nil
 }
 
 func appendPropertyValues(existingValue string, addedValue string, operator string) string {
@@ -861,16 +956,22 @@ func (p *Pattern) GetPerOccurrenceUserPropertyRanges(
 	return p.PerOccurrenceUserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName)), false
 }
 
-func (p *Pattern) GetPerUserEventPropertyValues(
-	eventIndex int, propertyName string) []string {
-	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
-	return p.PerUserEventCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
+func (p *Pattern) GetPerUserEventPropertyValues(eventIndex int, propertyName string) []string {
+	if p.PatternVersion < 2 {
+		// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+		return p.PerUserEventCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
+	} else {
+		return p.FreqProps.GetPropertyValues(propertyName, "event")
+	}
 }
 
-func (p *Pattern) GetPerUserUserPropertyValues(
-	eventIndex int, propertyName string) []string {
-	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
-	return p.PerUserUserCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
+func (p *Pattern) GetPerUserUserPropertyValues(eventIndex int, propertyName string) []string {
+	if p.PatternVersion < 2 {
+		// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+		return p.PerUserUserCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
+	} else {
+		return p.FreqProps.GetPropertyValues(propertyName, "user")
+	}
 }
 
 func (p *Pattern) GetPerOccurrenceEventPropertyValues(
@@ -924,4 +1025,97 @@ func ExtractCampaignName(eventName string) string {
 		return "Initial_Referrer = " + campaignName[0]
 	}
 	return ""
+}
+
+func (p *Pattern) GenFrequentProperties() *Fp.FrequentPropertiesStruct {
+
+	if p.FreqProps != nil {
+		return p.FreqProps
+	}
+	freqItems := make([]Fp.FrequentItemset, 0)
+	allProps := make(map[Fp.PropertyNameType][]string)
+	numProps := 0
+
+	newfreq := Fp.NewFrequentPropertiesStruct()
+	p.FreqProps = newfreq
+
+	fq := Fp.FrequentItemset{}
+
+	for _, cp := range p.UserPropertiesPatterns {
+		tmp := Fp.PropertyMapType{}
+		tmp.PropertyMap = make(map[string]string)
+		tmp.PropertyType = "user"
+		fq.Frequency = int(cp.Count)
+
+		for _, pn := range cp.Items {
+			propkeyval := strings.Split(pn, "::")
+			pk, pv := propkeyval[0], propkeyval[1]
+			pnt := Fp.PropertyNameType{PropertyName: pk, PropertyType: "user"}
+			tmp.PropertyMap[pk] = pv
+			if _, ok := allProps[pnt]; !ok {
+				allProps[pnt] = make([]string, 0)
+			}
+			if !U.In(allProps[pnt], pv) {
+				allProps[pnt] = append(allProps[pnt], pv)
+			}
+		}
+		for _, pn := range cp.CondItem {
+			propkeyval := strings.Split(pn, "::")
+			pk, pv := propkeyval[0], propkeyval[1]
+			pnt := Fp.PropertyNameType{PropertyName: pk, PropertyType: "user"}
+			tmp.PropertyMap[pk] = pv
+			if _, ok := allProps[pnt]; !ok {
+				allProps[pnt] = make([]string, 0)
+			}
+			if !U.In(allProps[pnt], pv) {
+				allProps[pnt] = append(allProps[pnt], pv)
+			}
+		}
+		fq.PropertyMapType = tmp
+		freqItems = append(freqItems, fq)
+		numProps++
+	}
+
+	for _, cp := range p.EventPropertiesPatterns {
+		tmp := Fp.PropertyMapType{}
+		tmp.PropertyMap = make(map[string]string)
+		tmp.PropertyType = "event"
+		fq.Frequency = int(cp.Count)
+
+		for _, pn := range cp.Items {
+			propkeyval := strings.Split(pn, "::")
+			pk, pv := propkeyval[0], propkeyval[1]
+			pnt := Fp.PropertyNameType{PropertyName: pk, PropertyType: "event"}
+			tmp.PropertyMap[pk] = pv
+			if _, ok := allProps[pnt]; !ok {
+				allProps[pnt] = make([]string, 0)
+			}
+			if !U.In(allProps[pnt], pv) {
+				allProps[pnt] = append(allProps[pnt], pv)
+			}
+		}
+		for _, pn := range cp.CondItem {
+			propkeyval := strings.Split(pn, "::")
+			pk, pv := propkeyval[0], propkeyval[1]
+			pnt := Fp.PropertyNameType{PropertyName: pk, PropertyType: "event"}
+			tmp.PropertyMap[pk] = pv
+			if _, ok := allProps[pnt]; !ok {
+				allProps[pnt] = make([]string, 0)
+			}
+			if !U.In(allProps[pnt], pv) {
+				allProps[pnt] = append(allProps[pnt], pv)
+			}
+		}
+		fq.PropertyMapType = tmp
+		freqItems = append(freqItems, fq)
+		numProps++
+	}
+
+	newfreq.Total = uint64(numProps)
+	newfreq.PropertyMap = allProps
+	newfreq.FrequentItemsets = freqItems
+	(*p).FreqProps = newfreq
+	p.EventPropertiesPatterns = nil
+	p.UserPropertiesPatterns = nil
+	return newfreq
 }

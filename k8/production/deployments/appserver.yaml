@@ -105,28 +105,48 @@ spec:
           - $(ADMIN_LOGIN_EMAIL)
           - --admin_login_token
           - $(ADMIN_LOGIN_TOKEN)
+          - --skip_track_project_ids
+          - $(SKIP_TRACK_PROJECT_IDS)
           - --facebook_app_id
           - $(FACEBOOK_APP_ID)
           - --facebook_app_secret
           - $(FACEBOOK_APP_SECRET)
-          - --salesforce_app_id
-          - $(SALESFORCE_APP_ID)
           - --linkedin_client_id
           - $(LINKEDIN_CLIENT_ID)
           - --linkedin_client_secret
           - $(LINKEDIN_CLIENT_SECRET)
+          - --salesforce_app_id
+          - $(SALESFORCE_APP_ID)
           - --salesforce_app_secret
           - $(SALESFORCE_APP_SECRET)
+          - --device_detector_path
+          - $(DEVICE_DETECTOR_DATA_PATH)
           - --sentry_dsn
           - $(SENTRY_DSN)
           - --gcp_project_id
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
-          - --attribution_debug
-          - 0
           - --blocked_sdk_request_project_tokens
-          - "5w62sncn48ohs9nl9fymkad3ewcked23"
+          - 5w62sncn48ohs9nl9fymkad3ewcked23
+          - --cache_look_up_range_projects
+          - 336:20190930
+          - --lookback_window_event_user_cache
+          - "20"
+          - --attribution_debug
+          - "1"
+          - --allow_smart_event_rule_creation
+          - --project_analytics_whitelisted_uuids
+          - 1b993a1b-8a76-4ddd-a827-fa3c579ba8b9
+          - --bucket_name
+          - $(BUCKET_NAME)
+          - --customer_enabled_projects_wi
+          - 399,594,559,628,616,645,640,641
+          - --disable_dashboard_query_db_execution
+          - --timezone_enabled_projects
+          - "446"
+          - --disable_db_writes
+          - --enable_mql_api
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -153,15 +173,17 @@ spec:
         - secretRef:
             name: secret-aws
         - secretRef:
-            name: secret-login-token
-        - secretRef:
             name: secret-facebook
         - secretRef:
             name: secret-linkedin
         - secretRef:
             name: secret-salesforce
         - secretRef:
+            name: secret-login-token
+        - secretRef:
             name: secret-sentry
+        - configMapRef:
+            name: config-bucket
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine

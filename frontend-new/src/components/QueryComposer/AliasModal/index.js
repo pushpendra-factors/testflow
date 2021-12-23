@@ -29,8 +29,7 @@ function AliasModal({
 
   return (
     <Modal
-      title={null}
-      width={750}
+      title={null} 
       visible={visible}
       footer={null}
       className={'fa-modal--regular p-6'}

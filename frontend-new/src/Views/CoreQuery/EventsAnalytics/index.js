@@ -24,7 +24,7 @@ function EventsAnalytics({
   renderedCompRef,
 }) {
   let content = null;
-
+  
   if (breakdownType === EACH_USER_TYPE) {
     if (resultState.data && !resultState.data.metrics.rows.length) {
       content = (

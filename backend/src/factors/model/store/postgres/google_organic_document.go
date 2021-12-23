@@ -68,7 +68,7 @@ func (pg *Postgres) GetGoogleOrganicFilterValues(projectID uint64, requestFilter
 	logCtx := log.WithField("projectID", projectID).WithField("req_id", reqID)
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to fetch Project Setting in searcch console filter values.")
+		logCtx.Error("Failed to fetch Project Setting in search console filter values.")
 		return []interface{}{}, http.StatusInternalServerError
 	}
 	urlPrefix := projectSetting.IntGoogleOrganicURLPrefixes
@@ -535,6 +535,9 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, ur
 func getGoogleOrganicFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	resultStatement := ""
 	var filterValue string
+	if len(filters) == 0 {
+		return resultStatement
+	}
 	for index, filter := range filters {
 		currentFilterStatement := ""
 		if filter.LogicalOp == "" {
@@ -548,10 +551,11 @@ func getGoogleOrganicFiltersWhereStatement(filters []model.ChannelFilterV1) stri
 		}
 		currentFilterStatement = fmt.Sprintf("value->>'%s' %s '%s' ", filter.Property, filterOperator, filterValue)
 		if index == 0 {
-			resultStatement = " AND " + currentFilterStatement
+			resultStatement = " AND ( " + currentFilterStatement
 		} else {
 			resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
 		}
 	}
-	return resultStatement
+	return resultStatement + " )"
+
 }

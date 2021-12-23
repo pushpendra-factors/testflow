@@ -3,6 +3,12 @@ package model
 import (
 	U "factors/util"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func ValidateKPIQuery(kpiQuery KPIQuery) bool {
@@ -129,17 +135,46 @@ func SplitKPIQueryToInternalKPIQueries(query Query, kpiQuery KPIQuery, metric st
 		currentQuery.AggregateProperty = metricTransformation.Metrics.Property
 		currentQuery.AggregateEntity = metricTransformation.Metrics.Entity
 		currentQuery.AggregatePropertyType = metricTransformation.Metrics.GroupByType
-		currentQuery.EventsWithProperties = prependFiltersBasedOnInternalTransformation(metricTransformation.Filters, query.EventsWithProperties)
+		currentQuery.EventsWithProperties = prependEventFiltersBasedOnInternalTransformation(metricTransformation.Filters, query.EventsWithProperties)
+		currentQuery.GlobalUserProperties = prependUserFiltersBasedOnInternalTransformation(metricTransformation.Filters, query.GlobalUserProperties, kpiQuery, metric)
 		finalResultantQueries = append(finalResultantQueries, currentQuery)
 	}
 	return finalResultantQueries
 }
 
-func prependFiltersBasedOnInternalTransformation(filters []QueryProperty, eventsWithProperties []QueryEventWithProperties) []QueryEventWithProperties {
+func prependEventFiltersBasedOnInternalTransformation(filters []QueryProperty, eventsWithProperties []QueryEventWithProperties) []QueryEventWithProperties {
+	resultantEventsWithProperties := make([]QueryEventWithProperties, 1)
 	var filtersBasedOnMetric []QueryProperty
-	filtersBasedOnMetric = append(filtersBasedOnMetric, filters...)
-	eventsWithProperties[0].Properties = append(filtersBasedOnMetric, eventsWithProperties[0].Properties...)
-	return eventsWithProperties
+	for _, filter := range filters {
+		if filter.Entity == EventEntity {
+			filtersBasedOnMetric = append(filtersBasedOnMetric, filter)
+		}
+	}
+	resultantEventsWithProperties[0].Name = eventsWithProperties[0].Name
+	resultantEventsWithProperties[0].AliasName = eventsWithProperties[0].AliasName
+	resultantEventsWithProperties[0].Properties = append(filtersBasedOnMetric, eventsWithProperties[0].Properties...)
+	return resultantEventsWithProperties
+}
+
+func prependUserFiltersBasedOnInternalTransformation(filters []QueryProperty, userProperties []QueryProperty, kpiQuery KPIQuery, metric string) []QueryProperty {
+	if kpiQuery.DisplayCategory == PageViewsDisplayCategory && U.ContainsStringInArray([]string{Entrances, Exits}, metric) {
+		var filtersBasedOnMetric []QueryProperty
+		for _, filter := range filters {
+			if filter.Entity == UserEntity {
+				filtersBasedOnMetric = append(filtersBasedOnMetric, QueryProperty{
+					Entity:    "user_g",
+					Type:      filter.Type,
+					Property:  filter.Property,
+					Operator:  filter.Operator,
+					LogicalOp: filter.LogicalOp,
+					Value:     kpiQuery.PageUrl,
+				})
+			}
+		}
+		return filtersBasedOnMetric
+	} else {
+		return make([]QueryProperty, 0)
+	}
 }
 
 // Functions supporting transforming eventResults to KPIresults
@@ -150,8 +185,11 @@ func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bo
 		var tmpResult *QueryResult
 		tmpResult = &QueryResult{}
 
+		log.WithField("result", result).Warn("kark1")
 		tmpResult.Headers = getTransformedHeaders(result.Headers, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
-		tmpResult.Rows = getTransformedRows(result.Rows, hasGroupByTimestamp, hasAnyGroupBy)
+		log.WithField("tmpResult.Headers", tmpResult.Headers).Warn("kark2")
+		tmpResult.Rows = GetTransformedRows(result.Rows, hasGroupByTimestamp, hasAnyGroupBy, len(result.Headers))
+		log.WithField("tmpResult.Rows", tmpResult.Rows).Warn("kark3")
 		resultantResults = append(resultantResults, tmpResult)
 	}
 	return resultantResults
@@ -170,13 +208,27 @@ func getTransformedHeaders(headers []string, hasGroupByTimestamp bool, hasAnyGro
 	return currentHeaders
 }
 
-// append(row[1:2], row[3:]...))
-// TODO: validate if rows are there or not.
-func getTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGroupBy bool) [][]interface{} {
+func GetTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGroupBy bool, headersLen int) [][]interface{} {
 	var currentRows [][]interface{}
 	currentRows = make([][]interface{}, 0)
+	if len(rows) == 0 {
+		currentRow := make([]interface{}, headersLen)
+		for index := range currentRow[:len(currentRow)-1] {
+			currentRow[index] = ""
+		}
+		currentRow[len(currentRow)-1] = 0
+		currentRows = append(currentRows, currentRow)
+		return currentRows
+	}
 	for _, row := range rows {
-		if hasAnyGroupBy && hasGroupByTimestamp {
+		if len(row) == 0 {
+			currentRow := make([]interface{}, headersLen)
+			for index := range currentRow[:len(currentRow)-1] {
+				currentRow[index] = ""
+			}
+			currentRow[len(currentRow)-1] = 0
+			currentRows = append(currentRows, currentRow)
+		} else if hasAnyGroupBy && hasGroupByTimestamp {
 			currentRow := append(row[1:2], row[3:]...)
 			currentRows = append(currentRows, currentRow)
 		} else if !hasAnyGroupBy && hasGroupByTimestamp {
@@ -191,38 +243,76 @@ func getTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGr
 // Each KPI metric is internally converted to event analytics.
 // Considering all rows to be equal in size because of analytics response.
 // resultAsMap - key with groupByColumns, value as row.
-func HandlingEventResultsByApplyingOperations(results []*QueryResult, transformations []TransformQueryi) QueryResult {
-	var resultAsMap, intermediateResultsAsMap map[string][]interface{}
-	resultAsMap = make(map[string][]interface{})
-	intermediateResultsAsMap = make(map[string][]interface{})
-	var finalResultRows [][]interface{}
+func HandlingEventResultsByApplyingOperations(results []*QueryResult, transformations []TransformQueryi, timezone string, isTimezoneEnabled bool) QueryResult {
+	resultKeys := getAllKeysFromResults(results)
 	var finalResult QueryResult
+	finalResultRows := make([][]interface{}, 0)
 	for index, result := range results {
 		if index == 0 {
-			resultAsMap = makeHashWithKeyAsGroupBy(result.Rows)
+			resultKeys = addValuesToHashMap(resultKeys, result.Rows)
 		} else {
 			for _, row := range result.Rows {
 				key := getkeyFromRow(row)
-				value1 := resultAsMap[key][len(row)-1]
+				value1 := resultKeys[key]
 				value2 := row[len(row)-1]
 				operator := transformations[index-1].Metrics.Operator
 				result := getValueFromValuesAndOperator(value1, value2, operator)
-				row[len(row)-1] = result
-				intermediateResultsAsMap[key] = row
+				resultKeys[key] = result
 			}
-			resultAsMap = intermediateResultsAsMap
-			intermediateResultsAsMap = make(map[string][]interface{})
 		}
 	}
-	for _, value := range resultAsMap {
-		finalResultRows = append(finalResultRows, value)
+
+	sortedKeys := getSortedKeys(resultKeys)
+	for _, sortedKey := range sortedKeys {
+		row := make([]interface{}, 0)
+		columns := strings.Split(sortedKey, ":;")
+		for _, column := range columns[:len(columns)-1] {
+			if strings.HasPrefix(column, "dat$") {
+				unixValue, _ := strconv.ParseInt(strings.TrimPrefix(column, "dat$"), 10, 64)
+				columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezone, isTimezoneEnabled)
+				row = append(row, columnValue)
+			} else {
+				row = append(row, column)
+			}
+		}
+		value := resultKeys[sortedKey]
+		row = append(row, value)
+		finalResultRows = append(finalResultRows, row)
 	}
 	finalResult.Headers = results[0].Headers
 	finalResult.Rows = finalResultRows
 	return finalResult
 }
 
-// TODO: Decide value when divided by 0.
+func getAllKeysFromResults(results []*QueryResult) map[string]interface{} {
+	resultKeys := make(map[string]interface{}, 0)
+	var key string
+	for _, result := range results {
+		for _, row := range result.Rows {
+			key = getkeyFromRow(row)
+			resultKeys[key] = 0
+		}
+	}
+	return resultKeys
+}
+
+func addValuesToHashMap(resultKeys map[string]interface{}, rows [][]interface{}) map[string]interface{} {
+	for _, row := range rows {
+		key := getkeyFromRow(row)
+		resultKeys[key] = row[len(row)-1]
+	}
+	return resultKeys
+}
+
+func getSortedKeys(hashMap map[string]interface{}) []string {
+	keys := make([]string, 0)
+	for k, _ := range hashMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func getValueFromValuesAndOperator(value1 interface{}, value2 interface{}, operator string) float64 {
 	var result float64
 	value1InFloat := U.SafeConvertToFloat64(value1)
@@ -246,11 +336,19 @@ func makeHashWithKeyAsGroupBy(rows [][]interface{}) map[string][]interface{} {
 	return hashMap
 }
 
-// could be anything. need to replace %d
 func getkeyFromRow(row []interface{}) string {
+	if len(row) <= 1 {
+		return "1"
+	}
 	var key string
 	for _, value := range row[:len(row)-1] {
-		key = fmt.Sprintf("%d", value) + ":"
+		if valueTime, ok := (value.(time.Time)); ok {
+			valueInUnix := valueTime.Unix()
+			key = key + fmt.Sprintf("dat$%v:;", valueInUnix)
+		} else {
+			key = key + fmt.Sprintf("%v", value) + ":;"
+		}
 	}
+
 	return key
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// From and to refer to JoinTime
 type ProfileQueryGroup struct {
 	Class          string                 `json:"cl"`
 	Queries        []ProfileQuery         `json:"queries"`
@@ -16,10 +17,14 @@ type ProfileQueryGroup struct {
 	To             int64                  `json:"to"`
 	Timezone       string                 `json:"tz"`
 }
+
+// From and to refer to JoinTime
 type ProfileQuery struct {
 	Type     string                 `json:"ty"` // all_users, hubspot_events, etc
 	Filters  []QueryProperty        `json:"pr"`
 	GroupBys []QueryGroupByProperty `json:"group_bys"`
+	From     int64                  `json:"from"`
+	To       int64                  `json:"to"`
 	Timezone string                 `json:"tz"`
 }
 
@@ -97,7 +102,7 @@ func (query *ProfileQuery) TransformDateTypeFilters() error {
 }
 
 const (
-	DefaultSelectForAllUsers = "COUNT(*) as all_users"
+	DefaultSelectForAllUsers = "COUNT(DISTINCT(COALESCE(users.customer_user_id, users.id))) as all_users"
 )
 
 func SanitizeDateTypeRowsProfiles(result *QueryResult, query *ProfileQuery) {

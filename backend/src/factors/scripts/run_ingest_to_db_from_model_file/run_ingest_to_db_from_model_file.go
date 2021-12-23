@@ -8,7 +8,6 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
-	"factors/util"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -82,7 +81,7 @@ func main() {
 	shouldCountOccurence := *CountOccurence
 	flag.Parse()
 
-	defer util.NotifyOnPanic("Task#BuildDbFromModelFile", *env)
+	defer U.NotifyOnPanic("Task#BuildDbFromModelFile", *env)
 
 	appName := "db_from_model_file"
 
@@ -116,7 +115,7 @@ func main() {
 
 	err := C.InitDB(*config)
 	if err != nil {
-		log.Error("Failed to initialize DB.")
+		log.Error("failed to initialize DB.")
 		os.Exit(1)
 	}
 
@@ -139,7 +138,7 @@ func main() {
 		if *projectIdFlag != 0 {
 			err := testData(*customStartTime, *customEndTime, *projectIdFlag, shouldCountOccurence, file)
 			if err != nil {
-				log.Error("Failed to testData ", err)
+				log.Error("failed to testData ", err)
 			}
 		} else {
 			log.Error("Not valid parameter for queryMode")
@@ -151,7 +150,7 @@ func main() {
 		if *projectIdFlag != 0 {
 			err := testWithEventConstraints(*customStartTime, *customEndTime, *projectIdFlag, shouldCountOccurence, file)
 			if err != nil {
-				log.Error("Failed to testWithEventConstraints ", err)
+				log.Error("failed to testWithEventConstraints ", err)
 			}
 		} else {
 			log.Error("Not valid parameter for queryMode")
@@ -179,12 +178,12 @@ func main() {
 
 	project, err = dbCreateAndGetProjectWithAgentUUID(*projectName, *agentUUID)
 	if err != nil {
-		log.WithError(err).Error("Failed to create project for agent")
+		log.WithError(err).Error("failed to create project for agent")
 		os.Exit(1)
 	}
 	_, _, err = denormalizedEventsFileToProject(file, project)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse file")
+		log.WithError(err).Error("failed to parse file")
 		os.Exit(1)
 	}
 
@@ -197,7 +196,7 @@ func createRandomAgentUUID() (string, error) {
 		PlanCode: model.FreePlanCode,
 	}
 	if agent, err := store.GetStore().CreateAgentWithDependencies(&createAgentParams); err != http.StatusCreated {
-		return "", errors.New("Failed to create agent")
+		return "", errors.New("failed to create agent")
 	} else {
 		return agent.Agent.UUID, nil
 	}
@@ -225,7 +224,7 @@ func denormalizedEventsFileToProject(file *os.File, project *model.Project) (int
 		if project != nil {
 			err := eventToDb(decEvent, project)
 			if err != http.StatusOK {
-				return 0, 0, errors.New(fmt.Sprintf("Failed to create event %+v\n ,  %d", decEvent, err))
+				return 0, 0, fmt.Errorf("failed to create event %+v\n ,  %d", decEvent, err)
 			}
 		}
 
@@ -254,8 +253,8 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 
 	billingAcc, errCode := store.GetStore().GetBillingAccountByAgentUUID(agentUUID)
 	if errCode != http.StatusFound {
-		log.WithField("err_code", errCode).Error("CreateProject Failed, billing account error")
-		return nil, errors.New("Failed to create billingaccount")
+		log.WithField("err_code", errCode).Error("CreateProject failed, billing account error")
+		return nil, errors.New("failed to create billingaccount")
 	}
 
 	cproject, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName},
@@ -268,15 +267,15 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 }
 
 func eventToDb(event denEvent, project *model.Project) int {
-	userID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: event.UserId})
+	userID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: event.UserId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	if errCode != http.StatusCreated && errCode != http.StatusOK {
-		log.Errorf("Failed to create user status: %d", errCode)
+		log.Errorf("failed to create user status: %d", errCode)
 		return errCode
 	}
 
 	user, errCode := store.GetStore().GetUser(project.ID, userID)
 	if errCode != http.StatusFound {
-		log.Errorf("Failed to get user status: %d", errCode)
+		log.Errorf("failed to get user status: %d", errCode)
 		return errCode
 	}
 
@@ -334,48 +333,48 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	enQueries := []byte(`{"cl":"insights","ty":"events_occurrence","ec":"any_given_event","ewp":[{"na":"Fund Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
 	err = json.Unmarshal(enQueries, &query)
 	if err != nil {
-		return errors.New("Faile to unmarshal")
+		return errors.New("failed to unmarshal")
 	}
 	result, errCode, _ := store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
-		errors.New("Failed to analyze query")
+		return errors.New("failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[0].PerOccurrenceCount) {
 		log.Info("Success on compare PerOccurrenceCount for single event pattern PerOccurrenceCount: ", result.Rows[0][0].(int64))
 	} else {
-		log.Errorf("Failed to compare PerOccurrenceCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].PerOccurrenceCount)
+		log.Errorf("failed to compare PerOccurrenceCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].PerOccurrenceCount)
 	}
 
 	//TotalUserCount is calculated using COUNT on UNIQUE USERS in INSIGHT query
 	enQueries = []byte(`{"cl":"insights","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"$session","pr":[]},{"na":"View Project","pr":[]},{"na":"Fund Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
 	err = json.Unmarshal(enQueries, &query)
 	if err != nil {
-		return errors.New("Faile to unmarshal")
+		return errors.New("failed to unmarshal")
 	}
 	result, errCode, _ = store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
-		errors.New("Failed to analyze query")
+		return errors.New("failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[0].TotalUserCount) {
 		log.Info("Success on compare TotalUserCount for single event pattern TotalUserCount: ", result.Rows[0][0].(int64))
 	} else {
-		log.Errorf("Failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].TotalUserCount)
+		log.Errorf("failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].TotalUserCount)
 	}
 
 	//PerUserCount is calculated using COUNT on UNIQUE USERS in FUNNEL query. Same as COUNT on UNIQUE USERS in INSIGHT query
 	enQueries = []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"Fund Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
 	err = json.Unmarshal(enQueries, &query)
 	if err != nil {
-		return errors.New("Faile to unmarshal")
+		return errors.New("failed to unmarshal")
 	}
 	result, errCode, _ = store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
-		errors.New("Failed to analyze query")
+		return errors.New("failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[0].PerUserCount) {
 		log.Info("Success on compare PerUserCount for single event pattern PerUserCount: ", result.Rows[0][0].(int64))
 	} else {
-		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].PerUserCount)
+		log.Errorf("failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].PerUserCount)
 	}
 
 	// FOR DOUBLE EVENTS(SESSION -> FUND PROJECT) COUNT
@@ -385,21 +384,21 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	enQueries = []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"$session","pr":[]},{"na":"Fund Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
 	err = json.Unmarshal(enQueries, &query)
 	if err != nil {
-		return errors.New("Faile to unmarshal")
+		return errors.New("failed to unmarshal")
 	}
 	result, errCode, _ = store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
-		errors.New("Failed to analyze query")
+		return errors.New("failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[1].TotalUserCount) {
 		log.Info("Success on compare TotalUserCount for double event pattern TotalUserCount: ", result.Rows[0][0].(int64))
 	} else {
-		log.Errorf("Failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[1].TotalUserCount)
+		log.Errorf("failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[1].TotalUserCount)
 	}
 	if result.Rows[0][1].(int64) == int64(patterns[1].PerUserCount) {
 		log.Info("Success on compare PerUserCount for double event pattern PerUserCount: ", result.Rows[0][1].(int64))
 	} else {
-		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][1], patterns[1].PerUserCount)
+		log.Errorf("failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][1], patterns[1].PerUserCount)
 	}
 
 	//FOR TRIPLE EVENTS($SESSION -> FUND PROJECT -> VIEW PROJECT)
@@ -409,21 +408,21 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	enQueries = []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"$session","pr":[]},{"na":"Fund Project","pr":[]},{"na":"View Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
 	err = json.Unmarshal(enQueries, &query)
 	if err != nil {
-		return errors.New("Faile to unmarshal")
+		return errors.New("failed to unmarshal")
 	}
 	result, errCode, _ = store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
-		return errors.New("Failed to analyze query")
+		return errors.New("failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[2].TotalUserCount) {
 		log.Info("Success on compare TotalUserCount for triple event pattern TotalUserCount: ", result.Rows[0][0].(int64))
 	} else {
-		log.Errorf("Failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[2].TotalUserCount)
+		log.Errorf("failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[2].TotalUserCount)
 	}
 	if result.Rows[0][3] == int64(patterns[2].PerUserCount) {
 		log.Info("Success on compare PerUserCount for triple event pattern PerUserCount: ", result.Rows[0][3])
 	} else {
-		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][3], patterns[2].PerUserCount)
+		log.Errorf("failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][3], patterns[2].PerUserCount)
 	}
 
 	return nil
@@ -471,7 +470,7 @@ func getPatterns(projectID uint64, file *os.File, countOccurence bool) ([]*P.Pat
 		return nil, err
 	}
 	scanner = bufio.NewScanner(file)
-	err = P.CountPatterns(projectID, scanner, patterns, countOccurence)
+	err = P.CountPatterns(projectID, scanner, patterns, countOccurence, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -494,9 +493,9 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	//For Fund Project with $day_of_week equals Friday
 	log.Info("For Fund Project event")
 	genericPropertiesConstraints := []P.EventConstraints{
-		P.EventConstraints{
+		{
 			EPCategoricalConstraints: []P.CategoricalConstraint{
-				P.CategoricalConstraint{
+				{
 					PropertyName:  "$day_of_week",
 					PropertyValue: "Friday",
 				},
@@ -515,7 +514,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	enQueries := []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"Fund Project","pr":[{"en":"event","ty":"categorical","pr":"$day_of_week","op":"equals","va":"Friday","lop":"AND"}]}],"gbp":[],"gbt":"","tz":"UTC","fr":1393632000,"to":1394236799,"ovp":false}`)
 	err = json.Unmarshal(enQueries, &query)
 	if err != nil {
-		return errors.New("Failed to unmarshal")
+		return errors.New("failed to unmarshal")
 	}
 	result, _, _ := store.GetStore().Analyze(projectId, query)
 	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
@@ -525,16 +524,16 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	// with $SESSION event property $day_of_week equals Friday
 	log.Info("EVENTS($SESSION -> FUND PROJECT -> VIEW PROJECT")
 	genericPropertiesConstraints = []P.EventConstraints{
-		P.EventConstraints{
+		{
 			EPCategoricalConstraints: []P.CategoricalConstraint{
-				P.CategoricalConstraint{
+				{
 					PropertyName:  "$day_of_week",
 					PropertyValue: "Friday",
 				},
 			},
 		},
-		P.EventConstraints{},
-		P.EventConstraints{},
+		{},
+		{},
 	}
 
 	perUserCount, _ = patterns[2].GetPerUserCount(genericPropertiesConstraints)
@@ -542,7 +541,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	enQueries = []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"$session","pr":[{"en":"event","ty":"categorical","pr":"$day_of_week","op":"equals","va":"Friday","lop":"AND"}]},{"na":"Fund Project","pr":[]},{"na":"View Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
 	err = json.Unmarshal(enQueries, &query)
 	if err != nil {
-		return errors.New("Failed to unmarshal")
+		return errors.New("failed to unmarshal")
 	}
 	result, _, _ = store.GetStore().Analyze(projectId, query)
 	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))

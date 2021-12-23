@@ -1,0 +1,16 @@
+FROM golang:1.14-alpine AS builder
+
+ENV GOPATH /go
+WORKDIR /go/src/data_simulator
+ADD /data_simulator .
+RUN go build -o /go/src/data_simulator/bin/datagen datagen/data_generator.go
+ADD /data_simulator/config/livspace.yaml /go/src/data_simulator/bin
+ADD /data_simulator/config/acme_com.yaml /go/src/data_simulator/bin
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && apk add curl && rm -rf /var/cache/apk/*
+COPY --from=builder /go/src/data_simulator/bin/datagen  /go/src/data_simulator/bin/datagen 
+COPY --from=builder /go/src/data_simulator/bin/livspace.yaml /go/bin/livspace.yaml
+COPY --from=builder /go/src/data_simulator/bin/acme_com.yaml /go/bin/acme_com.yaml
+CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/src/data_simulator/bin/datagen --config=${CONFIG} --projectkey=${AUTH_TOKEN} --endpoint=http://${SDK_HOST}:8085 --env=docker --offset_hours_past=-2 --seed_date=${SEED_DATE}; break; fi; sleep 2; done"]

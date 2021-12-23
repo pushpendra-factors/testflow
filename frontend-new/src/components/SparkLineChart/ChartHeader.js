@@ -25,7 +25,7 @@ function ChartHeader({ total, query, bgColor, smallFont = false }) {
       <div
         className={`${smallFont ? styles.smallerTotalText : styles.totalText}`}
       >
-        <NumFormat shortHand={true} number={total} />
+        <NumFormat shortHand={total > 10000} number={total} />
       </div>
     </div>
   );

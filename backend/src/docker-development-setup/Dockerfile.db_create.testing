@@ -1,12 +1,12 @@
-FROM golang:1.12-alpine3.11 AS builder
+FROM golang:1.14-alpine AS builder
 
 ENV GOPATH /go
 WORKDIR /go/src/factors
 ADD /factors .
-RUN go build -o /go/src/factors/backend/bin/builddb scripts/run_db_create.go
+RUN go build -o /go/src/factors/backend/bin/builddb scripts/run_db_create/run_db_create.go
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && apk add curl && rm -rf /var/cache/apk/*
 COPY --from=builder /go/src/factors/backend/bin/builddb /go/src/factors/backend/bin/builddb
-CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/src/factors/backend/bin/builddb --db_host=${DB_HOST}; break; fi; sleep 2; done"]
+CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/src/factors/backend/bin/builddb --db_host=${DB_HOST} --dev_setup; break; fi; sleep 2; done"]

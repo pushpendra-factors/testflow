@@ -35,7 +35,7 @@ func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (uint64, *model
 
 	project, agent, _ := SetupProjectWithAgentDAO()
 
-	createdUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 
 	rEventName := "event1"
 	_ = ServePostRequestWithHeaders(r, uri,
@@ -54,6 +54,27 @@ func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (uint64, *model
 		})
 
 	rEventName = "event3"
+	_ = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon", "up2": "uv2"}}`, createdUserID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	rEventName = "hubspot_account_created"
+	_ = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon", "up2": "uv2"}}`, createdUserID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	rEventName = "hubspot_opportunity_created"
+	_ = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon", "up2": "uv2"}}`, createdUserID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	rEventName = "hubspot_contact_created"
 	_ = ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon", "up2": "uv2"}}`, createdUserID, rEventName)),
 		map[string]string{
@@ -109,7 +130,25 @@ func sendGetAllFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, pro
 	r.ServeHTTP(w, req)
 	return w
 }
-
+func sendGetAllFactorsGroupedTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/factors/grouped_tracked_event", projectID)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error getting tracked event.")
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
 func sendRemoveFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.RemoveFactorsTrackedEventParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -151,13 +190,34 @@ func TestCreateFactorsTrackedEvent(t *testing.T) {
 	request := V1.CreateFactorsTrackedEventParams{}
 	request.EventName = "event1"
 
+	var obj successObject
 	// Happy path
 	request = V1.CreateFactorsTrackedEventParams{}
 	request.EventName = "event1"
 	w := sendCreateFactorsTrackedEvent(r, request, agent, projectId)
 	assert.Equal(t, http.StatusCreated, w.Code)
-	var obj successObject
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &obj)
+	successFactorsTrackedEventIds = append(successFactorsTrackedEventIds, obj.Id)
+
+	request.EventName = "hubspot_account_created"
+	w = sendCreateFactorsTrackedEvent(r, request, agent, projectId)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &obj)
+	successFactorsTrackedEventIds = append(successFactorsTrackedEventIds, obj.Id)
+
+	request.EventName = "hubspot_opportunity_created"
+	w = sendCreateFactorsTrackedEvent(r, request, agent, projectId)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &obj)
+	successFactorsTrackedEventIds = append(successFactorsTrackedEventIds, obj.Id)
+
+	request.EventName = "hubspot_contact_created"
+	w = sendCreateFactorsTrackedEvent(r, request, agent, projectId)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &obj)
 	successFactorsTrackedEventIds = append(successFactorsTrackedEventIds, obj.Id)
 
@@ -190,6 +250,21 @@ func TestCreateFactorsTrackedEvent(t *testing.T) {
 	assert.Equal(t, successFactorsTrackedEventIds[0], int64(trackedEvent[0].ID))
 	assert.Equal(t, true, trackedEvent[0].IsActive)
 	assert.Equal(t, "event1", trackedEvent[0].Name)
+
+	// grouped_tracked_events
+	w = sendGetAllFactorsGroupedTrackedEventRequest(r, agent, projectId)
+	assert.Equal(t, http.StatusOK, w.Code)
+	groupedTrackedEvent := make(map[string][]model.FactorsTrackedEventInfo)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &groupedTrackedEvent)
+	assert.Equal(t, true, groupedTrackedEvent["website_event"][0].IsActive)
+	assert.Equal(t, "event1", groupedTrackedEvent["website_event"][0].Name)
+	assert.Equal(t, true, groupedTrackedEvent["contact_event"][0].IsActive)
+	assert.Equal(t, "hubspot_contact_created", groupedTrackedEvent["contact_event"][0].Name)
+	assert.Equal(t, true, groupedTrackedEvent["account_event"][0].IsActive)
+	assert.Equal(t, "hubspot_account_created", groupedTrackedEvent["account_event"][0].Name)
+	assert.Equal(t, true, groupedTrackedEvent["opportunity_event"][0].IsActive)
+	assert.Equal(t, "hubspot_opportunity_created", groupedTrackedEvent["opportunity_event"][0].Name)
 
 	// remove event
 	removeRequest := V1.RemoveFactorsTrackedEventParams{

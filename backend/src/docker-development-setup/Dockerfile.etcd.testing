@@ -1,8 +1,9 @@
 ARG ETCD_VERSION
 FROM bitnami/etcd:$ETCD_VERSION
 
-ENV ETCDCTL_API 3
 USER root
+ENV ETCDCTL_API 3
+RUN chown -R 1000:1000 /bitnami
 RUN mkdir -p /usr/local/var/factors/local_disk
 RUN mkdir -p /usr/local/var/factors/cloud_storage/metadata
 RUN touch /usr/local/var/factors/cloud_storage/metadata/version1.txt

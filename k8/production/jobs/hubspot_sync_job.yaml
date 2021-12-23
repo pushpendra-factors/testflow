@@ -27,7 +27,10 @@ spec:
             - --env
             - $(ENV)
             - --data_service_host
-            - $(DATA_SERVICE_HOST_URL)
+            - $(DATA_SERVICE_MEMSQL_HOST_URL)
+            - --enable_deleted_contacts
+            - --enable_deleted_projectIDs
+            - "594"
             envFrom:
             - configMapRef:
                 name: config-env

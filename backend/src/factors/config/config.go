@@ -58,6 +58,8 @@ const TEST = "test"
 const STAGING = "staging"
 const PRODUCTION = "production"
 
+const MemSQLResourcePoolOLAP = "pool_olap"
+
 // Warning: Any changes to the cookie name has to be
 // in sync with other services which uses the cookie.
 const FactorsSessionCookieName = "factors-sid"
@@ -169,29 +171,40 @@ type Configuration struct {
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []uint64
 	MultipleTimezoneEnabledProjects        []uint64
+	DemoProjectIds                         []uint64
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when enabled.
 	// Added as pointer to prevent accidental writes from
 	// other services while testing.
-	DisableDBWrites                        *bool
-	DisableRedisWrites                     *bool
-	DisableQueryCache                      *bool
-	AllowedCampaignEnrichmentByProjectID   string
-	UseOpportunityAssociationByProjectID   string
-	AllowChannelGroupingForProjectIDs      string
-	CloudManager                           filestore.FileManager
-	SegmentExcludedCustomerIDByProject     map[uint64]string // map[project_id]customer_user_id
-	AttributionDebug                       int
-	DisableDashboardQueryDBExecution       bool
-	AllowedHubspotGroupsByProjectIDs       string
-	EnableFilterOptimisation               bool
-	FilterPropertiesStartTimestamp         int64
-	OnlyAttributionDashboardCaching        int
-	SkipAttributionDashboardCaching        int
-	IsRunningForMemsql                     int
-	UseSourcePropertyOverwriteByProjectIDs string
+	DisableDBWrites                             *bool
+	EnableDemoReadAccess                        *bool
+	DisableRedisWrites                          *bool
+	DisableQueryCache                           *bool
+	AllowedCampaignEnrichmentByProjectID        string
+	UseOpportunityAssociationByProjectID        string
+	AllowChannelGroupingForProjectIDs           string
+	CloudManager                                filestore.FileManager
+	SegmentExcludedCustomerIDByProject          map[uint64]string // map[project_id]customer_user_id
+	AttributionDebug                            int
+	DisableDashboardQueryDBExecution            bool
+	AllowedHubspotGroupsByProjectIDs            string
+	EnableFilterOptimisation                    bool
+	FilterPropertiesStartTimestamp              int64
+	OnlyAttributionDashboardCaching             int
+	SkipAttributionDashboardCaching             int
+	IsRunningForMemsql                          int
+	UseSourcePropertyOverwriteByProjectIDs      string
+	AllowedSalesforceGroupsByProjectIDs         string
+	DevBox                                      bool
+	AllowSupportForUserPropertiesInIdentifyCall string
+	SkipEventNameStepByProjectID                string
+	SkipUserJoinInEventQueryByProjectID         string
+	AllowSupportForDateRangeInProfiles          string
+	EnableEventLevelEventProperties             string
+	EnableOLTPQueriesMemSQLImprovements         string
+	CaptureSourceInUsersTable                   string
 }
 
 type Services struct {
@@ -342,6 +355,66 @@ func IsAllowedHubspotGroupsByProjectID(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.AllowedHubspotGroupsByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsAllowedSalesforceGroupsByProjectID(projectID uint64) bool {
+	if configuration.AllowedSalesforceGroupsByProjectIDs == "" {
+		return false
+	}
+
+	if configuration.AllowedSalesforceGroupsByProjectIDs == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowedSalesforceGroupsByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+func SkipEventNameStepByProjectID(projectID uint64) bool {
+	if configuration.SkipEventNameStepByProjectID == "" {
+		return false
+	}
+
+	if configuration.SkipEventNameStepByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.SkipEventNameStepByProjectID, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+func SkipUserJoinInEventQueryByProjectID(projectID uint64) bool {
+	if configuration.SkipUserJoinInEventQueryByProjectID == "" {
+		return false
+	}
+
+	if configuration.SkipUserJoinInEventQueryByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.SkipUserJoinInEventQueryByProjectID, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true
@@ -666,14 +739,15 @@ func setMemSQLResourcePoolQueryCallback(db *gorm.DB) {
 	}
 }
 
-func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx) {
+func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx, pool string) {
 	logCtx := log.WithField("memsql_user", configuration.MemSQLInfo.User)
-	if configuration.PrimaryDatastore != DatastoreTypeMemSQL {
+
+	// Use olap_pool only for production environment.
+	if !IsProduction() {
 		return
 	}
 
-	pool := configuration.MemSQLInfo.ResourcePool
-	if pool == "" {
+	if configuration.PrimaryDatastore != DatastoreTypeMemSQL {
 		return
 	}
 
@@ -846,6 +920,13 @@ func DisableDBWrites() bool {
 		return *GetConfig().DisableDBWrites
 	}
 	return true
+}
+
+func EnableDemoReadAccess() bool {
+	if GetConfig().EnableDemoReadAccess != nil {
+		return *GetConfig().EnableDemoReadAccess
+	}
+	return false
 }
 
 // DisableMemSQLRedisWrites If redis writes are disabled. Defaults to true unless specified explicitly.
@@ -1245,6 +1326,94 @@ func UseSourcePropertyOverwriteByProjectIDs(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.UseSourcePropertyOverwriteByProjectIDs, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+// AllowSupportForUserPropertiesInIdentityCall id used to check if support for user properties
+// is allowed for a given (or list of) project
+func AllowSupportForUserPropertiesInIdentifyCall(projectID uint64) bool {
+	if configuration.AllowSupportForUserPropertiesInIdentifyCall == "" {
+		return false
+	}
+
+	if configuration.AllowSupportForUserPropertiesInIdentifyCall == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowSupportForUserPropertiesInIdentifyCall, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+// AllowSupportForDateRangeInProfiles is used to check if support for date range
+// is allowed for a given (or list of) project in Profiles module
+func AllowSupportForDateRangeInProfiles(projectID uint64) bool {
+	if configuration.AllowSupportForDateRangeInProfiles == "" {
+		return false
+	}
+
+	if configuration.AllowSupportForDateRangeInProfiles == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowSupportForDateRangeInProfiles, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+// EnableEventLevelEventProperties is used to check if the event level properties
+// are to be enabled for a given (or list of) project
+func EnableEventLevelEventProperties(projectID uint64) bool {
+	if configuration.EnableEventLevelEventProperties == "" {
+		return false
+	}
+
+	if configuration.EnableEventLevelEventProperties == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.EnableEventLevelEventProperties, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+}
+
+// EnableOLTPQueriesMemSQLImprovements is used to check if the OLTP queries performance improvements
+// for memsql are to be enabled for a given (or list of) project
+func EnableOLTPQueriesMemSQLImprovements(projectID uint64) bool {
+	if configuration.EnableOLTPQueriesMemSQLImprovements == "" {
+		return false
+	}
+
+	if configuration.EnableOLTPQueriesMemSQLImprovements == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.EnableOLTPQueriesMemSQLImprovements, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true
@@ -1804,6 +1973,15 @@ func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 	return false
 }
 
+func IsDemoProject(projectId uint64) bool {
+	for _, id := range configuration.DemoProjectIds {
+		if id == projectId {
+			return true
+		}
+	}
+	return false
+}
+
 func EnableMQLAPI() bool {
 	return configuration.EnableMQLAPI
 }
@@ -1843,4 +2021,12 @@ func UseEventsFilterPropertiesOptimisedLogic(queryFromTimestamp int64) bool {
 
 func UseUsersFilterPropertiesOptimisedLogic() bool {
 	return configuration.EnableFilterOptimisation
+}
+
+func IsDevBox() bool {
+	return configuration.DevBox
+}
+
+func SetEnableEventLevelEventProperties(projectId uint64) {
+	configuration.EnableEventLevelEventProperties = fmt.Sprintf("%d", projectId)
 }

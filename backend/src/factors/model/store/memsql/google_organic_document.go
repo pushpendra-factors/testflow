@@ -527,6 +527,9 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, ur
 func getGoogleOrganicFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	resultStatement := ""
 	var filterValue string
+	if len(filters) == 0 {
+		return resultStatement
+	}
 	for index, filter := range filters {
 		currentFilterStatement := ""
 		if filter.LogicalOp == "" {
@@ -540,10 +543,11 @@ func getGoogleOrganicFiltersWhereStatement(filters []model.ChannelFilterV1) stri
 		}
 		currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') %s '%s' ", filter.Property, filterOperator, filterValue)
 		if index == 0 {
-			resultStatement = " AND " + currentFilterStatement
+			resultStatement = " AND ( " + currentFilterStatement
 		} else {
 			resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
 		}
 	}
-	return resultStatement
+	return resultStatement + " )"
+
 }

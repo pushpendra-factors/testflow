@@ -28,6 +28,13 @@ func main() {
 	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
 	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
+	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -74,6 +81,16 @@ func main() {
 			Password: *dbPass,
 			AppName:  taskID,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:         *memSQLHost,
+			Port:         *memSQLPort,
+			User:         *memSQLUser,
+			Name:         *memSQLName,
+			Password:     *memSQLPass,
+			Certificate:  *memSQLCertificate,
+			ResourcePool: *memSQLResourcePool,
+			AppName:      taskID,
+		},
 		SentryDSN:           *sentryDSN,
 		PrimaryDatastore:    *primaryDatastore,
 		RedisHost:           *redisHost,
@@ -102,31 +119,28 @@ func main() {
 
 	eventNameIDSplit := strings.Split(*eventNameIDstr, ",")
 
-	var eventNameIDs []uint64
+	var eventNameIDs []string
 	for i := range eventNameIDSplit {
-		eventNameID, err := util.GetPropertyValueAsFloat64(eventNameIDSplit[i])
-		if err != nil {
-			log.Panic("invalid event name id")
-		}
+		eventNameID := eventNameIDSplit[i]
 
-		eventNameIDs = append(eventNameIDs, uint64(eventNameID))
+		eventNameIDs = append(eventNameIDs, eventNameID)
 	}
 
-	log.Info(fmt.Sprintf("Running for event_name_id %d", eventNameIDs))
-	propertiesUpdateList, eventPropertiesUpdateCount, eventUserPropertiesUpdateCount, latestUserPropertiesUpdateCount, err := beginBackFillDateTimePropertiesByEventNameID(*projectID, eventNameIDs, *from, *to, *wetRun)
+	log.Info(fmt.Sprintf("Running for event_name_id %v", eventNameIDs))
+	propertiesUpdateList, updateCount, err := beginBackFillDateTimePropertiesByEventNameID(*projectID, eventNameIDs, *from, *to, *wetRun)
 	if err != nil {
 		log.WithFields(log.Fields{"wet_run": *wetRun}).WithError(err).Error("Failed to update event for datetime properties.")
 		os.Exit(1)
 	}
 
 	log.WithFields(log.Fields{"properties_update_list": propertiesUpdateList,
-		"event_properties_update_count":       eventPropertiesUpdateCount,
-		"event_user_properties_update_count":  eventUserPropertiesUpdateCount,
-		"latest_user_properties_update_count": latestUserPropertiesUpdateCount}).Info("Updating event properties completed.")
+		"event_properties_update_count":       updateCount["eventPropertieUpdateCount"],
+		"event_user_properties_update_count":  updateCount["eventUserPropertiesUpdateCount"],
+		"latest_user_properties_update_count": updateCount["latestUserPropertiesUpdateCount"]}).Info("Updating event properties completed.")
 }
 
 // GetEventsBetweenRangeByEventNameIDs return events between range by event_name_id. End time is not inclusive
-func GetEventsBetweenRangeByEventNameIDs(projectID uint64, eventNameID []uint64, from, to int64) ([]model.Event, int) {
+func GetEventsBetweenRangeByEventNameIDs(projectID uint64, eventNameID []string, from, to int64) ([]model.Event, int) {
 	db := C.GetServices().Db
 
 	var events []model.Event
@@ -144,90 +158,78 @@ func GetEventsBetweenRangeByEventNameIDs(projectID uint64, eventNameID []uint64,
 	return events, http.StatusFound
 }
 
-func beginBackFillDateTimePropertiesByEventNameID(projectID uint64, eventNameIDs []uint64, from, to int64, wetRun bool) (*map[string]bool, int, int, int, error) {
+func beginBackFillDateTimePropertiesByEventNameID(projectID uint64, eventNameIDs []string, from, to int64, wetRun bool) (map[string]bool, map[string]int, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name_ids": eventNameIDs, "from": from, "to": to})
 	if projectID == 0 || len(eventNameIDs) < 1 || from == 0 || to == 0 {
 		logCtx.Error("Missing fields.")
-		return nil, 0, 0, 0, errors.New("missing fields")
+		return nil, nil, errors.New("missing fields")
 	}
 
 	datetimeProperties := make(map[string]bool, 0)
-	for i := range eventNameIDs {
-		eventName, err := store.GetStore().GetEventNameFromEventNameId(eventNameIDs[i], projectID)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get event name.")
-			return nil, 0, 0, 0, errors.New("failed to get event name")
-		}
 
-		propertyDetails, status := store.GetStore().GetAllPropertyDetailsByProjectID(projectID, eventName.Name, false)
-		if status != http.StatusFound {
-			logCtx.Error("Failed to get property details.")
-			return nil, 0, 0, 0, errors.New("failed to get property details")
-		}
+	propertyDetails, status := store.GetStore().GetAllPropertyDetailsByProjectID(projectID, "", true)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get property details.")
+		return nil, nil, errors.New("failed to get property details")
+	}
 
-		for pName, pType := range *propertyDetails {
-			if pType == util.PropertyTypeDateTime {
-				datetimeProperties[pName] = true
-			}
+	for pName, pType := range *propertyDetails {
+		if pType == util.PropertyTypeDateTime && strings.HasPrefix(pName, util.SALESFORCE_PROPERTY_PREFIX) {
+			datetimeProperties[pName] = true
 		}
-
 	}
 
 	if len(datetimeProperties) < 1 {
 		logCtx.Error("Empty datetime properties")
-		return nil, 0, 0, 0, errors.New("empty datetime properties")
+		return nil, nil, errors.New("empty datetime properties")
 	}
 
 	events, status := GetEventsBetweenRangeByEventNameIDs(projectID, eventNameIDs, from, to)
 	if status != http.StatusFound {
 		logCtx.Error("Failed to get events between range.")
-		return nil, 0, 0, 0, errors.New("failed to get events")
+		return nil, nil, errors.New("failed to get events")
 	}
 
 	allPropertiesUpdateList := make(map[string]bool, 0)
-	eventPropertieUpdateCount := 0
-	eventUserPropertiesUpdateCount := 0
-	latestUserPropertiesUpdateCount := 0
+	updateCount := make(map[string]int)
 	for i := range events {
-		propertiesUpdateList, eventPropertiesUpdate, eventUserPropertiesUpdate, err := updateEventPropertiesAndEventUserProperties(projectID, &events[i], &datetimeProperties, wetRun)
+		eventPropertiesUpdateList, eventUserPropertiesUpdateList, err := updateEventPropertiesAndEventUserProperties(projectID, &events[i], &datetimeProperties, wetRun)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"event_id": events[i].ID}).WithError(err).Error("Failed to update event.")
-			return nil, eventPropertieUpdateCount, eventUserPropertiesUpdateCount, latestUserPropertiesUpdateCount, err
+			return nil, updateCount, err
 		}
 
-		if eventPropertiesUpdate {
-			eventPropertieUpdateCount++
-		}
-
-		if eventUserPropertiesUpdate {
-			eventUserPropertiesUpdateCount++
-		}
-
-		if propertiesUpdateList != nil {
-			for pName := range *propertiesUpdateList {
+		if len(eventPropertiesUpdateList) > 0 {
+			updateCount["eventPropertieUpdateCount"]++
+			for pName := range eventPropertiesUpdateList {
 				allPropertiesUpdateList[pName] = true
 			}
 		}
 
-		propertiesUpdateList, err = updateLatesUserPropeties(projectID, events[i].UserId, &datetimeProperties, wetRun)
+		if len(eventUserPropertiesUpdateList) > 0 {
+			updateCount["eventUserPropertiesUpdateCount"]++
+			for pName := range eventUserPropertiesUpdateList {
+				allPropertiesUpdateList[pName] = true
+			}
+		}
+
+		latestUserPropertiesUpdateList, err := updateLatesUserPropeties(projectID, events[i].UserId, &datetimeProperties, wetRun)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"event_id": events[i].ID}).WithError(err).Error("Failed to update latest user properties.")
-			return nil, eventPropertieUpdateCount, eventUserPropertiesUpdateCount, latestUserPropertiesUpdateCount, err
+			return nil, updateCount, err
 		}
 
-		if propertiesUpdateList != nil {
-			latestUserPropertiesUpdateCount++
-		}
-
-		if propertiesUpdateList != nil {
-			for pName := range *propertiesUpdateList {
+		if len(latestUserPropertiesUpdateList) > 0 {
+			updateCount["latestUserPropertiesUpdateCount"]++
+			for pName := range latestUserPropertiesUpdateList {
 				allPropertiesUpdateList[pName] = true
 			}
+
 		}
 
 	}
 
-	return &allPropertiesUpdateList, eventPropertieUpdateCount, eventUserPropertiesUpdateCount, latestUserPropertiesUpdateCount, nil
+	return allPropertiesUpdateList, updateCount, nil
 }
 
 func updateDatetimePropertiesToUnix(properties *map[string]interface{}, datetimeProperties *map[string]bool) (*map[string]interface{}, *map[string]bool, bool, error) {
@@ -258,25 +260,11 @@ func updateDatetimePropertiesToUnix(properties *map[string]interface{}, datetime
 	return properties, &propertiesUpdateList, isUpdateRequired, nil
 }
 
-func backfillEventPropertiesIfRequired(projectID uint64, userID string, eventID string, properties *postgres.Jsonb, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, error) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "event_id": eventID, "datetime_properties": datetimeProperties})
-	if projectID == 0 || userID == "" || eventID == "" || properties == nil {
-		return nil, errors.New("missing required field")
-	}
+func updateEventPropertiesIfRequired(projectID uint64, eventID, eventUserID string, eventProperties *map[string]interface{}, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, error) {
 
-	var eventProperties map[string]interface{}
-	err := json.Unmarshal(properties.RawMessage, &eventProperties)
-	if err != nil {
-		return nil, err
-	}
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_id": eventID, "event_properties": eventProperties})
 
-	if eventProperties == nil || len(eventProperties) < 1 {
-		return nil, errors.New("empty map found")
-	}
-
-	logCtx = logCtx.WithFields(log.Fields{"event_properties": eventProperties})
-
-	newEventProperties, propertiesUpdateList, isUpdateRequired, err := updateDatetimePropertiesToUnix(&eventProperties, datetimeProperties)
+	newEventProperties, propertiesUpdateList, isUpdateRequired, err := updateDatetimePropertiesToUnix(eventProperties, datetimeProperties)
 	if err != nil {
 		logCtx.WithFields(log.Fields{"event_properties": eventProperties}).WithError(err).Error("Failed to update datetime properties to unix.")
 		return nil, err
@@ -288,46 +276,28 @@ func backfillEventPropertiesIfRequired(projectID uint64, userID string, eventID 
 
 	updatedEventPropertiesJsonb, err := util.EncodeToPostgresJsonb(newEventProperties)
 	if err != nil {
+		logCtx.WithFields(log.Fields{"event_properties": eventProperties}).WithError(err).Error("Failed to encode event properties.")
 		return nil, err
 	}
 
 	if wetRun {
-		status := store.GetStore().OverwriteEventProperties(projectID, userID, eventID, updatedEventPropertiesJsonb)
+		status := store.GetStore().OverwriteEventProperties(projectID, eventUserID, eventID, updatedEventPropertiesJsonb)
 		if status != http.StatusAccepted {
 			return nil, errors.New("failed to update event properties")
 		}
 	}
 
 	return propertiesUpdateList, nil
+
 }
 
-func backFillEventUserPropertiesIfRequired(projectID uint64, userID string, eventUserPropertiesID string, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, error) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "event_properties_id": eventUserPropertiesID})
-	if projectID == 0 || userID == "" || eventUserPropertiesID == "" {
-		logCtx.Error("Missing required fields.")
-		return nil, errors.New("missing required field")
-	}
+func updateEventUserPropertiesIfRequired(projectID uint64, eventID, eventUserID string, eventUserProperties *map[string]interface{}, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, error) {
 
-	properties, status := store.GetStore().GetUserProperties(projectID, userID, eventUserPropertiesID)
-	if status != http.StatusFound {
-		logCtx.Error("Failed to get event user properties.")
-		return nil, errors.New("failed to get event user properties")
-	}
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_id": eventID, "event_user_properties": eventUserProperties})
 
-	var eventUserProperties map[string]interface{}
-	err := json.Unmarshal(properties.RawMessage, &eventUserProperties)
+	newEventUserProperties, propertiesUpdateList, isUpdateRequired, err := updateDatetimePropertiesToUnix(eventUserProperties, datetimeProperties)
 	if err != nil {
-		return nil, err
-	}
-
-	if eventUserProperties == nil || len(eventUserProperties) < 1 {
-		logCtx.Error("Empty map found.")
-		return nil, errors.New("empty map found")
-	}
-
-	newEventUserProperties, propertiesUpdateList, isUpdateRequired, err := updateDatetimePropertiesToUnix(&eventUserProperties, datetimeProperties)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to update datetime properties to unix.")
+		logCtx.WithFields(log.Fields{"event_user_properties": newEventUserProperties}).WithError(err).Error("Failed to update datetime properties to unix.")
 		return nil, err
 	}
 
@@ -335,61 +305,99 @@ func backFillEventUserPropertiesIfRequired(projectID uint64, userID string, even
 		return nil, nil
 	}
 
-	eventUserPropertiesJsonb, err := util.EncodeToPostgresJsonb(newEventUserProperties)
+	updatedEventUserPropertiesJsonb, err := util.EncodeToPostgresJsonb(newEventUserProperties)
 	if err != nil {
 		return nil, err
 	}
 
 	if wetRun {
-		status = store.GetStore().OverwriteUserProperties(projectID, userID, eventUserPropertiesID, eventUserPropertiesJsonb)
+		status := store.GetStore().OverwriteEventUserPropertiesByID(projectID, eventUserID, eventID, updatedEventUserPropertiesJsonb)
 		if status != http.StatusAccepted {
-			return nil, errors.New("failed to overwrite event user properties")
+			return nil, errors.New("failed to update event properties")
 		}
 	}
 
 	return propertiesUpdateList, nil
+
 }
 
-func updateEventPropertiesAndEventUserProperties(projectID uint64, event *model.Event, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, bool, bool, error) {
+func backfillEventIfRequired(projectID uint64, userID string, eventID string, properties *postgres.Jsonb, userProperties *postgres.Jsonb, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, *map[string]bool, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "event_id": eventID, "datetime_properties": datetimeProperties})
+	if projectID == 0 || userID == "" || eventID == "" || properties == nil {
+		return nil, nil, errors.New("missing required field")
+	}
+
+	var eventProperties map[string]interface{}
+	err := json.Unmarshal(properties.RawMessage, &eventProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to unmarshal event properties")
+		return nil, nil, err
+	}
+
+	if eventProperties == nil || len(eventProperties) < 1 {
+		return nil, nil, errors.New("empty map found")
+	}
+
+	eventPropertiesUpdateList, err := updateEventPropertiesIfRequired(projectID, eventID, userID, &eventProperties, datetimeProperties, wetRun)
+	if err != nil {
+		logCtx.WithFields(log.Fields{"event_properties": eventProperties}).WithError(err).
+			Error("Failed to update event properties.")
+		return nil, nil, err
+	}
+
+	var eventUserProperties map[string]interface{}
+	err = json.Unmarshal(userProperties.RawMessage, &eventUserProperties)
+	if err != nil {
+		logCtx.WithFields(log.Fields{"event_user_properties": eventUserProperties}).WithError(err).
+			Error("Failed to unmarshal event user properties.")
+		return nil, nil, err
+	}
+
+	if eventUserProperties == nil || len(eventUserProperties) < 1 {
+		return nil, nil, errors.New("empty map found")
+	}
+
+	eventUserPropertiesUpdateList, err := updateEventUserPropertiesIfRequired(projectID, eventID, userID, &eventUserProperties, datetimeProperties, wetRun)
+	if err != nil {
+		logCtx.WithFields(log.Fields{"event_properties": eventProperties}).WithError(err).
+			Error("Failed to update event user properties.")
+		return nil, nil, err
+	}
+
+	return eventPropertiesUpdateList, eventUserPropertiesUpdateList, nil
+}
+
+func updateEventPropertiesAndEventUserProperties(projectID uint64, event *model.Event, datetimeProperties *map[string]bool, wetRun bool) (map[string]bool, map[string]bool, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "datetime_properties": datetimeProperties, "event_id": event.ID})
 	if projectID == 0 || event == nil || datetimeProperties == nil || len(*datetimeProperties) < 1 {
 		logCtx.Error("Missing required fields.")
-		return nil, false, false, errors.New("missing required fields")
+		return nil, nil, errors.New("missing required fields")
 	}
 
-	allPropertiesUpdateList := make(map[string]bool)
-	propertiesUpdateList, err := backfillEventPropertiesIfRequired(projectID, event.UserId, event.ID, &event.Properties, datetimeProperties, wetRun)
+	allEventPropertiesUpdateList := make(map[string]bool)
+	allEventUserPropertiesUpdateList := make(map[string]bool)
+	eventPropertiesUpdateList, eventUserPropertiesUpdateList, err := backfillEventIfRequired(projectID, event.UserId, event.ID, &event.Properties, event.UserProperties, datetimeProperties, wetRun)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to backfill event propeties.")
-		return nil, false, false, err
+		return nil, nil, err
 	}
 
-	eventPropertiesUpdated := propertiesUpdateList != nil
-
-	if propertiesUpdateList != nil {
-		for pName := range *propertiesUpdateList {
-			allPropertiesUpdateList[pName] = true
+	if eventPropertiesUpdateList != nil {
+		for pName := range *eventPropertiesUpdateList {
+			allEventPropertiesUpdateList[pName] = true
 		}
 	}
 
-	propertiesUpdateList, err = backFillEventUserPropertiesIfRequired(projectID, event.UserId, event.UserPropertiesId, datetimeProperties, wetRun)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to backfill event user propeties.")
-		return nil, false, false, err
-	}
-
-	eventUserPropertiesUpdated := propertiesUpdateList != nil
-
-	if propertiesUpdateList != nil {
-		for pName := range *propertiesUpdateList {
-			allPropertiesUpdateList[pName] = true
+	if eventUserPropertiesUpdateList != nil {
+		for pName := range *eventUserPropertiesUpdateList {
+			allEventUserPropertiesUpdateList[pName] = true
 		}
 	}
 
-	return &allPropertiesUpdateList, eventPropertiesUpdated, eventUserPropertiesUpdated, nil
+	return allEventPropertiesUpdateList, allEventUserPropertiesUpdateList, nil
 }
 
-func updateLatesUserPropeties(projectID uint64, userID string, datetimeProperties *map[string]bool, wetRun bool) (*map[string]bool, error) {
+func updateLatesUserPropeties(projectID uint64, userID string, datetimeProperties *map[string]bool, wetRun bool) (map[string]bool, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID})
 
 	if projectID == 0 || userID == "" {
@@ -428,11 +436,11 @@ func updateLatesUserPropeties(projectID uint64, userID string, datetimePropertie
 	}
 
 	if wetRun {
-		status = store.GetStore().OverwriteUserProperties(projectID, userID, user.PropertiesId, userPropertiesJsonb)
+		status = store.GetStore().OverwriteUserPropertiesByID(projectID, userID, userPropertiesJsonb, false, 0, "")
 		if status != http.StatusAccepted {
 			return nil, errors.New("failed to overwrite event user properties")
 		}
 	}
 
-	return propertiesUpdateList, nil
+	return *propertiesUpdateList, nil
 }

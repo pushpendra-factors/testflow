@@ -242,9 +242,9 @@ func TestGetDashboardResultFromCache(t *testing.T) {
 		OverridePeriod: true,
 	}
 
-	w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine})
+	w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine, QueryId: 1})
 	assert.Equal(t, http.StatusCreated, w.Code)
-	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine})
+	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Presentation: model.PresentationLine, QueryId: 3})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	//For Channel query
@@ -270,8 +270,7 @@ func TestGetDashboardResultFromCache(t *testing.T) {
 	}
 
 	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{
-		Presentation: "pc",
-	})
+		Presentation: "pc", QueryId: 2})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	dashboards, errCode := store.GetStore().GetDashboards(project.ID, agent.UUID)

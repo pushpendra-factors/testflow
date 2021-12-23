@@ -1,17 +1,3 @@
-# FROM golang:1.14-alpine AS builder
-
-# WORKDIR /go/src/factors
-# ADD /factors .
-# RUN go build -o $GOPATH/bin/patternmine $GOPATH/src/factors/scripts/run_pattern_mine/run_pattern_mine.go
-
-# # Create stripped down version without go and source code
-# FROM alpine:3.7
-# RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
-# COPY --from=builder /go/bin/patternmine /go/bin/patternmine
-# ENTRYPOINT ["/go/bin/patternmine"]
-
-
-
 FROM golang:1.14-buster
 WORKDIR /go/src/factors
 ADD /factors .
