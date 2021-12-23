@@ -58,16 +58,16 @@ import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
 import { fetchAgentInfo } from 'Reducers/agentActions';
 
-const whiteListedAccounts_KPI = [
-  'jitesh@factors.ai',
-  'kartheek@factors.ai',
-  'baliga@factors.ai',
-  'praveenr@factors.ai',
-  'sonali@factors.ai',
-  'solutions@factors.ai',
-  'praveen@factors.ai',
-  'ashwin@factors.ai',
-];
+// const whiteListedAccounts_KPI = [
+//   'jitesh@factors.ai',
+//   'kartheek@factors.ai',
+//   'baliga@factors.ai',
+//   'praveenr@factors.ai',
+//   'sonali@factors.ai',
+//   'solutions@factors.ai',
+//   'praveen@factors.ai',
+//   'ashwin@factors.ai',
+// ];
 
 const coreQueryoptions = [
   {
@@ -79,11 +79,6 @@ const coreQueryoptions = [
     title: 'Funnels',
     icon: 'funnels_cq',
     desc: 'Find how users are navigating a defined path',
-  },
-  {
-    title: 'KPIs',
-    icon: 'KPI_cq',
-    desc: 'Access your key marketing metrics',
   },
   {
     title: 'Campaigns',
@@ -104,6 +99,11 @@ const coreQueryoptions = [
     title: 'Profiles',
     icon: 'profiles_cq',
     desc: 'Explore all Profiles with filters and breakdowns',
+  },
+  {
+    title: 'KPIs',
+    icon: 'KPI_cq',
+    desc: 'Access your key marketing metrics',
   },
 ];
 
@@ -596,12 +596,12 @@ function CoreQuery({
             <Col span={20}>
               <div className={'flex'}>
                 {coreQueryoptions.map((item, index) => {
-                  if (
-                    item.title === 'KPIs' &&
-                    !whiteListedAccounts_KPI.includes(activeAccount)
-                  ) {
-                    return null;
-                  }
+                  // if (
+                  //   item.title === 'KPIs' &&
+                  //   !whiteListedAccounts_KPI.includes(activeAccount)
+                  // ) {
+                  //   return null;
+                  // }
                   return (
                     <div
                       key={index}
@@ -611,14 +611,14 @@ function CoreQuery({
                       <div
                         className={`fai--custom-card-new--top-section flex justify-center items-center`}
                       >
-                        {/* {item.title == 'Templates' && (
+                        {item.title == 'KPIs' && (
                           <Tag
-                            color='red'
+                            color='orange'
                             className={'fai--custom-card--badge'}
                           >
-                            Coming Soon
+                            BETA
                           </Tag>
-                        )} */}
+                        )}
                         <SVG name={item.icon} size={40} />
                       </div>
 
