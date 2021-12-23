@@ -48,7 +48,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
       style={{ maxHeight: '600px' }}
       mask={false}
     >
-      <div className='search-bar'>
+      <div data-tour = 'step-3' className='search-bar'>
         <div className='flex justify-center px-4'>
           <Input
             value={searchValue}

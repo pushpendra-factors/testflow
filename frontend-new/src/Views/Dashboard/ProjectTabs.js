@@ -174,6 +174,7 @@ function ProjectTabs({
   const operations = (
     <>
       <Button
+        data-tour = 'step-4'
         className={styles.operations}
         type='text'
         onClick={() => setaddDashboardModal(true)}
