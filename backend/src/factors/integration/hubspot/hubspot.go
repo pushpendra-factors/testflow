@@ -1659,6 +1659,14 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 				logCtx.WithFields(log.Fields{"document": documents[i]}).WithError(err).Error("Missing group user id in company record in sync deal groups.")
 				continue
 			}
+
+			// update group_user_id  details on created record
+			errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, documents[i].ID, document.Type, "",
+				documents[i].Timestamp, model.HubspotDocumentActionCreated, "", groupUserID)
+			if errCode != http.StatusAccepted {
+				logCtx.Error("Failed to update group user_id in hubspot created document as synced in sync deal company.")
+				continue
+			}
 		}
 
 		_, status = store.GetStore().CreateGroupRelationship(projectID, model.GROUP_NAME_HUBSPOT_DEAL, dealGroupUserID,
