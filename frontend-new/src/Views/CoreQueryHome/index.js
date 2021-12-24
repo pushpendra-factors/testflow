@@ -71,9 +71,9 @@ import { fetchAgentInfo } from 'Reducers/agentActions';
 
 const coreQueryoptions = [
   {
-    title: 'Events',
-    icon: 'events_cq',
-    desc: 'Create charts from events and related properties',
+    title: 'KPIs',
+    icon: 'KPI_cq',
+    desc: 'Access your key marketing metrics',
   },
   {
     title: 'Funnels',
@@ -81,19 +81,9 @@ const coreQueryoptions = [
     desc: 'Find how users are navigating a defined path',
   },
   {
-    title: 'Campaigns',
-    icon: 'campaigns_cq',
-    desc: 'Find the effect of your marketing campaigns',
-  },
-  {
-    title: 'Attributions',
+    title: 'Attribution',
     icon: 'attributions_cq',
     desc: 'Analyse Multi Touch Attributions',
-  },
-  {
-    title: 'Templates',
-    icon: 'templates_cq',
-    desc: 'A list of advanced queries crafted by experts',
   },
   {
     title: 'Profiles',
@@ -101,10 +91,23 @@ const coreQueryoptions = [
     desc: 'Explore all Profiles with filters and breakdowns',
   },
   {
-    title: 'KPIs',
-    icon: 'KPI_cq',
-    desc: 'Access your key marketing metrics',
+    title: 'Events',
+    icon: 'events_cq',
+    desc: 'Create charts from events and related properties',
   },
+  
+  {
+    title: 'Campaigns',
+    icon: 'campaigns_cq',
+    desc: 'Find the effect of your marketing campaigns',
+  },
+  {
+    title: 'Templates',
+    icon: 'templates_cq',
+    desc: 'A list of advanced queries crafted by experts',
+  },
+  
+  
 ];
 
 const columns = [
@@ -509,7 +512,7 @@ function CoreQuery({
       });
     }
 
-    if (item.title === 'Attributions') {
+    if (item.title === 'Attribution') {
       setQueryType(QUERY_TYPE_ATTRIBUTION);
     }
 
