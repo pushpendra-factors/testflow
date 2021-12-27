@@ -105,7 +105,7 @@ export const getTableColumns = (
     return {
       title: getClickableTitleSorter(
         e.property,
-        { key: `${e.property} - ${index}`, type: 'categorical', subtype: null },
+        { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
       ),
@@ -124,7 +124,7 @@ export const getTableColumns = (
     dataIndex: `value`,
     width: 200,
     render: (d) => {
-      return <NumFormat number={d} />;
+      return d ? <NumFormat number={d} /> : 0;
     },
   };
   return [...breakdownColumns, valueCol];
@@ -380,7 +380,7 @@ export const getDateBasedColumns = (
     return {
       title: getClickableTitleSorter(
         e.property,
-        { key: `${e.property} - ${index}`, type: 'categorical', subtype: null },
+        { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
       ),
@@ -403,7 +403,7 @@ export const getDateBasedColumns = (
       width: 150,
       dataIndex: moment(cat).format(format),
       render: (d) => {
-        return <NumFormat number={d} />;
+        return d ? <NumFormat number={d} /> : 0;
       },
     };
   });

@@ -979,6 +979,11 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 			return true
 		}
 
+		if prevDoc.Action == model.HubspotDocumentActionCreated {
+			// In case the only last sync doc was a CreateDocument, create an OTP for this one.
+			return true
+		}
+
 		var err error
 		var prevProperties *map[string]interface{}
 
@@ -1619,68 +1624,82 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 		return "", http.StatusInsufficientStorage
 	}
 
-	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIDList, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
-	if status != http.StatusFound && len(documents) > 0 {
-		logCtx.WithFields(log.Fields{"contact_ids": contactIDList}).Error("Failed to get contact created documents for syncGroupDeal.")
-		return "", http.StatusInternalServerError
-	}
-
-	for i := range documents {
-		userID := documents[i].UserId
-		if userID == "" {
-			logCtx.WithField("contact_id", documents[i].ID).Error("No user id found on contact create document")
-			continue
+	if len(contactIDList) > 0 {
+		documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIDList, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+		if status != http.StatusFound {
+			logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "err_code": status}).
+				Error("Failed to get contact created documents for syncGroupDeal.")
+			return "", http.StatusInternalServerError
 		}
 
-		_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_HUBSPOT_DEAL, "", dealGroupUserID)
-		if status != http.StatusAccepted && status != http.StatusNotModified {
-			logCtx.WithFields(log.Fields{"contact_id": documents[i].ID, "deal_group_user_id": dealGroupUserID}).Error("Failed to update contact user group for hubspot deal.")
-		}
-	}
-
-	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, companyIDList,
-		model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
-	if status != http.StatusFound && len(companyIDList) > 0 {
-		logCtx.WithFields(log.Fields{"contact_ids": companyIDList}).Error("Failed to get company created documents for syncGroupDeal.")
-		return "", http.StatusInternalServerError
-	}
-
-	for i := range documents {
-		groupUserID := getGroupUserID(&documents[i])
-		if groupUserID == "" {
-			userProperties, err := getCompanyProperties(projectID, &documents[i])
-			if err != nil {
-				logCtx.WithFields(log.Fields{"document": documents[i]}).Error("Failed to get company properties in sync deal groups.")
+		for i := range documents {
+			userID := documents[i].UserId
+			if userID == "" {
+				logCtx.WithField("contact_id", documents[i].ID).Error("No user id found on contact create document")
 				continue
 			}
 
-			groupUserID, _, err = syncGroupCompany(projectID, document, &userProperties)
-			if err != nil {
-				logCtx.WithFields(log.Fields{"document": documents[i]}).Error("Missing group user id in company record in sync deal groups.")
+			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_HUBSPOT_DEAL, "", dealGroupUserID)
+			if status != http.StatusAccepted && status != http.StatusNotModified {
+				logCtx.WithFields(log.Fields{"contact_id": documents[i].ID, "deal_group_user_id": dealGroupUserID, "err_code": status}).
+					Error("Failed to update contact user group for hubspot deal.")
+			}
+
+			// update group_user_id  details on created record
+			errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, documents[i].ID, document.Type, "",
+				documents[i].Timestamp, model.HubspotDocumentActionCreated, "", groupUserID)
+			if errCode != http.StatusAccepted {
+				logCtx.Error("Failed to update group user_id in hubspot created document as synced in sync deal company.")
 				continue
 			}
 		}
+	}
 
-		_, status = store.GetStore().CreateGroupRelationship(projectID, model.GROUP_NAME_HUBSPOT_DEAL, dealGroupUserID,
-			model.GROUP_NAME_HUBSPOT_COMPANY, groupUserID)
-		if status != http.StatusCreated && status != http.StatusConflict {
-			logCtx.WithFields(log.Fields{"company_id": documents[i].ID,
-				"left_group_name":     model.GROUP_NAME_HUBSPOT_DEAL,
-				"right_group_name":    model.GROUP_NAME_HUBSPOT_COMPANY,
-				"left_group_user_id":  dealGroupUserID,
-				"right_group_user_id": groupUserID}).
-				Error("Failed to update hubspot deal group relationships.")
+	if len(companyIDList) > 0 {
+		documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, companyIDList,
+			model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
+		if status != http.StatusFound {
+			logCtx.WithFields(log.Fields{"company_ids": companyIDList}).Error("Failed to get company created documents for syncGroupDeal.")
+			return "", http.StatusInternalServerError
 		}
 
-		_, status = store.GetStore().CreateGroupRelationship(projectID, model.GROUP_NAME_HUBSPOT_COMPANY, groupUserID,
-			model.GROUP_NAME_HUBSPOT_DEAL, dealGroupUserID)
-		if status != http.StatusCreated && status != http.StatusConflict {
-			logCtx.WithFields(log.Fields{"company_id": documents[i].ID,
-				"right_group_name":    model.GROUP_NAME_HUBSPOT_DEAL,
-				"left_group_name":     model.GROUP_NAME_HUBSPOT_COMPANY,
-				"right_group_user_id": dealGroupUserID,
-				"left_group_user_id":  groupUserID}).
-				Error("Failed to update hubspot deal group relationships.")
+		for i := range documents {
+			groupUserID := getGroupUserID(&documents[i])
+			if groupUserID == "" {
+				userProperties, err := getCompanyProperties(projectID, &documents[i])
+				if err != nil {
+					logCtx.WithFields(log.Fields{"document": documents[i]}).Error("Failed to get company properties in sync deal groups.")
+					continue
+				}
+
+				groupUserID, _, err = syncGroupCompany(projectID, &documents[i], &userProperties)
+				if err != nil {
+					logCtx.WithFields(log.Fields{"document": documents[i]}).WithError(err).Error("Missing group user id in company record in sync deal groups.")
+					continue
+				}
+			}
+
+			_, status = store.GetStore().CreateGroupRelationship(projectID, model.GROUP_NAME_HUBSPOT_DEAL, dealGroupUserID,
+				model.GROUP_NAME_HUBSPOT_COMPANY, groupUserID)
+			if status != http.StatusCreated && status != http.StatusConflict {
+				logCtx.WithFields(log.Fields{"company_id": documents[i].ID,
+					"left_group_name":     model.GROUP_NAME_HUBSPOT_DEAL,
+					"right_group_name":    model.GROUP_NAME_HUBSPOT_COMPANY,
+					"left_group_user_id":  dealGroupUserID,
+					"right_group_user_id": groupUserID}).
+					Error("Failed to update hubspot deal group relationships.")
+			}
+
+			_, status = store.GetStore().CreateGroupRelationship(projectID, model.GROUP_NAME_HUBSPOT_COMPANY, groupUserID,
+				model.GROUP_NAME_HUBSPOT_DEAL, dealGroupUserID)
+			if status != http.StatusCreated && status != http.StatusConflict {
+				logCtx.WithFields(log.Fields{"company_id": documents[i].ID,
+					"right_group_name":    model.GROUP_NAME_HUBSPOT_DEAL,
+					"left_group_name":     model.GROUP_NAME_HUBSPOT_COMPANY,
+					"right_group_user_id": dealGroupUserID,
+					"left_group_user_id":  groupUserID}).
+					Error("Failed to update hubspot deal group relationships.")
+			}
 		}
 	}
 
