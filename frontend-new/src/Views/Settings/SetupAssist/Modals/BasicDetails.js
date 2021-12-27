@@ -50,8 +50,8 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
       <div className={'fa-container'}>
             <Row justify={'center'}>
                 <Col span={7} >
-                    <div className={'flex flex-col justify-center mt-20'}>
-                        <Row className={'mb-20'}>
+                    <div className={'flex flex-col justify-center mt-16'}>
+                        <Row className={'mb-4'}>
                             <Col span={24} >
                                 <Text type={'title'} level={3} color={'grey-2'} weight={'bold'}>Basic Details</Text>
                                 <Progress percent={33.33} strokeWidth={3} showInfo={false} />
@@ -77,7 +77,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
                             </Form.Item>
                         </Col>
                         <Col span={24}>
-                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-6 mb-2'}>Select Your timezone</Text>
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-6 mb-2'}>Select timezone</Text>
                             <Form.Item
                                 name="time_zone"
                                 className={'m-0'}
@@ -94,9 +94,9 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
                             </Form.Item>
                         </Col>
                         <Col span={24}>
-                            <div className={'mt-20 flex justify-center'}>
+                            <div className={'mt-8 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type="primary" style={{width:'280px', height:'36px'}} className={'ml-2'} htmlType="submit">
+                                    <Button size={'large'} type="primary" style={{width:'28vw', height:'36px'}} className={'m-0'} htmlType="submit">
                                     Next
                                     </Button>
                                 </Form.Item>
@@ -105,7 +105,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
                         {/* <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type={'text'} style={{width:'280px', height:'36px'}} htmlType="text" onClick={onSkip}>
+                                    <Button size={'large'} type={'text'} style={{width:'28vw', height:'36px'}} htmlType="text" onClick={onSkip}>
                                     Skip
                                     </Button>
                                 </Form.Item>
@@ -115,7 +115,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
                     </Form>
                         
                         </Col>
-                        <Col span={24} className={'mt-20'}>
+                        <Col span={24} className={'mt-4'}>
                             <Text type={'title'} level={6} align={'center'} color={'grey-2'}>or Explore our demo project for now</Text>
                         </Col>
                         </Row>

@@ -14,7 +14,6 @@ function Brand({handleCancel, udpateProjectDetails, activeProject}) {
     const history = useHistory();
 
     const handleCreate = () => {
-      console.log({'profile_picture':imageUrl})
         udpateProjectDetails(activeProject.id, {'profile_picture':imageUrl}).then(() => {
           message.success('Profile Image Uploaded')
           handleCancel();
@@ -22,6 +21,11 @@ function Brand({handleCancel, udpateProjectDetails, activeProject}) {
         }).catch((err) => {
           message.error('error:',err)
         })
+    }
+
+    const handleSkip = () => {
+      handleCancel();
+      history.push('/project-setup');
     }
 
     function getBase64(img, callback) {
@@ -61,8 +65,8 @@ function Brand({handleCancel, udpateProjectDetails, activeProject}) {
       <div className={'fa-container'}>
             <Row justify={'center'}>
                 <Col span={7} >
-                    <div className={'flex flex-col justify-center mt-20'}>
-                        <Row className={'mb-20'}>
+                    <div className={'flex flex-col justify-center mt-16'}>
+                        <Row className={'mb-4'}>
                             <Col span={24} >
                                 <Text type={'title'} level={3} color={'grey-2'} weight={'bold'}>Brand your Project</Text>
                                 <Progress percent={100} status={'normal'} strokeWidth={3} showInfo={false} />
@@ -70,7 +74,7 @@ function Brand({handleCancel, udpateProjectDetails, activeProject}) {
                         </Row>
                         <Row className={'mt-2'}>
                             <Col>
-                                <Text type={'paragraph'} mini extraClass={'m-0 mt-1 mb-4'} color={'grey'} style={{marginLeft:'145px'}}>Project Thumbnail</Text>
+                                <Text type={'paragraph'} mini extraClass={'m-0 mt-1 mb-4'} color={'grey'} style={{textAlign:'center'}}>Project Thumbnail</Text>
                                 <Upload
                                     name="avatar"
                                     accept={''}
@@ -79,15 +83,20 @@ function Brand({handleCancel, udpateProjectDetails, activeProject}) {
                                     beforeUpload={beforeUpload}
                                     onChange={handleChange}
                                 >
-                                    {imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px',marginLeft:'160px'}} /> : <img src='../../../../assets/avatar/ModalAvatar.png' style={{marginLeft:'150px'}}></img>}
+                                    {imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px',marginLeft:'10vw'}} /> : <img src='../../../../assets/avatar/ModalAvatar.png' style={{marginLeft:'10vw'}}></img>}
                                 </Upload>
-                                <Text type={'paragraph'} mini  extraClass={'m-0 mt-4'} color={'grey'} style={{marginLeft:'90px'}}>A logo helps personalise your Project</Text>
+                                <Text type={'paragraph'} mini  extraClass={'m-0 mt-4'} color={'grey'} style={{textAlign:'center'}}>A logo helps personalise your Project</Text>
                                 <Text type={'paragraph'} mini  extraClass={'m-0 mt-8'} color={'red'} style={{ textAlign:'center'}}>Note: Upload images with a width and height of up to 105px, less than 2mb, in either a jpeg or png format.</Text>
                             </Col>
                         </Row>
-                        <Row className={'mt-12'}>
+                        <Row className={'mt-8'}>
                             <Col>
-                                <Button size={'large'} type={'primary'} style={{width:'280px', height:'36px'}} className={'ml-20'} onClick={handleCreate}>Create</Button>
+                                <Button size={'large'} type={'primary'} style={{width:'28vw', height:'36px'}} className={'m-0'} onClick={handleCreate}>Create</Button>
+                            </Col>
+                        </Row>
+                        <Row className={'mt-4'}>
+                            <Col>
+                                <Button size={'large'} type={'text'} style={{width:'28vw', height:'36px'}} className={'m-0'} onClick={handleSkip}>Skip</Button>
                             </Col>
                         </Row>
                     </div>

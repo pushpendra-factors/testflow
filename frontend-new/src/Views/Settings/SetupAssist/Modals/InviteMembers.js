@@ -64,8 +64,8 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
       <div className={'fa-container'}>
             <Row justify={'center'}>
                 <Col span={7} >
-                    <div className={'flex flex-col justify-center mt-20'}>
-                        <Row className={'mb-20'}>
+                    <div className={'flex flex-col justify-center mt-16'}>
+                        <Row className={'mb-4'}>
                             <Col span={24} >
                                 <Text type={'title'} level={3} color={'grey-2'} weight={'bold'}>Invite Team Members</Text>
                                 <Progress percent={66.66} strokeWidth={3} showInfo={false} />
@@ -148,9 +148,9 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                         )}
                         </Form.List>
                         <Col span={24}>
-                            <div className={'mt-16 flex justify-center'}>
+                            <div className={'mt-8 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type="primary" style={{width:'440px', height:'36px'}} className={'ml-2'} htmlType="submit">
+                                    <Button size={'large'} type="primary" style={{width:'28vw', height:'36px'}} className={'ml-2'} htmlType="submit">
                                     Invite and Continue
                                     </Button>
                                 </Form.Item>
@@ -159,7 +159,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                         <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type={'text'} style={{width:'440px', height:'36px'}} htmlType="text" onClick={onSkip}>
+                                    <Button size={'large'} type={'text'} style={{width:'28vw', height:'36px'}} htmlType="text" onClick={onSkip}>
                                     Skip now, I will invite later
                                     </Button>
                                 </Form.Item>

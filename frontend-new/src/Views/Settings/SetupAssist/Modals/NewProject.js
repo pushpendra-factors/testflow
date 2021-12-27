@@ -32,7 +32,7 @@ function NewProject(props) {
                 <Text type={'title'} level={4} weight={'bold'} color={'grey-2'} extraClass={'m-0 -mt-10 ml-16'}>Create a New Project</Text>
               </Col>
               <Col>
-                <Button size={'large'} type="text" onClick={() => props.handleCancel()}><SVG name="times" size={20}></SVG></Button>
+                {/* <Button size={'large'} type="text" onClick={() => props.handleCancel()}><SVG name="times" size={20}></SVG></Button> */}
               </Col>
             </Row>
           </div>

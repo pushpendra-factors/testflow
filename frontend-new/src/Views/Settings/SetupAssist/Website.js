@@ -82,13 +82,18 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
     <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
       <div className={'mb-10 pl-4'}>
         <Row gutter={[24, 24]} justify={'space-between'} className={'mt-0'}>
-            <Col>
-                <Text type={'title'} level={5} weight={'bold'} extraClass={'pb-2 m-0'}>Connect with your website data</Text>
-            </Col>
+          <Col span={17}>
+            <Text type={'title'} level={5} weight={'bold'} extraClass={'pb-2 m-0'}>Connect with your website data</Text>
+          </Col>
+          <Col>
+            <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
+          </Col>
         </Row>
+        <JavascriptSDK />
+
         <Row gutter={[24, 24]} justify={'space-between'} className={'pt-4 pb-2 mt-0 '}>
           <Col span={17}>
-            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>With our Customer Data Platform or Data Warehouse</Text>
+            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>With your Customer Data Platform</Text>
           </Col>
           <Col>
             <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
@@ -106,15 +111,15 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
           </Col>
         </Row>
 
-        <Row gutter={[24, 24]} justify={'space-between'} className={'pt-8 pb-2 mt-0 '}>
+        {/* <Row gutter={[24, 24]} justify={'space-between'} className={'pt-8 pb-2 mt-0 '}>
           <Col span={17}>
             <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Connect with your website data</Text>
           </Col>
           <Col>
             <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
           </Col>
-        </Row>
-        <JavascriptSDK />
+        </Row> */}
+        {/* <JavascriptSDK /> */}
       </div>
       </ErrorBoundary>
     </> 
