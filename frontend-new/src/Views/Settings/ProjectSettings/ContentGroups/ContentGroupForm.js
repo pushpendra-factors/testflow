@@ -80,6 +80,11 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
     }
 
     const confirmRemove = (obj) => {
+        if (formState == 'add') {
+            const rulesToUpdate = [...rulesState.filter((rl) => JSON.stringify(rl) !== JSON.stringify(obj))];
+            setRulesState(rulesToUpdate);
+        }
+
         const rulesToUpdate = [...smartPropState.rule.filter((rule) => JSON.stringify(rule) !== JSON.stringify(obj))];
         
         if(formState!=='add') {
