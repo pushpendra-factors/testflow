@@ -687,7 +687,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	assert.Equal(t, "campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	userID := response.UserId
 
-	timestamp = timestamp + 1
+	timestamp = timestamp + 10000
 	trackPayload = SDK.TrackPayload{
 		Name:          U.EVENT_NAME_FORM_SUBMITTED,
 		Timestamp:     timestamp,
@@ -710,7 +710,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	assert.Equal(t, "campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 
 	// Visit from campaign2.
-	timestamp = timestamp + 1
+	timestamp = timestamp + 10000
 	trackPayload = SDK.TrackPayload{
 		Name:      U.EVENT_NAME_FORM_SUBMITTED,
 		Timestamp: timestamp,
@@ -725,7 +725,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	assert.Empty(t, response.UserId)
 	_, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
-	timestamp = timestamp + 1
+	timestamp = timestamp + 10000
 	trackPayload = SDK.TrackPayload{
 		Name:          U.EVENT_NAME_FORM_SUBMITTED,
 		Timestamp:     timestamp,

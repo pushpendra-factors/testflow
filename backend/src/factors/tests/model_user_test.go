@@ -333,7 +333,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, status, http.StatusAccepted)
-	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
+	assert.Equal(t, oldUpdatedProperties, newUpdatedProperties)
 
 	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
@@ -429,7 +429,7 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 	assert.NotNil(t, propertiesMap[U.UP_CONTINENT])
 	assert.Equal(t, "Asia", propertiesMap[U.UP_CONTINENT])
 	assert.NotNil(t, propertiesMap[U.UP_POSTAL_CODE])
-	assert.Equal(t, "560002", propertiesMap[U.UP_POSTAL_CODE])
+	assert.Equal(t, "560076", propertiesMap[U.UP_POSTAL_CODE])
 	assert.NotNil(t, propertiesMap["prop_1"]) // Should append to existing values.
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
