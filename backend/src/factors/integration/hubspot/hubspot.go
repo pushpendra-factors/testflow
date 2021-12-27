@@ -973,9 +973,15 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 
 	// Once filters passed, now check for the existing properties
 	if filtersPassed != 0 && filtersPassed == len(rule.Filters) {
+
 		prevDoc, status := store.GetStore().GetLastSyncedHubspotDocumentByID(document.ProjectId, document.ID, document.Type)
 		if status != http.StatusFound {
 			// In case no prev properties exist continue creating OTP
+			return true
+		}
+
+		if prevDoc.Action == model.HubspotDocumentActionCreated {
+			// In case the only last sync doc was a CreateDocument, create an OTP for this one.
 			return true
 		}
 
