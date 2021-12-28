@@ -116,17 +116,18 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 		return "", make([]interface{}, 0), err
 	}
 
-	allowSupportForDateRangeInProfiles := C.AllowSupportForDateRangeInProfiles(projectID)
+	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
 
 	var stepSqlStmnt string
-	stepSqlStmnt = fmt.Sprintf("SELECT %s FROM users WHERE project_id = ? %s", selectStmnt, filterStmnt)
+	stepSqlStmnt = fmt.Sprintf("SELECT %s FROM users WHERE project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterStmnt)
 	params = append(params, groupBySelectParams...)
 	params = append(params, projectID)
 	params = append(params, filterParams...)
-	if allowSupportForDateRangeInProfiles {
-		stepSqlStmnt = fmt.Sprintf("%s AND join_timestamp>=? AND join_timestamp<=?", stepSqlStmnt)
-		params = append(params, query.From)
-		params = append(params, query.To)
+	params = append(params, query.From)
+	params = append(params, query.To)
+	if allowSupportForSourceColumnInUsers && model.IsValidUserSource(query.Source) {
+		stepSqlStmnt = fmt.Sprintf("%s AND source=?", stepSqlStmnt)
+		params = append(params, query.Source)
 	}
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY all_users LIMIT 10000", stepSqlStmnt, groupByStmnt)
 

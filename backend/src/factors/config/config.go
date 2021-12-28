@@ -201,10 +201,10 @@ type Configuration struct {
 	AllowSupportForUserPropertiesInIdentifyCall string
 	SkipEventNameStepByProjectID                string
 	SkipUserJoinInEventQueryByProjectID         string
-	AllowSupportForDateRangeInProfiles          string
 	EnableEventLevelEventProperties             string
 	EnableOLTPQueriesMemSQLImprovements         string
 	CaptureSourceInUsersTable                   string
+	AllowSupportForSourceColumnInUsers          string
 }
 
 type Services struct {
@@ -1357,28 +1357,6 @@ func AllowSupportForUserPropertiesInIdentifyCall(projectID uint64) bool {
 	return false
 }
 
-// AllowSupportForDateRangeInProfiles is used to check if support for date range
-// is allowed for a given (or list of) project in Profiles module
-func AllowSupportForDateRangeInProfiles(projectID uint64) bool {
-	if configuration.AllowSupportForDateRangeInProfiles == "" {
-		return false
-	}
-
-	if configuration.AllowSupportForDateRangeInProfiles == "*" {
-		return true
-	}
-
-	projectIDstr := fmt.Sprintf("%d", projectID)
-	projectIDs := strings.Split(configuration.AllowSupportForDateRangeInProfiles, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
-}
-
 // EnableEventLevelEventProperties is used to check if the event level properties
 // are to be enabled for a given (or list of) project
 func EnableEventLevelEventProperties(projectID uint64) bool {
@@ -2029,4 +2007,12 @@ func IsDevBox() bool {
 
 func SetEnableEventLevelEventProperties(projectId uint64) {
 	configuration.EnableEventLevelEventProperties = fmt.Sprintf("%d", projectId)
+}
+
+func IsProfileQuerySourceSupported(projectId uint64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowSupportForSourceColumnInUsers, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
 }
