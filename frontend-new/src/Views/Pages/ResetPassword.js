@@ -22,7 +22,7 @@ function ResetPassword(props) {
     setDataLoading(true);
     const tokenFromUrl = queryString.parse(props.location.search)?.token;
 
-    form.validateFields().then((value) => {
+    form.validateFields().then((value) => { 
       setDataLoading(true);
       setTimeout(() => {
         props.setPassword(value.password, tokenFromUrl)
@@ -76,11 +76,20 @@ function ResetPassword(props) {
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
                                 <Form.Item
                                 name="password"
-                                rules={[
+                                rules={[ 
+
                                   {
-                                    required: true,
-                                    message: 'Please input your old password.'
-                                  }
+                                    required: true, 
+                                    message: 'Please enter your new password.'
+                                  },
+                                  ({ getFieldValue }) => ({
+                                    validator(rule, value) { 
+                                      if (!value || value.match(/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/)) {
+                                        return Promise.resolve();
+                                      }
+                                      return Promise.reject(new Error('Your password must contain at least eight characters, at least one number and both lower and uppercase letters and special characters.'));
+                                    }
+                                  }) 
                                 ]}
 
                                 >
