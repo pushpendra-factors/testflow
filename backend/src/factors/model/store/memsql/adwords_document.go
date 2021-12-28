@@ -2085,14 +2085,14 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 		model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for adwords", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
 	err = db.Raw(adwordsCampaignMetadataFetchQueryStr, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsCampaign).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for adwords", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 

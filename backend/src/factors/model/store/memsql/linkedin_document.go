@@ -1067,7 +1067,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	if projectSetting.IntLinkedinAdAccount == "" {
-		log.Error("Failed to get custtomer account ids")
+		log.WithField("projectID", projectID).Error("Failed to get custtomer account ids")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	customerAccountIDs := strings.Split(projectSetting.IntLinkedinAdAccount, ",")
@@ -1090,7 +1090,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for Linkedin", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
@@ -1099,7 +1099,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		customerAccountIDs).Find(&channelDocumentsCampaign).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for Linkedin", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
