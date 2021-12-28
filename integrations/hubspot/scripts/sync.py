@@ -250,11 +250,10 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
     r = get_with_fallback_retry(project_id,get_url)
     if not r.ok:
         return {},{}, r
-    response_dict = json.loads(r.text)
+    response_dict,unmodified_dict = json.loads(r.text),json.loads(r.text)
     if "contacts" not in response_dict:
         raise Exception("Missing contacts property key on contacts")
     contacts = response_dict["contacts"]
-    unmodified_dict = response_dict
     contact_ids = []
     for contact in contacts:
         if "vid" not in contact:
