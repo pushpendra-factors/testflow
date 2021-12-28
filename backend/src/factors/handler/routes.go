@@ -286,6 +286,12 @@ func InitIntRoutes(r *gin.Engine) {
 		SalesforceAuthRedirectHandler)
 	intRouteGroup.GET(SalesforceCallbackRoute,
 		SalesforceCallbackHandler)
+
+	intRouteGroup.DELETE("/:channel_name",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		IntDeleteHandler)
+
 }
 
 func InitDataServiceRoutes(r *gin.Engine) {

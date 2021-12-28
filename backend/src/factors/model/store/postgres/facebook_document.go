@@ -1176,3 +1176,19 @@ func (pg *Postgres) GetLatestMetaForFacebookForGivenDays(projectID uint64, days 
 	}
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
+
+func (pg *Postgres) DeleteFacebookIntegration(projectID uint64) (int, error) {
+	db := C.GetServices().Db
+	updateValues := make(map[string]interface{})
+	updateValues["int_facebook_access_token"] = nil
+	updateValues["int_facebook_email"] = nil
+	updateValues["int_facebook_user_id"] = nil
+	updateValues["int_facebook_ad_account"] = nil
+	updateValues["int_facebook_agent_uuid"] = nil
+
+	err := db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(updateValues).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
+}
