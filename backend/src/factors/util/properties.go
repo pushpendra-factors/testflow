@@ -1135,9 +1135,11 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$sf_campaign_member_created": "Campaign Member Created",
 	"$sf_campaign_member_updated": "Campaign Member Updated",
 	"$session":                    "Website Session",
-	"$form_submitted":             "Form Submit",
+	"$form_submitted":             "Form Button Click",
 	"$hubspot_company_created":    "Company Created",
 	"$hubspot_company_updated":    "Company Updated",
+	"$hubspot_deal_created":       "Deal Created",
+	"$hubspot_deal_updated":       "Deal Updated",
 }
 
 var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
@@ -1146,6 +1148,8 @@ var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
 	"$hubspot_deal_state_changed": "Hubspot",
 	"$hubspot_company_created":    "Hubspot",
 	"$hubspot_company_updated":    "Hubspot",
+	"$hubspot_deal_created":       "Hubspot",
+	"$hubspot_deal_updated":       "Hubspot",
 	"$sf_contact_created":         "Salesforce",
 	"$sf_contact_updated":         "Salesforce",
 	"$sf_lead_created":            "Salesforce",
