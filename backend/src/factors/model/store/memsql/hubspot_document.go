@@ -251,6 +251,51 @@ func (store *MemSQL) GetSyncedHubspotDocumentByFilter(projectID uint64,
 	return &document, http.StatusFound
 }
 
+func (store *MemSQL) getUpdatedDealAssociationDocument(projectID uint64, incomingDocument *model.HubspotDocument) (*model.HubspotDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "incoming_document": incomingDocument})
+	if projectID <= 0 || incomingDocument.Type != model.HubspotDocumentTypeDeal || incomingDocument.ID == "" {
+		logCtx.Error("Invalid record on getUpdatedDealAssociationDocument.")
+		return nil, http.StatusBadRequest
+	}
+
+	existingDocuments, status := store.GetHubspotDocumentByTypeAndActions(projectID, []string{incomingDocument.ID}, model.HubspotDocumentTypeDeal,
+		[]int{incomingDocument.Action, model.HubspotDocumentActionAssociationsUpdated})
+	if status != http.StatusNotFound && status != http.StatusFound {
+		if status == http.StatusNotFound {
+			logCtx.Error("Expected one record in getUpdatedDealAssociationDocument.")
+		}
+
+		return nil, http.StatusInternalServerError
+	}
+
+	latestDocument := existingDocuments[len(existingDocuments)-1]
+	updateRequired, err := model.IsDealUpdatedRequired(incomingDocument, &latestDocument)
+	if err != nil {
+		log.WithFields(log.Fields{"incoming_document": incomingDocument, "latest_document": latestDocument}).
+			WithError(err).Error("Failed to check for IsDealUpdatedRequired.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if !updateRequired {
+		return nil, http.StatusConflict
+	}
+
+	incomingDocument.Timestamp = latestDocument.Timestamp + 1
+	incomingDocument.Action = model.HubspotDocumentActionAssociationsUpdated
+
+	errCode := store.satisfiesHubspotDocumentUniquenessConstraints(incomingDocument)
+	if errCode != http.StatusOK {
+		if errCode == http.StatusConflict {
+			return nil, errCode
+		}
+
+		logCtx.WithField("errCode", errCode).Error("Failed to check satisfiesHubspotDocumentUniquenessConstraints.")
+		return nil, status
+	}
+
+	return incomingDocument, http.StatusOK
+}
+
 func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.HubspotDocument) int {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectId})
 
@@ -335,7 +380,25 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 
 	errCode = store.satisfiesHubspotDocumentUniquenessConstraints(document)
 	if errCode != http.StatusOK {
-		return errCode
+		if errCode != http.StatusConflict {
+			return errCode
+		}
+
+		if document.Type != model.HubspotDocumentTypeDeal {
+			return errCode
+		}
+
+		newDocument, errCode := store.getUpdatedDealAssociationDocument(projectId, document)
+		if errCode != http.StatusOK {
+			if errCode != http.StatusConflict {
+				logCtx.WithField("errCode", errCode).Error("Failed to getUpdatedDealAssociationDocument.")
+				return http.StatusInternalServerError
+			}
+
+			return errCode
+		}
+
+		document = newDocument
 	}
 
 	db := C.GetServices().Db

@@ -938,6 +938,9 @@ func CreateOrGetSalesforceEventName(projectID uint64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	for _, doctype := range model.GetSalesforceAllowedObjects(projectID) {
+		if doctype == model.SalesforceDocumentTypeOpportunityContactRole {
+			continue
+		}
 		typAlias := model.GetSalesforceAliasByDocType(doctype)
 		eventName := model.GetSalesforceEventNameByAction(typAlias, model.SalesforceDocumentCreated)
 		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
