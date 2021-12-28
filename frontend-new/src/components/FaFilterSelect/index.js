@@ -537,6 +537,7 @@ const FAFilterSelect = ({
           <>
             {' '}
             <Tooltip
+              mouseLeaveDelay={0}
               title={
                 valuesState && valuesState.length
                   ? valuesState
