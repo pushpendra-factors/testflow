@@ -1657,13 +1657,6 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 					Error("Failed to update contact user group for hubspot deal.")
 			}
 
-			// update group_user_id  details on created record
-			errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, documents[i].ID, document.Type, "",
-				documents[i].Timestamp, model.HubspotDocumentActionCreated, "", groupUserID)
-			if errCode != http.StatusAccepted {
-				logCtx.Error("Failed to update group user_id in hubspot created document as synced in sync deal company.")
-				continue
-			}
 		}
 	}
 
@@ -1687,6 +1680,14 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 				groupUserID, _, err = syncGroupCompany(projectID, &documents[i], &userProperties)
 				if err != nil {
 					logCtx.WithFields(log.Fields{"document": documents[i]}).WithError(err).Error("Missing group user id in company record in sync deal groups.")
+					continue
+				}
+
+				// update group_user_id  details on created record
+				errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, documents[i].ID, document.Type, "",
+					documents[i].Timestamp, model.HubspotDocumentActionCreated, "", groupUserID)
+				if errCode != http.StatusAccepted {
+					logCtx.Error("Failed to update group user_id in hubspot created document as synced in sync deal company.")
 					continue
 				}
 			}
