@@ -60,32 +60,32 @@ const SetupAssist = ({agents, integration}) => {
                     <Col span={ checkIntegration ? 17 : 20}>
                         <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'}>Let's get started</Text>
                         <Text type={'title'} level={6} weight={'regular'} extraClass={'m-0'} color={'grey'}>The first step to get up and running with Factors is to get data into your project:</Text>
-                        <img src='../../assets/images/Illustration=pop gift.png' style={{width: '100%',maxWidth: '80px', marginLeft:'650px',marginTop:'-80px'}}/>
+                        <img src='../../assets/images/Illustration=pop gift.png' style={{width: '100%',maxWidth: '80px', marginLeft:'610px',marginTop:'-80px'}}/>
                     </Col>
                     <Col>
                     { checkIntegration ?
-                        <Button type="default" size={'large'} style={{borderColor:'#1E89FF', color:'#1E89FF', background:'#fff', marginTop:'1rem'}} onClick={() => setShowModal(true)}><QrcodeOutlined style={{color:'#1E89FF'}} />Go to Dashboards</Button>
+                        <Button type="default" size={'large'} style={{borderColor:'#1E89FF', color:'#1E89FF', background:'#fff', marginTop:'1rem'}} onClick={() => setShowModal(true)}><SVG name={'dashboard'} size={20} color="blue"/>Go to Dashboards</Button>
                     : null}
                     </Col>
                 </Row>
                 <Row gutter={[24, 24]} justify={'center'}>
-                    <Col span={5}>
+                    <Col span={5} style={{paddingRight: '20px'}}>
                         <Timeline>
                             <Timeline.Item color ={current === 0 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 0 ? 'brand-color': null} onClick={() => setCurrent(0)}>Connect with your website data</Text></Timeline.Item>
                             <Timeline.Item color ={current === 1 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 1 ? 'brand-color': null} onClick={() => setCurrent(1)}>Connect with your Ad platforms</Text></Timeline.Item>
                             <Timeline.Item color ={current === 2 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 2 ? 'brand-color': null} onClick={() => setCurrent(2)}>Connect with your CRMS</Text></Timeline.Item>
                             <Timeline.Item color ={current === 3 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 3 ? 'brand-color': null} onClick={() => setCurrent(3)}>Other integrations</Text></Timeline.Item>
                         </Timeline>
-                        <Row className={'pt-20'}>
+                        <Row className={'pt-16'}>
                             <Col>
                                 <Text type={'title'} level={4} weight={'bold'} extraClass={'pb-4 m-0'}>Setup a call with a rep</Text>
                                 <Text type={'title'} level={6} extraClass={'pb-6 m-0'}>We are always happy to assist you</Text>
                                 <a href={meetLink} target='_blank' ><Button type={'primary'}>Setup Call</Button></a>
-                                <img src='../../assets/images/character-1.png' style={{width: '100%',maxWidth: '80px',marginLeft:'110px', marginTop:'-20px'}}/>
+                                <img src='../../assets/images/character-1.png' style={{width: '100%',maxWidth: '80px',marginLeft:'110px', marginTop:'-30px'}}/>
                             </Col>
                         </Row>
                     </Col>
-                    <Col span={15} style={{padding: '0'}}>
+                    <Col span={16} style={{padding: '0px 0px 0px 30px'}}>
                         {current === 0 ? <Website />: current === 1 ? <AdPlatforms />: current === 2 ? <CRMS /> : <OtherIntegrations />}
                     </Col>
                 </Row>

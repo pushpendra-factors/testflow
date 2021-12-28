@@ -91,12 +91,12 @@ function Brand({handleCancel, udpateProjectDetails, activeProject}) {
                         </Row>
                         <Row className={'mt-8'}>
                             <Col>
-                                <Button size={'large'} type={'primary'} style={{width:'28vw', height:'36px'}} className={'m-0'} onClick={handleCreate}>Create</Button>
+                                <Button size={'large'} type={'primary'} style={{width:'27vw', height:'36px'}} className={'m-0'} onClick={handleCreate}>Create</Button>
                             </Col>
                         </Row>
                         <Row className={'mt-4'}>
                             <Col>
-                                <Button size={'large'} type={'text'} style={{width:'28vw', height:'36px'}} className={'m-0'} onClick={handleSkip}>Skip</Button>
+                                <Button size={'large'} type={'text'} style={{width:'27vw', height:'36px'}} className={'m-0'} onClick={handleSkip}>Skip Now</Button>
                             </Col>
                         </Row>
                     </div>

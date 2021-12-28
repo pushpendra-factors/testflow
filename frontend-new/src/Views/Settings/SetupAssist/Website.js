@@ -81,7 +81,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
     <>
     <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
       <div className={'mb-10 pl-4'}>
-        <Row gutter={[24, 24]} justify={'space-between'} className={'mt-0'}>
+        <Row gutter={[24, 24]} justify={'space-between'} className={'mt-0 pl-3'}>
           <Col span={17}>
             <Text type={'title'} level={5} weight={'bold'} extraClass={'pb-2 m-0'}>Connect with your website data</Text>
           </Col>
@@ -91,7 +91,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
         </Row>
         <JavascriptSDK />
 
-        <Row gutter={[24, 24]} justify={'space-between'} className={'pt-4 pb-2 mt-0 '}>
+        <Row gutter={[24, 24]} justify={'space-between'} className={'pt-4 pb-2 mt-0 pl-4'}>
           <Col span={17}>
             <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>With your Customer Data Platform</Text>
           </Col>
@@ -99,7 +99,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
             <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
           </Col>
         </Row>
-        <Row className={'mt-4'}>
+        <Row className={'mt-4 pl-4'}>
           <Col span={24}>
             {dataLoading ? <Skeleton active paragraph={{ rows: 4 }} />
               : IntegrationProviderData.map((item, index) => {

@@ -68,10 +68,10 @@ function UserData({ signup, data }) {
                         "property": "website",
                         "value": values.website
                     },
-                    {
-                        "property": "phone",
-                        "value": values.phone
-                    },
+                    // {
+                    //     "property": "phone",
+                    //     "value": values.phone
+                    // },
                     {
                         "property": "monthly_tracked_users",
                         "value": values.monthly_tracked_users
@@ -143,7 +143,7 @@ function UserData({ signup, data }) {
                                     <Text type={'title'} level={4} extraClass={'m-0'} weight={'bold'}>You are almost there</Text>
                                 </div>
                             </Col>
-                            <Col span={24}>
+                            {/* <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-10 w-full'} >
                                         <Form.Item label={null}
                                             name="phone"
@@ -152,7 +152,7 @@ function UserData({ signup, data }) {
                                             <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'} placeholder="Phone Number" />
                                         </Form.Item>
                                     </div>
-                            </Col>
+                            </Col> */}
                             <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
                                             <Form.Item label={null}
@@ -209,7 +209,7 @@ function UserData({ signup, data }) {
                                     </div>
                             </Col>
                             <Col span={24}>
-                                <div className={'flex flex-col justify-center items-center mt-20'} >
+                                <div className={'flex flex-col justify-center items-center mt-16'} >
                                     <Form.Item className={'m-0'} loading={dataLoading}>
                                         <Button htmlType="submit" loading={dataLoading} type={'primary'} size={'large'} className={'w-full'}>Done</Button>
                                     </Form.Item>
