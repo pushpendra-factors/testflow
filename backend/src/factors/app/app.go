@@ -125,6 +125,8 @@ func main() {
 	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
 	allowSupportForDateRangeInProfiles := flag.String("allow_support_for_date_range_in_profiles", "", "")
 	enableEventLevelEventProperties := flag.String("enable_event_level_event_properties", "", "")
+	useOLAPPoolForAnalytics := flag.Bool("use_olap_pool_for_analytics", false,
+		"Will use the pool_olap if set, else use user-level default pool.")
 
 	flag.Parse()
 
@@ -210,6 +212,7 @@ func main() {
 		SkipUserJoinInEventQueryByProjectID:     *skipUserJoinInEventQueryByProjectID,
 		AllowSupportForDateRangeInProfiles:      *allowSupportForDateRangeInProfiles,
 		EnableEventLevelEventProperties:         *enableEventLevelEventProperties,
+		UseOLAPPoolForAnalytics:                 *useOLAPPoolForAnalytics,
 	}
 	C.InitConf(config)
 
