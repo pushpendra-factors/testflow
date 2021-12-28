@@ -21,7 +21,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
 
       const renderRuleViewButtons = (rules) => {
         return rules.map((obj, i) => {
-            return (<div className={`flex justify-start -ml-4 ${i > 0 && 'mt-4'}`}>
+            return (<div className={`flex justify-start -mr-48 ${i > 0 && 'mt-4'}`}>
             <Button 
                 type={'text'}
                 size={'large'}
@@ -57,6 +57,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
           title: 'Rule',
           dataIndex: 'rule',
           key: 'rule',
+          align: 'center',
           render: (rules) => renderRuleViewButtons(rules)
         },
         {
@@ -153,6 +154,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
                 duration: 5,
               });
         }, err => {
+            setRulesState(rulesState);
             notification.error({
                 message: "Error",
                 description: err.data.error,
@@ -182,7 +184,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
     const handleValuesSubmit = (data, oldRule) => {
         if(data) {
             const rule = {...data};
-            const rulesToUpdate = [...rulesState.filter((rl) => JSON.stringify(rl) !== JSON.stringify(oldRule))];
+            const rulesToUpdate = [...rulesState.filter((rl) => JSON.stringify(rl) !== JSON.stringify(rule))];
             rulesToUpdate.push(rule);
             setRulesState(rulesToUpdate);
             setshowAddValueModal(false);
