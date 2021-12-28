@@ -12,6 +12,7 @@ import {
   DATE_FORMATS,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
+import { displayName } from 'Components/FaFilterSelect/utils';
 
 export const defaultSortProp = () => {
   return [
@@ -89,7 +90,9 @@ export const formatData = (data, queries, colors, eventNames) => {
   const grns = getBreakDownGranularities(headerSlice, breakdowns);
 
   const result = rows.map((d, index) => {
-    const breakdownVals = d.slice(eventIndex + 1, countIndex);
+    const breakdownVals = d
+      .slice(eventIndex + 1, countIndex)
+      .map((vl) => (displayName[vl] ? displayName[vl] : vl));
     const breakdownData = {};
     for (let i = 0; i < breakdowns.length; i++) {
       const bkd = breakdowns[i];
@@ -99,7 +102,7 @@ export const formatData = (data, queries, colors, eventNames) => {
       );
     }
     const eventName = eventNames[d[eventIndex]] || d[eventIndex];
-    const str = eventName + ',' + Object.values(breakdownData).join(',');
+    const str = eventName + ',' + Object.values(breakdownData).join(', ');
     const queryIndex = queries.findIndex(
       (_, index) => index === d[event_indexIndex]
     );
@@ -329,7 +332,7 @@ export const formatDataInStackedAreaFormat = (
       row
         .slice(eventIndex + 1, countIndex)
         .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
-        .join(',');
+        .join(', ');
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);

@@ -1882,6 +1882,7 @@ func (store *MemSQL) UpdateUserGroup(projectID uint64, userID, groupName, groupI
 	groupUserIndex := fmt.Sprintf("group_%d_user_id", group.ID)
 	user, status := store.GetUser(projectID, userID)
 	if status != http.StatusFound {
+		logCtx.Error("Failed to get user for group association.")
 		return nil, http.StatusInternalServerError
 	}
 

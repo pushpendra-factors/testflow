@@ -1,7 +1,7 @@
 
 # Development Setup Using Docker
 
-https://github.com/Slashbit-Technologies/factors/wiki/Development-server-for-branch-testing
+https://github.com/Slashbit-Technologies/factors/wiki/Development-Setup
 
 
 ## -------  Below setup on localhost is outdated. Use above Docker setup -------------

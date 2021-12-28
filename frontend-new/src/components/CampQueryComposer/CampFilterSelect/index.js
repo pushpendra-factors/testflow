@@ -8,6 +8,7 @@ import FaDatepicker from '../../FaDatepicker';
 import FaSelect from '../../FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
+import { displayName } from 'Components/FaFilterSelect/utils';
 
 const defaultOpProps = {
     "categorical": [
@@ -185,7 +186,7 @@ const CampFilterSelect = ({
             <Tooltip title={renderGroupDisplayName(propState)}>
                 <Button
                     icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
-                    className={``}
+                    className={`fa-button--truncate fa-button--truncate-xs`}
                     type="link"
                     onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderGroupDisplayName(propState)}
                 </Button>
@@ -269,13 +270,33 @@ const CampFilterSelect = ({
         }
         if(!operatorState || !propState?.name) return null;
 
-        return (<div className={`${styles.filter__propContainer} ml-4`}>
-            <Tooltip title={valuesState && valuesState.length ? valuesState.join(', ') : null}><Button
-                className={``}
-                type="link"
-                onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}> {valuesState && valuesState.length ? valuesState.join(', ') : 'Select Values'}
-            </Button> </Tooltip> {valuesSelectionOpen && selectionComponent} 
-        </div>)
+        return (
+          <div className={`${styles.filter__propContainer} ml-4`}>
+            <Tooltip
+              title={
+                valuesState && valuesState.length
+                  ? valuesState
+                      .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                      .join(', ')
+                  : null
+              }
+            >
+              <Button
+                className={`fa-button--truncate fa-button--truncate-lg`}
+                type='link'
+                onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
+              >
+                {' '}
+                {valuesState && valuesState.length
+                  ? valuesState
+                      .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                      .join(', ')
+                  : 'Select Values'}
+              </Button>{' '}
+            </Tooltip>{' '}
+            {valuesSelectionOpen && selectionComponent}
+          </div>
+        );
 
     }
 

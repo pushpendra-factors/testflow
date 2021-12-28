@@ -1,8 +1,8 @@
-import React, { useState, useEffect, lazy } from "react";
-import { Row, Col, Tag, Avatar, Skeleton, Button } from "antd";
-import { Text, SVG, FaErrorComp, FaErrorLog } from "factorsComponents";
-import { connect } from "react-redux";
-import { fetchProjectSettings } from "Reducers/global";
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Tag, Avatar, Skeleton, Button, Tooltip } from 'antd';
+import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import { connect } from 'react-redux';
+import { fetchProjectSettings } from 'Reducers/global';
 import retryDynamicImport from 'Utils/dynamicImport';
 
 // const HubspotIntegration = lazy(()=>retryDynamicImport(() => import("./Hubspot")));
@@ -13,171 +13,288 @@ import retryDynamicImport from 'Utils/dynamicImport';
 // const SalesForceIntegration = lazy(()=>retryDynamicImport(() => import("./Salesforce")));
 // const LinkedInIntegration = lazy(()=>retryDynamicImport(() => import("./LinkedIn")));
 
-import HubspotIntegration from "./Hubspot";
-import SegmentIntegration from "./Segment";
-import DriftIntegration from "./Drift";
-import GoogleAdWords from "./GoogleAdWords";
-import FacebookIntegration from "./Facebook";
-import SalesForceIntegration from "./Salesforce";
-import LinkedInIntegration from "./LinkedIn";
-import GoogleSearchConsole from "./GoogleSearchConsole";
+import HubspotIntegration from './Hubspot';
+import SegmentIntegration from './Segment';
+import DriftIntegration from './Drift';
+import GoogleAdWords from './GoogleAdWords';
+import FacebookIntegration from './Facebook';
+import SalesForceIntegration from './Salesforce';
+import LinkedInIntegration from './LinkedIn';
+import GoogleSearchConsole from './GoogleSearchConsole';
 
-import { ErrorBoundary } from "react-error-boundary";
-import RevealIntegration from "./Reveal";
+import { ErrorBoundary } from 'react-error-boundary';
+import RevealIntegration from './Reveal';
 
 const IntegrationProviderData = [
   {
     name: 'Segment',
-    desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
+    desc:
+      'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Segment_ads',
-    kbLink:false,
+    kbLink: false,
   },
   {
     name: 'Hubspot',
-    desc: 'Sync your Contact, Company and Deal objects with Factors on a daily basis',
+    desc:
+      'Sync your Contact, Company and Deal objects with Factors on a daily basis',
     icon: 'Hubspot_ads',
-    kbLink:'https://help.factors.ai/en/articles/5099532-hubspot',
+    kbLink: 'https://help.factors.ai/en/articles/5099532-hubspot',
   },
   {
     name: 'Salesforce',
-    desc: 'Sync your Leads, Contact, Account, Opportunity and Campaign objects with Factors on a daily basis',
+    desc:
+      'Sync your Leads, Contact, Account, Opportunity and Campaign objects with Factors on a daily basis',
     icon: 'Salesforce_ads',
-    kbLink:'https://help.factors.ai/en/articles/5099533-salesforce',
+    kbLink: 'https://help.factors.ai/en/articles/5099533-salesforce',
   },
   {
     name: 'Google Ads',
     desc: 'Integrate reporting from Google Search, Youtube and Display Network',
     icon: 'Google_ads',
-    kbLink:'https://help.factors.ai/en/articles/5099504-google-ads',
+    kbLink: 'https://help.factors.ai/en/articles/5099504-google-ads',
   },
   {
     name: 'Facebook',
-    desc: 'Pull in reports from Facebook, Instagram and Facebook Audience Network',
+    desc:
+      'Pull in reports from Facebook, Instagram and Facebook Audience Network',
     icon: 'Facebook_ads',
-    kbLink:'https://help.factors.ai/en/articles/5099507-facebook-ads'
+    kbLink: 'https://help.factors.ai/en/articles/5099507-facebook-ads',
   },
   {
     name: 'LinkedIn',
     desc: 'Sync LinkedIn ads reports with Factors for performance reporting',
     icon: 'Linkedin_ads',
-    kbLink:'https://help.factors.ai/en/articles/5099508-linkedin',
+    kbLink: 'https://help.factors.ai/en/articles/5099508-linkedin',
   },
   {
     name: 'Drift',
-    desc: 'Track events and conversions from Drift’s chat solution on the website',
+    desc:
+      'Track events and conversions from Drift’s chat solution on the website',
     icon: 'DriftLogo',
-    kbLink:false,
+    kbLink: false,
   },
   {
     name: 'Google Search Console',
-    desc: 'Track organic search impressions, clicks and position from Google Search',
+    desc:
+      'Track organic search impressions, clicks and position from Google Search',
     icon: 'Google',
-    kbLink:'https://help.factors.ai/en/articles/5576963-google-search-console',
+    kbLink: 'https://help.factors.ai/en/articles/5576963-google-search-console',
   },
   {
     name: 'Clearbit Reveal',
     desc: 'Take action as soon as a target account hits your site',
     icon: 'ClearbitLogo',
-    kbLink:false,
+    kbLink: false,
   },
 ];
-
-
 
 const IntegrationCard = ({ item, index }) => {
   const [showForm, setShowForm] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [toggle, setToggle] = useState(false);
+  const [isStatus, setIsStatus] = useState('');
 
   const loadIntegrationForm = (item) => {
     switch (item?.name) {
-      case 'Hubspot': return <HubspotIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'Segment': return <SegmentIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'Drift': return <DriftIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'Facebook': return <FacebookIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'Salesforce': return <SalesForceIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'Google Ads': return <GoogleAdWords kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'LinkedIn': return <LinkedInIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'Google Search Console': return <GoogleSearchConsole kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'Clearbit Reveal': return <RevealIntegration active={isActive} setIsActive={setIsActive} />
-      default: return <><Tag color="orange" style={{ marginTop: '8px' }}>Enable from <a href="https://app-old.factors.ai/" target="_blank">here</a></Tag> </>
+      case 'Hubspot':
+        return (
+          <HubspotIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      case 'Segment':
+        return (
+          <SegmentIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      case 'Drift':
+        return (
+          <DriftIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      case 'Facebook':
+        return (
+          <FacebookIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      case 'Salesforce':
+        return (
+          <SalesForceIntegration
+            kbLink={item.kbLink}
+            setIsActive={setIsActive}
+          />
+        );
+      case 'Google Ads':
+        return <GoogleAdWords kbLink={item.kbLink} setIsStatus={setIsStatus} />;
+      case 'LinkedIn':
+        return (
+          <LinkedInIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      case 'Google Search Console':
+        return (
+          <GoogleSearchConsole kbLink={item.kbLink} setIsStatus={setIsStatus} />
+        );
+      case 'Clearbit Reveal':
+        return (
+          <RevealIntegration active={isActive} setIsActive={setIsActive} />
+        );
+      default:
+        return (
+          <>
+            <Tag color='orange' style={{ marginTop: '8px' }}>
+              Enable from{' '}
+              <a href='https://app-old.factors.ai/' target='_blank'>
+                here
+              </a>
+            </Tag>{' '}
+          </>
+        );
     }
-  }
+  };
 
   useEffect(() => {
-    setToggle(!isActive);
-  }, [isActive]);
+    setToggle(!(isActive || isStatus === 'Active'));
+  }, [isActive, isStatus]);
 
   return (
-    <div key={index} className="fa-intergration-card">
-      <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Bundle Error:02'} subtitle={ "We are facing trouble loading App Bundles. Drop us a message on the in-app chat."} />} onError={FaErrorLog}> 
-      <div className={"flex justify-between"}>
-        <div className={"flex"}>
-          <Avatar
-            size={40}
-            shape={"square"}
-            icon={<SVG name={item.icon} size={40} color={"purple"} />}
-            style={{ backgroundColor: "#F5F6F8" }}
+    <div key={index} className='fa-intergration-card'>
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size={'medium'}
+            title={'Bundle Error:02'}
+            subtitle={
+              'We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
+            }
           />
-        </div>
-        <div className={'flex flex-col justify-start items-start ml-4 w-full'}>
-          <div className={'flex items-center'}>
-            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{item.name}</Text>
-            {isActive && <Tag color="green" style={{ marginLeft: '8px' }}>Active</Tag>}
-          </div>
-          <Text type={'paragraph'} mini extraClass={'m-0 w-9/12'} color={'grey'} lineHeight={'medium'}>{item.desc}</Text>
-          {toggle && loadIntegrationForm(item)}
-        </div>
-        {isActive &&
-          <div className={'flex flex-col items-start'}>
-            <Button type={'text'} onClick={() => setToggle(!toggle)} icon={toggle ? <SVG size={16} name={'ChevronDown'} /> : <SVG size={16} name={'ChevronRight'} />} />
-          </div>
         }
-      </div>
+        onError={FaErrorLog}
+      >
+        <div className={'flex justify-between'}>
+          <div className={'flex'}>
+            <Avatar
+              size={40}
+              shape={'square'}
+              icon={<SVG name={item.icon} size={40} color={'purple'} />}
+              style={{ backgroundColor: '#F5F6F8' }}
+            />
+          </div>
+          <div
+            className={'flex flex-col justify-start items-start ml-4 w-full'}
+          >
+            <div className={'flex items-center'}>
+              <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
+                {item.name}
+              </Text>
+              {(isActive || isStatus === 'Active') && (
+                <Tag color='green' style={{ marginLeft: '8px' }}>
+                  Active
+                </Tag>
+              )}
+              {isStatus === 'Pending' && (
+                <Tooltip
+                  title={
+                    item.name === 'Google Ads'
+                      ? 'Account(s) Selection Pending.'
+                      : 'URL(s) Selection Pending.'
+                  }
+                >
+                  <Tag color='orange' style={{ marginLeft: '8px' }}>
+                    Pending!
+                  </Tag>
+                </Tooltip>
+              )}
+            </div>
+            <Text
+              type={'paragraph'}
+              mini
+              extraClass={'m-0 w-9/12'}
+              color={'grey'}
+              lineHeight={'medium'}
+            >
+              {item.desc}
+            </Text>
+            {toggle && loadIntegrationForm(item)}
+          </div>
+          {(isActive || isStatus === 'Active') && (
+            <div className={'flex flex-col items-start'}>
+              <Button
+                type={'text'}
+                onClick={() => setToggle(!toggle)}
+                icon={
+                  toggle ? (
+                    <SVG size={16} name={'ChevronDown'} />
+                  ) : (
+                    <SVG size={16} name={'ChevronRight'} />
+                  )
+                }
+              />
+            </div>
+          )}
+        </div>
       </ErrorBoundary>
     </div>
   );
 };
-function IntegrationSettings({ currentProjectSettings, activeProject, fetchProjectSettings }) {
+function IntegrationSettings({
+  currentProjectSettings,
+  activeProject,
+  fetchProjectSettings,
+}) {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id).then(() => {
-      setDataLoading(false); 
-    }); 
-  },[activeProject]);
+      setDataLoading(false);
+    });
+  }, [activeProject]);
 
   return (
     <>
-    <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-      <div className={'mb-10 pl-4'}>
-        <Row>
-          <Col span={12}>
-            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Integrations</Text>
-          </Col>
-        </Row>
-        <Row className={'mt-4'}>
-          <Col span={24}>
-            {dataLoading ? <Skeleton active paragraph={{ rows: 4 }} />
-              : IntegrationProviderData.map((item, index) => {
-                return (
-                  <IntegrationCard item={item} index={index} key={index} currentProjectSettings={currentProjectSettings} />
-                );
-              })
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size={'medium'}
+            title={'Integrations Error'}
+            subtitle={
+              'We are facing some issues with the integrations. Drop us a message on the in-app chat.'
             }
-          </Col>
-        </Row>
-
-      </div>
+          />
+        }
+        onError={FaErrorLog}
+      >
+        <div className={'mb-10 pl-4'}>
+          <Row>
+            <Col span={12}>
+              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
+                Integrations
+              </Text>
+            </Col>
+          </Row>
+          <Row className={'mt-4'}>
+            <Col span={24}>
+              {dataLoading ? (
+                <Skeleton active paragraph={{ rows: 4 }} />
+              ) : (
+                IntegrationProviderData.map((item, index) => {
+                  return (
+                    <IntegrationCard
+                      item={item}
+                      index={index}
+                      key={index}
+                      currentProjectSettings={currentProjectSettings}
+                    />
+                  );
+                })
+              )}
+            </Col>
+          </Row>
+        </div>
       </ErrorBoundary>
-    </> 
+    </>
   );
 }
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  currentProjectSettings: state.global.currentProjectSettings
+  currentProjectSettings: state.global.currentProjectSettings,
 });
 
-
-export default connect(mapStateToProps, {fetchProjectSettings})(IntegrationSettings);
+export default connect(mapStateToProps, { fetchProjectSettings })(
+  IntegrationSettings
+);

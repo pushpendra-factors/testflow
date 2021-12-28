@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"encoding/json"
+	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/metrics"
@@ -814,4 +815,22 @@ func (store *MemSQL) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings
 		}
 	}
 	return mapOfProjectToCustomerIds, nil
+}
+
+func (store *MemSQL) DeleteChannelIntegration(projectID uint64, channelName string) (int, error) {
+	if projectID == 0 {
+		return http.StatusBadRequest, errors.New("invalid projectID")
+	}
+	switch channelName {
+	case "facebook":
+		return store.DeleteFacebookIntegration(projectID)
+	case "linkedin":
+		return store.DeleteLinkedinIntegration(projectID)
+	case "adwords":
+		return store.DeleteAdwordsIntegration(projectID)
+	case "google_organic":
+		return store.DeleteGoogleOrganicIntegration(projectID)
+	default:
+		return http.StatusBadRequest, errors.New("invalid channel name")
+	}
 }

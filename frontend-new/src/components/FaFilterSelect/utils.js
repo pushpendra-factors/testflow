@@ -26,3 +26,5 @@ export const  DEFAULT_OPERATOR_PROPS = {
       "since"
     ]
 };
+
+export const displayName = {'$none': '(Not Set)'};

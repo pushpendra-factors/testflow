@@ -185,7 +185,7 @@ const LinkedEventsBlock = ({
             <div className={`${styles.block__content} fa--query_block_section--basic mt-4 relative`}>
                 {<Tooltip title={eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}> <Button 
                     type="link" 
-                    className={``}
+                    className={`fa-button--truncate fa-button--truncate-lg`}
                     onClick={toggleEventSelect}>
                         <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
                         {eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}

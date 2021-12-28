@@ -6,7 +6,7 @@ import {
   CREATE_PROJECT_FULFILLED,
   FETCH_PROJECTS_REJECTED,
 } from './types';
-import { get, getHostUrl, post, put } from '../utils/request';
+import { get, getHostUrl, post, put, del } from '../utils/request';
 
 var host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : host + '/';
@@ -19,6 +19,7 @@ const defaultState = {
   fetchingProjects: null,
   projectsError: null,
   currentProjectSettings: {},
+  contentGroup: [],
 };
 
 export default function (state = defaultState, action) {
@@ -127,6 +128,24 @@ export default function (state = defaultState, action) {
         ...state,
         projects: projectsWithRoles,
       };
+    }
+    case 'CREATE_CONTENT_GROUP': {
+      const props = [...state.contentGroup];
+      props.push(action.payload);
+      return { ...state, contentGroup: props}
+    }
+    case 'UPDATE_CONTENT_GROUP': {
+      const propsToUpdate = [...state.contentGroup.map((prop, i) => {
+        if(prop.id === action.payload.id) {
+            return action.payload;
+        } else {
+            return action.payload;
+        }
+      })];
+      return { ...state, contentGroup: propsToUpdate}
+    }
+    case 'FETCH_CONTENT_GROUP': {
+      return { ...state, contentGroup: action.payload };
     }
     default:
       return state;
@@ -474,6 +493,76 @@ export function fetchSearchConsoleCustomerAccounts(payload) {
         })
         .catch((err) => {
           reject(err);
+        });
+    });
+  };
+}
+
+export function addContentGroup(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup', payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'CREATE_CONTENT_GROUP', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function updateContentGroup(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup/'+ payload.id, payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'UPDATE_CONTENT_GROUP', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchContentGroup(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup', {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_CONTENT_GROUP', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function deleteContentGroup(projectId, id) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/'+ projectId +'/v1/contentgroup/' + id)
+      .then((res) => {
+            resolve(res);
+        }).catch((err) => {
+            reject(err);
         });
     });
   };
