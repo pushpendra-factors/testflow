@@ -20,6 +20,7 @@ import {
   Text,
 } from '../../../components/factorsComponents';
 import { Popover } from 'antd';
+import { displayName } from 'Components/FaFilterSelect/utils';
 
 export const defaultSortProp = () => {
   return [
@@ -49,7 +50,6 @@ export const getSingleTouchPointChartData = (
   touchpoint,
   isComparisonApplied
 ) => {
-  console.log('attributions getSingleTouchPointChartData');
   const enabledDimensions = attr_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
@@ -131,7 +131,6 @@ export const getDualTouchPointChartData = (
   attribution_method_compare,
   currMetricsValue
 ) => {
-  console.log('attributions getDualTouchPointChartData');
   const enabledDimensions = attr_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
@@ -145,7 +144,7 @@ export const getDualTouchPointChartData = (
         })
       : [d[touchpoint]];
     return {
-      name: name.join(','),
+      name: name.join(', '),
       [attribution_method]: !currMetricsValue
         ? d['Conversion']
         : d['Cost per Conversion'],
@@ -178,7 +177,6 @@ export const formatData = (
       series: [],
     };
   }
-  console.log('attributions formatData');
   const { headers, rows } = data;
   const touchpointIdx = headers.indexOf(touchPoint);
   const enabledDimensions = attr_dimensions.filter(
@@ -272,7 +270,6 @@ export const formatGroupedData = (
   attribution_method_compare,
   currMetricsValue
 ) => {
-  console.log('attribution formatGroupedData');
   const { headers } = data;
   const str = currMetricsValue ? `Cost Per Conversion` : `${event} - Users`;
   const compareStr = currMetricsValue
@@ -395,7 +392,6 @@ export const getTableColumns = (
   comparison_data,
   cmprDuration
 ) => {
-  console.log('attributions getTableColumns');
   const enabledDimensions = attr_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
@@ -797,7 +793,6 @@ export const getTableData = (
   attr_dimensions,
   comparison_data
 ) => {
-  console.log('attributions getTableData');
   const { headers } = data;
   const costIdx = headers.indexOf('Cost Per Conversion');
   const userIdx = headers.indexOf(`${event} - Users`);
@@ -837,16 +832,23 @@ export const getTableData = (
       if (enabledDimensions.length) {
         enabledDimensions.forEach((dimension) => {
           const index = headers.indexOf(dimension.responseHeader);
-          dimensionsData[dimension.title] = index > -1 ? row[index] : '';
+          dimensionsData[dimension.title] =
+            index > -1
+              ? displayName[row[index]]
+                ? displayName[row[index]]
+                : row[index]
+              : '';
         });
       } else {
         const touchpointIdx = headers.indexOf(touchpoint);
-        dimensionsData[touchpoint] = row[touchpointIdx];
+        dimensionsData[touchpoint] = displayName[row[touchpointIdx]]
+          ? displayName[row[touchpointIdx]]
+          : row[touchpointIdx];
       }
 
       let resultantRow = {
         index,
-        category: Object.values(dimensionsData).join(','),
+        category: Object.values(dimensionsData).join(', '),
         ...dimensionsData,
         ...metricsData,
         Conversion: !comparison_data
@@ -929,7 +931,6 @@ export const getTableData = (
         return row[touchpoint].toLowerCase().includes(searchText.toLowerCase());
       }
     });
-
   return SortResults(result, currentSorter);
 };
 
@@ -942,7 +943,6 @@ export const getScatterPlotChartData = (
   yAxisMetric,
   isComparisonApplied
 ) => {
-  console.log('attributions getScatterPlotChartData');
   const enabledDimensions = attr_dimensions.filter(
     (d) => d.touchPoint === selectedTouchPoint && d.enabled
   );
@@ -959,7 +959,7 @@ export const getScatterPlotChartData = (
       category.push(d[selectedTouchPoint]);
     }
 
-    categories.push(category.join(','));
+    categories.push(category.join(', '));
     if (isComparisonApplied) {
       comparisonPlotData.push([
         Number(d[xAxisMetric].compare_value),
@@ -996,8 +996,6 @@ export const getAxisMetricOptions = (
   attribution_method_compare,
   eventNames
 ) => {
-  console.log('eventNames', eventNames);
-  console.log('attributions getAxisMetricOptions');
   const result = ATTRIBUTION_METRICS.filter(
     (metric) => !metric.isEventMetric
   ).map((metric) => {

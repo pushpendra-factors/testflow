@@ -458,15 +458,38 @@ const GlobalFilterSelect = ({
         }
         if(!operatorState || !propState?.name) return null;
 
-        return (<div className={`${styles.filter__propContainer} ml-4 w-7/12`}>
-            {propState.type === 'categorical'? <Tooltip title={valuesState && valuesState.length ? valuesState.join(', ') : null}><Button
-                className={`fa-button--truncate fa-button--truncate-lg`}
-                type="link"
-                onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}> {valuesState && valuesState.length ? valuesState.join(', ') : 'Select Values'}
-            </Button> </Tooltip> : null }
-            
-            {valuesSelectionOpen || propState.type !== 'categorical'? selectionComponent : null} 
-        </div>)
+        return (
+          <div className={`${styles.filter__propContainer} ml-4 w-7/12`}>
+            {propState.type === 'categorical' ? (
+              <Tooltip
+                title={
+                  valuesState && valuesState.length
+                    ? valuesState
+                        .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                        .join(', ')
+                    : null
+                }
+              >
+                <Button
+                  className={`fa-button--truncate fa-button--truncate-lg`}
+                  type='link'
+                  onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
+                >
+                  {' '}
+                  {valuesState && valuesState.length
+                    ? valuesState
+                        .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                        .join(', ')
+                    : 'Select Values'}
+                </Button>{' '}
+              </Tooltip>
+            ) : null}
+
+            {valuesSelectionOpen || propState.type !== 'categorical'
+              ? selectionComponent
+              : null}
+          </div>
+        );
 
     }
 

@@ -9,8 +9,10 @@ import FaSelect from 'Components/FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
-
-import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
+import {
+  DEFAULT_OPERATOR_PROPS,
+  displayName,
+} from 'Components/FaFilterSelect/utils';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -242,7 +244,7 @@ const GlobalFilterSelect = ({
                 <SVG name={propState.icon} size={16} color={'purple'} />
               ) : null
             }
-            className={`fa-button--truncate-xs`}
+            className={`fa-button--truncate fa-button--truncate-xs`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
           >
@@ -461,7 +463,11 @@ const GlobalFilterSelect = ({
           value={
             operator === 'before'
               ? moment(parsedValues['to'])
-              : moment(parsedValues['from'] ? parsedValues['from'] : parsedValues['fr'])
+              : moment(
+                  parsedValues['from']
+                    ? parsedValues['from']
+                    : parsedValues['fr']
+                )
           }
           size={'small'}
           suffixIcon={null}
@@ -535,7 +541,11 @@ const GlobalFilterSelect = ({
         {propState.type === 'categorical' ? (
           <Tooltip
             title={
-              valuesState && valuesState.length ? valuesState.join(', ') : null
+              valuesState && valuesState.length
+                ? valuesState
+                    .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                    .join(', ')
+                : null
             }
           >
             <Button
@@ -545,7 +555,9 @@ const GlobalFilterSelect = ({
             >
               {' '}
               {valuesState && valuesState.length
-                ? valuesState.join(', ')
+                ? valuesState
+                    .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                    .join(', ')
                 : 'Select Values'}
             </Button>{' '}
           </Tooltip>

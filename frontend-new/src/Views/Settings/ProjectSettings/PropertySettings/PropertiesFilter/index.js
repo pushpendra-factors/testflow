@@ -83,7 +83,7 @@ function PropertyFilter({activeProject, propOpts = [], filter, insertFilter}) {
             
             <Button 
                 icon={propState && propState.icon? <SVG name={propState.type} size={16} color={'purple'} />: null} 
-                className={`fa-button--truncate`} 
+                className={`fa-button--truncate fa-button--truncate-xs`} 
                 type="link" 
                 onClick={() => setPropSelectOpen(!propSelectOpen)}> {propState?.name? propState?.name : 'Select Property'} 
             </Button>

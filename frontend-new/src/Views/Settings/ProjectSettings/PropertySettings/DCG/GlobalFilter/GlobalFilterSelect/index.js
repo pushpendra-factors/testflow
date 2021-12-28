@@ -3,11 +3,12 @@ import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
 import { Button, InputNumber, Tooltip } from 'antd';
-import GroupSelect from 'Components/QueryComposer/GroupSelect';
+import GroupSelect2 from 'Components/QueryComposer/GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
 import moment from 'moment';
 import { isArray } from 'lodash';
+import { displayName } from 'Components/FaFilterSelect/utils';
 
 const defaultOpProps = {
     "categorical": [
@@ -206,13 +207,12 @@ const GlobalFilterSelect = ({
                 </Button>
             </Tooltip>
             {propSelectOpen &&
-                <GroupSelect
+                <GroupSelect2
                     groupedProperties={propOpts}
                     placeholder="Select Property"
                     optionClick={(group, val) => propSelect([...val, group])}
                     onClickOutside={() => setPropSelectOpen(false)}
-
-                ></GroupSelect>
+                ></GroupSelect2>
             }
 
         </div>)
@@ -280,15 +280,38 @@ const GlobalFilterSelect = ({
         }
         if(!operatorState || !propState?.name) return null;
 
-        return (<div className={`${styles.filter__propContainer} ml-2`}>
-            {propState.type === 'categorical'? <Tooltip title={valuesState && valuesState.length ? valuesState.join(', ') : null}><Button
-                className={`fa-button--truncate`}
-                type="link"
-                onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}> {valuesState && valuesState.length ? valuesState.join(', ') : 'Select Values'}
-            </Button> </Tooltip> : null }
-            
-            {valuesSelectionOpen || propState.type !== 'categorical'? selectionComponent : null} 
-        </div>)
+        return (
+          <div className={`${styles.filter__propContainer} ml-2`}>
+            {propState.type === 'categorical' ? (
+              <Tooltip
+                title={
+                  valuesState && valuesState.length
+                    ? valuesState
+                        .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                        .join(', ')
+                    : null
+                }
+              >
+                <Button
+                  className={`fa-button--truncate`}
+                  type='link'
+                  onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
+                >
+                  {' '}
+                  {valuesState && valuesState.length
+                    ? valuesState
+                        .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                        .join(', ')
+                    : 'Select Values'}
+                </Button>{' '}
+              </Tooltip>
+            ) : null}
+
+            {valuesSelectionOpen || propState.type !== 'categorical'
+              ? selectionComponent
+              : null}
+          </div>
+        );
 
     }
 

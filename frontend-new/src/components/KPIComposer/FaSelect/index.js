@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
 import { Input, Button } from 'antd';
+import { displayName } from '../../FaFilterSelect/utils';
 
 const FaSelect = ({
   options,
@@ -66,7 +67,7 @@ const FaSelect = ({
           rendOpts.push(
             <div
               key={index}
-              title={op[0]}
+              title={displayName[op[0]] ? displayName[op[0]] : op[0]}
               className={`fa-select-group-select--options ${
                 isSelected ? styles.fa_selected : null
               }`}
@@ -75,7 +76,7 @@ const FaSelect = ({
               {op[1] && !multiSelect ? (
                 <SVG name={op[1]} extraClass={'self-center'}></SVG>
               ) : null}
-              <span className={`ml-1 ${styles.optText}`}>{op[0]}</span>
+              <span className={`ml-1 ${styles.optText}`}>{displayName[op[0]] ? displayName[op[0]] : op[0]}</span>
               {isSelected ? (
                 <SVG
                   name='checkmark'
@@ -121,7 +122,7 @@ const FaSelect = ({
         rendOpts.push(
           <div
             key={index}
-            title={op[0]}
+            title={displayName[op[0]] ? displayName[op[0]] : op[0]}
             className={`fa-select-group-select--options ${
               isSelected ? styles.fa_selected : null
             }`}
@@ -130,7 +131,7 @@ const FaSelect = ({
             {op[1] && !multiSelect ? (
               <SVG name={op[1]} extraClass={'self-center'}></SVG>
             ) : null}
-            <span className={`ml-1 ${styles.optText}`}>{op[0]}</span>
+            <span className={`ml-1 ${styles.optText}`}>{displayName[op[0]] ? displayName[op[0]] : op[0]}</span>
             {isSelected ? (
               <SVG
                 name='checkmark'

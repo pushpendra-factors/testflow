@@ -617,9 +617,9 @@ export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
 };
 
 const getEventIdx = (eventData, userObj) => {
-  const str = userObj.slice(0, userObj.length - 1).join(',');
+  const str = userObj.slice(0, userObj.length - 1).join(', ');
   const eventIdx = eventData.findIndex(
-    (elem) => elem.slice(0, elem.length - 1).join(',') === str
+    (elem) => elem.slice(0, elem.length - 1).join(', ') === str
   );
   return eventIdx;
 };

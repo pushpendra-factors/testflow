@@ -19,6 +19,7 @@ import {
   getCampaignStateFromRequestQuery,
   getProfileQueryFromRequestQuery,
   getKPIStateFromRequestQuery,
+  DefaultDateRangeFormat,
 } from '../CoreQuery/utils';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import ConfirmationModal from '../../components/ConfirmationModal';
@@ -158,7 +159,7 @@ function CoreQuery({
   fetchWeeklyIngishts,
   activeProject,
   updateChartTypes,
-  activeAccount,
+  activeAgent,
   updateSavedQuerySettings,
   setProfileQueries,
   fetchAgentInfo,
@@ -491,6 +492,13 @@ function CoreQuery({
     if (item.title === 'Funnels') {
       setQueryType(QUERY_TYPE_FUNNEL);
       setQueries([]);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          globalFilters: [],
+          date_range: { ...DefaultDateRangeFormat },
+        };
+      });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -503,6 +511,13 @@ function CoreQuery({
     if (item.title === 'Events') {
       setQueryType(QUERY_TYPE_EVENT);
       setQueries([]);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          globalFilters: [],
+          date_range: { ...DefaultDateRangeFormat },
+        };
+      });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -519,6 +534,13 @@ function CoreQuery({
     if (item.title === 'KPIs') {
       setQueryType(QUERY_TYPE_KPI);
       setQueries([]);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          globalFilters: [],
+          date_range: { ...DefaultDateRangeFormat },
+        };
+      });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -535,6 +557,13 @@ function CoreQuery({
     if (item.title === 'Profiles') {
       setQueryType(QUERY_TYPE_PROFILE);
       setProfileQueries([]);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          globalFilters: [],
+          date_range: { ...DefaultDateRangeFormat },
+        };
+      });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -705,7 +734,7 @@ function CoreQuery({
 }
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  activeAccount: state.agent?.agent_details?.email,
+  activeAgent: state.agent?.agent_details?.email,
 });
 
 export default connect(mapStateToProps, {

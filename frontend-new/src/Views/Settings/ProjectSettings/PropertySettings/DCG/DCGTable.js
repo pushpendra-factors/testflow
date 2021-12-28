@@ -9,6 +9,7 @@ import { udpateProjectDetails } from 'Reducers/global';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import defaultRules from './defaultRules';
 import _ from 'lodash';
+import { displayName } from 'Components/FaFilterSelect/utils';
 
 const { confirm } = Modal;
 
@@ -90,30 +91,43 @@ const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, se
 
   const renderRow = (data) => {
     if (data) {
-      let queryMap = getBaseQueryfromResponse(data)
+      let queryMap = getBaseQueryfromResponse(data);
       return (
         <div className={'w-full'} style={{ maxWidth: '550px' }}>
           {queryMap.map((item, index) => {
-            return <div className={'inline-flex items-center mb-2'} key={index}>
-              {/* {
+            return (
+              <div className={'inline-flex items-center mb-2'} key={index}>
+                {/* {
                     index != 0 && 
                   <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-1"}>{item.logical_operator}</Text>
                   }
                   <Tag>{`${item.property} ${returnSymbols(item.condition)} ${item.value}`}</Tag> */}
-              <Tag>{`${matchEventName(item?.props[0])} ${item?.operator} ${_.join(item?.values, [', '])}`}</Tag>
-              {
-                (queryMap.length != index + 1) && <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-1"}>{`AND`}</Text>
-              }
-
-            </div>
+                <Tag>{`${matchEventName(item?.props[0])} ${
+                  item?.operator
+                } ${_.join(
+                  item?.values.map((vl) =>
+                    displayName[vl] ? displayName[vl] : vl
+                  ),
+                  [', ']
+                )}`}</Tag>
+                {queryMap.length != index + 1 && (
+                  <Text
+                    type={'title'}
+                    weight={'thin'}
+                    color={'grey'}
+                    level={8}
+                    extraClass={'m-0 mr-1'}
+                  >{`AND`}</Text>
+                )}
+              </div>
+            );
           })}
         </div>
-      )
+      );
+    } else {
+      null;
     }
-    else {
-      null
-    }
-  }
+  };
   const columns = [
 
     {

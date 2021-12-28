@@ -13,6 +13,7 @@ import {
 } from '../../../../utils/constants';
 import { renderHorizontalBarChart } from '../SingleEventMultipleBreakdown/utils';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
+import { displayName } from 'Components/FaFilterSelect/utils';
 
 export const defaultSortProp = () => {
   return [
@@ -51,7 +52,6 @@ export const getTableColumns = (
   userPropNames,
   eventPropNames
 ) => {
-  console.log('sesb getTableColumns');
   const breakdownColumns = breakdown.map((e) => {
     const displayTitle =
       e.prop_category === 'user'
@@ -92,7 +92,6 @@ export const getTableColumns = (
 };
 
 export const getDataInTableFormat = (data, searchText, currentSorter) => {
-  console.log('sesb getDataInTableFormat');
   const filteredData = data.filter(
     (d) => d.label.toLowerCase().indexOf(searchText.toLowerCase()) > -1
   );
@@ -116,7 +115,13 @@ export const parseForDateTimeLabel = (grn, label) => {
       return label;
     }
 
-    if (grn === 'date' || grn === 'day' || grn === 'month' || grn === 'hour') {
+    if (
+      grn === 'date' ||
+      grn === 'day' ||
+      grn === 'month' ||
+      grn === 'hour' ||
+      grn === 'quarter'
+    ) {
       labelValue = dateLabel.format(DATE_FORMATS[grn]);
     } else if (grn === 'week') {
       labelValue = getWeekFormat(dateLabel);
@@ -135,17 +140,19 @@ export const formatData = (data) => {
   ) {
     return [];
   }
-  console.log('sesb Format Data');
   const result = data.metrics.rows.map((elem, index) => {
     const labelVal = parseForDateTimeLabel(
       data.meta?.query?.gbp[0]?.grn,
       elem[2]
     );
     const breakdowns = data.meta.query.gbp;
+    const displayLabel = displayName[labelVal]
+      ? displayName[labelVal]
+      : labelVal;
     return {
-      label: labelVal,
+      label: displayLabel,
       value: elem[3],
-      [breakdowns[0].pr]: labelVal,
+      [breakdowns[0].pr]: displayLabel,
       'Event Count': elem[3], //used for sorting, value key will be removed soon
       index,
     };
@@ -162,7 +169,6 @@ export const getDateBasedColumns = (
   userPropNames,
   eventPropNames
 ) => {
-  console.log('sesb getDateBasedColumns');
   const OverallColumn = {
     title: getClickableTitleSorter(
       'Overall',
@@ -219,7 +225,6 @@ export const getDateBasedTableData = (
   searchText,
   currentSorter
 ) => {
-  console.log('sesb getDateBasedTableData');
   const result = seriesData.filter((sd) =>
     sd.name.toLowerCase().includes(searchText.toLowerCase())
   );
@@ -244,7 +249,6 @@ export const formatDataInStackedAreaFormat = (
       data: [],
     };
   }
-  console.log('sesb formatDataInStackedAreaFormat');
   const dateIndex = data.headers.findIndex((h) => h === 'datetime');
   const countIndex = data.headers.findIndex(
     (h) => h === 'count' || h === 'aggregate'
@@ -279,7 +283,7 @@ export const formatDataInStackedAreaFormat = (
     let breakdownJoin = row
       .slice(breakdownIndex, countIndex)
       .map((x) => parseForDateTimeLabel(data.meta?.query?.gbp[0]?.grn, x))
-      .join(',');
+      .join(', ');
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);
