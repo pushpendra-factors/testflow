@@ -205,6 +205,7 @@ type Configuration struct {
 	EnableOLTPQueriesMemSQLImprovements         string
 	CaptureSourceInUsersTable                   string
 	AllowSupportForSourceColumnInUsers          string
+	UseOLAPPoolForAnalytics                     bool
 }
 
 type Services struct {
@@ -737,6 +738,10 @@ func setMemSQLResourcePoolQueryCallback(db *gorm.DB) {
 			Error("Failed to set resource pool before query.")
 		return
 	}
+}
+
+func UseOLAPPoolForAnalytics() bool {
+	return configuration.UseOLAPPoolForAnalytics
 }
 
 func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx, pool string) {

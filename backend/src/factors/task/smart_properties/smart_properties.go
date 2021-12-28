@@ -41,6 +41,7 @@ func EnrichSmartPropertyForChangedRulesForProject(projectID uint64) int {
 		log.Warn("No updated rules found for project ", projectID)
 		return http.StatusOK
 	}
+	// Need to fetch only required projects that have integration.
 	log.Warn("No of changed smart properties rules: ", len(smartPropertyRules))
 	adwordsCampaigns, adwordsAdGroups := store.GetStore().GetLatestMetaForAdwordsForGivenDays(projectID, 30)
 	facebookCampaigns, facebookAdGroups := store.GetStore().GetLatestMetaForFacebookForGivenDays(projectID, 30)
