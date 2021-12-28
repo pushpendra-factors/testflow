@@ -513,13 +513,11 @@ type Model interface {
 	//Group
 	CreateGroup(projectID uint64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int)
 	GetGroup(projectID uint64, groupName string) (*model.Group, int)
-	CreateOrUpdateCompanyGroupPropertiesBySource(projectID uint64, companyID, companyUserID string, enProperties *map[string]interface{},
-		companyCreatedTimestamp, updateTimestamp int64, source string) (string, error)
+	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
+		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID uint64, channelName string) (int, error)
-	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
-		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 
 	//group_relationship
 	CreateGroupRelationship(projectID uint64, leftGroupName, leftGroupUserID, rightGroupName, rightGroupUserID string) (*model.GroupRelationship, int)
