@@ -27,4 +27,4 @@ export const  DEFAULT_OPERATOR_PROPS = {
     ]
 };
 
-export const displayName = {'$none': '(Not Set)'};
+export const displayName = {'$none': '$none'};
