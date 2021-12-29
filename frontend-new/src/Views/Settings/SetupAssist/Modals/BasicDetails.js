@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import {
-  Row, Col, Button, Input, Form, Progress, message, Select
+  Row, Col, Button, Input, Form, Progress, message, Select, Popconfirm, Upload
 } from 'antd';
+import { ExclamationCircleFilled } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents';
-import { createProjectWithTimeZone } from 'Reducers/global';
+import { createProjectWithTimeZone, udpateProjectDetails } from 'Reducers/global';
 import { TimeZoneOffsetValues } from 'Utils/constants'; 
-import InviteMembers from './InviteMembers';
+import Congrates from './Congrates';
 const { Option } = Select;
 
 const getKeyByValue = (obj, value) =>  Object.keys(obj).find(key => obj[key]?.city === value);
@@ -21,9 +22,11 @@ const TimeZoneName =
   "AEST" :'AEST (Australia Eastern Standard Time)', 
 }
 
-function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }) {
+function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, udpateProjectDetails }) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
 
   const onFinish = values => {
        let projectData = {
@@ -31,8 +34,13 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
         time_zone: TimeZoneOffsetValues[values.time_zone]?.city
       }; 
       createProjectWithTimeZone(projectData).then(() => {
-        setFormData(projectData);
-        message.success('New Project Created!');
+        udpateProjectDetails(activeProject.id, {'profile_picture':imageUrl}).then(() => {
+            message.success('Profile Image Uploaded')
+            setFormData(projectData);
+            message.success('New Project Created!');
+          }).catch((err) => {
+            message.error('error:',err)
+          })
       }).catch((err) => {
         message.error('Oops! Something went wrong.');
         console.log('createProject Failed:', err);
@@ -44,6 +52,40 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
 //     setFormData(true)
 //   };
 
+  function getBase64(img, callback) {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => callback(reader.result));
+    reader.readAsDataURL(img);
+  }
+  
+  function beforeUpload(file) {
+    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
+    if (!isJpgOrPng) {
+      message.error('You can only upload JPG/PNG file!');
+    }
+    const isLt2M = file.size / 1024 / 1024 < 2;
+    if (!isLt2M) {
+      message.error('Image must smaller than 2MB!');
+    }
+    return isJpgOrPng && isLt2M;
+  }
+
+  const handleChange = info => {
+    if (info.file.status === 'uploading') {
+      return;
+    }
+    if (info.file.status === 'done') {
+      // Get this url from response in real world.
+      getBase64(info.file.originFileObj, imageUrl => {
+        setImageUrl(imageUrl);
+      });
+    }
+  };
+
+  function cancel(e) {
+    window.open('#!','_blank')
+  }
+
   return (
     <>
     {!formData &&
@@ -53,8 +95,8 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
                     <div className={'flex flex-col justify-center mt-16'}>
                         <Row className={'mb-4'}>
                             <Col span={24} >
-                                <Text type={'title'} level={3} color={'grey-2'} weight={'bold'}>Basic Details</Text>
-                                <Progress percent={33.33} strokeWidth={3} showInfo={false} />
+                                <Text type={'title'} level={3} color={'grey-2'} align={'center'} weight={'bold'}>Basic Details</Text>
+                                {/* <Progress percent={33.33} strokeWidth={3} showInfo={false} /> */}
                             </Col>
                         </Row>
                         <Row>
@@ -67,7 +109,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
                     >
                     <Row>
                         <Col span={24}>
-                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mb-2'}>Project name</Text>
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-1 mb-1'}>Project Name</Text>
                             <Form.Item
                                 label={null}
                                 name="projectName"
@@ -77,7 +119,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
                             </Form.Item>
                         </Col>
                         <Col span={24}>
-                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-6 mb-2'}>Select timezone</Text>
+                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-1 mt-6 mb-1'}>Select timezone</Text>
                             <Form.Item
                                 name="time_zone"
                                 className={'m-0'}
@@ -92,12 +134,47 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
                                 })} 
                                 </Select>
                             </Form.Item>
+                            <Text type={'title'} level={7} color={'grey'} extraClass={'inline m-0 mt-3 ml-2 mb-2'}>Set it to what is there in your CRM</Text>
+                            <Popconfirm placement="rightTop" title={<Text type={'title'} size={10} extraClass={'max-w-xs'}>Set it to what is there in your CRM. This cannot be changed by the user after selecting once.</Text>} icon={<ExclamationCircleFilled style={{color:'#1E89FF'}}/>} onCancel={cancel} okText="Got it" cancelText="Learn More" cancelButtonProps={{ type: 'text', style:{color:'#1E89FF'}}}>
+                                <Button type={'text'} className={'m-0'} style={{backgroundColor:'white'}}><SVG name={'infoCircle'} size={20} color="gray"/></Button>
+                            </Popconfirm>
                         </Col>
+                        {showProfile?
+                        <Col span={24}>
+                            <Row className={'mt-4 border-t'}>
+                                <Col span={6} className={'mt-6'}>
+                                    <Upload
+                                        name="avatar"
+                                        accept={''}
+                                        showUploadList={false}
+                                        action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
+                                        beforeUpload={beforeUpload}
+                                        onChange={handleChange}
+                                    >
+                                        {imageUrl ? <img src={imageUrl} alt="avatar" /> : <img src='../../../../assets/avatar/upload-picture.png'></img>}
+                                    </Upload>
+                                </Col>
+                                <Col span={17} className={'mt-6'}>
+                                    <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Upload project thumbnail</Text>
+                                    <Text type={'title'} size={10} extraClass={'inline m-0'} color={'grey'}>You can skip this now and do it later by going to the project settings.</Text>
+                                </Col>
+                                <Col span={1} className={'mt-6'}>
+                                    <Button type='text' className={'m-0'} onClick={() => setShowProfile(false)}><SVG name={'times'} size={12} /></Button>
+                                </Col>
+                            </Row>
+                        </Col>
+                        : 
+                        <Col span={24}>
+                            <div className={'mt-2'}>
+                                <Text type={'title'} size={8} color={'grey'} extraClass={'max-w-md m-0 ml-1'}>A logo helps personalize your Project. <a onClick={() => setShowProfile(true)}>Upload project thumbnail</a></Text>
+                            </div>
+                        </Col>
+                        }
                         <Col span={24}>
                             <div className={'mt-8 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type="primary" style={{width:'28vw', height:'36px'}} className={'m-0'} htmlType="submit">
-                                    Next
+                                    <Button size={'large'} type="primary" style={{width:'27vw', height:'36px'}} className={'m-0'} htmlType="submit">
+                                    Create
                                     </Button>
                                 </Form.Item>
                             </div>
@@ -115,8 +192,8 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
                     </Form>
                         
                         </Col>
-                        <Col span={24} className={'mt-4'}>
-                            <Text type={'title'} level={6} align={'center'} color={'grey-2'}>or Explore our demo project for now</Text>
+                        <Col span={24} className={'mt-8'}>
+                            <a href='#!'><Text type={'title'} level={6} align={'center'} weight={'bold'} color={'brand-color'}>or Explore our demo project for now</Text></a>
                         </Col>
                         </Row>
                     </div>
@@ -125,7 +202,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel }
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
       </div>
     }
-    {formData && <InviteMembers handleCancel = {handleCancel} />}
+    {formData && <Congrates handleCancel = {handleCancel} />}
     </>
 
   );
@@ -135,4 +212,4 @@ const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
   });
 
-export default connect(mapStateToProps, { createProjectWithTimeZone })(BasicDetails);
+export default connect(mapStateToProps, { createProjectWithTimeZone, udpateProjectDetails })(BasicDetails);
