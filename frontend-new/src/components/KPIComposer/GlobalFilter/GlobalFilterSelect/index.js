@@ -11,7 +11,7 @@ import { isArray } from 'lodash';
 import moment from 'moment';
 import _ from 'lodash'; 
 
-import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
+import {DEFAULT_OPERATOR_PROPS, displayName} from 'Components/FaFilterSelect/utils';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
