@@ -99,7 +99,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	createUserID, newUserErrorCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: rCustomerUserId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, newUserErrorCode)
-	lastUser, lastUserErrorCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, rCustomerUserId)
+	lastUser, lastUserErrorCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, rCustomerUserId, model.UserSourceWeb)
 	assert.Equal(t, http.StatusFound, lastUserErrorCode)
 	assert.Equal(t, createUserID, lastUser.ID)
 
@@ -199,16 +199,16 @@ func TestDBGetUserLatestByCustomerUserId(t *testing.T) {
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	createUserID1, latestUserErrCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, latestUserErrCode)
-	getUser, getUserErrCode := store.GetStore().GetUserLatestByCustomerUserId(project.ID, rCustomerUserId)
+	getUser, getUserErrCode := store.GetStore().GetUserLatestByCustomerUserId(project.ID, rCustomerUserId, model.UserSourceWeb)
 	assert.Equal(t, http.StatusFound, getUserErrCode)
 	assert.Equal(t, createUserID1, getUser.ID)
 
 	// Bad input. // Without project scope.
-	_, errCode := store.GetStore().GetUserLatestByCustomerUserId(0, rCustomerUserId)
+	_, errCode := store.GetStore().GetUserLatestByCustomerUserId(0, rCustomerUserId, model.UserSourceWeb)
 	assert.NotEqual(t, http.StatusFound, errCode)
 
 	// Bad input. // Unacceptable customer_user_id
-	_, errCode = store.GetStore().GetUserLatestByCustomerUserId(project.ID, " ")
+	_, errCode = store.GetStore().GetUserLatestByCustomerUserId(project.ID, " ", model.UserSourceWeb)
 	assert.NotEqual(t, http.StatusFound, errCode)
 
 	sameCustomerId := "user_1"
@@ -218,7 +218,7 @@ func TestDBGetUserLatestByCustomerUserId(t *testing.T) {
 	assert.NotEmpty(t, createUserID2)
 	createUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createUserID3)
-	luser, errCode := store.GetStore().GetUserLatestByCustomerUserId(project.ID, sameCustomerId)
+	luser, errCode := store.GetStore().GetUserLatestByCustomerUserId(project.ID, sameCustomerId, model.UserSourceWeb)
 	assert.Equal(t, createUserID3, luser.ID) // Should be the latest user with same customer_user_id.
 }
 
@@ -1115,7 +1115,7 @@ func TestGetSelectedUsersByCustomerUserID(t *testing.T) {
 	for i := 0; i < int(limit); i++ {
 		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: customer_id, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 		assert.Equal(t, http.StatusCreated, errCode)
-		lastUser, lastUserErrorCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, customer_id)
+		lastUser, lastUserErrorCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, customer_id, model.UserSourceWeb)
 		assert.Equal(t, http.StatusFound, lastUserErrorCode)
 		assert.Equal(t, createdUserID, lastUser.ID)
 		users = append(users, *lastUser)

@@ -206,6 +206,7 @@ type Configuration struct {
 	CaptureSourceInUsersTable                   string
 	AllowSupportForSourceColumnInUsers          string
 	UseOLAPPoolForAnalytics                     bool
+	RestrictReusingUsersByCustomerUserId        string
 }
 
 type Services struct {
@@ -2016,6 +2017,14 @@ func SetEnableEventLevelEventProperties(projectId uint64) {
 
 func IsProfileQuerySourceSupported(projectId uint64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowSupportForSourceColumnInUsers, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
+}
+
+func CheckRestrictReusingUsersByCustomerUserId(projectId uint64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RestrictReusingUsersByCustomerUserId, "")
 	if allProjects || projectIDsMap[projectId] {
 		return true
 	}

@@ -678,16 +678,26 @@ func (pg *Postgres) GetSelectedUsersByCustomerUserID(projectID uint64, customerU
 	return users, http.StatusFound
 }
 
-func (pg *Postgres) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*model.User, int) {
+func (pg *Postgres) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string, requestSource int) (*model.User, int) {
 	db := C.GetServices().Db
 
 	var user model.User
-	if err := db.Order("created_at DESC").Where("project_id = ?", projectId).Where(
-		"customer_user_id = ?", customerUserId).First(&user).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
+	if !C.CheckRestrictReusingUsersByCustomerUserId(projectId) {
+		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).Where(
+			"customer_user_id = ?", customerUserId).First(&user).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return nil, http.StatusNotFound
+			}
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusInternalServerError
+	} else {
+		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).Where(
+			"customer_user_id = ?", customerUserId).Where("source = ?", requestSource).First(&user).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return nil, http.StatusNotFound
+			}
+			return nil, http.StatusInternalServerError
+		}
 	}
 	return &user, http.StatusFound
 }
@@ -800,7 +810,7 @@ func (pg *Postgres) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUser
 	if errCode == http.StatusNotFound {
 		// if found by c_uid return user, else create new user.
 		if custUserId != "" {
-			user, errCode = pg.GetUserLatestByCustomerUserId(projectId, custUserId)
+			user, errCode = pg.GetUserLatestByCustomerUserId(projectId, custUserId, requestSource)
 			if errCode == http.StatusFound {
 				return user, http.StatusOK
 			}

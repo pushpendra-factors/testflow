@@ -132,7 +132,7 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	params = append(params, query.From)
 	params = append(params, query.To)
 	if allowSupportForSourceColumnInUsers {
-		stepSqlStmnt = fmt.Sprintf("%s AND source=?", stepSqlStmnt)
+		stepSqlStmnt = fmt.Sprintf("%s AND source=? AND (is_group_user=0 or is_group_user IS NULL)", stepSqlStmnt)
 		params = append(params, query.Source)
 	}
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY all_users LIMIT 10000", stepSqlStmnt, groupByStmnt)

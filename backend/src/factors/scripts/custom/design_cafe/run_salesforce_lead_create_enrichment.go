@@ -206,12 +206,12 @@ func userIndentificationByPhoneNo(projectId uint64, phoneNo string) string {
 				return ""
 			}
 
-			userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, newPhoneNo)
+			userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, newPhoneNo, model.UserSourceSalesforce)
 			if errCode == http.StatusFound {
 				return userLatest.ID
 			}
 
-			userLatest, errCode = store.GetStore().GetUserLatestByCustomerUserId(projectId, "+"+newPhoneNo)
+			userLatest, errCode = store.GetStore().GetUserLatestByCustomerUserId(projectId, "+"+newPhoneNo, model.UserSourceSalesforce)
 			if errCode == http.StatusFound {
 				return userLatest.ID
 			}
