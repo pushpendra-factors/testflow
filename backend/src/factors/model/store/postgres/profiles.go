@@ -53,10 +53,9 @@ func (pg *Postgres) runSingleProfilesQuery(projectID uint64, query model.Profile
 }
 
 func (pg *Postgres) ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
-	switch query.Type {
-	case "all_users":
+	if model.IsValidUserSource(query.Type) {
 		return pg.ExecuteAllUsersProfilesQuery(projectID, query)
-	default:
+	} else {
 		return &model.QueryResult{}, http.StatusBadRequest, "Invalid query type for profiles"
 	}
 }
@@ -125,9 +124,9 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	params = append(params, filterParams...)
 	params = append(params, query.From)
 	params = append(params, query.To)
-	if allowSupportForSourceColumnInUsers && model.IsValidUserSource(query.Source) {
+	if allowSupportForSourceColumnInUsers {
 		stepSqlStmnt = fmt.Sprintf("%s AND source=? AND (is_group_user=false OR is_group_user IS NULL)", stepSqlStmnt)
-		params = append(params, query.Source)
+		params = append(params, model.UserSourceMap[query.Type])
 	}
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY all_users LIMIT 10000", stepSqlStmnt, groupByStmnt)
 
