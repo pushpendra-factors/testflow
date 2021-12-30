@@ -33,6 +33,7 @@ import (
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
 // by these constants.
+const prop_thresh_percent = 0.5
 const max_SEGMENTS = 25000
 const max_EVENT_NAMES = 250
 const top_K = 5
@@ -2337,6 +2338,15 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 	eventEventPropMap := make(map[string]map[string]int)
 
 	blacklist := []string{}
+	var whitelistUserProps = []string{}
+	var whitelistEventProps = []string{}
+
+	// TODO : Look at the memory consumption due to these variables
+	// (if there is a way to find event counts, can include blacklisting in first loop itself)
+	threshPercent := prop_thresh_percent
+	eventThreshMap := make(map[string]int)
+	userPropEventMaxMap := make(map[string]map[string]int)
+	eventPropEventMaxMap := make(map[string]map[string]int)
 
 	s := map[string]bool{}
 
@@ -2349,6 +2359,7 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 			return nil, err
 		}
 		eventNameString := eventDetails.EventName
+		eventThreshMap[eventNameString] += 1
 
 		if _, ok := eventEventPropMap[eventNameString]; !ok {
 			eventEventPropMap[eventNameString] = make(map[string]int)
@@ -2371,10 +2382,19 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 
 			propType := userPropCatgMap[uKey]
 			if propType == U.PropertyTypeCategorical {
+				if _, ok := userPropEventMaxMap[uKey]; !ok {
+					userPropEventMaxMap[uKey] = make(map[string]int)
+				}
 				pstring := U.GetPropertyValueAsString(uVal)
+				if pstring == "" {
+					pstring = "$none"
+				}
 				propString := strings.Join([]string{uKey, pstring}, "::")
 				if ok, _, _ := U.StringIn(blacklist, uKey); !ok {
 					eventUserPropMap[eventNameString][propString] += 1
+					if count := eventUserPropMap[eventNameString][propString]; count > userPropEventMaxMap[uKey][eventNameString] && pstring != "$none" {
+						userPropEventMaxMap[uKey][eventNameString] = eventUserPropMap[eventNameString][propString]
+					}
 				}
 			}
 		}
@@ -2387,6 +2407,9 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 
 			propType := eventPropCatgMap[eKey]
 			if propType == U.PropertyTypeCategorical {
+				if _, ok := eventPropEventMaxMap[eKey]; !ok {
+					eventPropEventMaxMap[eKey] = make(map[string]int)
+				}
 				pstring := U.GetPropertyValueAsString(eVal)
 				if pstring == "" {
 					pstring = "$none"
@@ -2394,10 +2417,27 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 				propString := strings.Join([]string{eKey, pstring}, "::")
 				if ok, _, _ := U.StringIn(blacklist, eKey); !ok {
 					eventEventPropMap[eventNameString][propString] += 1
+					if count := eventEventPropMap[eventNameString][propString]; count > eventPropEventMaxMap[eKey][eventNameString] && pstring != "$none" {
+						eventPropEventMaxMap[eKey][eventNameString] = eventEventPropMap[eventNameString][propString]
+					}
 				}
 			}
 		}
 	}
+
+	mineLog.Info("eventCountMap", eventThreshMap)
+	for ev, count := range eventThreshMap {
+		eventThreshMap[ev] = int(math.Max(threshPercent*float64(count)/100, 1.5))
+	}
+	mineLog.Info("eventThreshMap", eventThreshMap)
+
+	mineLog.Info("userPropEventMaxMap", userPropEventMaxMap, "eventPropEventMaxMap", eventPropEventMaxMap)
+	blacklistUserPropsMap := getBlacklistedProps(userPropEventMaxMap, eventThreshMap, whitelistUserProps)
+	blacklistEventPropsMap := getBlacklistedProps(eventPropEventMaxMap, eventThreshMap, whitelistEventProps)
+	mineLog.Info("blacklistUserPropsMap", blacklistUserPropsMap, "blacklistEventPropsMap", blacklistEventPropsMap)
+
+	filterProps(eventUserPropMap, blacklistUserPropsMap)
+	filterProps(eventEventPropMap, blacklistEventPropsMap)
 
 	dir, name = (*cloudManager).GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId)
 	createFileFromMap(dir, name, cloudManager, userPropCatgMap)
@@ -2481,4 +2521,40 @@ func getPropertiesCategoricalMapFromFile(cloudManager *filestore.FileManager, pr
 func removePropertiesTree(val string) bool {
 
 	return U.IsDateTime(val)
+}
+
+func filterProps(PropMap map[string]map[string]int, blacklistPropsMap map[string]bool) {
+	for _, kvcMap := range PropMap {
+		for kv, _ := range kvcMap {
+			key := strings.Split(kv, "::")[0]
+			if present := blacklistPropsMap[key]; present {
+				delete(kvcMap, kv)
+			}
+		}
+	}
+}
+
+func getBlacklistedProps(PropEventMaxMap map[string]map[string]int, eventThreshMap map[string]int, whitelistProps []string) map[string]bool {
+	blacklistPropsMap := make(map[string]bool)
+	for prop, eMap := range PropEventMaxMap {
+		proceed := true
+		for _, key := range whitelistProps {
+			if prop == key {
+				proceed = false
+			}
+		}
+		if proceed {
+
+			blacklisted := true
+			for ev, c := range eMap {
+				if c > eventThreshMap[ev] {
+					blacklisted = false
+				}
+			}
+			if blacklisted {
+				blacklistPropsMap[prop] = true
+			}
+		}
+	}
+	return blacklistPropsMap
 }
