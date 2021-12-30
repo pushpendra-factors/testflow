@@ -33,14 +33,19 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
         name: values.projectName,
         time_zone: TimeZoneOffsetValues[values.time_zone]?.city
       }; 
-      createProjectWithTimeZone(projectData).then(() => {
-        udpateProjectDetails(activeProject.id, {'profile_picture':imageUrl}).then(() => {
+      createProjectWithTimeZone(projectData).then((res) => {
+        const projectId = res.data.id;
+        if(imageUrl) {
+          udpateProjectDetails(projectId, {'profile_picture':imageUrl}).then(() => {
             message.success('Profile Image Uploaded')
             setFormData(projectData);
-            message.success('New Project Created!');
           }).catch((err) => {
             message.error('error:',err)
           })
+        } else {
+          setFormData(projectData);
+        }
+        message.success('New Project Created!');
       }).catch((err) => {
         message.error('Oops! Something went wrong.');
         console.log('createProject Failed:', err);

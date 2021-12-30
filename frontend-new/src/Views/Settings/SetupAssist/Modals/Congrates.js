@@ -57,7 +57,7 @@ function Congrates({handleCancel}) {
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
       </div>
     } {
-        showInvite && <InviteMembers />
+        showInvite && <InviteMembers handleCancel = {handleCancel} />
     }
     </>
 
