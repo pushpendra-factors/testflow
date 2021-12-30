@@ -104,11 +104,17 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		}
 	}
 
-	allowSupportForDateRangeInProfiles := C.AllowSupportForDateRangeInProfiles(projectID)
-
-	if allowSupportForDateRangeInProfiles && (profileQueryGroup.From == 0 || profileQueryGroup.To == 0) {
+	if profileQueryGroup.From == 0 || profileQueryGroup.To == 0 {
 		logCtx.WithError(err).Error("Query failed. Invalid date range provided.")
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid date range provided.", true
+	}
+
+	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
+
+	if allowSupportForSourceColumnInUsers && !model.IsValidUserSource(profileQueryGroup.Source) {
+		logCtx.WithError(err).Error("Query failed. Invalid user source.")
+		message := fmt.Sprintf("Query failed. Invalid user source provided : %s", profileQueryGroup.Source)
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, message, true
 	}
 
 	// copying global filters and groupby into sparate queries and datetime transformations
@@ -117,9 +123,19 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		profileQueryGroup.Queries[index].GroupBys = append(profileQueryGroup.Queries[index].GroupBys, profileQueryGroup.GlobalGroupBys...)
 
 		// passing date range
-		if allowSupportForDateRangeInProfiles {
-			profileQueryGroup.Queries[index].From = profileQueryGroup.From
-			profileQueryGroup.Queries[index].To = profileQueryGroup.To
+		profileQueryGroup.Queries[index].From = profileQueryGroup.From
+		profileQueryGroup.Queries[index].To = profileQueryGroup.To
+
+		if allowSupportForSourceColumnInUsers && model.IsValidUserSource(profileQueryGroup.Source) {
+			switch profileQueryGroup.Source {
+			case model.UserSourceWebString:
+				profileQueryGroup.Queries[index].Source = model.UserSourceWeb
+			case model.UserSourceHubspotString:
+				profileQueryGroup.Queries[index].Source = model.UserSourceHubspot
+			case model.UserSourceSalesforceString:
+				profileQueryGroup.Queries[index].Source = model.UserSourceSalesforce
+			default:
+			}
 		}
 
 		// setting up the timezone for individual queries from the global value

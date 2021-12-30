@@ -3288,7 +3288,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	// deal1 existing mapping company - > company1ID  contact -> nil
 	// new  company - > company1ID,company2ID  contact - > company1Contact[3]
 
-	// verify contact no associated to any
+	// verify contact not associated to any
 	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%d", company1Contact[3])}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
 	assert.Equal(t, http.StatusFound, status)
 	assert.Len(t, documents, 2)
@@ -3356,6 +3356,56 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		assert.Equal(t, groupRelationship[0].RightGroupUserID, company2GroupUserID)
 	}
 
+	// deal3 getting associated to company2 but without updated timestamp
+	// should create new record of action associationupdated with timestamp = prevtimestamp +1
+
+	deal = IntHubspot.Deal{
+		DealId: dealIds[2],
+		Properties: map[string]IntHubspot.Property{
+			"hs_createdate": {
+				Value: fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[2])*time.Hour).Unix()*1000),
+			},
+			"hs_lastmodifieddate": {
+				Value: fmt.Sprintf("%d", dealStartTimestamp.Add(time.Duration(dealIds[2])*time.Hour).Add(20*time.Minute).Unix()*1000),
+			},
+			"stage": {
+				Value: fmt.Sprintf("deal%d In Progress", dealIds[2]),
+			},
+		},
+		Associations: IntHubspot.Associations{
+			AssociatedCompanyIds: append(dealCompanyAssociations[2], company2ID),
+			AssociatedContactIds: dealContactAssociations[2],
+		},
+	}
+
+	enJSON, err = json.Marshal(deal)
+	assert.Nil(t, err)
+	dealPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameDeal,
+		Value:     &dealPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	// inserting again should return status conflict
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusConflict, status)
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID,
+		[]string{U.GetPropertyValueAsString(dealIds[2])}, model.HubspotDocumentTypeDeal, []int{model.HubspotDocumentActionAssociationsUpdated})
+	assert.Len(t, documents, 1)
+
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 1)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	groupRelationship, status = store.GetStore().GetGroupRelationshipByUserID(project.ID, deal3GroupUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, groupRelationship, 1)
+	assert.Equal(t, company2GroupUserID, groupRelationship[0].RightGroupUserID)
+	assert.Equal(t, 1, groupRelationship[0].RightGroupNameID)
+	user, _ = store.GetStore().GetUser(project.ID, companyContacts[0].UserId)
+	assert.True(t, assertUserGroupValueByColumnName(user, "group_2_user_id", deal3GroupUserID))
 }
 
 func TestHubspotOfflineTouchPoint(t *testing.T) {

@@ -2916,6 +2916,7 @@ func TestSalesforceGroups(t *testing.T) {
 
 	leadID1 := "acc1_lead1_" + getRandomName()
 	leadID2 := "acc2_lead1_" + getRandomName()
+	leadID2_3 := "acc2_lead2_" + getRandomName()
 	document = map[string]interface{}{
 		"Id":                 leadID1,
 		"Name":               "lead1",
@@ -2929,6 +2930,16 @@ func TestSalesforceGroups(t *testing.T) {
 	document = map[string]interface{}{
 		"Id":                 leadID2,
 		"Name":               "lead2",
+		"ConvertedAccountId": accountID2,
+		"CreatedDate":        createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate":   createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameLead)
+
+	document = map[string]interface{}{
+		"Id":                 leadID2_3,
+		"Name":               "leadID2_3",
 		"ConvertedAccountId": accountID2,
 		"CreatedDate":        createdDate.Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate":   createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
@@ -2964,19 +2975,24 @@ func TestSalesforceGroups(t *testing.T) {
 	opportunityID4 := "acc2_opp2_" + getRandomName()
 
 	document = map[string]interface{}{
-		"Id":               opportunityID1,
-		"Name":             "opportunity1",
-		"AccountId":        accountID1,
-		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
-		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+		"Id":                            opportunityID1,
+		"Name":                          "opportunity1",
+		"AccountId":                     accountID1,
+		IntSalesforce.OpportunityLeadID: leadID1,
+		"CreatedDate":                   createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate":              createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
 	}
 	processRecords = append(processRecords, document)
 	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameOpportunity)
 
 	document = map[string]interface{}{
-		"Id":               opportunityID2,
-		"Name":             "opportunity2",
-		"AccountId":        accountID2,
+		"Id":        opportunityID2,
+		"Name":      "opportunity2",
+		"AccountId": accountID2,
+		IntSalesforce.OpportunityMultipleLeadID: map[string]bool{
+			leadID2:   true,
+			leadID2_3: true,
+		},
 		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
 		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
 	}
@@ -3003,19 +3019,67 @@ func TestSalesforceGroups(t *testing.T) {
 	processRecords = append(processRecords, document)
 	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameOpportunity)
 
+	// opportunity contact roles
+	opportunityID4ContactRole1 := "opportunityID4ContactRole1"
+	opportunityID4ContactRole2 := "opportunityID4ContactRole2"
+
+	opportunityID4ContactRole1ContactID := "opportunityID4ContactRole1ContactID"
+	opportunityID4ContactRole2ContactID := "opportunityID4ContactRole2ContactID"
+	document = map[string]interface{}{
+		"Id":               opportunityID4ContactRole1ContactID,
+		"Name":             opportunityID4ContactRole1ContactID,
+		"AccountId":        accountID2,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameContact)
+
+	document = map[string]interface{}{
+		"Id":               opportunityID4ContactRole2ContactID,
+		"Name":             opportunityID4ContactRole2ContactID,
+		"AccountId":        accountID2,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameContact)
+
+	document = map[string]interface{}{
+		"Id":               opportunityID4ContactRole1,
+		"Name":             "opportunityID4ContactRole1",
+		"ContactId":        opportunityID4ContactRole1ContactID,
+		"OpportunityId":    opportunityID4,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameOpportunityContactRole)
+	document = map[string]interface{}{
+		"Id":               opportunityID4ContactRole2,
+		"Name":             "opportunityID4ContactRole2",
+		"ContactId":        opportunityID4ContactRole2ContactID,
+		"OpportunityId":    opportunityID4,
+		"CreatedDate":      createdDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": createdDate.Add(30 * time.Second).Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	processRecords = append(processRecords, document)
+	processRecordsType = append(processRecordsType, model.SalesforceDocumentTypeNameOpportunityContactRole)
+
 	for i := range processRecords {
 		err = createDummySalesforceDocument(project.ID, processRecords[i], processRecordsType[i])
 		assert.Nil(t, err, fmt.Sprintf("doc_type %s", processRecordsType[i]))
 	}
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
-	assert.Len(t, enrichStatus, 6) // group account status and group opportunity status
+	assert.Len(t, enrichStatus, 7) // group account status, contact roles and group opportunity status
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 	assert.Equal(t, "success", enrichStatus[2].Status)
 	assert.Equal(t, "success", enrichStatus[3].Status)
 	assert.Equal(t, "success", enrichStatus[4].Status)
 	assert.Equal(t, "success", enrichStatus[5].Status)
+	assert.Equal(t, "success", enrichStatus[6].Status)
 
 	account1GroupUserId := ""
 	account2GroupUserId := ""
@@ -3023,6 +3087,8 @@ func TestSalesforceGroups(t *testing.T) {
 	opportunity2GroupUserId := ""
 	opportunity3GroupUserId := ""
 	opportunity4GroupUserId := ""
+	opportunityID4ContactRole1ContactUserID := ""
+	opportunityID4ContactRole2ContactUserID := ""
 	for i := range processRecords {
 		docType := model.GetSalesforceDocTypeByAlias(processRecordsType[i])
 		documents, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(processRecords[i]["Id"])}, docType, 0)
@@ -3055,6 +3121,21 @@ func TestSalesforceGroups(t *testing.T) {
 				}
 			}
 
+		} else if documents[0].Type == model.SalesforceDocumentTypeOpportunityContactRole {
+			if documents[0].ID == opportunityID4ContactRole1 {
+				assert.Equal(t, opportunityID4ContactRole1ContactUserID, documents[0].UserID)
+			} else {
+				assert.Equal(t, opportunityID4ContactRole2ContactUserID, documents[0].UserID)
+			}
+
+			assert.Equal(t, opportunity4GroupUserId, documents[0].GroupUserID)
+			assert.Equal(t, opportunity4GroupUserId, documents[0].GroupUserID)
+		} else if documents[0].Type == model.SalesforceDocumentTypeContact {
+			if documents[0].ID == opportunityID4ContactRole2ContactID {
+				opportunityID4ContactRole2ContactUserID = documents[0].UserID
+			} else {
+				opportunityID4ContactRole1ContactUserID = documents[0].UserID
+			}
 		} else {
 			nonGroupUser, _ := store.GetStore().GetUser(project.ID, documents[0].UserID)
 			assert.Equal(t, false, *nonGroupUser.IsGroupUser)
@@ -3071,14 +3152,14 @@ func TestSalesforceGroups(t *testing.T) {
 	result, status := querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
 		"$salesforce_lead_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
-	assert.Len(t, result, 2)
+	assert.Len(t, result, 3)
 	assert.Equal(t, float64(1), result[leadID1])
 	assert.Equal(t, float64(1), result[leadID2])
 
 	result, status = querySingleEventWithBreakdownByUserProperty(project.ID, U.EVENT_NAME_SALESFORCE_LEAD_UPDATED,
 		"$salesforce_lead_id", createdDate.Unix()-500, createdDate.Add(30*time.Second).Unix()+500)
 	assert.Equal(t, http.StatusOK, status)
-	assert.Len(t, result, 2)
+	assert.Len(t, result, 3)
 	assert.Equal(t, float64(2), result[leadID1])
 	assert.Equal(t, float64(2), result[leadID2])
 
@@ -3183,22 +3264,25 @@ func TestSalesforceGroups(t *testing.T) {
 	assert.Equal(t, float64(1), result["B"])
 
 	for id, docType := range map[string]int{
-		leadID1:        model.SalesforceDocumentTypeLead,
-		leadID2:        model.SalesforceDocumentTypeLead,
-		contactID1:     model.SalesforceDocumentTypeContact,
-		contactID2:     model.SalesforceDocumentTypeContact,
-		accountID1:     model.SalesforceDocumentTypeAccount,
-		accountID2:     model.SalesforceDocumentTypeAccount,
-		opportunityID1: model.SalesforceDocumentTypeOpportunity,
-		opportunityID2: model.SalesforceDocumentTypeOpportunity,
-		opportunityID3: model.SalesforceDocumentTypeOpportunity,
-		opportunityID4: model.SalesforceDocumentTypeOpportunity,
+		leadID1:                             model.SalesforceDocumentTypeLead,
+		leadID2:                             model.SalesforceDocumentTypeLead,
+		leadID2_3:                           model.SalesforceDocumentTypeLead,
+		contactID1:                          model.SalesforceDocumentTypeContact,
+		contactID2:                          model.SalesforceDocumentTypeContact,
+		opportunityID4ContactRole1ContactID: model.SalesforceDocumentTypeContact,
+		opportunityID4ContactRole2ContactID: model.SalesforceDocumentTypeContact,
+		accountID1:                          model.SalesforceDocumentTypeAccount,
+		accountID2:                          model.SalesforceDocumentTypeAccount,
+		opportunityID1:                      model.SalesforceDocumentTypeOpportunity,
+		opportunityID2:                      model.SalesforceDocumentTypeOpportunity,
+		opportunityID3:                      model.SalesforceDocumentTypeOpportunity,
+		opportunityID4:                      model.SalesforceDocumentTypeOpportunity,
 	} {
 		documents, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(id)}, docType, 0)
 		assert.Equal(t, http.StatusFound, status)
-		lasteDocument := documents[len(documents)-1]
+		latestDocument := documents[len(documents)-1]
 		if docType == model.SalesforceDocumentTypeAccount || docType == model.SalesforceDocumentTypeOpportunity {
-			groupUser, status := store.GetStore().GetUser(project.ID, lasteDocument.GroupUserID)
+			groupUser, status := store.GetStore().GetUser(project.ID, latestDocument.GroupUserID)
 			assert.Equal(t, http.StatusFound, status)
 			assert.Equal(t, model.UserSourceSalesforce, *groupUser.Source)
 
@@ -3225,14 +3309,29 @@ func TestSalesforceGroups(t *testing.T) {
 			}
 
 		} else {
-			assert.Equal(t, "", lasteDocument.GroupUserID)
-			nonGroupUser, status := store.GetStore().GetUser(project.ID, lasteDocument.UserID)
+			assert.Equal(t, "", latestDocument.GroupUserID)
+			nonGroupUser, status := store.GetStore().GetUser(project.ID, latestDocument.UserID)
 			assert.Equal(t, http.StatusFound, status)
-			if lasteDocument.ID == leadID1 || lasteDocument.ID == contactID1 {
+			if latestDocument.ID == leadID1 || latestDocument.ID == contactID1 {
 				assert.Equal(t, "account1", nonGroupUser.Group1ID)
+				assert.Equal(t, account1GroupUserId, nonGroupUser.Group1UserID)
+
+				if latestDocument.ID == leadID1 {
+					assert.Equal(t, opportunity1GroupUserId, nonGroupUser.Group2UserID)
+				}
 			} else {
 				assert.Equal(t, "account2", nonGroupUser.Group1ID)
+				assert.Equal(t, account2GroupUserId, nonGroupUser.Group1UserID)
+
+				if latestDocument.ID == leadID2 || latestDocument.ID == leadID2_3 {
+					assert.Equal(t, opportunity2GroupUserId, nonGroupUser.Group2UserID)
+				}
 			}
+
+			if id == opportunityID4ContactRole1ContactID || id == opportunityID4ContactRole2ContactID {
+				assert.Equal(t, opportunity4GroupUserId, nonGroupUser.Group2UserID)
+			}
+
 			assert.NotEqual(t, "", nonGroupUser.Group1UserID)
 		}
 	}

@@ -306,6 +306,10 @@ func GetSalesforceAllowedObjects(projectID uint64) []int {
 		docTypes = append(docTypes, SalesforceCampaignDocuments...)
 	}
 
+	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
+		docTypes = append(docTypes, SalesforceDocumentTypeOpportunityContactRole)
+	}
+
 	return docTypes
 }
 

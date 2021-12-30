@@ -1796,6 +1796,7 @@ func (pg *Postgres) UpdateUserGroup(projectID uint64, userID, groupName, groupID
 
 	user, status := pg.GetUser(projectID, userID)
 	if status != http.StatusFound {
+		logCtx.Error("Failed to get user for group association.")
 		return nil, http.StatusInternalServerError
 	}
 

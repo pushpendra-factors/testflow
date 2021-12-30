@@ -16,6 +16,7 @@ import {
   getBreakdownDataMapperWithUniqueValues,
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
+import { displayName } from 'Components/FaFilterSelect/utils';
 
 export const defaultSortProp = () => {
   return [
@@ -69,7 +70,9 @@ export const formatData = (data, breakdown, currentEventIndex) => {
     const grns = getBreakDownGranularities(headerSlice, breakdown);
 
     const result = rows.map((d, index) => {
-      const breakdownVals = d.slice(0, countIndex);
+      const breakdownVals = d
+        .slice(0, countIndex)
+        .map((vl) => (displayName[vl] ? displayName[vl] : vl));
       const breakdownData = {};
       for (let i = 0; i < breakdown.length; i++) {
         const bkd = breakdown[i].property;
@@ -78,7 +81,7 @@ export const formatData = (data, breakdown, currentEventIndex) => {
           breakdownVals[i]
         );
       }
-      const grpLabel = Object.values(breakdownData).join(',');
+      const grpLabel = Object.values(breakdownData).join(', ');
       return {
         label: grpLabel,
         value: d[countIndex],
@@ -341,7 +344,7 @@ export const formatDataInSeriesFormat = (
     const breakdownJoin = row
       .slice(breakdownIndex, countIndex)
       .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
-      .join(',');
+      .join(', ');
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);

@@ -16,6 +16,7 @@ type ProfileQueryGroup struct {
 	From           int64                  `json:"from"`
 	To             int64                  `json:"to"`
 	Timezone       string                 `json:"tz"`
+	Source         string                 `json:"source"`
 }
 
 // From and to refer to JoinTime
@@ -26,6 +27,7 @@ type ProfileQuery struct {
 	From     int64                  `json:"from"`
 	To       int64                  `json:"to"`
 	Timezone string                 `json:"tz"`
+	Source   int                    `json:"source"`
 }
 
 func (q *ProfileQueryGroup) GetClass() string {

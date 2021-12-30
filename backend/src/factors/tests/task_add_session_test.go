@@ -105,7 +105,7 @@ func TestAddSessionLatestUserProperties(t *testing.T) {
 	trackPayload = SDK.TrackPayload{
 		Auto:            true,
 		Name:            randomEventName,
-		Timestamp:       timestampUnix + 1*60,
+		Timestamp:       timestampUnix + 100000,
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
 		UserId:          userID,
@@ -133,7 +133,7 @@ func TestAddSessionLatestUserProperties(t *testing.T) {
 	trackPayload = SDK.TrackPayload{
 		Auto:            true,
 		Name:            randomEventName,
-		Timestamp:       timestampUnix + 40*60,
+		Timestamp:       timestampUnix + 200000,
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
 		UserId:          userID,

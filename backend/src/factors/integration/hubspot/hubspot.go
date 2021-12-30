@@ -973,7 +973,6 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 
 	// Once filters passed, now check for the existing properties
 	if filtersPassed != 0 && filtersPassed == len(rule.Filters) {
-
 		prevDoc, status := store.GetStore().GetLastSyncedHubspotDocumentByID(document.ProjectId, document.ID, document.Type)
 		if status != http.StatusFound {
 			// In case no prev properties exist continue creating OTP
@@ -1520,6 +1519,18 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 
 		processEventNames = append(processEventNames, updatedEventName)
 		processEventTimestamps = append(processEventTimestamps, document.Timestamp)
+
+	}
+
+	if document.Action == model.HubspotDocumentActionAssociationsUpdated {
+		createdDocument, status := store.GetStore().GetSyncedHubspotDocumentByFilter(projectID,
+			document.ID, document.Type, model.HubspotDocumentActionCreated)
+		if status != http.StatusFound {
+			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get hubspot company created document for deals association update.")
+			return "", http.StatusInternalServerError
+		}
+
+		return createdDocument.GroupUserId, http.StatusOK
 	}
 
 	if groupUserID == "" {
@@ -1746,7 +1757,7 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 		logCtx.Error("Skipped deal sync. No user associated to hubspot deal.")
 	} else if !dealstageExists || dealStage == nil {
 		logCtx.Error("No deal stage property found on hubspot deal.")
-	} else {
+	} else if document.Action != model.HubspotDocumentActionAssociationsUpdated {
 		trackPayload := &SDK.TrackPayload{
 			Name:            U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
 			ProjectId:       projectID,

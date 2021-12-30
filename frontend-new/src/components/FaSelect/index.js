@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { SVG, Text } from '../factorsComponents';
 import { Input, Button } from 'antd';
+import { displayName } from '../FaFilterSelect/utils';
 
 const FaSelect = ({
   options,
@@ -61,39 +62,10 @@ const FaSelect = ({
     let isSelected = false;
 
     if (searchTerm?.length) {
-      options.forEach((op, index) => {
-        isSelected = isSelectedCheck(op);
-        if (op[0].toLowerCase().includes(searchTerm.toLowerCase())) {
-          rendOpts.push(
-            <div
-              key={index}
-              title={op[0]}
-              className={`fa-select-group-select--options ${
-                isSelected ? styles.fa_selected : null
-              }`}
-              onClick={() => optClick(() => optionClick(op), op)}
-            >
-              {op[1] && !multiSelect ? (
-                <SVG name={op[1]} extraClass={'self-center'}></SVG>
-              ) : null}
-              <span className={`ml-1 ${styles.optText}`}>{op[0]}</span>
-              {isSelected ? (
-                <SVG
-                  name='checkmark'
-                  extraClass={'self-center'}
-                  size={17}
-                  color={'purple'}
-                />
-              ) : null}
-            </div>
-          );
-        }
-      });
-
       isSelected = isSelectedCheck([searchTerm]);
       rendOpts.push(
         <div
-          key={rendOpts.length + 2}
+          key={'custom_value'}
           className={`fa-select-group-select--options ${
             isSelectedCheck([searchTerm]) ? styles.fa_selected : null
           }`}
@@ -116,13 +88,44 @@ const FaSelect = ({
           ) : null}
         </div>
       );
+
+      options.forEach((op, index) => {
+        isSelected = isSelectedCheck(op);
+        if (op[0].toLowerCase().includes(searchTerm.toLowerCase())) {
+          rendOpts.push(
+            <div
+              key={index}
+              title={displayName[op[0]] ? displayName[op[0]] : op[0]}
+              className={`fa-select-group-select--options ${
+                isSelected ? styles.fa_selected : null
+              }`}
+              onClick={() => optClick(() => optionClick(op), op)}
+            >
+              {op[1] && !multiSelect ? (
+                <SVG name={op[1]} extraClass={'self-center'}></SVG>
+              ) : null}
+              <span className={`ml-1 ${styles.optText}`}>
+                {displayName[op[0]] ? displayName[op[0]] : op[0]}
+              </span>
+              {isSelected ? (
+                <SVG
+                  name='checkmark'
+                  extraClass={'self-center'}
+                  size={17}
+                  color={'purple'}
+                />
+              ) : null}
+            </div>
+          );
+        }
+      });
     } else {
       options.forEach((op, index) => {
         isSelected = isSelectedCheck(op);
         rendOpts.push(
           <div
             key={index}
-            title={op[0]}
+            title={displayName[op[0]] ? displayName[op[0]] : op[0]}
             className={`fa-select-group-select--options ${
               isSelected ? styles.fa_selected : null
             }`}
@@ -131,7 +134,9 @@ const FaSelect = ({
             {op[1] && !multiSelect ? (
               <SVG name={op[1]} extraClass={'self-center'}></SVG>
             ) : null}
-            <span className={`ml-1 ${styles.optText}`}>{op[0]}</span>
+            <span className={`ml-1 ${styles.optText}`}>
+              {displayName[op[0]] ? displayName[op[0]] : op[0]}
+            </span>
             {isSelected ? (
               <SVG
                 name='checkmark'
@@ -148,7 +153,7 @@ const FaSelect = ({
     if (delOption) {
       rendOpts.push(
         <div
-          key={100}
+          key={'del_opt'}
           className={`fa-select-group-select--options ${styles.dropdown__del_opt}`}
           onClick={delOptionClick}
         >
@@ -162,14 +167,14 @@ const FaSelect = ({
       if (rendOpts.length >= 4) {
         rendOpts.push(
           <div
-            key={101}
+            key={'empty_opt'}
             className={`fa-select-group-select--options ${styles.dropdown__empty_opt}`}
           ></div>
         );
       }
       rendOpts.push(
         <div
-          key={100}
+          key={'apply_opt'}
           className={`fa-select-group-select--options ${styles.dropdown__apply_opt}`}
           onClick={applyClick}
         >

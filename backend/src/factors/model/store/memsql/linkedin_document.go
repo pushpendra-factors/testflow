@@ -1105,3 +1105,19 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
+
+func (store *MemSQL) DeleteLinkedinIntegration(projectID uint64) (int, error) {
+	db := C.GetServices().Db
+	updateValues := make(map[string]interface{})
+	updateValues["int_linkedin_ad_account"] = nil
+	updateValues["int_linkedin_access_token"] = nil
+	updateValues["int_linkedin_refresh_token"] = nil
+	updateValues["int_linkedin_refresh_token_expiry"] = nil
+	updateValues["int_linkedin_access_token_expiry"] = nil
+
+	err := db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(updateValues).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
+}

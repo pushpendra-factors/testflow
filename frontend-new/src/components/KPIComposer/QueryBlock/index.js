@@ -403,7 +403,7 @@ function QueryBlock({
       <div
         className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${styles.query_block__event} block_section items-center`}
       >
-        <div className={'flex'}>
+        <div className={'flex items-center'}>
           <div
             className={
               'fa--query_block--add-event active flex justify-center items-center mr-2'
@@ -441,7 +441,7 @@ function QueryBlock({
             <Tooltip title={eventNames[event.label] ? eventNames[event.label] : event.label}>
               <Button
                 // icon={<SVG name='mouseevent' size={16} color={'purple'} />}
-                className={``}
+                className={`fa-button--truncate fa-button--truncate-lg`}
                 type='link'
                 onClick={triggerDropDown}
               >

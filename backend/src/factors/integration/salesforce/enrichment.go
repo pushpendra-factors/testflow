@@ -989,6 +989,75 @@ func CreateSalesforceGroupRelationship(projectID uint64, leftGroupName, leftgrou
 	return nil
 }
 
+func enrichOpportunityContactRoles(projectID uint64, document *model.SalesforceDocument) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document": document})
+	if projectID == 0 || document == nil {
+		return http.StatusBadRequest
+	}
+
+	if document.Type != model.SalesforceDocumentTypeOpportunityContactRole {
+		return http.StatusInternalServerError
+	}
+
+	var properties map[string]interface{}
+	err := json.Unmarshal(document.Value.RawMessage, &properties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to unmarshal opportunity contact roles.")
+		return http.StatusInternalServerError
+	}
+
+	oppID, contactID := U.GetPropertyValueAsString(properties["OpportunityId"]), U.GetPropertyValueAsString(properties["ContactId"])
+	if oppID == "" || contactID == "" {
+		logCtx.Error("Failed to get opportunity id or contact id.")
+		return http.StatusInternalServerError
+	}
+
+	associatedUserID := ""
+	groupUserID := ""
+	documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppID}, model.SalesforceDocumentTypeOpportunity, true)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		return http.StatusInternalServerError
+	}
+
+	if documents[0].Synced == false {
+		return http.StatusOK
+	}
+
+	if status == http.StatusFound {
+		groupUserID = documents[0].GroupUserID
+		if groupUserID == "" {
+			return http.StatusOK
+		}
+
+		documents, status = store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{contactID}, model.SalesforceDocumentTypeContact, true)
+		if status != http.StatusFound && status != http.StatusNotFound {
+			return http.StatusInternalServerError
+		}
+
+		if status == http.StatusFound {
+			contactUserID := documents[0].UserID
+			_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
+			fmt.Println("status ", status)
+			if status != http.StatusAccepted && status != http.StatusNotModified {
+				log.WithFields(log.Fields{"project_id": projectID, "user_id": contactUserID, "group_user_id": groupUserID}).
+					Error("Failed to update salesforce user group id for opportunity contact roles.")
+				return http.StatusInternalServerError
+			}
+
+			if status == http.StatusAccepted {
+				associatedUserID = contactUserID
+			}
+		}
+	}
+
+	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", associatedUserID, groupUserID, true)
+	if status != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce opportunity document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
 func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
@@ -1704,6 +1773,8 @@ func enrichAll(project *model.Project, documents []model.SalesforceDocument, sal
 			errCode = enrichOpportunities(project.ID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeCampaign, model.SalesforceDocumentTypeCampaignMember:
 			errCode = enrichCampaign(project, &documents[i], endTimestamp)
+		case model.SalesforceDocumentTypeOpportunityContactRole:
+			errCode = enrichOpportunityContactRoles(project.ID, &documents[i])
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue
@@ -1920,6 +1991,7 @@ func Enrich(projectID uint64) ([]Status, bool) {
 	overAllSyncStatus := make(map[string]bool)
 
 	pendingOpportunityGroupAssociations := make(map[string]map[string]string)
+	enrichOrderByType := salesforceEnrichOrderByType[:]
 	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
 		var syncStatus map[string]bool
 		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID)
@@ -1931,11 +2003,12 @@ func Enrich(projectID uint64) ([]Status, bool) {
 			overAllSyncStatus[fmt.Sprintf("groups_%s", docType)] = syncStatus[docType]
 		}
 
+		enrichOrderByType = append(enrichOrderByType, model.SalesforceDocumentTypeOpportunityContactRole)
 	}
 
 	for _, timeRange := range orderedTimeSeries {
 
-		for _, docType := range salesforceEnrichOrderByType {
+		for _, docType := range enrichOrderByType {
 
 			if docMinTimestamp[docType] <= 0 || timeRange[1] < docMinTimestamp[docType] {
 				continue

@@ -123,8 +123,8 @@ func main() {
 	devBox := flag.Bool("dev_box", false, "Is this going to be deployed on one box")
 	skipEventNameStepByProjectID := flag.String("skip_event_name_step_by_project_id", "", "")
 	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
-	allowSupportForDateRangeInProfiles := flag.String("allow_support_for_date_range_in_profiles", "", "")
 	enableEventLevelEventProperties := flag.String("enable_event_level_event_properties", "", "")
+	allowSupportForSourceColumnInUsers := flag.String("allow_support_for_source_column_in_users", "", "")
 	useOLAPPoolForAnalytics := flag.Bool("use_olap_pool_for_analytics", false,
 		"Will use the pool_olap if set, else use user-level default pool.")
 
@@ -210,8 +210,8 @@ func main() {
 		DevBox:                                  *devBox,
 		SkipEventNameStepByProjectID:            *skipEventNameStepByProjectID,
 		SkipUserJoinInEventQueryByProjectID:     *skipUserJoinInEventQueryByProjectID,
-		AllowSupportForDateRangeInProfiles:      *allowSupportForDateRangeInProfiles,
 		EnableEventLevelEventProperties:         *enableEventLevelEventProperties,
+		AllowSupportForSourceColumnInUsers:      *allowSupportForSourceColumnInUsers,
 		UseOLAPPoolForAnalytics:                 *useOLAPPoolForAnalytics,
 	}
 	C.InitConf(config)
