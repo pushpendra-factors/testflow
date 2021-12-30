@@ -1684,7 +1684,7 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 				}
 
 				// update group_user_id  details on created record
-				errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, documents[i].ID, document.Type, "",
+				errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, documents[i].ID, documents[i].Type, "",
 					documents[i].Timestamp, model.HubspotDocumentActionCreated, "", groupUserID)
 				if errCode != http.StatusAccepted {
 					logCtx.Error("Failed to update group user_id in hubspot created document as synced in sync deal company.")
