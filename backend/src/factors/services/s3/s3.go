@@ -82,6 +82,26 @@ func (sd *S3Driver) GetProjectDir(projectId uint64) string {
 	return fmt.Sprintf("projects/%d/events/", projectId)
 }
 
+func (gcsd *S3Driver) GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("userPropCatgMap_%d.txt", modelId)
+}
+
+func (gcsd *S3Driver) GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventPropCatgMap_%d.txt", modelId)
+}
+
+func (gcsd *S3Driver) GetModelUserPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventUserPropMap_%d.txt", modelId)
+}
+
+func (gcsd *S3Driver) GetModelEventPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventEventPropMap_%d.txt", modelId)
+}
+
 func (sd *S3Driver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := sd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
@@ -98,7 +118,7 @@ func (sd *S3Driver) GetModelEventsBucketingFilePathAndName(projectId uint64, sta
 }
 
 func (sd *S3Driver) GetMasterNumericalBucketsFile(projectId uint64) (string, string) {
-	path := sd.GetProjectEventFileDir(projectId)
+	path := sd.GetProjectDir(projectId)
 	return path, fmt.Sprintf("numerical_buckets_master.txt")
 }
 
