@@ -1037,7 +1037,6 @@ func enrichOpportunityContactRoles(projectID uint64, document *model.SalesforceD
 		if status == http.StatusFound {
 			contactUserID := documents[0].UserID
 			_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
-			fmt.Println("status ", status)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				log.WithFields(log.Fields{"project_id": projectID, "user_id": contactUserID, "group_user_id": groupUserID}).
 					Error("Failed to update salesforce user group id for opportunity contact roles.")

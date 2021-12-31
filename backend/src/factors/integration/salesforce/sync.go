@@ -938,9 +938,10 @@ func CreateOrGetSalesforceEventName(projectID uint64) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	for _, doctype := range model.GetSalesforceAllowedObjects(projectID) {
-		if doctype == model.SalesforceDocumentTypeOpportunityContactRole {
+		if skipObjectEvent(doctype) {
 			continue
 		}
+
 		typAlias := model.GetSalesforceAliasByDocType(doctype)
 		eventName := model.GetSalesforceEventNameByAction(typAlias, model.SalesforceDocumentCreated)
 		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
@@ -1043,6 +1044,10 @@ func syncSalesforcePropertyByType(projectID uint64, doctTypeAlias string, fieldN
 	return nil
 }
 
+func skipObjectEvent(docType int) bool {
+	return docType == model.SalesforceDocumentTypeOpportunityContactRole
+}
+
 // SyncDatetimeAndNumericalProperties sync datetime and numerical properties to the property_details table
 func SyncDatetimeAndNumericalProperties(projectID uint64, accessToken, instanceURL string) (bool, []Status) {
 	if projectID == 0 || accessToken == "" || instanceURL == "" {
@@ -1059,6 +1064,10 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, accessToken, instanceU
 	var allStatus []Status
 	anyFailures := false
 	for _, doctype := range model.GetSalesforceAllowedObjects(projectID) {
+		if skipObjectEvent(doctype) {
+			continue
+		}
+
 		var status Status
 		typAlias := model.GetSalesforceAliasByDocType(doctype)
 		status.Type = typAlias
