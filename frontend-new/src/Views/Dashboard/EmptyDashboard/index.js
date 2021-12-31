@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from 'antd';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 // import NoDataChart from '../../../components/NoDataChart';
 import { SVG, Text } from '../../../components/factorsComponents';
 import { PlusOutlined } from '@ant-design/icons'
@@ -10,6 +10,7 @@ import InviteUsers from '../../Settings/ProjectSettings/UserSettings/InviteUsers
 
 function EmptyDashboard() {
     const [visible, setVisible] = useState(false);
+    const history = useHistory();
 
     const handleClick = () => {
         setVisible(true);
@@ -49,7 +50,7 @@ function EmptyDashboard() {
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
                         To Start moniter your metrics, complete setting using
                     </Text>
-                    <Link to='/project-setup' className={'text-base font-semibold'}>Setup Assist<span style={{fontSize:'30px'}}>→</span> </Link>
+                    <Button type={'link'} style={{backgroundColor:'white'}} onClick={()=> history.push('/project-setup')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
                     <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />} onClick={handleClick}>Invite a teammate for help</Button>
                 </div>
 

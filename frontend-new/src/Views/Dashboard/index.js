@@ -23,15 +23,15 @@ function Dashboard() {
   const integration = useSelector((state) => state.global.currentProjectSettings);
   const dispatch = useDispatch();
 
-  const checkIntegration = integration.int_segment || 
-  integration.int_adwords_enabled_agent_uuid ||
-  integration.int_linkedin_agent_uuid ||
-  integration.int_facebook_user_id ||
-  integration.int_hubspot ||
-  integration.int_salesforce_enabled_agent_uuid ||
-  integration.int_drift ||
-  integration.int_google_organic_enabled_agent_uuid ||
-  integration.int_clear_bit;
+  const checkIntegration = integration?.int_segment || 
+  integration?.int_adwords_enabled_agent_uuid ||
+  integration?.int_linkedin_agent_uuid ||
+  integration?.int_facebook_user_id ||
+  integration?.int_hubspot ||
+  integration?.int_salesforce_enabled_agent_uuid ||
+  integration?.int_drift ||
+  integration?.int_google_organic_enabled_agent_uuid ||
+  integration?.int_clear_bit;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);

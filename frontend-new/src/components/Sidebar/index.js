@@ -37,17 +37,22 @@ function Sidebar(props) {
   };
 
   useEffect(() => {
-    if (props.currentAgent.is_onboarding_flow_seen) {
-        setShowProjectModal(false);
+    let agent = props.agents.filter(agent => agent.email === props.currentAgent.email);
+    if(!agent[0].invited_by) {
+      if (props.currentAgent.is_onboarding_flow_seen) {
+          setShowProjectModal(false);
+      } else {
+        setShowProjectModal(true);
+          props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
+              props.fetchAgentInfo().then(() => {
+                  console.log('Profile details updated!');
+              });
+          }).catch((err) => {
+              console.log('updateAgentInfo failed-->', err);
+          });
+      }
     } else {
-      setShowProjectModal(true);
-        props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
-            props.fetchAgentInfo().then(() => {
-                console.log('Profile details updated!');
-            });
-        }).catch((err) => {
-            console.log('updateAgentInfo failed-->', err);
-        });
+      setShowProjectModal(false);
     }
   }, [])
 
@@ -241,7 +246,8 @@ const mapStateToProps = (state) => {
   return {
     projects: state.global.projects,
     active_project: state.global.active_project,
-    currentAgent: state.agent.agent_details
+    currentAgent: state.agent.agent_details,
+    agents: state.agent.agents
   };
 };
 export default connect(mapStateToProps, { setActiveProject, signout, updateAgentInfo, fetchAgentInfo })(Sidebar);

@@ -81,7 +81,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
   return (
     <>
     <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-      <div className={'animate__animated animate__fadeInUpBig mb-10 pl-4'}>
+      <div className={'animate__animated animate__fadeInUpBig animate__fast mb-10 pl-4'}>
         <Row gutter={[24, 24]} justify={'space-between'} className={'mt-0 pl-3'}>
           <Col span={17}>
             <Text type={'title'} level={5} weight={'bold'} extraClass={'pb-2 m-0'}>Connect with your website data</Text>

@@ -14,15 +14,14 @@ import Lottie from 'react-lottie';
 import setupAssistData from '../../../assets/lottie/Setup assist1.json';
 const axios = require('axios').default;
 
-const SetupAssist = ({agents, integration}) => {
+const SetupAssist = ({currentAgent, integration}) => {
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
     const history = useHistory();
 
     const APIKEY = '69137c15-00a5-4d12-91e7-9641797e9572';
-    let email;
+    let email = currentAgent.email;
     let ownerData;
-    agents.map(agent => email = agent.email);
 
     axios.get(`https://api.hubapi.com/contacts/v1/contact/email/${email}/profile?hapikey=${APIKEY}`)
     .then(response => response.json())
@@ -43,15 +42,15 @@ const SetupAssist = ({agents, integration}) => {
         }
     };
 
-    const checkIntegration = integration.int_segment || 
-    integration.int_adwords_enabled_agent_uuid ||
-    integration.int_linkedin_agent_uuid ||
-    integration.int_facebook_user_id ||
-    integration.int_hubspot ||
-    integration.int_salesforce_enabled_agent_uuid ||
-    integration.int_drift ||
-    integration.int_google_organic_enabled_agent_uuid ||
-    integration.int_clear_bit;
+    const checkIntegration = integration?.int_segment || 
+    integration?.int_adwords_enabled_agent_uuid ||
+    integration?.int_linkedin_agent_uuid ||
+    integration?.int_facebook_user_id ||
+    integration?.int_hubspot ||
+    integration?.int_salesforce_enabled_agent_uuid ||
+    integration?.int_drift ||
+    integration?.int_google_organic_enabled_agent_uuid ||
+    integration?.int_clear_bit;
 
     return (
         <>
@@ -131,7 +130,7 @@ const SetupAssist = ({agents, integration}) => {
 };
 
 const mapStateToProps = (state) => ({
-    agents: state.agent.agents,
+    currentAgent: state.agent.agent_details,
     integration: state.global.currentProjectSettings
 });
 
