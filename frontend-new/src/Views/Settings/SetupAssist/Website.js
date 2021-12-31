@@ -4,6 +4,7 @@ import { Text, SVG, FaErrorComp, FaErrorLog } from "factorsComponents";
 import { connect } from "react-redux";
 import { fetchProjectSettings } from "Reducers/global";
 import retryDynamicImport from 'Utils/dynamicImport';
+import 'animate.css';
 
 
 import SegmentIntegration from "../ProjectSettings/IntegrationSettings/Segment";
@@ -80,7 +81,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
   return (
     <>
     <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-      <div className={'mb-10 pl-4'}>
+      <div className={'animate__animated animate__fadeInUpBig mb-10 pl-4'}>
         <Row gutter={[24, 24]} justify={'space-between'} className={'mt-0 pl-3'}>
           <Col span={17}>
             <Text type={'title'} level={5} weight={'bold'} extraClass={'pb-2 m-0'}>Connect with your website data</Text>
@@ -90,6 +91,8 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
           </Col>
         </Row>
         <JavascriptSDK />
+
+        <Text type={'title'} level={5} weight={'bold'} align={'center'} color={'grey'} extraClass={'pb-2 m-0'}>OR</Text>
 
         <Row gutter={[24, 24]} justify={'space-between'} className={'pt-4 pb-2 mt-0 pl-4'}>
           <Col span={17}>

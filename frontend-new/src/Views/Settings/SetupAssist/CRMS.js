@@ -4,6 +4,7 @@ import { Text, SVG, FaErrorComp, FaErrorLog } from "factorsComponents";
 import { connect } from "react-redux";
 import { fetchProjectSettings } from "Reducers/global";
 import retryDynamicImport from 'Utils/dynamicImport';
+import 'animate.css';
 
 import HubspotIntegration from "../ProjectSettings/IntegrationSettings/Hubspot";
 import SalesForceIntegration from "../ProjectSettings/IntegrationSettings/Salesforce";
@@ -86,7 +87,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
   return (
     <>
     <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-      <div className={'mb-10 pl-4'}>
+      <div className={'animate__animated animate__fadeInUpBig mb-10 pl-4'}>
         <Row gutter={[24, 24]} justify={'space-between'} className={'pb-2 mt-0 '}>
           <Col span={17}>
             <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Connect with your CRMS</Text>

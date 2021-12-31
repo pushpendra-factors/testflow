@@ -8,6 +8,7 @@ import { Text, SVG } from 'factorsComponents';
 import { createProjectWithTimeZone, udpateProjectDetails } from 'Reducers/global';
 import { TimeZoneOffsetValues } from 'Utils/constants'; 
 import Congrates from './Congrates';
+import 'animate.css';
 const { Option } = Select;
 
 const getKeyByValue = (obj, value) =>  Object.keys(obj).find(key => obj[key]?.city === value);
@@ -146,7 +147,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                         </Col>
                         {showProfile?
                         <Col span={24}>
-                            <Row className={'mt-4 border-t'}>
+                            <Row className={'animate__animated animate__fadeIn mt-4 border-t'}>
                                 <Col span={6} className={'mt-6'}>
                                     <Upload
                                         name="avatar"

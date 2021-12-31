@@ -11,6 +11,7 @@
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
     "acorn": "^8.6.0",
+    "animate.css": "^4.1.1",
     "ansi-html": "0.0.7",
     "ansi-regex": "^6.0.1",
     "antd": "^4.5.2",
