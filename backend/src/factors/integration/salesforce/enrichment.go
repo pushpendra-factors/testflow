@@ -1550,7 +1550,8 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 
 func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule", "document_id": document.ID, "document_action": document.Action})
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule",
+		"document_id": document.ID, "document_action": document.Action, "document": document})
 
 	if &project.SalesforceTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.SalesforceTouchPoints) {
 
@@ -1704,7 +1705,7 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 				}
 			}
 		default:
-			logCtx.WithField("Document", trackPayload).Error("No matching operator found for offline touch point rules for salesforce document.")
+			logCtx.WithField("Rule", rule).WithField("TrackPayload", trackPayload).Error("No matching operator found for offline touch point rules for salesforce document.")
 			continue
 		}
 	}

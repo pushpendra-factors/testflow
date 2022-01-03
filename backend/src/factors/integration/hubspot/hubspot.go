@@ -837,7 +837,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, lastModifiedTimeStamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRule",
-		"document_id": document.ID, "document_action": document.Action})
+		"document_id": document.ID, "document_action": document.Action, "document": document})
 
 	lastModifiedTimeStamp = U.CheckAndGetStandardTimestamp(lastModifiedTimeStamp)
 
@@ -852,12 +852,18 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 			return err
 		}
 
-		rules := touchPointRules["hs_touch_point_rules"]
+		// Get the last sync doc for the current update doc.
+		prevDoc, status := store.GetStore().GetLastSyncedHubspotUpdateDocumentByID(document.ProjectId, document.ID, document.Type)
+		if status != http.StatusFound {
+			// In case no prev properties
+			prevDoc = nil
+		}
 
+		rules := touchPointRules["hs_touch_point_rules"]
 		for _, rule := range rules {
 
 			// Check if rule is applicable & the record has changed property w.r.t filters
-			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, document, logCtx) {
+			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, document, prevDoc, logCtx) {
 				continue
 			}
 
@@ -939,7 +945,7 @@ func canCreateHSTouchPoint(documentActionType int) bool {
 	}
 	return true
 }
-func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, logCtx *log.Entry) bool {
+func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, prevDoc *model.HubspotDocument, logCtx *log.Entry) bool {
 
 	filtersPassed := 0
 	for _, filter := range rule.Filters {
@@ -966,15 +972,14 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 				}
 			}
 		default:
-			logCtx.WithField("Document", trackPayload).Error("No matching operator found for offline touch point rules for hubspot document.")
+			logCtx.WithField("Rule", rule).WithField("TrackPayload", trackPayload).Error("No matching operator found for offline touch point rules for hubspot document.")
 			continue
 		}
 	}
 
 	// Once filters passed, now check for the existing properties
 	if filtersPassed != 0 && filtersPassed == len(rule.Filters) {
-		prevDoc, status := store.GetStore().GetLastSyncedHubspotDocumentByID(document.ProjectId, document.ID, document.Type)
-		if status != http.StatusFound {
+		if prevDoc == nil {
 			// In case no prev properties exist continue creating OTP
 			return true
 		}
@@ -992,7 +997,7 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 		}
 
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to GetHubspotDocumentProperties - Offline touch point. Continuing.")
+			logCtx.WithField("Rule", rule).WithField("TrackPayload", trackPayload).WithError(err).Error("Failed to GetHubspotDocumentProperties - Offline touch point. Continuing.")
 			// In case of err with previous properties, log error but continue creating OTP
 			return true
 		}
