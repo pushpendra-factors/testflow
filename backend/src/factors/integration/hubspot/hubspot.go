@@ -1637,8 +1637,9 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 
 	contactIDList, companyIDList, err := getDealAssociatedIDs(projectID, document)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to getDealAssociatedIDs.")
-		return "", http.StatusInsufficientStorage
+		logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "company_ids": companyIDList}).
+			WithError(err).Error("Failed to getDealAssociatedIDs.")
+		return dealGroupUserID, http.StatusOK
 	}
 
 	if len(contactIDList) > 0 {
@@ -1646,7 +1647,6 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 		if status != http.StatusFound {
 			logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "err_code": status}).
 				Error("Failed to get contact created documents for syncGroupDeal.")
-			return "", http.StatusInternalServerError
 		}
 
 		for i := range documents {
@@ -1669,8 +1669,8 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 		documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, companyIDList,
 			model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
 		if status != http.StatusFound {
-			logCtx.WithFields(log.Fields{"company_ids": companyIDList}).Error("Failed to get company created documents for syncGroupDeal.")
-			return "", http.StatusInternalServerError
+			logCtx.WithFields(log.Fields{"company_ids": companyIDList}).
+				Error("Failed to get company created documents for syncGroupDeal.")
 		}
 
 		for i := range documents {
