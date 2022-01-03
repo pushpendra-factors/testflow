@@ -11,7 +11,7 @@ import CRMS from './CRMS';
 import OtherIntegrations from './OtherIntegrations';
 import { useHistory } from 'react-router-dom';
 import Lottie from 'react-lottie';
-import setupAssistData from '../../../assets/lottie/Setup assist1.json';
+import setupAssistData from '../../../assets/lottie/Final Jan 3 Setupassist.json'
 const axios = require('axios').default;
 
 const SetupAssist = ({currentAgent, integration}) => {

@@ -198,9 +198,9 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                     </Form>
                         
                         </Col>
-                        <Col span={24} className={'mt-8'}>
+                        {/* <Col span={24} className={'mt-8'}>
                             <a href='#!'><Text type={'title'} level={6} align={'center'} weight={'bold'} color={'brand-color'}>or Explore our demo project for now</Text></a>
-                        </Col>
+                        </Col> */}
                         </Row>
                     </div>
                 </Col>
