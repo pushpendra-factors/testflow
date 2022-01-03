@@ -341,14 +341,29 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUse
 
 	var user model.User
 	db := C.GetServices().Db
-	if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
-		Where("customer_user_id = ?", customerUserId).Where("source = ?", requestSource).
-		First(&user).Error; err != nil {
-
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
+	if !C.CheckRestrictReusingUsersByCustomerUserId(projectId) {
+		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
+			Where("customer_user_id = ?", customerUserId).First(&user).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return nil, http.StatusNotFound
+			}
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusInternalServerError
+	} else {
+		var userSourceWhereCondition string
+		if requestSource == model.UserSourceWeb {
+			userSourceWhereCondition = "source = ? OR source IS NULL"
+		} else {
+			userSourceWhereCondition = "source = ?"
+		}
+		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
+			Where("customer_user_id = ?", customerUserId).Where(userSourceWhereCondition, requestSource).
+			First(&user).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return nil, http.StatusNotFound
+			}
+			return nil, http.StatusInternalServerError
+		}
 	}
 	return &user, http.StatusFound
 }

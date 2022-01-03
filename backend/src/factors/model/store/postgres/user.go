@@ -691,8 +691,14 @@ func (pg *Postgres) GetUserLatestByCustomerUserId(projectId uint64, customerUser
 			return nil, http.StatusInternalServerError
 		}
 	} else {
+		var userSourceWhereCondition string
+		if requestSource == model.UserSourceWeb {
+			userSourceWhereCondition = "source = ? OR source IS NULL"
+		} else {
+			userSourceWhereCondition = "source = ?"
+		}
 		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).Where(
-			"customer_user_id = ?", customerUserId).Where("source = ?", requestSource).First(&user).Error; err != nil {
+			"customer_user_id = ?", customerUserId).Where(userSourceWhereCondition, requestSource).First(&user).Error; err != nil {
 			if gorm.IsRecordNotFoundError(err) {
 				return nil, http.StatusNotFound
 			}

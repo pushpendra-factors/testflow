@@ -131,8 +131,13 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	params = append(params, query.From)
 	params = append(params, query.To)
 	if allowSupportForSourceColumnInUsers {
-		stepSqlStmnt = fmt.Sprintf("%s AND source=? AND (is_group_user=0 or is_group_user IS NULL)", stepSqlStmnt)
+		if model.UserSourceMap[query.Type] == model.UserSourceWeb {
+			stepSqlStmnt = fmt.Sprintf("%s AND (source=? OR source IS NULL)", stepSqlStmnt)
+		} else {
+			stepSqlStmnt = fmt.Sprintf("%s AND source=?)", stepSqlStmnt)
+		}
 		params = append(params, model.UserSourceMap[query.Type])
+		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=0 or is_group_user IS NULL)", stepSqlStmnt)
 	}
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY all_users LIMIT 10000", stepSqlStmnt, groupByStmnt)
 
