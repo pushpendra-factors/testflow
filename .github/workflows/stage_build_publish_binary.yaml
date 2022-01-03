@@ -51,14 +51,14 @@ jobs:
     - run: |-
         gcloud --quiet auth configure-docker
     
-    - name: Build Pattern Mine 
+    - name: Build binary
       env : 
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
         IMAGE_NAME: ${{ github.event.inputs.image_id}}
       working-directory: ${{ env.GOPATH}}/src
       run : TAG=${{ env.IMAGE_NAME}} ENV=staging make pack-${{ github.event.inputs.binary}}
 
-    - name: Publish Pattern Mine 
+    - name: Publish binary
       env : 
         GOPATH: ${{ env.PATH_TO_FACTORS }}/factors/backend
         IMAGE_NAME: ${{ github.event.inputs.image_id}}
