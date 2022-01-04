@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-beam-dashboard-caching-now upload-beam-dashboard-caching-now pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events go-fmt pack-beam-add-session upload-beam-add-session pack-memsql-hubspot-sync-fields upload-memsql-hubspot-sync-fields pack-replicate-properties upload-replicate-properties pack-precompiles-queries upload-precompile-queries test
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-beam-dashboard-caching-now upload-beam-dashboard-caching-now pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events go-fmt pack-beam-add-session upload-beam-add-session pack-memsql-hubspot-sync-fields upload-memsql-hubspot-sync-fields pack-replicate-properties upload-replicate-properties pack-precompiles-queries upload-precompile-queries pack-sdk-bundle upload-sdk-bundle pack-event-bundle upload-event-bundle pack-analytics-bundle upload-analytics-bundle test
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -412,30 +412,30 @@ upload-precompile-queries: export IMAGE_NAME=precompile-queries-job
 upload-precompile-queries: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/precompile-queries-job:$(TAG)
 
-pack-sdk-dependants: pack-sdk-request-worker
-pack-sdk-dependants: pack-integration-request-worker
-pack-sdk-dependants: pack-hubspot-enrich
-pack-sdk-dependants: pack-salesforce-enrich
+pack-sdk-bundle: pack-sdk-request-worker
+pack-sdk-bundle: pack-integration-request-worker
+pack-sdk-bundle: pack-hubspot-enrich
+pack-sdk-bundle: pack-salesforce-enrich
 
-upload-sdk-dependants: upload-sdk-request-worker
-upload-sdk-dependants: upload-integration-request-worker
-upload-sdk-dependants: upload-hubspot-enrich
-upload-sdk-dependants: upload-salesforce-enrich
+upload-sdk-bundle: upload-sdk-request-worker
+upload-sdk-bundle: upload-integration-request-worker
+upload-sdk-bundle: upload-hubspot-enrich
+upload-sdk-bundle: upload-salesforce-enrich
 
-pack-event-dependants: pack-sdk-dependants
-pack-event-dependants: pack-add-session
+pack-event-bundle: pack-sdk-bundle
+pack-event-bundle: pack-add-session
 
-upload-event-dependants: upload-sdk-dependants
-upload-event-dependants: upload-add-session
+upload-event-bundle: upload-sdk-bundle
+upload-event-bundle: upload-add-session
 
-pack-analytics-dependants: pack-api
-pack-analytics-dependants: pack-dashboard-caching
-pack-analytics-dependants: pack-monthly-dashboard-caching
-pack-analytics-dependants: pack-monthly-beam-dashboard-caching
-pack-analytics-dependants: pack-monthly-beam-dashboard-caching-now
+pack-analytics-bundle: pack-api
+pack-analytics-bundle: pack-dashboard-caching
+pack-analytics-bundle: pack-monthly-dashboard-caching
+pack-analytics-bundle: pack-monthly-beam-dashboard-caching
+pack-analytics-bundle: pack-monthly-beam-dashboard-caching-now
 
-upload-analytics-dependants: upload-api
-upload-analytics-dependants: upload-dashboard-caching
-upload-analytics-dependants: upload-monthly-dashboard-caching
-upload-analytics-dependants: upload-monthly-beam-dashboard-caching
-upload-analytics-dependants: upload-monthly-beam-dashboard-caching-now
+upload-analytics-bundle: upload-api
+upload-analytics-bundle: upload-dashboard-caching
+upload-analytics-bundle: upload-monthly-dashboard-caching
+upload-analytics-bundle: upload-monthly-beam-dashboard-caching
+upload-analytics-bundle: upload-monthly-beam-dashboard-caching-now
