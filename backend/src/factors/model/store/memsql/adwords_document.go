@@ -1001,9 +1001,6 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
 	if query.GroupByTimestamp == "" {
-		if projectID == 559 {
-			log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteAdwordsChannelQueryV1 and no gbt - memsql caching test.")
-		}
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
 			projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
 		if errCode != http.StatusOK {
@@ -1017,9 +1014,6 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model
 		}
 		return columns, resultMetrics, http.StatusOK
 	} else {
-		if projectID == 559 {
-			log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteAdwordsChannelQueryV1 and gbt1 - memsql caching test.")
-		}
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
 			projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
 		if errCode != http.StatusOK {
@@ -1030,9 +1024,6 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model
 		if err != nil {
 			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
-		}
-		if projectID == 559 {
-			log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteAdwordsChannelQueryV1 and gbt1 - memsql caching test.")
 		}
 		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForAdwordsQueryV1(
@@ -1058,13 +1049,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 	var sql string
 	var params []interface{}
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
-	if projectID == 559 {
-		log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 1 - memsql caching test.")
-	}
 	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
-	if projectID == 559 {
-		log.WithField("query", *query).WithField("reqID", reqID).WithField("transformedQuery", transformedQuery).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 2 - memsql caching test.")
-	}
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.AdwordsSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
@@ -1074,16 +1059,11 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	if projectID == 559 {
-		log.WithField("query", *query).WithField("reqID", reqID).WithField("isSmartPropertyPresent", isSmartPropertyPresent).WithField("query.Filters", query.Filters).WithField("query.GroupBy", query.GroupBy).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 3 - memsql caching test.")
-	}
 	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
-	if projectID == 559 {
-		log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 4 - memsql caching test.")
-	}
+
 	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }

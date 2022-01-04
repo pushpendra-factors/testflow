@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/jinzhu/gorm"
-	"github.com/rs/xid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -559,8 +558,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	} else if baseQuery.GetClass() == model.QueryClassChannelV1 {
 		groupQuery := baseQuery.(*model.ChannelGroupQueryV1)
 		unitReport.Query = groupQuery
-		reqID := xid.New().String()
-		result, errCode = store.RunChannelGroupQuery(projectID, groupQuery.Queries, reqID)
+		result, errCode = store.RunChannelGroupQuery(projectID, groupQuery.Queries, "")
 	} else if baseQuery.GetClass() == model.QueryClassEvents {
 		groupQuery := baseQuery.(*model.QueryGroup)
 		unitReport.Query = groupQuery

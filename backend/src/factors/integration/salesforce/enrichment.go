@@ -1037,6 +1037,7 @@ func enrichOpportunityContactRoles(projectID uint64, document *model.SalesforceD
 		if status == http.StatusFound {
 			contactUserID := documents[0].UserID
 			_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
+			fmt.Println("status ", status)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
 				log.WithFields(log.Fields{"project_id": projectID, "user_id": contactUserID, "group_user_id": groupUserID}).
 					Error("Failed to update salesforce user group id for opportunity contact roles.")
@@ -1550,8 +1551,7 @@ func enrichCampaignMember(project *model.Project, document *model.SalesforceDocu
 
 func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, endTimestamp int64) error {
 
-	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule",
-		"document_id": document.ID, "document_action": document.Action, "document": document})
+	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplySFOfflineTouchPointRule", "document_id": document.ID, "document_action": document.Action})
 
 	if &project.SalesforceTouchPoints != nil && !U.IsEmptyPostgresJsonb(&project.SalesforceTouchPoints) {
 
@@ -1705,7 +1705,7 @@ func filterCheck(rule model.SFTouchPointRule, trackPayload *SDK.TrackPayload, lo
 				}
 			}
 		default:
-			logCtx.WithField("Rule", rule).WithField("TrackPayload", trackPayload).Error("No matching operator found for offline touch point rules for salesforce document.")
+			logCtx.WithField("Document", trackPayload).Error("No matching operator found for offline touch point rules for salesforce document.")
 			continue
 		}
 	}

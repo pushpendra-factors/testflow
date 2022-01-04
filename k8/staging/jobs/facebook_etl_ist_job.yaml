@@ -27,7 +27,7 @@ spec:
             - --env
             - $(ENV)
             - --data_service_host
-            - $(DATA_SERVICE_MEMSQL_HOST_URL)
+            - $(DATA_SERVICE_HOST_URL)
             - --timezone
             - "Asia/Kolkata"
             envFrom:
