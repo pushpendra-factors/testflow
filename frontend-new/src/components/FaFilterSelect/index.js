@@ -8,8 +8,9 @@ import FaDatepicker from '../FaDatepicker';
 import FaSelect from '../FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
-import { DEFAULT_OPERATOR_PROPS, displayName } from 'Components/FaFilterSelect/utils';
+import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 import moment from 'moment';
+import { DISPLAY_PROP } from '../../utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -541,7 +542,7 @@ const FAFilterSelect = ({
               title={
                 valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                       .join(', ')
                   : null
               }
@@ -555,7 +556,7 @@ const FAFilterSelect = ({
                 {' '}
                 {valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                       .join(', ')
                   : 'Select Values'}
               </Button>{' '}

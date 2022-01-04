@@ -33,6 +33,7 @@ import (
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
 // by these constants.
+const prop_thresh_percent = 0.5
 const max_SEGMENTS = 25000
 const max_EVENT_NAMES = 250
 const top_K = 5
@@ -1162,10 +1163,41 @@ func FilterTopEvents(eventsMap map[string]int, limitCount int, eventclass string
 	return eventsList
 }
 
-func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, eventPropMap map[string]bool,
-	upCount, epCount map[string]map[string]int, upCatg, epCatg map[string]string) (CampaignEventLists, error) {
+func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *filestore.FileManager, userPropMap, eventPropMap map[string]bool, projectId, modelId uint64) (CampaignEventLists, error) {
 	// read events file , filter and create properties based on userProp and eventsProp
 	// create encoded events based on $session and campaign eventName
+	var fileDir, fileName string
+	var err error
+	var upCatg, epCatg map[string]string
+	var upCount, epCount map[string]map[string]int
+
+	fileDir, fileName = (*cloudManager).GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId)
+	upCatg, err = getPropertiesCategoricalMapFromFile(cloudManager, projectId, modelId, fileDir, fileName)
+	if err != nil {
+		mineLog.Error("Error reading type of user properties from File")
+		return CampaignEventLists{}, err
+	}
+
+	fileDir, fileName = (*cloudManager).GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId)
+	epCatg, err = getPropertiesCategoricalMapFromFile(cloudManager, projectId, modelId, fileDir, fileName)
+	if err != nil {
+		mineLog.Error("Error reading type of event properties from File")
+		return CampaignEventLists{}, err
+	}
+
+	fileDir, fileName = (*cloudManager).GetModelUserPropertiesFilePathAndName(projectId, modelId)
+	upCount, err = getPropertiesMapFromFile(cloudManager, projectId, modelId, fileDir, fileName)
+	if err != nil {
+		mineLog.Error("Error reading user properties from File")
+		return CampaignEventLists{}, err
+	}
+
+	fileDir, fileName = (*cloudManager).GetModelEventPropertiesFilePathAndName(projectId, modelId)
+	epCount, err = getPropertiesMapFromFile(cloudManager, projectId, modelId, fileDir, fileName)
+	if err != nil {
+		mineLog.Error("Error reading event properties from File")
+		return CampaignEventLists{}, err
+	}
 
 	var smartEvents CampaignEventLists
 	mineLog.WithField("path", tmpEventsFilePath).Info("Read Events from file to create encoded events")
@@ -1340,15 +1372,15 @@ func writeEncodedEvent(eventName string, property string, propertyName string, p
 	return nil
 }
 
-func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64, countsVersion int) ([]string, map[string]string, map[string]map[string]int, map[string]map[string]int, map[string]string, map[string]string, error) {
+func GetEventNamesAndType(tmpEventsFilePath string, cloudManager *filestore.FileManager, projectId uint64, modelId uint64, countsVersion int) ([]string, map[string]string, error) {
 	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
+		return nil, nil, err
 	}
-	eventNames, upCount, epCount, upCatg, epCatg, err := GetEventNamesFromFile(scanner, projectId, countsVersion)
+	eventNames, err := GetEventNamesFromFile(scanner, cloudManager, projectId, modelId, countsVersion)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": tmpEventsFilePath}).Error("Failed to read event names from file")
-		return nil, nil, nil, nil, nil, nil, err
+		return nil, nil, err
 	}
 	mineLog.WithField("tmpEventsFilePath",
 		tmpEventsFilePath).Info("Unique EventNames", eventNames)
@@ -1362,10 +1394,10 @@ func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64, countsVers
 
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get event names and Type from DB")
-		return nil, nil, nil, nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	return eventNames, eventNamesWithType, upCount, epCount, upCatg, epCatg, nil
+	return eventNames, eventNamesWithType, nil
 }
 
 // buildWhiteListProperties build user and event properties from db ,
@@ -1449,15 +1481,13 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 	return upFilteredMap, epFilteredMap
 }
 
-func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efTmpName string, diskManager *serviceDisk.DiskDriver, projectId uint64,
-	modelId uint64, eReader io.Reader, userPropList, eventPropList map[string]bool, campaignLimitCount int,
-	upCount, epCount map[string]map[string]int, upCatg, epCatg map[string]string) (CampaignEventLists, error) {
+func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efTmpName string, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, projectId uint64,
+	modelId uint64, eReader io.Reader, userPropList, eventPropList map[string]bool, campaignLimitCount int) (CampaignEventLists, error) {
 	// Rewrites the events file restricting the properties to only whitelisted properties.
 	//  Also returns list special campaign events created during rewrite.
-
 	var err error
 	efPath := efTmpPath + "tmpevents_" + efTmpName
-	smartEvents, err := rewriteEventsFile(tmpEventsFilePath, efPath, userPropList, eventPropList, upCount, epCount, upCatg, epCatg)
+	smartEvents, err := rewriteEventsFile(tmpEventsFilePath, efPath, cloudManager, userPropList, eventPropList, projectId, modelId)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "tmpEventsFilePath": tmpEventsFilePath}).Error("Failed to filter disabled properties")
 		return CampaignEventLists{}, err
@@ -1531,7 +1561,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 	tmpEventsFilepath := efTmpPath + efTmpName
 	mineLog.Info("Successfuly downloaded events file from cloud.", tmpEventsFilepath, efTmpPath, efTmpName)
-	eventNames, eventNamesWithType, upCount, epCount, upCatg, epCatg, err := GetEventNamesAndType(tmpEventsFilepath, projectId, countsVersion)
+	eventNames, eventNamesWithType, err := GetEventNamesAndType(tmpEventsFilepath, cloudManager, projectId, modelId, countsVersion)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
 		return 0, err
@@ -1568,8 +1598,9 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.Info("Number of EventNames: ", len(eventNames))
 	mineLog.Info("Number of User Properties: ", len(userPropList))
 	mineLog.Info("Number of Event Properties: ", len(eventPropList))
-	campaignAnalyticsSorted, err := buildEventsFileOnProperties(tmpEventsFilepath, efTmpPath, efTmpName, diskManager, projectId,
-		modelId, eReader, userPropList, eventPropList, campaignLimitCount, upCount, epCount, upCatg, epCatg)
+
+	campaignAnalyticsSorted, err := buildEventsFileOnProperties(tmpEventsFilepath, efTmpPath, efTmpName, cloudManager, diskManager, projectId,
+		modelId, eReader, userPropList, eventPropList, campaignLimitCount)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
 		return 0, err
@@ -1611,7 +1642,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 
 	//write events file to GCP
 	modEventsFile := fmt.Sprintf("events_modified_%d.txt", modelId)
-	err = writeFileToGCP(projectId, modelId, modEventsFile, tmpEventsFilepath, cloudManager)
+	err = writeFileToGCP(projectId, modelId, modEventsFile, tmpEventsFilepath, cloudManager, "")
 	if err != nil {
 		return 0, fmt.Errorf("unable to write modified events file to GCP")
 	}
@@ -2276,7 +2307,7 @@ func GetEventNamesFromFile_(scanner *bufio.Scanner, projectId uint64) ([]string,
 		}
 		eventNameString := dat["en"].(string)
 		_, ok := s[eventNameString]
-		if ok != true {
+		if !ok {
 			eventNames = append(eventNames, eventNameString)
 			s[eventNameString] = true
 		}
@@ -2293,10 +2324,12 @@ func GetEventNamesFromFile_(scanner *bufio.Scanner, projectId uint64) ([]string,
 }
 
 // GetEventNamesFromFile read unique eventNames from Event file
-func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64, countsVersion int) ([]string, map[string]map[string]int, map[string]map[string]int, map[string]string, map[string]string, error) {
+func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileManager, projectId uint64, modelId uint64, countsVersion int) ([]string, error) {
 	logCtx := log.WithField("project_id", projectId)
 	scanner.Split(bufio.ScanLines)
 	var txtline string
+	var dir, name string
+
 	eventNames := make([]string, 0)
 	userPropCatgMap := make(map[string]string)
 	eventPropCatgMap := make(map[string]string)
@@ -2305,6 +2338,15 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64, countsVersi
 	eventEventPropMap := make(map[string]map[string]int)
 
 	blacklist := []string{}
+	var whitelistUserProps = []string{}
+	var whitelistEventProps = []string{}
+
+	// TODO : Look at the memory consumption due to these variables
+	// (if there is a way to find event counts, can include blacklisting in first loop itself)
+	threshPercent := prop_thresh_percent
+	eventThreshMap := make(map[string]int)
+	userPropEventMaxMap := make(map[string]map[string]int)
+	eventPropEventMaxMap := make(map[string]map[string]int)
 
 	s := map[string]bool{}
 
@@ -2314,9 +2356,10 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64, countsVersi
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(txtline), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": txtline, "err": err}).Error("Read failed")
-			return nil, nil, nil, nil, nil, err
+			return nil, err
 		}
 		eventNameString := eventDetails.EventName
+		eventThreshMap[eventNameString] += 1
 
 		if _, ok := eventEventPropMap[eventNameString]; !ok {
 			eventEventPropMap[eventNameString] = make(map[string]int)
@@ -2326,26 +2369,34 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64, countsVersi
 		}
 
 		_, ok := s[eventNameString]
-		if ok != true {
+		if !ok {
 			eventNames = append(eventNames, eventNameString)
 			s[eventNameString] = true
 		}
 
 		for uKey, uVal := range eventDetails.UserProperties {
-			if _, ok := eventPropCatgMap[uKey]; !ok {
+			if _, ok := userPropCatgMap[uKey]; !ok {
 				propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectId, eventNameString, uKey, uVal, true)
 				userPropCatgMap[uKey] = propertyType
 			}
 
 			propType := userPropCatgMap[uKey]
 			if propType == U.PropertyTypeCategorical {
+				if _, ok := userPropEventMaxMap[uKey]; !ok {
+					userPropEventMaxMap[uKey] = make(map[string]int)
+				}
 				pstring := U.GetPropertyValueAsString(uVal)
+				if pstring == "" {
+					pstring = "$none"
+				}
 				propString := strings.Join([]string{uKey, pstring}, "::")
 				if ok, _, _ := U.StringIn(blacklist, uKey); !ok {
 					eventUserPropMap[eventNameString][propString] += 1
+					if count := eventUserPropMap[eventNameString][propString]; count > userPropEventMaxMap[uKey][eventNameString] && pstring != "$none" {
+						userPropEventMaxMap[uKey][eventNameString] = eventUserPropMap[eventNameString][propString]
+					}
 				}
 			}
-
 		}
 
 		for eKey, eVal := range eventDetails.EventProperties {
@@ -2356,6 +2407,9 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64, countsVersi
 
 			propType := eventPropCatgMap[eKey]
 			if propType == U.PropertyTypeCategorical {
+				if _, ok := eventPropEventMaxMap[eKey]; !ok {
+					eventPropEventMaxMap[eKey] = make(map[string]int)
+				}
 				pstring := U.GetPropertyValueAsString(eVal)
 				if pstring == "" {
 					pstring = "$none"
@@ -2363,16 +2417,39 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64, countsVersi
 				propString := strings.Join([]string{eKey, pstring}, "::")
 				if ok, _, _ := U.StringIn(blacklist, eKey); !ok {
 					eventEventPropMap[eventNameString][propString] += 1
+					if count := eventEventPropMap[eventNameString][propString]; count > eventPropEventMaxMap[eKey][eventNameString] && pstring != "$none" {
+						eventPropEventMaxMap[eKey][eventNameString] = eventEventPropMap[eventNameString][propString]
+					}
 				}
 			}
-
 		}
 	}
+
+	mineLog.Info("eventCountMap", eventThreshMap)
+	for ev, count := range eventThreshMap {
+		eventThreshMap[ev] = int(math.Max(threshPercent*float64(count)/100, 1.5))
+	}
+	mineLog.Info("eventThreshMap", eventThreshMap)
+
+	mineLog.Info("userPropEventMaxMap", userPropEventMaxMap, "eventPropEventMaxMap", eventPropEventMaxMap)
+	blacklistUserPropsMap := getBlacklistedProps(userPropEventMaxMap, eventThreshMap, whitelistUserProps)
+	blacklistEventPropsMap := getBlacklistedProps(eventPropEventMaxMap, eventThreshMap, whitelistEventProps)
+	mineLog.Info("blacklistUserPropsMap", blacklistUserPropsMap, "blacklistEventPropsMap", blacklistEventPropsMap)
+
+	filterProps(eventUserPropMap, blacklistUserPropsMap)
+	filterProps(eventEventPropMap, blacklistEventPropsMap)
+
+	dir, name = (*cloudManager).GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId)
+	createFileFromMap(dir, name, cloudManager, userPropCatgMap)
+
+	dir, name = (*cloudManager).GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId)
+	createFileFromMap(dir, name, cloudManager, eventPropCatgMap)
+
 	err := scanner.Err()
 	logCtx.Info("Extraced Unique EventNames from file")
 
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, err
 	}
 
 	if countsVersion == 2 {
@@ -2393,14 +2470,91 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64, countsVersi
 		mineLog.Infof("Total number of user properties key,values after filtering:%d", userKeys)
 		mineLog.Infof("Total number of event properties key,values after filtering:%d", eventKeys)
 	}
-	return eventNames, eventUserPropMap, eventEventPropMap, userPropCatgMap, eventPropCatgMap, nil
+
+	dir, name = (*cloudManager).GetModelUserPropertiesFilePathAndName(projectId, modelId)
+	createFileFromMap(dir, name, cloudManager, eventUserPropMap)
+
+	_, name = (*cloudManager).GetModelEventPropertiesFilePathAndName(projectId, modelId)
+	createFileFromMap(dir, name, cloudManager, eventEventPropMap)
+
+	return eventNames, nil
+}
+
+func createFileFromMap(fileDir, fileName string, cloudManager *filestore.FileManager, Map interface{}) error {
+	if mapBytes, err := json.Marshal(Map); err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to create ", fileName, " with error: ", err)
+		return err
+	} else {
+		(*cloudManager).Create(fileDir, fileName, bytes.NewReader(mapBytes))
+	}
+	return nil
+}
+
+func getPropertiesMapFromFile(cloudManager *filestore.FileManager, projectId, modelId uint64, fileDir, fileName string) (map[string]map[string]int, error) {
+	var reqMap map[string]map[string]int
+	var buf bytes.Buffer
+
+	file, _ := (*cloudManager).Get(fileDir, fileName)
+	_, err := buf.ReadFrom(file)
+	if err != nil {
+		mineLog.Error("Error reading properties map from File")
+		return nil, err
+	}
+	json.Unmarshal(buf.Bytes(), &reqMap)
+	return reqMap, nil
+}
+
+func getPropertiesCategoricalMapFromFile(cloudManager *filestore.FileManager, projectId, modelId uint64, fileDir, fileName string) (map[string]string, error) {
+	var reqMap map[string]string
+	var buf bytes.Buffer
+
+	file, _ := (*cloudManager).Get(fileDir, fileName)
+	_, err := buf.ReadFrom(file)
+	if err != nil {
+		mineLog.Error("Error reading properties category map from File")
+		return nil, err
+	}
+	json.Unmarshal(buf.Bytes(), &reqMap)
+	return reqMap, nil
 }
 
 func removePropertiesTree(val string) bool {
 
-	if U.IsDateTime(val) {
-		return true
-	}
+	return U.IsDateTime(val)
+}
 
-	return false
+func filterProps(PropMap map[string]map[string]int, blacklistPropsMap map[string]bool) {
+	for _, kvcMap := range PropMap {
+		for kv, _ := range kvcMap {
+			key := strings.Split(kv, "::")[0]
+			if present := blacklistPropsMap[key]; present {
+				delete(kvcMap, kv)
+			}
+		}
+	}
+}
+
+func getBlacklistedProps(PropEventMaxMap map[string]map[string]int, eventThreshMap map[string]int, whitelistProps []string) map[string]bool {
+	blacklistPropsMap := make(map[string]bool)
+	for prop, eMap := range PropEventMaxMap {
+		proceed := true
+		for _, key := range whitelistProps {
+			if prop == key {
+				proceed = false
+			}
+		}
+		if proceed {
+
+			blacklisted := true
+			for ev, c := range eMap {
+				if c > eventThreshMap[ev] {
+					blacklisted = false
+				}
+			}
+			if blacklisted {
+				blacklistPropsMap[prop] = true
+			}
+		}
+	}
+	return blacklistPropsMap
 }

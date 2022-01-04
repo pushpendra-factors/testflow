@@ -2,10 +2,11 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: shared-persistent-pool
-  name: replicate-properties-job
+    nodePool: default-pool
+  name: precompile-queries-job
 spec:
-  schedule: "*/15 * * * *" # In UTC
+  schedule: "0 0 * * *" # everyday at 12AM
+  concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
   jobTemplate:
@@ -14,13 +15,13 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: shared-persistent-pool
+            nodePool: default-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: shared-persistent-pool
+            cloud.google.com/gke-nodepool: default-pool
           containers:
-          - name: replicate-properties-job
-            image: us.gcr.io/factors-production/replicate-properties-job:xxxx
+          - name: precompile-queries-job
+            image: us.gcr.io/factors-production/precompile-queries-job:xxxx
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -37,10 +38,12 @@ spec:
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
-            - --primary_datastore
-            - "memsql"
             - --sentry_dsn
             - $(SENTRY_DSN)
+            - --app_name
+            - "precompile_queries_job"
+            - --project_ids
+            - "2"
             envFrom:
             - configMapRef:
                 name: config-env

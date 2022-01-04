@@ -10,8 +10,8 @@ import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
 import _ from 'lodash'; 
-
-import {DEFAULT_OPERATOR_PROPS, displayName} from 'Components/FaFilterSelect/utils';
+import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -465,7 +465,7 @@ const GlobalFilterSelect = ({
                 title={
                   valuesState && valuesState.length
                     ? valuesState
-                        .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                         .join(', ')
                     : null
                 }
@@ -478,7 +478,7 @@ const GlobalFilterSelect = ({
                   {' '}
                   {valuesState && valuesState.length
                     ? valuesState
-                        .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                         .join(', ')
                     : 'Select Values'}
                 </Button>{' '}

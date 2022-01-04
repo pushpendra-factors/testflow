@@ -8,7 +8,7 @@ import FaDatepicker from 'Components/FaDatepicker';
 import FaSelect from 'Components/FaSelect';
 import moment from 'moment';
 import { isArray } from 'lodash';
-import { displayName } from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../../../../../utils/constants';
 
 const defaultOpProps = {
     "categorical": [
@@ -287,7 +287,7 @@ const GlobalFilterSelect = ({
                 title={
                   valuesState && valuesState.length
                     ? valuesState
-                        .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                         .join(', ')
                     : null
                 }
@@ -300,7 +300,7 @@ const GlobalFilterSelect = ({
                   {' '}
                   {valuesState && valuesState.length
                     ? valuesState
-                        .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                         .join(', ')
                     : 'Select Values'}
                 </Button>{' '}

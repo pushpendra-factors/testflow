@@ -16,7 +16,7 @@ import {
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
-import { displayName } from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -103,7 +103,7 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
             `${breakdown[bIdx].property} - ${bIdx}`
           ] = parseForDateTimeLabel(
             grns[bIdx],
-            displayName[elem[b]] ? displayName[elem[b]] : elem[b]
+            DISPLAY_PROP[elem[b]] ? DISPLAY_PROP[elem[b]] : elem[b]
           );
         }
       });
