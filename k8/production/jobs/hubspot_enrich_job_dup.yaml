@@ -37,6 +37,8 @@ spec:
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
+            - --primary_datastore
+            - "memsql"
             - --redis_host
             - $(REDIS_HOST_2)
             - --redis_port
