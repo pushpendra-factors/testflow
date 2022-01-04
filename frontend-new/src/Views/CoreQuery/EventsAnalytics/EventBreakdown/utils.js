@@ -5,7 +5,7 @@ import {
 import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
 import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
 import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
-import { displayName } from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 export const getDefaultSortProp = () => {
   return {
@@ -32,7 +32,7 @@ export const formatData = (data) => {
   const result = data.rows.map((d, index) => {
     const breakdownVals = d
       .slice(0, d.length - 1)
-      .map((vl) => (displayName[vl] ? displayName[vl] : vl));
+      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
     const breakdownData = {};
     for (let i = 0; i < breakdowns.length; i++) {
       const bkd = breakdowns[i];

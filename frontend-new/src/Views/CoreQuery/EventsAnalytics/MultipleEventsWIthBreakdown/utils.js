@@ -12,7 +12,7 @@ import {
   DATE_FORMATS,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
-import { displayName } from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -92,7 +92,7 @@ export const formatData = (data, queries, colors, eventNames) => {
   const result = rows.map((d, index) => {
     const breakdownVals = d
       .slice(eventIndex + 1, countIndex)
-      .map((vl) => (displayName[vl] ? displayName[vl] : vl));
+      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
     const breakdownData = {};
     for (let i = 0; i < breakdowns.length; i++) {
       const bkd = breakdowns[i];
@@ -331,7 +331,12 @@ export const formatDataInStackedAreaFormat = (
       ',' +
       row
         .slice(eventIndex + 1, countIndex)
-        .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
+        .map((x, ind) =>
+          parseForDateTimeLabel(
+            grns[ind],
+            DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x
+          )
+        )
         .join(', ');
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];

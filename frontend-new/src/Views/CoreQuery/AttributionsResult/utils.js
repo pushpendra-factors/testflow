@@ -20,7 +20,7 @@ import {
   Text,
 } from '../../../components/factorsComponents';
 import { Popover } from 'antd';
-import { displayName } from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -834,15 +834,15 @@ export const getTableData = (
           const index = headers.indexOf(dimension.responseHeader);
           dimensionsData[dimension.title] =
             index > -1
-              ? displayName[row[index]]
-                ? displayName[row[index]]
+              ? DISPLAY_PROP[row[index]]
+                ? DISPLAY_PROP[row[index]]
                 : row[index]
               : '';
         });
       } else {
         const touchpointIdx = headers.indexOf(touchpoint);
-        dimensionsData[touchpoint] = displayName[row[touchpointIdx]]
-          ? displayName[row[touchpointIdx]]
+        dimensionsData[touchpoint] = DISPLAY_PROP[row[touchpointIdx]]
+          ? DISPLAY_PROP[row[touchpointIdx]]
           : row[touchpointIdx];
       }
 

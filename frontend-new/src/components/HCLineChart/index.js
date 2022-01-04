@@ -66,7 +66,12 @@ function LineChart({
         borderRadius: 12,
         useHTML: true,
         formatter: function () {
-          const format = frequency === 'hour' ? 'MMM D, h A' : 'MMM D, YYYY';
+          const format =
+            frequency === 'hour'
+              ? 'MMM D, h A'
+              : frequency === 'date' || frequency === 'week'
+              ? 'MMM D, YYYY'
+              : 'MMM YYYY';
           return ReactDOMServer.renderToString(
             <>
               <Text
