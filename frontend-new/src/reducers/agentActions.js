@@ -266,16 +266,16 @@ export function projectAgentInvite(projectId, payload){
           dispatch({type: "PROJECT_AGENT_INVITE_FULFILLED", payload: r.data });
           resolve(r.data);
         }else if (r.status && r.status == 409){ 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r }); 
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error }); 
           reject("User Seats limit reached");
         }
         else { 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r });
-          reject(r);
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+          reject(r.data.error);
         }
       })
       .catch((r) => { 
-        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r });
+        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
       });
     });
   }
@@ -290,16 +290,16 @@ export function projectAgentBatchInvite(projectId, payload){
           dispatch({type: "PROJECT_AGENT_BATCH_INVITE_FULFILLED", payload: r.data });
           resolve(r.data);
         }else if (r.status && r.status == 409){ 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.failed_to_invite_agent_idx }); 
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data }); 
           reject("User Seats limit reached");
         }
         else { 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.failed_to_invite_agent_idx });
-          reject(r.data.error);
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data});
+          reject(r.data);
         }
       })
       .catch((r) => { 
-        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.failed_to_invite_agent_idx});
+        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data });
       });
     });
   }
