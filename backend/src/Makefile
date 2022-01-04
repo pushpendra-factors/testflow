@@ -411,3 +411,31 @@ pack-precompile-queries:
 upload-precompile-queries: export IMAGE_NAME=precompile-queries-job
 upload-precompile-queries: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/precompile-queries-job:$(TAG)
+
+pack-sdk-dependants: pack-sdk-request-worker
+pack-sdk-dependants: pack-integration-request-worker
+pack-sdk-dependants: pack-hubspot-enrich
+pack-sdk-dependants: pack-salesforce-enrich
+
+upload-sdk-dependants: upload-sdk-request-worker
+upload-sdk-dependants: upload-integration-request-worker
+upload-sdk-dependants: upload-hubspot-enrich
+upload-sdk-dependants: upload-salesforce-enrich
+
+pack-event-dependants: pack-sdk-dependants
+pack-event-dependants: pack-add-session
+
+upload-event-dependants: upload-sdk-dependants
+upload-event-dependants: upload-add-session
+
+pack-analytics-dependants: pack-api
+pack-analytics-dependants: pack-dashboard-caching
+pack-analytics-dependants: pack-monthly-dashboard-caching
+pack-analytics-dependants: pack-monthly-beam-dashboard-caching
+pack-analytics-dependants: pack-monthly-beam-dashboard-caching-now
+
+upload-analytics-dependants: upload-api
+upload-analytics-dependants: upload-dashboard-caching
+upload-analytics-dependants: upload-monthly-dashboard-caching
+upload-analytics-dependants: upload-monthly-beam-dashboard-caching
+upload-analytics-dependants: upload-monthly-beam-dashboard-caching-now
