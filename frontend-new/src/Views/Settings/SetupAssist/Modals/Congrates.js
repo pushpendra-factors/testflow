@@ -37,8 +37,8 @@ function Congrates({handleCancel}) {
                         </Row>
                         <Row className={'mt-1'}>
                             <Col>
-                                <Text type={'paragraph'} mini  extraClass={'m-0'} color={'grey'} weight={'bold'} style={{textAlign:'center'}}>Congratulations, Your new project is created successfully.</Text>
-                                <Text type={'paragraph'} mini  extraClass={'m-0'} color={'grey'} weight={'bold'} style={{ textAlign:'center'}}>Your new project is created successfully.</Text>
+                                <Text type={'paragraph'} mini  extraClass={'m-0'} color={'grey'} weight={'bold'} style={{textAlign:'center'}}>Congratulations! Your project has been created.It’s now time to connect to your data sources</Text>
+                                {/* <Text type={'paragraph'} mini  extraClass={'m-0'} color={'grey'} weight={'bold'} style={{ textAlign:'center'}}></Text> */}
                             </Col>
                         </Row>
                         <Row className={'mt-6'}>

@@ -84,10 +84,15 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
       <div className={'animate__animated animate__fadeInUpBig animate__fast mb-10 pl-4'}>
         <Row gutter={[24, 24]} justify={'space-between'} className={'mt-0 pl-3'}>
           <Col span={17}>
-            <Text type={'title'} level={5} weight={'bold'} extraClass={'pb-2 m-0'}>Connect with your website data</Text>
+            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Connect with your website data</Text>
           </Col>
           <Col>
             <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
+          </Col>
+        </Row>
+        <Row gutter={[24, 24]} justify={'center'} className={'mt-0 pl-3'}>
+          <Col>
+            <Text type={'title'} level={7} color={'grey'} extraClass={'pb-2 m-0'}>Factors offers a native and lightweight Javascript SDK using which we collect, store, and process all events that occur on your website. Alternatively, you can also send us this data via a CDP such as Segment.</Text>
           </Col>
         </Row>
         <JavascriptSDK />

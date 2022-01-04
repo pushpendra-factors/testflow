@@ -73,9 +73,9 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                                 {/* <Progress percent={66.66} strokeWidth={3} showInfo={false} /> */}
                             </Col>
                         </Row>
-                        <Row className={'mb-2 -mt-3'}>
+                        <Row className={'mb-2 -mt-2'}>
                             <Col span={24} >
-                                <Text type={'title'} size={10} color={'grey'} extraClass={'max-w-md'}>You can skip this now. You can find this under User Settings</Text>
+                                <Text type={'title'} size={10} color={'grey'} extraClass={'max-w-md'}>Invite people into your new project for better collaboration and planning. You can always invite more under User Settings</Text>
                             </Col>
                         </Row>
                         <Row>
