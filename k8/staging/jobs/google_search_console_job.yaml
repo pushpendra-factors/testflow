@@ -31,7 +31,7 @@ spec:
             - --developer_token
             - $(GOOGLE_ADWORDS_DEVELOPER_TOKEN)
             - --data_service_host
-            - $(DATA_SERVICE_HOST_URL)
+            - $(DATA_SERVICE_MEMSQL_HOST_URL)
             envFrom:
             - configMapRef:
                 name: config-pythonappserver

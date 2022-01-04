@@ -38,7 +38,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
     
             <Button 
                 size={'large'}
-                className={`fa-button--truncate ml-1 capitalize pointer-events-none`} 
+                className={`fa-button--truncate ml-1 pointer-events-none`} 
                 > {obj?.va} 
             </Button>
         </div>)
@@ -51,7 +51,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
           title: 'Order',
           dataIndex: 'content_group_value',
           key: 'content_group_value', 
-          render: (text) => <span className={'capitalize text-gray-600 text-sm font-bold'}>{text}</span>
+          render: (text) => <span className={'text-gray-600 text-sm font-bold'}>{text}</span>
         },
         {
           title: 'Rule',
@@ -184,7 +184,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
     const handleValuesSubmit = (data, oldRule) => {
         if(data) {
             const rule = {...data};
-            const rulesToUpdate = [...rulesState.filter((rl) => JSON.stringify(rl) !== JSON.stringify(rule))];
+            const rulesToUpdate = [...rulesState.filter((rl) => JSON.stringify(rl) !== JSON.stringify(oldRule))];
             rulesToUpdate.push(rule);
             setRulesState(rulesToUpdate);
             setshowAddValueModal(false);
@@ -217,14 +217,14 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
             <Row className={'mt-8'}>
                 <Col span={18}>
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Name</Text>
-                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={'capitalize'}>{smartPropState.content_group_name}</Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={''}>{smartPropState.content_group_name}</Text>
                 </Col> 
             </Row>
 
             <Row className={'mt-6'}>
                 <Col span={18}>
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Description </Text>
-                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={'capitalize'}>{smartPropState.content_group_description}</Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={''}>{smartPropState.content_group_description}</Text>
                 </Col> 
             </Row>
           </>
@@ -238,7 +238,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
             <Row className={'mt-8'}>
                 <Col span={18}>
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Name</Text>
-                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={'capitalize'}>{smartPropState.content_group_name}</Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={''}>{smartPropState.content_group_name}</Text>
                 </Col> 
             </Row>
             :
