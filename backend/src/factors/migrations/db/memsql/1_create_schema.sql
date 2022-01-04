@@ -394,6 +394,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_facebook_agent_uuid text,
     int_facebook_user_id text,
     int_facebook_ad_account text,
+    int_facebook_token_expiry bigint,
     int_linkedin_ad_account text,
     int_linkedin_access_token text,
     int_linkedin_access_token_expiry bigint,
