@@ -51,11 +51,13 @@ export default function reducer(state = {
       return nextState
     }
     case "PROJECT_AGENT_BATCH_INVITE_FULFILLED": {
-      let nextState = { ...state };  
-      let projectAgentMapping = action.payload.project_agent_mappings[0]; 
-      nextState.agents = [...state.agents]; 
-      nextState.agents.push(projectAgentMapping);  
-      nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid];         
+      let nextState = { ...state }; 
+      for(let i = 0; i < action.payload.project_agent_mappings.length; i++) {
+        let projectAgentMapping = action.payload.project_agent_mappings[i]; 
+        nextState.agents = [...state.agents]; 
+        nextState.agents.push(projectAgentMapping);  
+        nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid]; 
+    } 
       return nextState
     }
     case "PROJECT_AGENT_INVITE_REJECTED": {
@@ -264,16 +266,16 @@ export function projectAgentInvite(projectId, payload){
           dispatch({type: "PROJECT_AGENT_INVITE_FULFILLED", payload: r.data });
           resolve(r.data);
         }else if (r.status && r.status == 409){ 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error }); 
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r }); 
           reject("User Seats limit reached");
         }
         else { 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
-          reject(r.data.error);
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r });
+          reject(r);
         }
       })
       .catch((r) => { 
-        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r });
       });
     });
   }
@@ -288,16 +290,16 @@ export function projectAgentBatchInvite(projectId, payload){
           dispatch({type: "PROJECT_AGENT_BATCH_INVITE_FULFILLED", payload: r.data });
           resolve(r.data);
         }else if (r.status && r.status == 409){ 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error }); 
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.failed_to_invite_agent_idx }); 
           reject("User Seats limit reached");
         }
         else { 
-          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.failed_to_invite_agent_idx });
           reject(r.data.error);
         }
       })
       .catch((r) => { 
-        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.failed_to_invite_agent_idx});
       });
     });
   }

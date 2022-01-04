@@ -36,16 +36,22 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
       finalData[val] = data[val];
     }
 
-    projectAgentBatchInvite(activeProjectID, finalData).then(() => {
+    projectAgentBatchInvite(activeProjectID, finalData).then((res) => {
       fetchProjectAgents(activeProjectID);
-        message.success('Invitation sent successfully!');
-        handleCancel();
-        history.push('/project-setup');
-    }).catch((err) => {
-      console.log('invite error', err);
-      form.resetFields();
-      message.error(err);
-    });
+      if(!res.failed_to_invite_agent_idx[0]) {
+          message.success('Invitation sent successfully!');
+          handleCancel();
+          history.push('/project-setup');
+        } else {
+          for (let i = 0; i < finalData.length; i++) {
+            if(!res.failed_to_invite_agent_idx[i]) {
+              message.success(finalData[i]['email'] + ' : Invitation sent successfully!');
+            } else {
+              message.error(finalData[i]['email'] + ' : ' + res.failed_to_invite_agent_idx[i]);
+            }
+          }
+        }
+    })
   }; 
 
   const onSkip = () => {
