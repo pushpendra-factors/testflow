@@ -761,6 +761,7 @@ type FacebookAddAccessTokenPayload struct {
 
 type FacebookLongLivedTokenResponse struct {
 	AccessToken string `json:"access_token"`
+	ExpiresIn   int64  `json:"expires_in"`
 }
 
 // IntFacebookAddAccessTokenHandler godoc
@@ -825,7 +826,7 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 	_, errCode = store.GetStore().UpdateProjectSettings(projectId, &model.ProjectSetting{
 		IntFacebookEmail: requestPayload.Email, IntFacebookAccessToken: newBody.AccessToken,
 		IntFacebookAgentUUID: &currentAgentUUID, IntFacebookUserID: requestPayload.UserID,
-		IntFacebookAdAccount: requestPayload.AdAccounts})
+		IntFacebookAdAccount: requestPayload.AdAccounts, IntFacebookTokenExpiry: time.Now().Unix() + newBody.ExpiresIn})
 	if errCode != http.StatusAccepted {
 		log.WithField("project_id", projectId).Error("Failed to update project settings with facebook email and access token")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed updating facebook email and access token in project settings"})

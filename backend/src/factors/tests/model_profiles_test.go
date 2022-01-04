@@ -38,12 +38,11 @@ func TestProfiles(t *testing.T) {
 
 	t.Run("No filters, no groupby", func(t *testing.T) {
 		query := model.ProfileQuery{
-			Type:     "all_users",
+			Type:     "web",
 			Filters:  []model.QueryProperty{},
 			GroupBys: []model.QueryGroupByProperty{},
 			From:     joinTime - 100,
 			To:       nextUserJoinTime + 100,
-			Source:   model.UserSourceWeb,
 		}
 		queryGroup := model.ProfileQueryGroup{
 			Class:          "profiles",
@@ -63,14 +62,13 @@ func TestProfiles(t *testing.T) {
 
 	t.Run("1 filter, no groupby", func(t *testing.T) {
 		query := model.ProfileQuery{
-			Type: "all_users",
+			Type: "web",
 			Filters: []model.QueryProperty{
 				{Type: "categorical", Property: "country", Operator: "equals", Value: "india", LogicalOp: "AND"},
 			},
 			GroupBys: []model.QueryGroupByProperty{},
 			From:     joinTime - 100,
 			To:       nextUserJoinTime + 100,
-			Source:   model.UserSourceWeb,
 		}
 		queryGroup := model.ProfileQueryGroup{
 			Class:          "profiles",
@@ -89,12 +87,11 @@ func TestProfiles(t *testing.T) {
 	})
 	t.Run("joinTime check", func(t *testing.T) {
 		query := model.ProfileQuery{
-			Type:     "all_users",
+			Type:     "web",
 			Filters:  []model.QueryProperty{},
 			GroupBys: []model.QueryGroupByProperty{},
 			From:     joinTime - 100,
 			To:       joinTime + 100,
-			Source:   model.UserSourceWeb,
 		}
 		queryGroup := model.ProfileQueryGroup{
 			Class:          "profiles",
@@ -114,12 +111,11 @@ func TestProfiles(t *testing.T) {
 
 	t.Run("No filter, 1 group by", func(t *testing.T) {
 		query := model.ProfileQuery{
-			Type:     "all_users",
+			Type:     "web",
 			Filters:  []model.QueryProperty{},
 			GroupBys: []model.QueryGroupByProperty{{Entity: "user_g", Property: "country", Type: "categorical"}},
 			From:     joinTime - 100,
 			To:       nextUserJoinTime + 100,
-			Source:   model.UserSourceWeb,
 		}
 		queryGroup := model.ProfileQueryGroup{
 			Class:          "profiles",
@@ -168,10 +164,9 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 		// normal query to fetch users from initialTimestamp to finalTimestamp
 		// since a total 11 users were created, the query should return count 11 in result
 		query := model.ProfileQuery{
-			Type:   "all_users",
-			From:   initialTimestamp,
-			To:     finalTimestamp,
-			Source: model.UserSourceWeb,
+			Type: "web",
+			From: initialTimestamp,
+			To:   finalTimestamp,
 		}
 
 		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query)
@@ -200,7 +195,7 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 
 		// group by query applied on property->'$browser'
 		query2 := model.ProfileQuery{
-			Type: "all_users",
+			Type: "web",
 			From: initialTimestamp,
 			To:   finalTimestamp,
 			GroupBys: []model.QueryGroupByProperty{
@@ -210,7 +205,6 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 					Type:     "categorical",
 				},
 			},
-			Source: model.UserSourceWeb,
 		}
 
 		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2)
@@ -235,7 +229,7 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 
 		// group by query applied on property->'$user_id'
 		query3 := model.ProfileQuery{
-			Type: "all_users",
+			Type: "web",
 			From: initialTimestamp,
 			To:   finalTimestamp,
 			GroupBys: []model.QueryGroupByProperty{
@@ -245,7 +239,6 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 					Type:     "categorical",
 				},
 			},
-			Source: model.UserSourceWeb,
 		}
 
 		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3)
@@ -296,10 +289,9 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 		// group query to fetch users from initialTimestamp to finalTimestamp
 		// since a total 11 users were created, the query should return count 11 in result
 		query := model.ProfileQuery{
-			Type:   "all_users",
-			From:   initialTimestamp,
-			To:     finalTimestamp,
-			Source: model.UserSourceWeb,
+			Type: "web",
+			From: initialTimestamp,
+			To:   finalTimestamp,
 			GroupBys: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:   model.PropertyEntityUser,
@@ -343,10 +335,9 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 		// total 21 users were created, 11 web users and 10 hubspot users
 		// the following query should return count 10, since it is filtered for source = hubspot
 		query2 := model.ProfileQuery{
-			Type:   "all_users",
-			From:   initialTimestamp,
-			To:     finalTimestamp,
-			Source: model.UserSourceHubspot,
+			Type: "hubspot",
+			From: initialTimestamp,
+			To:   finalTimestamp,
 			GroupBys: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:   model.PropertyEntityUser,
@@ -390,10 +381,9 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 		// total 26 users were created, 11 web users, 10 hubspot users and 5 salesforce users
 		// the following query should return count 5, since it is filtered for source = salesforce
 		query3 := model.ProfileQuery{
-			Type:   "all_users",
-			From:   initialTimestamp,
-			To:     finalTimestamp,
-			Source: model.UserSourceSalesforce,
+			Type: "salesforce",
+			From: initialTimestamp,
+			To:   finalTimestamp,
 			GroupBys: []model.QueryGroupByProperty{
 				model.QueryGroupByProperty{
 					Entity:   model.PropertyEntityUser,

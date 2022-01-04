@@ -16,7 +16,7 @@ import styles from './index.module.scss';
 import { parseForDateTimeLabel } from '../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import { GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../utils/constants';
 import DurationCol from './FunnelsResultTable/DurationCol';
-import { displayName } from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../utils/constants';
 
 const windowSize = {
   w: window.outerWidth,
@@ -133,7 +133,7 @@ export const formatData = (response, arrayMapper) => {
     const breakdownData = {};
     const breakdownVals = row
       .slice(0, firstEventIdx)
-      .map((vl) => (displayName[vl] ? displayName[vl] : vl));
+      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
     for (let i = 0; i < breakdowns.length; i++) {
       const bkd = breakdowns[i];
       const bkdVal = parseForDateTimeLabel(grns[i], breakdownVals[i]);

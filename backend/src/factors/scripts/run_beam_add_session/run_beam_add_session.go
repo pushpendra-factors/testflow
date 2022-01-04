@@ -51,14 +51,13 @@ var (
 	dbName = flag.String("db_name", "autometa", "")
 	dbPass = flag.String("db_pass", "@ut0me7a", "")
 
-	memSQLHost         = flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
-	memSQLPort         = flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
-	memSQLUser         = flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
-	memSQLName         = flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
-	memSQLPass         = flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
-	memSQLCertificate  = flag.String("memsql_cert", "", "")
-	memSQLResourcePool = flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
-	primaryDatastore   = flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	memSQLHost        = flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort        = flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser        = flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName        = flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass        = flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate = flag.String("memsql_cert", "", "")
+	primaryDatastore  = flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost           = flag.String("redis_host", "localhost", "")
 	redisPort           = flag.Int("redis_port", 6379, "")
@@ -670,14 +669,13 @@ func main() {
 			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:         *memSQLHost,
-			Port:         *memSQLPort,
-			User:         *memSQLUser,
-			Name:         *memSQLName,
-			Password:     *memSQLPass,
-			Certificate:  *memSQLCertificate,
-			ResourcePool: *memSQLResourcePool,
-			AppName:      appName,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
 		},
 		PrimaryDatastore:                    *primaryDatastore,
 		RedisHost:                           *redisHost,

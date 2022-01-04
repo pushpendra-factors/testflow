@@ -99,6 +99,26 @@ func (gcsd *GCSDriver) GetProjectDir(projectId uint64) string {
 	return fmt.Sprintf("projects/%d/events/", projectId)
 }
 
+func (gcsd *GCSDriver) GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("userPropCatgMap_%d.txt", modelId)
+}
+
+func (gcsd *GCSDriver) GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventPropCatgMap_%d.txt", modelId)
+}
+
+func (gcsd *GCSDriver) GetModelUserPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventUserPropMap_%d.txt", modelId)
+}
+
+func (gcsd *GCSDriver) GetModelEventPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventEventPropMap_%d.txt", modelId)
+}
+
 func (gcsd *GCSDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)

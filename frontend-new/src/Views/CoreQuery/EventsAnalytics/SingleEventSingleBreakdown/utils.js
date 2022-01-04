@@ -13,7 +13,7 @@ import {
 } from '../../../../utils/constants';
 import { renderHorizontalBarChart } from '../SingleEventMultipleBreakdown/utils';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
-import { displayName } from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -146,8 +146,8 @@ export const formatData = (data) => {
       elem[2]
     );
     const breakdowns = data.meta.query.gbp;
-    const displayLabel = displayName[labelVal]
-      ? displayName[labelVal]
+    const displayLabel = DISPLAY_PROP[labelVal]
+      ? DISPLAY_PROP[labelVal]
       : labelVal;
     return {
       label: displayLabel,
@@ -282,7 +282,12 @@ export const formatDataInStackedAreaFormat = (
   data.rows.forEach((row) => {
     let breakdownJoin = row
       .slice(breakdownIndex, countIndex)
-      .map((x) => parseForDateTimeLabel(data.meta?.query?.gbp[0]?.grn, x))
+      .map((x) =>
+        parseForDateTimeLabel(
+          data.meta?.query?.gbp[0]?.grn,
+          DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x
+        )
+      )
       .join(', ');
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];
