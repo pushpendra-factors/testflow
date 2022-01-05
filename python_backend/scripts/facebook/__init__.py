@@ -12,6 +12,7 @@ TIMEZONE_IST = "Asia/Kolkata"
 
 ACCESS_TOKEN = "int_facebook_access_token"
 FACEBOOK_AD_ACCOUNT = "int_facebook_ad_account"
+TOKEN_EXPIRY = "int_facebook_token_expiry"
 DATA = "data"
 FACEBOOK = "facebook"
 PLATFORM = "platform"

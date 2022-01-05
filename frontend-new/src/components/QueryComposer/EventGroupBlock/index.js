@@ -33,10 +33,11 @@ const EventGroupBlock = ({
       label: 'User Properties',
       icon: 'user',
       values: [],
-    }
+    },
   ]);
 
   const [propSelVis, setSelVis] = useState(false);
+  const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
@@ -50,7 +51,7 @@ const EventGroupBlock = ({
     setFilterOptions(filterOpts);
   }, [eventProperties]);
 
-  const onChange = (group, val) => {
+  const onChange = (group, val, ind) => {
     const newGroupByState = Object.assign({}, groupByEvent);
     if (group === 'User Properties') {
       newGroupByState.prop_category = 'user';
@@ -70,7 +71,8 @@ const EventGroupBlock = ({
       newGroupByState.grn = 'day';
     }
 
-    setGroupState(newGroupByState);
+    setGroupState(newGroupByState, ind);
+    setGroupByDDVisible(false);
     closeDropDown();
   };
 
@@ -143,17 +145,48 @@ const EventGroupBlock = ({
 
   const renderGroupContent = () => {
     let propName = '';
-    if(groupByEvent.property && groupByEvent.prop_category === 'user') {
-      propName = userPropNames[groupByEvent.property]? userPropNames[groupByEvent.property] : groupByEvent.property;
+    if (groupByEvent.property && groupByEvent.prop_category === 'user') {
+      propName = userPropNames[groupByEvent.property]
+        ? userPropNames[groupByEvent.property]
+        : groupByEvent.property;
     }
 
-    if(groupByEvent.property && groupByEvent.prop_category === 'event') {
-      propName = eventPropNames[groupByEvent.property]? eventPropNames[groupByEvent.property] : groupByEvent.property;
+    if (groupByEvent.property && groupByEvent.prop_category === 'event') {
+      propName = eventPropNames[groupByEvent.property]
+        ? eventPropNames[groupByEvent.property]
+        : groupByEvent.property;
     }
 
-    return (
+    return isGroupByDDVisible ? (
       <>
-        <Button icon={<SVG name={groupByEvent.prop_category} size={16} color={'purple'} />} type={'link'} className={'ml-2'}>
+        <Button
+          icon={
+            <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
+          }
+          type={'link'}
+          className={'ml-2'}
+        >
+          {propName}
+        </Button>
+        <div className={styles.group_block__event_selector}>
+          <GroupSelect2
+            groupedProperties={filterOptions}
+            placeholder='Select Property'
+            optionClick={(group, val) => onChange(group, val, index)}
+            onClickOutside={() => setGroupByDDVisible(false)}
+          ></GroupSelect2>
+        </div>
+      </>
+    ) : (
+      <>
+        <Button
+          icon={
+            <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
+          }
+          type={'link'}
+          className={'ml-2'}
+          onClick={() => setGroupByDDVisible(true)}
+        >
           {propName}
         </Button>
         {renderGroupPropertyOptions(groupByEvent)}
@@ -163,7 +196,6 @@ const EventGroupBlock = ({
 
   const renderGroupBySelect = () => {
     return (
-
       <div className={styles.group_block__event_selector}>
         <GroupSelect2
           groupedProperties={filterOptions}
@@ -178,13 +210,16 @@ const EventGroupBlock = ({
   return (
     <div className={`flex items-center relative w-full`}>
       <Button
-          type="text"
-          onClick={() => delGroupState(groupByEvent)}
-          size={'small'}
-          className={`mr-1 fa-btn--custom`}
-        >  <SVG name={'remove'} />  </Button>
+        type='text'
+        onClick={() => delGroupState(groupByEvent)}
+        size={'small'}
+        className={`mr-1 fa-btn--custom`}
+      >
+        {' '}
+        <SVG name={'remove'} />{' '}
+      </Button>
       <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>
-        {grpIndex<1? 'Breakdown' : '...and'}{' '}
+        {grpIndex < 1 ? 'Breakdown' : '...and'}{' '}
       </Text>
       {groupByEvent && groupByEvent.property ? (
         renderGroupContent()

@@ -110,6 +110,12 @@ const (
 	UserSourceSalesforce = 3
 )
 
+var UserSourceMap = map[string]int{
+	"web":        1,
+	"hubspot":    2,
+	"salesforce": 3,
+}
+
 func GetRequestSourcePointer(requestSource int) *int {
 	var requestSourcePointer = requestSource
 	return &requestSourcePointer
@@ -850,4 +856,12 @@ func GetUserGroupID(user *User) (string, error) {
 	}
 
 	return value, nil
+}
+
+func IsValidUserSource(source string) bool {
+	if _, exists := UserSourceMap[source]; exists {
+		return true
+	} else {
+		return false
+	}
 }

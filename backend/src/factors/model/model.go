@@ -386,7 +386,7 @@ type Model interface {
 	IsUserExistByID(projectID uint64, id string) int
 	GetUsers(projectID uint64, offset uint64, limit uint64) ([]model.User, int)
 	GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int)
-	GetUserLatestByCustomerUserId(projectID uint64, customerUserId string) (*model.User, int)
+	GetUserLatestByCustomerUserId(projectID uint64, customerUserId string, requestSource int) (*model.User, int)
 	GetExistingCustomerUserID(projectID uint64, arrayCustomerUserID []string) (map[string]string, int)
 	GetUserBySegmentAnonymousId(projectID uint64, segAnonId string) (*model.User, int)
 	GetAllUserIDByCustomerUserID(projectID uint64, customerUserID string) ([]string, int)
@@ -515,6 +515,9 @@ type Model interface {
 	GetGroup(projectID uint64, groupName string) (*model.Group, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
+
+	// Delete channel Integrations
+	DeleteChannelIntegration(projectID uint64, channelName string) (int, error)
 
 	//group_relationship
 	CreateGroupRelationship(projectID uint64, leftGroupName, leftGroupUserID, rightGroupName, rightGroupUserID string) (*model.GroupRelationship, int)

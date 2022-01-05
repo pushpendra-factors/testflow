@@ -16,6 +16,7 @@ import {
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -58,7 +59,6 @@ export const getProfileBreakDownGranularities = (
 ) => {
   const grns = [];
   let brks = [...breakdowns];
-  console.log('breakdowns', breakdowns);
   breakDownSlice.forEach((h) => {
     const brkIndex = brks.findIndex((x) => h === x.property);
     grns.push(
@@ -86,7 +86,6 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
   ) {
     return [];
   }
-  console.log('profile with breakdown formatData');
   try {
     const { headers, rows } = data.result_group[currentEventIndex];
     const activeQuery = queries[currentEventIndex];
@@ -102,13 +101,16 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
         if (b > -1) {
           breakdownVals[
             `${breakdown[bIdx].property} - ${bIdx}`
-          ] = parseForDateTimeLabel(grns[bIdx], elem[b]);
+          ] = parseForDateTimeLabel(
+            grns[bIdx],
+            DISPLAY_PROP[elem[b]] ? DISPLAY_PROP[elem[b]] : elem[b]
+          );
         }
       });
       const color = generateColors(1);
       result.push({
         index,
-        label: Object.values(breakdownVals).join(),
+        label: Object.values(breakdownVals).join(', '),
         value: elem[valIndex],
         color,
         ...breakdownVals,
@@ -181,7 +183,6 @@ export const getDataInHorizontalBarChartFormat = (
   cardSize = 1,
   isDashboardWidget = false
 ) => {
-  console.log('profiles getDataInHorizontalBarChartFormat');
   const sortedData = SortResults(aggregateData, [
     {
       key: 'value',
@@ -280,7 +281,6 @@ export const getHorizontalBarChartColumns = (
   eventPropNames,
   cardSize = 1
 ) => {
-  console.log('profile getHorizontalBarChartColumns');
   const result = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayTitle(
       e,

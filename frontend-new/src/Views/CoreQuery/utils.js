@@ -32,7 +32,7 @@ import {
 } from '../../utils/constants';
 import { Radio } from 'antd';
 import { formatFilterDate } from '../../utils/dataFormatter';
-import _ from 'lodash'; 
+import _ from 'lodash';
 
 export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
@@ -493,7 +493,7 @@ export const getQuery = (
   query.cl = QUERY_TYPE_EVENT;
   query.ty =
     result_criteria === TOTAL_EVENTS_CRITERIA ||
-    result_criteria === FREQUENCY_CRITERIA
+      result_criteria === FREQUENCY_CRITERIA
       ? TYPE_EVENTS_OCCURRENCE
       : TYPE_UNIQUE_USERS;
 
@@ -617,9 +617,9 @@ export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
 };
 
 const getEventIdx = (eventData, userObj) => {
-  const str = userObj.slice(0, userObj.length - 1).join(',');
+  const str = userObj.slice(0, userObj.length - 1).join(', ');
   const eventIdx = eventData.findIndex(
-    (elem) => elem.slice(0, elem.length - 1).join(',') === str
+    (elem) => elem.slice(0, elem.length - 1).join(', ') === str
   );
   return eventIdx;
 };
@@ -892,6 +892,25 @@ export const DashboardDefaultDateRangeFormat = {
   dateType: PREDEFINED_DATES.LAST_WEEK,
 };
 
+export const getStateFromFilters = (rawFilters = []) => {
+  const filters = [];
+  rawFilters.forEach((pr) => {
+    if (pr.lop === 'AND') {
+      filters.push({
+        operator:
+          pr.ty === 'datetime'
+            ? reverseDateOperatorMap[pr.op]
+            : reverseOperatorMap[pr.op],
+        props: [pr.pr, pr.ty, pr.en],
+        values: [pr.va],
+      });
+    } else {
+      filters[filters.length - 1].values.push(pr.va);
+    }
+  });
+  return filters;
+}
+
 export const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
@@ -1079,10 +1098,10 @@ export const getAttributionStateFromRequestQuery = (
         enabled: !requestQuery.attribution_key_dimensions
           ? dimension.defaultValue
           : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
-              -1 ||
-            requestQuery.attribution_key_custom_dimensions?.indexOf(
-              dimension.header
-            ) > -1,
+          -1 ||
+          requestQuery.attribution_key_custom_dimensions?.indexOf(
+            dimension.header
+          ) > -1,
       };
     }
     return dimension;
@@ -1391,7 +1410,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
       } else {
         const horizontalBarChart =
           requestQuery[0].gbp.length <= 3 &&
-          requestQuery[0].ewp.length === 1 ? (
+            requestQuery[0].ewp.length === 1 ? (
             <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
               Display Bar Chart
             </Radio>
@@ -1539,8 +1558,8 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
 };
 
 export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
-  console.log('requestQuery-->>',requestQuery);
-  console.log('requestQuery kpiConfig-->>',kpiConfig);
+  console.log('requestQuery-->>', requestQuery);
+  console.log('requestQuery kpiConfig-->>', kpiConfig);
   const queryType = requestQuery.cl;
   const queries = [];
   for (let i = 0; i < requestQuery.qG.length; i = i + 2) {
@@ -1563,7 +1582,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
               : reverseOperatorMap[pr.co],
           props: [DNa, pr.prDaTy, isCamp],
           values: val,
-          extra: [DNa, pr.prNa, pr.prDaTy, isCamp], 
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
         });
       } else if (pr.prDaTy === 'categorical') {
         eventFilters[eventFilters.length - 1].values.push(pr.va);
@@ -1594,7 +1613,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
             : reverseOperatorMap[pr.co],
         props: [DNa, pr.prDaTy, isCamp],
         values: val,
-        extra: [DNa, pr.prNa, pr.prDaTy, isCamp], 
+        extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
       });
     } else if (pr.prDaTy === 'categorical') {
       filters[filters.length - 1].values.push(pr.va);

@@ -117,9 +117,9 @@ func TestAPICreateProject(t *testing.T) {
 		assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
 		assert.NotNil(t, jsonResponseMap["jobs_metadata"])
 		assert.NotNil(t, jsonResponseMap["interaction_settings"])
-		assert.NotNil(t, jsonResponseMap["salesforce_touch_points"])
-		assert.NotNil(t, jsonResponseMap["hubspot_touch_points"])
-		assert.Equal(t, 16, len(jsonResponseMap))
+		assert.Nil(t, jsonResponseMap["salesforce_touch_points"])
+		assert.Nil(t, jsonResponseMap["hubspot_touch_points"])
+		assert.Equal(t, 17, len(jsonResponseMap))
 	})
 }
 
@@ -149,9 +149,9 @@ func TestAPIEditProject(t *testing.T) {
 		assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
 		assert.NotNil(t, jsonResponseMap["jobs_metadata"])
 		assert.NotNil(t, jsonResponseMap["interaction_settings"])
-		assert.NotNil(t, jsonResponseMap["salesforce_touch_points"])
-		assert.NotNil(t, jsonResponseMap["hubspot_touch_points"])
-		assert.Equal(t, 16, len(jsonResponseMap))
+		assert.Nil(t, jsonResponseMap["salesforce_touch_points"])
+		assert.Nil(t, jsonResponseMap["hubspot_touch_points"])
+		assert.Equal(t, 17, len(jsonResponseMap))
 		w = sendEditProjectRequest(r, uint64(jsonResponseMap["id"].(float64)), projectName, agent)
 		assert.Equal(t, http.StatusCreated, w.Code)
 		jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -168,9 +168,9 @@ func TestAPIEditProject(t *testing.T) {
 		assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 		assert.NotNil(t, jsonResponseMap["jobs_metadata"])
 		assert.NotNil(t, jsonResponseMap["interaction_settings"])
-		assert.NotNil(t, jsonResponseMap["salesforce_touch_points"])
-		assert.NotNil(t, jsonResponseMap["hubspot_touch_points"])
-		assert.Equal(t, 16, len(jsonResponseMap))
+		assert.Nil(t, jsonResponseMap["salesforce_touch_points"])
+		assert.Nil(t, jsonResponseMap["hubspot_touch_points"])
+		assert.Equal(t, 17, len(jsonResponseMap))
 	})
 }
 

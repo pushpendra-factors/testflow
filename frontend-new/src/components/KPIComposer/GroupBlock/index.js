@@ -178,7 +178,7 @@ function GroupBlock({
     }
     return (
       <Tooltip title={propertyName}>
-        <Button className={``} type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {propertyName}</Button>
+        <Button className={`fa-button--truncate`} type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {propertyName}</Button>
       </Tooltip>
     )
   }

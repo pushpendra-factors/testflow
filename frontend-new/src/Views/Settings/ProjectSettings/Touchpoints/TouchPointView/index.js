@@ -12,10 +12,10 @@ import { fetchEventPropertyValues } from 'Reducers/coreQuery/services';
 import FaSelect from '../../../../../components/FaSelect';
 
 import {
-    getFilters
+    getFilters, getStateFromFilters
 } from '../../../../../Views/CoreQuery/utils';
 
-const TouchpointView = ({ activeProject, eventProperties, filters = [], onCancel, onSave }) => {
+const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userProperties, rule, onCancel, onSave }) => {
     const [dropDownValues, setDropDownValues] = useState({});
     const [filterDD, setFilterDD] = useState(false);
     const [timestampRef, setTimestampRefState] = useState('LAST_MODIFIED_TIME_REF');
@@ -57,9 +57,29 @@ const TouchpointView = ({ activeProject, eventProperties, filters = [], onCancel
         operator: DEFAULT_OPERATOR_PROPS,
     });
 
+    useEffect(()=>{
+        if(rule) {
+            const filterState = getStateFromFilters(rule.filters);
+            setNewFilterStates(filterState);
+            setPropertyMap(rule.properties_map);
+            if(rule.touchPointPropRef === 'LAST_MODIFIED_TIME_REF') {
+                setTimestampRefState('LAST_MODIFIED_TIME_REF');
+                setTimestampPropRef(false);
+                setTouchPointPropRef('LAST_MODIFIED_TIME_REF');
+            } else {
+                setTimestampRefState(``);
+                setTouchPointPropRef(rule.touch_point_time_ref)
+                setTimestampPropRef(true);
+                setDateTypeDD(false);
+            }
+        }
+        
+    }, [rule])
+
 
     const setValuesByProps = (props) => {
-        fetchEventPropertyValues(activeProject.id, '$hubspot_contact_updated', props[1]).then(res => {
+        const eventToCall = tchType === '2' ? '$hubspot_contact_updated' : '$sf_contact_updated';
+        fetchEventPropertyValues(activeProject.id, eventToCall, props[1]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
             ddValues[props[1]] = [...res.data, '$none'];
             setDropDownValues(ddValues);
@@ -71,15 +91,22 @@ const TouchpointView = ({ activeProject, eventProperties, filters = [], onCancel
     }
 
     useEffect(() => {
+        const eventToCall = tchType === '2' ? '$hubspot_contact_updated' : '$sf_contact_updated';
+        const tchUserProps = [];
         const filterDD = Object.assign({}, filterDropDownOptions);
         const propState = [];
+        if(tchType === '2') {
+            userProperties.forEach((prop) => {if(prop[1]?.startsWith('$hubspot')){tchUserProps.push(prop)}})
+        } else if(tchType === '3') {
+            userProperties.forEach((prop) => {if(prop[1]?.startsWith('$salesforce')){tchUserProps.push(prop)}})
+        }
         filterDropDownOptions.props.forEach((k) => {
-            propState.push({ label: k.label, icon: 'event', values: eventProperties['$hubspot_contact_updated'] });
+            propState.push({ label: k.label, icon: 'event', values: [...eventProperties[eventToCall], ...tchUserProps] });
         });
 
         const dateTypepoperties = [];
-        eventProperties['$hubspot_contact_updated']?.forEach((prop) => { if (prop[2] === 'datetime') { dateTypepoperties.push(prop) } }
-        );
+        eventProperties[eventToCall]?.forEach((prop) => { if (prop[2] === 'datetime') { dateTypepoperties.push(prop) } });
+        tchUserProps.forEach((prop) => { if (prop[2] === 'datetime') { dateTypepoperties.push(prop)}});
         setDateTypeProps(dateTypepoperties);
         filterDD.props = propState;
         setFiltDD(filterDD);
@@ -159,7 +186,7 @@ const TouchpointView = ({ activeProject, eventProperties, filters = [], onCancel
     const renderFilterBlock = () => {
         return (<Row className={`mt-4`}>
             <Col span={7} className={`justify-items-end`}>
-                <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Select Hubspot Contact field</Text>
+                <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Select {tchType === '2'? `Hubspot`: 'Sales Force'} Contact field</Text>
             </Col>
 
             <Col span={12}>
@@ -181,9 +208,34 @@ const TouchpointView = ({ activeProject, eventProperties, filters = [], onCancel
         }
     }
 
+    const setTimestampRefSF = (val) => {
+        const timeStVal = val?.target?.value;
+        setTimestampRefState(timeStVal);
+        setTimestampPropRef(false);
+        setTouchPointPropRef(timeStVal);
+    } 
+
     const setTimestampProp = (val) => {
         setTouchPointPropRef(val[1]);
         setDateTypeDD(false);
+    }
+
+    const renderTimestampRenderOption = () => {
+        let radioGroupElement = null;
+        if(tchType === '2') {
+            radioGroupElement = (<Radio.Group onChange={setTimestampRef} value={timestampRef}>
+                <Radio value={`LAST_MODIFIED_TIME_REF`}>Factors Last modified time</Radio>
+                <Radio value={``}>Select a property</Radio>
+            </Radio.Group>)
+        }
+        else if (tchType === '3') {
+            radioGroupElement = (<Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
+                <Radio value={`campaign_member_created_date`}>Campaign Created Date</Radio>
+                <Radio value={`campaign_member_first_responded_date`}>Campaign First Responded Date</Radio>
+            </Radio.Group>)
+        }
+        
+        return radioGroupElement;
     }
 
     const renderTimestampSelector = () => {
@@ -192,10 +244,7 @@ const TouchpointView = ({ activeProject, eventProperties, filters = [], onCancel
                 <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Touchpoint Timestamp</Text>
             </Row>
             <Row className={`mt-4`}>
-                <Radio.Group onChange={setTimestampRef} value={timestampRef}>
-                    <Radio value={`LAST_MODIFIED_TIME_REF`}>Factors Last modified time</Radio>
-                    <Radio value={``}>Select a property</Radio>
-                </Radio.Group>
+                {renderTimestampRenderOption()}
             </Row>
             <Row className={`mt-2`}>
                 {timestampPropertyRef &&
@@ -238,6 +287,19 @@ const TouchpointView = ({ activeProject, eventProperties, filters = [], onCancel
         setPropertyMap(propMap);
     }
 
+    const renderEventPropertyCampOptions = () => {
+        const eventToCall = tchType === '2' ? '$hubspot_contact_updated' : '$sf_contact_updated';
+        const propertiesMp = [...eventProperties[eventToCall]];
+        if(tchType === '2') {
+            userProperties.forEach((prop) => {if(prop[1]?.startsWith('$hubspot')){propertiesMp.push(prop)}})
+        } else if(tchType === '3') {
+            userProperties.forEach((prop) => {if(prop[1]?.startsWith('$salesforce')){propertiesMp.push(prop)}})
+        }
+        return propertiesMp?.map((prop) => {
+            return (<Option value={prop[1]}> {prop[0]} </Option>);
+        });
+    }
+
     const renderPropertyMap = () => {
         return (<div className={`border-top--thin pt-5 mt-8 `}>
             <Row>
@@ -275,9 +337,7 @@ const TouchpointView = ({ activeProject, eventProperties, filters = [], onCancel
                 <Col>
                     <Select className={'fa-select w-full'} size={'large'} value={propertyMap['$campaign']['va']} onSelect={setPropCampaign} defaultValue={``}>
                         <Option value={``}>Select Campaign Property </Option>
-                        {eventProperties['$hubspot_contact_updated']?.map((prop) => {
-                            return (<Option value={prop[1]}> {prop[0]} </Option>)
-                        })}
+                        {renderEventPropertyCampOptions()}
                     </Select>
                 </Col>
             </Row>
@@ -336,7 +396,8 @@ const TouchpointView = ({ activeProject, eventProperties, filters = [], onCancel
 
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
-    eventProperties: state.coreQuery.eventProperties
+    eventProperties: state.coreQuery.eventProperties,
+    userProperties: state.coreQuery.userProperties
 });
 
 export default connect(mapStateToProps, {})(TouchpointView);

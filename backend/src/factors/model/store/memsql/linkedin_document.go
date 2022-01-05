@@ -1067,7 +1067,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	if projectSetting.IntLinkedinAdAccount == "" {
-		log.Error("Failed to get custtomer account ids")
+		log.WithField("projectID", projectID).Error("Failed to get custtomer account ids")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	customerAccountIDs := strings.Split(projectSetting.IntLinkedinAdAccount, ",")
@@ -1090,7 +1090,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for Linkedin", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
@@ -1099,9 +1099,25 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		customerAccountIDs).Find(&channelDocumentsCampaign).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for Linkedin", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
 	return channelDocumentsCampaign, channelDocumentsAdGroup
+}
+
+func (store *MemSQL) DeleteLinkedinIntegration(projectID uint64) (int, error) {
+	db := C.GetServices().Db
+	updateValues := make(map[string]interface{})
+	updateValues["int_linkedin_ad_account"] = nil
+	updateValues["int_linkedin_access_token"] = nil
+	updateValues["int_linkedin_refresh_token"] = nil
+	updateValues["int_linkedin_refresh_token_expiry"] = nil
+	updateValues["int_linkedin_access_token_expiry"] = nil
+
+	err := db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(updateValues).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
 }

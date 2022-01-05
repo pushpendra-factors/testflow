@@ -87,7 +87,7 @@ const GLobalFilter = ({filters = [],  setGlobalFilters, onFiltersLoad=[]}) => {
         } else {
             filtrs.push(
                 <div key={filtrs.length} className={`flex mt-2`}>
-                    <Button className={``} type="text" onClick={() => setFilterDD(true)} icon={<SVG name="plus" />}> Add new </Button> 
+                    <Button className={`fa-button--truncate`} type="text" onClick={() => setFilterDD(true)} icon={<SVG name="plus" />}> Add new </Button> 
                 </div>
             )
         }

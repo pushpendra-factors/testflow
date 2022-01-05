@@ -10,8 +10,8 @@ import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
 import _ from 'lodash'; 
-
 import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -458,15 +458,38 @@ const GlobalFilterSelect = ({
         }
         if(!operatorState || !propState?.name) return null;
 
-        return (<div className={`${styles.filter__propContainer} ml-4 w-7/12`}>
-            {propState.type === 'categorical'? <Tooltip title={valuesState && valuesState.length ? valuesState.join(', ') : null}><Button
-                className={`fa-button--truncate fa-button--truncate-lg`}
-                type="link"
-                onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}> {valuesState && valuesState.length ? valuesState.join(', ') : 'Select Values'}
-            </Button> </Tooltip> : null }
-            
-            {valuesSelectionOpen || propState.type !== 'categorical'? selectionComponent : null} 
-        </div>)
+        return (
+          <div className={`${styles.filter__propContainer} ml-4 w-7/12`}>
+            {propState.type === 'categorical' ? (
+              <Tooltip
+                title={
+                  valuesState && valuesState.length
+                    ? valuesState
+                        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                        .join(', ')
+                    : null
+                }
+              >
+                <Button
+                  className={`fa-button--truncate fa-button--truncate-lg`}
+                  type='link'
+                  onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
+                >
+                  {' '}
+                  {valuesState && valuesState.length
+                    ? valuesState
+                        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                        .join(', ')
+                    : 'Select Values'}
+                </Button>{' '}
+              </Tooltip>
+            ) : null}
+
+            {valuesSelectionOpen || propState.type !== 'categorical'
+              ? selectionComponent
+              : null}
+          </div>
+        );
 
     }
 

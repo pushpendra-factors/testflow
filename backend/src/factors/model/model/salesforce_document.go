@@ -88,21 +88,23 @@ func getCRMPropertyKeyByType(source, objectType, key string) string {
  Salesforce supported document types and their alias
 */
 const (
-	SalesforceDocumentTypeContact        = 1
-	SalesforceDocumentTypeLead           = 2
-	SalesforceDocumentTypeAccount        = 3
-	SalesforceDocumentTypeOpportunity    = 4
-	SalesforceDocumentTypeCampaign       = 5
-	SalesforceDocumentTypeCampaignMember = 6
-	SalesforceDocumentTypeGroupAccount   = 7
+	SalesforceDocumentTypeContact                = 1
+	SalesforceDocumentTypeLead                   = 2
+	SalesforceDocumentTypeAccount                = 3
+	SalesforceDocumentTypeOpportunity            = 4
+	SalesforceDocumentTypeCampaign               = 5
+	SalesforceDocumentTypeCampaignMember         = 6
+	SalesforceDocumentTypeGroupAccount           = 7
+	SalesforceDocumentTypeOpportunityContactRole = 8
 
-	SalesforceDocumentTypeNameContact        = "contact"
-	SalesforceDocumentTypeNameLead           = "lead"
-	SalesforceDocumentTypeNameAccount        = "account"
-	SalesforceDocumentTypeNameOpportunity    = "opportunity"
-	SalesforceDocumentTypeNameCampaign       = "campaign"
-	SalesforceDocumentTypeNameCampaignMember = "campaignmember"
-	SalesforceDocumentTypeNameGroupAccount   = "group_account"
+	SalesforceDocumentTypeNameContact                = "contact"
+	SalesforceDocumentTypeNameLead                   = "lead"
+	SalesforceDocumentTypeNameAccount                = "account"
+	SalesforceDocumentTypeNameOpportunity            = "opportunity"
+	SalesforceDocumentTypeNameCampaign               = "campaign"
+	SalesforceDocumentTypeNameCampaignMember         = "campaignmember"
+	SalesforceDocumentTypeNameGroupAccount           = "group_account"
+	SalesforceDocumentTypeNameOpportunityContactRole = "opportunityContactRole"
 
 	SFCampaignMemberResponded    = "campaign_member_first_responded_date"
 	SFCampaignMemberCreated      = "campaign_member_created_date"
@@ -124,13 +126,14 @@ const (
 
 // SalesforceDocumentTypeAlias maps document type to alias
 var SalesforceDocumentTypeAlias = map[string]int{
-	SalesforceDocumentTypeNameContact:        SalesforceDocumentTypeContact,
-	SalesforceDocumentTypeNameLead:           SalesforceDocumentTypeLead,
-	SalesforceDocumentTypeNameAccount:        SalesforceDocumentTypeAccount,
-	SalesforceDocumentTypeNameOpportunity:    SalesforceDocumentTypeOpportunity,
-	SalesforceDocumentTypeNameCampaign:       SalesforceDocumentTypeCampaign,
-	SalesforceDocumentTypeNameCampaignMember: SalesforceDocumentTypeCampaignMember,
-	SalesforceDocumentTypeNameGroupAccount:   SalesforceDocumentTypeGroupAccount,
+	SalesforceDocumentTypeNameContact:                SalesforceDocumentTypeContact,
+	SalesforceDocumentTypeNameLead:                   SalesforceDocumentTypeLead,
+	SalesforceDocumentTypeNameAccount:                SalesforceDocumentTypeAccount,
+	SalesforceDocumentTypeNameOpportunity:            SalesforceDocumentTypeOpportunity,
+	SalesforceDocumentTypeNameCampaign:               SalesforceDocumentTypeCampaign,
+	SalesforceDocumentTypeNameCampaignMember:         SalesforceDocumentTypeCampaignMember,
+	SalesforceDocumentTypeNameGroupAccount:           SalesforceDocumentTypeGroupAccount,
+	SalesforceDocumentTypeNameOpportunityContactRole: SalesforceDocumentTypeOpportunityContactRole,
 }
 
 // SalesforceStandardDocumentType will be pulled if no custom list is provided

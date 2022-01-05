@@ -35,7 +35,7 @@ type TrackPayload struct {
 	CustomerEventId *string         `json:"c_event_id"`
 	EventProperties U.PropertiesMap `json:"event_properties"`
 	UserProperties  U.PropertiesMap `json:"user_properties"`
-	Timestamp       int64           `json:"timestamp`
+	Timestamp       int64           `json:"timestamp"`
 	ProjectId       uint64          `json:"project_id"`
 	Auto            bool            `json:"auto"`
 	ClientIP        string          `json:"client_ip"`
@@ -970,7 +970,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	if request.UserId == "" {
 		response := &IdentifyResponse{}
 
-		userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, request.CustomerUserId)
+		userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, request.CustomerUserId, request.RequestSource)
 		switch errCode {
 		case http.StatusInternalServerError:
 			return errCode, &IdentifyResponse{

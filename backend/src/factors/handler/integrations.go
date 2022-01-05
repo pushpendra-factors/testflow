@@ -761,6 +761,7 @@ type FacebookAddAccessTokenPayload struct {
 
 type FacebookLongLivedTokenResponse struct {
 	AccessToken string `json:"access_token"`
+	ExpiresIn   int64  `json:"expires_in"`
 }
 
 // IntFacebookAddAccessTokenHandler godoc
@@ -825,7 +826,7 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 	_, errCode = store.GetStore().UpdateProjectSettings(projectId, &model.ProjectSetting{
 		IntFacebookEmail: requestPayload.Email, IntFacebookAccessToken: newBody.AccessToken,
 		IntFacebookAgentUUID: &currentAgentUUID, IntFacebookUserID: requestPayload.UserID,
-		IntFacebookAdAccount: requestPayload.AdAccounts})
+		IntFacebookAdAccount: requestPayload.AdAccounts, IntFacebookTokenExpiry: time.Now().Unix() + newBody.ExpiresIn})
 	if errCode != http.StatusAccepted {
 		log.WithField("project_id", projectId).Error("Failed to update project settings with facebook email and access token")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed updating facebook email and access token in project settings"})
@@ -1155,4 +1156,42 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 
 	redirectURL := IntSalesforce.GetSalesforceAuthorizationURL(C.GetSalesforceAppId(), GetSalesforceRedirectURL(), "code", url.QueryEscape(string(enOAuthState)))
 	c.JSON(http.StatusTemporaryRedirect, gin.H{"redirectURL": redirectURL})
+}
+
+func IntDeleteHandler(c *gin.Context) {
+
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Delete Integration failed. Invalid project."})
+		return
+	}
+	loggedInAgentPAM, errCode := store.GetStore().GetProjectAgentMapping(projectID, loggedInAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch loggedInAgentPAM"})
+		return
+	}
+
+	if loggedInAgentPAM.Role != model.ADMIN {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "operation denied for non-admins"})
+		return
+	}
+
+	if errCode == http.StatusInternalServerError {
+		c.AbortWithStatus(errCode)
+		return
+	}
+	channelName := c.Params.ByName("channel_name")
+	if channelName == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid channel name."})
+		return
+	}
+	log.Info("channel_name ", channelName)
+
+	errCode, err := store.GetStore().DeleteChannelIntegration(projectID, channelName)
+	if err != nil || errCode != http.StatusOK {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": err})
+		return
+	}
+	c.JSON(http.StatusOK, nil)
 }

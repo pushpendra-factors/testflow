@@ -2031,14 +2031,14 @@ func (pg *Postgres) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days i
 		model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for adwords", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
 	err = db.Raw(adwordsCampaignMetadataFetchQueryStr, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsCampaign).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for adwords", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
@@ -2312,4 +2312,28 @@ func (pg *Postgres) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, p
 		},
 	}
 	return result, nil
+}
+func (pg *Postgres) DeleteAdwordsIntegration(projectID uint64) (int, error) {
+	db := C.GetServices().Db
+	projectSetting := model.ProjectSetting{}
+
+	err := db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Find(&projectSetting).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	agentUpdateValues := make(map[string]interface{})
+	agentUpdateValues["int_adwords_refresh_token"] = nil
+	err = db.Model(&model.Agent{}).Where("uuid = ?", *projectSetting.IntAdwordsEnabledAgentUUID).Update(agentUpdateValues).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	projectSettingUpdateValues := make(map[string]interface{})
+	projectSettingUpdateValues["int_adwords_customer_account_id"] = nil
+	projectSettingUpdateValues["int_adwords_enabled_agent_uuid"] = nil
+	err = db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(projectSettingUpdateValues).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
 }

@@ -44,7 +44,6 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 
 	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
 	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
@@ -123,8 +122,10 @@ func main() {
 	devBox := flag.Bool("dev_box", false, "Is this going to be deployed on one box")
 	skipEventNameStepByProjectID := flag.String("skip_event_name_step_by_project_id", "", "")
 	skipUserJoinInEventQueryByProjectID := flag.String("skip_user_join_in_event_query_by_project_id", "", "")
-	allowSupportForDateRangeInProfiles := flag.String("allow_support_for_date_range_in_profiles", "", "")
 	enableEventLevelEventProperties := flag.String("enable_event_level_event_properties", "", "")
+	allowSupportForSourceColumnInUsers := flag.String("allow_support_for_source_column_in_users", "", "")
+	useOLAPPoolForAnalytics := flag.Bool("use_olap_pool_for_analytics", false,
+		"Will use the pool_olap if set, else use user-level default pool.")
 
 	flag.Parse()
 
@@ -147,14 +148,13 @@ func main() {
 			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:         *memSQLHost,
-			Port:         *memSQLPort,
-			User:         *memSQLUser,
-			Name:         *memSQLName,
-			Password:     *memSQLPass,
-			Certificate:  *memSQLCertificate,
-			ResourcePool: *memSQLResourcePool,
-			AppName:      appName,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
 
 			MaxOpenConnections:     *memSQLDBMaxOpenConnections,
 			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
@@ -208,8 +208,9 @@ func main() {
 		DevBox:                                  *devBox,
 		SkipEventNameStepByProjectID:            *skipEventNameStepByProjectID,
 		SkipUserJoinInEventQueryByProjectID:     *skipUserJoinInEventQueryByProjectID,
-		AllowSupportForDateRangeInProfiles:      *allowSupportForDateRangeInProfiles,
 		EnableEventLevelEventProperties:         *enableEventLevelEventProperties,
+		AllowSupportForSourceColumnInUsers:      *allowSupportForSourceColumnInUsers,
+		UseOLAPPoolForAnalytics:                 *useOLAPPoolForAnalytics,
 	}
 	C.InitConf(config)
 

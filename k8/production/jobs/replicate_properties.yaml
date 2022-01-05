@@ -32,13 +32,11 @@ spec:
             - --memsql_name
             - $(MEMSQL_DB)
             - --memsql_user
-            - $(MEMSQL_USER)
+            - $(MEMSQL_OLTP_USER)
             - --memsql_pass
             - $(MEMSQL_PASSWORD)
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
-            - --memsql_resource_pool
-            - $(MEMSQL_RPOOL_SOFT_CPU_50)
             - --primary_datastore
             - "memsql"
             - --sentry_dsn

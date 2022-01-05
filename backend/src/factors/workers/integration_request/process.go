@@ -82,6 +82,7 @@ func main() {
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
+	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 
 	flag.Parse()
 
@@ -135,6 +136,7 @@ func main() {
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
 		CaptureSourceInUsersTable:                   *captureSourceInUsersTable,
 		EnableOLTPQueriesMemSQLImprovements:         *enableOLTPQueriesMemSQLImprovements,
+		RestrictReusingUsersByCustomerUserId:        *restrictReusingUsersByCustomerUserId,
 	}
 	C.InitConf(config)
 

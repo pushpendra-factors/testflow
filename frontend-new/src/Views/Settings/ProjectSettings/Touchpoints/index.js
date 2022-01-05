@@ -27,11 +27,11 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
 
     const [touchPointsData, setTouchPointsData] = useState([]);
 
-    const [touchPointState, setTouchPointState] = useState('list');
+    const [touchPointState, setTouchPointState] = useState({state: 'list', index: 0});
 
     const columns = [
         {
-            title: 'Hubspot Object',
+            title: tabNo === "2"? 'Hubspot Object' : 'Salesforce Object',
             dataIndex: 'filters',
             key: 'filters',
             render: (obj) => { return renderObjects(obj) }
@@ -42,6 +42,12 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
             key: 'properties_map',
             render: (obj) => { return renderPropertyMap(obj) }
         },
+        // {
+        //     title: '',
+        //     dataIndex: 'index',
+        //     key: 'index',
+        //     render: (obj) => { return renderTableActions(obj) }
+        // },
 
     ];
 
@@ -50,15 +56,42 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
     }
 
     useEffect(() => {
-        const touchpointObjs = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
+        if(tabNo === "2") {
+            setHubspotContactDate();
+        }
+        if(tabNo === "3") {
+            setSalesforceContactData();
+        }
+        
+    }, [activeProject, tabNo]);
+
+    const setSalesforceContactData = () => {
+        const touchpointObjs = activeProject['salesforce_touch_points'] && activeProject['salesforce_touch_points']['sf_touch_point_rules'] ? 
+            [...activeProject['salesforce_touch_points']['sf_touch_point_rules'].map((rule, id) => ({...rule, 'index': id}))] 
+            : [];
+        setTouchPointsData(touchpointObjs);
+
+        getEventProperties(activeProject.id, '$sf_contact_updated')
+    }
+
+    const setHubspotContactDate = () => {
+        const touchpointObjs = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? 
+            [...activeProject['hubspot_touch_points']['hs_touch_point_rules'].map((rule, id) => ({...rule, 'index': id}))] 
+            : [];
         setTouchPointsData(touchpointObjs);
 
         getEventProperties(activeProject.id, '$hubspot_contact_updated')
-    }, [activeProject])
+    }
 
-    useEffect(() => {
-        console.log(currentProjectSettings);
-    }, [currentProjectSettings])
+    const renderTableActions = (index) => {
+        return (<Button
+            type='text'
+            onClick={() => setTouchPointState({state: 'edit', index: index})}
+            className={`fa-btn--custom ml-1 mr-1`}
+        >
+            <SVG name='more'></SVG>
+        </Button>)
+    }
 
     const renderObjects = (obj) => {
         const filters = [];
@@ -92,7 +125,7 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
                         </Row>
                     </Col>
 
-                    <Col>
+                    <Col className={`fa-truncate-150`}>
                         <Text level={7} type={'title'} extraClass={'ml-4'} weight={'thin'}>{obj['$type']['va']}</Text>
                     </Col>
                 </Row>}
@@ -105,7 +138,7 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
                         </Row>
                     </Col>
 
-                    <Col>
+                    <Col className={`fa-truncate-150`}>
                         <Text level={7} type={'title'} extraClass={'ml-4'} weight={'thin'}>{obj['$source']['va']}</Text>
                     </Col>
                 </Row>}
@@ -118,7 +151,7 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
                         </Row>
                     </Col>
 
-                    <Col>
+                    <Col className={`fa-truncate-150`}>
                         <Text level={7} type={'title'} extraClass={'ml-4'} weight={'thin'}>{obj['$campaign']['va']}</Text>
                     </Col>
                 </Row>}
@@ -131,7 +164,7 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
                         </Row>
                     </Col>
 
-                    <Col>
+                    <Col className={`fa-truncate-150`}>
                         <Text level={7} type={'title'} extraClass={'ml-4'} weight={'thin'}>{obj['$channel']['va']}</Text>
                     </Col>
                 </Row>}
@@ -141,10 +174,10 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
 
     const renderTitle = () => {
         let title = null;
-        if (touchPointState === 'list') {
+        if (touchPointState.state === 'list') {
             title = (<Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Touchpoints</Text>);
         }
-        if (touchPointState === 'add') {
+        if (touchPointState.state === 'add') {
             title = (<Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Add new Touchpoint</Text>);
         }
         return title;
@@ -152,11 +185,11 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
 
     const renderTitleActions = () => {
         let titleAction = null;
-        if (touchPointState === 'list') {
-            if (tabNo === "2") {
+        if (touchPointState.state === 'list') {
+            if (tabNo !== "1") {
                 titleAction = (
                     <Button size={'large'} onClick={() => {
-                        setTouchPointState('add')
+                        setTouchPointState({state: 'add', index: 0})
                     }}><SVG name={'plus'} extraClass={'mr-2'} size={16} />Add New</Button>)
             }
         }
@@ -165,21 +198,28 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
     }
 
     const onTchSave = (tchObj) => {
-        const tchPointRules = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
-        tchPointRules.push(tchObj);
-        const projectDetails = { ...activeProject }
-        udpateProjectDetails(activeProject.id, { 'hubspot_touch_points': { 'hs_touch_point_rules': tchPointRules } });
+        let tchPointRules = [];
+        if(tabNo === '2') {
+            tchPointRules = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
+            tchPointRules.push(tchObj);
+            udpateProjectDetails(activeProject.id, { 'hubspot_touch_points': { 'hs_touch_point_rules': tchPointRules } });
+        }
+        else if (tabNo === '3') {
+            tchPointRules = activeProject['salesforce_touch_points'] && activeProject['salesforce_touch_points']['sf_touch_point_rules'] ? [...activeProject['salesforce_touch_points']['sf_touch_point_rules']] : [];
+            tchPointRules.push(tchObj);
+            udpateProjectDetails(activeProject.id, { 'salesforce_touch_points': { 'sf_touch_point_rules': tchPointRules } });
+        }
         fetchProjects();
-        setTouchPointState('list');
+        setTouchPointState({state: 'list', index: 0});
     }
 
     const onTchCancel = () => {
-        setTouchPointState('list');
+        setTouchPointState({state: 'list', index: 0});
     }
 
     const renderTouchPointContent = () => {
         let touchPointContent = null;
-        if (touchPointState === 'list') {
+        if (touchPointState.state === 'list') {
             touchPointContent = (<Tabs activeKey={`${tabNo}`} onChange={callback} >
                 <TabPane tab="Digital Marketing" key="1">
                     <MarketingInteractions />
@@ -195,11 +235,25 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
                         />
                     </div>
                 </TabPane>
+
+                <TabPane tab="Salesforce" key="3">
+                    <div className={`mb-10 pl-4 mt-10`}>
+                        <Table className="fa-table--basic mt-4"
+                            columns={columns}
+                            dataSource={touchPointsData}
+                            pagination={false}
+                            loading={false}
+                        />
+                    </div>
+                </TabPane>
             </Tabs>)
         }
-        else if (touchPointState === 'add') {
-            touchPointContent = (<TouchpointView onSave={onTchSave} onCancel={onTchCancel}> </TouchpointView>)
+        else if (touchPointState.state === 'add') {
+            touchPointContent = (<TouchpointView tchType={tabNo} rule={null} onSave={onTchSave} onCancel={onTchCancel}> </TouchpointView>)
         }
+        // else if (touchPointState.state === 'edit') {
+        //     touchPointContent = (<TouchpointView rule={touchPointsData[touchPointState.index]} onSave={onTchSave} onCancel={onTchCancel}> </TouchpointView>)
+        // }
         return touchPointContent;
     }
 

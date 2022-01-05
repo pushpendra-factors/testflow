@@ -188,6 +188,36 @@ func (pg *Postgres) GetSyncedHubspotDocumentByFilter(projectID uint64,
 	return &document, http.StatusFound
 }
 
+func (pg *Postgres) getUpdatedDealAssociationDocument(projectID uint64, incomingDocument *model.HubspotDocument) (*model.HubspotDocument, int) {
+
+	if projectID <= 0 || incomingDocument.Type != model.HubspotDocumentTypeDeal {
+		return nil, http.StatusBadRequest
+	}
+
+	documents, status := pg.GetHubspotDocumentByTypeAndActions(projectID, []string{incomingDocument.ID},
+		incomingDocument.Type, []int{incomingDocument.Action, model.HubspotDocumentActionAssociationsUpdated})
+	if status != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	latestDocument := documents[len(documents)-1]
+	updateRequired, err := model.IsDealUpdatedRequired(incomingDocument, &latestDocument)
+	if err != nil {
+		log.WithFields(log.Fields{"incoming_document": incomingDocument, "existing_document": latestDocument}).
+			WithError(err).Error("Failed to check for new IsDealUpdatedRequired.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if !updateRequired {
+		return nil, http.StatusConflict
+	}
+
+	incomingDocument.Timestamp = latestDocument.Timestamp + 1
+	incomingDocument.Action = model.HubspotDocumentActionAssociationsUpdated
+
+	return incomingDocument, http.StatusOK
+}
+
 func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.HubspotDocument) int {
 	logCtx := log.WithField("project_id", document.ProjectId)
 
@@ -271,12 +301,34 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 	db := C.GetServices().Db
 	err = db.Create(document).Error
 	if err != nil {
-		if isDuplicateHubspotDocumentError(err) {
+		if !isDuplicateHubspotDocumentError(err) {
+			logCtx.WithError(err).Error("Failed to create hubspot document.")
+			return http.StatusInternalServerError
+		}
+
+		if document.Type != model.HubspotDocumentTypeDeal {
 			return http.StatusConflict
 		}
 
-		logCtx.WithError(err).Error("Failed to create hubspot document.")
-		return http.StatusInternalServerError
+		newDocument, errCode := pg.getUpdatedDealAssociationDocument(projectId, document)
+		if errCode != http.StatusOK {
+			if errCode != http.StatusConflict {
+				logCtx.WithField("errCode", errCode).Error("Failed to getUpdatedDealAssociationDocument.")
+				return http.StatusInternalServerError
+			}
+
+			return errCode
+		}
+
+		err = db.Create(&newDocument).Error
+		if err != nil {
+			if isDuplicateHubspotDocumentError(err) {
+				return http.StatusConflict
+			}
+
+			logCtx.WithError(err).Error("Failed to create hubspot deal association document.")
+			return http.StatusInternalServerError
+		}
 	}
 
 	if isNew { // create updated document for new user

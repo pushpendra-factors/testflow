@@ -195,7 +195,7 @@ func (store *MemSQL) GetSmartEventEventNameByNameANDType(projectID uint64, name,
 	db := C.GetServices().Db
 
 	var eventNames []model.EventName
-	if err := db.Where("project_id = ? AND type = ? AND name = ? and deleted = 'false'",
+	if err := db.Where("project_id = ? AND type = ? AND name = ? and deleted = 0",
 		projectID, typ, name).Find(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting filter_event_names")
 
@@ -714,7 +714,7 @@ func getNonFilterEventsByName(projectID uint64, eventName string) ([]model.Event
 	db := C.GetServices().Db
 
 	var eventNames []model.EventName
-	if err := db.Where("project_id = ? AND type != ? AND name = ? AND deleted = 'false'",
+	if err := db.Where("project_id = ? AND type != ? AND name = ? AND deleted = 0",
 		projectID, model.TYPE_FILTER_EVENT_NAME, eventName).Find(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting filter_events_by_name")
 
@@ -732,7 +732,7 @@ func isEventNameExistByTypeAndFitlerExpr(projectID uint64, typ string, filterExp
 	db := C.GetServices().Db
 
 	var eventNames model.EventName
-	if err := db.Limit(1).Where("project_id = ? AND type = ? AND filter_expr = ? AND deleted = 'false'",
+	if err := db.Limit(1).Where("project_id = ? AND type = ? AND filter_expr = ? AND deleted = 0",
 		projectID, typ, filterExpr).Select("id").Find(&eventNames).Error; err != nil {
 
 		if gorm.IsRecordNotFoundError(err) {
@@ -752,7 +752,7 @@ func (store *MemSQL) GetFilterEventNames(projectId uint64) ([]model.EventName, i
 	db := C.GetServices().Db
 
 	var eventNames []model.EventName
-	if err := db.Where("project_id = ? AND type = ? AND deleted = 'false'",
+	if err := db.Where("project_id = ? AND type = ? AND deleted = 0",
 		projectId, model.TYPE_FILTER_EVENT_NAME).Find(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"project_id": projectId}).WithError(err).Error("Failed getting filter_event_names")
 
@@ -772,7 +772,7 @@ func (store *MemSQL) GetSmartEventFilterEventNames(projectID uint64, includeDele
 
 	whereStmnt := "project_id = ? AND type IN(?)"
 	if !includeDeleted {
-		whereStmnt = whereStmnt + " AND deleted = 'false' "
+		whereStmnt = whereStmnt + " AND deleted = 0 "
 	}
 
 	var eventNames []model.EventName
@@ -798,7 +798,7 @@ func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID uint64, id strin
 
 	whereStmnt := "project_id = ? AND type IN(?) AND id =? "
 	if !isDeleted {
-		whereStmnt = whereStmnt + " AND deleted = 'false' "
+		whereStmnt = whereStmnt + " AND deleted = 0 "
 	}
 
 	db := C.GetServices().Db
@@ -841,7 +841,7 @@ func (store *MemSQL) GetFilterEventNamesByExprPrefix(projectId uint64, prefix st
 	var eventNames []model.EventName
 
 	db := C.GetServices().Db
-	if err := db.Where("project_id = ? AND type = ? AND filter_expr LIKE ? AND deleted = 'false'",
+	if err := db.Where("project_id = ? AND type = ? AND filter_expr LIKE ? AND deleted = 0",
 		projectId, model.TYPE_FILTER_EVENT_NAME, fmt.Sprintf("%s%%", prefix)).Find(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectId, "prefix": prefix}).WithError(err).Error(
 			"filtering eventName failed on GetFilterEventNamesByExprPrefix")

@@ -336,19 +336,34 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID uint64, customer
 	return users, http.StatusFound
 }
 
-func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*model.User, int) {
+func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string, requestSource int) (*model.User, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var user model.User
 	db := C.GetServices().Db
-	if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
-		Where("customer_user_id = ?", customerUserId).
-		First(&user).Error; err != nil {
-
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
+	if !C.CheckRestrictReusingUsersByCustomerUserId(projectId) {
+		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
+			Where("customer_user_id = ?", customerUserId).First(&user).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return nil, http.StatusNotFound
+			}
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusInternalServerError
+	} else {
+		var userSourceWhereCondition string
+		if requestSource == model.UserSourceWeb {
+			userSourceWhereCondition = "source = ? OR source IS NULL"
+		} else {
+			userSourceWhereCondition = "source = ?"
+		}
+		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
+			Where("customer_user_id = ?", customerUserId).Where(userSourceWhereCondition, requestSource).
+			First(&user).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return nil, http.StatusNotFound
+			}
+			return nil, http.StatusInternalServerError
+		}
 	}
 	return &user, http.StatusFound
 }
@@ -470,7 +485,7 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 	if errCode == http.StatusNotFound {
 		// if found by c_uid return user, else create new user.
 		if custUserId != "" {
-			user, errCode = store.GetUserLatestByCustomerUserId(projectId, custUserId)
+			user, errCode = store.GetUserLatestByCustomerUserId(projectId, custUserId, requestSource)
 			if errCode == http.StatusFound {
 				return user, http.StatusOK
 			}
@@ -1882,6 +1897,7 @@ func (store *MemSQL) UpdateUserGroup(projectID uint64, userID, groupName, groupI
 	groupUserIndex := fmt.Sprintf("group_%d_user_id", group.ID)
 	user, status := store.GetUser(projectID, userID)
 	if status != http.StatusFound {
+		logCtx.Error("Failed to get user for group association.")
 		return nil, http.StatusInternalServerError
 	}
 

@@ -202,7 +202,7 @@ function ProfileBlock({
             <Tooltip title={event.label==='all_users' ? 'All Users' : event.label}>
               <Button
                 icon={<SVG name="mouseevent" size={16} color={"purple"} />}
-                className={``}
+                className={`fa-button--truncate fa-button--truncate-lg`}
                 type="link"
                 style={{ pointerEvents: "none" }}
                 // disabled

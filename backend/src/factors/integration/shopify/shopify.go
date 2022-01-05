@@ -117,7 +117,7 @@ func GetTrackDetailsFromCheckoutObject(
 			h.Write([]byte(custUserId))
 			custUserId = fmt.Sprintf("%x", h.Sum(nil))
 		}
-		user, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, custUserId)
+		user, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, custUserId, model.UserSourceWeb)
 		switch errCode {
 		case http.StatusInternalServerError:
 			return "", "", false, nil, nil, 0, fmt.Errorf(
@@ -274,7 +274,7 @@ func GetTrackDetailsFromOrderObject(
 			h.Write([]byte(custUserId))
 			custUserId = fmt.Sprintf("%x", h.Sum(nil))
 		}
-		user, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, custUserId)
+		user, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, custUserId, model.UserSourceWeb)
 		switch errCode {
 		case http.StatusInternalServerError:
 			return "", "", false, nil, nil, 0, fmt.Errorf(

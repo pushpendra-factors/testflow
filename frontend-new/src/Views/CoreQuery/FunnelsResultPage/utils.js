@@ -16,6 +16,7 @@ import styles from './index.module.scss';
 import { parseForDateTimeLabel } from '../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import { GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../utils/constants';
 import DurationCol from './FunnelsResultTable/DurationCol';
+import { DISPLAY_PROP } from '../../../utils/constants';
 
 const windowSize = {
   w: window.outerWidth,
@@ -130,21 +131,23 @@ export const formatData = (response, arrayMapper) => {
 
   const result = rows.map((row, index) => {
     const breakdownData = {};
-    const breakdownVals = row.slice(0, firstEventIdx);
+    const breakdownVals = row
+      .slice(0, firstEventIdx)
+      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
     for (let i = 0; i < breakdowns.length; i++) {
       const bkd = breakdowns[i];
       const bkdVal = parseForDateTimeLabel(grns[i], breakdownVals[i]);
       breakdownData[`${bkd.pr} - ${bkd.eni}`] =
         bkdVal === '$no_group' ? 'Overall' : bkdVal;
     }
-    const name = Object.values(breakdownData).join(',');
-    const nonConvertedName = row.slice(0, firstEventIdx).join(',');
+    const name = Object.values(breakdownData).join(', ');
+    const nonConvertedName = row.slice(0, firstEventIdx).join(', ');
 
     const durationMetric = meta.metrics.find(
       (elem) => elem.title === 'MetaStepTimeInfo'
     );
     const durationGrp = durationMetric.rows.find(
-      (elem) => elem.slice(0, firstEventIdx).join(',') === nonConvertedName
+      (elem) => elem.slice(0, firstEventIdx).join(', ') === nonConvertedName
     );
 
     const timeData = {};

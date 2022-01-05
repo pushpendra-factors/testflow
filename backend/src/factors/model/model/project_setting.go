@@ -40,6 +40,7 @@ type ProjectSetting struct {
 	IntFacebookAgentUUID   *string `json:"int_facebook_agent_uuid,omitempty"`
 	IntFacebookUserID      string  `json:"int_facebook_user_id,omitempty"`
 	IntFacebookAdAccount   string  `json:"int_facebook_ad_account,omitempty"`
+	IntFacebookTokenExpiry int64   `json:"int_facebook_token_expiry"`
 	// Archival related fields.
 	ArchiveEnabled  *bool `gorm:"default:false" json:"archive_enabled"`
 	BigqueryEnabled *bool `gorm:"default:false" json:"bigquery_enabled"`
@@ -93,6 +94,7 @@ type FacebookProjectSettings struct {
 	IntFacebookAccessToken string `json:"int_facebook_access_token"`
 	IntFacebookAdAccount   string `json:"int_facebook_ad_account"`
 	IntFacebookEmail       string `json:"int_facebook_email"`
+	IntFacebookTokenExpiry int64  `json:"int_facebook_token_expiry"`
 }
 
 type LinkedinProjectSettings struct {

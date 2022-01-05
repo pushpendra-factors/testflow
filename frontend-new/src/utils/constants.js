@@ -449,6 +449,7 @@ export const TimeZoneOffsetValues = {
 };
 
 export const DATE_FORMATS = {
+  quarter: 'MMM-YYYY',
   month: 'MMM-YYYY',
   date: 'D-MMM-YYYY',
   day: 'D-MMM-YYYY',
@@ -456,3 +457,5 @@ export const DATE_FORMATS = {
 };
 
 export const ProfileUsersMapper = { all_users: 'All Users' };
+export const DISPLAY_PROP = { $none: '(Not Set)' };
+export const REV_DISPLAY_PROP = { '(Not Set)': '$none' };

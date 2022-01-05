@@ -180,11 +180,11 @@ func TestCircularDependency(t *testing.T) {
 
 func TestTaskDependencyInsertDelete(t *testing.T) {
 	// Test dependency register-deregister
-	taskName1 := fmt.Sprintf("%v_%v", "task_event1", U.TimeNowZ().Unix())
+	taskName1 := fmt.Sprintf("%v_%v", "task_event1_dep", U.TimeNowZ().Unix())
 	id1, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName1, "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
-	taskName2 := fmt.Sprintf("%v_%v", "task_event2", U.TimeNowZ().Unix())
+	taskName2 := fmt.Sprintf("%v_%v", "task_event2_dep", U.TimeNowZ().Unix())
 	id2, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName2, "Source", model.Daily, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
@@ -211,7 +211,7 @@ func TestTaskDependencyInsertDelete(t *testing.T) {
 	assert.Equal(t, "Invalid taskID", message)
 
 	// Test delta calculation
-	taskName3 := fmt.Sprintf("%v_%v", "task_event3", U.TimeNowZ().Unix())
+	taskName3 := fmt.Sprintf("%v_%v", "task_event3_dep", U.TimeNowZ().Unix())
 	id3, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName3, "Source", model.Weekly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)

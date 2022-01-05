@@ -1241,7 +1241,7 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID uint64, days
 		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
@@ -1250,8 +1250,24 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID uint64, days
 		customerAccountIDs).Find(&channelDocumentsCampaign).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for facebook", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	return channelDocumentsCampaign, channelDocumentsAdGroup
+}
+
+func (store *MemSQL) DeleteFacebookIntegration(projectID uint64) (int, error) {
+	db := C.GetServices().Db
+	updateValues := make(map[string]interface{})
+	updateValues["int_facebook_access_token"] = nil
+	updateValues["int_facebook_email"] = nil
+	updateValues["int_facebook_user_id"] = nil
+	updateValues["int_facebook_ad_account"] = nil
+	updateValues["int_facebook_agent_uuid"] = nil
+
+	err := db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(updateValues).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
 }

@@ -103,7 +103,7 @@ function Chart({
         ?.nonConvertedName;
       const currGrp = groups.find((g) => g.name === data.group);
       const durationGrp = durationMetric.rows.find(
-        (elem) => elem.slice(0, firstEventIdx).join(',') === nonConvertedName
+        (elem) => elem.slice(0, firstEventIdx).join(', ') === nonConvertedName
       );
       const firstEventData = eventsData[0];
       const currEventData = eventsData.find((elem) => elem.name === data.key);
@@ -392,7 +392,7 @@ function Chart({
             ?.nonConvertedName;
           const durationGrp = durationMetric.rows.find(
             (elem) =>
-              elem.slice(0, firstEventIdx).join(',') === nonConvertedName
+              elem.slice(0, firstEventIdx).join(', ') === nonConvertedName
           );
           const durationVals = durationGrp
             ? durationGrp.slice(firstEventIdx)

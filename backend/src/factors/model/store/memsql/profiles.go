@@ -53,10 +53,9 @@ func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.Profil
 }
 
 func (store *MemSQL) ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
-	switch query.Type {
-	case "all_users":
+	if model.IsValidUserSource(query.Type) {
 		return store.ExecuteAllUsersProfilesQuery(projectID, query)
-	default:
+	} else {
 		return &model.QueryResult{}, http.StatusBadRequest, "Invalid query type for profiles"
 	}
 }
@@ -121,18 +120,24 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 
 	filterJoinStmnt := getUsersFilterJoinStatement(projectID, query.Filters)
 
-	allowSupportForDateRangeInProfiles := C.AllowSupportForDateRangeInProfiles(projectID)
+	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
 
 	var stepSqlStmnt string
 	stepSqlStmnt = fmt.Sprintf(
-		"SELECT %s FROM users %s WHERE users.project_id = ? %s", selectStmnt, filterJoinStmnt, filterStmnt)
+		"SELECT %s FROM users %s WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterJoinStmnt, filterStmnt)
 	params = append(params, groupBySelectParams...)
 	params = append(params, projectID)
 	params = append(params, filterParams...)
-	if allowSupportForDateRangeInProfiles {
-		stepSqlStmnt = fmt.Sprintf("%s AND join_timestamp>=? AND join_timestamp<=?", stepSqlStmnt)
-		params = append(params, query.From)
-		params = append(params, query.To)
+	params = append(params, query.From)
+	params = append(params, query.To)
+	if allowSupportForSourceColumnInUsers {
+		if model.UserSourceMap[query.Type] == model.UserSourceWeb {
+			stepSqlStmnt = fmt.Sprintf("%s AND (source=? OR source IS NULL)", stepSqlStmnt)
+		} else {
+			stepSqlStmnt = fmt.Sprintf("%s AND source=?)", stepSqlStmnt)
+		}
+		params = append(params, model.UserSourceMap[query.Type])
+		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=0 or is_group_user IS NULL)", stepSqlStmnt)
 	}
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY all_users LIMIT 10000", stepSqlStmnt, groupByStmnt)
 
