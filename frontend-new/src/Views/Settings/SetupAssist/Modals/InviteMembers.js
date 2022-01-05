@@ -46,6 +46,8 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
           for (let i = 0; i < finalData.length; i++) {
             if(!res.failed_to_invite_agent_idx[i]) {
               message.success(finalData[i]['email'] + ' : Invitation sent successfully!');
+              handleCancel();
+              history.push('/project-setup');
             } else {
               message.error(finalData[i]['email'] + ' : ' + res.failed_to_invite_agent_idx[i]);
             }

@@ -40,46 +40,114 @@ const IntegrationCard = ({ item, index }) => {
   const [showForm, setShowForm] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [toggle, setToggle] = useState(false);
+  const [isStatus, setIsStatus] = useState('');
 
   const loadIntegrationForm = (item) => {
     switch (item?.name) {
-      case 'Facebook': return <FacebookIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'Google Ads': return <GoogleAdWords kbLink={item.kbLink} setIsActive={setIsActive} />;
-      case 'LinkedIn': return <LinkedInIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
-      default: return <><Tag color="orange" style={{ marginTop: '8px' }}>Enable from <a href="https://app-old.factors.ai/" target="_blank">here</a></Tag> </>
+      case 'Facebook':
+        return (
+          <FacebookIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      case 'Google Ads':
+        return <GoogleAdWords kbLink={item.kbLink} setIsStatus={setIsStatus} />;
+      case 'LinkedIn':
+        return (
+          <LinkedInIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      default:
+        return (
+          <>
+            <Tag color='orange' style={{ marginTop: '8px' }}>
+              Enable from{' '}
+              <a href='https://app-old.factors.ai/' target='_blank'>
+                here
+              </a>
+            </Tag>{' '}
+          </>
+        );
     }
-  }
+  };
 
   useEffect(() => {
-    setToggle(!isActive);
-  }, [isActive]);
+    setToggle(!(isActive || isStatus === 'Active'));
+  }, [isActive, isStatus]);
 
   return (
-    <div key={index} className="fa-intergration-card">
-      <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Bundle Error:02'} subtitle={ "We are facing trouble loading App Bundles. Drop us a message on the in-app chat."} />} onError={FaErrorLog}> 
-      <div className={"flex justify-between"}>
-        <div className={"flex"}>
-          <Avatar
-            size={40}
-            shape={"square"}
-            icon={<SVG name={item.icon} size={40} color={"purple"} />}
-            style={{ backgroundColor: "#F5F6F8" }}
+    <div key={index} className='fa-intergration-card'>
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size={'medium'}
+            title={'Bundle Error:02'}
+            subtitle={
+              'We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
+            }
           />
-        </div>
-        <div className={'flex flex-col justify-start items-start ml-4 w-full'}>
-          <div className={'flex items-center'}>
-            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{item.name}</Text>
-            {isActive && <Tag color="green" style={{ marginLeft: '8px' }}>Active</Tag>}
-          </div>
-          <Text type={'paragraph'} mini extraClass={'m-0 w-9/12'} color={'grey'} lineHeight={'medium'}>{item.desc}</Text>
-          {toggle && loadIntegrationForm(item)}
-        </div>
-        {isActive &&
-          <div className={'flex flex-col items-start'}>
-            <Button type={'text'} onClick={() => setToggle(!toggle)} icon={toggle ? <SVG size={16} name={'ChevronDown'} /> : <SVG size={16} name={'ChevronRight'} />} />
-          </div>
         }
-      </div>
+        onError={FaErrorLog}
+      >
+        <div className={'flex justify-between'}>
+          <div className={'flex'}>
+            <Avatar
+              size={40}
+              shape={'square'}
+              icon={<SVG name={item.icon} size={40} color={'purple'} />}
+              style={{ backgroundColor: '#F5F6F8' }}
+            />
+          </div>
+          <div
+            className={'flex flex-col justify-start items-start ml-4 w-full'}
+          >
+            <div className={'flex items-center'}>
+              <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
+                {item.name}
+              </Text>
+              {(isActive || isStatus === 'Active') && (
+                <Tag color='green' style={{ marginLeft: '8px' }}>
+                  Active
+                </Tag>
+              )}
+              {isStatus === 'Pending' && (
+                <Tooltip
+                  title={
+                    item.name === 'Google Ads'
+                      ? 'Account(s) Selection Pending.'
+                      : 'URL(s) Selection Pending.'
+                  }
+                >
+                  <Tag color='orange' style={{ marginLeft: '8px' }}>
+                    Pending!
+                  </Tag>
+                </Tooltip>
+              )}
+            </div>
+            <Text
+              type={'paragraph'}
+              mini
+              extraClass={'m-0 w-9/12'}
+              color={'grey'}
+              lineHeight={'medium'}
+            >
+              {item.desc}
+            </Text>
+            {toggle && loadIntegrationForm(item)}
+          </div>
+          {(isActive || isStatus === 'Active') && (
+            <div className={'flex flex-col items-start'}>
+              <Button
+                type={'text'}
+                onClick={() => setToggle(!toggle)}
+                icon={
+                  toggle ? (
+                    <SVG size={16} name={'ChevronDown'} />
+                  ) : (
+                    <SVG size={16} name={'ChevronRight'} />
+                  )
+                }
+              />
+            </div>
+          )}
+        </div>
       </ErrorBoundary>
     </div>
   );
