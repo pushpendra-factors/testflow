@@ -429,7 +429,6 @@ const FAFilterSelect = ({
                 onClickOutside={() => setValuesSelectionOpen(false)}
                 selectedOpts={valuesState ? valuesState : []}
                 allowSearch={true}
-                posRight={true}
             >
             </FaSelect>);
         }

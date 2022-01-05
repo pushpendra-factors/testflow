@@ -8,7 +8,7 @@ import {
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
-  ProfileUsersMapper,
+  ReverseProfileMapper,
 } from '../../../../utils/constants';
 import {
   getBreakdownDataMapperWithUniqueValues,
@@ -110,7 +110,7 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
       const color = generateColors(1);
       result.push({
         index,
-        label: Object.values(breakdownVals).join(', '),
+        label: Object.values(breakdownVals).join(),
         value: elem[valIndex],
         color,
         ...breakdownVals,
@@ -155,7 +155,9 @@ export const getTableColumns = (
 
   const eventCol = {
     title: getClickableTitleSorter(
-      ProfileUsersMapper[queries[currentEventIndex]],
+      ReverseProfileMapper[queries[currentEventIndex]]
+        ? ReverseProfileMapper[queries[currentEventIndex]]
+        : queries[currentEventIndex],
       { key: 'value', type: 'numerical', subtype: null },
       currentSorter,
       handleSorting

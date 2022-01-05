@@ -31,7 +31,7 @@ function BarChart({
       label = label
         .split(',')
         .filter((elem) => elem)
-        .join(', ');
+        .join(',');
 
       const tickLength = BAR_CHART_XAXIS_TICK_LENGTH[cardSize];
       if (label.length > tickLength && position === 'tick') {
@@ -242,7 +242,7 @@ function BarChart({
 
   useEffect(() => {
     displayChart();
-  }, [displayChart, cardSize]);
+  }, [cardSize]);
 
   let legendsMapper = [];
   let legendColors = {};

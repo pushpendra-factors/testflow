@@ -8,7 +8,7 @@ import {
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import HorizontalBarChartCell from '../../EventsAnalytics/SingleEventMultipleBreakdown/HorizontalBarChartCell';
-import { ProfileUsersMapper } from '../../../../utils/constants';
+import { ReverseProfileMapper } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -53,7 +53,9 @@ export const getTableData = (data, queries, currentSorter, searchText) => {
       const query = queries[index];
       return {
         index,
-        Users: `${toLetters(index)}. ${ProfileUsersMapper[query]}`,
+        Users: `${toLetters(index)}. ${
+          ReverseProfileMapper[query] ? ReverseProfileMapper[query] : query
+        }`,
         value: rg.rows[0][1],
       };
     });
@@ -116,7 +118,9 @@ export const getDataInHorizontalBarChartFormat = (
         color: colors[index % 10],
       });
       return `${toLetters(queryIndex)}. ${
-        ProfileUsersMapper[queries[queryIndex]]
+        ReverseProfileMapper[queries[queryIndex]]
+          ? ReverseProfileMapper[queries[queryIndex]]
+          : queries[queryIndex]
       }`;
     });
 

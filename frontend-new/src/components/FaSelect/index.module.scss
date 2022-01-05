@@ -1,13 +1,11 @@
 .dropdown {
     &__select {
         position: absolute; 
-        width: 300px;
 
         display: flex;
         flex-direction: column;
 
         top: 46px;
-        left: 0;
 
         &__content {
             display: flex;
