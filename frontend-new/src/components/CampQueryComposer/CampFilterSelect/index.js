@@ -8,8 +8,7 @@ import FaDatepicker from '../../FaDatepicker';
 import FaSelect from '../../FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
-import { displayName } from 'Components/FaFilterSelect/utils';
-
+import { DISPLAY_PROP } from '../../../utils/constants';
 const defaultOpProps = {
     "categorical": [
       '=',
@@ -240,7 +239,6 @@ const CampFilterSelect = ({
                 onClickOutside={() => setValuesSelectionOpen(false)}
                 selectedOpts={valuesState ? valuesState : []}
                 allowSearch={true}
-                posRight={true}
             >
             </FaSelect>);
         
@@ -276,7 +274,7 @@ const CampFilterSelect = ({
               title={
                 valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                       .join(', ')
                   : null
               }
@@ -289,7 +287,7 @@ const CampFilterSelect = ({
                 {' '}
                 {valuesState && valuesState.length
                   ? valuesState
-                      .map((vl) => (displayName[vl] ? displayName[vl] : vl))
+                      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                       .join(', ')
                   : 'Select Values'}
               </Button>{' '}

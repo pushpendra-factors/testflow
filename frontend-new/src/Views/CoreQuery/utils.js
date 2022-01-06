@@ -29,6 +29,8 @@ import {
   CHART_TYPE_SCATTER_PLOT,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   QUERY_TYPE_PROFILE,
+  ProfileMapper,
+  ReverseProfileMapper,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 import { formatFilterDate } from '../../utils/dataFormatter';
@@ -160,7 +162,7 @@ const getProfileWithProperties = (queries) => {
     });
     pwps.push({
       // an: ev.alias,
-      ty: ev.label,
+      ty: ProfileMapper[ev.label] ? ProfileMapper[ev.label] : ev.label,
       pr: filterProps,
       tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
     });
@@ -342,10 +344,10 @@ export const getFunnelQuery = (
   return query;
 };
 
-const getEventsWithPropertiesKPI = (filters, category) => { 
+const getEventsWithPropertiesKPI = (filters, category) => {
   const filterProps = [];
   // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
-  filters.forEach((fil) => { 
+  filters.forEach((fil) => {
     if (Array.isArray(fil.values)) {
       fil.values.forEach((val, index) => {
         filterProps.push({
@@ -353,8 +355,14 @@ const getEventsWithPropertiesKPI = (filters, category) => {
           prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: !index ? 'AND' : 'OR',
-          en: category == 'channels' ? '' : (fil?.extra ? fil?.extra[3] : 'event'),
-          objTy: category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+          en:
+            category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+          objTy:
+            category == 'channels'
+              ? fil?.extra
+                ? fil?.extra[3]
+                : 'event'
+              : '',
           va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
         });
       });
@@ -364,9 +372,13 @@ const getEventsWithPropertiesKPI = (filters, category) => {
         prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
         co: operatorMap[fil.operator],
         lOp: 'AND',
-        en: category == 'channels' ? '' : (fil?.extra ? fil?.extra[3] : 'event'),
-        objTy: category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
-        va: fil.props[1] === 'datetime' ? formatFilterDate(fil.values) : fil.values,
+        en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+        objTy:
+          category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+        va:
+          fil.props[1] === 'datetime'
+            ? formatFilterDate(fil.values)
+            : fil.values,
       });
     }
   });
@@ -493,7 +505,7 @@ export const getQuery = (
   query.cl = QUERY_TYPE_EVENT;
   query.ty =
     result_criteria === TOTAL_EVENTS_CRITERIA ||
-      result_criteria === FREQUENCY_CRITERIA
+    result_criteria === FREQUENCY_CRITERIA
       ? TYPE_EVENTS_OCCURRENCE
       : TYPE_UNIQUE_USERS;
 
@@ -909,7 +921,7 @@ export const getStateFromFilters = (rawFilters = []) => {
     }
   });
   return filters;
-}
+};
 
 export const getFilters = (filters) => {
   const result = [];
@@ -1008,7 +1020,7 @@ export const getAttributionQuery = (
       query_type: queryType,
       attribution_methodology: models[0],
       lbw: window,
-      tactic_offer_type: tacticOfferType
+      tactic_offer_type: tacticOfferType,
     },
   };
   if (dateRange.from && dateRange.to) {
@@ -1098,10 +1110,10 @@ export const getAttributionStateFromRequestQuery = (
         enabled: !requestQuery.attribution_key_dimensions
           ? dimension.defaultValue
           : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
-          -1 ||
-          requestQuery.attribution_key_custom_dimensions?.indexOf(
-            dimension.header
-          ) > -1,
+              -1 ||
+            requestQuery.attribution_key_custom_dimensions?.indexOf(
+              dimension.header
+            ) > -1,
       };
     }
     return dimension;
@@ -1119,7 +1131,7 @@ export const getAttributionStateFromRequestQuery = (
     attr_dimensions,
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
-    tacticOfferType: requestQuery.tactic_offer_type
+    tacticOfferType: requestQuery.tactic_offer_type,
   };
 
   if (requestQuery.attribution_methodology_c) {
@@ -1410,7 +1422,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
       } else {
         const horizontalBarChart =
           requestQuery[0].gbp.length <= 3 &&
-            requestQuery[0].ewp.length === 1 ? (
+          requestQuery[0].ewp.length === 1 ? (
             <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
               Display Bar Chart
             </Radio>
@@ -1493,7 +1505,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
       }
     });
     return {
-      label: e.ty,
+      label: ReverseProfileMapper[e.ty] ? ReverseProfileMapper[e.ty] : e.ty,
       filters,
     };
   });
@@ -1569,12 +1581,12 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       ? config.metrics.find((m) => m.name === q.me[0])
       : null;
 
-    let eventFilters = []
+    let eventFilters = [];
     q?.fil?.forEach((pr) => {
       if (pr.lOp === 'AND') {
         let val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
         let DNa = _.startCase(pr.prNa);
-        let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en
+        let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
         eventFilters.push({
           operator:
             pr.prDaTy === 'datetime'
@@ -1605,7 +1617,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     if (pr.lOp === 'AND') {
       let val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
       let DNa = _.startCase(pr.prNa);
-      let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en
+      let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
       filters.push({
         operator:
           pr.prDaTy === 'datetime'
@@ -1619,13 +1631,12 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       filters[filters.length - 1].values.push(pr.va);
     }
   });
- 
 
   const globalBreakdown = requestQuery.gGBy.map((opt, index) => {
     let appGbp = {};
     appGbp = {
       property: opt.prNa,
-      prop_type: opt.prDaTy, 
+      prop_type: opt.prDaTy,
       overAllIndex: index,
       prop_category: opt.en || opt.objTy,
     };

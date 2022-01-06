@@ -9,7 +9,7 @@ import { udpateProjectDetails } from 'Reducers/global';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import defaultRules from './defaultRules';
 import _ from 'lodash';
-import { displayName } from 'Components/FaFilterSelect/utils';
+import { DISPLAY_PROP } from '../../../../../utils/constants';
 
 const { confirm } = Modal;
 
@@ -106,7 +106,7 @@ const DCGTable = ({ activeProject, udpateProjectDetails, setShowModalVisible, se
                   item?.operator
                 } ${_.join(
                   item?.values.map((vl) =>
-                    displayName[vl] ? displayName[vl] : vl
+                    DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
                   ),
                   [', ']
                 )}`}</Tag>

@@ -111,12 +111,6 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 
 	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
 
-	if allowSupportForSourceColumnInUsers && !model.IsValidUserSource(profileQueryGroup.Source) {
-		logCtx.WithError(err).Error("Query failed. Invalid user source.")
-		message := fmt.Sprintf("Query failed. Invalid user source provided : %s", profileQueryGroup.Source)
-		return nil, http.StatusBadRequest, V1.INVALID_INPUT, message, true
-	}
-
 	// copying global filters and groupby into sparate queries and datetime transformations
 	for index, _ := range profileQueryGroup.Queries {
 		profileQueryGroup.Queries[index].Filters = append(profileQueryGroup.Queries[index].Filters, profileQueryGroup.GlobalFilters...)
@@ -126,16 +120,10 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		profileQueryGroup.Queries[index].From = profileQueryGroup.From
 		profileQueryGroup.Queries[index].To = profileQueryGroup.To
 
-		if allowSupportForSourceColumnInUsers && model.IsValidUserSource(profileQueryGroup.Source) {
-			switch profileQueryGroup.Source {
-			case model.UserSourceWebString:
-				profileQueryGroup.Queries[index].Source = model.UserSourceWeb
-			case model.UserSourceHubspotString:
-				profileQueryGroup.Queries[index].Source = model.UserSourceHubspot
-			case model.UserSourceSalesforceString:
-				profileQueryGroup.Queries[index].Source = model.UserSourceSalesforce
-			default:
-			}
+		if allowSupportForSourceColumnInUsers && !model.IsValidUserSource(profileQueryGroup.Queries[index].Type) {
+			logCtx.WithError(err).Error("Query failed. Invalid user source.")
+			message := fmt.Sprintf("Query failed. Invalid user source provided : %s", profileQueryGroup.Queries[index].Type)
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, message, true
 		}
 
 		// setting up the timezone for individual queries from the global value

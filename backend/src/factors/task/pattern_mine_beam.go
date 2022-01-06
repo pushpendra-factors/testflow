@@ -116,9 +116,14 @@ func countPatternsWorkerBeam(ctx context.Context, projectID uint64, filepath str
 }
 
 func writeFileToGCP(projectId, modelId uint64, name string, fpath string,
-	cloudManager *filestore.FileManager) error {
+	cloudManager *filestore.FileManager, writePath string) error {
 
-	path := (*cloudManager).GetProjectModelDir(projectId, modelId)
+	var path string
+	if writePath == "" {
+		path = (*cloudManager).GetProjectModelDir(projectId, modelId)
+	} else {
+		path = writePath
+	}
 	mineLog.Infof("Reading file from (toGCP)   : %s ", fpath)
 	f, err := os.OpenFile(fpath, os.O_RDWR, 0666)
 	if err != nil {
@@ -234,6 +239,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 	events := bytes.NewReader(userAndEventsInfoBytes)
 	path, _ := (*cloudManager).GetModelEventInfoFilePathAndName(projectId, modelId)
 	nameUI := scopeName + "_UI.txt"
+	path = path + "patterns_part/" + scopeName + "/"
 	err = (*cloudManager).Create(path, nameUI, events)
 	if err != nil {
 		mineLog.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
@@ -244,7 +250,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 
 	//-------Write intermediate patterns file to GCP--------
 	fileNameIntermediate := scopeName + "_itm_patterns.txt"
-	err = writeFileToGCP(projectId, modelId, fileNameIntermediate, ptInputPath, cloudManager)
+	err = writeFileToGCP(projectId, modelId, fileNameIntermediate, ptInputPath, cloudManager, path)
 	if err != nil {
 		return "", fmt.Errorf("unable to write to cloud : %s", fileNameIntermediate)
 	}
@@ -270,10 +276,12 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 		mineLog.Fatal("Scope is not valid")
 	}
 	var itrFname string
+	efTmpPath = efTmpPath + "patterns_part/" + scopeName + "/"
 	if beamStruct.Env == "development" {
-		itrFname = filepath.Join(modelpathDir, fileNameIntermediate)
+
+		itrFname = filepath.Join(efTmpPath, fileNameIntermediate)
 	} else {
-		itrFname = `gs://` + bucketName + `/` + modelpathDir + fileNameIntermediate
+		itrFname = `gs://` + bucketName + `/` + efTmpPath + fileNameIntermediate
 	}
 	countPatternsExecutor(s, scopeName, configEncodedString, itrFname, countsVersion)
 	err = beamx.Run(ctx, p)
@@ -357,6 +365,7 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 
 	modelpath := cloudManager.GetProjectModelDir(projectID, modelId)
 	pathEinfo, _ := cloudManager.GetModelEventInfoFilePathAndName(projectID, modelId)
+	pathEinfo = pathEinfo + "patterns_part/" + scopeName + "/"
 	einfo, err := (cloudManager).Get(pathEinfo, scopeName+"_UI.txt")
 	if err != nil {
 		return fmt.Errorf("unable to get events info file :%v", err)
@@ -463,7 +472,7 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 		fi.Close()
 	}
 
-	err = writeFileToGCP(projectID, modelId, tmpPatternsFile, patternTmpFileLocal.Name(), &cloudManager)
+	err = writeFileToGCP(projectID, modelId, tmpPatternsFile, patternTmpFileLocal.Name(), &cloudManager, "")
 	if err != nil {
 		return fmt.Errorf("unable to write part file to GCP : %v", err)
 	}

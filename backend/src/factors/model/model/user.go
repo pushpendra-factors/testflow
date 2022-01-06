@@ -110,11 +110,11 @@ const (
 	UserSourceSalesforce = 3
 )
 
-const (
-	UserSourceWebString        = "web"
-	UserSourceHubspotString    = "hubspot"
-	UserSourceSalesforceString = "salesforce"
-)
+var UserSourceMap = map[string]int{
+	"web":        1,
+	"hubspot":    2,
+	"salesforce": 3,
+}
 
 func GetRequestSourcePointer(requestSource int) *int {
 	var requestSourcePointer = requestSource
@@ -858,13 +858,10 @@ func GetUserGroupID(user *User) (string, error) {
 	return value, nil
 }
 
-func IsValidUserSource(source interface{}) bool {
-	switch source.(type) {
-	case string:
-		return source == UserSourceWebString || source == UserSourceHubspotString || source == UserSourceSalesforceString
-	case int:
-		return source == UserSourceWeb || source == UserSourceHubspot || source == UserSourceSalesforce
-	default:
+func IsValidUserSource(source string) bool {
+	if _, exists := UserSourceMap[source]; exists {
+		return true
+	} else {
 		return false
 	}
 }

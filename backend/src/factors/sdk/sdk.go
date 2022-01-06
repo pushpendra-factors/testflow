@@ -970,7 +970,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	if request.UserId == "" {
 		response := &IdentifyResponse{}
 
-		userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, request.CustomerUserId)
+		userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, request.CustomerUserId, request.RequestSource)
 		switch errCode {
 		case http.StatusInternalServerError:
 			return errCode, &IdentifyResponse{

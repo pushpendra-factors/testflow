@@ -18,7 +18,7 @@ function DashboardWidgetLegends({
         let label = legend
           .split(',')
           .filter((elem) => elem)
-          .join(', ');
+          .join(',');
         label = eventNames[label] || label;
         const key = arrayMapper.find((m) => m.index === index).mapper;
         return (

@@ -16,7 +16,6 @@ type ProfileQueryGroup struct {
 	From           int64                  `json:"from"`
 	To             int64                  `json:"to"`
 	Timezone       string                 `json:"tz"`
-	Source         string                 `json:"source"`
 }
 
 // From and to refer to JoinTime
@@ -27,7 +26,6 @@ type ProfileQuery struct {
 	From     int64                  `json:"from"`
 	To       int64                  `json:"to"`
 	Timezone string                 `json:"tz"`
-	Source   int                    `json:"source"`
 }
 
 func (q *ProfileQueryGroup) GetClass() string {
@@ -104,7 +102,7 @@ func (query *ProfileQuery) TransformDateTypeFilters() error {
 }
 
 const (
-	DefaultSelectForAllUsers = "COUNT(DISTINCT(COALESCE(users.customer_user_id, users.id))) as all_users"
+	DefaultSelectForAllUsers = "COUNT(DISTINCT(COALESCE(users.customer_user_id, users.id))) as " + AliasAggr
 )
 
 func SanitizeDateTypeRowsProfiles(result *QueryResult, query *ProfileQuery) {
