@@ -1,4 +1,6 @@
 -- UP
+SET GLOBAL default_table_type = rowstore;
+
 CREATE DATABASE IF NOT EXISTS factors;
 
 USE factors;

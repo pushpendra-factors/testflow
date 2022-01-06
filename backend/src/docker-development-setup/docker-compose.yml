@@ -67,7 +67,7 @@ services:
                 context: .
                 dockerfile: Dockerfile.memsql.testing
                 args:
-                    - MEMSQL_VERSION=centos-7.3.10-6c220bccfc-3.2.8-1.11.4
+                    - MEMSQL_VERSION=latest
             image: testing/memsql:1.0
             restart: always
             environment:
