@@ -15,7 +15,8 @@ function UserSettings({
   agents,
   projectAgentRemove,
   activeProjectID,
-  updateAgentRole
+  updateAgentRole,
+  fetchProjectAgents
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataSource, setdataSource] = useState(null);
@@ -30,8 +31,12 @@ function UserSettings({
       okText: 'Yes',
       onOk() {
         projectAgentRemove(activeProjectID, uuid).then(() => {
+          fetchProjectAgents(activeProjectID);
+          const rulesToUpdate = [...dataSource.filter((val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid))];
+          setdataSource(rulesToUpdate);
           message.success('User removed!');
         }).catch((err) => {
+          console.log('rm err', err)
           message.error(err);
         });
       }
@@ -46,6 +51,9 @@ function UserSettings({
       okText: 'Yes',
       onOk() {
         updateAgentRole(activeProjectID, uuid, 2).then(() => {
+          fetchProjectAgents(activeProjectID);
+          const rulesToUpdate = [...dataSource.filter((val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid))];
+          setdataSource(rulesToUpdate);
           message.success('User role updated!');
         }).catch((err) => {
           message.error(err.data.error); 
@@ -61,7 +69,7 @@ function UserSettings({
         <a>Remove User</a>
       </Menu.Item>
       {values.role === 1 &&
-        <Menu.Item key="0" onClick={() => confirmRoleChange(values.uuid)}>
+        <Menu.Item key="1" onClick={() => confirmRoleChange(values.uuid)}>
           <a>Make Project Admin</a>
         </Menu.Item>
       }
