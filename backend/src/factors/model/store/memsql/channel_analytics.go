@@ -267,6 +267,9 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, f
 
 // RunChannelGroupQuery - @TODO Kark v1
 func (store *MemSQL) RunChannelGroupQuery(projectID uint64, queriesOriginal []model.ChannelQueryV1, reqID string) (model.ChannelResultGroupV1, int) {
+	if projectID == 559 {
+		log.WithField("queriesOriginal", queriesOriginal).WithField("reqID", reqID).Warn("Inside RunChannelGroupQuery - memsql caching test.")
+	}
 	queries := make([]model.ChannelQueryV1, 0, 0)
 	U.DeepCopy(&queriesOriginal, &queries)
 
@@ -297,7 +300,9 @@ func (store *MemSQL) RunChannelGroupQuery(projectID uint64, queriesOriginal []mo
 // TODO Handling errorcase.
 func (store *MemSQL) runSingleChannelQuery(projectID uint64, query model.ChannelQueryV1,
 	resultHolder *model.ChannelQueryResultV1, waitGroup *sync.WaitGroup, reqID string) {
-
+	if projectID == 559 {
+		log.WithField("query", query).WithField("reqID", reqID).Warn("Inside runSingleChannelQuery - memsql caching test.")
+	}
 	defer waitGroup.Done()
 	tempResultHolder, _ := store.ExecuteChannelQueryV1(projectID, &query, reqID)
 	resultHolder.Headers = tempResultHolder.Headers
@@ -318,6 +323,9 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.Channe
 	var err int
 	if !(isValidChannel(query.Channel)) {
 		return queryResult, http.StatusBadRequest
+	}
+	if projectID == 559 {
+		log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteChannelQueryV1 - memsql caching test.")
 	}
 	switch query.Channel {
 	case CAAllChannelAds:
