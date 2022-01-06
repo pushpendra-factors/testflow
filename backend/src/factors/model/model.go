@@ -307,7 +307,7 @@ type Model interface {
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int
-	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID string) (*model.Project, int)
+	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID string, createDashboard bool) (*model.Project, int)
 	CreateDefaultProjectForAgent(agentUUID string) (*model.Project, int)
 	GetProject(id uint64) (*model.Project, int)
 	GetProjectByToken(token string) (*model.Project, int)
