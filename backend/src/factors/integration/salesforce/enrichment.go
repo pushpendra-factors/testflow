@@ -1564,7 +1564,14 @@ func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 		}
 
 		rules := touchPointRules["sf_touch_point_rules"]
-
+		var campaignMemberDocuments []model.SalesforceDocument
+		var status int
+		if document.Action == model.SalesforceDocumentUpdated {
+			campaignMemberDocuments, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, false)
+			if status != http.StatusFound {
+				campaignMemberDocuments = nil
+			}
+		}
 		for _, rule := range rules {
 
 			// check if rule is applicable
@@ -1583,15 +1590,15 @@ func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 				}
 			case model.SalesforceDocumentUpdated:
 
-				campaignMemberDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(project.ID, []string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, endTimestamp)
-				if status != http.StatusFound {
+				if campaignMemberDocuments == nil || len(campaignMemberDocuments) == 0 {
 					logCtx.Warn("failed to get campaign member salesforce document for campaign member.")
 					continue
 				}
-				logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).WithField("Document[0]", campaignMemberDocuments[0]).Info("Found existing campaign member document")
+				logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).
+					WithField("Document[size-1]", campaignMemberDocuments[len(campaignMemberDocuments)-1]).Info("Found existing campaign member document")
 
 				// len(campaignMemberDocuments) > 0 && timestamp sorted desc
-				enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[0])
+				enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[len(campaignMemberDocuments)-1])
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to get properties for salesforce campaign member.")
 					continue
@@ -1599,6 +1606,7 @@ func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 				// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
 				if val, exists := (*enCampaignMemberProperties)[model.EP_SFCampaignMemberResponded]; exists {
 					if val.(bool) == true {
+						logCtx.Warn("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
 						continue
 					}
 				}
@@ -1648,14 +1656,19 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		}
 	}
 	payload.Timestamp = timestamp
-	payload.EventProperties[U.EP_TIMESTAMP] = timestamp
 
 	// Mapping touch point properties:
 	for key, value := range rule.PropertiesMap {
-		if _, exists := trackPayload.EventProperties[value]; exists {
-			payload.EventProperties[key] = trackPayload.EventProperties[value]
+
+		if value.Type == model.TouchPointPropertyValueAsConstant {
+			payload.EventProperties[key] = value.Value
 		} else {
-			payload.EventProperties[key] = model.PropertyValueNone
+			if _, exists := trackPayload.EventProperties[value.Value]; exists {
+				payload.EventProperties[key] = trackPayload.EventProperties[value.Value]
+			} else {
+				// Property value is not found, hence keeping it as $none
+				payload.EventProperties[key] = model.PropertyValueNone
+			}
 		}
 	}
 
