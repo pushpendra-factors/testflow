@@ -53,7 +53,7 @@ function ProfileBlock({
         {isDDVisible ? (
           <FaSelect
             options={[
-              ['All Users'],
+              ['Website Visitors'],
               ['Hubspot Contacts'],
               ['Salesforce Users'],
             ]}
