@@ -271,6 +271,7 @@ type Model interface {
 
 	// project_agent_mapping
 	CreateProjectAgentMappingWithDependencies(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int)
+	CreateProjectAgentMappingWithDependenciesWithoutDashboard(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int)
 	GetProjectAgentMapping(projectID uint64, agentUUID string) (*model.ProjectAgentMapping, int)
 	GetProjectAgentMappingsByProjectId(projectID uint64) ([]model.ProjectAgentMapping, int)
 	GetProjectAgentMappingsByProjectIds(projectIds []uint64) ([]model.ProjectAgentMapping, int)
