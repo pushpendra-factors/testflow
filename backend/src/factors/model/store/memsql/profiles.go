@@ -134,7 +134,7 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 		if model.UserSourceMap[query.Type] == model.UserSourceWeb {
 			stepSqlStmnt = fmt.Sprintf("%s AND (source=? OR source IS NULL)", stepSqlStmnt)
 		} else {
-			stepSqlStmnt = fmt.Sprintf("%s AND source=?)", stepSqlStmnt)
+			stepSqlStmnt = fmt.Sprintf("%s AND source=?", stepSqlStmnt)
 		}
 		params = append(params, model.UserSourceMap[query.Type])
 		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=0 or is_group_user IS NULL)", stepSqlStmnt)

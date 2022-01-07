@@ -135,7 +135,6 @@ const EventGroupBlock = ({
               options={propOpts[opt.prop_type]}
               optionClick={setProp}
               onClickOutside={() => setSelVis(false)}
-              posRight={true}
             ></FaSelect>
           )}
         </div>

@@ -1017,6 +1017,49 @@ func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, 
 	return http.StatusAccepted
 }
 
+// GetLastSyncedHubspotUpdateDocumentByID returns latest synced record by document id with preference to the Update doc if timestamp is same.
+func (store *MemSQL) GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_id": docID, "doc_type": docType})
+
+	if projectID == 0 || docType == 0 || docID == "" {
+		logCtx.Error("Missing required field")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var document []model.HubspotDocument
+
+	if err := db.Where("project_id = ? AND type = ? AND id = ? and synced=true",
+		projectID, docType, docID).Order("timestamp DESC").Limit(2).Find(&document).Error; err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Error("Failed to get latest hubspot document by userID.")
+			return nil, http.StatusInternalServerError
+		}
+		return nil, http.StatusNotFound
+	}
+
+	if len(document) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	if len(document) == 2 {
+		// Prefer the latest doc by time
+		if document[0].Timestamp > document[1].Timestamp {
+			return &document[0], http.StatusFound
+		}
+		// Prefer the UpdatedActionEvent over CreateActionEvent
+		if document[0].Action == model.HubspotDocumentActionUpdated {
+			return &document[0], http.StatusFound
+		}
+		if document[1].Action == model.HubspotDocumentActionUpdated {
+			return &document[1], http.StatusFound
+		}
+	}
+	// Case with just one document.
+	return &document[0], http.StatusFound
+}
+
 // GetLastSyncedHubspotDocumentByID returns latest synced record by document id.
 func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int) {
 	argFields := log.Fields{"project_id": projectID, "doc_id": docID, "doc_type": docType}

@@ -262,6 +262,7 @@ type Model interface {
 	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
 	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
 	GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
+	GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
 	GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{}
 
 	// plan
@@ -307,7 +308,7 @@ type Model interface {
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int
-	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID string) (*model.Project, int)
+	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID string, createDashboard bool) (*model.Project, int)
 	CreateDefaultProjectForAgent(agentUUID string) (*model.Project, int)
 	GetProject(id uint64) (*model.Project, int)
 	GetProjectByToken(token string) (*model.Project, int)

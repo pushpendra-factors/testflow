@@ -17,7 +17,8 @@ const FaSelect = ({
   posRight = false,
   children,
   extraClass = '',
-  disabled=false
+  disabled = false,
+  showIcon = true,
 }) => {
   const [optClickArr, setOptClickArr] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,9 +67,11 @@ const FaSelect = ({
       rendOpts.push(
         <div
           key={'custom_value'}
-          className={`fa-select-group-select--options ${
-            isSelectedCheck([searchTerm]) ? styles.fa_selected : null
-          }`}
+          className={`${
+            allowSearch
+              ? 'fa-select-group-select--options'
+              : 'fa-select--options'
+          } ${isSelectedCheck([searchTerm]) ? styles.fa_selected : null}`}
           onClick={() =>
             optClick(() => optionClick([searchTerm]), [searchTerm])
           }
@@ -96,12 +99,14 @@ const FaSelect = ({
             <div
               key={index}
               title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
-              className={`fa-select-group-select--options ${
-                isSelected ? styles.fa_selected : null
-              }`}
+              className={`${
+                allowSearch
+                  ? 'fa-select-group-select--options'
+                  : 'fa-select--options'
+              } ${isSelected ? styles.fa_selected : null}`}
               onClick={() => optClick(() => optionClick(op), op)}
             >
-              {op[1] && !multiSelect ? (
+              {op[1] && showIcon && !multiSelect ? (
                 <SVG name={op[1]} extraClass={'self-center'}></SVG>
               ) : null}
               <span className={`ml-1 ${styles.optText}`}>
@@ -126,12 +131,14 @@ const FaSelect = ({
           <div
             key={index}
             title={DISPLAY_PROP[op[0]] ? DISPLAY_PROP[op[0]] : op[0]}
-            className={`fa-select-group-select--options ${
-              isSelected ? styles.fa_selected : null
-            }`}
+            className={`${
+              allowSearch
+                ? 'fa-select-group-select--options'
+                : 'fa-select--options'
+            } ${isSelected ? styles.fa_selected : null}`}
             onClick={() => optClick(() => optionClick(op), op)}
           >
-            {op[1] && !multiSelect ? (
+            {op[1] && showIcon && !multiSelect ? (
               <SVG name={op[1]} extraClass={'self-center'}></SVG>
             ) : null}
             <span className={`ml-1 ${styles.optText}`}>
@@ -154,7 +161,11 @@ const FaSelect = ({
       rendOpts.push(
         <div
           key={'del_opt'}
-          className={`fa-select-group-select--options ${styles.dropdown__del_opt}`}
+          className={`${
+            allowSearch
+              ? 'fa-select-group-select--options'
+              : 'fa-select--options'
+          } ${styles.dropdown__del_opt}`}
           onClick={delOptionClick}
         >
           <SVG name={'remove'} extraClass={'self-center'}></SVG>
@@ -168,14 +179,22 @@ const FaSelect = ({
         rendOpts.push(
           <div
             key={'empty_opt'}
-            className={`fa-select-group-select--options ${styles.dropdown__empty_opt}`}
+            className={`${
+              allowSearch
+                ? 'fa-select-group-select--options'
+                : 'fa-select--options'
+            } ${styles.dropdown__empty_opt}`}
           ></div>
         );
       }
       rendOpts.push(
         <div
           key={'apply_opt'}
-          className={`fa-select-group-select--options ${styles.dropdown__apply_opt}`}
+          className={`${
+            allowSearch
+              ? 'fa-select-group-select--options'
+              : 'fa-select--options'
+          } ${styles.dropdown__apply_opt}`}
           onClick={applyClick}
         >
           <Button disabled={!optClickArr.length} type='primary'>
@@ -212,6 +231,10 @@ const FaSelect = ({
           posRight ? styles.dropdown__select_rt : styles.dropdown__select_lt
         } fa-select ${
           posRight ? `fa-select--group-select-sm` : `fa-select--group-select`
+        } ${
+          allowSearch
+            ? `fa-select--group-select-sm`
+            : `fa-select--group-select-mini`
         }`}
       >
         {allowSearch && renderSearchInput()}

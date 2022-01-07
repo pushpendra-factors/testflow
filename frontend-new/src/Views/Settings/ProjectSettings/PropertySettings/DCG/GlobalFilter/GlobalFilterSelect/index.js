@@ -250,7 +250,6 @@ const GlobalFilterSelect = ({
                 onClickOutside={() => setValuesSelectionOpen(false)}
                 selectedOpts={valuesState ? valuesState : []}
                 allowSearch={true}
-                posRight={true}
             >
             </FaSelect>);
         

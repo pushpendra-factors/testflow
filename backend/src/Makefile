@@ -405,6 +405,12 @@ upload-replicate-properties: export IMAGE_NAME=replicate-properties-job
 upload-replicate-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/replicate-properties-job:$(TAG)
 
+pack-queries-id-text-patch:
+	docker build -t us.gcr.io/factors-$(ENV)/query-id-text-patch-job:$(TAG) -f Dockerfile.queries_id_text_patch_job .
+upload-queries-id-text-patch: export IMAGE_NAME=query-id-text-patch-job
+upload-queries-id-text-patch: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/query-id-text-patch-job:$(TAG)
+
 pack-precompile-queries:
 	docker build -t us.gcr.io/factors-$(ENV)/precompile-queries-job:$(TAG) -f Dockerfile.precompile_queries_job .
 

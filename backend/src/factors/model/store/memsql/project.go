@@ -170,7 +170,7 @@ func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int
 	if project.TimeZone != "" {
 		updateFields["time_zone"] = project.TimeZone
 	}
-	if project.ProfilePicture != ""{
+	if project.ProfilePicture != "" {
 		updateFields["profile_picture"] = project.ProfilePicture
 	}
 	_, errCode := time.LoadLocation(string(project.TimeZone))
@@ -208,7 +208,7 @@ func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int
 	return 0
 }
 
-func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID string) int {
+func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID string, createDashboard bool) int {
 	logCtx := log.WithField("project_id", projectID)
 
 	// Associated project setting creation with default state.
@@ -224,10 +224,12 @@ func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID strin
 	}
 
 	if ENABLE_DEFAULT_WEB_ANALYTICS {
-		errCode = store.createDefaultDashboardsForProject(projectID, agentUUID)
-		if errCode != http.StatusCreated {
-			logCtx.Error("Create default dashboards failed on create project dependencies.")
-			return errCode
+		if createDashboard {
+			errCode = store.createDefaultDashboardsForProject(projectID, agentUUID)
+			if errCode != http.StatusCreated {
+				logCtx.Error("Create default dashboards failed on create project dependencies.")
+				return errCode
+			}
 		}
 	}
 
@@ -236,14 +238,14 @@ func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID strin
 
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
 func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agentUUID string,
-	agentRole uint64, billingAccountID string) (*model.Project, int) {
+	agentRole uint64, billingAccountID string, createDashboard bool) (*model.Project, int) {
 
 	cProject, errCode := createProject(project)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
 
-	errCode = store.createProjectDependencies(cProject.ID, agentUUID)
+	errCode = store.createProjectDependencies(cProject.ID, agentUUID, createDashboard)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
@@ -284,7 +286,7 @@ func (store *MemSQL) CreateDefaultProjectForAgent(agentUUID string) (*model.Proj
 
 	cProject, errCode := store.CreateProjectWithDependencies(
 		&model.Project{Name: model.DefaultProjectName},
-		agentUUID, model.ADMIN, billingAcc.ID)
+		agentUUID, model.ADMIN, billingAcc.ID, true)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
