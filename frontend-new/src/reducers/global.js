@@ -236,7 +236,7 @@ export function createProject(projectName) {
 export function createProjectWithTimeZone(data) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects', data)
+      post(dispatch, host + 'projects?create_dashboard=false', data)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'CREATE_PROJECT_TIMEZONE_FULFILLED', payload: r.data });
