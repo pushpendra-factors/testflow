@@ -216,7 +216,7 @@ func (store *MemSQL) DeleteSmartPropertyByRuleID(projectID uint64, ruleID string
 	db := C.GetServices().Db
 	smartProperty := make([]model.SmartProperties, 0, 0)
 
-	err := db.Table("smart_properties").Where("project_id = ? AND rules_ref->>? IS NOT NULL", projectID, ruleID).Find(&smartProperty).Error
+	err := db.Table("smart_properties").Where("project_id = ? AND JSON_EXTRACT_STRING(rules_ref, ?) IS NOT NULL", projectID, ruleID).Find(&smartProperty).Error
 	if err != nil {
 		if err.Error() == "record not found" {
 			return 0, 0, http.StatusAccepted
