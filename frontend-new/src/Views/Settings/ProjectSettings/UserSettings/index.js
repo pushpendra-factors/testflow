@@ -39,8 +39,16 @@ function UserSettings({
             setdataSource(rulesToUpdate);
             message.success('User removed!');
           }).catch((err) => {
-            console.log('rm err', err)
-            message.error(err);
+            if(!err) {
+              console.log('rm err', err)
+              message.error(err?.data?.error);
+            } else {
+              // temporary fix for now will fix it later
+              fetchProjectAgents(activeProjectID);
+              const rulesToUpdate = [...dataSource.filter((val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid))];
+              setdataSource(rulesToUpdate);
+              message.success('User removed!');
+            }
           });
         } else {
           message.error('Agent user can not remove other users');

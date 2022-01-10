@@ -275,18 +275,36 @@ export function projectAgentRemove(projectId, agentUUID){
   return function(dispatch){
     return new Promise((resolve, reject) => {
       put(dispatch, host + "projects/" + projectId +"/agents/remove", {"agent_uuid":agentUUID})
-      .then((r) => {
-        if(r.status == 202) {
-          dispatch({ type: "PROJECT_AGENT_REMOVE_FULFILLED", payload: r.data });
+        .then((r) => { 
+          if (r.status == 403) {
+            dispatch({
+              type: "PROJECT_AGENT_REMOVE_REJECTED",
+              error: r
+            });
+            reject(r.data.error);
+          }
+          if (r.status == 202) {
+            dispatch({
+              type: "PROJECT_AGENT_REMOVE_FULFILLED",
+              payload: r.data
+            });
+            resolve(r.data);
+          }
+
+          dispatch({
+            type: "PROJECT_AGENT_REMOVE_FULFILLED",
+            payload: r.data
+          });
           resolve(r.data);
-        } else if (r.status == 403) {
-          dispatch({ type: "PROJECT_AGENT_REMOVE_REJECTED", payload: r.data.error });
-          reject(r.data.error);
-        }
-      }).catch((r) => {
-        dispatch({ type: "PROJECT_AGENT_REMOVE_REJECTED", payload: r.data });
-        resolve(r.data)
-      });
+
+        })
+        .catch((r) => { 
+          dispatch({
+            type: "PROJECT_AGENT_REMOVE_REJECTED",
+            error: r
+          });
+          reject(r);
+        });
     });
   }
 }
