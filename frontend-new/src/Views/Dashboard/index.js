@@ -20,8 +20,10 @@ function Dashboard() {
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
   const { dashboards } = useSelector((state) => state.dashboard);
-  const integration = useSelector((state) => state.global.currentProjectSettings);
+  let integration = useSelector((state) => state.global.currentProjectSettings);
   const dispatch = useDispatch();
+
+  integration = integration?.project_settings || integration;
 
   const checkIntegration = integration?.int_segment || 
   integration?.int_adwords_enabled_agent_uuid ||
@@ -31,7 +33,7 @@ function Dashboard() {
   integration?.int_salesforce_enabled_agent_uuid ||
   integration?.int_drift ||
   integration?.int_google_organic_enabled_agent_uuid ||
-  integration?.int_clear_bit;
+  integration?.int_clear_bit || integration?.int_completed;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Row, Col, Modal, Button, Timeline
 } from 'antd';
@@ -12,9 +12,10 @@ import OtherIntegrations from './OtherIntegrations';
 import { useHistory } from 'react-router-dom';
 import Lottie from 'react-lottie';
 import setupAssistData from '../../../assets/lottie/Final Jan 3 Setupassist.json'
+import { fetchProjectSettingsV1 } from 'Reducers/global';
 const axios = require('axios').default;
 
-const SetupAssist = ({currentAgent, integration}) => {
+const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSettingsV1}) => {
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
     const history = useHistory();
@@ -42,6 +43,14 @@ const SetupAssist = ({currentAgent, integration}) => {
         }
     };
 
+    useEffect(() => {
+        fetchProjectSettingsV1(activeProject.id).then(() => {
+            console.log('fetch project settings success');
+        });
+    }, [activeProject, current]);
+
+    integration = integration?.project_settings || integration;
+
     const checkIntegration = integration?.int_segment || 
     integration?.int_adwords_enabled_agent_uuid ||
     integration?.int_linkedin_agent_uuid ||
@@ -50,7 +59,7 @@ const SetupAssist = ({currentAgent, integration}) => {
     integration?.int_salesforce_enabled_agent_uuid ||
     integration?.int_drift ||
     integration?.int_google_organic_enabled_agent_uuid ||
-    integration?.int_clear_bit;
+    integration?.int_clear_bit || integration?.int_completed;
 
     return (
         <>
@@ -130,8 +139,9 @@ const SetupAssist = ({currentAgent, integration}) => {
 };
 
 const mapStateToProps = (state) => ({
+    activeProject: state.global.active_project,
     currentAgent: state.agent.agent_details,
     integration: state.global.currentProjectSettings
 });
 
-export default connect(mapStateToProps)(SetupAssist);
+export default connect(mapStateToProps, { fetchProjectSettingsV1 })(SetupAssist);

@@ -301,6 +301,50 @@ export function fetchProjectSettings(projectId) {
   };
 }
 
+export function fetchProjectSettingsV1(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectId + '/v1/settings')
+        .then((r) => {
+          if (r.ok) {
+            dispatch({
+              type: 'FETCH_PROJECT_SETTINGS_FULFILLED',
+              payload: {
+                currentProjectId: projectId,
+                settings: r.data,
+              },
+            });
+
+            resolve(r);
+          } else {
+            dispatch({
+              type: 'FETCH_PROJECT_SETTINGS_REJECTED',
+              payload: {
+                currentProjectId: projectId,
+                settings: {},
+                err: 'Failed to get project settings.',
+              },
+            });
+
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({
+            type: 'FETCH_PROJECT_SETTINGS_REJECTED',
+            payload: {
+              currentProjectId: projectId,
+              settings: {},
+              err: err,
+            },
+          });
+
+          reject(err);
+        });
+    });
+  };
+}
+
 export function udpateProjectSettings(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
