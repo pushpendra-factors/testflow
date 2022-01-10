@@ -154,11 +154,16 @@ func (dd *DiskDriver) GetPatternChunksDir(projectId, modelId uint64) string {
 	modelDir := dd.GetProjectModelDir(projectId, modelId)
 	return fmt.Sprintf("%schunks/", modelDir)
 }
-
+func (dd *DiskDriver) GetChunksMetaDataDir(projectId, modelId uint64) string {
+	modelDir := dd.GetProjectModelDir(projectId, modelId)
+	return fmt.Sprintf("%smetadata/", modelDir)
+}
 func (dd *DiskDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
 	return dd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }
-
+func (dd *DiskDriver) GetChunksMetaDataFilePathAndName(projectId, modelId uint64) (string, string) {
+	return dd.GetChunksMetaDataDir(projectId, modelId), fmt.Sprintf("metadata.txt")
+}
 func (dd *DiskDriver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
 	year, month, date := time.Unix(startTime, 0).UTC().Date()
 	path := fmt.Sprintf("%s/archive/%d/%d/%d/", dd.baseDir, projectID, year, int(month))
