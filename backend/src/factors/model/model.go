@@ -108,6 +108,10 @@ type Model interface {
 	ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
 	ExecuteKPIQueryForChannels(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
 
+	// Custom Metrics
+	CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int)
+	GetCustomMetricsByProjectId(projectID uint64) ([]model.CustomMetric, string, int)
+
 	//templates
 	RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
 	GetTemplateConfig(projectID uint64, templateType int) (model.TemplateConfig, int)
@@ -185,6 +189,8 @@ type Model interface {
 	GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID uint64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
+	GetPropertiesForHubspot(projectID uint64, reqID string) []map[string]string
+	GetPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string
 
 	// events
 	GetEventCountOfUserByEventName(projectID uint64, userId string, eventNameId string) (uint64, int)
