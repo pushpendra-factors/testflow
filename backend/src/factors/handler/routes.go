@@ -65,6 +65,8 @@ func InitAppRoutes(r *gin.Engine) {
 	r.GET(routePrefix+"/IsDependentTaskDone", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.IsDependentTaskDoneHandler))
 	r.POST(routePrefix+"/InsertTaskBeginRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskBeginRecordHandler))
 	r.POST(routePrefix+"/InsertTaskEndRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskEndRecordHandler))
+	r.POST("/hubspot/createcontact", V1.HubspotCreateContact)
+	r.GET("/hubspot/getcontact", V1.GetHubspotContactByEmail)
 	// Auth route group with authentication an authorization middleware.
 	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	authRouteGroup.Use(mid.SetLoggedInAgent())

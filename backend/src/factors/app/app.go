@@ -126,6 +126,7 @@ func main() {
 	allowSupportForSourceColumnInUsers := flag.String("allow_support_for_source_column_in_users", "", "")
 	useOLAPPoolForAnalytics := flag.Bool("use_olap_pool_for_analytics", false,
 		"Will use the pool_olap if set, else use user-level default pool.")
+	hubspotAPIOnboardingHAPIKey := flag.String("hubspot_API_onboarding_HAPI_key", "4ae4fe41-1921-4fb7-a7e5-67d0f492dc0c", "")
 
 	flag.Parse()
 
@@ -211,6 +212,7 @@ func main() {
 		EnableEventLevelEventProperties:         *enableEventLevelEventProperties,
 		AllowSupportForSourceColumnInUsers:      *allowSupportForSourceColumnInUsers,
 		UseOLAPPoolForAnalytics:                 *useOLAPPoolForAnalytics,
+		HubspotAPIOnboardingHAPIKey:             *hubspotAPIOnboardingHAPIKey,
 	}
 	C.InitConf(config)
 
