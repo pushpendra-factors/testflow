@@ -946,6 +946,9 @@ func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.
 	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForAdwordsQueryV1(
 			projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
+		if errCode == http.StatusNotFound {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusOK
+		}
 		if errCode != http.StatusOK {
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 		}
@@ -959,6 +962,9 @@ func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.
 	} else {
 		sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForAdwordsQueryV1(
 			projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
+		if errCode == http.StatusNotFound {
+			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusOK
+		}
 		if errCode != http.StatusOK {
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 		}
