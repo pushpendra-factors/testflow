@@ -43,6 +43,7 @@ type Model interface {
 	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
+	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)

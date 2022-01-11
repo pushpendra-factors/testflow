@@ -890,9 +890,11 @@ type TokenError struct {
 }
 
 // GetAccessToken gets new salesforce access token by refresh token
-func GetAccessToken(ps *model.SalesforceProjectSettings, redirectURL string) (string, error) {
+func GetAccessToken(ps *model.SalesforceProjectSettings, redirectURL string) (string, string, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID})
+
 	if ps == nil || redirectURL == "" {
-		return "", errors.New("invalid project setting or redirect url")
+		return "", "", errors.New("invalid project setting or redirect url")
 	}
 
 	queryParams := fmt.Sprintf("grant_type=%s&refresh_token=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
@@ -901,7 +903,7 @@ func GetAccessToken(ps *model.SalesforceProjectSettings, redirectURL string) (st
 
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	client := &http.Client{
@@ -909,28 +911,49 @@ func GetAccessToken(ps *model.SalesforceProjectSettings, redirectURL string) (st
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		var errBody TokenError
 		json.NewDecoder(resp.Body).Decode(&errBody)
-		return "", fmt.Errorf("error while query data %s : %s", errBody.Error, errBody.ErrorDescription)
+		return "", "", fmt.Errorf("error while query data %s : %s", errBody.Error, errBody.ErrorDescription)
 	}
 
 	var jsonResponse map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	accessToken, exists := jsonResponse["access_token"].(string)
 	if !exists && accessToken == "" {
-		return "", errors.New("failed to get access token by refresh token")
+		return "", "", errors.New("failed to get access token by refresh token")
 	}
 
-	return accessToken, nil
+	instanceURL, exists := jsonResponse["instance_url"].(string)
+	if !exists && instanceURL == "" {
+		logCtx.Error("Failed to get instance_url in GetAccessToken method.")
+		return "", "", errors.New("failed to get instance_url")
+	}
+
+	if ps.InstanceURL != instanceURL {
+		projectSetting, errCode := store.GetStore().GetProjectSetting(ps.ProjectID)
+		if errCode != http.StatusFound {
+			logCtx.Error("Failed to fetch Project Setting in GetAccessToken method for project.")
+		} else {
+			errCode := store.GetStore().UpdateAgentSalesforceInstanceURL(*projectSetting.IntSalesforceEnabledAgentUUID,
+				instanceURL)
+			if errCode != http.StatusAccepted {
+				logCtx.WithFields(log.Fields{"Agent_uuid": projectSetting.IntSalesforceEnabledAgentUUID,
+					"instanceURL": instanceURL})
+				logCtx.Error("Failed to update instanceURL for agent in GetAccessToken method.")
+			}
+		}
+	}
+
+	return accessToken, instanceURL, nil
 }
 
 // CreateOrGetSalesforceEventName makes sure salesforce event name exists
