@@ -457,13 +457,13 @@ export const DATE_FORMATS = {
 };
 
 export const ProfileMapper = {
-  'All Users': 'web',
+  'Website Visitors': 'web',
   'Hubspot Contacts': 'hubspot',
   'Salesforce Users': 'salesforce',
 };
 
 export const ReverseProfileMapper = {
-  web: 'All Users',
+  web: 'Website Visitors',
   hubspot: 'Hubspot Contacts',
   salesforce: 'Salesforce Users',
 };

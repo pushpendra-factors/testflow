@@ -40,7 +40,8 @@ export const getVisibleData = (aggregateData, sorter) => {
 export const getBreakdownIndices = (headers, breakdown) => {
   const result = breakdown.map((elem) => {
     const str = elem.property;
-    return headers.findIndex((elem) => elem === str);
+    const strIndex = headers.findIndex((elem) => elem === str);
+    return strIndex;
   });
   return result;
 };
@@ -48,7 +49,10 @@ export const getBreakdownIndices = (headers, breakdown) => {
 export const getDateBreakdownIndices = (data, breakdown) => {
   const result = breakdown.map((elem) => {
     const str = elem.name + '_' + elem.property;
-    return data.result_group[0].headers.findIndex((elem) => elem === str);
+    const strIndex = data.result_group[0].headers.findIndex(
+      (elem) => elem === str
+    );
+    return strIndex;
   });
   return result;
 };
@@ -62,7 +66,7 @@ export const getProfileBreakDownGranularities = (
   breakDownSlice.forEach((h) => {
     const brkIndex = brks.findIndex((x) => h === x.property);
     grns.push(
-      brks[brkIndex].prop_type === 'datetime' && brks[brkIndex].grn
+      brks[brkIndex]?.prop_type === 'datetime' && brks[brkIndex]?.grn
         ? brks[brkIndex].grn
         : undefined
     );
@@ -89,7 +93,9 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
   try {
     const { headers, rows } = data.result_group[currentEventIndex];
     const activeQuery = queries[currentEventIndex];
-    const valIndex = headers.findIndex((h) => h === activeQuery);
+    const valIndex = headers.findIndex(
+      (elem) => elem === 'count' || elem === 'aggregate' || elem === 'all_users'
+    );
     const breakdownIndices = getBreakdownIndices(headers, breakdown);
     const breakdownHeaders = headers.slice(breakdownIndices[0]);
     const grns = getProfileBreakDownGranularities(breakdownHeaders, breakdown);
@@ -111,7 +117,9 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
       result.push({
         index,
         label: Object.values(breakdownVals).join(),
-        value: elem[valIndex],
+        value: DISPLAY_PROP[elem[valIndex]]
+          ? DISPLAY_PROP[elem[valIndex]]
+          : elem[valIndex],
         color,
         ...breakdownVals,
       });

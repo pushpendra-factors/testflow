@@ -242,7 +242,7 @@ function BarChart({
 
   useEffect(() => {
     displayChart();
-  }, [cardSize]);
+  }, [displayChart, cardSize]);
 
   let legendsMapper = [];
   let legendColors = {};
