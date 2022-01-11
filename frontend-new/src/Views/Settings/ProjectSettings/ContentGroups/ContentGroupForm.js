@@ -167,6 +167,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
         if(data) {
             // Save with data
             // Close modal
+            setShowSmartProperty(false);
             const smrtProp = {id: smartPropState.id?smartPropState.id: '', project_id: activeProject.id, content_group_name: data.content_group_name, content_group_description: data.content_group_description, rule:rulesState};
             if(formState !== 'add') {
                 updateForm(smrtProp);
@@ -225,6 +226,9 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
                 <Col span={18}>
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Description </Text>
                     <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={''}>{smartPropState.content_group_description}</Text>
+                    {formState === 'view' ? 
+                    <Button size={'large'} className={'m-0 mt-2'} type={'primary'}  onClick={() => setFormState('edit')}>Edit</Button>
+                    : null}
                 </Col> 
             </Row>
           </>
@@ -295,12 +299,12 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
                                 <Col span={12}>
                                     <div className={'flex justify-end'}>
                                     <Button size={'large'} onClick={() => setShowSmartProperty(false)}>Cancel</Button>
-                                    {formState === 'view' ? 
+                                    {/* {formState === 'view' ? 
                                     <Button size={'large'} className={'ml-2'} type={'primary'}  onClick={() => setFormState('edit')}>Edit</Button>
-                                    : null}
-                                    {formState !== 'view' ? 
+                                    : null} */}
+                                    {formState !== 'view' ?  
                                     <Button size={'large'} className={'ml-2'} type={'primary'}  htmlType="submit">Save</Button>
-                                    : null}
+                                    : <Button size={'large'} className={'ml-2'} type={'primary'}  onClick={() => setShowSmartProperty(false)}>Close</Button>}
                                     </div>
                                 </Col>
                             </Row> 
