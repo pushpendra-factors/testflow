@@ -69,6 +69,21 @@ type patternProperties struct {
 	patternType string
 }
 
+var GlobalmetaDataDir string
+var EventNumericPropertyKeyMap = make(map[string]bool)
+var UserNumericPropertyKeyMap = make(map[string]bool)
+
+type Properties struct {
+	NumericalProperties   []string            `json:"numerical_property"`
+	CategoricalProperties map[string][]string `json:"categorical_property"`
+}
+
+type ChunkMetaData struct {
+	Events          []string   `json:"events"`
+	EventProperties Properties `json:"event_properties"`
+	UserProperties  Properties `json:"user_properties"`
+}
+
 func (pp patternProperties) Get_patternEventNames() []string {
 	return pp.pattern.EventNames
 }
@@ -476,7 +491,7 @@ func mineAndWriteLenOnePatterns(projectID uint64, modelId uint64, cloudManager *
 	eventNames []string, filepathString string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64,
-	countOccurence bool, campaignTypeEvents CampaignEventLists, efTmpPath string, beamConfig *RunBeamConfig, countsVersion int) (
+	countOccurence bool, campaignTypeEvents CampaignEventLists, efTmpPath string, beamConfig *RunBeamConfig, countsVersion int, createMetadata bool) (
 	[]*P.Pattern, int64, error) {
 	var lenOnePatterns []*P.Pattern
 	var filteredLenOnePatterns []*P.Pattern
@@ -523,7 +538,7 @@ func mineAndWriteLenOnePatterns(projectID uint64, modelId uint64, cloudManager *
 
 	mineLog.Infof("patternSize : %d , ", patternsSize)
 
-	if err := writePatternsAsChunks(filteredLenOnePatterns, chunkDir); err != nil {
+	if err := writePatternsAsChunks(filteredLenOnePatterns, chunkDir, createMetadata); err != nil {
 		return []*P.Pattern{}, 0, err
 	}
 	return filteredLenOnePatterns, patternsSize, nil
@@ -562,7 +577,7 @@ func mineAndWriteLenTwoPatterns(projectId uint64, modelId uint64,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool,
 	goalPatterns []*P.Pattern, repeatedEventsList []string, eventNamesWithType map[string]string,
-	beamConfig *RunBeamConfig, efTmpPath string, countsVersion int) (
+	beamConfig *RunBeamConfig, efTmpPath string, countsVersion int, createMetadata bool) (
 	[]*P.Pattern, int64, error) {
 
 	var patternsSize int64
@@ -606,7 +621,7 @@ func mineAndWriteLenTwoPatterns(projectId uint64, modelId uint64,
 	// based on the quota  startevent filter url, sme, campaign events etc.
 	goalFilteredLenTwoPatterns := FilterCombinationPatterns(filteredLenTwoPatterns, goalPatterns, eventNamesWithType)
 
-	if err := writePatternsAsChunks(goalFilteredLenTwoPatterns, chunkDir); err != nil {
+	if err := writePatternsAsChunks(goalFilteredLenTwoPatterns, chunkDir, createMetadata); err != nil {
 		return []*P.Pattern{}, 0, err
 	}
 	mineLog.Info("Total Numnber of Len Two Patterns :", len(goalFilteredLenTwoPatterns))
@@ -726,7 +741,7 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 	numRoutines int, chunkDir string,
 	maxModelSize int64, countOccurence bool,
 	eventNamesWithType map[string]string, repeatedEvents []string,
-	campTypeEvents CampaignEventLists, efTmpPath string, beamConfig *RunBeamConfig, countsVersion int) error {
+	campTypeEvents CampaignEventLists, efTmpPath string, beamConfig *RunBeamConfig, countsVersion int, createMetadata bool) error {
 	var filteredPatterns []*P.Pattern
 	var cumulativePatternsSize int64 = 0
 
@@ -735,7 +750,7 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 
 	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(projectId, modelId, cloudManager,
 		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir,
-		maxModelSize, cumulativePatternsSize, countOccurence, campTypeEvents, efTmpPath, beamConfig, countsVersion)
+		maxModelSize, cumulativePatternsSize, countOccurence, campTypeEvents, efTmpPath, beamConfig, countsVersion,createMetadata)
 	if err != nil {
 		return fmt.Errorf("unable to mine len one patterns :%v", err)
 	}
@@ -764,7 +779,7 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 		filteredPatterns, filepath, cloudManager, userAndEventsInfo,
 		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize,
 		countOccurence, goalPatterns, repeatedEvents, eventNamesWithType,
-		beamConfig, efTmpPath, countsVersion)
+		beamConfig, efTmpPath, countsVersion,createMetadata)
 	if err != nil {
 		return err
 	}
@@ -841,7 +856,7 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 		}
 
 		cumulativePatternsSize += patternsSize
-		if err := writePatternsAsChunks(filteredThreePatterns, chunkDir); err != nil {
+		if err := writePatternsAsChunks(filteredThreePatterns, chunkDir,createMetadata); err != nil {
 			return err
 		}
 		printFilteredPatterns(filteredThreePatterns, patternLen)
@@ -883,7 +898,7 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 		}
 
 		cumulativePatternsSize += patternsSize
-		if err := writePatternsAsChunks(filteredMissingPatterns, chunkDir); err != nil {
+		if err := writePatternsAsChunks(filteredMissingPatterns, chunkDir,createMetadata); err != nil {
 			return err
 		}
 		printFilteredPatterns(filteredMissingPatterns, patternLen-1)
@@ -919,7 +934,7 @@ func mineAndWritePatterns(projectId uint64, modelId uint64, filepath string,
 		}
 		if len(filteredPatterns) > 0 {
 			cumulativePatternsSize += patternsSize
-			if err := writePatternsAsChunks(filteredPatterns, chunkDir); err != nil {
+			if err := writePatternsAsChunks(filteredPatterns, chunkDir,createMetadata); err != nil {
 				return err
 			}
 		}
@@ -992,7 +1007,6 @@ func getChunkIdFromName(chunkFileName string) string {
 
 	return regex_NUM.FindString(chunkFileName)
 }
-
 func getLastChunkInfo(chunksDir string) (int, os.FileInfo, error) {
 	cfiles, err := ioutil.ReadDir(chunksDir)
 	if err != nil {
@@ -1018,8 +1032,7 @@ func getLastChunkInfo(chunksDir string) (int, os.FileInfo, error) {
 
 	return lastChunkIndex, lastChunkFileInfo, nil
 }
-
-func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string) error {
+func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string, createMetadataForChunks bool) error {
 	lastChunkIndex, lastChunkFileInfo, err := getLastChunkInfo(chunksDir)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to read chunks dir.")
@@ -1112,10 +1125,49 @@ func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string) error {
 
 		currentFileSize = currentFileSize + pBytesLen
 	}
-
+	if createMetadataForChunks {
+		metaData := GetChunkMetaData(patterns)
+		WriteMetaDataHandler(metaData)
+	}
 	return nil
 }
-
+func WriteMetaDataHandler(metaData []ChunkMetaData) {
+	metaDataDir := GlobalmetaDataDir
+	err := WriteMetaData(metaData, metaDataDir)
+	if err != nil {
+		log.WithError(err).Error("failed to write metadata")
+		return
+	}
+	log.Info("metaData written succesfully")
+}
+func WriteMetaData(metaData []ChunkMetaData, metaDataDir string) error {
+	path := metaDataDir + "/metadata.txt"
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		mineLog.WithError(err).Error("Failed to open metadata file.")
+		return err
+	}
+	defer file.Close()
+	w := bufio.NewWriter(file)
+	for _, data := range metaData {
+		bytes, err := json.Marshal(data)
+		if err != nil {
+			log.WithError(err).Error("failed to marshal meta data")
+			continue
+		}
+		lineWrite := string(bytes)
+		if _, err := w.WriteString(lineWrite + "\n"); err != nil {
+			log.WithError(err).Error("Unable to write metadata to file.")
+			return err
+		}
+	}
+	err = w.Flush()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	return nil
+}
 func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *filestore.FileManager) ([]string, error) {
 	cfiles, err := ioutil.ReadDir(tmpChunksDir)
 	if err != nil {
@@ -1134,7 +1186,7 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 			}
 			err = (*cloudManager).Create(cloudChunksDir, cfName, cfFile)
 			if err != nil {
-				mineLog.WithError(err).Error("Failed to chunk upload file to cloud.")
+				mineLog.WithError(err).Error("Failed to upload chunk file to cloud.")
 				return uploadedChunkIds, err
 			}
 			uploadedChunkIds = append(uploadedChunkIds, chunkIdStr)
@@ -1143,7 +1195,27 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 
 	return uploadedChunkIds, nil
 }
-
+func uploadMetaDataToCloud(metaDataDir, cloudMetaDataDir string, cloudManager *filestore.FileManager) error {
+	files, err := ioutil.ReadDir(metaDataDir)
+	if err != nil {
+		return err
+	}
+	for _, cf := range files {
+		mdfName := cf.Name()
+		mdfPath := fmt.Sprintf("%s/%s", metaDataDir, mdfName)
+		mdFile, err := os.OpenFile(mdfPath, os.O_RDWR, 0666)
+		if err != nil {
+			log.WithError(err).Error("Failed to open tmp metadata to upload.")
+			return err
+		}
+		err = (*cloudManager).Create(cloudMetaDataDir, mdfName, mdFile)
+		if err != nil {
+			mineLog.WithError(err).Error("Failed to upload metadata file to cloud.")
+			return err
+		}
+	}
+	return nil
+}
 func FilterTopEvents(eventsMap map[string]int, limitCount int, eventclass string) []string {
 	eventsList := make([]string, 0)
 	eventsListWithCounts := U.RankByWordCount(eventsMap)
@@ -1538,10 +1610,10 @@ func buildEventsInfoForEncodedEvents(smartEvents CampaignEventLists, userAndEven
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
 	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64,
-	countOccurence bool, campaignLimitCount int, beamConfig *RunBeamConfig, countsVersion int) (int, error) {
+	countOccurence bool, campaignLimitCount int, beamConfig *RunBeamConfig, countsVersion int, createMetadata bool) (int, error) {
 
 	var err error
-
+	GlobalmetaDataDir = diskManager.GetChunksMetaDataDir(projectId, modelId)
 	// download events file from cloud to local
 	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTime, modelType)
 	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, startTime, modelType)
@@ -1634,7 +1706,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		mineLog.WithFields(log.Fields{"chunkDir": tmpChunksDir, "error": err}).Error("Unable to create chunks directory.")
 		return 0, err
 	}
-	if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir); err != nil {
+	if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir,createMetadata); err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
 		return 0, err
 	}
@@ -1653,7 +1725,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	err = mineAndWritePatterns(projectId, modelId, tmpEventsFilepath,
 		userAndEventsInfo, cloudManager, eventNames, numRoutines, tmpChunksDir, maxModelSize,
 		countOccurence, eventNamesWithType, repeatedEvents, campaignAnalyticsSorted,
-		efTmpPath, beamConfig, countsVersion)
+		efTmpPath, beamConfig, countsVersion,createMetadata)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		return 0, err
@@ -1670,6 +1742,19 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 			"cloudChunksDir": cloudChunksDir}).Error("Failed to upload chunks to cloud.")
 	}
 	mineLog.Info("Successfully uploaded chunks to cloud.")
+
+	// upload metadata to cloud
+	if createMetadata {
+		cloudMetaDataDir := (*cloudManager).GetChunksMetaDataDir(projectId, modelId)
+		mineLog.WithFields(log.Fields{"MetaDataDir": GlobalmetaDataDir,
+			"cloudMetaDataDir": cloudMetaDataDir}).Info("Uploading metadata to cloud.")
+		err = uploadMetaDataToCloud(GlobalmetaDataDir, cloudMetaDataDir, cloudManager)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"localMetaDataDir": GlobalmetaDataDir,
+				"cloudMetaDataDir": cloudMetaDataDir}).Error("Failed to upload metadata to cloud.")
+		}
+		mineLog.Info("Successfully uploaded metadata to cloud.")
+	}
 
 	// update metadata and notify new version through etcd.
 	mineLog.WithFields(log.Fields{
@@ -2557,4 +2642,140 @@ func getBlacklistedProps(PropEventMaxMap map[string]map[string]int, eventThreshM
 		}
 	}
 	return blacklistPropsMap
+}
+func GetChunkMetaData(Patterns []*P.Pattern) []ChunkMetaData {
+	var metaData []ChunkMetaData
+	for _, pattern := range Patterns {
+		var metadataObj ChunkMetaData
+		if pattern.PatternVersion != 2 { // histogram
+			metadataObj.Events = pattern.EventNames
+			// For Events
+			EventPropertiesObj := Properties{
+				CategoricalProperties: make(map[string][]string),
+			}
+
+			// numerical properties
+			if pattern.PerUserEventNumericProperties != nil && pattern.PerUserEventNumericProperties.Template != nil {
+				for _, eventNumericPropertyKey := range *pattern.PerUserEventNumericProperties.Template {
+					if _, exists := EventNumericPropertyKeyMap[eventNumericPropertyKey.Name]; !exists {
+						EventPropertiesObj.NumericalProperties = append(EventPropertiesObj.NumericalProperties, eventNumericPropertyKey.Name)
+						EventNumericPropertyKeyMap[eventNumericPropertyKey.Name] = true
+					}
+
+				}
+			}
+
+			// categorical properties
+
+			if pattern.PerUserEventCategoricalProperties != nil && pattern.PerUserEventCategoricalProperties.Template != nil {
+				for idx, eventCategoricalPropertyKey := range *pattern.PerUserEventCategoricalProperties.Template {
+					Key := eventCategoricalPropertyKey.Name
+					eventCategoricalPropertyValues := make([]string, 0)
+					for _, bin := range pattern.PerUserEventCategoricalProperties.Bins {
+						valMap := make(map[string]bool)
+						FreqMap := bin.FrequencyMaps[idx]
+						for value := range FreqMap.Fmap {
+							if _, exists := valMap[value]; !exists { // deduping values
+								eventCategoricalPropertyValues = append(eventCategoricalPropertyValues, value)
+								valMap[value] = true
+							}
+						}
+					}
+					if len(eventCategoricalPropertyValues) != 0 {
+						EventPropertiesObj.CategoricalProperties[Key] = eventCategoricalPropertyValues
+					}
+
+				}
+			}
+
+			//For Users
+			UserPropertiesObj := Properties{
+				CategoricalProperties: make(map[string][]string),
+			}
+			// numerical properties
+			if pattern.PerUserUserNumericProperties != nil && pattern.PerUserUserNumericProperties.Template != nil {
+				for _, userNumericPropertyKey := range *pattern.PerUserUserNumericProperties.Template {
+					if _, exists := UserNumericPropertyKeyMap[userNumericPropertyKey.Name]; !exists {
+						UserPropertiesObj.NumericalProperties = append(UserPropertiesObj.NumericalProperties, userNumericPropertyKey.Name)
+						UserNumericPropertyKeyMap[userNumericPropertyKey.Name] = true
+					}
+
+				}
+			}
+
+			// categorical properties
+			if pattern.PerUserUserCategoricalProperties != nil && pattern.PerUserUserCategoricalProperties.Template != nil {
+				for idx, userCategoricalPropertyKey := range *pattern.PerUserUserCategoricalProperties.Template {
+					Key := userCategoricalPropertyKey.Name
+					userCategoricalPropertyValues := make([]string, 0)
+					for _, bin := range pattern.PerUserUserCategoricalProperties.Bins {
+						valMap := make(map[string]bool)
+						FreqMap := bin.FrequencyMaps[idx]
+						for value := range FreqMap.Fmap {
+							if _, exists := valMap[value]; !exists {
+								userCategoricalPropertyValues = append(userCategoricalPropertyValues, value)
+								valMap[value] = true
+							}
+						}
+					}
+					if len(userCategoricalPropertyValues) != 0 {
+						UserPropertiesObj.CategoricalProperties[Key] = userCategoricalPropertyValues
+					}
+
+				}
+			}
+			metadataObj.EventProperties = EventPropertiesObj
+			metadataObj.UserProperties = UserPropertiesObj
+
+		} else if pattern.PatternVersion == 2 { // fp tree
+			metadataObj.Events = pattern.EventNames
+			// only categorical properties
+			// for Events Fp-tree
+			var EventPropertiesObj Properties
+			var EventCategoricalProperty = make(map[string][]string)
+			if pattern.EventPropertiesPatterns != nil {
+				for _, eventCategoricalProperty := range *&pattern.EventPropertiesPatterns {
+					for _, item := range eventCategoricalProperty.Items {
+						keyVal := strings.Split(item, "::") // splitting key and value
+						if len(keyVal) == 2 {
+							if vals, exists := EventCategoricalProperty[keyVal[0]]; exists {
+								if !U.ContainsStringInArray(vals, keyVal[1]) {
+									EventCategoricalProperty[keyVal[0]] = append(EventCategoricalProperty[keyVal[0]], keyVal[1])
+								}
+							} else {
+								EventCategoricalProperty[keyVal[0]] = append(EventCategoricalProperty[keyVal[0]], keyVal[1])
+							}
+						}
+					}
+				}
+			}
+
+			EventPropertiesObj.CategoricalProperties = EventCategoricalProperty
+			// only categorical properties
+			// for Users Fp-tree
+			var UserPropertiesObj Properties
+			var UserCategoricalProperty = make(map[string][]string)
+			if pattern.UserPropertiesPatterns != nil {
+				for _, userCategoricalProperty := range *&pattern.UserPropertiesPatterns {
+					for _, item := range userCategoricalProperty.Items {
+						keyVal := strings.Split(item, "::")
+						if len(keyVal) == 2 {
+							if vals, exists := UserCategoricalProperty[keyVal[0]]; exists {
+								if !U.ContainsStringInArray(vals, keyVal[1]) {
+									UserCategoricalProperty[keyVal[0]] = append(UserCategoricalProperty[keyVal[0]], keyVal[1])
+								}
+							} else {
+								UserCategoricalProperty[keyVal[0]] = append(UserCategoricalProperty[keyVal[0]], keyVal[1])
+							}
+						}
+					}
+				}
+			}
+			UserPropertiesObj.CategoricalProperties = UserCategoricalProperty
+			metadataObj.EventProperties = EventPropertiesObj
+			metadataObj.UserProperties = UserPropertiesObj
+		}
+		metaData = append(metaData, metadataObj)
+	}
+	return metaData
 }

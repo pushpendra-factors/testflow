@@ -71,7 +71,17 @@ func (store *MemSQL) CreateProjectAgentMappingWithDependencies(pam *model.Projec
 
 	return cPam, http.StatusCreated
 }
+func (store *MemSQL) CreateProjectAgentMappingWithDependenciesWithoutDashboard(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int) {
+	if errCode := store.satisfiesPAMForeignConstraints(*pam); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
+	}
 
+	cPam, errCode := createProjectAgentMapping(pam)
+	if errCode != http.StatusCreated {
+		return cPam, errCode
+	}
+	return cPam, http.StatusCreated
+}
 func (store *MemSQL) GetProjectAgentMapping(projectId uint64, agentUUID string) (*model.ProjectAgentMapping, int) {
 
 	if projectId == 0 || agentUUID == "" {

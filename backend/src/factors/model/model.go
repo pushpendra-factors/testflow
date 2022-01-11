@@ -43,6 +43,7 @@ type Model interface {
 	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
+	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
@@ -107,6 +108,10 @@ type Model interface {
 	ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int)
 	ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
 	ExecuteKPIQueryForChannels(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
+
+	// Custom Metrics
+	CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int)
+	GetCustomMetricsByProjectId(projectID uint64) ([]model.CustomMetric, string, int)
 
 	//templates
 	RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
@@ -185,6 +190,8 @@ type Model interface {
 	GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID uint64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
+	GetPropertiesForHubspot(projectID uint64, reqID string) []map[string]string
+	GetPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string
 
 	// events
 	GetEventCountOfUserByEventName(projectID uint64, userId string, eventNameId string) (uint64, int)
@@ -271,6 +278,7 @@ type Model interface {
 
 	// project_agent_mapping
 	CreateProjectAgentMappingWithDependencies(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int)
+	CreateProjectAgentMappingWithDependenciesWithoutDashboard(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int)
 	GetProjectAgentMapping(projectID uint64, agentUUID string) (*model.ProjectAgentMapping, int)
 	GetProjectAgentMappingsByProjectId(projectID uint64) ([]model.ProjectAgentMapping, int)
 	GetProjectAgentMappingsByProjectIds(projectIds []uint64) ([]model.ProjectAgentMapping, int)
@@ -308,7 +316,7 @@ type Model interface {
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int
-	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID string) (*model.Project, int)
+	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID string, createDashboard bool) (*model.Project, int)
 	CreateDefaultProjectForAgent(agentUUID string) (*model.Project, int)
 	GetProject(id uint64) (*model.Project, int)
 	GetProjectByToken(token string) (*model.Project, int)

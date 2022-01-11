@@ -183,6 +183,16 @@ func (store *MemSQL) UpdateAgentIntSalesforce(uuid, refreshToken string, instanc
 	return updateAgent(uuid, model.IntSalesforceRefreshToken(refreshToken), model.IntSalesforceInstanceURL(instanceUrl))
 }
 
+func (store *MemSQL) UpdateAgentSalesforceInstanceURL(uuid, instanceUrl string) int {
+	if uuid == "" || instanceUrl == "" {
+		log.WithField("agent_uuid", uuid).Error(
+			"UpdateAgentInstanceURL failed. Invalid params.")
+		return http.StatusBadRequest
+	}
+
+	return updateAgent(uuid, model.IntSalesforceInstanceURL(instanceUrl))
+}
+
 func (store *MemSQL) UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
 
 	if uuid == "" || plainTextPassword == "" {

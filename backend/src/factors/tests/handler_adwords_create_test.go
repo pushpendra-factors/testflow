@@ -21,7 +21,7 @@ func testingCreateAdwordsDocument(t *testing.T) {
 
 	project, customerAccountID, _, statusCode := createProjectAndAddAdwordsDocument(t, r)
 	if statusCode == http.StatusAccepted {
-		campaignID := 1
+		campaignID := "1"
 		value := map[string]interface{}{"cost": "100", "clicks": "50", "campaign_id": campaignID, "impressions": "1000", "campaign_name": "Campaign_1"}
 		valueJSON, err := U.EncodeToPostgresJsonb(&value)
 		assert.Nil(t, err)
@@ -51,14 +51,14 @@ func createProjectAndAddAdwordsDocument(t *testing.T, r *gin.Engine) (*M.Project
 	return project, customerAccountID1, agent, statusCode
 }
 
-func sendCreateAdwordsDocumentReq(r *gin.Engine, projectID uint64, customerAccountID string, typeAlias string, timestamp int64, id int, valueJSON *postgres.Jsonb) *httptest.ResponseRecorder {
+func sendCreateAdwordsDocumentReq(r *gin.Engine, projectID uint64, customerAccountID string, typeAlias string, timestamp int64, id string, valueJSON *postgres.Jsonb) *httptest.ResponseRecorder {
 	payload := map[string]interface{}{
-		"project_id":             projectID,
-		"customer_ad_account_id": customerAccountID,
-		"type_alias":             typeAlias,
-		"timestamp":              timestamp,
-		"id":                     id,
-		"value":                  valueJSON,
+		"project_id":      projectID,
+		"customer_acc_id": customerAccountID,
+		"type_alias":      typeAlias,
+		"timestamp":       timestamp,
+		"id":              id,
+		"value":           valueJSON,
 	}
 
 	rb := U.NewRequestBuilder(http.MethodPost, "http://localhost:8089/data_service/adwords/documents/add").

@@ -65,6 +65,8 @@ func InitAppRoutes(r *gin.Engine) {
 	r.GET(routePrefix+"/IsDependentTaskDone", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.IsDependentTaskDoneHandler))
 	r.POST(routePrefix+"/InsertTaskBeginRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskBeginRecordHandler))
 	r.POST(routePrefix+"/InsertTaskEndRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskEndRecordHandler))
+	r.POST("/hubspot/createcontact", V1.HubspotCreateContact)
+	r.GET("/hubspot/getcontact", V1.GetHubspotContactByEmail)
 	// Auth route group with authentication an authorization middleware.
 	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	authRouteGroup.Use(mid.SetLoggedInAgent())
@@ -130,6 +132,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
+	// v1 custom metrics - admin/settings side.
+	authRouteGroup.GET("/:project_id/"+ROUTE_VERSION_V1+"/custom_metrics/config", V1.GetCustomMetricsConfig)
+	authRouteGroup.POST("/:project_id/"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.CreateCustomMetric))
+	authRouteGroup.GET("/:project_id/"+ROUTE_VERSION_V1+"/custom_metrics", responseWrapper(V1.GetCustomMetrics))
+
 	// v1 CRM And Smart Event endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", CreateSmartEventFilterHandler)
@@ -163,6 +170,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/agents/remove", RemoveProjectAgent)
 	authRouteGroup.PUT("/:project_id/agents/update", AgentUpdate)
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
+	authRouteGroup.GET("/:project_id/v1/settings", V1.GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
 
 	// V1 Routes
@@ -195,6 +203,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/factor/compare", V1.PostFactorsCompareHandler)
 	authRouteGroup.POST("/:project_id/v1/events/displayname", responseWrapper(V1.CreateDisplayNamesHandler))
 	authRouteGroup.GET("/:project_id/v1/factor", V1.GetFactorsHandler)
+	authRouteGroup.GET("/:project_id/v1/factor/model_metadata", V1.GetModelMetaData)
 
 	authRouteGroup.GET("/:project_id/insights", responseWrapper(V1.GetWeeklyInsightsHandler))
 	authRouteGroup.GET("/:project_id/weekly_insights_metadata", responseWrapper(V1.GetWeeklyInsightsMetadata))

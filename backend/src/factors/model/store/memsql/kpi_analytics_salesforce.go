@@ -39,11 +39,11 @@ func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID uint64, re
 		"category":         model.EventCategory,
 		"display_category": displayCategory,
 		"metrics":          model.GetMetricsForDisplayCategory(displayCategory),
-		"properties":       store.getPropertiesForSalesforce(projectID, reqID),
+		"properties":       store.GetPropertiesForSalesforce(projectID, reqID),
 	}
 }
 
-func (store *MemSQL) getPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string {
+func (store *MemSQL) GetPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string {
 	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
 	properties, propertiesToDisplayNames, err := store.GetRequiredUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {

@@ -206,6 +206,7 @@ type Configuration struct {
 	AllowSupportForSourceColumnInUsers          string
 	UseOLAPPoolForAnalytics                     bool
 	RestrictReusingUsersByCustomerUserId        string
+	HubspotAPIOnboardingHAPIKey                 string
 }
 
 type Services struct {

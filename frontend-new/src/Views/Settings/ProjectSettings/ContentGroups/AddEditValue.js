@@ -83,16 +83,18 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
                             <>
                                 {fields.map(({ key, name, fieldKey, ...restField }) => (
                                 <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                                    <Form.Item
-                                    {...restField}
-                                    initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].lop? selectedRule.rule[fieldKey].lop : comboOp}
-                                    name={[name, 'lop']}
-                                    fieldKey={[fieldKey, 'lop']}
-                                    >
-                                        <Select showArrow={false} open={false} bordered={false}>
-                                            <Option value={comboOp}>{fieldKey===0?'Page':comboOp}</Option>
-                                        </Select>
-                                    </Form.Item>
+                                    <div className={'w-16'}>
+                                        <Form.Item
+                                        {...restField}
+                                        initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].lop? selectedRule.rule[fieldKey].lop : comboOp}
+                                        name={[name, 'lop']}
+                                        fieldKey={[fieldKey, 'lop']}
+                                        >
+                                            <Select showArrow={false} open={false} bordered={false}>
+                                                <Option value={comboOp}>{fieldKey===0?'Page':comboOp}</Option>
+                                            </Select>
+                                        </Form.Item>
+                                    </div>
                                     <div className={'w-24 fa-select'}>
                                         <Form.Item
                                         {...restField}

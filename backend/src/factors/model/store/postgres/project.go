@@ -145,7 +145,7 @@ func (pg *Postgres) UpdateProject(projectId uint64, project *model.Project) int 
 	if project.TimeZone != "" {
 		updateFields["time_zone"] = project.TimeZone
 	}
-	if project.ProfilePicture != ""{
+	if project.ProfilePicture != "" {
 		updateFields["profile_picture"] = project.ProfilePicture
 	}
 	_, errCode := time.LoadLocation(string(project.TimeZone))
@@ -211,7 +211,7 @@ func (pg *Postgres) createProjectDependencies(projectID uint64, agentUUID string
 
 // CreateProjectWithDependencies separate create method with dependencies to avoid breaking tests.
 func (pg *Postgres) CreateProjectWithDependencies(project *model.Project, agentUUID string,
-	agentRole uint64, billingAccountID string) (*model.Project, int) {
+	agentRole uint64, billingAccountID string, createDashboard bool) (*model.Project, int) {
 
 	cProject, errCode := createProject(project)
 	if errCode != http.StatusCreated {
@@ -222,16 +222,25 @@ func (pg *Postgres) CreateProjectWithDependencies(project *model.Project, agentU
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
-
-	_, errCode = pg.CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
-		ProjectID: cProject.ID,
-		AgentUUID: agentUUID,
-		Role:      agentRole,
-	})
-	if errCode != http.StatusCreated {
-		return nil, errCode
+	if createDashboard {
+		_, errCode = pg.CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+			ProjectID: cProject.ID,
+			AgentUUID: agentUUID,
+			Role:      agentRole,
+		})
+		if errCode != http.StatusCreated {
+			return nil, errCode
+		}
+	} else {
+		_, errCode = pg.CreateProjectAgentMappingWithDependenciesWithoutDashboard(&model.ProjectAgentMapping{
+			ProjectID: cProject.ID,
+			AgentUUID: agentUUID,
+			Role:      agentRole,
+		})
+		if errCode != http.StatusCreated {
+			return nil, errCode
+		}
 	}
-
 	_, errCode = createProjectBillingAccountMapping(project.ID, billingAccountID)
 	return cProject, errCode
 }
@@ -259,7 +268,7 @@ func (pg *Postgres) CreateDefaultProjectForAgent(agentUUID string) (*model.Proje
 
 	cProject, errCode := pg.CreateProjectWithDependencies(
 		&model.Project{Name: model.DefaultProjectName},
-		agentUUID, model.ADMIN, billingAcc.ID)
+		agentUUID, model.ADMIN, billingAcc.ID, true)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}

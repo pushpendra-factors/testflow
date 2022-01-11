@@ -168,6 +168,16 @@ func (pg *Postgres) UpdateAgentIntSalesforce(uuid, refreshToken string, instance
 	return updateAgent(uuid, model.IntSalesforceRefreshToken(refreshToken), model.IntSalesforceInstanceURL(instanceUrl))
 }
 
+func (pg *Postgres) UpdateAgentSalesforceInstanceURL(uuid, instanceUrl string) int {
+	if uuid == "" || instanceUrl == "" {
+		log.WithField("agent_uuid", uuid).Error(
+			"UpdateAgentInstanceURL failed. Invalid params.")
+		return http.StatusBadRequest
+	}
+
+	return updateAgent(uuid, model.IntSalesforceInstanceURL(instanceUrl))
+}
+
 func (pg *Postgres) UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
 
 	if uuid == "" || plainTextPassword == "" {
