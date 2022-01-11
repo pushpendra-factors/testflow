@@ -53,7 +53,13 @@ func (pg *Postgres) CreateProjectAgentMappingWithDependencies(pam *model.Project
 
 	return cPam, http.StatusCreated
 }
-
+func (pg *Postgres) CreateProjectAgentMappingWithDependenciesWithoutDashboard(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int) {
+	cPam, errCode := createProjectAgentMapping(pam)
+	if errCode != http.StatusCreated {
+		return cPam, errCode
+	}
+	return cPam, http.StatusCreated
+}
 func (pg *Postgres) GetProjectAgentMapping(projectId uint64, agentUUID string) (*model.ProjectAgentMapping, int) {
 
 	if projectId == 0 || agentUUID == "" {

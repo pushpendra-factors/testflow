@@ -16,6 +16,7 @@ import {
   getBreakdownDataMapperWithUniqueValues,
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -69,7 +70,9 @@ export const formatData = (data, breakdown, currentEventIndex) => {
     const grns = getBreakDownGranularities(headerSlice, breakdown);
 
     const result = rows.map((d, index) => {
-      const breakdownVals = d.slice(0, countIndex);
+      const breakdownVals = d
+        .slice(0, countIndex)
+        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
       const breakdownData = {};
       for (let i = 0; i < breakdown.length; i++) {
         const bkd = breakdown[i].property;
@@ -78,7 +81,7 @@ export const formatData = (data, breakdown, currentEventIndex) => {
           breakdownVals[i]
         );
       }
-      const grpLabel = Object.values(breakdownData).join(',');
+      const grpLabel = Object.values(breakdownData).join(', ');
       return {
         label: grpLabel,
         value: d[countIndex],
@@ -105,7 +108,7 @@ export const getTableColumns = (
     return {
       title: getClickableTitleSorter(
         e.property,
-        { key: `${e.property} - ${index}`, type: 'categorical', subtype: null },
+        { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
       ),
@@ -124,7 +127,7 @@ export const getTableColumns = (
     dataIndex: `value`,
     width: 200,
     render: (d) => {
-      return <NumFormat number={d} />;
+      return d ? <NumFormat number={d} /> : 0;
     },
   };
   return [...breakdownColumns, valueCol];
@@ -340,8 +343,10 @@ export const formatDataInSeriesFormat = (
   rows.forEach((row) => {
     const breakdownJoin = row
       .slice(breakdownIndex, countIndex)
-      .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
-      .join(',');
+      .map((x, ind) =>
+        parseForDateTimeLabel(grns[ind], DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x)
+      )
+      .join(', ');
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);
@@ -380,7 +385,7 @@ export const getDateBasedColumns = (
     return {
       title: getClickableTitleSorter(
         e.property,
-        { key: `${e.property} - ${index}`, type: 'categorical', subtype: null },
+        { key: `${e.property} - ${index}`, type: e.prop_type, subtype: e.grn },
         currentSorter,
         handleSorting
       ),
@@ -403,7 +408,7 @@ export const getDateBasedColumns = (
       width: 150,
       dataIndex: moment(cat).format(format),
       render: (d) => {
-        return <NumFormat number={d} />;
+        return d ? <NumFormat number={d} /> : 0;
       },
     };
   });

@@ -8,11 +8,12 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"time"
 )
 
 type signInParams struct {
@@ -94,6 +95,7 @@ func Signout(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resp)
 }
+
 type agentInviteParams struct {
 	Email string `json:"email" binding:"required"`
 	Role  int64  `json:"role"`
@@ -265,26 +267,26 @@ func AgentInviteBatch(c *gin.Context) {
 	}
 	agentInfoMap := make(map[string]*model.AgentInfo)
 	pam := []model.ProjectAgentMapping{}
-	failedToInviteAgentIndexes:= make(map[int]bool)
+	failedToInviteAgentIndexes := make(map[int]string)
 	for idx, agentDetail := range *params {
 		emailOfAgentToInvite := agentDetail.Email
 		roleOfAgent := agentDetail.Role
 
 		createProjectAgentMapping, errCode := store.GetStore().IsNewProjectAgentMappingCreationAllowed(projectId, emailOfAgentToInvite)
 		if errCode != http.StatusOK {
-			failedToInviteAgentIndexes[idx] = true
+			failedToInviteAgentIndexes[idx] = ""
 			continue
 		}
 
 		if !createProjectAgentMapping {
-			failedToInviteAgentIndexes[idx] = true
+			failedToInviteAgentIndexes[idx] = ""
 			continue
 		}
 
 		invitedAgent, errCode := store.GetStore().GetAgentByEmail(emailOfAgentToInvite)
 		if errCode == http.StatusInternalServerError {
 			logCtx.Error("Failed to GetAgentByEmail")
-			failedToInviteAgentIndexes[idx] = true
+			failedToInviteAgentIndexes[idx] = "Failed to GetAgentByEmail"
 			continue
 		}
 
@@ -298,7 +300,7 @@ func AgentInviteBatch(c *gin.Context) {
 			resp, errCode := store.GetStore().CreateAgentWithDependencies(&createAgentParams)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed to CreateAgent")
-				failedToInviteAgentIndexes[idx] = true
+				failedToInviteAgentIndexes[idx] = "Failed to CreateAgent"
 				continue
 			}
 			invitedAgent = resp.Agent
@@ -317,11 +319,11 @@ func AgentInviteBatch(c *gin.Context) {
 			})
 		if errCode == http.StatusInternalServerError {
 			logCtx.Error("Failed to createProjectAgentMapping")
-			failedToInviteAgentIndexes[idx] = true
+			failedToInviteAgentIndexes[idx] = "Failed to createProjectAgentMapping"
 			continue
 		} else if errCode == http.StatusFound {
 			//c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "User is already mapped to project"})
-			failedToInviteAgentIndexes[idx] = true
+			failedToInviteAgentIndexes[idx] = "User is already mapped to project"
 			continue
 		}
 
@@ -335,7 +337,7 @@ func AgentInviteBatch(c *gin.Context) {
 			if err != nil {
 				wrapErr := errors.Wrap(err, "Failed to create auth token for invited agent")
 				logCtx.WithError(wrapErr).Error("Failed to create auth token for invited agent")
-				failedToInviteAgentIndexes[idx] = true
+				failedToInviteAgentIndexes[idx] = "Failed to create auth token for invited agent"
 				continue
 			}
 			fe_host := C.GetProtocol() + C.GetAPPDomain()
@@ -344,7 +346,6 @@ func AgentInviteBatch(c *gin.Context) {
 		}
 
 		invitedAgentInfo := model.CreateAgentInfo(invitedAgent)
-		
 
 		agentInfoMap[invitedAgentInfo.UUID] = invitedAgentInfo
 
@@ -353,7 +354,7 @@ func AgentInviteBatch(c *gin.Context) {
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to send activation email")
 			//c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "Failed to send invitation email"})
-			failedToInviteAgentIndexes[idx] = true
+			failedToInviteAgentIndexes[idx] = "Failed to send activation email"
 			continue
 		}
 		pam = append(pam, *projectAgentMapping)
@@ -858,10 +859,10 @@ func UpdateAgentBillingAccount(c *gin.Context) {
 }
 
 type updateAgentParams struct {
-	FirstName             string `json:"first_name"`
-	LastName              string `json:"last_name"`
-	Phone                 string `json:"phone"`
-	IsOnboardingFlowSeen bool   `json:"is_onboarding_flow_seen"`
+	FirstName            string `json:"first_name"`
+	LastName             string `json:"last_name"`
+	Phone                string `json:"phone"`
+	IsOnboardingFlowSeen *bool  `json:"is_onboarding_flow_seen"`
 }
 
 func getUpdateAgentParams(c *gin.Context) (*updateAgentParams, error) {

@@ -188,6 +188,36 @@ func (pg *Postgres) GetSyncedHubspotDocumentByFilter(projectID uint64,
 	return &document, http.StatusFound
 }
 
+func (pg *Postgres) getUpdatedDealAssociationDocument(projectID uint64, incomingDocument *model.HubspotDocument) (*model.HubspotDocument, int) {
+
+	if projectID <= 0 || incomingDocument.Type != model.HubspotDocumentTypeDeal {
+		return nil, http.StatusBadRequest
+	}
+
+	documents, status := pg.GetHubspotDocumentByTypeAndActions(projectID, []string{incomingDocument.ID},
+		incomingDocument.Type, []int{incomingDocument.Action, model.HubspotDocumentActionAssociationsUpdated})
+	if status != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	latestDocument := documents[len(documents)-1]
+	updateRequired, err := model.IsDealUpdatedRequired(incomingDocument, &latestDocument)
+	if err != nil {
+		log.WithFields(log.Fields{"incoming_document": incomingDocument, "existing_document": latestDocument}).
+			WithError(err).Error("Failed to check for new IsDealUpdatedRequired.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if !updateRequired {
+		return nil, http.StatusConflict
+	}
+
+	incomingDocument.Timestamp = latestDocument.Timestamp + 1
+	incomingDocument.Action = model.HubspotDocumentActionAssociationsUpdated
+
+	return incomingDocument, http.StatusOK
+}
+
 func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.HubspotDocument) int {
 	logCtx := log.WithField("project_id", document.ProjectId)
 
@@ -271,12 +301,34 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 	db := C.GetServices().Db
 	err = db.Create(document).Error
 	if err != nil {
-		if isDuplicateHubspotDocumentError(err) {
+		if !isDuplicateHubspotDocumentError(err) {
+			logCtx.WithError(err).Error("Failed to create hubspot document.")
+			return http.StatusInternalServerError
+		}
+
+		if document.Type != model.HubspotDocumentTypeDeal {
 			return http.StatusConflict
 		}
 
-		logCtx.WithError(err).Error("Failed to create hubspot document.")
-		return http.StatusInternalServerError
+		newDocument, errCode := pg.getUpdatedDealAssociationDocument(projectId, document)
+		if errCode != http.StatusOK {
+			if errCode != http.StatusConflict {
+				logCtx.WithField("errCode", errCode).Error("Failed to getUpdatedDealAssociationDocument.")
+				return http.StatusInternalServerError
+			}
+
+			return errCode
+		}
+
+		err = db.Create(&newDocument).Error
+		if err != nil {
+			if isDuplicateHubspotDocumentError(err) {
+				return http.StatusConflict
+			}
+
+			logCtx.WithError(err).Error("Failed to create hubspot deal association document.")
+			return http.StatusInternalServerError
+		}
 	}
 
 	if isNew { // create updated document for new user
@@ -845,6 +897,49 @@ func (pg *Postgres) UpdateHubspotDocumentAsSynced(projectId uint64, id string, d
 	return http.StatusAccepted
 }
 
+// GetLastSyncedHubspotUpdateDocumentByID returns latest synced record by document id with preference to the Update doc if timestamp is same.
+func (pg *Postgres) GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_id": docID, "doc_type": docType})
+
+	if projectID == 0 || docType == 0 || docID == "" {
+		logCtx.Error("Missing required field")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var document []model.HubspotDocument
+
+	if err := db.Where("project_id = ? AND type = ? AND id = ? and synced=true",
+		projectID, docType, docID).Order("timestamp DESC").Limit(2).Find(&document).Error; err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Error("Failed to get latest hubspot document by userID.")
+			return nil, http.StatusInternalServerError
+		}
+		return nil, http.StatusNotFound
+	}
+
+	if len(document) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	if len(document) == 2 {
+		// Prefer the latest doc by time
+		if document[0].Timestamp > document[1].Timestamp {
+			return &document[0], http.StatusFound
+		}
+		// Prefer the UpdatedActionEvent over CreateActionEvent
+		if document[0].Action == model.HubspotDocumentActionUpdated {
+			return &document[0], http.StatusFound
+		}
+		if document[1].Action == model.HubspotDocumentActionUpdated {
+			return &document[1], http.StatusFound
+		}
+	}
+	// Case with just one document.
+	return &document[0], http.StatusFound
+}
+
 // GetLastSyncedHubspotDocumentByID returns latest synced record by document id.
 func (pg *Postgres) GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_id": docID, "doc_type": docType})
@@ -916,11 +1011,19 @@ func (pg *Postgres) CreateOrUpdateGroupPropertiesBySource(projectID uint64, grou
 		return groupUserID, nil
 	}
 
+	var requestSource int
+	if source == model.SmartCRMEventSourceHubspot {
+		requestSource = model.UserSourceHubspot
+	} else {
+		requestSource = model.UserSourceSalesforce
+	}
+
 	isGroupUser := true
 	userID, status := pg.CreateGroupUser(&model.User{
 		ProjectId:     projectID,
 		IsGroupUser:   &isGroupUser,
 		JoinTimestamp: createdTimestamp,
+		Source:        &requestSource,
 	}, groupName, groupID)
 	if status != http.StatusCreated {
 		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to create group user.")

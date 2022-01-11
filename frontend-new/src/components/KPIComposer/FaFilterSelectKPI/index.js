@@ -11,6 +11,7 @@ import { isArray } from 'lodash';
 import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
 import moment from 'moment';
 import _ from 'lodash'; 
+import { DISPLAY_PROP } from '../../../utils/constants';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
  
@@ -428,7 +429,6 @@ const FAFilterSelect = ({
                 onClickOutside={() => setValuesSelectionOpen(false)}
                 selectedOpts={valuesState ? valuesState : []}
                 allowSearch={true}
-                posRight={true}
             >
             </FaSelect>);
         }
@@ -451,15 +451,40 @@ const FAFilterSelect = ({
             selectionComponent = (<InputNumber value={valuesState} onBlur={emitFilter} onChange={setNumericalValue}></InputNumber>);
         }
 
-        return (<div className={`${styles.filter__propContainer} ml-4`}>
-            {propState.type === 'categorical' ? <> <Tooltip title={valuesState && valuesState.length ? valuesState.join(', ') : null}><Button
-                className={`fa-button--truncate fa-button--truncate-lg`}
-                type="link"
-                onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}> {valuesState && valuesState.length ? valuesState.join(', ') : 'Select Values'}
-            </Button> </Tooltip> {valuesSelectionOpen && selectionComponent} </> : null}
+        return (
+          <div className={`${styles.filter__propContainer} ml-4`}>
+            {propState.type === 'categorical' ? (
+              <>
+                {' '}
+                <Tooltip
+                  title={
+                    valuesState && valuesState.length
+                      ? valuesState
+                          .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                          .join(', ')
+                      : null
+                  }
+                >
+                  <Button
+                    className={`fa-button--truncate fa-button--truncate-lg`}
+                    type='link'
+                    onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
+                  >
+                    {' '}
+                    {valuesState && valuesState.length
+                      ? valuesState
+                          .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                          .join(', ')
+                      : 'Select Values'}
+                  </Button>{' '}
+                </Tooltip>{' '}
+                {valuesSelectionOpen && selectionComponent}{' '}
+              </>
+            ) : null}
 
             {propState.type !== 'categorical' ? selectionComponent : null}
-        </div>)
+          </div>
+        );
 
     }
 

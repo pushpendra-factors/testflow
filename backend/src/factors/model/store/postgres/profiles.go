@@ -53,10 +53,9 @@ func (pg *Postgres) runSingleProfilesQuery(projectID uint64, query model.Profile
 }
 
 func (pg *Postgres) ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
-	switch query.Type {
-	case "all_users":
+	if model.IsValidUserSource(query.Type) {
 		return pg.ExecuteAllUsersProfilesQuery(projectID, query)
-	default:
+	} else {
 		return &model.QueryResult{}, http.StatusBadRequest, "Invalid query type for profiles"
 	}
 }
@@ -116,28 +115,34 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 		return "", make([]interface{}, 0), err
 	}
 
-	allowSupportForDateRangeInProfiles := C.AllowSupportForDateRangeInProfiles(projectID)
+	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
 
 	var stepSqlStmnt string
-	stepSqlStmnt = fmt.Sprintf("SELECT %s FROM users WHERE project_id = ? %s", selectStmnt, filterStmnt)
+	stepSqlStmnt = fmt.Sprintf("SELECT %s FROM users WHERE project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterStmnt)
 	params = append(params, groupBySelectParams...)
 	params = append(params, projectID)
 	params = append(params, filterParams...)
-	if allowSupportForDateRangeInProfiles {
-		stepSqlStmnt = fmt.Sprintf("%s AND join_timestamp>=? AND join_timestamp<=?", stepSqlStmnt)
-		params = append(params, query.From)
-		params = append(params, query.To)
+	params = append(params, query.From)
+	params = append(params, query.To)
+	if allowSupportForSourceColumnInUsers {
+		if model.UserSourceMap[query.Type] == model.UserSourceWeb {
+			stepSqlStmnt = fmt.Sprintf("%s AND (source=? OR source IS NULL)", stepSqlStmnt)
+		} else {
+			stepSqlStmnt = fmt.Sprintf("%s AND source=?", stepSqlStmnt)
+		}
+		params = append(params, model.UserSourceMap[query.Type])
+		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=false OR is_group_user IS NULL)", stepSqlStmnt)
 	}
-	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY all_users LIMIT 10000", stepSqlStmnt, groupByStmnt)
+	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s LIMIT 10000", stepSqlStmnt, groupByStmnt, model.AliasAggr)
 
 	finalSQLStmnt := ""
 	if isGroupByTypeWithBuckets(query.GroupBys) {
-		selectAliases := "all_users"
+		selectAliases := model.AliasAggr
 		sqlStmnt := "WITH step_0 AS (" + stepSqlStmnt + ")"
 		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(&sqlStmnt, &params, query.GroupBys, "step_0", "", false, selectAliases)
 		selectAliases = aggregateSelectKeys + selectAliases
-		finalGroupBy := "all_users, " + strings.Join(aggregateGroupBys, ",")
-		finalOrderBy := "all_users, " + strings.Join(aggregateOrderBys, ",")
+		finalGroupBy := model.AliasAggr + ", " + strings.Join(aggregateGroupBys, ",")
+		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
 		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s LIMIT 1000", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
 	} else {
 		finalSQLStmnt = stepSqlStmnt

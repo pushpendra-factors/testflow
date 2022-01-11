@@ -136,6 +136,7 @@ func TestUserGroups(t *testing.T) {
 	for i := range allowedGroups {
 		userID, status := store.GetStore().CreateGroupUser(&model.User{
 			ProjectId: project.ID,
+			Source:    model.GetRequestSourcePointer(model.UserSourceHubspot),
 		}, allowedGroups[i], groupIDs[i])
 		assert.Equal(t, http.StatusCreated, status)
 		assert.NotEqual(t, "", userID)

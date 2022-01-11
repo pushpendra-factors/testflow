@@ -348,6 +348,61 @@ func transformResultsForEachEventQuery(oldResult *model.QueryResult, query model
 
 	updateEventNameInHeaderAndAddMeta(newResult)
 
+	// Below piece of transformation re-orders the result w.r.t to the query order of events.
+	// This uses MetaEventInfo, which is a prior meta of result stating the order of events in query and in result.
+	metaMetricsEventMeta := model.HeaderRows{}
+	for _, val := range newResult.Meta.MetaMetrics {
+		if val.Title == MetaEventInfo {
+			metaMetricsEventMeta = val
+		}
+	}
+	if metaMetricsEventMeta.Title == MetaEventInfo {
+
+		queryIndexToName := make(map[int]string)
+		minEventIndex := 100000
+		for _, row := range metaMetricsEventMeta.Rows {
+			// "HeaderIndex(current res order)", "EventIndex(query event order)", "EventName"
+			queryIndexToName[row[1].(int)] = row[2].(string)
+			if minEventIndex > row[0].(int) {
+				minEventIndex = row[0].(int)
+			}
+		}
+
+		finalIndexToOldIndexMap := make(map[int]int)
+		// Copy non-event index which will remain same
+		for i := 0; i < minEventIndex; i++ {
+			finalIndexToOldIndexMap[i] = i
+		}
+		for _, row := range metaMetricsEventMeta.Rows {
+			finalIndexToOldIndexMap[row[1].(int)+minEventIndex] = row[0].(int)
+		}
+
+		var finalResultHeaders []string
+		finalResultRows := make([][]interface{}, 0, 0)
+		// transform the headers w.r.t the events order in query
+		for idx, _ := range newResultHeaders {
+			finalResultHeaders = append(finalResultHeaders, newResultHeaders[finalIndexToOldIndexMap[idx]])
+		}
+
+		// copying the data to finalResultRows
+		for _, row := range newResultRows {
+			newRow := make([]interface{}, 0, 0)
+			for _, colValue := range row {
+				newRow = append(newRow, colValue)
+			}
+			finalResultRows = append(finalResultRows, newRow)
+		}
+
+		// Rearranging the data to final Result
+		for rowNo, row := range newResultRows {
+			for colNo, _ := range row {
+				finalResultRows[rowNo][colNo] = newResultRows[rowNo][finalIndexToOldIndexMap[colNo]]
+			}
+		}
+		finalResult := &model.QueryResult{Headers: finalResultHeaders, Rows: finalResultRows, Meta: newResult.Meta}
+		return finalResult, nil
+	}
+
 	return newResult, nil
 }
 
@@ -872,7 +927,7 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 		if query.AggregatePropertyType == U.PropertyTypeNumerical {
 			noneSelectCase := fmt.Sprintf("CASE WHEN %s.%s = '%s' THEN 0.0 ", refStep, aggregatePropertyDetails.Property, model.PropertyValueNone)
 			emptySelectCase := fmt.Sprintf("WHEN %s.%s = '' THEN 0.0 ", refStep, aggregatePropertyDetails.Property)
-			defaultCase := fmt.Sprintf("ELSE CAST(%s.%s AS DECIMAL) END AS %s ", refStep, aggregatePropertyDetails.Property, model.AliasAggr)
+			defaultCase := fmt.Sprintf("ELSE %s.%s END AS %s ", refStep, aggregatePropertyDetails.Property, model.AliasAggr)
 			aggregateSelect = noneSelectCase + emptySelectCase + defaultCase
 		} else {
 			aggregateSelect, aggregateParams = getNoneHandledGroupBySelect(projectID, aggregatePropertyDetails, aggregateKey, query.Timezone)
@@ -1789,7 +1844,7 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 			if query.AggregatePropertyType == U.PropertyTypeNumerical {
 				noneSelectCase := fmt.Sprintf("CASE WHEN %s.%s = '%s' THEN 0.0 ", step, model.AliasAggr, model.PropertyValueNone)
 				emptySelectCase := fmt.Sprintf("WHEN %s.%s = '' THEN 0.0 ", step, model.AliasAggr)
-				defaultCase := fmt.Sprintf("ELSE CAST(%s.%s AS DECIMAL) END as %s ", step, model.AliasAggr, model.AliasAggr)
+				defaultCase := fmt.Sprintf("ELSE %s.%s END as %s ", step, model.AliasAggr, model.AliasAggr)
 				selectStr = selectStr + ", " + noneSelectCase + emptySelectCase + defaultCase
 			} else {
 				selectStr = selectStr + ", " + fmt.Sprintf("%s.%s as %s", step, model.AliasAggr, model.AliasAggr)
@@ -2049,7 +2104,7 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 		aggregateGroupBys = joinWithComma(model.AliasEventName, aggregateGroupBys)
 	}
 	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(CAST(%s AS DECIMAL)) as %s FROM %s",
+		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(%s) as %s FROM %s",
 			query.AggregateFunction, model.AliasAggr, model.AliasAggr, aggregateFromStepName)
 	} else {
 		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(event_id) AS %s FROM %s",

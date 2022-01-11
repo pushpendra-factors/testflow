@@ -54,7 +54,6 @@ function TouchPointDimensions({
           <FaSelect
             extraClass={styles.dimensionsSelect}
             onClickOutside={setTPDimensionsSelection.bind(this, false)}
-            posRight={true}
             allowSearch={false}
           >
             <TouchPointDimensionsList touchPoint={touchPoint} />

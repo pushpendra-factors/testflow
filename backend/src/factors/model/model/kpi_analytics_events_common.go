@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func ValidateKPIQuery(kpiQuery KPIQuery) bool {
@@ -185,11 +183,8 @@ func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bo
 		var tmpResult *QueryResult
 		tmpResult = &QueryResult{}
 
-		log.WithField("result", result).Warn("kark1")
 		tmpResult.Headers = getTransformedHeaders(result.Headers, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
-		log.WithField("tmpResult.Headers", tmpResult.Headers).Warn("kark2")
 		tmpResult.Rows = GetTransformedRows(result.Rows, hasGroupByTimestamp, hasAnyGroupBy, len(result.Headers))
-		log.WithField("tmpResult.Rows", tmpResult.Rows).Warn("kark3")
 		resultantResults = append(resultantResults, tmpResult)
 	}
 	return resultantResults

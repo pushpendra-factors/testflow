@@ -5,6 +5,7 @@ import {
 import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
 import { getBreakDownGranularities } from '../SingleEventMultipleBreakdown/utils';
 import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 export const getDefaultSortProp = () => {
   return {
@@ -29,7 +30,9 @@ export const formatData = (data) => {
   const grns = getBreakDownGranularities(headerSlice, breakdowns);
 
   const result = data.rows.map((d, index) => {
-    const breakdownVals = d.slice(0, d.length - 1);
+    const breakdownVals = d
+      .slice(0, d.length - 1)
+      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
     const breakdownData = {};
     for (let i = 0; i < breakdowns.length; i++) {
       const bkd = breakdowns[i];
@@ -38,7 +41,7 @@ export const formatData = (data) => {
         breakdownVals[i]
       );
     }
-    const grpLabel = Object.values(breakdownData).join(',');
+    const grpLabel = Object.values(breakdownData).join(', ');
     return {
       index,
       label: grpLabel,

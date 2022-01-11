@@ -13,6 +13,7 @@ import (
 	C "factors/config"
 	"factors/metrics"
 	mid "factors/middleware"
+	"factors/model/model"
 	"factors/model/store"
 	SDK "factors/sdk"
 	"factors/util"
@@ -71,6 +72,7 @@ func SDKTrackHandler(c *gin.Context) {
 		return
 	}
 
+	request.RequestSource = model.UserSourceWeb
 	// Add client_ip and user_agent from context
 	// to track request.
 	request.ClientIP = c.ClientIP()
@@ -136,6 +138,7 @@ func SDKBulkEventHandler(c *gin.Context) {
 	for i, sdkTrackPayload := range sdkTrackPayloads {
 		sdkTrackPayload.ClientIP = clientIP
 		sdkTrackPayload.UserAgent = userAgent
+		sdkTrackPayload.RequestSource = model.UserSourceWeb
 
 		errCode, resp := SDK.TrackWithQueue(projectToken, &sdkTrackPayload, C.GetSDKRequestQueueAllowedTokens())
 		if errCode != http.StatusOK {
@@ -187,6 +190,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
+	request.RequestSource = model.UserSourceWeb
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	status, response := SDK.IdentifyWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens())
 	if status == http.StatusOK {
@@ -231,6 +235,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 
 	request.ClientIP = c.ClientIP()
+	request.RequestSource = model.UserSourceWeb
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	status, response := SDK.AddUserPropertiesWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens())
@@ -312,6 +317,7 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 	}
 
 	request.UserAgent = c.Request.UserAgent()
+	request.RequestSource = model.UserSourceWeb
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	status, response := SDK.UpdateEventPropertiesWithQueue(projectToken, &request,
@@ -449,9 +455,10 @@ func SDKAMPTrackHandler(c *gin.Context) {
 		ScreenWidth:        screenWidth,
 		PageLoadTimeInSecs: pageLoadTimeInSecs,
 
-		Timestamp: util.TimeNowUnix(), // request timestamp.
-		UserAgent: c.Request.UserAgent(),
-		ClientIP:  c.ClientIP(),
+		Timestamp:     util.TimeNowUnix(), // request timestamp.
+		UserAgent:     c.Request.UserAgent(),
+		ClientIP:      c.ClientIP(),
+		RequestSource: model.UserSourceWeb,
 	}
 	customProperties := make(map[string]interface{})
 
@@ -525,8 +532,9 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 		PageScrollPercent: pageScrollPercent,
 		PageSpentTime:     pageSpentTime,
 
-		Timestamp: time.Now().Unix(), // request timestamp.
-		UserAgent: c.Request.UserAgent(),
+		Timestamp:     time.Now().Unix(), // request timestamp.
+		UserAgent:     c.Request.UserAgent(),
+		RequestSource: model.UserSourceWeb,
 	}
 
 	status, response := SDK.AMPUpdateEventPropertiesWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens())
@@ -567,6 +575,7 @@ func SDKAMPIdentifyHandler(c *gin.Context) {
 	payload.CustomerUserID = customerUserID
 	payload.ClientID = clientID
 	payload.Timestamp = util.TimeNowUnix()
+	payload.RequestSource = model.UserSourceWeb
 
 	c.JSON(SDK.AMPIdentifyWithQueue(token, &payload, C.GetSDKRequestQueueAllowedTokens()))
 }

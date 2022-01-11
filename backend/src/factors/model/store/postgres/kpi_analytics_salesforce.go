@@ -39,11 +39,11 @@ func (pg *Postgres) getConfigForSpecificSalesforceCategory(projectID uint64, req
 		"category":         model.EventCategory,
 		"display_category": displayCategory,
 		"metrics":          model.GetMetricsForDisplayCategory(displayCategory),
-		"properties":       pg.getPropertiesForSalesforce(projectID, reqID),
+		"properties":       pg.GetPropertiesForSalesforce(projectID, reqID),
 	}
 }
 
-func (pg *Postgres) getPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string {
+func (pg *Postgres) GetPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string {
 	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
 	properties, propertiesToDisplayNames, err := pg.GetRequiredUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {

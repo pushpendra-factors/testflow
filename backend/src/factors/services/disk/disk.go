@@ -103,6 +103,26 @@ func (dd *DiskDriver) GetProjectDir(projectId uint64) string {
 	return fmt.Sprintf("%s/projects/%d/", dd.baseDir, projectId)
 }
 
+func (gcsd *DiskDriver) GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("userPropCatgMap_%d.txt", modelId)
+}
+
+func (gcsd *DiskDriver) GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventPropCatgMap_%d.txt", modelId)
+}
+
+func (gcsd *DiskDriver) GetModelUserPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventUserPropMap_%d.txt", modelId)
+}
+
+func (gcsd *DiskDriver) GetModelEventPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventEventPropMap_%d.txt", modelId)
+}
+
 func (dd *DiskDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := dd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
@@ -134,11 +154,16 @@ func (dd *DiskDriver) GetPatternChunksDir(projectId, modelId uint64) string {
 	modelDir := dd.GetProjectModelDir(projectId, modelId)
 	return fmt.Sprintf("%schunks/", modelDir)
 }
-
+func (dd *DiskDriver) GetChunksMetaDataDir(projectId, modelId uint64) string {
+	modelDir := dd.GetProjectModelDir(projectId, modelId)
+	return fmt.Sprintf("%smetadata/", modelDir)
+}
 func (dd *DiskDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
 	return dd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }
-
+func (dd *DiskDriver) GetChunksMetaDataFilePathAndName(projectId, modelId uint64) (string, string) {
+	return dd.GetChunksMetaDataDir(projectId, modelId), fmt.Sprintf("metadata.txt")
+}
 func (dd *DiskDriver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
 	year, month, date := time.Unix(startTime, 0).UTC().Date()
 	path := fmt.Sprintf("%s/archive/%d/%d/%d/", dd.baseDir, projectID, year, int(month))

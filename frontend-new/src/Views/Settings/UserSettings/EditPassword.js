@@ -80,7 +80,7 @@ function EditPassword(props) {
                       {
                         required: true,
                         message: 'Please input your old password.'
-                      }
+                      },
                     ]}
 
                     >
@@ -97,7 +97,15 @@ function EditPassword(props) {
                       {
                         required: true,
                         message: 'Please input your new password.'
-                      }
+                      },
+                      ({ getFieldValue }) => ({
+                        validator(rule, value) { 
+                          if (!value || value.match(/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/)) {
+                            return Promise.resolve();
+                          }
+                          return Promise.reject(new Error('Your password must contain at least eight characters, at least one number and both lower and uppercase letters and special characters.'));
+                        }
+                      }) 
                     ]}
 
                     >

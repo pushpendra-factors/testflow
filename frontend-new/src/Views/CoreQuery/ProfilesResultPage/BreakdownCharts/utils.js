@@ -8,7 +8,7 @@ import {
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
-  ProfileUsersMapper,
+  ReverseProfileMapper,
 } from '../../../../utils/constants';
 import {
   getBreakdownDataMapperWithUniqueValues,
@@ -16,6 +16,7 @@ import {
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -39,7 +40,8 @@ export const getVisibleData = (aggregateData, sorter) => {
 export const getBreakdownIndices = (headers, breakdown) => {
   const result = breakdown.map((elem) => {
     const str = elem.property;
-    return headers.findIndex((elem) => elem === str);
+    const strIndex = headers.findIndex((elem) => elem === str);
+    return strIndex;
   });
   return result;
 };
@@ -47,7 +49,10 @@ export const getBreakdownIndices = (headers, breakdown) => {
 export const getDateBreakdownIndices = (data, breakdown) => {
   const result = breakdown.map((elem) => {
     const str = elem.name + '_' + elem.property;
-    return data.result_group[0].headers.findIndex((elem) => elem === str);
+    const strIndex = data.result_group[0].headers.findIndex(
+      (elem) => elem === str
+    );
+    return strIndex;
   });
   return result;
 };
@@ -58,11 +63,10 @@ export const getProfileBreakDownGranularities = (
 ) => {
   const grns = [];
   let brks = [...breakdowns];
-  console.log('breakdowns', breakdowns);
   breakDownSlice.forEach((h) => {
     const brkIndex = brks.findIndex((x) => h === x.property);
     grns.push(
-      brks[brkIndex].prop_type === 'datetime' && brks[brkIndex].grn
+      brks[brkIndex]?.prop_type === 'datetime' && brks[brkIndex]?.grn
         ? brks[brkIndex].grn
         : undefined
     );
@@ -86,11 +90,12 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
   ) {
     return [];
   }
-  console.log('profile with breakdown formatData');
   try {
     const { headers, rows } = data.result_group[currentEventIndex];
     const activeQuery = queries[currentEventIndex];
-    const valIndex = headers.findIndex((h) => h === activeQuery);
+    const valIndex = headers.findIndex(
+      (elem) => elem === 'count' || elem === 'aggregate' || elem === 'all_users'
+    );
     const breakdownIndices = getBreakdownIndices(headers, breakdown);
     const breakdownHeaders = headers.slice(breakdownIndices[0]);
     const grns = getProfileBreakDownGranularities(breakdownHeaders, breakdown);
@@ -102,14 +107,19 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
         if (b > -1) {
           breakdownVals[
             `${breakdown[bIdx].property} - ${bIdx}`
-          ] = parseForDateTimeLabel(grns[bIdx], elem[b]);
+          ] = parseForDateTimeLabel(
+            grns[bIdx],
+            DISPLAY_PROP[elem[b]] ? DISPLAY_PROP[elem[b]] : elem[b]
+          );
         }
       });
       const color = generateColors(1);
       result.push({
         index,
         label: Object.values(breakdownVals).join(),
-        value: elem[valIndex],
+        value: DISPLAY_PROP[elem[valIndex]]
+          ? DISPLAY_PROP[elem[valIndex]]
+          : elem[valIndex],
         color,
         ...breakdownVals,
       });
@@ -153,7 +163,9 @@ export const getTableColumns = (
 
   const eventCol = {
     title: getClickableTitleSorter(
-      ProfileUsersMapper[queries[currentEventIndex]],
+      ReverseProfileMapper[queries[currentEventIndex]]
+        ? ReverseProfileMapper[queries[currentEventIndex]]
+        : queries[currentEventIndex],
       { key: 'value', type: 'numerical', subtype: null },
       currentSorter,
       handleSorting
@@ -181,7 +193,6 @@ export const getDataInHorizontalBarChartFormat = (
   cardSize = 1,
   isDashboardWidget = false
 ) => {
-  console.log('profiles getDataInHorizontalBarChartFormat');
   const sortedData = SortResults(aggregateData, [
     {
       key: 'value',
@@ -280,7 +291,6 @@ export const getHorizontalBarChartColumns = (
   eventPropNames,
   cardSize = 1
 ) => {
-  console.log('profile getHorizontalBarChartColumns');
   const result = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayTitle(
       e,

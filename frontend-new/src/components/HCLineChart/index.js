@@ -43,9 +43,11 @@ function LineChart({
         },
         labels: {
           formatter: function () {
-            return frequency === 'hour'
-              ? moment(this.value).format('MMM D, h A')
-              : moment(this.value).format('MMM D');
+            if (frequency === 'hour') {
+              return moment(this.value).format('MMM D, h A');
+            } else if (frequency === 'date' || frequency === 'week') {
+              return moment(this.value).format('MMM D');
+            } else return moment(this.value).format('MMM YYYY');
           },
         },
       },
@@ -64,7 +66,12 @@ function LineChart({
         borderRadius: 12,
         useHTML: true,
         formatter: function () {
-          const format = frequency === 'hour' ? 'MMM D, h A' : 'MMM D, YYYY';
+          const format =
+            frequency === 'hour'
+              ? 'MMM D, h A'
+              : frequency === 'date' || frequency === 'week'
+              ? 'MMM D, YYYY'
+              : 'MMM YYYY';
           return ReactDOMServer.renderToString(
             <>
               <Text

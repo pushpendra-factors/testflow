@@ -73,7 +73,6 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	salesforceAppID := flag.String("salesforce_app_id", "", "")
@@ -107,6 +106,8 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableSalesforceGroupsByProjectIDs := flag.String("salesforce_groups_by_project_ids", "", "Enable salesforce groups by projects.")
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
+	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -138,14 +139,13 @@ func main() {
 			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:         *memSQLHost,
-			Port:         *memSQLPort,
-			User:         *memSQLUser,
-			Name:         *memSQLName,
-			Password:     *memSQLPass,
-			Certificate:  *memSQLCertificate,
-			ResourcePool: *memSQLResourcePool,
-			AppName:      appName,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
 		},
 		PrimaryDatastore:                       *primaryDatastore,
 		APIDomain:                              *apiDomain,
@@ -163,6 +163,8 @@ func main() {
 		DisableRedisWrites:                     disableRedisWrites,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
 		AllowedSalesforceGroupsByProjectIDs:    *enableSalesforceGroupsByProjectIDs,
+		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
+		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
 	}
 
 	C.InitConf(config)
@@ -207,7 +209,7 @@ func main() {
 				continue
 			}
 
-			accessToken, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
+			accessToken, instanceURL, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
 			if err != nil {
 				log.WithField("project_id", pid).Errorf("Failed to get salesforce access token: %s", err)
 				continue
@@ -223,7 +225,7 @@ func main() {
 				}
 			}
 
-			failure, propertyDetailSync := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, projectSettings.InstanceURL)
+			failure, propertyDetailSync := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, instanceURL)
 			if failure {
 				anyFailure = true
 			}

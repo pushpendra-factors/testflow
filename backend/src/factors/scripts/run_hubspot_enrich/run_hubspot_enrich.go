@@ -27,7 +27,6 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -59,6 +58,8 @@ func main() {
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableHubspotGroupsByProjectID := flag.String("enable_hubspot_groups_by_project_id", "", "Enable hubspot groups for projects.")
 	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
+	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -87,14 +88,13 @@ func main() {
 			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:         *memSQLHost,
-			Port:         *memSQLPort,
-			User:         *memSQLUser,
-			Name:         *memSQLName,
-			Password:     *memSQLPass,
-			Certificate:  *memSQLCertificate,
-			ResourcePool: *memSQLResourcePool,
-			AppName:      appName,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
 		},
 		PrimaryDatastore:                       *primaryDatastore,
 		RedisHost:                              *redisHost,
@@ -107,6 +107,8 @@ func main() {
 		DisableRedisWrites:                     disableRedisWrites,
 		AllowedHubspotGroupsByProjectIDs:       *enableHubspotGroupsByProjectID,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
+		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
+		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
 	}
 
 	C.InitConf(config)

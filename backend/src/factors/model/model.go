@@ -40,9 +40,10 @@ type Model interface {
 	UpdateAgentIntSalesforce(uuid, refreshToken string, instanceURL string) int
 	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
-	UpdateAgentInformation(agentUUID, firstName, lastName, phone string,isOnboardingFlowSeen bool) int
+	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
+	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
@@ -107,6 +108,10 @@ type Model interface {
 	ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int)
 	ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
 	ExecuteKPIQueryForChannels(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int)
+
+	// Custom Metrics
+	CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int)
+	GetCustomMetricsByProjectId(projectID uint64) ([]model.CustomMetric, string, int)
 
 	//templates
 	RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
@@ -185,6 +190,8 @@ type Model interface {
 	GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID uint64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
+	GetPropertiesForHubspot(projectID uint64, reqID string) []map[string]string
+	GetPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string
 
 	// events
 	GetEventCountOfUserByEventName(projectID uint64, userId string, eventNameId string) (uint64, int)
@@ -262,6 +269,7 @@ type Model interface {
 	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
 	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
 	GetLastSyncedHubspotDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
+	GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int)
 	GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{}
 
 	// plan
@@ -270,6 +278,7 @@ type Model interface {
 
 	// project_agent_mapping
 	CreateProjectAgentMappingWithDependencies(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int)
+	CreateProjectAgentMappingWithDependenciesWithoutDashboard(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int)
 	GetProjectAgentMapping(projectID uint64, agentUUID string) (*model.ProjectAgentMapping, int)
 	GetProjectAgentMappingsByProjectId(projectID uint64) ([]model.ProjectAgentMapping, int)
 	GetProjectAgentMappingsByProjectIds(projectIds []uint64) ([]model.ProjectAgentMapping, int)
@@ -307,7 +316,7 @@ type Model interface {
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int
-	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID string) (*model.Project, int)
+	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID string, createDashboard bool) (*model.Project, int)
 	CreateDefaultProjectForAgent(agentUUID string) (*model.Project, int)
 	GetProject(id uint64) (*model.Project, int)
 	GetProjectByToken(token string) (*model.Project, int)
@@ -378,15 +387,15 @@ type Model interface {
 
 	// user
 	CreateUser(user *model.User) (string, int)
-	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64) (string, int)
-	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int)
+	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64, requestSource int) (string, int)
+	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64, requestSource int) (*model.User, int)
 	GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID uint64, id string) (*model.User, int)
 	GetUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int)
 	IsUserExistByID(projectID uint64, id string) int
 	GetUsers(projectID uint64, offset uint64, limit uint64) ([]model.User, int)
 	GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int)
-	GetUserLatestByCustomerUserId(projectID uint64, customerUserId string) (*model.User, int)
+	GetUserLatestByCustomerUserId(projectID uint64, customerUserId string, requestSource int) (*model.User, int)
 	GetExistingCustomerUserID(projectID uint64, arrayCustomerUserID []string) (map[string]string, int)
 	GetUserBySegmentAnonymousId(projectID uint64, segAnonId string) (*model.User, int)
 	GetAllUserIDByCustomerUserID(projectID uint64, customerUserID string) ([]string, int)
@@ -515,6 +524,9 @@ type Model interface {
 	GetGroup(projectID uint64, groupName string) (*model.Group, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
+
+	// Delete channel Integrations
+	DeleteChannelIntegration(projectID uint64, channelName string) (int, error)
 
 	//group_relationship
 	CreateGroupRelationship(projectID uint64, leftGroupName, leftGroupUserID, rightGroupName, rightGroupUserID string) (*model.GroupRelationship, int)

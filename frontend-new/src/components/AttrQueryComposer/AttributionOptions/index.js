@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Button, Radio } from 'antd';
+import { Button, Tooltip, Radio } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import FaSelect from '../../FaSelect';
 
@@ -137,19 +137,15 @@ const AttributionOptions = ({
   const addModelAction = () => {
     return (
       <div className={'fa--query_block--actions--cols relative ml-2'}>
-        <Button
-          type='text'
-          onClick={() => setMoreOptions(true)}
-          className={'fa-btn--custom mr-1'}
-        >
-          <SVG name='more'></SVG>
-        </Button>
-
-        {moreOptions? <FaSelect
-          options={[[`Compare model`]]}
-          optionClick={(val) => setCompareModelActive(true) && setMoreOptions(false)}
-          onClickOutside={() => setMoreOptions(false)}
-        ></FaSelect> : false}
+        <Tooltip title={'Add Compare Model'}>
+          <Button
+            type='text'
+            onClick={() => setCompareModelActive(true) && setMoreOptions(false)}
+            className={'fa-btn--custom mr-1'}
+          >
+            <SVG name='compare'></SVG>
+          </Button>
+        </Tooltip>
       </div>
     );
   };

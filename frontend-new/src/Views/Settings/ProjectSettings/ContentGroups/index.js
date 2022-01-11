@@ -60,19 +60,19 @@ const columns = [
       title: 'Title',
       dataIndex: 'content_group_name',
       key: 'content_group_name', 
-      render: (text) => <span className={'capitalize font-medium'}>{text}</span>
+      render: (text) => <span className={'font-medium'}>{text}</span>
     },
     {
       title: 'Description',
       dataIndex: 'content_group_description',
       key: 'content_group_description', 
-      render: (text) => <span className={'capitalize text-gray-700'}>{text}</span>
+      render: (text) => <span className={'text-gray-700'}>{text}</span>
     },
     {
         title: 'Values',
         dataIndex: 'rule',
         key: 'rule', 
-        render: (text) => <span className={'capitalize ml-3 text-gray-700'}>{text}</span>
+        render: (text) => <span className={'ml-3 text-gray-700'}>{text}</span>
       },
     {
       title: '',

@@ -104,12 +104,12 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		}
 	}
 
-	allowSupportForDateRangeInProfiles := C.AllowSupportForDateRangeInProfiles(projectID)
-
-	if allowSupportForDateRangeInProfiles && (profileQueryGroup.From == 0 || profileQueryGroup.To == 0) {
+	if profileQueryGroup.From == 0 || profileQueryGroup.To == 0 {
 		logCtx.WithError(err).Error("Query failed. Invalid date range provided.")
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid date range provided.", true
 	}
+
+	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
 
 	// copying global filters and groupby into sparate queries and datetime transformations
 	for index, _ := range profileQueryGroup.Queries {
@@ -117,9 +117,13 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		profileQueryGroup.Queries[index].GroupBys = append(profileQueryGroup.Queries[index].GroupBys, profileQueryGroup.GlobalGroupBys...)
 
 		// passing date range
-		if allowSupportForDateRangeInProfiles {
-			profileQueryGroup.Queries[index].From = profileQueryGroup.From
-			profileQueryGroup.Queries[index].To = profileQueryGroup.To
+		profileQueryGroup.Queries[index].From = profileQueryGroup.From
+		profileQueryGroup.Queries[index].To = profileQueryGroup.To
+
+		if allowSupportForSourceColumnInUsers && !model.IsValidUserSource(profileQueryGroup.Queries[index].Type) {
+			logCtx.WithError(err).Error("Query failed. Invalid user source.")
+			message := fmt.Sprintf("Query failed. Invalid user source provided : %s", profileQueryGroup.Queries[index].Type)
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, message, true
 		}
 
 		// setting up the timezone for individual queries from the global value

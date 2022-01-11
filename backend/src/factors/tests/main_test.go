@@ -85,12 +85,13 @@ func TestMain(m *testing.M) {
 		UseSourcePropertyOverwriteByProjectIDs:      "*",
 		AllowedSalesforceGroupsByProjectIDs:         "*",
 		AllowSupportForUserPropertiesInIdentifyCall: "*",
-		AllowSupportForDateRangeInProfiles:          "*",
 		SkipEventNameStepByProjectID:                "*",
 		SkipUserJoinInEventQueryByProjectID:         "*",
 		EnableEventLevelEventProperties:             "",
 		LookbackWindowForEventUserCache:             *lookbackWindowForEventUserCache,
 		EnableOLTPQueriesMemSQLImprovements:         "*",
+		CaptureSourceInUsersTable:                   "*",
+		AllowSupportForSourceColumnInUsers:          "*",
 	}
 	C.InitConf(config)
 

@@ -92,15 +92,14 @@ var PostgresDefaultDBParams = DBConf{
 }
 
 type DBConf struct {
-	Host         string
-	Port         int
-	User         string
-	Name         string
-	Password     string
-	AppName      string
-	UseSSL       bool
-	Certificate  string
-	ResourcePool string
+	Host        string
+	Port        int
+	User        string
+	Name        string
+	Password    string
+	AppName     string
+	UseSSL      bool
+	Certificate string
 
 	// Pooling
 	MaxOpenConnections     int
@@ -201,9 +200,13 @@ type Configuration struct {
 	AllowSupportForUserPropertiesInIdentifyCall string
 	SkipEventNameStepByProjectID                string
 	SkipUserJoinInEventQueryByProjectID         string
-	AllowSupportForDateRangeInProfiles          string
 	EnableEventLevelEventProperties             string
 	EnableOLTPQueriesMemSQLImprovements         string
+	CaptureSourceInUsersTable                   string
+	AllowSupportForSourceColumnInUsers          string
+	UseOLAPPoolForAnalytics                     bool
+	RestrictReusingUsersByCustomerUserId        string
+	HubspotAPIOnboardingHAPIKey                 string
 }
 
 type Services struct {
@@ -719,23 +722,8 @@ func GetMemSQLDSNString(dbConf *DBConf) string {
 	return memsqlDBConfig.FormatDSN()
 }
 
-func setMemSQLResourcePoolQueryCallback(db *gorm.DB) {
-	logCtx := log.WithField("memsql_user", configuration.MemSQLInfo.User)
-	if configuration.PrimaryDatastore != DatastoreTypeMemSQL {
-		return
-	}
-
-	pool := configuration.MemSQLInfo.ResourcePool
-	if pool == "" {
-		return
-	}
-
-	err := db.Exec("SET resource_pool = ?", pool).Error
-	if err != nil {
-		logCtx.WithError(err).
-			Error("Failed to set resource pool before query.")
-		return
-	}
+func UseOLAPPoolForAnalytics() bool {
+	return configuration.UseOLAPPoolForAnalytics
 }
 
 func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx, pool string) {
@@ -756,10 +744,6 @@ func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx, pool string) {
 			Error("Failed to set resource pool before query.")
 		return
 	}
-}
-
-func gormSetMemSQLResourcePoolCallback(scope *gorm.Scope) {
-	setMemSQLResourcePoolQueryCallback(scope.DB())
 }
 
 func isValidMemSQLResourcePool(resourcePool string) bool {
@@ -796,28 +780,6 @@ func isValidMemSQLResourcePool(resourcePool string) bool {
 	return exists
 }
 
-func SetMemSQLResourcePool(memSQLDB *gorm.DB, resourcePool string) error {
-	if resourcePool != "" {
-		log.Infof("Using memsql resource pool %s", resourcePool)
-	}
-
-	if valid := isValidMemSQLResourcePool(resourcePool); !valid {
-		return errors.New("invalid resource pool")
-	}
-
-	// Before any transactional events like .Create() .Update() and .Delete()
-	memSQLDB.Callback().Create().After("gorm:begin_transaction").
-		Register("set_memsql_resource_pool", gormSetMemSQLResourcePoolCallback)
-	// Before .Find()
-	memSQLDB.Callback().Create().Before("gorm:query").
-		Register("set_memsql_resource_pool", gormSetMemSQLResourcePoolCallback)
-	// Before .Rows()
-	memSQLDB.Callback().Create().Before("gorm:row_query").
-		Register("set_memsql_resource_pool", gormSetMemSQLResourcePoolCallback)
-
-	return nil
-}
-
 func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int) error {
 	if services == nil {
 		services = &Services{}
@@ -830,11 +792,6 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 		log.WithError(err).Fatal("Failed connecting to memsql.")
 	}
 	memSQLDB.LogMode(IsDevelopment())
-
-	err = SetMemSQLResourcePool(memSQLDB, configuration.MemSQLInfo.ResourcePool)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to set resource pool.")
-	}
 
 	// Removes emoji and cleans up string and postgres.Jsonb columns.
 	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
@@ -1347,28 +1304,6 @@ func AllowSupportForUserPropertiesInIdentifyCall(projectID uint64) bool {
 
 	projectIDstr := fmt.Sprintf("%d", projectID)
 	projectIDs := strings.Split(configuration.AllowSupportForUserPropertiesInIdentifyCall, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
-}
-
-// AllowSupportForDateRangeInProfiles is used to check if support for date range
-// is allowed for a given (or list of) project in Profiles module
-func AllowSupportForDateRangeInProfiles(projectID uint64) bool {
-	if configuration.AllowSupportForDateRangeInProfiles == "" {
-		return false
-	}
-
-	if configuration.AllowSupportForDateRangeInProfiles == "*" {
-		return true
-	}
-
-	projectIDstr := fmt.Sprintf("%d", projectID)
-	projectIDs := strings.Split(configuration.AllowSupportForDateRangeInProfiles, ",")
 	for i := range projectIDs {
 		if projectIDs[i] == projectIDstr {
 			return true
@@ -2028,4 +1963,20 @@ func IsDevBox() bool {
 
 func SetEnableEventLevelEventProperties(projectId uint64) {
 	configuration.EnableEventLevelEventProperties = fmt.Sprintf("%d", projectId)
+}
+
+func IsProfileQuerySourceSupported(projectId uint64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowSupportForSourceColumnInUsers, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
+}
+
+func CheckRestrictReusingUsersByCustomerUserId(projectId uint64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RestrictReusingUsersByCustomerUserId, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
 }

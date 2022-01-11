@@ -183,6 +183,16 @@ func (store *MemSQL) UpdateAgentIntSalesforce(uuid, refreshToken string, instanc
 	return updateAgent(uuid, model.IntSalesforceRefreshToken(refreshToken), model.IntSalesforceInstanceURL(instanceUrl))
 }
 
+func (store *MemSQL) UpdateAgentSalesforceInstanceURL(uuid, instanceUrl string) int {
+	if uuid == "" || instanceUrl == "" {
+		log.WithField("agent_uuid", uuid).Error(
+			"UpdateAgentInstanceURL failed. Invalid params.")
+		return http.StatusBadRequest
+	}
+
+	return updateAgent(uuid, model.IntSalesforceInstanceURL(instanceUrl))
+}
+
 func (store *MemSQL) UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
 
 	if uuid == "" || plainTextPassword == "" {
@@ -233,7 +243,7 @@ func (store *MemSQL) UpdateAgentVerificationDetails(agentUUID, password, firstNa
 	return updateAgent(agentUUID, options...)
 }
 
-func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string,isOnboardingFlowSeen bool) int {
+func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int {
 	if agentUUID == "" {
 		return http.StatusBadRequest
 	}
@@ -247,7 +257,9 @@ func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phon
 	if phone != "" {
 		updateParams = append(updateParams, model.Phone(phone))
 	}
-	updateParams = append(updateParams, model.IsOnboardingFlowSeen(isOnboardingFlowSeen))
+	if isOnboardingFlowSeen != nil {
+		updateParams = append(updateParams, model.IsOnboardingFlowSeen(*isOnboardingFlowSeen))
+	}
 	return updateAgent(agentUUID, updateParams...)
 }
 

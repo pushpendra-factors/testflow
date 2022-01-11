@@ -93,7 +93,7 @@ const GLobalFilter = ({
       filtrs.push(
         <div key={filtrs.length} className={`flex mt-2`}>
           <Button
-            className={``}
+            className={`fa-button--truncate`}
             type="text"
             onClick={() => setFilterDD(true)}
             icon={<SVG name="plus" />}

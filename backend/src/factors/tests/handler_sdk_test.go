@@ -673,6 +673,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			"$qp_utm_campaign": "campaign1",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
@@ -686,11 +687,12 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	assert.Equal(t, "campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	userID := response.UserId
 
-	timestamp = timestamp + 1
+	timestamp = timestamp + 10000
 	trackPayload = SDK.TrackPayload{
-		Name:      U.EVENT_NAME_FORM_SUBMITTED,
-		Timestamp: timestamp,
-		UserId:    user.ID,
+		Name:          U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp:     timestamp,
+		UserId:        user.ID,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
@@ -708,7 +710,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	assert.Equal(t, "campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 
 	// Visit from campaign2.
-	timestamp = timestamp + 1
+	timestamp = timestamp + 10000
 	trackPayload = SDK.TrackPayload{
 		Name:      U.EVENT_NAME_FORM_SUBMITTED,
 		Timestamp: timestamp,
@@ -716,17 +718,19 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 		EventProperties: U.PropertiesMap{
 			"$qp_utm_campaign": "campaign2",
 		},
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
 	_, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
-	timestamp = timestamp + 1
+	timestamp = timestamp + 10000
 	trackPayload = SDK.TrackPayload{
-		Name:      U.EVENT_NAME_FORM_SUBMITTED,
-		Timestamp: timestamp,
-		UserId:    user.ID,
+		Name:          U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp:     timestamp,
+		UserId:        user.ID,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.NotNil(t, response.EventId)
@@ -756,11 +760,12 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
 		randomeEventName := U.RandomLowerAphaNumString(10)
 		trackPayload := SDK.TrackPayload{
-			EventId:    eventId,
-			UserId:     userId,
-			CreateUser: true,
-			Name:       randomeEventName,
-			Timestamp:  timestamp,
+			EventId:       eventId,
+			UserId:        userId,
+			CreateUser:    true,
+			Name:          randomeEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -785,11 +790,12 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
 		randomeEventName := U.RandomLowerAphaNumString(10)
 		trackPayload := SDK.TrackPayload{
-			EventId:    eventId,
-			UserId:     user.ID,
-			CreateUser: false,
-			Name:       randomeEventName,
-			Timestamp:  timestamp,
+			EventId:       eventId,
+			UserId:        user.ID,
+			CreateUser:    false,
+			Name:          randomeEventName,
+			Timestamp:     timestamp,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 		assert.Equal(t, http.StatusOK, status)
@@ -812,7 +818,8 @@ func TestSDKWithQueue(t *testing.T) {
 	t.Run("TrackWithoutUserId", func(t *testing.T) {
 		randomeEventName := U.RandomLowerAphaNumString(10)
 		payload := SDK.TrackPayload{
-			Name: randomeEventName,
+			Name:          randomeEventName,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.TrackWithQueue(project.Token,
 			&payload, []string{project.Token})
@@ -826,8 +833,9 @@ func TestSDKWithQueue(t *testing.T) {
 	t.Run("TrackWithUserId", func(t *testing.T) {
 		randomeEventName := U.RandomLowerAphaNumString(10)
 		payload := SDK.TrackPayload{
-			Name:   randomeEventName,
-			UserId: user.ID,
+			Name:          randomeEventName,
+			UserId:        user.ID,
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.TrackWithQueue(project.Token,
 			&payload, []string{project.Token})
@@ -842,6 +850,7 @@ func TestSDKWithQueue(t *testing.T) {
 		randomeUserId := U.RandomLowerAphaNumString(10)
 		payload := SDK.IdentifyPayload{
 			CustomerUserId: randomeUserId,
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.IdentifyWithQueue(project.Token,
 			&payload, []string{project.Token})
@@ -855,6 +864,7 @@ func TestSDKWithQueue(t *testing.T) {
 		payload := SDK.IdentifyPayload{
 			UserId:         U.GetUUID(),
 			CustomerUserId: randomeUserId,
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.IdentifyWithQueue(project.Token,
 			&payload, []string{project.Token})
@@ -865,7 +875,8 @@ func TestSDKWithQueue(t *testing.T) {
 
 	t.Run("AddUserPropertiesWithoutUserId", func(t *testing.T) {
 		payload := SDK.AddUserPropertiesPayload{
-			Properties: U.PropertiesMap{},
+			Properties:    U.PropertiesMap{},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.AddUserPropertiesWithQueue(project.Token,
 			&payload, []string{project.Token})
@@ -876,8 +887,9 @@ func TestSDKWithQueue(t *testing.T) {
 
 	t.Run("AddUserPropertiesWithUserId", func(t *testing.T) {
 		payload := SDK.AddUserPropertiesPayload{
-			UserId:     U.GetUUID(),
-			Properties: U.PropertiesMap{},
+			UserId:        U.GetUUID(),
+			Properties:    U.PropertiesMap{},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.AddUserPropertiesWithQueue(project.Token,
 			&payload, []string{project.Token})
@@ -889,7 +901,8 @@ func TestSDKWithQueue(t *testing.T) {
 	// Update event
 	t.Run("UpdateEventProperties", func(t *testing.T) {
 		payload := SDK.UpdateEventPropertiesPayload{
-			Properties: U.PropertiesMap{},
+			Properties:    U.PropertiesMap{},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, _ := SDK.UpdateEventPropertiesWithQueue(
 			project.Token, &payload, []string{project.Token})
@@ -910,6 +923,7 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 			CreateUser:     true,
 			CustomerUserId: customerUserID,
 			JoinTimestamp:  timestamp,
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.Identify(project.ID, payload, false)
 		assert.Equal(t, http.StatusOK, status)
@@ -930,6 +944,7 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 			CreateUser:     true,
 			CustomerUserId: customerUserID,
 			JoinTimestamp:  timestamp,
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.Identify(project.ID, payload, false)
 		assert.Equal(t, http.StatusOK, status)
@@ -947,6 +962,7 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 			UserId:         user.ID,
 			CreateUser:     false,
 			CustomerUserId: customerUserId,
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.Identify(project.ID, payload, false)
 		assert.Equal(t, http.StatusOK, status)
@@ -973,6 +989,7 @@ func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
 			Properties: U.PropertiesMap{
 				"key": "value1",
 			},
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.AddUserProperties(project.ID, payload)
 		assert.Equal(t, http.StatusOK, status)
@@ -993,7 +1010,8 @@ func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
 			Properties: U.PropertiesMap{
 				"key": "value1",
 			},
-			Timestamp: time.Now().Unix(),
+			Timestamp:     time.Now().Unix(),
+			RequestSource: model.UserSourceWeb,
 		}
 		status, response := SDK.AddUserProperties(project.ID, payload)
 		assert.Equal(t, http.StatusOK, status)
@@ -1143,7 +1161,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 
 	timestampBeforeOneDay := U.UnixTimeBeforeDuration(time.Hour * 24)
 	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
-		JoinTimestamp: timestampBeforeOneDay})
+		JoinTimestamp: timestampBeforeOneDay, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// New session has to created.
@@ -1280,7 +1298,7 @@ func TestTrackHandlerFormSubmitWithUserAlreadyIdentfiedBySDKRequest(t *testing.T
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID)
 
@@ -1570,6 +1588,7 @@ func TestSupportForUserPropertiesInIdentifyCall(t *testing.T) {
 			UserProperties: postgres.Jsonb{userProperties},
 			JoinTimestamp:  timestamp,
 			Source:         "sdk_user_identify",
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.Identify(project.ID, payload, true)
 		assert.Equal(t, http.StatusOK, status)
@@ -1592,6 +1611,7 @@ func TestSupportForUserPropertiesInIdentifyCall(t *testing.T) {
 			CreateUser:     false,
 			CustomerUserId: customerUserID,
 			UserProperties: postgres.Jsonb{userProperties},
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.Identify(project.ID, payload, true)
 		assert.Equal(t, http.StatusOK, status)
@@ -1615,6 +1635,7 @@ func TestSupportForUserPropertiesInIdentifyCall(t *testing.T) {
 			CreateUser:     false,
 			CustomerUserId: customerUserId,
 			UserProperties: postgres.Jsonb{userProperties},
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.Identify(project.ID, payload, false)
 		assert.Equal(t, http.StatusOK, status)
@@ -1638,6 +1659,7 @@ func TestSupportForUserPropertiesInIdentifyCall(t *testing.T) {
 			CreateUser:     false,
 			CustomerUserId: customerUserId,
 			UserProperties: postgres.Jsonb{userProperties},
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, _ := SDK.Identify(project.ID, payload, true)
 		assert.Equal(t, http.StatusOK, status)
@@ -1663,6 +1685,7 @@ func TestSupportForUserPropertiesInIdentifyCall(t *testing.T) {
 			CustomerUserId: customerUserID,
 			UserProperties: postgres.Jsonb{userProperties},
 			JoinTimestamp:  timestamp,
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.Identify(project.ID, payload, true)
 		assert.Equal(t, http.StatusOK, status)
@@ -1687,6 +1710,7 @@ func TestSupportForUserPropertiesInIdentifyCall(t *testing.T) {
 			CreateUser:     false,
 			CustomerUserId: customerUserId,
 			UserProperties: postgres.Jsonb{userProperties},
+			RequestSource:  model.UserSourceWeb,
 		}
 		status, response := SDK.Identify(project.ID, payload, true)
 		assert.Equal(t, http.StatusOK, status)
@@ -1711,10 +1735,10 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 	project, user1, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 
-	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix() - 10})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix() - 10, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix()})
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix(), Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// identify all users with same c_uid.
@@ -2177,13 +2201,14 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 		SourceURL: "abcd.com/",
 		Title:     "Test",
 
-		Timestamp: time.Now().Unix(), // request timestamp.
-		UserAgent: userAgentStr,
-		ClientIP:  "10.10.0.1",
+		Timestamp:     time.Now().Unix(), // request timestamp.
+		UserAgent:     userAgentStr,
+		ClientIP:      "10.10.0.1",
+		RequestSource: model.UserSourceWeb,
 	}
 	errCode, _ := SDK.AMPTrackByToken(project.Token, payload)
 	assert.Equal(t, errCode, http.StatusOK)
-	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload.Timestamp)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload.Timestamp, payload.RequestSource)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, userID, "")
 
@@ -2192,13 +2217,14 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 		SourceURL: "abcd.com/1/",
 		Title:     "Test1",
 
-		Timestamp: time.Now().Unix(), // request timestamp.
-		UserAgent: userAgentStr,
-		ClientIP:  "10.10.0.1",
+		Timestamp:     time.Now().Unix(), // request timestamp.
+		UserAgent:     userAgentStr,
+		ClientIP:      "10.10.0.1",
+		RequestSource: model.UserSourceWeb,
 	}
 	errCode, _ = SDK.AMPTrackByToken(project.Token, payload1)
 	assert.Equal(t, errCode, http.StatusOK)
-	user1ID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload1.Timestamp)
+	user1ID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload1.Timestamp, payload1.RequestSource)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user1ID, "")
 
@@ -2207,13 +2233,14 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 		SourceURL: "abcd.com/xy_z",
 		Title:     "Test2",
 
-		Timestamp: time.Now().Unix(), // request timestamp.
-		UserAgent: userAgentStr,
-		ClientIP:  "10.10.0.1",
+		Timestamp:     time.Now().Unix(), // request timestamp.
+		UserAgent:     userAgentStr,
+		ClientIP:      "10.10.0.1",
+		RequestSource: model.UserSourceWeb,
 	}
 	errCode, _ = SDK.AMPTrackByToken(project.Token, payload2)
 	assert.Equal(t, errCode, http.StatusOK)
-	user2ID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload2.Timestamp)
+	user2ID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload2.Timestamp, payload2.RequestSource)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user2ID, "")
 
@@ -2224,13 +2251,14 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 		SourceURL: url3 + "/?a=3", // with query param.
 		Title:     "Test2",
 
-		Timestamp: time.Now().Unix(), // request timestamp.
-		UserAgent: userAgentStr,
-		ClientIP:  "10.10.0.1",
+		Timestamp:     time.Now().Unix(), // request timestamp.
+		UserAgent:     userAgentStr,
+		ClientIP:      "10.10.0.1",
+		RequestSource: model.UserSourceWeb,
 	}
 	errCode, _ = SDK.AMPTrackByToken(project.Token, payload3)
 	assert.Equal(t, errCode, http.StatusOK)
-	ampUserID3, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload3.Timestamp)
+	ampUserID3, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload3.Timestamp, payload3.RequestSource)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, ampUserID3, "")
 }
@@ -2242,9 +2270,10 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 	timestamp := U.UnixTimeBeforeAWeek()
 	clientId := U.RandomLowerAphaNumString(5)
 	request := &SDK.AMPTrackPayload{
-		ClientID:  clientId,
-		SourceURL: "https://example.com/a/b",
-		Timestamp: timestamp,
+		ClientID:      clientId,
+		SourceURL:     "https://example.com/a/b",
+		Timestamp:     timestamp,
+		RequestSource: model.UserSourceWeb,
 	}
 	errCode, response := SDK.AMPTrackByToken(project.Token, request)
 	assert.Equal(t, http.StatusOK, errCode)
@@ -2261,9 +2290,10 @@ func TestSDKUpdateEventProperties(t *testing.T) {
 	timestamp := U.UnixTimeBeforeAWeek()
 	clientId := U.RandomLowerAphaNumString(5)
 	request := &SDK.AMPTrackPayload{
-		ClientID:  clientId,
-		SourceURL: "https://example.com/a/b",
-		Timestamp: timestamp,
+		ClientID:      clientId,
+		SourceURL:     "https://example.com/a/b",
+		Timestamp:     timestamp,
+		RequestSource: model.UserSourceWeb,
 	}
 	errCode, response := SDK.AMPTrackByToken(project.Token, request)
 	assert.Equal(t, http.StatusOK, errCode)
@@ -2277,6 +2307,7 @@ func TestSDKUpdateEventProperties(t *testing.T) {
 		Timestamp:         timestamp,
 		PageScrollPercent: 98,
 		PageSpentTime:     99,
+		RequestSource:     model.UserSourceWeb,
 	}
 	errCode, _ = SDK.AMPUpdateEventPropertiesByToken(project.Token, updateRequest)
 	assert.Equal(t, http.StatusAccepted, errCode)
@@ -2293,6 +2324,7 @@ func TestSDKUpdateEventProperties(t *testing.T) {
 		Timestamp:         timestamp,
 		PageScrollPercent: 98,
 		PageSpentTime:     99,
+		RequestSource:     model.UserSourceWeb,
 	}
 	errCode, _ = SDK.AMPUpdateEventPropertiesByToken(project.Token, updateRequest2)
 	assert.Equal(t, http.StatusBadRequest, errCode)
@@ -2308,9 +2340,10 @@ func TestSDKAMPIdentifyHandler(t *testing.T) {
 	timestamp := U.UnixTimeBeforeAWeek()
 	clientID := U.RandomLowerAphaNumString(5)
 	request := &SDK.AMPTrackPayload{
-		ClientID:  clientID,
-		SourceURL: "https://example.com/a/b",
-		Timestamp: timestamp,
+		ClientID:      clientID,
+		SourceURL:     "https://example.com/a/b",
+		Timestamp:     timestamp,
+		RequestSource: model.UserSourceWeb,
 	}
 	errCode, _ := SDK.AMPTrackByToken(project.Token, request)
 	assert.Equal(t, http.StatusOK, errCode)
@@ -2323,7 +2356,7 @@ func TestSDKAMPIdentifyHandler(t *testing.T) {
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	assert.Equal(t, "User has been identified successfully.", jsonResponseMap["message"])
-	createdUserID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	createdUserID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp, request.RequestSource)
 	assert.Equal(t, http.StatusFound, errCode)
 	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -2337,11 +2370,12 @@ func TestSDKAMPIdentifyHandler(t *testing.T) {
 		CustomerUserID: cUID,
 		ClientID:       clientID,
 		Timestamp:      oldTimestamp,
+		RequestSource:  model.UserSourceWeb,
 	}
 	status, message := SDK.AMPIdentifyByToken(project.Token, &payload)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "User has been identified successfully.", message.Message)
-	ampUserID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	ampUserID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp, payload.RequestSource)
 	assert.Equal(t, http.StatusFound, errCode)
 	user, errCode = store.GetStore().GetUser(project.ID, ampUserID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -2366,6 +2400,7 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 			"$page_count": 10,
 			"$session_spent_time": 2.2}`,
 		))},
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 
 	createdUserID2, _ := store.GetStore().CreateUser(&model.User{
@@ -2380,6 +2415,7 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 			"$page_count": 15,
 			"$session_spent_time": 4.4}`,
 		))},
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 
 	// Test AddUserProperties handler call.
@@ -2390,6 +2426,7 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 			Properties: U.PropertiesMap{
 				"revenue": 42,
 			},
+			RequestSource: model.UserSourceWeb,
 		},
 	)
 	assert.Equal(t, http.StatusOK, errCode)
@@ -2421,6 +2458,7 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 			"$page_count": 10,
 			"$session_spent_time": 2.2}`,
 		))},
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 
 	// Without CustomerUserID
@@ -2435,6 +2473,7 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 			"$page_count": 15,
 			"$session_spent_time": 4.4}`,
 		))},
+		Source: model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 	// Before identify, properties are different for the users.
 	user1DB, _ := store.GetStore().GetUser(project.ID, createdUserID1)
@@ -2446,6 +2485,7 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	identifyPayload := &SDK.IdentifyPayload{
 		UserId:         createdUserID2,
 		CustomerUserId: customerUserID,
+		RequestSource:  model.UserSourceWeb,
 	}
 
 	errCode, _ := SDK.IdentifyByToken(project.Token, identifyPayload)
@@ -2475,8 +2515,9 @@ func TestSDKTrackFirstEventUserProperties(t *testing.T) {
 	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
 	randomEventURL := "https://example.com/" + U.RandomLowerAphaNumString(5)
 	trackPayload := SDK.TrackPayload{
-		Name:      randomEventURL,
-		Timestamp: timestamp,
+		Name:          randomEventURL,
+		Timestamp:     timestamp,
+		RequestSource: model.UserSourceWeb,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
 	assert.Equal(t, http.StatusOK, status)
@@ -2671,6 +2712,7 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	createdUserID, status := store.GetStore().CreateUser(&model.User{
 		ProjectId:      project.ID,
 		CustomerUserId: cuid,
+		Source:         model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 	assert.Equal(t, http.StatusCreated, status)
 
@@ -2717,6 +2759,7 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 		UserId:         createdUserID,
 		CustomerUserId: cuid2,
 		Source:         "test",
+		RequestSource:  model.UserSourceWeb,
 	}, true)
 
 	assert.Equal(t, http.StatusOK, status)
@@ -2729,6 +2772,7 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 		CustomerUserId: cuid2,
 		Source:         "sdk_user_identify",
 		Timestamp:      timestamp + 500,
+		RequestSource:  model.UserSourceWeb,
 	}, true)
 
 	assert.Equal(t, http.StatusOK, status)
@@ -2746,12 +2790,14 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	cuid3 := "user3"
 	createdUserID, status = store.GetStore().CreateUser(&model.User{
 		ProjectId: project.ID,
+		Source:    model.GetRequestSourcePointer(model.UserSourceWeb),
 	})
 
 	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
 		UserId:         createdUserID,
 		CustomerUserId: cuid3,
 		Source:         "sdk_user_identify",
+		RequestSource:  model.UserSourceWeb,
 	}, true)
 
 	assert.Equal(t, http.StatusOK, status)

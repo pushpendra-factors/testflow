@@ -261,8 +261,8 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 	// 	CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED},
 	// },
 	SalesforceUsersDisplayCategory: {
-		CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_SALESFORCE_CONTACT_CREATED},
-		CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED},
+		CountOfContactsCreated: {"display_name": "Leads created", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_CREATED},
+		CountOfContactsUpdated: {"display_name": "Leads updated", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_UPDATED},
 	},
 	SalesforceAccountsDisplayCategory: {
 		CountOfLeadsCreated: {"display_name": "Leads created", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_CREATED},
@@ -690,9 +690,16 @@ func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, confi
 	return true
 }
 
-func GetTransformedHeadersForChannels(headers []string) []string {
+func GetTransformedHeadersForChannels(headers []string, hasAnyGroupByTimestamp bool, hasAnyGroupBy bool) []string {
 	currentHeaders := headers
 	size := len(currentHeaders)
 	currentHeaders[size-1] = AliasAggr
+	if hasAnyGroupBy && hasAnyGroupByTimestamp {
+		resultantHeaders := make([]string, 0)
+		resultantHeaders = append(resultantHeaders, currentHeaders[size-2])
+		resultantHeaders = append(resultantHeaders, currentHeaders[:size-2]...)
+		resultantHeaders = append(resultantHeaders, currentHeaders[size-1])
+		currentHeaders = resultantHeaders
+	}
 	return currentHeaders
 }

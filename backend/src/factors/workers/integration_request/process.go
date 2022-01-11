@@ -46,7 +46,6 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -80,7 +79,9 @@ func main() {
 		"Map of project_id and customer_user_id to exclude identification on segment.")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	allowSupportForUserPropertiesInIdentifyCall := flag.String("allow_support_for_user_properties_in_identify_call", "", "")
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
+	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 
 	flag.Parse()
 
@@ -117,14 +118,13 @@ func main() {
 		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 		MemSQLInfo: C.DBConf{
-			Host:         *memSQLHost,
-			Port:         *memSQLPort,
-			User:         *memSQLUser,
-			Name:         *memSQLName,
-			Password:     *memSQLPass,
-			Certificate:  *memSQLCertificate,
-			ResourcePool: *memSQLResourcePool,
-			AppName:      workerName,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     workerName,
 		},
 		CacheSortedSet:   *cacheSortedSet,
 		PrimaryDatastore: *primaryDatastore,
@@ -132,7 +132,9 @@ func main() {
 			*segmentExcludedCustomerUserIDByProject, "SegmentExcludedCustomerIDByProject"),
 		DisableRedisWrites:                          disableRedisWrites,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
+		CaptureSourceInUsersTable:                   *captureSourceInUsersTable,
 		EnableOLTPQueriesMemSQLImprovements:         *enableOLTPQueriesMemSQLImprovements,
+		RestrictReusingUsersByCustomerUserId:        *restrictReusingUsersByCustomerUserId,
 	}
 	C.InitConf(config)
 

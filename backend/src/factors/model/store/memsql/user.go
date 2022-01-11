@@ -43,6 +43,16 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		return nil, errors.New("invalid project_id")
 	}
 
+	if user.Source == nil {
+		logCtx.Error("Failed to create user. User source not provided.")
+		return nil, errors.New("user source missing")
+	}
+
+	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(C.GetConfig().CaptureSourceInUsersTable, "")
+	if !allProjects && !projectIDsMap[user.ProjectId] {
+		user.Source = nil
+	}
+
 	// Add id with our uuid generator, if not given.
 	if user.ID == "" {
 		user.ID = U.GetUUID()
@@ -326,19 +336,34 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID uint64, customer
 	return users, http.StatusFound
 }
 
-func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*model.User, int) {
+func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string, requestSource int) (*model.User, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var user model.User
 	db := C.GetServices().Db
-	if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
-		Where("customer_user_id = ?", customerUserId).
-		First(&user).Error; err != nil {
-
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
+	if !C.CheckRestrictReusingUsersByCustomerUserId(projectId) {
+		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
+			Where("customer_user_id = ?", customerUserId).First(&user).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return nil, http.StatusNotFound
+			}
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusInternalServerError
+	} else {
+		var userSourceWhereCondition string
+		if requestSource == model.UserSourceWeb {
+			userSourceWhereCondition = "source = ? OR source IS NULL"
+		} else {
+			userSourceWhereCondition = "source = ?"
+		}
+		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
+			Where("customer_user_id = ?", customerUserId).Where(userSourceWhereCondition, requestSource).
+			First(&user).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return nil, http.StatusNotFound
+			}
+			return nil, http.StatusInternalServerError
+		}
 	}
 	return &user, http.StatusFound
 }
@@ -430,7 +455,7 @@ func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID uint64, customerUser
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
 func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string,
-	requestTimestamp int64) (*model.User, int) {
+	requestTimestamp int64, requestSource int) (*model.User, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId,
@@ -460,7 +485,7 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 	if errCode == http.StatusNotFound {
 		// if found by c_uid return user, else create new user.
 		if custUserId != "" {
-			user, errCode = store.GetUserLatestByCustomerUserId(projectId, custUserId)
+			user, errCode = store.GetUserLatestByCustomerUserId(projectId, custUserId, requestSource)
 			if errCode == http.StatusFound {
 				return user, http.StatusOK
 			}
@@ -472,7 +497,7 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 			}
 		}
 
-		cUser := &model.User{ProjectId: projectId, JoinTimestamp: requestTimestamp}
+		cUser := &model.User{ProjectId: projectId, JoinTimestamp: requestTimestamp, Source: &requestSource}
 		// add seg_aid, if provided and not exist already.
 		if segAnonId != "" {
 			cUser.SegmentAnonymousId = segAnonId
@@ -538,7 +563,7 @@ func (store *MemSQL) GetUserIDByAMPUserID(projectId uint64, ampUserId string) (s
 	return user.ID, http.StatusFound
 }
 
-func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (string, int) {
+func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64, requestSource int) (string, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if projectId == 0 || ampUserId == "" {
@@ -558,7 +583,7 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 	}
 
 	user, err := store.createUserWithError(&model.User{ProjectId: projectId,
-		AMPUserId: ampUserId, JoinTimestamp: timestamp})
+		AMPUserId: ampUserId, JoinTimestamp: timestamp, Source: &requestSource})
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to create user by amp user id on CreateOrGetAMPUser")
@@ -1832,6 +1857,7 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 		Properties:                 user.Properties,
 		PropertiesUpdatedTimestamp: user.PropertiesUpdatedTimestamp,
 		JoinTimestamp:              user.JoinTimestamp,
+		Source:                     user.Source,
 	}
 
 	if groupID != "" {
@@ -1871,6 +1897,7 @@ func (store *MemSQL) UpdateUserGroup(projectID uint64, userID, groupName, groupI
 	groupUserIndex := fmt.Sprintf("group_%d_user_id", group.ID)
 	user, status := store.GetUser(projectID, userID)
 	if status != http.StatusFound {
+		logCtx.Error("Failed to get user for group association.")
 		return nil, http.StatusInternalServerError
 	}
 

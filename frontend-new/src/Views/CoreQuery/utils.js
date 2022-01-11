@@ -29,10 +29,12 @@ import {
   CHART_TYPE_SCATTER_PLOT,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   QUERY_TYPE_PROFILE,
+  ProfileMapper,
+  ReverseProfileMapper,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 import { formatFilterDate } from '../../utils/dataFormatter';
-import _ from 'lodash'; 
+import _ from 'lodash';
 
 export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
@@ -160,7 +162,7 @@ const getProfileWithProperties = (queries) => {
     });
     pwps.push({
       // an: ev.alias,
-      ty: ev.label,
+      ty: ProfileMapper[ev.label] ? ProfileMapper[ev.label] : ev.label,
       pr: filterProps,
       tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
     });
@@ -344,28 +346,35 @@ export const getFunnelQuery = (
 
 const getEventsWithPropertiesKPI = (filters, category) => {
   const filterProps = [];
+  // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
   filters.forEach((fil) => {
-    console.log('getEventsWithPropertiesKPI filters', fil);
     if (Array.isArray(fil.values)) {
       fil.values.forEach((val, index) => {
         filterProps.push({
-          prNa: fil?.extra[1],
-          prDaTy: fil?.extra[2],
+          prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+          prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
           co: operatorMap[fil.operator],
           lOp: !index ? 'AND' : 'OR',
-          en: category == 'channels' ? '' : fil?.extra[3],
-          objTy: category == 'channels' ? fil?.extra[3] : '',
+          en:
+            category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+          objTy:
+            category == 'channels'
+              ? fil?.extra
+                ? fil?.extra[3]
+                : 'event'
+              : '',
           va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
         });
       });
     } else {
       filterProps.push({
-        prNa: fil?.extra[1],
-        prDaTy: fil?.extra[2],
+        prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+        prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
         co: operatorMap[fil.operator],
         lOp: 'AND',
-        en: category == 'channels' ? '' : fil?.extra[3],
-        objTy: category == 'channels' ? fil?.extra[3] : '',
+        en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+        objTy:
+          category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
         va:
           fil.props[1] === 'datetime'
             ? formatFilterDate(fil.values)
@@ -620,9 +629,9 @@ export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
 };
 
 const getEventIdx = (eventData, userObj) => {
-  const str = userObj.slice(0, userObj.length - 1).join(',');
+  const str = userObj.slice(0, userObj.length - 1).join(', ');
   const eventIdx = eventData.findIndex(
-    (elem) => elem.slice(0, elem.length - 1).join(',') === str
+    (elem) => elem.slice(0, elem.length - 1).join(', ') === str
   );
   return eventIdx;
 };
@@ -895,6 +904,25 @@ export const DashboardDefaultDateRangeFormat = {
   dateType: PREDEFINED_DATES.LAST_WEEK,
 };
 
+export const getStateFromFilters = (rawFilters = []) => {
+  const filters = [];
+  rawFilters.forEach((pr) => {
+    if (pr.lop === 'AND') {
+      filters.push({
+        operator:
+          pr.ty === 'datetime'
+            ? reverseDateOperatorMap[pr.op]
+            : reverseOperatorMap[pr.op],
+        props: [pr.pr, pr.ty, pr.en],
+        values: [pr.va],
+      });
+    } else {
+      filters[filters.length - 1].values.push(pr.va);
+    }
+  });
+  return filters;
+};
+
 export const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
@@ -992,7 +1020,7 @@ export const getAttributionQuery = (
       query_type: queryType,
       attribution_methodology: models[0],
       lbw: window,
-      tactic_offer_type: tacticOfferType
+      tactic_offer_type: tacticOfferType,
     },
   };
   if (dateRange.from && dateRange.to) {
@@ -1103,7 +1131,7 @@ export const getAttributionStateFromRequestQuery = (
     attr_dimensions,
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
-    tacticOfferType: requestQuery.tactic_offer_type
+    tacticOfferType: requestQuery.tactic_offer_type,
   };
 
   if (requestQuery.attribution_methodology_c) {
@@ -1477,7 +1505,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
       }
     });
     return {
-      label: e.ty,
+      label: ReverseProfileMapper[e.ty] ? ReverseProfileMapper[e.ty] : e.ty,
       filters,
     };
   });
@@ -1542,8 +1570,8 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
 };
 
 export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
-  console.log('requestQuery-->>',requestQuery);
-  console.log('requestQuery kpiConfig-->>',kpiConfig);
+  console.log('requestQuery-->>', requestQuery);
+  console.log('requestQuery kpiConfig-->>', kpiConfig);
   const queryType = requestQuery.cl;
   const queries = [];
   for (let i = 0; i < requestQuery.qG.length; i = i + 2) {
@@ -1553,12 +1581,12 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       ? config.metrics.find((m) => m.name === q.me[0])
       : null;
 
-    let eventFilters = []
+    let eventFilters = [];
     q?.fil?.forEach((pr) => {
       if (pr.lOp === 'AND') {
         let val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
         let DNa = _.startCase(pr.prNa);
-        let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en
+        let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
         eventFilters.push({
           operator:
             pr.prDaTy === 'datetime'
@@ -1566,7 +1594,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
               : reverseOperatorMap[pr.co],
           props: [DNa, pr.prDaTy, isCamp],
           values: val,
-          extra: [DNa, pr.prNa, pr.prDaTy, isCamp], 
+          extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
         });
       } else if (pr.prDaTy === 'categorical') {
         eventFilters[eventFilters.length - 1].values.push(pr.va);
@@ -1589,7 +1617,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     if (pr.lOp === 'AND') {
       let val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
       let DNa = _.startCase(pr.prNa);
-      let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en
+      let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
       filters.push({
         operator:
           pr.prDaTy === 'datetime'
@@ -1597,22 +1625,30 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
             : reverseOperatorMap[pr.co],
         props: [DNa, pr.prDaTy, isCamp],
         values: val,
-        extra: [DNa, pr.prNa, pr.prDaTy, isCamp], 
+        extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
       });
     } else if (pr.prDaTy === 'categorical') {
       filters[filters.length - 1].values.push(pr.va);
     }
   });
 
-  const globalBreakdown = requestQuery.gGBy.map((opt) => {
-    return {
+  const globalBreakdown = requestQuery.gGBy.map((opt, index) => {
+    let appGbp = {};
+    appGbp = {
       property: opt.prNa,
       prop_type: opt.prDaTy,
-      eventName: '$present',
-      eventIndex: 0,
+      overAllIndex: index,
       prop_category: opt.en || opt.objTy,
     };
+    if (opt.prDaTy === 'datetime') {
+      opt.grn ? (appGbp['grn'] = opt.grn) : (appGbp['grn'] = 'day');
+    }
+    if (opt.prDaTy === 'numerical') {
+      opt.gbty ? (appGbp['gbty'] = opt.gbty) : (appGbp['gbty'] = '');
+    }
+    return appGbp;
   });
+
   const groupBy = {
     global: globalBreakdown,
     event: [], //will be added later

@@ -317,6 +317,7 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 		Name:            smartEventPayload.Name,
 		SmartEventType:  hubspotSmartEventName.Type,
 		UserId:          userID,
+		RequestSource:   model.UserSourceHubspot,
 	}
 
 	timestampReferenceField := hubspotSmartEventName.Filter.TimestampReferenceField
@@ -693,6 +694,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 		EventProperties: *enProperties,
 		UserProperties:  *enProperties,
 		Timestamp:       getEventTimestamp(document.Timestamp),
+		RequestSource:   model.UserSourceHubspot,
 	}
 
 	logCtx = logCtx.WithField("action", document.Action).WithField(
@@ -705,7 +707,8 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 		createdUserID, status := store.GetStore().CreateUser(&model.User{
 			ProjectId:      project.ID,
 			JoinTimestamp:  getEventTimestamp(document.Timestamp),
-			CustomerUserId: customerUserID})
+			CustomerUserId: customerUserID,
+			Source:         model.GetRequestSourcePointer(model.UserSourceHubspot)})
 		if status != http.StatusCreated {
 			logCtx.WithField("status", status).Error("Failed to create user for hubspot contact created event.")
 			return http.StatusInternalServerError
@@ -764,7 +767,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 
 		if customerUserID != "" {
 			status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{
-				UserId: userID, CustomerUserId: customerUserID}, false)
+				UserId: userID, CustomerUserId: customerUserID, RequestSource: model.UserSourceHubspot}, false)
 			if status != http.StatusOK {
 				logCtx.WithField("customer_user_id", customerUserID).Error(
 					"Failed to identify user on hubspot contact sync.")
@@ -834,7 +837,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, lastModifiedTimeStamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRule",
-		"document_id": document.ID, "document_action": document.Action})
+		"document_id": document.ID, "document_action": document.Action, "document": document})
 
 	lastModifiedTimeStamp = U.CheckAndGetStandardTimestamp(lastModifiedTimeStamp)
 
@@ -849,12 +852,18 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 			return err
 		}
 
-		rules := touchPointRules["hs_touch_point_rules"]
+		// Get the last sync doc for the current update doc.
+		prevDoc, status := store.GetStore().GetLastSyncedHubspotUpdateDocumentByID(document.ProjectId, document.ID, document.Type)
+		if status != http.StatusFound {
+			// In case no prev properties
+			prevDoc = nil
+		}
 
+		rules := touchPointRules["hs_touch_point_rules"]
 		for _, rule := range rules {
 
-			// check if rule is applicable
-			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, logCtx) {
+			// Check if rule is applicable & the record has changed property w.r.t filters
+			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, document, prevDoc, logCtx) {
 				continue
 			}
 
@@ -881,6 +890,7 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 		EventProperties: eventProperties,
 		UserId:          trackPayload.UserId,
 		Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+		RequestSource:   trackPayload.RequestSource,
 	}
 
 	var timestamp int64
@@ -935,8 +945,7 @@ func canCreateHSTouchPoint(documentActionType int) bool {
 	}
 	return true
 }
-
-func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, logCtx *log.Entry) bool {
+func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, prevDoc *model.HubspotDocument, logCtx *log.Entry) bool {
 
 	filtersPassed := 0
 	for _, filter := range rule.Filters {
@@ -963,11 +972,55 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, lo
 				}
 			}
 		default:
-			logCtx.WithField("Document", trackPayload).Error("No matching operator found for offline touch point rules for hubspot document.")
+			logCtx.WithField("Rule", rule).WithField("TrackPayload", trackPayload).Error("No matching operator found for offline touch point rules for hubspot document.")
 			continue
 		}
 	}
-	return filtersPassed != 0 && filtersPassed == len(rule.Filters)
+
+	// Once filters passed, now check for the existing properties
+	if filtersPassed != 0 && filtersPassed == len(rule.Filters) {
+		if prevDoc == nil {
+			// In case no prev properties exist continue creating OTP
+			return true
+		}
+
+		if prevDoc.Action == model.HubspotDocumentActionCreated {
+			// In case the only last sync doc was a CreateDocument, create an OTP for this one.
+			return true
+		}
+
+		var err error
+		var prevProperties *map[string]interface{}
+
+		if document.Type == model.HubspotDocumentTypeContact {
+			prevProperties, _, err = GetContactProperties(document.ProjectId, prevDoc)
+		}
+
+		if err != nil {
+			logCtx.WithField("Rule", rule).WithField("TrackPayload", trackPayload).WithError(err).Error("Failed to GetHubspotDocumentProperties - Offline touch point. Continuing.")
+			// In case of err with previous properties, log error but continue creating OTP
+			return true
+		}
+
+		samePropertyMatchingScore := 0
+		for _, filter := range rule.Filters {
+			if val1, exists1 := trackPayload.EventProperties[filter.Property]; exists1 {
+				if val2, exists2 := (*prevProperties)[filter.Property]; exists2 {
+					if val1 == val2 {
+						samePropertyMatchingScore++
+					}
+				}
+			}
+		}
+		// If all filter properties matches with that of the previous found properties, skip and fail
+		if samePropertyMatchingScore == len(rule.Filters) {
+			return false
+		} else {
+			return true
+		}
+	}
+	// When neither filters matched nor (filters matched but values are same)
+	return false
 }
 
 func getDealUserID(projectID uint64, deal *Deal) string {
@@ -1434,7 +1487,7 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 	createdEventName, updatedEventName := getGroupEventName(document.Type)
 	if document.Action == model.HubspotDocumentActionCreated {
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID, "",
-			enProperties, document.Timestamp, document.Timestamp, model.SmartCRMEventSourceHubspot)
+			enProperties, getEventTimestamp(document.Timestamp), getEventTimestamp(document.Timestamp), model.SmartCRMEventSourceHubspot)
 
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot created group properties.")
@@ -1462,7 +1515,7 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 
 		groupUser := getGroupUserID(createdDocument)
 		groupUserID, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, groupName, groupID,
-			groupUser, enProperties, createdDocument.Timestamp, document.Timestamp,
+			groupUser, enProperties, getEventTimestamp(createdDocument.Timestamp), getEventTimestamp(document.Timestamp),
 			model.SmartCRMEventSourceHubspot)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to update hubspot updated group properties.")
@@ -1471,6 +1524,18 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 
 		processEventNames = append(processEventNames, updatedEventName)
 		processEventTimestamps = append(processEventTimestamps, document.Timestamp)
+
+	}
+
+	if document.Action == model.HubspotDocumentActionAssociationsUpdated {
+		createdDocument, status := store.GetStore().GetSyncedHubspotDocumentByFilter(projectID,
+			document.ID, document.Type, model.HubspotDocumentActionCreated)
+		if status != http.StatusFound {
+			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to get hubspot company created document for deals association update.")
+			return "", http.StatusInternalServerError
+		}
+
+		return createdDocument.GroupUserId, http.StatusOK
 	}
 
 	if groupUserID == "" {
@@ -1481,10 +1546,11 @@ func createOrUpdateHubspotGroupsProperties(projectID uint64, document *model.Hub
 	for i := range processEventNames {
 
 		trackPayload := &SDK.TrackPayload{
-			Name:      processEventNames[i],
-			ProjectId: projectID,
-			Timestamp: getEventTimestamp(processEventTimestamps[i]),
-			UserId:    groupUserID,
+			Name:          processEventNames[i],
+			ProjectId:     projectID,
+			Timestamp:     getEventTimestamp(processEventTimestamps[i]),
+			UserId:        groupUserID,
+			RequestSource: model.UserSourceHubspot,
 		}
 		docTypeAlias := model.GetHubspotTypeAliasByType(document.Type)
 
@@ -1571,72 +1637,87 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 
 	contactIDList, companyIDList, err := getDealAssociatedIDs(projectID, document)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to getDealAssociatedIDs.")
-		return "", http.StatusInsufficientStorage
+		logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "company_ids": companyIDList}).
+			WithError(err).Error("Failed to getDealAssociatedIDs.")
+		return dealGroupUserID, http.StatusOK
 	}
 
-	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIDList, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
-	if status != http.StatusFound && len(documents) > 0 {
-		logCtx.WithFields(log.Fields{"contact_ids": contactIDList}).Error("Failed to get contact created documents for syncGroupDeal.")
-		return "", http.StatusInternalServerError
-	}
-
-	for i := range documents {
-		userID := documents[i].UserId
-		if userID == "" {
-			logCtx.WithField("contact_id", documents[i].ID).Error("No user id found on contact create document")
-			continue
+	if len(contactIDList) > 0 {
+		documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIDList, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+		if status != http.StatusFound {
+			logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "err_code": status}).
+				Error("Failed to get contact created documents for syncGroupDeal.")
 		}
 
-		_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_HUBSPOT_DEAL, "", dealGroupUserID)
-		if status != http.StatusAccepted && status != http.StatusNotModified {
-			logCtx.WithFields(log.Fields{"contact_id": documents[i].ID, "deal_group_user_id": dealGroupUserID}).Error("Failed to update contact user group for hubspot deal.")
-		}
-	}
-
-	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, companyIDList,
-		model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
-	if status != http.StatusFound && len(companyIDList) > 0 {
-		logCtx.WithFields(log.Fields{"contact_ids": companyIDList}).Error("Failed to get company created documents for syncGroupDeal.")
-		return "", http.StatusInternalServerError
-	}
-
-	for i := range documents {
-		groupUserID := getGroupUserID(&documents[i])
-		if groupUserID == "" {
-			userProperties, err := getCompanyProperties(projectID, &documents[i])
-			if err != nil {
-				logCtx.WithFields(log.Fields{"document": documents[i]}).Error("Failed to get company properties in sync deal groups.")
+		for i := range documents {
+			userID := documents[i].UserId
+			if userID == "" {
+				logCtx.WithField("contact_id", documents[i].ID).Error("No user id found on contact create document")
 				continue
 			}
 
-			groupUserID, _, err = syncGroupCompany(projectID, document, &userProperties)
-			if err != nil {
-				logCtx.WithFields(log.Fields{"document": documents[i]}).Error("Missing group user id in company record in sync deal groups.")
-				continue
+			_, status := store.GetStore().UpdateUserGroup(projectID, userID, model.GROUP_NAME_HUBSPOT_DEAL, "", dealGroupUserID)
+			if status != http.StatusAccepted && status != http.StatusNotModified {
+				logCtx.WithFields(log.Fields{"contact_id": documents[i].ID, "deal_group_user_id": dealGroupUserID, "err_code": status}).
+					Error("Failed to update contact user group for hubspot deal.")
 			}
+
+		}
+	}
+
+	if len(companyIDList) > 0 {
+		documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, companyIDList,
+			model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
+		if status != http.StatusFound {
+			logCtx.WithFields(log.Fields{"company_ids": companyIDList}).
+				Error("Failed to get company created documents for syncGroupDeal.")
 		}
 
-		_, status = store.GetStore().CreateGroupRelationship(projectID, model.GROUP_NAME_HUBSPOT_DEAL, dealGroupUserID,
-			model.GROUP_NAME_HUBSPOT_COMPANY, groupUserID)
-		if status != http.StatusCreated && status != http.StatusConflict {
-			logCtx.WithFields(log.Fields{"company_id": documents[i].ID,
-				"left_group_name":     model.GROUP_NAME_HUBSPOT_DEAL,
-				"right_group_name":    model.GROUP_NAME_HUBSPOT_COMPANY,
-				"left_group_user_id":  dealGroupUserID,
-				"right_group_user_id": groupUserID}).
-				Error("Failed to update hubspot deal group relationships.")
-		}
+		for i := range documents {
+			groupUserID := getGroupUserID(&documents[i])
+			if groupUserID == "" {
+				userProperties, err := getCompanyProperties(projectID, &documents[i])
+				if err != nil {
+					logCtx.WithFields(log.Fields{"document": documents[i]}).Error("Failed to get company properties in sync deal groups.")
+					continue
+				}
 
-		_, status = store.GetStore().CreateGroupRelationship(projectID, model.GROUP_NAME_HUBSPOT_COMPANY, groupUserID,
-			model.GROUP_NAME_HUBSPOT_DEAL, dealGroupUserID)
-		if status != http.StatusCreated && status != http.StatusConflict {
-			logCtx.WithFields(log.Fields{"company_id": documents[i].ID,
-				"right_group_name":    model.GROUP_NAME_HUBSPOT_DEAL,
-				"left_group_name":     model.GROUP_NAME_HUBSPOT_COMPANY,
-				"right_group_user_id": dealGroupUserID,
-				"left_group_user_id":  groupUserID}).
-				Error("Failed to update hubspot deal group relationships.")
+				groupUserID, _, err = syncGroupCompany(projectID, &documents[i], &userProperties)
+				if err != nil {
+					logCtx.WithFields(log.Fields{"document": documents[i]}).WithError(err).Error("Missing group user id in company record in sync deal groups.")
+					continue
+				}
+
+				// update group_user_id  details on created record
+				errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, documents[i].ID, documents[i].Type, "",
+					documents[i].Timestamp, model.HubspotDocumentActionCreated, "", groupUserID)
+				if errCode != http.StatusAccepted {
+					logCtx.Error("Failed to update group user_id in hubspot created document as synced in sync deal company.")
+					continue
+				}
+			}
+
+			_, status = store.GetStore().CreateGroupRelationship(projectID, model.GROUP_NAME_HUBSPOT_DEAL, dealGroupUserID,
+				model.GROUP_NAME_HUBSPOT_COMPANY, groupUserID)
+			if status != http.StatusCreated && status != http.StatusConflict {
+				logCtx.WithFields(log.Fields{"company_id": documents[i].ID,
+					"left_group_name":     model.GROUP_NAME_HUBSPOT_DEAL,
+					"right_group_name":    model.GROUP_NAME_HUBSPOT_COMPANY,
+					"left_group_user_id":  dealGroupUserID,
+					"right_group_user_id": groupUserID}).
+					Error("Failed to update hubspot deal group relationships.")
+			}
+
+			_, status = store.GetStore().CreateGroupRelationship(projectID, model.GROUP_NAME_HUBSPOT_COMPANY, groupUserID,
+				model.GROUP_NAME_HUBSPOT_DEAL, dealGroupUserID)
+			if status != http.StatusCreated && status != http.StatusConflict {
+				logCtx.WithFields(log.Fields{"company_id": documents[i].ID,
+					"right_group_name":    model.GROUP_NAME_HUBSPOT_DEAL,
+					"left_group_name":     model.GROUP_NAME_HUBSPOT_COMPANY,
+					"right_group_user_id": dealGroupUserID,
+					"left_group_user_id":  groupUserID}).
+					Error("Failed to update hubspot deal group relationships.")
+			}
 		}
 	}
 
@@ -1681,7 +1762,7 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 		logCtx.Error("Skipped deal sync. No user associated to hubspot deal.")
 	} else if !dealstageExists || dealStage == nil {
 		logCtx.Error("No deal stage property found on hubspot deal.")
-	} else {
+	} else if document.Action != model.HubspotDocumentActionAssociationsUpdated {
 		trackPayload := &SDK.TrackPayload{
 			Name:            U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
 			ProjectId:       projectID,
@@ -1689,6 +1770,7 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 			EventProperties: *enProperties,
 			UserProperties:  *enProperties,
 			Timestamp:       getEventTimestamp(document.Timestamp),
+			RequestSource:   model.UserSourceHubspot,
 		}
 
 		// Track deal stage change only if, deal with same id and

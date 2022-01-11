@@ -1,6 +1,7 @@
 package tests
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +24,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 
 	// Test successful create project.
 	projectName := U.RandomLowerAphaNumString(15)
-	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName}, agent.UUID, model.ADMIN, billingAccount.ID)
+	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName}, agent.UUID, model.ADMIN, billingAccount.ID, true)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, project.ID > 0)
 	assert.Equal(t, projectName, project.Name)
@@ -71,7 +73,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	// Random Token.
 	providedToken := U.RandomLowerAphaNumString(32)
 	// Reusing the same name. Name is not meant to be unique.
-	project, errCode = store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName, Token: providedToken}, agent.UUID, model.ADMIN, billingAccount.ID)
+	project, errCode = store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName, Token: providedToken}, agent.UUID, model.ADMIN, billingAccount.ID, true)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, project.ID > previousProjectId)
 	assert.Equal(t, projectName, project.Name)
@@ -100,7 +102,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 
 	// Test Bad input by providing id.
 	// Reusing the same name. Name is not meant to be unique.
-	project, errCode = store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName, ID: previousProjectId + 10}, agent.UUID, model.ADMIN, billingAccount.ID)
+	project, errCode = store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName, ID: previousProjectId + 10}, agent.UUID, model.ADMIN, billingAccount.ID, true)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, project)
 
@@ -114,14 +116,14 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 
 	// Check corresponding project returned with token.
-	project, errCode = store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName}, agent.UUID, model.ADMIN, billingAccount.ID)
+	project, errCode = store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName}, agent.UUID, model.ADMIN, billingAccount.ID, true)
 	rProject, rErrCode := store.GetStore().GetProjectByToken(project.Token)
 	assert.Equal(t, http.StatusFound, rErrCode)
 	assert.Equal(t, project.ID, rProject.ID)
 
 	// Test CreateProjectWithDependencies
 	start = time.Now()
-	projectWithDeps, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName}, agent.UUID, model.ADMIN, billingAccount.ID)
+	projectWithDeps, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName}, agent.UUID, model.ADMIN, billingAccount.ID, true)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, projectWithDeps.ID > 0)
 	assert.Equal(t, 32, len(projectWithDeps.Token))
@@ -205,7 +207,7 @@ func TestNextSessionStartTimestampForProject(t *testing.T) {
 	billingAccount, errCode := store.GetStore().GetBillingAccountByAgentUUID(createdAgent.Agent.UUID)
 	assert.Equal(t, http.StatusFound, errCode)
 	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: U.RandomLowerAphaNumString(15)},
-		createdAgent.Agent.UUID, model.ADMIN, billingAccount.ID)
+		createdAgent.Agent.UUID, model.ADMIN, billingAccount.ID, true)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	assert.NotNil(t, project.JobsMetadata)
@@ -226,4 +228,17 @@ func TestNextSessionStartTimestampForProject(t *testing.T) {
 	gotTimestampAfterUpdate, errCode := store.GetStore().GetNextSessionStartTimestampForProject(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, newTimestamp, gotTimestampAfterUpdate)
+}
+
+func TestProjectSettingIngestionTimezoneFetch(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	projectSetting := model.ProjectSetting{}
+	db := C.GetServices().Db
+	db.Table("project_settings").Where("project_id = ?", project.ID).First(&projectSetting)
+
+	projectSetting.IntGoogleIngestionTimezone = "Australia"
+	db.Save(projectSetting)
+	_, projectSettings, _ := store.GetStore().GetFacebookEnabledIDsAndProjectSettingsForProject([]uint64{project.ID})
+	log.Warn(projectSettings)
 }

@@ -48,7 +48,7 @@ const CriteriaSection = ({queryType, queryCount = 0, crit_show, crit_perf, group
                   who performed
                 </Text>
 
-                <div className={``}>
+                <div className={`fa-button--truncate`}>
                     <Button 
                             size={'large'} 
                             type="link" 

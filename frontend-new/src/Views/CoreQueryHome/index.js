@@ -19,6 +19,7 @@ import {
   getCampaignStateFromRequestQuery,
   getProfileQueryFromRequestQuery,
   getKPIStateFromRequestQuery,
+  DefaultDateRangeFormat,
 } from '../CoreQuery/utils';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import ConfirmationModal from '../../components/ConfirmationModal';
@@ -58,22 +59,22 @@ import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
 import { fetchAgentInfo } from 'Reducers/agentActions';
 
-const whiteListedAccounts_KPI = [
-  'jitesh@factors.ai',
-  'kartheek@factors.ai',
-  'baliga@factors.ai',
-  'praveenr@factors.ai',
-  'sonali@factors.ai',
-  'solutions@factors.ai',
-  'praveen@factors.ai',
-  'ashwin@factors.ai',
-];
+// const whiteListedAccounts_KPI = [
+//   'jitesh@factors.ai',
+//   'kartheek@factors.ai',
+//   'baliga@factors.ai',
+//   'praveenr@factors.ai',
+//   'sonali@factors.ai',
+//   'solutions@factors.ai',
+//   'praveen@factors.ai',
+//   'ashwin@factors.ai',
+// ];
 
 const coreQueryoptions = [
   {
-    title: 'Events',
-    icon: 'events_cq',
-    desc: 'Create charts from events and related properties',
+    title: 'KPIs',
+    icon: 'KPI_cq',
+    desc: 'Access your key marketing metrics',
   },
   {
     title: 'Funnels',
@@ -81,30 +82,33 @@ const coreQueryoptions = [
     desc: 'Find how users are navigating a defined path',
   },
   {
-    title: 'KPIs',
-    icon: 'KPI_cq',
-    desc: 'Access your key marketing metrics',
-  },
-  {
-    title: 'Campaigns',
-    icon: 'campaigns_cq',
-    desc: 'Find the effect of your marketing campaigns',
-  },
-  {
-    title: 'Attributions',
+    title: 'Attribution',
     icon: 'attributions_cq',
     desc: 'Analyse Multi Touch Attributions',
-  },
-  {
-    title: 'Templates',
-    icon: 'templates_cq',
-    desc: 'A list of advanced queries crafted by experts',
   },
   {
     title: 'Profiles',
     icon: 'profiles_cq',
     desc: 'Explore all Profiles with filters and breakdowns',
   },
+  {
+    title: 'Events',
+    icon: 'events_cq',
+    desc: 'Create charts from events and related properties',
+  },
+  
+  {
+    title: 'Campaigns',
+    icon: 'campaigns_cq',
+    desc: 'Find the effect of your marketing campaigns',
+  },
+  {
+    title: 'Templates',
+    icon: 'templates_cq',
+    desc: 'A list of advanced queries crafted by experts',
+  },
+  
+  
 ];
 
 const columns = [
@@ -155,7 +159,7 @@ function CoreQuery({
   fetchWeeklyIngishts,
   activeProject,
   updateChartTypes,
-  activeAccount,
+  activeAgent,
   updateSavedQuerySettings,
   setProfileQueries,
   fetchAgentInfo,
@@ -488,6 +492,13 @@ function CoreQuery({
     if (item.title === 'Funnels') {
       setQueryType(QUERY_TYPE_FUNNEL);
       setQueries([]);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          globalFilters: [],
+          date_range: { ...DefaultDateRangeFormat },
+        };
+      });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -500,6 +511,13 @@ function CoreQuery({
     if (item.title === 'Events') {
       setQueryType(QUERY_TYPE_EVENT);
       setQueries([]);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          globalFilters: [],
+          date_range: { ...DefaultDateRangeFormat },
+        };
+      });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -509,13 +527,20 @@ function CoreQuery({
       });
     }
 
-    if (item.title === 'Attributions') {
+    if (item.title === 'Attribution') {
       setQueryType(QUERY_TYPE_ATTRIBUTION);
     }
 
     if (item.title === 'KPIs') {
       setQueryType(QUERY_TYPE_KPI);
       setQueries([]);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          globalFilters: [],
+          date_range: { ...DefaultDateRangeFormat },
+        };
+      });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -532,6 +557,13 @@ function CoreQuery({
     if (item.title === 'Profiles') {
       setQueryType(QUERY_TYPE_PROFILE);
       setProfileQueries([]);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          globalFilters: [],
+          date_range: { ...DefaultDateRangeFormat },
+        };
+      });
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: {
@@ -596,12 +628,12 @@ function CoreQuery({
             <Col span={20}>
               <div className={'flex'}>
                 {coreQueryoptions.map((item, index) => {
-                  if (
-                    item.title === 'KPIs' &&
-                    !whiteListedAccounts_KPI.includes(activeAccount)
-                  ) {
-                    return null;
-                  }
+                  // if (
+                  //   item.title === 'KPIs' &&
+                  //   !whiteListedAccounts_KPI.includes(activeAccount)
+                  // ) {
+                  //   return null;
+                  // }
                   return (
                     <div
                       key={index}
@@ -611,14 +643,14 @@ function CoreQuery({
                       <div
                         className={`fai--custom-card-new--top-section flex justify-center items-center`}
                       >
-                        {/* {item.title == 'Templates' && (
+                        {item.title == 'KPIs' && (
                           <Tag
-                            color='red'
+                            color='orange'
                             className={'fai--custom-card--badge'}
                           >
-                            Coming Soon
+                            BETA
                           </Tag>
-                        )} */}
+                        )}
                         <SVG name={item.icon} size={40} />
                       </div>
 
@@ -702,7 +734,7 @@ function CoreQuery({
 }
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  activeAccount: state.agent?.agent_details?.email,
+  activeAgent: state.agent?.agent_details?.email,
 });
 
 export default connect(mapStateToProps, {

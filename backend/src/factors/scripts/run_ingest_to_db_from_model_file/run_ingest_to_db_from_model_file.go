@@ -258,7 +258,7 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 	}
 
 	cproject, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName},
-		agentUUID, 0, billingAcc.ID)
+		agentUUID, 0, billingAcc.ID, true)
 	if errCode != http.StatusCreated {
 		log.Error("failed to CreateProjectWithDependencies")
 		return nil, errors.New("failed to CreateProjectWithDependencies")
@@ -267,7 +267,7 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 }
 
 func eventToDb(event denEvent, project *model.Project) int {
-	userID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: event.UserId})
+	userID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: event.UserId, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	if errCode != http.StatusCreated && errCode != http.StatusOK {
 		log.Errorf("failed to create user status: %d", errCode)
 		return errCode

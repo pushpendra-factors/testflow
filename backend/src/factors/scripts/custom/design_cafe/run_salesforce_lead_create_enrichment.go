@@ -206,12 +206,12 @@ func userIndentificationByPhoneNo(projectId uint64, phoneNo string) string {
 				return ""
 			}
 
-			userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, newPhoneNo)
+			userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, newPhoneNo, model.UserSourceSalesforce)
 			if errCode == http.StatusFound {
 				return userLatest.ID
 			}
 
-			userLatest, errCode = store.GetStore().GetUserLatestByCustomerUserId(projectId, "+"+newPhoneNo)
+			userLatest, errCode = store.GetStore().GetUserLatestByCustomerUserId(projectId, "+"+newPhoneNo, model.UserSourceSalesforce)
 			if errCode == http.StatusFound {
 				return userLatest.ID
 			}
@@ -237,6 +237,7 @@ func buildUserCreatedEvent(projectID uint64, properties map[string]interface{}, 
 		EventProperties: properties,
 		UserProperties:  properties,
 		Timestamp:       getJoinTimeStamp(properties["SF_Created_Date"].(string)),
+		RequestSource:   model.UserSourceSalesforce,
 	}
 
 	latestUserId := userIndentificationByPhoneNo(projectID, properties["SF_Mobile"].(string))
@@ -254,7 +255,7 @@ func buildUserCreatedEvent(projectID uint64, properties map[string]interface{}, 
 		customerUserId := getPhoneNoAsCustomerUserId(properties["SF_Mobile"].(string))
 
 		status, _ = SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userId, CustomerUserId: customerUserId}, false)
+			UserId: userId, CustomerUserId: customerUserId, RequestSource: model.UserSourceSalesforce}, false)
 		if status != http.StatusOK {
 			return errors.New(fmt.Sprintf("Failed to identify user %s", customerUserId))
 		}

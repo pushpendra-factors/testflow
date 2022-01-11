@@ -74,7 +74,7 @@ var mapOfTypeToLinkedinJobCTEAlias = map[string]string{
 
 var errorEmptyLinkedinDocument = errors.New("empty linked document")
 
-const linkedinFilterQueryStr = "SELECT DISTINCT LCASE(JSON_EXTRACT_STRING(value, ?) as filter_value FROM linkedin_documents WHERE project_id = ? AND" +
+const linkedinFilterQueryStr = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM linkedin_documents WHERE project_id = ? AND" +
 	" " + "customer_ad_account_id = ? AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
 
 const fromLinkedinDocuments = " FROM linkedin_documents "
@@ -82,20 +82,41 @@ const fromLinkedinDocuments = " FROM linkedin_documents "
 const staticWhereStatementForLinkedin = "WHERE project_id = ? AND customer_ad_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 const staticWhereStatementForLinkedinWithSmartProperty = "WHERE linkedin_documents.project_id = ? AND linkedin_documents.customer_ad_account_id IN ( ? ) AND linkedin_documents.type = ? AND linkedin_documents.timestamp between ? AND ? "
 
-const linkedinAdGroupMetadataFetchQueryStr = "WITH ad_group as (select campaign_id as ad_group_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, campaign_group_id " +
-	"from linkedin_documents where type = ? AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_ad_account_id IN (?) " +
-	"AND (campaign_id, timestamp) in (select campaign_id, max(timestamp) from linkedin_documents where type = ? AND " +
-	"project_id = ? AND timestamp between ? and ? AND customer_ad_account_id IN (?) group by campaign_id)), campaign as " +
-	"(select campaign_group_id as campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from linkedin_documents where type = ? AND " +
-	"project_id = ?  AND timestamp BETWEEN ? AND ? AND customer_ad_account_id IN (?) and (campaign_group_id, timestamp) in " +
-	"(select campaign_group_id, max(timestamp) from linkedin_documents where type = ? and project_id = ? and timestamp " +
-	"BETWEEN ? and ?  AND customer_ad_account_id IN (?) group by campaign_group_id)) select ad_group_id, ad_group_name, " +
-	"campaign.campaign_id, campaign_name from ad_group join campaign on ad_group.campaign_group_id = campaign.campaign_id"
+const linkedinAdGroupMetadataFetchQueryStr = "WITH ad_group as (select ad_group_information.campaign_id_1 as campaign_id, ad_group_information.ad_group_id_1 as ad_group_id, ad_group_information.ad_group_name_1 as ad_group_name " +
+	"from ( " +
+	"select campaign_group_id as campaign_id_1, campaign_id as ad_group_id_1, JSON_EXTRACT_STRING(value, 'name') as ad_group_name_1, timestamp " +
+	"from linkedin_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_ad_account_id IN (?) " +
+	") as ad_group_information " +
+	"INNER JOIN " +
+	"(select campaign_id as ad_group_id_1, max(timestamp) as timestamp " +
+	"from linkedin_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_ad_account_id IN (?) group by ad_group_id_1 " +
+	") as ad_group_latest_timestamp_id " +
+	"ON ad_group_information.ad_group_id_1 = ad_group_latest_timestamp_id.ad_group_id_1 AND ad_group_information.timestamp = ad_group_latest_timestamp_id.timestamp), " +
 
-const linkedinCampaignMetadataFetchQueryStr = "select campaign_group_id as campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from linkedin_documents where " +
-	"type = ? AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_ad_account_id IN (?) and " +
-	"(campaign_group_id, timestamp) in (select campaign_group_id, max(timestamp) from linkedin_documents where type = ? " +
-	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_group_id)"
+	" campaign as (select campaign_information.campaign_id_1 as campaign_id, campaign_information.campaign_name_1 as campaign_name " +
+	"from ( " +
+	"select campaign_group_id as campaign_id_1, JSON_EXTRACT_STRING(value, 'name') as campaign_name_1, timestamp " +
+	"from linkedin_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_ad_account_id IN (?) " +
+	") as campaign_information " +
+	"INNER JOIN " +
+	"(select campaign_group_id as campaign_id_1, max(timestamp) as timestamp " +
+	"from linkedin_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_ad_account_id IN (?) group by campaign_id_1 " +
+	") as campaign_latest_timestamp_id " +
+	"ON campaign_information.campaign_id_1 = campaign_latest_timestamp_id.campaign_id_1 AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp) " +
+
+	"select campaign.campaign_id, campaign.campaign_name, ad_group.ad_group_id, ad_group.ad_group_name " +
+	"from campaign join ad_group on ad_group.campaign_id = campaign.campaign_id"
+
+const linkedinCampaignMetadataFetchQueryStr = "select campaign_information.campaign_id_1 as campaign_id, campaign_information.campaign_name_1 as campaign_name " +
+	"from ( " +
+	"select campaign_group_id as campaign_id_1, JSON_EXTRACT_STRING(value, 'name') as campaign_name_1, timestamp " +
+	"from linkedin_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_ad_account_id IN (?) " +
+	") as campaign_information " +
+	"INNER JOIN " +
+	"(select campaign_group_id as campaign_id_1, max(timestamp) as timestamp " +
+	"from linkedin_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_ad_account_id IN (?) group by campaign_id_1 " +
+	") as campaign_latest_timestamp_id " +
+	"ON campaign_information.campaign_id_1 = campaign_latest_timestamp_id.campaign_id_1 AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
 
 func (store *MemSQL) satisfiesLinkedinDocumentForeignConstraints(linkedinDocument model.LinkedinDocument) int {
 	_, errCode := store.GetProject(linkedinDocument.ProjectID)
@@ -345,7 +366,7 @@ func getLinkedinChannelResult(projectID uint64, customerAccountID string, query 
 	}
 
 	if len(resultRows) > 1 {
-		log.Error("Aggregate query returned more than one row on get adwords metric kvs.")
+		log.Error("Aggregate query returned more than one row on get linkedin metric kvs.")
 	}
 
 	metricKvs := make(map[string]interface{})
@@ -1056,7 +1077,6 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 
 // Since we dont have a way to store raw format, we are going with the approach of joins on query.
 func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
-	db := C.GetServices().Db
 
 	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0, 0)
 	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0, 0)
@@ -1067,7 +1087,7 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	if projectSetting.IntLinkedinAdAccount == "" {
-		log.Error("Failed to get custtomer account ids")
+		log.WithField("projectID", projectID).Error("Integration of linkedin is not available for this project.")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	customerAccountIDs := strings.Split(projectSetting.IntLinkedinAdAccount, ",")
@@ -1084,24 +1104,60 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(linkedinAdGroupMetadataFetchQueryStr, linkedinDocumentTypeAlias["campaign"], projectID, from, to, customerAccountIDs,
-		linkedinDocumentTypeAlias["campaign"], projectID, from, to, customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"],
-		projectID, from, to, customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID,
-		from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
+	query := linkedinAdGroupMetadataFetchQueryStr
+	params := []interface{}{linkedinDocumentTypeAlias["campaign"], projectID, from, to,
+		customerAccountIDs, linkedinDocumentTypeAlias["campaign"], projectID, from, to,
+		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs}
+
+	rows, _, err := store.ExecQueryWithContext(query, params)
 	if err != nil {
-		errString := fmt.Sprintf("failed to get last %d ad_group meta for Linkedin", days)
-		log.Error(errString)
+		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(linkedinCampaignMetadataFetchQueryStr, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
+		log.WithField("cur2", currentRecord).Warn("kark3-2")
+		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
+	}
+
+	query = linkedinCampaignMetadataFetchQueryStr
+	params = []interface{}{linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
 		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
-		customerAccountIDs).Find(&channelDocumentsCampaign).Error
+		customerAccountIDs}
+	rows, _, err = store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for Linkedin", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
-
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
+		log.WithField("cur2", currentRecord).Warn("kark3-1")
+		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
+	}
 	return channelDocumentsCampaign, channelDocumentsAdGroup
+}
+
+func (store *MemSQL) DeleteLinkedinIntegration(projectID uint64) (int, error) {
+	db := C.GetServices().Db
+	updateValues := make(map[string]interface{})
+	updateValues["int_linkedin_ad_account"] = nil
+	updateValues["int_linkedin_access_token"] = nil
+	updateValues["int_linkedin_refresh_token"] = nil
+	updateValues["int_linkedin_refresh_token_expiry"] = nil
+	updateValues["int_linkedin_access_token_expiry"] = nil
+
+	err := db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(updateValues).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
 }

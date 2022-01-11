@@ -249,8 +249,8 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
     log.warning("Downloading contacts without properties list "+get_url)
     r = get_with_fallback_retry(project_id,get_url)
     if not r.ok:
-        return {}, r
-    response_dict = json.loads(r.text)
+        return {},{}, r
+    response_dict,unmodified_dict = json.loads(r.text),json.loads(r.text)
     if "contacts" not in response_dict:
         raise Exception("Missing contacts property key on contacts")
     contacts = response_dict["contacts"]
@@ -266,7 +266,7 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
     r = get_with_fallback_retry(project_id,batch_url)
     if not r.ok:
         log.error("Failure getting batch contacts for project_id %d on sync_contacts", project_id)
-        return {},r
+        return {},{},r
     batch_contact_dict = json.loads(r.text)
 
     for contact in contacts:
@@ -285,7 +285,7 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
 
     response_dict["contacts"] = contacts
 
-    return response_dict, r
+    return response_dict, unmodified_dict, r
 
 
 def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
@@ -320,6 +320,7 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
 
         log.warning("Downloading contacts for project_id %d from url %s.", project_id, get_url_with_properties)
         response_dict = {}
+        unmodified_response_dict={}
         if err_url_too_long == False:
             r = get_with_fallback_retry(project_id,get_url_with_properties)
             if not r.ok:
@@ -333,7 +334,7 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
                 response_dict = json.loads(r.text)
 
         if err_url_too_long == True:
-            contact_dict, r = get_contacts_with_properties_by_id(project_id,api_key,get_url)
+            contact_dict,unmodified_response_dict, r = get_contacts_with_properties_by_id(project_id,api_key,get_url)
             if not r.ok:
                 log.error("Failure response %d from hubspot on batch sync_contacts", r.status_code)
                 break
@@ -343,9 +344,10 @@ def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
 
         has_more = response_dict['has-more']
         docs = response_dict['contacts']
+        validate_order_dict = unmodified_response_dict if err_url_too_long == True else response_dict
         if sync_all == False and ordered_historical_data_failure == False:
             should_stop, ordered_historical_data_failure  = should_continue_contact_historical_data(project_id,
-            response_dict,last_sync_timestamp-(10800*1000)) # fallback to 3hrs since hubspot api may not have updated latest change on bulk updates
+            validate_order_dict,last_sync_timestamp-(10800*1000)) # fallback to 3hrs since hubspot api may not have updated latest change on bulk updates
             if should_stop:
                 has_more = False
         if sync_all:

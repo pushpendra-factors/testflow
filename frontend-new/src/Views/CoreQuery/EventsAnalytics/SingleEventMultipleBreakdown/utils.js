@@ -15,6 +15,7 @@ import {
 } from '../../../../utils/constants';
 import HorizontalBarChartCell from './HorizontalBarChartCell';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
+import { DISPLAY_PROP } from '../../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -58,7 +59,9 @@ export const formatData = (data) => {
   const grns = getBreakDownGranularities(headerSlice, breakdowns);
 
   const result = rows.map((d, index) => {
-    const breakdownVals = d.slice(eventNameIndex + 1, countIndex);
+    const breakdownVals = d
+      .slice(eventNameIndex + 1, countIndex)
+      .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
     const breakdownData = {};
     for (let i = 0; i < breakdowns.length; i++) {
       const bkd = breakdowns[i];
@@ -67,7 +70,7 @@ export const formatData = (data) => {
         breakdownVals[i]
       );
     }
-    const grpLabel = Object.values(breakdownData).join(',');
+    const grpLabel = Object.values(breakdownData).join(', ');
     return {
       label: grpLabel,
       value: d[countIndex],
@@ -285,8 +288,10 @@ export const formatDataInStackedAreaFormat = (
   data.rows.forEach((row) => {
     const breakdownJoin = row
       .slice(breakdownIndex, countIndex)
-      .map((x, ind) => parseForDateTimeLabel(grns[ind], x))
-      .join(',');
+      .map((x, ind) =>
+        parseForDateTimeLabel(grns[ind], DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x)
+      )
+      .join(', ');
     const bIdx = labelsMapper[breakdownJoin];
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);

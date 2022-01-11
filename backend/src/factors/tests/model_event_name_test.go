@@ -565,7 +565,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 
-	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID)
 	assert.Equal(t, http.StatusCreated, errCode)
 	rEventName := "event1"
@@ -1720,7 +1720,7 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 		eventNames = append(eventNames, *eventName)
 	}
 
-	createdUserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, status)
 
 	// creating multiple normal events

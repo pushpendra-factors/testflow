@@ -99,6 +99,26 @@ func (gcsd *GCSDriver) GetProjectDir(projectId uint64) string {
 	return fmt.Sprintf("projects/%d/events/", projectId)
 }
 
+func (gcsd *GCSDriver) GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("userPropCatgMap_%d.txt", modelId)
+}
+
+func (gcsd *GCSDriver) GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventPropCatgMap_%d.txt", modelId)
+}
+
+func (gcsd *GCSDriver) GetModelUserPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventUserPropMap_%d.txt", modelId)
+}
+
+func (gcsd *GCSDriver) GetModelEventPropertiesFilePathAndName(projectId, modelId uint64) (string, string) {
+	path := gcsd.GetProjectModelDir(projectId, modelId) + "properties/"
+	return path, fmt.Sprintf("eventEventPropMap_%d.txt", modelId)
+}
+
 func (gcsd *GCSDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
@@ -128,11 +148,16 @@ func (gcsd *GCSDriver) GetPatternChunksDir(projectId, modelId uint64) string {
 	modelDir := gcsd.GetProjectModelDir(projectId, modelId)
 	return fmt.Sprintf("%schunks/", modelDir)
 }
-
+func (gcsd *GCSDriver) GetChunksMetaDataDir(projectId, modelId uint64) string {
+	modelDir := gcsd.GetProjectModelDir(projectId, modelId)
+	return fmt.Sprintf("%smetadata/", modelDir)
+}
 func (gcsd *GCSDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
 	return gcsd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }
-
+func (gcsd *GCSDriver) GetChunksMetaDataFilePathAndName(projectId, modelId uint64) (string, string) {
+	return gcsd.GetChunksMetaDataDir(projectId, modelId), fmt.Sprintf("metadata.txt")
+}
 func (gcsd *GCSDriver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
 	year, month, date := time.Unix(startTime, 0).UTC().Date()
 	path := fmt.Sprintf("archive/%d/%d/%d/", projectID, year, int(month))

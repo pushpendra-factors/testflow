@@ -180,7 +180,7 @@ export const getClickableTitleSorter = (
   handleSorting,
   alignmentClass = 'items-center'
 ) => {
-  const sorter = isArray(currentSorter)? currentSorter : [currentSorter];
+  const sorter = isArray(currentSorter) ? currentSorter : [currentSorter];
   const sorterPropIndex = sorter.findIndex(
     (elem) => elem.key === sorterProp.key
   );
@@ -190,12 +190,10 @@ export const getClickableTitleSorter = (
       className={`flex ${alignmentClass} justify-between cursor-pointer h-full`}
     >
       <div className='mr-2 break-all'>{title}</div>
-      {sorterPropIndex > -1 &&
-      sorter[sorterPropIndex].order === 'descend' ? (
+      {sorterPropIndex > -1 && sorter[sorterPropIndex].order === 'descend' ? (
         <ArrowDownOutlined />
       ) : null}
-      {sorterPropIndex > -1 &&
-      sorter[sorterPropIndex].order === 'ascend' ? (
+      {sorterPropIndex > -1 && sorter[sorterPropIndex].order === 'ascend' ? (
         <ArrowUpOutlined />
       ) : null}
     </div>
@@ -344,11 +342,13 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
         key: CHART_TYPE_STACKED_BAR,
         name: 'Stacked Column',
       },
-      {
+    ];
+    if (breakdownLength <= 3) {
+      menuItems.push({
         key: CHART_TYPE_HORIZONTAL_BAR_CHART,
         name: 'Bars',
-      },
-    ];
+      });
+    }
   }
 
   if (queryType === QUERY_TYPE_PROFILE && breakdownLength) {
@@ -602,7 +602,8 @@ export const SortByKey = (result, currentSorter) => {
         currentSorter.subtype === 'day' ||
         currentSorter.subtype === 'date' ||
         currentSorter.subtype === 'month' ||
-        currentSorter.subtype === 'hour'
+        currentSorter.subtype === 'hour' ||
+        currentSorter.subtype === 'quarter'
       ) {
         return SortDataByDate(
           result,

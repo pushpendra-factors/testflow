@@ -168,6 +168,16 @@ func (pg *Postgres) UpdateAgentIntSalesforce(uuid, refreshToken string, instance
 	return updateAgent(uuid, model.IntSalesforceRefreshToken(refreshToken), model.IntSalesforceInstanceURL(instanceUrl))
 }
 
+func (pg *Postgres) UpdateAgentSalesforceInstanceURL(uuid, instanceUrl string) int {
+	if uuid == "" || instanceUrl == "" {
+		log.WithField("agent_uuid", uuid).Error(
+			"UpdateAgentInstanceURL failed. Invalid params.")
+		return http.StatusBadRequest
+	}
+
+	return updateAgent(uuid, model.IntSalesforceInstanceURL(instanceUrl))
+}
+
 func (pg *Postgres) UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
 
 	if uuid == "" || plainTextPassword == "" {
@@ -218,7 +228,7 @@ func (pg *Postgres) UpdateAgentVerificationDetails(agentUUID, password, firstNam
 	return updateAgent(agentUUID, options...)
 }
 
-func (pg *Postgres) UpdateAgentInformation(agentUUID, firstName, lastName, phone string,isOnboardingFlowSeen bool) int {
+func (pg *Postgres) UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int {
 	if agentUUID == "" {
 		return http.StatusBadRequest
 	}
@@ -232,7 +242,9 @@ func (pg *Postgres) UpdateAgentInformation(agentUUID, firstName, lastName, phone
 	if phone != "" {
 		updateParams = append(updateParams, model.Phone(phone))
 	}
-	updateParams = append(updateParams, model.IsOnboardingFlowSeen(isOnboardingFlowSeen))
+	if isOnboardingFlowSeen != nil {
+		updateParams = append(updateParams, model.IsOnboardingFlowSeen(*isOnboardingFlowSeen))
+	}
 	return updateAgent(agentUUID, updateParams...)
 }
 

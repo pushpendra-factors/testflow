@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"encoding/json"
+	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/metrics"
@@ -766,4 +767,22 @@ func (pg *Postgres) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings(
 		}
 	}
 	return mapOfProjectToCustomerIds, nil
+}
+
+func (pg *Postgres) DeleteChannelIntegration(projectID uint64, channelName string) (int, error) {
+	if projectID == 0 {
+		return http.StatusBadRequest, errors.New("invalid projectID")
+	}
+	switch channelName {
+	case "facebook":
+		return pg.DeleteFacebookIntegration(projectID)
+	case "linkedin":
+		return pg.DeleteLinkedinIntegration(projectID)
+	case "adwords":
+		return pg.DeleteAdwordsIntegration(projectID)
+	case "google_organic":
+		return pg.DeleteGoogleOrganicIntegration(projectID)
+	default:
+		return http.StatusBadRequest, errors.New("invalid channel name")
+	}
 }

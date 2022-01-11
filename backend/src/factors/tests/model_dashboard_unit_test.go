@@ -659,7 +659,7 @@ func TestDashboardUnitEventForTimeZone(t *testing.T) {
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
-	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	event_timestamp := 1575138601
 
 	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", userID1, event_timestamp, "A", 1234)
@@ -822,7 +822,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
-	project.TimeZone = "Europe/Lisbon"
+	project.TimeZone = string(U.TimeZoneStringIST)
 	store.GetStore().UpdateProject(project.ID, project)
 
 	_, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "$session"})
@@ -832,15 +832,6 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	_, errCode = store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountID,
 	})
-
-	dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
-		ProjectID: project.ID,
-		Type:      model.QueryTypeDashboardQuery,
-		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
-	})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.Empty(t, errMsg)
-	assert.NotNil(t, dashboardQuery)
 
 	timezonestring := U.TimeZoneString(project.TimeZone)
 	dashboardName := U.RandomString(5)
@@ -862,6 +853,15 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
 		assert.Nil(t, err)
 
+		dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+			ProjectID: project.ID,
+			Type:      model.QueryTypeDashboardQuery,
+			Query:     postgres.Jsonb{json.RawMessage(queryString)},
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardQuery)
+
 		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
 			DashboardId:  dashboard.ID,
 			Presentation: model.PresentationCard,
@@ -876,7 +876,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	}
 	var reportCollector sync.Map
 	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1, &reportCollector)
-	assert.Equal(t, 4, updatedUnitsCount)
+	assert.Equal(t, 5, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
 		from, to, errCode := rangeFunction(timezonestring)
@@ -912,12 +912,15 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 
 			// Send same query as core query without sending dashboardID and unitID.
 			// Since cached from dashboard caching, it should also be available with direct query.
+			if (rangeString == "CURRENT_WEEK" || rangeString == "CURRENT_MONTH") && queryClass == model.QueryClassAttribution {
+				continue
+			}
 			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, 0, 0, query, false, false)
 			assert.NotEmpty(t, w)
 			assert.Equal(t, http.StatusOK, w.Code)
 			if queryClass != model.QueryClassWeb {
 				// For website analytics, it returns from Dashboard cache.
-				assert.Equal(t, "true", w.HeaderMap.Get(model.QueryCacheResponseFromCacheHeader), assertMsg)
+				assert.Equal(t, "true", w.Header().Get(model.QueryCacheResponseFromCacheHeader), assertMsg)
 			}
 
 			if from == U.GetBeginningOfDayTimestampIn(U.TimeNowUnix(), timezonestring) {
@@ -950,16 +953,6 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 		IntAdwordsCustomerAccountId: &customerAccountID,
 	})
 
-	dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
-		ProjectID: project.ID,
-		Type:      model.QueryTypeDashboardQuery,
-		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
-		Settings:  postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 100}`)},
-	})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.Empty(t, errMsg)
-	assert.NotNil(t, dashboardQuery)
-
 	dashboardName := U.RandomString(5)
 	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: dashboardName, Type: model.DashboardTypeProjectVisible})
 	assert.NotNil(t, dashboard)
@@ -976,6 +969,16 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
 		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
 		assert.Nil(t, err)
+
+		dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+			ProjectID: project.ID,
+			Type:      model.QueryTypeDashboardQuery,
+			Query:     postgres.Jsonb{json.RawMessage(queryString)},
+			Settings:  postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 100}`)},
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardQuery)
 
 		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
 			DashboardId:  dashboard.ID,
@@ -1045,17 +1048,6 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 		IntAdwordsCustomerAccountId: &customerAccountID,
 	})
 
-	dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
-		ProjectID: project.ID,
-		Type:      model.QueryTypeDashboardQuery,
-		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
-		Title:     "title_xyz",
-		Settings:  postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 100}`)},
-	})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.Empty(t, errMsg)
-	assert.NotNil(t, dashboardQuery)
-
 	dashboardName := U.RandomString(5)
 	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: dashboardName, Type: model.DashboardTypeProjectVisible})
 	assert.NotNil(t, dashboard)
@@ -1072,6 +1064,17 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
 		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
 		assert.Nil(t, err)
+
+		dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+			ProjectID: project.ID,
+			Type:      model.QueryTypeDashboardQuery,
+			Query:     postgres.Jsonb{json.RawMessage(queryString)},
+			Title:     "title_xyz",
+			Settings:  postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 100}`)},
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardQuery)
 
 		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID, &model.DashboardUnit{
 			DashboardId:  dashboard.ID,
@@ -1139,7 +1142,7 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
-	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	userID1, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	event_timestamp := time.Now().AddDate(0, -1, 0).Unix()
 	timezoneString, _ := store.GetStore().GetTimezoneForProject(project.ID)
 
@@ -1231,37 +1234,6 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 		assert.Equal(t, true, result.Cache)
 		assert.Equal(t, result.Result.Rows[0][0], float64(2))
 	}
-}
-
-func TestCreateDashboardUnitWithDeletedQuery(t *testing.T) {
-	project, agent, err := SetupProjectWithAgentDAO()
-	assert.Nil(t, err)
-	assert.NotEmpty(t, project, agent)
-
-	dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
-		ProjectID: project.ID,
-		Type:      model.QueryTypeDashboardQuery,
-		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
-	})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.Empty(t, errMsg)
-	assert.NotNil(t, dashboardQuery)
-
-	// Delete the above query.
-	errCode, errMsg = store.GetStore().DeleteDashboardQuery(project.ID, dashboardQuery.ID)
-	assert.Equal(t, http.StatusAccepted, errCode)
-
-	// Try creating a new dashboard unit for the deleted query.
-	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID,
-		&model.Dashboard{Name: U.RandomString(5), Type: model.DashboardTypeProjectVisible})
-	assert.NotNil(t, dashboard)
-	assert.Equal(t, http.StatusCreated, errCode)
-
-	dashboardUnit, errCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
-		&model.DashboardUnit{DashboardId: dashboard.ID, Presentation: model.PresentationLine,
-			QueryId: dashboardQuery.ID})
-	assert.NotEqual(t, http.StatusCreated, errCode)
-	assert.Empty(t, dashboardUnit)
 }
 
 func sendAttributionQueryReq(r *gin.Engine, projectID uint64, agent *model.Agent, dashboardID, unitID uint64, query model.AttributionQuery, refresh bool) *httptest.ResponseRecorder {

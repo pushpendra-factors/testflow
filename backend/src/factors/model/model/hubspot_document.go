@@ -46,9 +46,10 @@ type HubspotSyncInfo struct {
 }
 
 const (
-	HubspotDocumentActionCreated = 1
-	HubspotDocumentActionUpdated = 2
-	HubspotDocumentActionDeleted = 3
+	HubspotDocumentActionCreated             = 1
+	HubspotDocumentActionUpdated             = 2
+	HubspotDocumentActionDeleted             = 3
+	HubspotDocumentActionAssociationsUpdated = 4
 )
 
 const (
@@ -110,6 +111,16 @@ type HubspotProjectSyncStatus struct {
 	Status    string `json:"status"`
 	SyncAll   bool   `json:"sync_all"`
 	Timestamp int64  `json:"timestamp"`
+}
+
+// Associations struct for deal associations
+type Associations struct {
+	AssociatedCompanyIds []int64 `json:"associatedCompanyIds"`
+}
+
+// Deal definition
+type Deal struct {
+	Associations Associations `json:"associations"`
 }
 
 // GetHubspotMappedDataType returns mapped factors data type
@@ -564,4 +575,36 @@ func GetHubspotDocumentLastModifiedDate(document *HubspotDocument) (int64, error
 		return time.Now().UnixNano() / int64(time.Millisecond), nil
 	}
 	return tm.UnixNano() / int64(time.Millisecond), nil
+}
+
+// IsDealUpdatedRequired checks if any update on associated company in deal.
+func IsDealUpdatedRequired(incoming, existing *HubspotDocument) (bool, error) {
+	if incoming.Type != HubspotDocumentTypeDeal || existing.Type != HubspotDocumentTypeDeal {
+		return false, errors.New("invalid document type")
+	}
+
+	var incomingDeal Deal
+	var existingMap Deal
+	err := json.Unmarshal(incoming.Value.RawMessage, &incomingDeal)
+	if err != nil {
+		return false, err
+	}
+
+	err = json.Unmarshal(existing.Value.RawMessage, &existingMap)
+	if err != nil {
+		return false, err
+	}
+
+	existingCompanyIDs := make(map[interface{}]bool)
+	for i := range existingMap.Associations.AssociatedCompanyIds {
+		existingCompanyIDs[existingMap.Associations.AssociatedCompanyIds[i]] = true
+	}
+
+	for i := range incomingDeal.Associations.AssociatedCompanyIds {
+		if !existingCompanyIDs[incomingDeal.Associations.AssociatedCompanyIds[i]] {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

@@ -102,7 +102,7 @@ func (query *ProfileQuery) TransformDateTypeFilters() error {
 }
 
 const (
-	DefaultSelectForAllUsers = "COUNT(DISTINCT(COALESCE(users.customer_user_id, users.id))) as all_users"
+	DefaultSelectForAllUsers = "COUNT(DISTINCT(COALESCE(users.customer_user_id, users.id))) as " + AliasAggr
 )
 
 func SanitizeDateTypeRowsProfiles(result *QueryResult, query *ProfileQuery) {

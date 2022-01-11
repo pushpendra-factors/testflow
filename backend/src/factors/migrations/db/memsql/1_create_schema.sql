@@ -1,4 +1,6 @@
 -- UP
+SET GLOBAL default_table_type = rowstore;
+
 CREATE DATABASE IF NOT EXISTS factors;
 
 USE factors;
@@ -59,6 +61,7 @@ CREATE TABLE IF NOT EXISTS users (
     group_4_user_id text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    source int,
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, id) USING CLUSTERED COLUMNSTORE,
@@ -393,6 +396,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_facebook_agent_uuid text,
     int_facebook_user_id text,
     int_facebook_ad_account text,
+    int_facebook_token_expiry bigint,
     int_linkedin_ad_account text,
     int_linkedin_access_token text,
     int_linkedin_access_token_expiry bigint,
@@ -781,6 +785,22 @@ CREATE TABLE IF NOT EXISTS content_groups(
     UNIQUE KEY (project_id,content_group_name)
 );
 
+CREATE ROWSTORE TABLE IF NOT EXISTS custom_metrics(
+    project_id bigint NOT NULL,
+    id text NOT NULL,
+    name text NOT NULL,
+    description text,
+    type_of_query int,  -- represents if kpi-profiles
+    object_type text, -- represents if hubspot_contact ...
+    transformations json,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
+    SHARD KEY (project_id),
+    PRIMARY KEY (project_id, id),
+    UNIQUE KEY unique_custom_metrics_project_id_name_idx(project_id, name) USING HASH
+)
 -- DOWN
+-- DROP TABLE IF EXISTS custom_metrics;
 
 -- DROP DATABASE factors;

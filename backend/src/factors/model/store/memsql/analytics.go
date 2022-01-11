@@ -782,7 +782,8 @@ func getSelectTimestampByTypeAndPropertyName(timestampType, propertyName, timezo
 	} else {
 		selectTz = timezone
 	}
-	propertyToNum := "CONVERT(" + propertyName + ", DECIMAL(10))"
+
+	propertyToNum := "CONVERT(SUBSTRING(" + propertyName + ",1,10), DECIMAL(10))"
 	var selectStr string
 	if timestampType == model.GroupByTimestampHour {
 		selectStr = fmt.Sprintf("date_trunc('hour', CONVERT_TZ(FROM_UNIXTIME("+propertyToNum+"), 'UTC', '%s'))", selectTz)
@@ -1159,7 +1160,9 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	stmnt = fmt.Sprintf("/*!%s*/ ", C.GetConfig().AppName) + stmnt
 
 	// Set resource pool before query.
-	C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx, C.MemSQLResourcePoolOLAP)
+	if C.UseOLAPPoolForAnalytics() {
+		C.SetMemSQLResourcePoolQueryCallbackUsingSQLTx(tx, C.MemSQLResourcePoolOLAP)
+	}
 	rows, err := tx.QueryContext(*C.GetServices().DBContext, stmnt, params...)
 	log.WithError(err).WithFields(logFields).Info("Exec query with context")
 

@@ -56,15 +56,15 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	// Creating 3 users
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -202,7 +202,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	user1Properties[U.UP_LATEST_CAMPAIGN] = 123456
 	user1PropertiesBytes, _ := json.Marshal(user1Properties)
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{RawMessage: user1PropertiesBytes},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
@@ -291,15 +291,15 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	// Creating 3 users
 	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
 	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
-		JoinTimestamp: timestamp})
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
 	assert.NotEmpty(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
