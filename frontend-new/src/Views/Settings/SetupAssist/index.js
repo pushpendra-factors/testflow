@@ -12,27 +12,28 @@ import OtherIntegrations from './OtherIntegrations';
 import { useHistory } from 'react-router-dom';
 import Lottie from 'react-lottie';
 import setupAssistData from '../../../assets/lottie/Final Jan 3 Setupassist.json'
-import { fetchProjectSettingsV1 } from 'Reducers/global';
-const axios = require('axios').default;
+import { fetchProjectSettingsV1, getHubspotContact } from 'Reducers/global';
 
-const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSettingsV1}) => {
+const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSettingsV1, getHubspotContact}) => {
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
+    const [ownerID, setownerID] = useState();
     const history = useHistory();
 
-    const APIKEY = '69137c15-00a5-4d12-91e7-9641797e9572';
-    let email = currentAgent.email;
-    let ownerData;
-
-    axios.get(`https://api.hubapi.com/contacts/v1/contact/email/${email}/profile?hapikey=${APIKEY}`)
-    .then(response => response.json())
-    .then( data => {
-        ownerData = data['properties'].hubspot_owner_id.value;
-    })
-
-    const meetLink = ownerData === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
-                    :ownerData === '116047122'? 'https://calendly.com/priyanka-267/30min'
-                    :ownerData === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': null;
+    
+    useEffect(() => {
+        let email = currentAgent.email;
+        getHubspotContact(email).then((res) => {
+            console.log('get hubspot contact succes', res.data)
+            setownerID(res.data.hubspot_owner_id)
+        }).catch((err) => {
+            console.log(err.data.error)
+        });
+    }, []);
+    
+    let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
+                    :ownerID === '116047122'? 'https://calendly.com/priyanka-267/30min'
+                    :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': null;
 
     const defaultOptions = {
         loop: true,
@@ -144,4 +145,4 @@ const mapStateToProps = (state) => ({
     integration: state.global.currentProjectSettings
 });
 
-export default connect(mapStateToProps, { fetchProjectSettingsV1 })(SetupAssist);
+export default connect(mapStateToProps, { fetchProjectSettingsV1, getHubspotContact })(SetupAssist);

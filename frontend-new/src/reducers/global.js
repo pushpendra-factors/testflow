@@ -648,3 +648,41 @@ export function deleteContentGroup(projectId, id) {
     });
   };
 }
+
+export function createHubspotContact(email, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'hubspot/createcontact?email=' + email, payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'CREATE_HUBSPOT_CONTACT', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function getHubspotContact(email) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'hubspot/getcontact?email=' + email, {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_HUBSPOT_CONTACT', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}

@@ -6,25 +6,26 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import { signup } from 'Reducers/agentActions';
 import Congrats from './Congrats';
-const axios = require('axios').default;
+import { createHubspotContact, getHubspotContact } from '../../reducers/global';
 
-function UserData({ signup, data }) {
+function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
     const [form] = Form.useForm();
     const [dataLoading, setDataLoading] = useState(false);
     const [errorInfo, seterrorInfo] = useState(null);
     const [formData, setformData] = useState(null);
+    const [ownerID, setownerID] = useState();
 
     const getOwner = () => {
 
         const ownersData = [
             {
-                "value" : 116046946,
+                "value" : "116046946",
             },
             {
-                "value" : 116047122,
+                "value" : "116047122",
             },
             {
-                "value" : 116053799,
+                "value" : "116053799",
             }
         ]
         const index = Math.floor(Math.random()*3);
@@ -36,18 +37,15 @@ function UserData({ signup, data }) {
         setDataLoading(true);
         form.validateFields().then((values) => {
             setDataLoading(true);
-            const APIKEY = '69137c15-00a5-4d12-91e7-9641797e9572';
 
-            const isOwnerAvilable = false
-            let ownerData;
             const owner = getOwner();
 
-            axios.get(`https://api.hubapi.com/contacts/v1/contact/email/${data.email}/profile?hapikey=${APIKEY}`)
-            .then(response => response.json())
-            .then( data => {
-                ownerData = data['properties'].hubspot_owner_id.value;
-                isOwnerAvilable = data['properties'].hubspot_owner_id? true: false;
-            })
+            getHubspotContact(data.email).then((res) => {
+                console.log('get hubspot contact succes')
+                setownerID(res.data.hubspot_owner_id)
+            }).catch((err) => {
+                console.log(err.data.error)
+            });
 
 
             const jsonData = {
@@ -68,10 +66,6 @@ function UserData({ signup, data }) {
                         "property": "website",
                         "value": values.website
                     },
-                    // {
-                    //     "property": "phone",
-                    //     "value": values.phone
-                    // },
                     {
                         "property": "monthly_tracked_users",
                         "value": values.monthly_tracked_users
@@ -82,24 +76,22 @@ function UserData({ signup, data }) {
                     },
                     {
                         "property": "hubspot_owner_id",
-                        "value": isOwnerAvilable ? ownerData: owner.value
+                        "value": ownerID ? ownerID: owner.value
                     }                     
                 ]
             }
-
-            const url = `https://api.hubapi.com/contacts/v1/contact/createOrUpdate/email/${data.email}/?hapikey=${APIKEY}`;
             
-            axios.post(url, jsonData)
-            .then(function (response) {
+            createHubspotContact(data.email, jsonData)
+            .then((response) => {
                 console.log(response);
                 setDataLoading(false);
                 setformData(values);
             })
-            .catch(function (error) {
-                console.log(error);
+            .catch((err) => {
+                console.log(err);
                 setDataLoading(false);
                 form.resetFields();
-                seterrorInfo(err);
+                seterrorInfo(err.data.error);
             });
         }).catch((info) => {
             setDataLoading(false);
@@ -246,4 +238,4 @@ function UserData({ signup, data }) {
   );
 }
 
-export default connect(null, { signup })(UserData);
+export default connect(null, { signup, createHubspotContact, getHubspotContact })(UserData);
