@@ -19,7 +19,9 @@ type FileManager interface {
 	GetMasterNumericalBucketsFile(projectId uint64) (string, string)
 	GetModelEventsNumericalBucketsFile(projectId uint64, startTimestamp int64, modelType string) (string, string)
 	GetPatternChunksDir(projectId, modelId uint64) string
+	GetChunksMetaDataDir(projectId, modelId uint64) string
 	GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string)
+	GetChunksMetaDataFilePathAndName(projectId, modelId uint64) (string, string)
 	GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
 	GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
 	ListFiles(path string) []string

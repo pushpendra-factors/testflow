@@ -66,6 +66,10 @@ func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.
 
 	sanitizeNumericalBucketRanges(result, &query)
 
+	if model.HasGroupByDateTypeProperties(query.GroupByProperties) {
+		model.SanitizeDateTypeRows(result, &query)
+	}
+
 	addQueryToResultMeta(result, query)
 
 	updatedMetaStepTimeInfoHeaders(result)

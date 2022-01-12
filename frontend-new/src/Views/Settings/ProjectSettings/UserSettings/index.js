@@ -13,9 +13,11 @@ const { confirm } = Modal;
 
 function UserSettings({
   agents,
+  currentAgent,
   projectAgentRemove,
   activeProjectID,
-  updateAgentRole
+  updateAgentRole,
+  fetchProjectAgents
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataSource, setdataSource] = useState(null);
@@ -23,17 +25,34 @@ function UserSettings({
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   const confirmRemove = (uuid) => {
+    let agent = agents.filter(agent => agent.email === currentAgent.email);
     confirm({
       title: 'Do you want to remove this user?',
       icon: <ExclamationCircleOutlined />,
       content: 'Please confirm to proceed',
       okText: 'Yes',
       onOk() {
-        projectAgentRemove(activeProjectID, uuid).then(() => {
-          message.success('User removed!');
-        }).catch((err) => {
-          message.error(err);
-        });
+        if(agent[0].role === 2) {
+          projectAgentRemove(activeProjectID, uuid).then(() => {
+            fetchProjectAgents(activeProjectID);
+            const rulesToUpdate = [...dataSource.filter((val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid))];
+            setdataSource(rulesToUpdate);
+            message.success('User removed!');
+          }).catch((err) => {
+            if(!err) {
+              console.log('rm err', err)
+              message.error(err?.data?.error);
+            } else {
+              // temporary fix for now will fix it later
+              fetchProjectAgents(activeProjectID);
+              const rulesToUpdate = [...dataSource.filter((val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid))];
+              setdataSource(rulesToUpdate);
+              message.success('User removed!');
+            }
+          });
+        } else {
+          message.error('Agent user can not remove other users');
+        }
       }
     });
   };
@@ -46,6 +65,9 @@ function UserSettings({
       okText: 'Yes',
       onOk() {
         updateAgentRole(activeProjectID, uuid, 2).then(() => {
+          fetchProjectAgents(activeProjectID);
+          const rulesToUpdate = [...dataSource.filter((val) => JSON.stringify(val.uuid) !== JSON.stringify(uuid))];
+          setdataSource(rulesToUpdate);
           message.success('User role updated!');
         }).catch((err) => {
           message.error(err.data.error); 
@@ -61,7 +83,7 @@ function UserSettings({
         <a>Remove User</a>
       </Menu.Item>
       {values.role === 1 &&
-        <Menu.Item key="0" onClick={() => confirmRoleChange(values.uuid)}>
+        <Menu.Item key="1" onClick={() => confirmRoleChange(values.uuid)}>
           <a>Make Project Admin</a>
         </Menu.Item>
       }
@@ -169,7 +191,8 @@ function UserSettings({
 
 const mapStateToProps = (state) => ({
   activeProjectID: state.global.active_project.id,
-  agents: state.agent.agents
+  agents: state.agent.agents,
+  currentAgent: state.agent.agent_details
 });
 
 export default connect(mapStateToProps, { fetchProjectAgents, updateAgentRole, projectAgentRemove })(UserSettings);

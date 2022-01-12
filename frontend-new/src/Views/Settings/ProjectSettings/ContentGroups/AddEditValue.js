@@ -13,6 +13,7 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
 
     const onFinishValues = (values) => {
         if(values.content_group_value && values.rule){
+            values.rule.forEach(val => {val.lop = comboOp})
             submitValues(values, selectedRule);
         } else {
             notification.error({
@@ -90,12 +91,13 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
                                         name={[name, 'lop']}
                                         fieldKey={[fieldKey, 'lop']}
                                         >
-                                            <Select showArrow={false} open={false} bordered={false}>
+                                            {/* <Select showArrow={false} open={false} bordered={false}>
                                                 <Option value={comboOp}>{fieldKey===0?'Page':comboOp}</Option>
-                                            </Select>
+                                            </Select> */}
+                                            <Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{fieldKey===0?'Page':comboOp}</Text>
                                         </Form.Item>
                                     </div>
-                                    <div className={'w-24 fa-select'}>
+                                    <div className={'fa-select'}>
                                         <Form.Item
                                         {...restField}
                                         initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].op? selectedRule.rule[fieldKey].op : 'contains'}
@@ -104,27 +106,32 @@ function AddEditValue ({selectedRule, handleCancel, submitValues}) {
                                         rules={[{ required: true, message: 'Select any' }]}
                                         >
                                         
-                                            <Select showArrow={false}>
+                                            <Select showArrow={false} style={{width:'110px'}}>
+                                                <Option value="equals">Equals</Option>
+                                                <Option value="notEqual">Not Equals</Option>
                                                 <Option value="contains">Contains</Option>
+                                                <Option value="notContains">Not Contains</Option>
                                                 <Option value="startsWith">Starts With</Option>
                                                 <Option value="endsWith">Ends With</Option>
                                             </Select>
                                         </Form.Item>
                                     </div>
-                                    <Form.Item
-                                    {...restField}
-                                    initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].va? selectedRule.rule[fieldKey].va : ''}
-                                    name={[name, 'va']}
-                                    fieldKey={[fieldKey, 'va']}
-                                    rules={[{ required: true, message: 'Missing value' }]}
-                                    >
-                                    <Input placeholder="value" className={'fa-input'}/>
-                                    </Form.Item>
-                                <Button type={'text'} onClick={() => remove(name)}><SVG name={'Delete'} size={18} color='gray' /></Button>
+                                    <div className={'w-24'}>
+                                        <Form.Item
+                                        {...restField}
+                                        initialValue={selectedRule?.rule && selectedRule.rule[fieldKey].va? selectedRule.rule[fieldKey].va : ''}
+                                        name={[name, 'va']}
+                                        fieldKey={[fieldKey, 'va']}
+                                        rules={[{ required: true, message: 'Missing value' }]}
+                                        >
+                                        <Input placeholder="value" className={'fa-input'}/>
+                                        </Form.Item>
+                                    </div>
+                                    <Button type={'text'} onClick={() => remove(name)}><SVG name={'Delete'} size={18} color='gray' /></Button>
                                 </Space>
                                 ))}
                                 <Form.Item>
-                                    <div className={'w-24'}>
+                                    <div className={'w-24 mt-2'}>
                                     <Button size={'middle'} onClick={() => add()} block icon={<PlusOutlined />}>
                                         Add rule
                                     </Button>

@@ -339,7 +339,7 @@ export function projectAgentRemove(projectId, agentUUID){
           });
           reject(r);
         });
-    })
+    });
   }
 }
 

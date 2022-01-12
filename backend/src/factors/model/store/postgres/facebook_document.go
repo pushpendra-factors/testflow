@@ -1128,7 +1128,6 @@ func (pg *Postgres) GetFacebookChannelResult(projectID uint64, customerAccountID
 }
 
 func (pg *Postgres) GetLatestMetaForFacebookForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
-	db := C.GetServices().Db
 
 	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0)
 	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0)
@@ -1139,7 +1138,7 @@ func (pg *Postgres) GetLatestMetaForFacebookForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	if projectSetting.IntFacebookAdAccount == "" {
-		log.Error("Failed to get custtomer account ids")
+		log.WithField("projectID", projectID).Error("Integration of facebook is not available for this project.")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	customerAccountIDs := strings.Split(projectSetting.IntFacebookAdAccount, ",")
@@ -1156,24 +1155,43 @@ func (pg *Postgres) GetLatestMetaForFacebookForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(facebookAdGroupMetadataFetchQueryStr, facebookDocumentTypeAlias[facebookAdSet], projectID, from, to,
+	query := facebookAdGroupMetadataFetchQueryStr
+	params := []interface{}{facebookDocumentTypeAlias[facebookAdSet], projectID, from, to,
 		customerAccountIDs, facebookDocumentTypeAlias[facebookAdSet], projectID, from, to, customerAccountIDs,
 		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs,
-		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
+		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs}
+
+	rows, _, err := pg.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
 		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(facebookCampaignMetadataFetchQueryStr, facebookDocumentTypeAlias[facebookCampaign], projectID, from, to,
-		customerAccountIDs, facebookDocumentTypeAlias[facebookCampaign], projectID, from, to,
-		customerAccountIDs).Find(&channelDocumentsCampaign).Error
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
+		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
+	}
+
+	query = facebookCampaignMetadataFetchQueryStr
+	params = []interface{}{
+		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to,
+		customerAccountIDs, facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs}
+	rows, _, err = pg.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for facebook", days)
 		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
+		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
+	}
+
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
 

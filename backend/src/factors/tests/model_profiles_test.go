@@ -57,7 +57,7 @@ func TestProfiles(t *testing.T) {
 		assert.Equal(t, float64(2), result.Results[0].Rows[0][1])
 		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
 		assert.Equal(t, "query_index", result.Results[0].Headers[0])
-		assert.Equal(t, "all_users", result.Results[0].Headers[1])
+		assert.Equal(t, model.AliasAggr, result.Results[0].Headers[1])
 	})
 
 	t.Run("1 filter, no groupby", func(t *testing.T) {
@@ -83,7 +83,7 @@ func TestProfiles(t *testing.T) {
 		assert.Equal(t, float64(1), result.Results[0].Rows[0][1])
 		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
 		assert.Equal(t, "query_index", result.Results[0].Headers[0])
-		assert.Equal(t, "all_users", result.Results[0].Headers[1])
+		assert.Equal(t, model.AliasAggr, result.Results[0].Headers[1])
 	})
 	t.Run("joinTime check", func(t *testing.T) {
 		query := model.ProfileQuery{
@@ -106,7 +106,7 @@ func TestProfiles(t *testing.T) {
 		assert.Equal(t, float64(1), result.Results[0].Rows[0][1])
 		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
 		assert.Equal(t, "query_index", result.Results[0].Headers[0])
-		assert.Equal(t, "all_users", result.Results[0].Headers[1])
+		assert.Equal(t, model.AliasAggr, result.Results[0].Headers[1])
 	})
 
 	t.Run("No filter, 1 group by", func(t *testing.T) {
@@ -134,7 +134,7 @@ func TestProfiles(t *testing.T) {
 		assert.Equal(t, int(0), result.Results[0].Rows[1][0])
 		assert.Equal(t, "us", result.Results[0].Rows[1][2])
 		assert.Equal(t, "query_index", result.Results[0].Headers[0])
-		assert.Equal(t, "all_users", result.Results[0].Headers[1])
+		assert.Equal(t, model.AliasAggr, result.Results[0].Headers[1])
 		assert.Equal(t, "country", result.Results[0].Headers[2])
 	})
 
@@ -210,7 +210,7 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
-		assert.Equal(t, "all_users", result2.Headers[0])
+		assert.Equal(t, model.AliasAggr, result2.Headers[0])
 		assert.Equal(t, "$browser", result2.Headers[1])
 		assert.Equal(t, browser2, result2.Rows[0][1])
 		assert.Equal(t, browser1, result2.Rows[1][1])
@@ -304,7 +304,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "all_users", result.Headers[0])
+		assert.Equal(t, model.AliasAggr, result.Headers[0])
 		assert.Equal(t, "$source", result.Headers[1])
 		assert.Equal(t, fmt.Sprintf("%d", model.UserSourceWeb), result.Rows[0][1])
 		assert.Equal(t, float64(len(users)), result.Rows[0][0])
@@ -350,7 +350,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
-		assert.Equal(t, "all_users", result2.Headers[0])
+		assert.Equal(t, model.AliasAggr, result2.Headers[0])
 		assert.Equal(t, "$source", result2.Headers[1])
 		assert.Equal(t, fmt.Sprintf("%d", model.UserSourceHubspot), result2.Rows[0][1])
 		assert.Equal(t, float64(len(sourceHubspotUsers)), result2.Rows[0][0])
@@ -396,7 +396,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result3)
-		assert.Equal(t, "all_users", result3.Headers[0])
+		assert.Equal(t, model.AliasAggr, result3.Headers[0])
 		assert.Equal(t, "$source", result3.Headers[1])
 		assert.Equal(t, fmt.Sprintf("%d", model.UserSourceSalesforce), result3.Rows[0][1])
 		assert.Equal(t, float64(len(sourceSalesforceUsers)), result3.Rows[0][0])

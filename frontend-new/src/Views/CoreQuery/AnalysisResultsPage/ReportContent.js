@@ -22,6 +22,7 @@ import {
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_LINECHART,
   CHART_TYPE_TABLE,
+  ReverseProfileMapper,
 } from '../../../utils/constants';
 import { Spin } from 'antd';
 import FunnelsResultPage from '../FunnelsResultPage';
@@ -302,7 +303,14 @@ function ReportContent({
     if (queries.length > 1 && breakdown.length) {
       metricsDropdown = (
         <CampaignMetricsDropdown
-          metrics={queries.map((_, index) => `All Users (${toLetters(index)})`)}
+          metrics={queries.map(
+            (_, index) =>
+              `${
+                ReverseProfileMapper[queries[index]]
+                  ? ReverseProfileMapper[queries[index]]
+                  : queries[index]
+              } (${toLetters(index)})`
+          )}
           currValue={currMetricsValue}
           onChange={setCurrMetricsValue}
         />

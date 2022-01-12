@@ -208,7 +208,7 @@ func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int
 	return 0
 }
 
-func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID string, createDashboard bool) int {
+func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID string) int {
 	logCtx := log.WithField("project_id", projectID)
 
 	// Associated project setting creation with default state.
@@ -224,12 +224,10 @@ func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID strin
 	}
 
 	if ENABLE_DEFAULT_WEB_ANALYTICS {
-		if createDashboard {
-			errCode = store.createDefaultDashboardsForProject(projectID, agentUUID)
-			if errCode != http.StatusCreated {
-				logCtx.Error("Create default dashboards failed on create project dependencies.")
-				return errCode
-			}
+		errCode = store.createDefaultDashboardsForProject(projectID, agentUUID)
+		if errCode != http.StatusCreated {
+			logCtx.Error("Create default dashboards failed on create project dependencies.")
+			return errCode
 		}
 	}
 
@@ -245,20 +243,29 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 		return nil, errCode
 	}
 
-	errCode = store.createProjectDependencies(cProject.ID, agentUUID, createDashboard)
+	errCode = store.createProjectDependencies(cProject.ID, agentUUID)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
-
-	_, errCode = store.CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
-		ProjectID: cProject.ID,
-		AgentUUID: agentUUID,
-		Role:      agentRole,
-	})
-	if errCode != http.StatusCreated {
-		return nil, errCode
+	if createDashboard {
+		_, errCode = store.CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+			ProjectID: cProject.ID,
+			AgentUUID: agentUUID,
+			Role:      agentRole,
+		})
+		if errCode != http.StatusCreated {
+			return nil, errCode
+		}
+	} else {
+		_, errCode = store.CreateProjectAgentMappingWithDependenciesWithoutDashboard(&model.ProjectAgentMapping{
+			ProjectID: cProject.ID,
+			AgentUUID: agentUUID,
+			Role:      agentRole,
+		})
+		if errCode != http.StatusCreated {
+			return nil, errCode
+		}
 	}
-
 	_, errCode = store.createProjectBillingAccountMapping(project.ID, billingAccountID)
 	return cProject, errCode
 }
