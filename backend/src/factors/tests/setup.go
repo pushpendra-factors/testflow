@@ -27,7 +27,7 @@ func SetupProjectReturnDAO() (*model.Project, error) {
 	random_project_name := U.RandomLowerAphaNumString(15)
 
 	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: random_project_name},
-		agent.UUID, model.ADMIN, billingAccount.ID)
+		agent.UUID, model.ADMIN, billingAccount.ID, true)
 	if errCode != http.StatusCreated {
 		return nil, fmt.Errorf("Project Creation failed.")
 	}
@@ -233,7 +233,7 @@ func SetupTestData() (*testData, int) {
 	// Create random project.
 	random_project_name := U.RandomLowerAphaNumString(15)
 
-	project, err_code := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: random_project_name}, agent.UUID, model.ADMIN, billingAccount.ID)
+	project, err_code := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: random_project_name}, agent.UUID, model.ADMIN, billingAccount.ID, true)
 	if err_code != http.StatusCreated {
 		return nil, http.StatusInternalServerError
 	}

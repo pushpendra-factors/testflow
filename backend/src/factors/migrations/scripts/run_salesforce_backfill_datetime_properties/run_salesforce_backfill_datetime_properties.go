@@ -34,7 +34,6 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	memSQLResourcePool := flag.String("memsql_resource_pool", "", "If provided, all the queries will run under the given resource pool")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -82,14 +81,13 @@ func main() {
 			AppName:  taskID,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:         *memSQLHost,
-			Port:         *memSQLPort,
-			User:         *memSQLUser,
-			Name:         *memSQLName,
-			Password:     *memSQLPass,
-			Certificate:  *memSQLCertificate,
-			ResourcePool: *memSQLResourcePool,
-			AppName:      taskID,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     taskID,
 		},
 		SentryDSN:           *sentryDSN,
 		PrimaryDatastore:    *primaryDatastore,

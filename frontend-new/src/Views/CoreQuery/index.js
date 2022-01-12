@@ -1238,13 +1238,17 @@ function CoreQuery({
       return item.display_category == selectedMainCategory?.group;
     });
 
-    let DDvalues =  selGroup?.properties?.map((item)=>{
-      if (item == null) return
-      let ddName = item.display_name ? item.display_name  : item.name;
-      let ddtype = selGroup?.category == 'channels' ? item.object_type : (item.entity ? item.entity : item.object_type)
-      return [ddName, item.name, item.data_type, ddtype]
-    })
-
+    let DDvalues = selGroup?.properties?.map((item) => {
+      if (item == null) return;
+      let ddName = item.display_name ? item.display_name : item.name;
+      let ddtype =
+        selGroup?.category == 'channels'
+          ? item.object_type
+          : item.entity
+          ? item.entity
+          : item.object_type;
+      return [ddName, item.name, item.data_type, ddtype];
+    });
 
     setKPIConfigProps(DDvalues);
   }, [selectedMainCategory]);

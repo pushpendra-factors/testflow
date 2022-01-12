@@ -41,17 +41,30 @@ const (
 	higherOrderExpressionsWithMultiply = "SUM(JSON_EXTRACT_STRING(value, '%s'))*%s/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
 	higherOrderExpressionsWithDiv      = "(SUM(JSON_EXTRACT_STRING(value, '%s'))/1000000)/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
 
-	sumOfFloatExp                       = "sum((JSON_EXTRACT_STRING(value, '%s')))"
-	adwordsAdGroupMetadataFetchQueryStr = "select ad_group_id, campaign_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, " +
-		"JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name from adwords_documents where type = ? AND project_id = ? " +
-		"AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) " +
-		"AND (ad_group_id, timestamp) in (select ad_group_id, max(timestamp) from adwords_documents where type = ?" +
-		" AND project_id = ? AND timestamp between ? AND ? AND customer_account_id in (?) group by ad_group_id)"
+	sumOfFloatExp = "sum((JSON_EXTRACT_STRING(value, '%s')))"
 
-	adwordsCampaignMetadataFetchQueryStr = "select campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from adwords_documents where type = ? AND " +
-		"project_id = ? AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) " +
-		"AND (campaign_id, timestamp) in (select campaign_id, max(timestamp) from adwords_documents where type = ? " +
-		"AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) group by campaign_id)"
+	adwordsAdGroupMetadataFetchQueryStr = "select ad_group_information.ad_group_id, ad_group_information.campaign_id, ad_group_information.ad_group_name, ad_group_information.campaign_name " +
+		"from ( " +
+		"select ad_group_id, campaign_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name, timestamp " +
+		"from adwords_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_account_id IN (?) " +
+		") as ad_group_information " +
+		"INNER JOIN " +
+		"(select ad_group_id, max(timestamp) as timestamp " +
+		"from adwords_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_account_id IN (?) group by ad_group_id " +
+		") as ad_group_latest_timestamp_id " +
+		"ON ad_group_information.ad_group_id = ad_group_latest_timestamp_id.ad_group_id AND ad_group_information.timestamp = ad_group_latest_timestamp_id.timestamp "
+
+	adwordsCampaignMetadataFetchQueryStr = "select campaign_information.campaign_id, campaign_information.campaign_name " +
+		"from ( " +
+		"select campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name, timestamp " +
+		"from adwords_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_account_id IN (?) " +
+		") as campaign_information " +
+		"INNER JOIN " +
+		"(select campaign_id, max(timestamp) as timestamp " +
+		"from adwords_documents where type = ? AND project_id = ? AND timestamp between ? AND ? AND customer_account_id IN (?) group by campaign_id " +
+		") as campaign_latest_timestamp_id " +
+		"ON campaign_information.campaign_id = campaign_latest_timestamp_id.campaign_id AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
+
 	adwordsTemplateWeeklyDifferenceAnalysisKeywordsQuerySelectStmnt = "Select %s %s from "
 	fixedSelectForBreakdownAnalysisKeyword                          = "ABS((keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric)) as abs_change, " +
 		"(keyword_analysis_last_week.analysis_metric - keyword_analysis_previous_week.analysis_metric) as absolute_change, " +
@@ -1001,6 +1014,9 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
 	if query.GroupByTimestamp == "" {
+		if projectID == 559 {
+			log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteAdwordsChannelQueryV1 and no gbt - memsql caching test.")
+		}
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
 			projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
 		if errCode != http.StatusOK {
@@ -1014,6 +1030,9 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model
 		}
 		return columns, resultMetrics, http.StatusOK
 	} else {
+		if projectID == 559 {
+			log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteAdwordsChannelQueryV1 and gbt1 - memsql caching test.")
+		}
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForAdwordsQueryV1(
 			projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
 		if errCode != http.StatusOK {
@@ -1024,6 +1043,9 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model
 		if err != nil {
 			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		}
+		if projectID == 559 {
+			log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside ExecuteAdwordsChannelQueryV1 and gbt1 - memsql caching test.")
 		}
 		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForAdwordsQueryV1(
@@ -1049,7 +1071,13 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 	var sql string
 	var params []interface{}
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	if projectID == 559 {
+		log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 1 - memsql caching test.")
+	}
 	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
+	if projectID == 559 {
+		log.WithField("query", *query).WithField("reqID", reqID).WithField("transformedQuery", transformedQuery).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 2 - memsql caching test.")
+	}
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.AdwordsSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
@@ -1059,11 +1087,16 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
+	if projectID == 559 {
+		log.WithField("query", *query).WithField("reqID", reqID).WithField("isSmartPropertyPresent", isSmartPropertyPresent).WithField("query.Filters", query.Filters).WithField("query.GroupBy", query.GroupBy).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 3 - memsql caching test.")
+	}
 	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
-
+	if projectID == 559 {
+		log.WithField("query", *query).WithField("reqID", reqID).Warn("Inside GetSQLQueryAndParametersForAdwordsQueryV1 4 - memsql caching test.")
+	}
 	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
@@ -2053,7 +2086,6 @@ func (store *MemSQL) getAdwordsMetricsBreakdown(projectID uint64, customerAccoun
 }
 
 func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
-	db := C.GetServices().Db
 
 	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0, 0)
 	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0, 0)
@@ -2064,7 +2096,7 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	if projectSetting.IntAdwordsCustomerAccountId == nil || *(projectSetting.IntAdwordsCustomerAccountId) == "" {
-		log.Error("Failed to get custtomer account ids")
+		log.WithField("projectID", projectID).Error("Integration of adwords is not available for this project.")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	customerAccountIDs := strings.Split(*(projectSetting.IntAdwordsCustomerAccountId), ",")
@@ -2081,21 +2113,36 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(adwordsAdGroupMetadataFetchQueryStr, model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs,
-		model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
+	query := adwordsAdGroupMetadataFetchQueryStr
+	params := []interface{}{model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs,
+		model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs}
+	rows, _, err := store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for adwords", days)
 		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
+		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
+	}
 
-	err = db.Raw(adwordsCampaignMetadataFetchQueryStr, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsCampaign).Error
+	query = adwordsCampaignMetadataFetchQueryStr
+	params = []interface{}{model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs}
+	rows, _, err = store.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for adwords", days)
 		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
-
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
+		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
+	}
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
 

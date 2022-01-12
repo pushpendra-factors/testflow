@@ -131,12 +131,18 @@ func (sd *S3Driver) GetPatternChunksDir(projectId, modelId uint64) string {
 	modelDir := sd.GetProjectModelDir(projectId, modelId)
 	return fmt.Sprintf("%schunks/", modelDir)
 }
+func (sd *S3Driver) GetChunksMetaDataDir(projectId, modelId uint64) string {
+	modelDir := sd.GetProjectModelDir(projectId, modelId)
+	return fmt.Sprintf("%smetadata/", modelDir)
+}
 
 // GetPatternChunkFilePathAndName - Placeholder definition. Has to be implemented.
 func (sd *S3Driver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
 	return sd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }
-
+func (sd *S3Driver) GetChunksMetaDataFilePathAndName(projectId, modelId uint64) (string, string) {
+	return sd.GetChunksMetaDataDir(projectId, modelId), fmt.Sprintf("metadata.txt")
+}
 // GetEventArchiveFilePathAndName - Placeholder definition. Has to be implemented.
 func (sd *S3Driver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
 	return "", ""

@@ -65,7 +65,7 @@ func TestGetProjectsUnderBillingAccount(t *testing.T) {
 	td, errCode := SetupTestData()
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: U.RandomString(6)}, td.Agent.UUID, model.ADMIN, td.BillingAccount.ID)
+	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: U.RandomString(6)}, td.Agent.UUID, model.ADMIN, td.BillingAccount.ID, true)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	expProjectIDs := []uint64{td.Project.ID, project.ID}
@@ -88,7 +88,7 @@ func TestGetAgentsByProjectIDs(t *testing.T) {
 	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	project2, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: U.RandomString(6)}, agent2.UUID, model.ADMIN, td.BillingAccount.ID)
+	project2, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: U.RandomString(6)}, agent2.UUID, model.ADMIN, td.BillingAccount.ID, true)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	expAgentsUUID := []string{td.Agent.UUID, agent2.UUID}

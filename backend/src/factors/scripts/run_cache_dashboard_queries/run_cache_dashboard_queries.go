@@ -8,6 +8,7 @@ import (
 	"time"
 
 	C "factors/config"
+	Const "factors/constants"
 	"factors/model/store"
 	"factors/util"
 
@@ -133,6 +134,7 @@ func main() {
 
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
+	Const.SetSmartPropertiesReservedNames()
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	logCtx = logCtx.WithFields(log.Fields{

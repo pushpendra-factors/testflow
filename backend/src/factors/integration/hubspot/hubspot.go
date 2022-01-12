@@ -837,7 +837,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, lastModifiedTimeStamp int64) error {
 
 	logCtx := log.WithFields(log.Fields{"project_id": project.ID, "method": "ApplyHSOfflineTouchPointRule",
-		"document_id": document.ID, "document_action": document.Action})
+		"document_id": document.ID, "document_action": document.Action, "document": document})
 
 	lastModifiedTimeStamp = U.CheckAndGetStandardTimestamp(lastModifiedTimeStamp)
 
@@ -852,12 +852,18 @@ func ApplyHSOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 			return err
 		}
 
-		rules := touchPointRules["hs_touch_point_rules"]
+		// Get the last sync doc for the current update doc.
+		prevDoc, status := store.GetStore().GetLastSyncedHubspotUpdateDocumentByID(document.ProjectId, document.ID, document.Type)
+		if status != http.StatusFound {
+			// In case no prev properties
+			prevDoc = nil
+		}
 
+		rules := touchPointRules["hs_touch_point_rules"]
 		for _, rule := range rules {
 
 			// Check if rule is applicable & the record has changed property w.r.t filters
-			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, document, logCtx) {
+			if !canCreateHSTouchPoint(document.Action) || !filterCheck(rule, trackPayload, document, prevDoc, logCtx) {
 				continue
 			}
 
@@ -939,7 +945,7 @@ func canCreateHSTouchPoint(documentActionType int) bool {
 	}
 	return true
 }
-func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, logCtx *log.Entry) bool {
+func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, document *model.HubspotDocument, prevDoc *model.HubspotDocument, logCtx *log.Entry) bool {
 
 	filtersPassed := 0
 	for _, filter := range rule.Filters {
@@ -966,15 +972,14 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 				}
 			}
 		default:
-			logCtx.WithField("Document", trackPayload).Error("No matching operator found for offline touch point rules for hubspot document.")
+			logCtx.WithField("Rule", rule).WithField("TrackPayload", trackPayload).Error("No matching operator found for offline touch point rules for hubspot document.")
 			continue
 		}
 	}
 
 	// Once filters passed, now check for the existing properties
 	if filtersPassed != 0 && filtersPassed == len(rule.Filters) {
-		prevDoc, status := store.GetStore().GetLastSyncedHubspotDocumentByID(document.ProjectId, document.ID, document.Type)
-		if status != http.StatusFound {
+		if prevDoc == nil {
 			// In case no prev properties exist continue creating OTP
 			return true
 		}
@@ -992,7 +997,7 @@ func filterCheck(rule model.HSTouchPointRule, trackPayload *SDK.TrackPayload, do
 		}
 
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to GetHubspotDocumentProperties - Offline touch point. Continuing.")
+			logCtx.WithField("Rule", rule).WithField("TrackPayload", trackPayload).WithError(err).Error("Failed to GetHubspotDocumentProperties - Offline touch point. Continuing.")
 			// In case of err with previous properties, log error but continue creating OTP
 			return true
 		}
@@ -1632,8 +1637,9 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 
 	contactIDList, companyIDList, err := getDealAssociatedIDs(projectID, document)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to getDealAssociatedIDs.")
-		return "", http.StatusInsufficientStorage
+		logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "company_ids": companyIDList}).
+			WithError(err).Error("Failed to getDealAssociatedIDs.")
+		return dealGroupUserID, http.StatusOK
 	}
 
 	if len(contactIDList) > 0 {
@@ -1641,7 +1647,6 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 		if status != http.StatusFound {
 			logCtx.WithFields(log.Fields{"contact_ids": contactIDList, "err_code": status}).
 				Error("Failed to get contact created documents for syncGroupDeal.")
-			return "", http.StatusInternalServerError
 		}
 
 		for i := range documents {
@@ -1664,8 +1669,8 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 		documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, companyIDList,
 			model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
 		if status != http.StatusFound {
-			logCtx.WithFields(log.Fields{"company_ids": companyIDList}).Error("Failed to get company created documents for syncGroupDeal.")
-			return "", http.StatusInternalServerError
+			logCtx.WithFields(log.Fields{"company_ids": companyIDList}).
+				Error("Failed to get company created documents for syncGroupDeal.")
 		}
 
 		for i := range documents {
@@ -1684,7 +1689,7 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 				}
 
 				// update group_user_id  details on created record
-				errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, documents[i].ID, document.Type, "",
+				errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, documents[i].ID, documents[i].Type, "",
 					documents[i].Timestamp, model.HubspotDocumentActionCreated, "", groupUserID)
 				if errCode != http.StatusAccepted {
 					logCtx.Error("Failed to update group user_id in hubspot created document as synced in sync deal company.")

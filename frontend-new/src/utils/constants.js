@@ -456,6 +456,16 @@ export const DATE_FORMATS = {
   hour: 'D-MMM-YYYY H [h]',
 };
 
-export const ProfileUsersMapper = { all_users: 'All Users' };
+export const ProfileMapper = {
+  'Website Visitors': 'web',
+  'Hubspot Contacts': 'hubspot',
+  'Salesforce Users': 'salesforce',
+};
+
+export const ReverseProfileMapper = {
+  web: 'Website Visitors',
+  hubspot: 'Hubspot Contacts',
+  salesforce: 'Salesforce Users',
+};
 export const DISPLAY_PROP = { $none: '(Not Set)' };
 export const REV_DISPLAY_PROP = { '(Not Set)': '$none' };

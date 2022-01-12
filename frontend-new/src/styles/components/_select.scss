@@ -67,6 +67,27 @@
             }
         }
 
+        .fa-select--options
+        {
+            padding: 10px 15px;
+            color: $fa-color--mono-5;
+            font-weight: $font-weight--regular;
+            cursor: pointer;
+            display: inline-flex;
+            
+            &:hover{
+                background-color: rgba($fa-color--brand-1, 1);
+            }
+
+            h4 {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                overflow-wrap: normal;
+                height: 22px;
+                min-width: 48px;
+            }
+        }
+
         .fa-select-group-select--content
         {
             display: flex;
@@ -120,3 +141,8 @@
     width: 300px;
 }
 
+.fa-select--group-select-mini {
+    @extend .fa-select--group-select;
+    width: 220px;
+    padding: 12px 8px;
+}

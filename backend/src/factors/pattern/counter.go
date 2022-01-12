@@ -394,14 +394,15 @@ func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEven
 			return nil, err
 		}
 		for key, value := range eventDetails.UserProperties {
-			if Pval, ok := allProps[key]; ok {
+			propKey := key + "_UP"
+			if Pval, ok := allProps[propKey]; ok {
 				Pval.Count = Pval.Count + 1
 				Pval.PropertyName = key
 				Pval.PropertyType = "UP"
-				allProps[key] = Pval
+				allProps[propKey] = Pval
 			} else {
 				PrVal := PropertiesCount{key, "UP", 1}
-				allProps[key] = PrVal
+				allProps[propKey] = PrVal
 			}
 
 			propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectID, "", key, value, true)
@@ -420,7 +421,7 @@ func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEven
 					cmap = make(map[string]bool)
 					userPropertiesInfo.CategoricalPropertyKeyValues[key] = cmap
 				}
-				if len(categoricalValue) < maxPropertyValues {
+				if len(cmap) < maxPropertyValues {
 					cmap[categoricalValue] = true
 				}
 			} else {
@@ -435,14 +436,15 @@ func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEven
 			continue
 		}
 		for key, value := range eventDetails.EventProperties {
-			if Pval, ok := allProps[key]; ok {
+			propKey := key + "_EP"
+			if Pval, ok := allProps[propKey]; ok {
 				Pval.Count = Pval.Count + 1
 				Pval.PropertyName = key
 				Pval.PropertyType = "EP"
-				allProps[key] = Pval
+				allProps[propKey] = Pval
 			} else {
 				PrVal := PropertiesCount{key, "EP", 1}
-				allProps[key] = PrVal
+				allProps[propKey] = PrVal
 			}
 			propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventDetails.EventName, key, value, false)
 			if propertyType == U.PropertyTypeNumerical {
@@ -460,7 +462,7 @@ func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEven
 					cmap = make(map[string]bool)
 					eInfo.CategoricalPropertyKeyValues[key] = cmap
 				}
-				if len(categoricalValue) < maxPropertyValues {
+				if len(cmap) < maxPropertyValues {
 					cmap[categoricalValue] = true
 				}
 			} else {

@@ -81,6 +81,7 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
+	createMetadata := flag.Bool("create_metadata",false,"")
 	flag.Parse()
 
 	defer util.NotifyOnPanic("Task#PatternMine", *envFlag)
@@ -227,6 +228,7 @@ func main() {
 	configs["numCampaignsLimit"] = *numCampaignsLimit
 	configs["beamConfig"] = &beamConfig
 	configs["countsVersion"] = *countsVersion
+	configs["create_metadata"] = *createMetadata
 
 	// profiling
 

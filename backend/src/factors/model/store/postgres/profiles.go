@@ -133,16 +133,16 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 		params = append(params, model.UserSourceMap[query.Type])
 		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=false OR is_group_user IS NULL)", stepSqlStmnt)
 	}
-	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY all_users LIMIT 10000", stepSqlStmnt, groupByStmnt)
+	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s LIMIT 10000", stepSqlStmnt, groupByStmnt, model.AliasAggr)
 
 	finalSQLStmnt := ""
 	if isGroupByTypeWithBuckets(query.GroupBys) {
-		selectAliases := "all_users"
+		selectAliases := model.AliasAggr
 		sqlStmnt := "WITH step_0 AS (" + stepSqlStmnt + ")"
 		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(&sqlStmnt, &params, query.GroupBys, "step_0", "", false, selectAliases)
 		selectAliases = aggregateSelectKeys + selectAliases
-		finalGroupBy := "all_users, " + strings.Join(aggregateGroupBys, ",")
-		finalOrderBy := "all_users, " + strings.Join(aggregateOrderBys, ",")
+		finalGroupBy := model.AliasAggr + ", " + strings.Join(aggregateGroupBys, ",")
+		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
 		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s LIMIT 1000", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)
 	} else {
 		finalSQLStmnt = stepSqlStmnt
