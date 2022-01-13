@@ -2795,7 +2795,7 @@ func TestSalesforceOfflineTouchPoint(t *testing.T) {
 	rule := model.SFTouchPointRule{
 		Filters:           []model.TouchPointFilter{filter1},
 		TouchPointTimeRef: model.SFCampaignMemberCreated, // SFCampaignMemberResponded
-		PropertiesMap:     map[string]string{"$campaign": "$salesforce_campaignmember_campaignname"},
+		PropertiesMap:     map[string]model.TouchPointPropertyValue{"$campaign": model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$salesforce_campaignmember_campaignname"}},
 	}
 
 	trackResponse, err := IntSalesforce.CreateTouchPointEvent(project, trackPayload, &campaignMemberDocuments[0], rule)
@@ -2826,7 +2826,7 @@ func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 	rule := model.SFTouchPointRule{
 		Filters:           []model.TouchPointFilter{filter1},
 		TouchPointTimeRef: model.SFCampaignMemberCreated, // SFCampaignMemberResponded
-		PropertiesMap:     map[string]string{"$campaign": "$salesforce_campaignmember_campaignname"},
+		PropertiesMap:     map[string]model.TouchPointPropertyValue{"$campaign": model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "$salesforce_campaignmember_campaignname"}},
 	}
 
 	// creating manual rule
@@ -2834,7 +2834,7 @@ func TestSalesforceOfflineTouchPointDecode(t *testing.T) {
 	touchPointRules["sf_touch_point_rules"] = []model.SFTouchPointRule{rule}
 
 	// adding json rule
-	project.SalesforceTouchPoints = postgres.Jsonb{RawMessage: json.RawMessage(`{"sf_touch_point_rules":[{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Field Events","lop":"AND"},{"pr":"$salesforce_campaign_name","op":"contains","va":"Sendoso","lop":"AND"}],"touch_point_time_ref":"campaign_member_created_date","properties_map":{"campaign_name":"$salesforce_campaign_name","campaign_id":"$salesforce_campaign_id","source":"$salesforce_campaign_type"}},{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Others","lop":"AND"}],"touch_point_time_ref":"campaign_member_created_date","properties_map":{"campaign_name":"$salesforce_campaign_name","campaign_id":"$salesforce_campaign_id","source":"$salesforce_campaign_type"}},{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Nurture","lop":"AND"}],"touch_point_time_ref":"campaign_member_first_responded_date","properties_map":{"campaign_name":"$salesforce_campaign_name","campaign_id":"$salesforce_campaign_id","source":"$salesforce_campaign_type"}}]}`)}
+	project.SalesforceTouchPoints = postgres.Jsonb{RawMessage: json.RawMessage(`{"sf_touch_point_rules":[{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Field Events","lop":"AND"},{"pr":"$salesforce_campaign_name","op":"contains","va":"Sendoso","lop":"AND"}],"touch_point_time_ref":"campaign_member_created_date","properties_map":{"$campaign":{"ty":"Property","va":"$salesforce_campaign_name"},"$source":{"ty":"Property","va":"$salesforce_campaign_type"},"$campaign_id":{"ty":"Property","va":"$salesforce_campaign_id"}}},{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Others","lop":"AND"}],"touch_point_time_ref":"campaign_member_created_date","properties_map":{"$campaign":{"ty":"Property","va":"$salesforce_campaign_name"},"$source":{"ty":"Property","va":"$salesforce_campaign_type"},"$campaign_id":{"ty":"Property","va":"$salesforce_campaign_id"}}},{"filters":[{"pr":"$salesforce_campaign_type","op":"equals","va":"Nurture","lop":"AND"}],"touch_point_time_ref":"campaign_member_first_responded_date","properties_map":{"$campaign":{"ty":"Property","va":"$salesforce_campaign_name"},"$source":{"ty":"Property","va":"$salesforce_campaign_type"},"$campaign_id":{"ty":"Property","va":"$salesforce_campaign_id"}}}]}`)}
 	store.GetStore().UpdateProject(project.ID, project)
 
 	project, errCode := store.GetStore().GetProject(project.ID)

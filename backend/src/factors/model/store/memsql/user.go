@@ -1402,6 +1402,9 @@ func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
 		return http.StatusBadRequest
 	}
 
+	// Explicit cleanup for removing unsupported characters.
+	properties.RawMessage = U.CleanupUnsupportedCharOnStringBytes(properties.RawMessage)
+
 	update := map[string]interface{}{"properties": properties}
 	if updateTimestamp > 0 && updateTimestamp > currentPropertiesUpdatedTimestamp {
 		if C.UseSourcePropertyOverwriteByProjectIDs(projectID) {

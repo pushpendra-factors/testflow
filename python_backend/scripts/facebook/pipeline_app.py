@@ -3,13 +3,12 @@ import logging as log
 import sys
 import traceback
 import time
-from python_backend.scripts.facebook import TOKEN_EXPIRY
 
 import scripts
 from lib.data_services.factors_data_service import FactorsDataService
 from lib.utils.facebook.metrics_aggregator import MetricsAggregator
 from lib.utils.healthchecks import HealthChecksUtil
-from scripts.facebook import FACEBOOK_AD_ACCOUNT, PROJECT_ID, DEVELOPMENT, TEST
+from scripts.facebook import FACEBOOK_AD_ACCOUNT, PROJECT_ID, DEVELOPMENT, TEST, TOKEN_EXPIRY
 from scripts.facebook.etl_config import EtlConfig
 from scripts.facebook.etl_parser import EtlParser
 from scripts.facebook.job_scheduler_and_runner import JobSchedulerAndRunner

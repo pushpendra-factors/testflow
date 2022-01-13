@@ -39,8 +39,8 @@ const (
 	JobsMetadataKeyNextSessionStartTimestamp = "next_session_start_timestamp"
 	JobsMetadataColumnName                   = "jobs_metadata"
 	LastModifiedTimeRef                      = "LAST_MODIFIED_TIME_REF"
-	HSTouchPointPropertyValueAsProperty      = "Property"
-	HSTouchPointPropertyValueAsConstant      = "Constant"
+	TouchPointPropertyValueAsProperty        = "Property"
+	TouchPointPropertyValueAsConstant        = "Constant"
 )
 
 const DefaultProjectName = "My Project"
@@ -54,13 +54,17 @@ type SalesforceTouchPoints struct {
 }
 
 type SFTouchPointRule struct {
-	Filters           []TouchPointFilter `json:"filters"`
-	TouchPointTimeRef string             `json:"touch_point_time_ref"`
-	PropertiesMap     map[string]string  `json:"properties_map"`
+	Filters           []TouchPointFilter                 `json:"filters"`
+	TouchPointTimeRef string                             `json:"touch_point_time_ref"`
+	PropertiesMap     map[string]TouchPointPropertyValue `json:"properties_map"`
 }
 
 type TouchPointFilter struct {
-	Property  string `json:"pr"`
+	Property string `json:"pr"`
+	// Entity: user or event.
+	Entity string `json:"en"`
+	// Type: categorical or numerical
+	Type      string `json:"ty"`
 	Operator  string `json:"op"`
 	Value     string `json:"va"`
 	LogicalOp string `json:"lop"`
@@ -79,12 +83,12 @@ type HubspotTouchPoints struct {
 }
 
 type HSTouchPointRule struct {
-	Filters           []TouchPointFilter                   `json:"filters"`
-	TouchPointTimeRef string                               `json:"touch_point_time_ref"`
-	PropertiesMap     map[string]HSTouchPointPropertyValue `json:"properties_map"`
+	Filters           []TouchPointFilter                 `json:"filters"`
+	TouchPointTimeRef string                             `json:"touch_point_time_ref"`
+	PropertiesMap     map[string]TouchPointPropertyValue `json:"properties_map"`
 }
 
-type HSTouchPointPropertyValue struct {
+type TouchPointPropertyValue struct {
 	Type  string `json:"ty"`
 	Value string `json:"va"`
 }

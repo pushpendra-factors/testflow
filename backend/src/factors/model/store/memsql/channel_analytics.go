@@ -369,17 +369,24 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		return make([]string, 0, 0), [][]interface{}{}, http.StatusNotFound
+		headers := model.GetHeadersFromQuery(*query)
+		return headers, make([][]interface{}, 0, 0), http.StatusNotFound
 	} else if (projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "") &&
 		(projectSetting.IntFacebookAdAccount == "") && (projectSetting.IntLinkedinAdAccount == "") {
 		log.Warn("Integration not present for channels.")
-		return make([]string, 0, 0), [][]interface{}{}, http.StatusNotFound
+		headers := model.GetHeadersFromQuery(*query)
+		return headers, make([][]interface{}, 0, 0), http.StatusNotFound
 	}
 
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		if errCode == http.StatusNotFound {
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), http.StatusOK
+		}
 		if err != http.StatusOK {
-			return make([]string, 0, 0), [][]interface{}{}, err
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
 		finalParams = append(adwordsParams, facebookParams...)
@@ -394,8 +401,13 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 		columns = append(commonKeys, commonMetrics...)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		if errCode == http.StatusNotFound {
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), http.StatusOK
+		}
 		if err != http.StatusOK {
-			return make([]string, 0, 0), [][]interface{}{}, err
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
 		finalParams = append(adwordsParams, facebookParams...)
@@ -411,8 +423,13 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 		columns = append(commonKeys, commonMetrics...)
 	} else {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
+		if errCode == http.StatusNotFound {
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), http.StatusOK
+		}
 		if err != http.StatusOK {
-			return make([]string, 0, 0), [][]interface{}{}, err
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
 		finalParams = append(adwordsParams, facebookParams...)
@@ -429,7 +446,8 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 	_, resultMetrics, err := store.ExecuteSQL(finalQuery, finalParams, logCtx)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed in channel analytics with following error.")
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+		headers := model.GetHeadersFromQuery(*query)
+		return headers, make([][]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	return columns, resultMetrics, http.StatusOK
 }

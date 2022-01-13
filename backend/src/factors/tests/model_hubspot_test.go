@@ -3487,9 +3487,9 @@ func TestHubspotOfflineTouchPoint(t *testing.T) {
 		LogicalOp: "AND",
 	}
 
-	rulePropertyMap := make(map[string]model.HSTouchPointPropertyValue)
-	rulePropertyMap["$campaign"] = model.HSTouchPointPropertyValue{Type: model.HSTouchPointPropertyValueAsProperty, Value: "$hubspot_campaign_name"}
-	rulePropertyMap["$channel"] = model.HSTouchPointPropertyValue{Type: model.HSTouchPointPropertyValueAsConstant, Value: "Other"}
+	rulePropertyMap := make(map[string]model.TouchPointPropertyValue)
+	rulePropertyMap["$campaign"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$hubspot_campaign_name"}
+	rulePropertyMap["$channel"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "Other"}
 
 	rule := model.HSTouchPointRule{
 		Filters:           []model.TouchPointFilter{filter1},
@@ -3529,9 +3529,9 @@ func TestHubspotOfflineTouchPointDecode(t *testing.T) {
 		LogicalOp: "AND",
 	}
 
-	rulePropertyMap := make(map[string]model.HSTouchPointPropertyValue)
-	rulePropertyMap["$campaign"] = model.HSTouchPointPropertyValue{Type: model.HSTouchPointPropertyValueAsProperty, Value: "$hubspot_campaign_type"}
-	rulePropertyMap["$channel"] = model.HSTouchPointPropertyValue{Type: model.HSTouchPointPropertyValueAsConstant, Value: "Other"}
+	rulePropertyMap := make(map[string]model.TouchPointPropertyValue)
+	rulePropertyMap["$campaign"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsProperty, Value: "$hubspot_campaign_type"}
+	rulePropertyMap["$channel"] = model.TouchPointPropertyValue{Type: model.TouchPointPropertyValueAsConstant, Value: "Other"}
 
 	rule := model.HSTouchPointRule{
 		Filters:           []model.TouchPointFilter{filter1},
