@@ -16,7 +16,7 @@ const NoBreakdownTable = ({
   data,
   seriesData,
   categories,
-  queries,
+  kpis,
   section,
   chartType,
   sorter,
@@ -34,13 +34,13 @@ const NoBreakdownTable = ({
 
   useEffect(() => {
     setColumns(
-      getTableColumns(queries, sorter, handleSorting, eventNames, frequency)
+      getTableColumns(kpis, sorter, handleSorting, eventNames, frequency)
     );
-  }, [queries, sorter, handleSorting, eventNames]);
+  }, [kpis, sorter, handleSorting, eventNames]);
 
   useEffect(() => {
-    setTableData(getDataInTableFormat(seriesData, categories, queries, sorter));
-  }, [seriesData, categories, queries, sorter]);
+    setTableData(getDataInTableFormat(seriesData, categories, kpis, sorter));
+  }, [seriesData, categories, kpis, sorter]);
 
   useEffect(() => {
     setDateBasedColumns(

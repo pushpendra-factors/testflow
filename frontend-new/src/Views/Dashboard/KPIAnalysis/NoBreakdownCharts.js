@@ -34,7 +34,7 @@ import NoBreakdownTable from '../../CoreQuery/KPIAnalysis/NoBreakdownCharts/NoBr
 import DashboardWidgetLegends from '../../../components/DashboardWidgetLegends';
 
 const NoBreakdownCharts = ({
-  queries,
+  kpis,
   responseData,
   chartType,
   section,
@@ -43,7 +43,7 @@ const NoBreakdownCharts = ({
 }) => {
   const { handleEditQuery } = useContext(DashboardContext);
 
-  const [sorter, setSorter] = useState(getDefaultSortProp(queries));
+  const [sorter, setSorter] = useState(getDefaultSortProp(kpis));
   const [dateSorter, setDateSorter] = useState(getDefaultDateSortProp());
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -62,12 +62,12 @@ const NoBreakdownCharts = ({
   }, []);
 
   useEffect(() => {
-    const aggData = formatData(responseData, queries);
+    const aggData = formatData(responseData, kpis);
     const { categories: cats, data: d } = formatDataInSeriesFormat(aggData);
     setAggregateData(aggData);
     setCategories(cats);
     setData(d);
-  }, [responseData, queries]);
+  }, [responseData, kpis]);
 
   if (!aggregateData.length) {
     return (
@@ -102,7 +102,7 @@ const NoBreakdownCharts = ({
         handleSorting={handleSorting}
         dateSorter={dateSorter}
         handleDateSorting={handleDateSorting}
-        queries={queries}
+        kpis={kpis}
       />
     );
   }

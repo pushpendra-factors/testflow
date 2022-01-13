@@ -9,11 +9,10 @@ import React, {
 } from 'react';
 import {
   formatData,
-  // formatDataInStackedAreaFormat,
-  defaultSortProp,
   getVisibleData,
   formatDataInSeriesFormat,
   getVisibleSeriesData,
+  getDefaultSortProp,
 } from './utils';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
@@ -35,7 +34,7 @@ import StackedBarChart from '../../../../components/StackedBarChart';
 const BreakdownCharts = forwardRef(
   (
     {
-      queries,
+      kpis,
       breakdown,
       responseData,
       chartType,
@@ -54,13 +53,13 @@ const BreakdownCharts = forwardRef(
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
-        : defaultSortProp()
+        : getDefaultSortProp(kpis)
     );
     const [dateSorter, setDateSorter] = useState(
       savedQuerySettings.dateSorter &&
         Array.isArray(savedQuerySettings.dateSorter)
         ? savedQuerySettings.dateSorter
-        : defaultSortProp()
+        : getDefaultSortProp(kpis)
     );
     const [aggregateData, setAggregateData] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -85,7 +84,12 @@ const BreakdownCharts = forwardRef(
     });
 
     useEffect(() => {
-      const aggData = formatData(responseData, breakdown, currentEventIndex);
+      const aggData = formatData(
+        responseData,
+        kpis,
+        breakdown,
+        currentEventIndex
+      );
       const { categories: cats, data: d } = formatDataInSeriesFormat(
         responseData,
         aggData,
@@ -118,6 +122,7 @@ const BreakdownCharts = forwardRef(
     const table = (
       <div className='mt-12 w-full'>
         <BreakdownTable
+          kpis={kpis}
           data={aggregateData}
           seriesData={data}
           section={section}

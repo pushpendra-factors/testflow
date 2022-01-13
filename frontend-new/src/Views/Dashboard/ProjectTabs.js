@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { Tabs, Button, Spin, Select } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
 import {
@@ -17,9 +18,6 @@ import {
   FaErrorComp,
   FaErrorLog,
 } from '../../components/factorsComponents';
-import { ErrorBoundary } from 'react-error-boundary';
-// import InfoCard from '../../components/InfoCard';
-// import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 
 const { TabPane } = Tabs;
 
@@ -39,6 +37,8 @@ function ProjectTabs({
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
+  const { loading: savedQueriesLoading, error: savedQueriesError } = useSelector((state) => state.queries);
+  
   const MAX_DASHBOARD_TABS = 5;
   const dispatch = useDispatch();
 
@@ -183,7 +183,7 @@ function ProjectTabs({
     </>
   );
 
-  if (dashboards.loading || activeDashboardUnits.loading) {
+  if (dashboards.loading || activeDashboardUnits.loading || savedQueriesLoading) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
         <Spin size='large' />
@@ -191,21 +191,13 @@ function ProjectTabs({
     );
   }
 
-  if (dashboards.error || activeDashboardUnits.error) {
+  if (dashboards.error || activeDashboardUnits.error || savedQueriesError) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
         <NoDataChart />
       </div>
     );
   }
-
-  // const Footer = (type) => {
-  //   if (type === 'pr') {
-  //     return (<div className={''}> <LockOutlined/> Private </div>);
-  //   } if (type === 'pv') {
-  //     return (<div className={''}> <UnlockOutlined/> Public </div>);
-  //   }
-  // };
 
   if (dashboards.data.length) {
     return (

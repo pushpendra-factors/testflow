@@ -16,6 +16,7 @@ import { isSeriesChart } from '../../../../utils/dataFormatter';
 
 const BreakdownTable = ({
   data,
+  kpis,
   seriesData,
   categories,
   section,
@@ -44,13 +45,14 @@ const BreakdownTable = ({
     setColumns(
       getTableColumns(
         breakdown,
+        kpis,
         sorter,
         handleSorting,
         userPropNames,
         eventPropNames
       )
     );
-  }, [breakdown, sorter, handleSorting, userPropNames, eventPropNames]);
+  }, [breakdown, sorter, handleSorting, kpis, userPropNames, eventPropNames]);
 
   useEffect(() => {
     setTableData(getDataInTableFormat(data, searchText, sorter));
@@ -61,6 +63,7 @@ const BreakdownTable = ({
       getDateBasedColumns(
         categories,
         breakdown,
+        kpis,
         dateSorter,
         handleDateSorting,
         frequency,
@@ -71,6 +74,7 @@ const BreakdownTable = ({
   }, [
     categories,
     breakdown,
+    kpis,
     dateSorter,
     handleDateSorting,
     userPropNames,
