@@ -309,3 +309,18 @@ func TransformDateTypeValueForChannels(headers []string, rows [][]interface{}, g
 
 	return rows
 }
+
+func GetHeadersFromQuery(query ChannelQueryV1) []string {
+	headers := make([]string, 0, 0)
+	for _, currentGroupBy := range query.GroupBy {
+		headers = append(headers, currentGroupBy.Object+"_"+currentGroupBy.Property)
+	}
+
+	if query.GroupByTimestamp == "" {
+		headers = append(headers, "timestamp")
+	}
+	for _, metric := range query.SelectMetrics {
+		headers = append(headers, metric)
+	}
+	return headers
+}
