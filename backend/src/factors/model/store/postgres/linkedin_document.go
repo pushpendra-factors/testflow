@@ -1010,7 +1010,6 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 
 // Since we dont have a way to store raw format, we are going with the approach of joins on query.
 func (pg *Postgres) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
-	db := C.GetServices().Db
 
 	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0, 0)
 	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0, 0)
@@ -1021,7 +1020,7 @@ func (pg *Postgres) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	if projectSetting.IntLinkedinAdAccount == "" {
-		log.Error("Failed to get custtomer account ids")
+		log.WithField("projectID", projectID).Error("Integration of linkedin is not available for this project.")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	customerAccountIDs := strings.Split(projectSetting.IntLinkedinAdAccount, ",")
@@ -1038,23 +1037,42 @@ func (pg *Postgres) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(linkedinAdGroupMetadataFetchQueryStr, linkedinDocumentTypeAlias["campaign"], projectID, from, to, customerAccountIDs,
-		linkedinDocumentTypeAlias["campaign"], projectID, from, to, customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"],
-		projectID, from, to, customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID,
-		from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
+	query := linkedinAdGroupMetadataFetchQueryStr
+	params := []interface{}{linkedinDocumentTypeAlias["campaign"], projectID, from, to,
+		customerAccountIDs, linkedinDocumentTypeAlias["campaign"], projectID, from, to,
+		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs}
+
+	rows, _, err := pg.ExecQueryWithContext(query, params)
 	if err != nil {
-		errString := fmt.Sprintf("failed to get last %d ad_group meta for Linkedin", days)
-		log.Error(errString)
+		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(linkedinCampaignMetadataFetchQueryStr, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
+		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
+	}
+
+	query = linkedinCampaignMetadataFetchQueryStr
+	params = []interface{}{linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
 		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
-		customerAccountIDs).Find(&channelDocumentsCampaign).Error
+		customerAccountIDs}
+	rows, _, err = pg.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for Linkedin", days)
-		log.Error(errString)
+		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
+		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
 
 	return channelDocumentsCampaign, channelDocumentsAdGroup

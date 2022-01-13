@@ -2010,10 +2010,9 @@ func (pg *Postgres) getAdwordsMetricsBreakdown(projectID uint64, customerAccount
 }
 
 func (pg *Postgres) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
-	db := C.GetServices().Db
 
-	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0)
-	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0)
+	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0, 0)
+	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0, 0)
 
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
@@ -2021,7 +2020,7 @@ func (pg *Postgres) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days i
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	if projectSetting.IntAdwordsCustomerAccountId == nil || *(projectSetting.IntAdwordsCustomerAccountId) == "" {
-		log.Error("Failed to get custtomer account ids")
+		log.WithField("projectID", projectID).Error("Integration of adwords is not available for this project.")
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 	customerAccountIDs := strings.Split(*(projectSetting.IntAdwordsCustomerAccountId), ",")
@@ -2038,21 +2037,37 @@ func (pg *Postgres) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days i
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(adwordsAdGroupMetdataFetchQueryStr, model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs,
-		model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
+	query := adwordsAdGroupMetdataFetchQueryStr
+	params := []interface{}{model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs,
+		model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs}
+	rows, _, err := pg.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for adwords", days)
 		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
+		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
+	}
 
-	err = db.Raw(adwordsCampaignMetadataFetchQueryStr, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsCampaign).Error
+	query = adwordsCampaignMetadataFetchQueryStr
+	params = []interface{}{model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs}
+	rows, _, err = pg.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for adwords", days)
 		log.WithField("error string", err).Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
-
+	defer rows.Close()
+	for rows.Next() {
+		currentRecord := model.ChannelDocumentsWithFields{}
+		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
+		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
+	}
+	log.WithField("channelDocumentsAdGroup", channelDocumentsAdGroup).WithField("channelDocumentsCampaign", channelDocumentsCampaign).Warn("kark3")
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
 

@@ -28,7 +28,11 @@ func CreateProjectHandler(c *gin.Context) {
 		"reqId":      U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 		"agent_uuid": loggedInAgentUUID,
 	})
-
+	createDefaultDashBoard := c.Query("create_dashboard")
+	var createDashboard bool = true // by default
+	if createDefaultDashBoard == "false" {
+		createDashboard = false
+	}
 	var project model.Project
 	err := json.NewDecoder(r.Body).Decode(&project)
 	if err != nil {
@@ -51,13 +55,12 @@ func CreateProjectHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed"})
 		return
 	}
+	_, errCode = store.GetStore().CreateProjectWithDependencies(&project, loggedInAgentUUID, model.ADMIN, billingAcc.ID, createDashboard)
 
-	_, errCode = store.GetStore().CreateProjectWithDependencies(&project, loggedInAgentUUID, model.ADMIN, billingAcc.ID)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
 		return
 	}
-
 	c.JSON(http.StatusCreated, project)
 	return
 }
@@ -112,7 +115,14 @@ func EditProjectHandler(c *gin.Context) {
 	if err != nil {
 		logCtx.WithError(err).Error("EditProject Failed. Json Decoding failed.")
 	}
-
+	project, status := store.GetStore().GetProject(projectID)
+	if status != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+	if project.TimeZone != "" && projectEditDetails.TimeZone != "" {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "cannot edit existing timezone"})
+	}
 	errCode = store.GetStore().UpdateProject(projectID, &projectEditDetails)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)

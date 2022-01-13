@@ -258,7 +258,7 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 	}
 
 	cproject, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName},
-		agentUUID, 0, billingAcc.ID)
+		agentUUID, 0, billingAcc.ID, true)
 	if errCode != http.StatusCreated {
 		log.Error("failed to CreateProjectWithDependencies")
 		return nil, errors.New("failed to CreateProjectWithDependencies")
