@@ -912,12 +912,11 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	}
 
 	payload.Timestamp = timestamp
-	payload.EventProperties[U.EP_TIMESTAMP] = timestamp
 
 	// Mapping touch point properties:
 	for key, value := range rule.PropertiesMap {
 
-		if value.Type == model.HSTouchPointPropertyValueAsConstant {
+		if value.Type == model.TouchPointPropertyValueAsConstant {
 			payload.EventProperties[key] = value.Value
 		} else {
 			if _, exists := trackPayload.EventProperties[value.Value]; exists {
