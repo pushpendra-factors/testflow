@@ -545,10 +545,12 @@ func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID uint64, query *mode
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForLinkedinQueryV1(projectID,
 			query, reqID, fetchSource, " LIMIT 10000", false, nil)
 		if errCode == http.StatusNotFound {
-			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusOK
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), http.StatusOK
 		}
 		if errCode != http.StatusOK {
-			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), errCode
 		}
 		_, resultMetrics, err := store.ExecuteSQL(sql, params, logCtx)
 		columns := append(selectKeys, selectMetrics...)
@@ -561,28 +563,31 @@ func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID uint64, query *mode
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForLinkedinQueryV1(
 			projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
 		if errCode == http.StatusNotFound {
-			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusOK
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), http.StatusOK
 		}
 		if errCode != http.StatusOK {
-			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), errCode
 		}
 		_, resultMetrics, err := store.ExecuteSQL(sql, params, logCtx)
 		columns := append(selectKeys, selectMetrics...)
 		if err != nil {
 			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.LinkedinSpecificError)
-			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+			return columns, make([][]interface{}, 0, 0), http.StatusInternalServerError
 		}
 		groupByCombinations := model.GetGroupByCombinationsForChannelAnalytics(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForLinkedinQueryV1(
 			projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
 		if errCode != http.StatusOK {
-			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), errCode
 		}
 		_, resultMetrics, err = store.ExecuteSQL(sql, params, logCtx)
 		columns = append(selectKeys, selectMetrics...)
 		if err != nil {
 			logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.LinkedinSpecificError)
-			return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+			return columns, make([][]interface{}, 0, 0), http.StatusInternalServerError
 		}
 		return columns, resultMetrics, http.StatusOK
 	}
