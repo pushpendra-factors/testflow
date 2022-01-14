@@ -375,7 +375,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 		(projectSetting.IntFacebookAdAccount == "") && (projectSetting.IntLinkedinAdAccount == "") {
 		log.Warn("Integration not present for channels.")
 		headers := model.GetHeadersFromQuery(*query)
-		return headers, make([][]interface{}, 0, 0), http.StatusNotFound
+		return headers, make([][]interface{}, 0, 0), http.StatusOK
 	}
 
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
