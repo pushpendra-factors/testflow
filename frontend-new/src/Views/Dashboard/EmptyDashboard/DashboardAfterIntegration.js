@@ -5,9 +5,12 @@ import { FaErrorComp, FaErrorLog } from '../../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button } from 'antd';
 import Header from '../../AppLayout/Header';
+import { connect } from 'react-redux';
+import { getHubspotContact } from 'Reducers/global';
 
-function DashboardAfterIntegration({setaddDashboardModal}) {
+function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, currentAgent}) {
     const [dataLoading, setdataLoading] = useState(true);
+    const [ownerID, setownerID] = useState();
     const history = useHistory();
 
     useEffect(() => {
@@ -15,6 +18,20 @@ function DashboardAfterIntegration({setaddDashboardModal}) {
             setdataLoading(false)
         },3000);
     }, []);
+
+    useEffect(() => {
+        let email = currentAgent.email;
+        getHubspotContact(email).then((res) => {
+            console.log('get hubspot contact success', res.data)
+            setownerID(res.data.hubspot_owner_id)
+        }).catch((err) => {
+            console.log(err.data.error)
+        });
+    }, []);
+
+    let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
+                    :ownerID === '116047122'? 'https://calendly.com/priyanka-267/30min'
+                    :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': null;
 
     return (
         <>
@@ -75,7 +92,7 @@ function DashboardAfterIntegration({setaddDashboardModal}) {
                         <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>
                             or
                         </Text>
-                        <Button type={'default'} size={'large'} className={'w-full'}>Choose from templates</Button>
+                        <a href={meetLink} target='_blank' ><Button type={'default'} size={'large'} className={'w-full'}>Setup Call</Button></a>
                     </div>
                     }
                 </div>
@@ -86,4 +103,8 @@ function DashboardAfterIntegration({setaddDashboardModal}) {
 
 }
 
-export default DashboardAfterIntegration;
+const mapStateToProps = (state) => ({
+    currentAgent: state.agent.agent_details
+});
+
+export default connect(mapStateToProps, { getHubspotContact })(DashboardAfterIntegration);
