@@ -336,14 +336,15 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID uint64, customer
 	return users, http.StatusFound
 }
 
-func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string, requestSource int) (*model.User, int) {
+func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string,
+	requestSource int) (*model.User, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var user model.User
 	db := C.GetServices().Db
 	if !C.CheckRestrictReusingUsersByCustomerUserId(projectId) {
-		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
-			Where("customer_user_id = ?", customerUserId).First(&user).Error; err != nil {
+		if err := db.Limit(1).Order("created_at DESC").Where("project_id = ?", projectId).
+			Where("customer_user_id = ?", customerUserId).Find(&user).Error; err != nil {
 			if gorm.IsRecordNotFoundError(err) {
 				return nil, http.StatusNotFound
 			}
@@ -356,9 +357,9 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUse
 		} else {
 			userSourceWhereCondition = "source = ?"
 		}
-		if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
+		if err := db.Limit(1).Order("created_at DESC").Where("project_id = ?", projectId).
 			Where("customer_user_id = ?", customerUserId).Where(userSourceWhereCondition, requestSource).
-			First(&user).Error; err != nil {
+			Find(&user).Error; err != nil {
 			if gorm.IsRecordNotFoundError(err) {
 				return nil, http.StatusNotFound
 			}
