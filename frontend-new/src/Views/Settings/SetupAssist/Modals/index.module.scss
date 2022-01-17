@@ -1,0 +1,9 @@
+.hide {
+    display: none;
+  }
+  
+.show {
+    &:hover .hide {
+        display: inline-block;
+    } 
+}

@@ -33,6 +33,7 @@ function SearchBar({ setQueryToState }) {
   return (
     <> 
         <Input
+          data-tour = 'step-2'
           ref={inputRef}
           size="large"
           placeholder="Search Reports"

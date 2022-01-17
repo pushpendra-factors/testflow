@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
-import { Layout, Spin } from 'antd';
-import Sidebar from '../../components/Sidebar';
-import ProjectSettings from '../Settings/ProjectSettings';
-import componentsLib from '../../Views/componentsLib';
-import { connect, useSelector, useDispatch } from 'react-redux';
-import { bindActionCreators } from 'redux';
+import React, { useEffect, useState, useCallback, lazy, Suspense } from "react";
+import { Layout, Spin } from "antd";
+import Sidebar from "../../components/Sidebar"; 
+import ProjectSettings from "../Settings/ProjectSettings";
+import componentsLib from "../../Views/componentsLib";
+import SetupAssist from "../Settings/SetupAssist";
+import { connect, useSelector, useDispatch } from "react-redux";
+import { bindActionCreators } from "redux";
 import {
   BrowserRouter as Router,
   Route,
@@ -108,36 +109,30 @@ function AppLayout({
         <Spin size={'large'} className={'fa-page-loader'} />
       ) : (
         <Layout>
-          <ErrorBoundary
-            fallback={
-              <FaErrorComp
-                size={'medium'}
-                title={'Bundle Error:01'}
-                subtitle={
-                  'We are facing trouble loading App Bundles. Drop us a message on the in-app chat.'
-                }
-              />
-            }
-            onError={FaErrorLog}
-          >
-            {!show_analytics_result ? <Sidebar /> : null}
-            <Layout className={contentClassName}>
-              <Content className='bg-white min-h-screen'>
-                <Suspense fallback={<PageSuspenseLoader />}>
-                  <Switch>
-                    <Route exact path='/' name='Home' component={Dashboard} />
-                    <Route
-                      path='/components'
-                      name='componentsLib'
-                      component={componentsLib}
-                    />
-                    <Route path='/settings' component={ProjectSettings} />
-                    <Route path='/analyse' name='Home' component={CoreQuery} />
-                    <Route path='/explain' name='Factors' component={Factors} />
-                  </Switch>
-                </Suspense>
-              </Content>
-            </Layout>
+          <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Bundle Error:01'} subtitle={ "We are facing trouble loading App Bundles. Drop us a message on the in-app chat."} />} onError={FaErrorLog}> 
+          {!show_analytics_result ? <Sidebar /> : null}
+          <Layout className={contentClassName}>
+            <Content className="bg-white min-h-screen">
+              <Suspense fallback={<PageSuspenseLoader />}>
+                <Switch>
+                  <Route exact path="/" name="Home" component={Dashboard} />
+                  <Route
+                    path="/components"
+                    name="componentsLib"
+                    component={componentsLib}
+                  />
+                  <Route path="/settings" component={ProjectSettings} />
+                  <Route
+                    path="/analyse"
+                    name="Home"
+                    component={CoreQuery}
+                  />
+                  <Route path="/explain" name="Factors" component={Factors} />
+                  <Route path="/project-setup" component={SetupAssist} />
+                </Switch>
+              </Suspense>
+            </Content>
+          </Layout>
           </ErrorBoundary>
         </Layout>
       )}

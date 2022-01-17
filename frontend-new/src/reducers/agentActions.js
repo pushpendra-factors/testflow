@@ -50,6 +50,16 @@ export default function reducer(state = {
       nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid];         
       return nextState
     }
+    case "PROJECT_AGENT_BATCH_INVITE_FULFILLED": {
+      let nextState = { ...state }; 
+      for(let i = 0; i < action.payload.project_agent_mappings.length; i++) {
+        let projectAgentMapping = action.payload.project_agent_mappings[i]; 
+        nextState.agents = [...state.agents]; 
+        nextState.agents.push(projectAgentMapping);  
+        nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid]; 
+    } 
+      return nextState
+    }
     case "PROJECT_AGENT_INVITE_REJECTED": {
       return {
         ...state
@@ -266,6 +276,30 @@ export function projectAgentInvite(projectId, payload){
       })
       .catch((r) => { 
         dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+      });
+    });
+  }
+}
+
+export function projectAgentBatchInvite(projectId, payload){
+  return function(dispatch){ 
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + "projects/" + projectId + "/agents/batchinvite", payload)
+      .then((r) => { 
+        if (r.ok && r.status && r.status == 201){ 
+          dispatch({type: "PROJECT_AGENT_BATCH_INVITE_FULFILLED", payload: r.data });
+          resolve(r.data);
+        }else if (r.status && r.status == 409){ 
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data }); 
+          reject("User Seats limit reached");
+        }
+        else { 
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data});
+          reject(r.data);
+        }
+      })
+      .catch((r) => { 
+        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data });
       });
     });
   }

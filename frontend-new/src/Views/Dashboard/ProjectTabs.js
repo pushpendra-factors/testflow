@@ -52,7 +52,7 @@ function ProjectTabs({
         payload: dashboards.data.find((d) => d.id === parseInt(value)),
       });
     },
-    [dashboards, dispatch, activeDashboard.id]
+    [dashboards, dispatch, activeDashboard?.id]
   );
 
   const handleTabChange = useCallback(
@@ -74,12 +74,12 @@ function ProjectTabs({
   );
 
   const fetchUnits = useCallback(() => {
-    if (active_project.id && activeDashboard.id) {
+    if (active_project.id && activeDashboard?.id) {
       dispatch(
         fetchActiveDashboardUnits(active_project.id, activeDashboard.id)
       );
     }
-  }, [active_project.id, activeDashboard.id, dispatch]);
+  }, [active_project.id, activeDashboard?.id, dispatch]);
 
   useEffect(() => {
     fetchUnits();
@@ -123,12 +123,12 @@ function ProjectTabs({
         (elem) => parseInt(elem.id) === parseInt(activeDashboard.id)
       );
       if (dbIndex <= MAX_DASHBOARD_TABS - 2) {
-        return activeDashboard.id.toString();
+        return activeDashboard?.id?.toString();
       } else {
         return dashboards.data[MAX_DASHBOARD_TABS - 1].id.toString();
       }
     } else {
-      return activeDashboard.id.toString();
+      return activeDashboard?.id?.toString();
     }
   }, [activeDashboard, dashboards]);
 
@@ -168,12 +168,13 @@ function ProjectTabs({
       }
       // return d.name;
     },
-    [dashboards.data, activeDashboard.id, changeActiveDashboard]
+    [dashboards?.data, activeDashboard?.id, changeActiveDashboard]
   );
 
   const operations = (
     <>
       <Button
+        data-tour = 'step-4'
         className={styles.operations}
         type='text'
         onClick={() => setaddDashboardModal(true)}
