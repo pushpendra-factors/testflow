@@ -1,5 +1,5 @@
-import React, { useState, useEffect, lazy } from "react";
-import { Row, Col, Tag, Avatar, Skeleton, Button } from "antd";
+import React, { useState, useEffect } from "react";
+import { Row, Col, Tag, Avatar, Skeleton, Button, Tooltip } from "antd";
 import { Text, SVG, FaErrorComp, FaErrorLog } from "factorsComponents";
 import { connect } from "react-redux";
 import { fetchProjectSettings } from "Reducers/global";
@@ -171,7 +171,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
             <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Other integrations</Text>
           </Col>
           <Col>
-            <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
+            {/* <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text> */}
           </Col>
         </Row>
         <Row className={'mt-4'}>

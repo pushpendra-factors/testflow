@@ -39,7 +39,7 @@ function Sidebar(props) {
   useEffect(() => {
     let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);
     if(!agent || !agent[0]?.invited_by) {
-      if (props.currentAgent.is_onboarding_flow_seen) {
+      if (props.currentAgent?.is_onboarding_flow_seen) {
           setShowProjectModal(false);
       } else {
         setShowProjectModal(true);

@@ -124,7 +124,7 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
                         <Form
                         form={form}
                         name="login"
-                        validateTrigger
+                        // validateTrigger
                         initialValues={{ remember: false }}
                         onFinish={UserDataFn}
                         onChange={onChange}

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, lazy } from "react";
-import { Row, Col, Tag, Avatar, Skeleton, Button } from "antd";
+import React, { useState, useEffect } from "react";
+import { Row, Col, Tag, Avatar, Skeleton, Button, Tooltip } from "antd";
 import { Text, SVG, FaErrorComp, FaErrorLog } from "factorsComponents";
 import { connect } from "react-redux";
 import { fetchProjectSettings } from "Reducers/global";
@@ -87,7 +87,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
             <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Connect with your website data</Text>
           </Col>
           <Col>
-            <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
+            {/* <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text> */}
           </Col>
         </Row>
         <Row gutter={[24, 24]} justify={'center'} className={'mt-0 pl-3'}>
@@ -104,7 +104,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
             <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>With your Customer Data Platform</Text>
           </Col>
           <Col>
-            <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text>
+            {/* <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text> */}
           </Col>
         </Row>
         <Row className={'mt-4 pl-4'}>

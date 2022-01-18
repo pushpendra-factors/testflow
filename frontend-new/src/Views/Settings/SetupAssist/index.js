@@ -48,7 +48,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
         fetchProjectSettingsV1(activeProject.id).then(() => {
             console.log('fetch project settings success');
         });
-    }, [activeProject, current]);
+    }, [activeProject]);
 
     integration = integration?.project_settings || integration;
 

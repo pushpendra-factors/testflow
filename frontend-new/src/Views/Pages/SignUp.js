@@ -77,7 +77,7 @@ function SignUp({ signup }) {
                         <Form
                         form={form}
                         name="login"
-                        validateTrigger
+                        // validateTrigger
                         initialValues={{ remember: false }}
                         onFinish={SignUpFn}
                         onChange={onChange}

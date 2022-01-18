@@ -102,7 +102,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                                 validateTrigger={['onChange', 'onBlur']}
                                 rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                             >
-                            <Input className={'fa-input'} size={'large'} addonAfter={<Form.Item name={[0, "role"]} noStyle initialValue={2}>{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
+                            <Input className={''} size={'large'} addonAfter={<Form.Item name={[0, "role"]} noStyle initialValue={2}>{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
                         </Col>
                         {/* <Col span={24}>
@@ -146,7 +146,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                                 validateTrigger={['onChange', 'onBlur']}
                                 rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
                             >
-                            <Input className={'fa-input'} size={'large'}  addonAfter={<Form.Item name={[field.name, "role"]} noStyle initialValue={2}>{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
+                            <Input className={''} size={'large'}  addonAfter={<Form.Item name={[field.name, "role"]} noStyle initialValue={2}>{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
                             </Col>
                             {fields.length > 0 ? (
