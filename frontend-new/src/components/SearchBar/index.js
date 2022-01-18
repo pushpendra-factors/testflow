@@ -36,12 +36,11 @@ function SearchBar({ setQueryToState }) {
           data-tour = 'step-2'
           ref={inputRef}
           size="large"
-          placeholder="Search Reports"
+          placeholder="Lookup factors.ai"
           prefix={(
             <SVG name={'search'} size={16} color={'grey'} />
           )}
-          // className={styles.searchBarBox}
-          className={'fa-global-search--input'}
+          className={'fa-global-search--input-new'}
           onFocus={handleFocus}
         /> 
       <SearchModal

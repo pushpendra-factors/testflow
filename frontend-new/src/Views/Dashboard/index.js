@@ -13,6 +13,7 @@ import { getDashboardDateRange } from './utils';
 import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
 import EmptyDashboard from './EmptyDashboard';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration'
+import ProjectDropdown from './ProjectDropdown';
 
 function Dashboard() {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
@@ -98,8 +99,8 @@ function Dashboard() {
           </div>
         </Header>
 
-        <div className={'mt-20'}>
-          <ProjectTabs
+        <div className={`mt-20 h-full`}>
+          <ProjectDropdown
             handleEditClick={handleEditClick}
             setaddDashboardModal={setaddDashboardModal}
             durationObj={durationObj}

@@ -37,8 +37,11 @@ function ProjectTabs({
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
-  const { loading: savedQueriesLoading, error: savedQueriesError } = useSelector((state) => state.queries);
-  
+  const {
+    loading: savedQueriesLoading,
+    error: savedQueriesError,
+  } = useSelector((state) => state.queries);
+
   const MAX_DASHBOARD_TABS = 5;
   const dispatch = useDispatch();
 
@@ -184,7 +187,11 @@ function ProjectTabs({
     </>
   );
 
-  if (dashboards.loading || activeDashboardUnits.loading || savedQueriesLoading) {
+  if (
+    dashboards.loading ||
+    activeDashboardUnits.loading ||
+    savedQueriesLoading
+  ) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
         <Spin size='large' />

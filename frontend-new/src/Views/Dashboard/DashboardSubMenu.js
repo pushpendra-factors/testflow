@@ -79,7 +79,7 @@ function DashboardSubMenu({
           className={'datepicker-minWidth'}
         />
         {btn}
-        {dashboard?.class === DASHBOARD_TYPES.USER_CREATED ? (
+        {/* {dashboard?.class === DASHBOARD_TYPES.USER_CREATED ? (
           <Button
             onClick={handleEditClick.bind(this, dashboard)}
             type={'text'}
@@ -88,7 +88,7 @@ function DashboardSubMenu({
           >
             Edit
           </Button>
-        ) : null}
+        ) : null} */}
       </div>
       <div className={'flex justify-between items-center'}>
         {showRefreshBtn && (

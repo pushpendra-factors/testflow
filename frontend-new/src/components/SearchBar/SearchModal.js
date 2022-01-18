@@ -32,9 +32,8 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
     <Modal
       centered={true}
       visible={visible}
-      width={700}
       title={null}
-      className={`fa-modal--regular ${styles.modal} fa-modal--slideInDown fa-global-search--modal`}
+      className={`fa-modal--regular fa-modal--slideInDown ${styles.modal_new} fa-global-search--modal`}
       okText={'Save'}
       confirmLoading={false}
       closable={false}
@@ -57,8 +56,8 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
             // onFocus={handleFocus}
             autoFocus
             // className={`${styles.inputBox} ${focused ? styles.focused : ''}`}
-            className={`fa-global-search--input fa-global-search--input-fw py-4 mt-4`}
-            placeholder='Search Reports'
+            className={`fa-global-search--input-new fa-global-search--input-fw-new py-4 mt-4`}
+            placeholder='Lookup factors.ai'
             prefix={<SVG name='search' size={16} color={'grey'} />}
           />
         </div>
@@ -69,13 +68,13 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
             <div className='fa-global-search--contents'>
               {data.map((d) => {
                 const queryType = getQueryType(d.query);
-
                 const queryTypeName = {
                   events: 'events_cq',
                   funnel: 'funnels_cq',
                   channel_v1: 'campaigns_cq',
                   attribution: 'attributions_cq',
-                  profiles: 'profiles_cq'
+                  profiles: 'profiles_cq',
+                  kpi: 'KPI_cq',
                 };
                 let svgName = '';
                 Object.entries(queryTypeName).forEach(([k, v]) => {
@@ -83,7 +82,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                     svgName = v;
                   }
                 });
-              
+
                 return (
                   <div
                     onClick={() => handleQueryClick(d)}
