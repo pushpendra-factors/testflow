@@ -282,12 +282,13 @@ func (store *MemSQL) GetEventName(name string, projectId uint64) (*model.EventNa
 		return nil, http.StatusBadRequest
 	}
 
-	db := C.GetServices().Db
-
 	var eventName model.EventName
-	if err := db.Where(&model.EventName{Name: name, ProjectId: projectId}).First(&eventName).Error; err != nil {
-		log.WithFields(log.Fields{"projectId": projectId, "Name": name}).WithError(err).Error(
-			"Getting eventName failed on GetEventName")
+	db := C.GetServices().Db
+	if err := db.Limit(1).
+		Where("project_id = ? AND name = ?", projectId, name).
+		Find(&eventName).Error; err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "Name": name}).
+			WithError(err).Error("Getting eventName failed on GetEventName")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -804,8 +805,8 @@ func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID uint64, id strin
 	db := C.GetServices().Db
 
 	var eventName model.EventName
-	if err := db.Where(whereStmnt,
-		projectID, []string{model.TYPE_CRM_SALESFORCE, model.TYPE_CRM_HUBSPOT}, id).First(&eventName).Error; err != nil {
+	if err := db.Limit(1).Where(whereStmnt,
+		projectID, []string{model.TYPE_CRM_SALESFORCE, model.TYPE_CRM_HUBSPOT}, id).Find(&eventName).Error; err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting smart event filter_event_name")
 
 		return nil, http.StatusInternalServerError
