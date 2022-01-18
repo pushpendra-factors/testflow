@@ -50,7 +50,7 @@ services:
                 -  REDIS_HOST=redis
                 -  ETCD=etcd:2379
                 -  PS=patternserver
-            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --env=development --dev_box"]
+            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --env=development"]
             image: testing/api:1.0
             restart: always
             ports:

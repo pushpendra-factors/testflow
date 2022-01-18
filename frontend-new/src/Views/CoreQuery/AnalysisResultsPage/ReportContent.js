@@ -394,7 +394,7 @@ function ReportContent({
       content = (
         <KPIAnalysis
           resultState={resultState}
-          queries={queries}
+          kpis={queries}
           breakdown={breakdown}
           section={section}
           currMetricsValue={currMetricsValue}

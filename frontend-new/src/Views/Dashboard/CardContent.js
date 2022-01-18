@@ -260,7 +260,7 @@ function CardContent({ unit, resultState, durationObj }) {
     if (queryType === QUERY_TYPE_KPI) {
       content = (
         <KPIAnalysis
-          queries={events}
+          kpis={events}
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           section={DASHBOARD_WIDGET_SECTION}

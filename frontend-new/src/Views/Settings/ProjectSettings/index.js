@@ -77,7 +77,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               <Menu.Item key={MenuTabs.generalSettings}>{MenuTabs.generalSettings}</Menu.Item>
               <Menu.Item key={MenuTabs.SDK}>{MenuTabs.SDK}</Menu.Item>
               <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item>
-              <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
+              <Menu.Item data-tour='step-10' key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
               <Menu.Item key={MenuTabs.Touchpoints}>{MenuTabs.Touchpoints}</Menu.Item>
               <Menu.Item key={MenuTabs.Events}>{MenuTabs.Events}</Menu.Item>
               <Menu.Item key={MenuTabs.Properties}>{MenuTabs.Properties}</Menu.Item>

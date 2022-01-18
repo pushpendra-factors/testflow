@@ -7,10 +7,10 @@ import React, {
 } from 'react';
 import {
   formatData,
-  defaultSortProp,
   getVisibleData,
   formatDataInSeriesFormat,
   getVisibleSeriesData,
+  getDefaultSortProp,
 } from '../../CoreQuery/KPIAnalysis/BreakdownCharts/utils';
 import { getNewSorterState, isSeriesChart } from '../../../utils/dataFormatter';
 import NoDataChart from '../../../components/NoDataChart';
@@ -36,6 +36,7 @@ import { DashboardContext } from '../../../contexts/DashboardContext';
 
 const BreakdownCharts = ({
   breakdown,
+  kpis,
   responseData,
   chartType,
   section,
@@ -44,8 +45,8 @@ const BreakdownCharts = ({
 }) => {
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [visibleSeriesData, setVisibleSeriesData] = useState([]);
-  const [sorter, setSorter] = useState(defaultSortProp());
-  const [dateSorter, setDateSorter] = useState(defaultSortProp());
+  const [sorter, setSorter] = useState(getDefaultSortProp(kpis));
+  const [dateSorter, setDateSorter] = useState(getDefaultSortProp(kpis));
   const [aggregateData, setAggregateData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [data, setData] = useState([]);
@@ -64,7 +65,7 @@ const BreakdownCharts = ({
   }, []);
 
   useEffect(() => {
-    const aggData = formatData(responseData, breakdown, currentEventIndex);
+    const aggData = formatData(responseData, kpis, breakdown, currentEventIndex);
     const { categories: cats, data: d } = isSeriesChart(chartType)
       ? formatDataInSeriesFormat(
           responseData,
@@ -113,6 +114,7 @@ const BreakdownCharts = ({
   if (chartType === CHART_TYPE_TABLE) {
     chartContent = (
       <BreakdownTable
+        kpis={kpis}
         data={aggregateData}
         seriesData={data}
         section={section}

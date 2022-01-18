@@ -129,23 +129,58 @@ func TestKpiAnalytics(t *testing.T) {
 
 	t.Run("abc2", func(t *testing.T) {
 
-		query := model.KPIQuery{
+		query1 := model.KPIQuery{
 
 			Category:        "events",
 			DisplayCategory: "page_views",
 			PageUrl:         "s0",
-			//Metrics:         []string{"page_views", "unique_users"},
-			Metrics:  []string{"page_views"},
+			Metrics:         []string{"page_views"},
+			// Metrics:  []string{"page_views"},
 			Filters:  nil,
 			From:     startTimestamp,
 			To:       startTimestamp + 40,
 			Timezone: "Asia/Kolkata",
 			//GroupByTimestamp: "date",
 		}
+		query2 := model.KPIQuery{
+			Category:        "events",
+			DisplayCategory: "page_views",
+			PageUrl:         "s0",
+			Metrics:         []string{"page_views"},
+			// Metrics:          []string{"page_views"},
+			Filters:          nil,
+			From:             startTimestamp,
+			To:               startTimestamp + 40,
+			Timezone:         "Asia/Kolkata",
+			GroupByTimestamp: "date",
+		}
 
+		query3 := model.KPIQuery{
+
+			Category:        "events",
+			DisplayCategory: "page_views",
+			PageUrl:         "s0",
+			Metrics:         []string{"unique_users"},
+			Filters:         nil,
+			From:            startTimestamp,
+			To:              startTimestamp + 40,
+			Timezone:        "Asia/Kolkata",
+			//GroupByTimestamp: "date",
+		}
+		query4 := model.KPIQuery{
+			Category:         "events",
+			DisplayCategory:  "page_views",
+			PageUrl:          "s0",
+			Metrics:          []string{"unique_users"},
+			Filters:          nil,
+			From:             startTimestamp,
+			To:               startTimestamp + 40,
+			Timezone:         "Asia/Kolkata",
+			GroupByTimestamp: "date",
+		}
 		kpiQueryGroup := model.KPIQueryGroup{
 			Class:         "kpi",
-			Queries:       []model.KPIQuery{query},
+			Queries:       []model.KPIQuery{query1, query2, query3, query4},
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{
 				{

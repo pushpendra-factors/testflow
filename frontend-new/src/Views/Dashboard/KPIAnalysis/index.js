@@ -3,7 +3,7 @@ import NoBreakdownCharts from './NoBreakdownCharts';
 import BreakdownCharts from './BreakdownCharts';
 
 function KPIAnalysis({
-  queries,
+  kpis,
   resultState,
   chartType,
   section,
@@ -15,7 +15,7 @@ function KPIAnalysis({
   if (breakdown.length) {
     return (
       <BreakdownCharts
-        queries={queries}
+        kpis={kpis}
         chartType={chartType}
         responseData={resultState.data}
         breakdown={breakdown}
@@ -27,7 +27,7 @@ function KPIAnalysis({
   } else {
     return (
       <NoBreakdownCharts
-        queries={queries}
+        kpis={kpis}
         chartType={chartType}
         responseData={resultState.data}
         section={section}

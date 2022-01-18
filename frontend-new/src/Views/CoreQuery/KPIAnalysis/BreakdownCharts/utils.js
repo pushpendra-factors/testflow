@@ -18,15 +18,19 @@ import {
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
 
-export const defaultSortProp = () => {
-  return [
-    {
-      order: 'descend',
-      key: 'value',
-      type: 'numerical',
-      subtype: null,
-    },
-  ];
+export const getDefaultSortProp = (kpis) => {
+  console.log("getDefaultSortProp -> kpis", kpis)
+  if (Array.isArray(kpis) && kpis.length) {
+    return [
+      {
+        key: `${kpis[0]} - 0`,
+        type: 'numerical',
+        subtype: null,
+        order: 'descend',
+      },
+    ];
+  }
+  return [];
 };
 
 export const getVisibleData = (aggregateData, sorter) => {
@@ -45,33 +49,30 @@ export const getVisibleSeriesData = (data, sorter) => {
   return result;
 };
 
-export const formatData = (data, breakdown, currentEventIndex) => {
+export const formatData = (data, kpis, breakdown, currentEventIndex) => {
   try {
-    const dataIndex = currentEventIndex * 2;
     if (
       !data ||
       !Array.isArray(data) ||
       !data.length ||
-      !data[dataIndex] ||
-      !data[dataIndex].headers ||
-      !Array.isArray(data[dataIndex].headers) ||
-      !data[dataIndex].headers.length ||
-      !data[dataIndex].rows ||
-      !Array.isArray(data[dataIndex].rows) ||
-      !data[dataIndex].rows.length
+      !data[1].headers ||
+      !Array.isArray(data[1].headers) ||
+      !data[1].headers.length ||
+      !data[1].rows ||
+      !Array.isArray(data[1].rows) ||
+      !data[1].rows.length
     ) {
       return [];
     }
     console.log('kpi breakdown format data');
-    const { headers, rows } = data[dataIndex];
-    const countIndex = headers.findIndex((header) => header === 'aggregate');
+    const { headers, rows } = data[1];
 
-    const headerSlice = headers.slice(0, countIndex);
+    const headerSlice = headers.slice(0, breakdown.length);
     const grns = getBreakDownGranularities(headerSlice, breakdown);
 
     const result = rows.map((d, index) => {
       const breakdownVals = d
-        .slice(0, countIndex)
+        .slice(0, breakdown.length)
         .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl));
       const breakdownData = {};
       for (let i = 0; i < breakdown.length; i++) {
@@ -81,12 +82,18 @@ export const formatData = (data, breakdown, currentEventIndex) => {
           breakdownVals[i]
         );
       }
+      const kpiVals = d.slice(breakdown.length);
+      const kpisData = {};
+      for (let j = 0; j < kpis.length; j++) {
+        kpisData[`${kpis[j]} - ${j}`] = kpiVals[j];
+      }
       const grpLabel = Object.values(breakdownData).join(', ');
       return {
         label: grpLabel,
-        value: d[countIndex],
+        value: kpiVals[currentEventIndex],
         index,
         ...breakdownData,
+        ...kpisData,
       };
     });
     return result;
@@ -98,6 +105,7 @@ export const formatData = (data, breakdown, currentEventIndex) => {
 
 export const getTableColumns = (
   breakdown,
+  kpis,
   currentSorter,
   handleSorting,
   eventNames,
@@ -117,20 +125,22 @@ export const getTableColumns = (
       width: 200,
     };
   });
-  const valueCol = {
-    title: getClickableTitleSorter(
-      'Value',
-      { key: `value`, type: 'numerical', subtype: null },
-      currentSorter,
-      handleSorting
-    ),
-    dataIndex: `value`,
-    width: 200,
-    render: (d) => {
-      return d ? <NumFormat number={d} /> : 0;
-    },
-  };
-  return [...breakdownColumns, valueCol];
+  const kpiColumns = kpis.map((kpi, index) => {
+    return {
+      title: getClickableTitleSorter(
+        kpi,
+        { key: `${kpi} - ${index}`, type: 'numerical', subtype: null },
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: `${kpi} - ${index}`,
+      width: 200,
+      render: (d) => {
+        return d ? <NumFormat number={d} /> : 0;
+      },
+    };
+  });
+  return [...breakdownColumns, ...kpiColumns];
 };
 
 export const getDataInTableFormat = (data, searchText, currentSorter) => {
@@ -297,7 +307,7 @@ export const formatDataInSeriesFormat = (
   breakdown
 ) => {
   // console.log('kpi with breakdown formatDataInSeriesFormat');
-  const dataIndex = currentEventIndex * 2 + 1;
+  const dataIndex = 0;
   // console.log('dataIndex', dataIndex);
   if (
     !aggregateData.length ||
@@ -316,9 +326,6 @@ export const formatDataInSeriesFormat = (
   }
   const { headers, rows } = data[dataIndex];
   const dateIndex = headers.findIndex((h) => h === 'datetime');
-  const countIndex = headers.findIndex(
-    (h) => h === 'count' || h === 'aggregate'
-  );
   const breakdownIndex = dateIndex + 1;
   const differentDates = getDifferentDates(rows, dateIndex);
   const initializedDatesData = differentDates.map(() => {
@@ -336,13 +343,17 @@ export const formatDataInSeriesFormat = (
       ...d,
     };
   });
-  const headerSlice = headers.slice(breakdownIndex, countIndex);
+  const headerSlice = headers.slice(
+    breakdownIndex,
+    breakdown.length + breakdownIndex
+  );
   const grns = getBreakDownGranularities(headerSlice, breakdown);
   const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
 
   rows.forEach((row) => {
+    const kpiVals = row.slice(breakdown.length + breakdownIndex);
     const breakdownJoin = row
-      .slice(breakdownIndex, countIndex)
+      .slice(breakdownIndex, breakdown.length + breakdownIndex)
       .map((x, ind) =>
         parseForDateTimeLabel(grns[ind], DISPLAY_PROP[x] ? DISPLAY_PROP[x] : x)
       )
@@ -351,8 +362,9 @@ export const formatDataInSeriesFormat = (
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);
     if (resultantData[bIdx]) {
-      resultantData[bIdx][moment(category).format(format)] = row[countIndex];
-      resultantData[bIdx].data[idx] = row[countIndex];
+      resultantData[bIdx][moment(category).format(format)] =
+        kpiVals[currentEventIndex];
+      resultantData[bIdx].data[idx] = kpiVals[currentEventIndex];
     }
   });
   return {
@@ -364,6 +376,7 @@ export const formatDataInSeriesFormat = (
 export const getDateBasedColumns = (
   categories,
   breakdown,
+  kpis,
   currentSorter,
   handleSorting,
   frequency,
@@ -371,16 +384,6 @@ export const getDateBasedColumns = (
   eventPropNames
 ) => {
   console.log('kpi with breakdown getDateBasedColumns');
-  const OverallColumn = {
-    title: getClickableTitleSorter(
-      'Overall',
-      { key: `value`, type: 'numerical', subtype: null },
-      currentSorter,
-      handleSorting
-    ),
-    dataIndex: `value`,
-    width: 150,
-  };
   const breakdownColumns = breakdown.map((e, index) => {
     return {
       title: getClickableTitleSorter(
@@ -392,6 +395,22 @@ export const getDateBasedColumns = (
       dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
       width: 200,
+    };
+  });
+
+  const kpiColumns = kpis.map((kpi, index) => {
+    return {
+      title: getClickableTitleSorter(
+        kpi,
+        { key: `${kpi} - ${index}`, type: 'numerical', subtype: null },
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: `${kpi} - ${index}`,
+      width: 200,
+      render: (d) => {
+        return d ? <NumFormat number={d} /> : 0;
+      },
     };
   });
 
@@ -412,7 +431,7 @@ export const getDateBasedColumns = (
       },
     };
   });
-  return [...breakdownColumns, ...dateColumns, OverallColumn];
+  return [...breakdownColumns, ...kpiColumns, ...dateColumns];
 };
 
 export const getDateBasedTableData = (

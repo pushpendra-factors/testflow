@@ -31,7 +31,7 @@ import _ from 'lodash';
 
 const NoBreakdownCharts = forwardRef(
   (
-    { queries, responseData, chartType, durationObj, title = 'Kpi', section },
+    { kpis, responseData, chartType, durationObj, title = 'Kpi', section },
     ref
   ) => {
     const {
@@ -41,7 +41,7 @@ const NoBreakdownCharts = forwardRef(
     const [sorter, setSorter] = useState(
       savedQuerySettings.sorter && Array.isArray(savedQuerySettings.sorter)
         ? savedQuerySettings.sorter
-        : getDefaultSortProp(queries)
+        : getDefaultSortProp(kpis)
     );
     const [dateSorter, setDateSorter] = useState(
       savedQuerySettings.dateSorter &&
@@ -72,12 +72,12 @@ const NoBreakdownCharts = forwardRef(
     });
 
     useEffect(() => {
-      const aggData = formatData(responseData, queries);
+      const aggData = formatData(responseData, kpis);
       const { categories: cats, data: d } = formatDataInSeriesFormat(aggData);
       setAggregateData(aggData);
       setCategories(cats);
       setData(d);
-    }, [responseData, queries]);
+    }, [responseData, kpis]);
 
     if (!aggregateData.length) {
       return (
@@ -101,7 +101,7 @@ const NoBreakdownCharts = forwardRef(
           handleSorting={handleSorting}
           dateSorter={dateSorter}
           handleDateSorting={handleDateSorting}
-          queries={queries}
+          kpis={kpis}
         />
       </div>
     );

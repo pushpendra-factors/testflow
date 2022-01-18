@@ -151,7 +151,7 @@ return (
         <Input size="large" disabled={true} placeholder="API Key" value={currentProjectSettings.int_hubspot_api_key} style={{width:'400px'}}/>
     </div>
     }
-    <div className={'mt-4 flex'}>
+    <div className={'mt-4 flex'} data-tour = 'step-11'>
     {currentProjectSettings?.int_hubspot ? <Button loading={loading} onClick={()=>onDisconnect()}>Disconnect</Button> : <Button type={'primary'} loading={loading} onClick={()=>setShowForm(!showForm)}>Connect</Button>
     }
         {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}

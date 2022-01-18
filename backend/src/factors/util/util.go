@@ -119,17 +119,17 @@ func RandomString(n int) string {
 func RandomStringForSharableQuery(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	timestamp := time.Now().Unix()
-	timestampstr:= strconv.FormatInt(timestamp,10)
+	timestampstr := strconv.FormatInt(timestamp, 10)
 	var letter = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	
+
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letter[rand.Intn(len(letter))]
 	}
 	result := string(b)
-	length:= int32(len(result))
-	randIndex:= rand.Int31n(length-1)
-	newResult:= result[:randIndex]+timestampstr+result[randIndex:]
+	length := int32(len(result))
+	randIndex := rand.Int31n(length - 1)
+	newResult := result[:randIndex] + timestampstr + result[randIndex:]
 	return newResult
 }
 func RandomNumericString(n int) string {
@@ -1070,4 +1070,56 @@ func ConvertPostgresJSONBToMap(sourceJsonb postgres.Jsonb) (map[string]interface
 		return nil, err
 	}
 	return targetMap, nil
+}
+
+// Most of the rows will have groupBy keys and/or timestamp followed by a single value pattern.
+// To get Keys - we have taken (groupBy keys and/or timestamp values) as hashKey and metric value as hashValue against it.
+func GetkeyFromRow(row []interface{}) string {
+	if len(row) <= 1 {
+		return "1"
+	}
+	var key string
+	for _, value := range row[:len(row)-1] {
+		if valueTime, ok := (value.(time.Time)); ok {
+			valueInUnix := valueTime.Unix()
+			key = key + fmt.Sprintf("dat$%v:;", valueInUnix)
+		} else {
+			key = key + fmt.Sprintf("%v", value) + ":;"
+		}
+	}
+
+	return key
+}
+
+// Sorted the rows on basis of initial values to the final.
+// Considering that we have group keys and/or timestamp as initial keys, we might want to get them ordered by groupByKeys first.
+func GetSorted2DArrays(rows [][]interface{}) [][]interface{} {
+	sort.Slice(rows, func(i, j int) bool {
+		for x := range rows[i] {
+			if rows[i][x] == rows[j][x] {
+				continue
+			}
+			switch valueType := rows[i][x].(type) {
+			case float64:
+				return rows[i][x].(float64) < rows[j][x].(float64)
+			case float32:
+				return rows[i][x].(float32) < rows[j][x].(float32)
+			case int:
+				return rows[i][x].(int) < rows[j][x].(int)
+			case int32:
+				return rows[i][x].(int32) < rows[j][x].(int32)
+			case int64:
+				return rows[i][x].(int64) < rows[j][x].(int64)
+			case string:
+				return rows[i][x].(string) < rows[j][x].(string)
+			case time.Time:
+				return rows[i][x].(time.Time).Before(rows[j][x].(time.Time))
+			default:
+				log.Info("Unsupported type used on sorting %+v", valueType)
+				return true
+			}
+		}
+		return false
+	})
+	return rows
 }

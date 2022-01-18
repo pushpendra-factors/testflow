@@ -5,6 +5,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
+	"reflect"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -15,6 +16,11 @@ import (
 func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
 	var queryResults []model.QueryResult
 	finalStatusCode := http.StatusOK
+	isTimezoneEnabled := false
+	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
+	if C.IsMultipleProjectTimezoneEnabled(projectID) {
+		isTimezoneEnabled = true
+	}
 	for _, query := range kpiQueryGroup.Queries {
 		query.Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
 		query.GroupBy = kpiQueryGroup.GlobalGroupBy
@@ -25,7 +31,22 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 		}
 		queryResults = append(queryResults, result...)
 	}
-	return queryResults, finalStatusCode
+	if finalStatusCode != http.StatusOK {
+		log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("queryResults", queryResults).Error("Failed in executing following KPI Query with status Not Ok.")
+		return []model.QueryResult{model.QueryResult{}, model.QueryResult{}}, finalStatusCode
+	}
+
+	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(queryResults, kpiQueryGroup, finalStatusCode)
+	finalQueryResult := make([]model.QueryResult, 0)
+	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
+	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
+	if (!reflect.DeepEqual(model.QueryResult{}, gbtRelatedMergedResults)) {
+		finalQueryResult = append(finalQueryResult, gbtRelatedMergedResults)
+	}
+	if (!reflect.DeepEqual(model.QueryResult{}, nonGbtRelatedMergedResults)) {
+		finalQueryResult = append(finalQueryResult, nonGbtRelatedMergedResults)
+	}
+	return finalQueryResult, finalStatusCode
 }
 
 func (store *MemSQL) kpiQueryFunctionDeciderBasedOnCategory(category string) func(uint64, string, model.KPIQuery) ([]model.QueryResult, int) {
