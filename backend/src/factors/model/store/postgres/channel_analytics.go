@@ -583,12 +583,8 @@ func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp s
 func getSelectTimestampByTypeForChannels(timestampType, timezone string) string {
 	var selectTz string
 	var selectStr string
+	selectTz = model.DefaultTimezone
 
-	if timezone == "" {
-		selectTz = model.DefaultTimezone
-	} else {
-		selectTz = timezone
-	}
 	if timestampType == model.GroupByTimestampHour {
 		selectStr = fmt.Sprintf(dateTruncateString, "hour", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
