@@ -323,6 +323,10 @@ func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query 
 	logCtx := log.WithField("xreq_id", reqID)
 	if query.GetGroupByTimestamp() == "" {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", false, nil)
+		if errCode == http.StatusNotFound {
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), http.StatusOK
+		}
 		if errCode != http.StatusOK {
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 		}
@@ -335,6 +339,10 @@ func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query 
 		return columns, resultMetrics, http.StatusOK
 	} else {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID, query, reqID, fetchSource, " LIMIT 100", false, nil)
+		if errCode == http.StatusNotFound {
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), http.StatusOK
+		}
 		if errCode != http.StatusOK {
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 		}
@@ -346,6 +354,10 @@ func (store *MemSQL) ExecuteGoogleOrganicChannelQueryV1(projectID uint64, query 
 		}
 		groupByCombinations := getGroupByCombinationsForSearchConsole(columns, resultMetrics)
 		sql, params, selectKeys, selectMetrics, errCode = store.GetSQLQueryAndParametersForGoogleOrganicQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", true, groupByCombinations)
+		if errCode == http.StatusNotFound {
+			headers := model.GetHeadersFromQuery(*query)
+			return headers, make([][]interface{}, 0, 0), http.StatusOK
+		}
 		if errCode != http.StatusOK {
 			return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 		}
