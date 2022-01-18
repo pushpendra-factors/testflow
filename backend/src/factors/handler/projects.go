@@ -120,8 +120,9 @@ func EditProjectHandler(c *gin.Context) {
 		c.AbortWithStatus(errCode)
 		return
 	}
-	if project.TimeZone != "" && projectEditDetails.TimeZone != "" {
+	if project.TimeZone != "Asia/Kolkata" && projectEditDetails.TimeZone != "" {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "cannot edit existing timezone"})
+		return
 	}
 	errCode = store.GetStore().UpdateProject(projectID, &projectEditDetails)
 	if errCode == http.StatusInternalServerError {

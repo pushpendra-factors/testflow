@@ -55,7 +55,7 @@ const FaDatepicker = ({
     dateString: null,
     dateType: null,
   };
-  const onChange = (startDate, dateString) => {
+  const onChange = (startDate, dateString) => { 
     setShowDatePicker(false);
     const dateType = datePickerType;
     const endDate = MomentTz(startDate).add(1, MomentTzKey[dateType]);
@@ -192,8 +192,8 @@ const FaDatepicker = ({
       onSelect(newDateData);
     }
     if (type == 'last_week') {
-      let startDate = MomentTz(getFirstDayOfLastWeek()).startOf('day').toDate();
-      let endDate = MomentTz(getLastDayOfLastWeek()).endOf('day').toDate();
+      let startDate = MomentTz(today).subtract(1, 'weeks').startOf('week').toDate();
+      let endDate = MomentTz(today).subtract(1, 'weeks').endOf('week').toDate();
       let newDateData = {
         ...dateData,
         startDate,
@@ -218,9 +218,9 @@ const FaDatepicker = ({
       setdateString('This Month');
       onSelect(newDateData);
     }
-    if (type == 'last_month') {
-      let startDate = MomentTz(getFirstDayOfLastMonth()).startOf('day').toDate();
-      let endDate = MomentTz(getLastDayOfLastMonth()).endOf('day').toDate();
+    if (type == 'last_month') { 
+      let startDate = MomentTz().subtract(1,'months').startOf('month').toDate();
+      let endDate = MomentTz().subtract(1,'months').endOf('month').toDate();
       let newDateData = {
         ...dateData,
         startDate,
@@ -352,7 +352,7 @@ const FaDatepicker = ({
     }
   };
 
-  const renderCustomPicker = () => {
+  const renderCustomPicker = () => {  
     return (
       <>
         <div className={`fa-custom-datepicker`}>
@@ -400,7 +400,7 @@ const FaDatepicker = ({
     );
   };
 
-  const renderFaDatePicker = () => {
+  const renderFaDatePicker = () => { 
     return (
       <div className={`fa-custom-datepicker`}>
         {
