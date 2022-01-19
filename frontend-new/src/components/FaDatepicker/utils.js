@@ -68,7 +68,7 @@ const DEFAULT_DATE_RANGES = [
     {
       label: DATE_RANGE_TODAY_LABEL,
       range: () => ({
-        startDate: MomentTz().startOf('day').toDate(),
+        startDate: MomentTz().startOf('day'),
         endDate: MomentTz()
       }),
       isSelected(range) {
@@ -82,21 +82,21 @@ const DEFAULT_DATE_RANGES = [
     {
       label: DATE_RANGE_YESTERDAY_LABEL,
       range: () => ({
-        startDate: MomentTz().subtract(1, 'days').startOf('day').toDate(),
-        endDate: MomentTz().subtract(1, 'days').endOf('day').toDate()
+        startDate: MomentTz().subtract(1, 'days').startOf('day'),
+        endDate: MomentTz().subtract(1, 'days').endOf('day')
       })
     },
     {
       label: DEFAULT_DATE_RANGE_LABEL,
       ...(!isTodayTheFirstDayOfWeek() && {
         range: () => ({
-          startDate: MomentTz().startOf('week').toDate(),
-          endDate: MomentTz().subtract(1, 'days').endOf('day').toDate()
+          startDate: MomentTz().startOf('week'),
+          endDate: MomentTz().subtract(1, 'days').endOf('day')
         })
       }),
       ...(isTodayTheFirstDayOfWeek() && {
         range: () => ({
-          startDate: MomentTz().startOf('day').toDate(),
+          startDate: MomentTz().startOf('day'),
           endDate: MomentTz()
         })
       })
@@ -105,13 +105,13 @@ const DEFAULT_DATE_RANGES = [
       label: DATE_RANGE_LABEL_CURRENT_MONTH,
       ...(!isTodayTheFirstDayOfMonth() && {
         range: () => ({ 
-          startDate: MomentTz().startOf('month').toDate(),
-          endDate: MomentTz().subtract(1,'days').endOf('day').toDate()
+          startDate: MomentTz().startOf('month'),
+          endDate: MomentTz().subtract(1,'days').endOf('day')
         })
       }),
       ...(isTodayTheFirstDayOfMonth() && {
         range: () => ({ 
-          startDate: MomentTz().startOf('day').toDate(),
+          startDate: MomentTz().startOf('day'),
           endDate: MomentTz()
         })
       })
@@ -119,21 +119,21 @@ const DEFAULT_DATE_RANGES = [
     {
       label: DATE_RANGE_LABEL_LAST_WEEK,
       range: () => ({ 
-        startDate: MomentTz().startOf('week').toDate(),
-        endDate: MomentTz().endOf('week').toDate()
+        startDate: MomentTz().startOf('week'),
+        endDate: MomentTz().endOf('week')
       })
     },
     {
       label: DATE_RANGE_LABEL_LAST_MONTH,
       range: () => ({ 
-        startDate: MomentTz().subtract(1,'months').startOf('month').toDate(),
-        endDate: MomentTz().subtract(1,'months').endOf('month').toDate(),
+        startDate: MomentTz().subtract(1,'months').startOf('month'),
+        endDate: MomentTz().subtract(1,'months').endOf('month'),
       })
     },
     {
       label: DATE_RANGE_LABEL_LAST_7_DAYS,
       range: () => ({
-        startDate: MomentTz().subtract(7, 'days').startOf('day').toDate(),
+        startDate: MomentTz().subtract(7, 'days').startOf('day'),
         endDate: MomentTz()
       })
     }
