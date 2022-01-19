@@ -207,6 +207,7 @@ type Configuration struct {
 	UseOLAPPoolForAnalytics                     bool
 	RestrictReusingUsersByCustomerUserId        string
 	HubspotAPIOnboardingHAPIKey                 string
+	DebugEnabled                                bool
 }
 
 type Services struct {
@@ -1735,6 +1736,14 @@ func GetProjectsFromListWithAllProjectSupport(projectIdsList,
 	}
 
 	return false, allowedMap, disallowedMap
+}
+
+func GetDashboardUnitIDs(dashboardUnitIDsList string) []uint64 {
+	dashboardUnitIDsList = strings.TrimSpace(dashboardUnitIDsList)
+	if dashboardUnitIDsList == "*" {
+		return make([]uint64, 0, 0)
+	}
+	return GetTokensFromStringListAsUint64(dashboardUnitIDsList)
 }
 
 func ProjectIdsFromProjectIdBoolMap(mp map[uint64]bool) []uint64 {

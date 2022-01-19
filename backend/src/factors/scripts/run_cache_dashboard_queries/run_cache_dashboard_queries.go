@@ -19,6 +19,8 @@ func main() {
 	envFlag := flag.String("env", C.DEVELOPMENT, "Environment. Could be development|staging|production")
 	projectIDFlag := flag.String("project_id", "", "Comma separated project ids to run for. * to run for all")
 	excludeProjectIDFlag := flag.String("exclude_project_id", "", "Comma separated project ids to exclude for the run")
+	dashboardUnitIDFlag := flag.String("dashboard_unit_id", "", "Comma separated dashboard unit ids to run. * for all")
+	debugEnabled := flag.Bool("debug_enabled", false, "Enabled/Disable debug for the query.")
 	numRoutinesFlag := flag.Int("num_routines", 4, "Number of dashboard units to sync in parallel. Each dashboard unit runs 4 queries")
 	numRoutinesForWebAnalyticsFlag := flag.Int("num_routines_for_web_analytics", 1,
 		"No.of routines to use for web analytics dashboard caching.")
@@ -81,6 +83,8 @@ func main() {
 		panic(fmt.Errorf("Invalid project id %s", *projectIDFlag))
 	} else if *numRoutinesFlag == 0 {
 		panic(fmt.Errorf("Num routines must at least be 1"))
+	} else if *dashboardUnitIDFlag == "" {
+		panic(fmt.Errorf("Invalid dashboard unit id %s", *dashboardUnitIDFlag))
 	}
 
 	logCtx.Info("Starting to initialize database.")
@@ -122,6 +126,7 @@ func main() {
 		IsRunningForMemsql:                  *runningForMemsql,
 		SkipEventNameStepByProjectID:        *skipEventNameStepByProjectID,
 		SkipUserJoinInEventQueryByProjectID: *skipUserJoinInEventQueryByProjectID,
+		DebugEnabled:                        *debugEnabled,
 	}
 
 	C.InitConf(config)
@@ -151,9 +156,9 @@ func main() {
 	if !*onlyWebAnalytics {
 		if C.GetIsRunningForMemsql() == 0 {
 			waitGroup.Add(1)
-			go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
+			go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *dashboardUnitIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
 		} else {
-			cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
+			cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *dashboardUnitIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
 		}
 	}
 	if C.GetIsRunningForMemsql() == 0 {
@@ -200,13 +205,13 @@ func main() {
 	C.PingHealthcheckForSuccess(healthcheckPingID, status)
 }
 
-func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup) {
+func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, dashboardUnitIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup) {
 
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
 	startTime := util.TimeNowUnix()
-	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines, reportCollector)
+	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, dashboardUnitIDs, numRoutines, reportCollector)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	reportCollector.Store("all", timeTakenString)
 }
