@@ -148,7 +148,7 @@ function ProjectDropdown({
         {selectVisible ? (
           <GroupSelect2
             groupedProperties={generateDBList()}
-            placeholder='Select Event'
+            placeholder='Search Dashboard'
             iconColor='#3E516C'
             optionClick={handleOptChange}
             onClickOutside={() => setSelectVisible(false)}
