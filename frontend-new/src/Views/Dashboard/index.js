@@ -78,7 +78,7 @@ function Dashboard() {
     };
   }, [dispatch]);
 
-  if (dashboards.data.length) {
+  // if (dashboards.data.length) {
   return (
     <>
       <ErrorBoundary
@@ -119,25 +119,25 @@ function Dashboard() {
       </ErrorBoundary>
     </>
   );
-  } else {
-    return (
-      <>
-      {checkIntegration?
-      <>
-        <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal}/>
-          <AddDashboard
-              setEditDashboard={setEditDashboard}
-              editDashboard={editDashboard}
-              addDashboardModal={addDashboardModal}
-              setaddDashboardModal={setaddDashboardModal}
-            />
-      </>
-      :
-        <EmptyDashboard />
-      } 
-    </>
-    );
-  }
+  // } else {
+  //   return (
+  //     <>
+  //     {checkIntegration?
+  //     <>
+  //       <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal}/>
+  //         <AddDashboard
+  //             setEditDashboard={setEditDashboard}
+  //             editDashboard={editDashboard}
+  //             addDashboardModal={addDashboardModal}
+  //             setaddDashboardModal={setaddDashboardModal}
+  //           />
+  //     </>
+  //     :
+  //       <EmptyDashboard />
+  //     } 
+  //   </>
+  //   );
+  // }
 }
 
 export default Dashboard;
