@@ -83,6 +83,18 @@ func (q *ProfileQueryGroup) GetTimeZone() U.TimeZoneString {
 	return U.TimeZoneString(q.Timezone)
 }
 
+func (q *ProfileQueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	for i := range q.GlobalFilters {
+		q.GlobalFilters[i].ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+	}
+	for i := range q.Queries {
+		for j := range q.Queries[i].Filters {
+			q.Queries[i].Filters[j].ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+		}
+	}
+	return nil
+}
+
 func (q *ProfileQuery) SetTimeZone(timezoneString U.TimeZoneString) {
 	q.Timezone = string(timezoneString)
 }

@@ -378,6 +378,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, dashboard
 	return len(dashboardUnits)
 }
 
+// Main method kark2 current
 // GetQueryAndClassFromDashboardUnit returns query and query-class of dashboard unit.
 func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string) {
 	projectID := dashboardUnit.ProjectID

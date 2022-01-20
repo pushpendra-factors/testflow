@@ -1,0 +1,70 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: shared-persistent-pool
+  name: convert-epoch-saved-queries-tz1-to-tz2
+spec:
+  schedule: "0 0 30 * *" # In UTC. Every 30 days.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: shared-persistent-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: shared-persistent-pool
+          containers:
+          - name: convert-epoch-saved-queries-tz1-to-tz2
+            image: us.gcr.io/factors-staging/convert-epoch-saved-queries-tz1-to-tz2:v1
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
+            - --redis_host
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port
+            - $(PERSISTENT_REDIS_PORT)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            - --primary_datastore
+            - memsql
+            - --project_id
+            - "2"
+            - --current_timezone
+            - ""
+            - --next_timezone
+            - ""
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-persistent-redis
+            - configMapRef:
+                name: config-postgres
+            - secretRef:
+                name: secret-postgres
+            - secretRef:
+                name: secret-sentry
+            - configMapRef:
+                name: config-memsql
+            - secretRef:
+                name: secret-memsql
+          restartPolicy: OnFailure

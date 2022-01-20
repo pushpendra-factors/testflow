@@ -21,6 +21,7 @@ type Queries struct {
 	UpdatedAt     time.Time      `json:"updated_at"`
 	Settings      postgres.Jsonb `json:"settings"`
 	IdText        string         `json:"id_text"`
+	Converted     bool
 }
 
 const (

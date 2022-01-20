@@ -341,6 +341,7 @@ type Model interface {
 	DeleteDashboardQuery(projectID uint64, queryID uint64) (int, string)
 	UpdateSavedQuery(projectID uint64, queryID uint64, query *model.Queries) (*model.Queries, int)
 	SearchQueriesWithProjectId(projectID uint64, searchString string) ([]model.Queries, int)
+	GetAllNonConvertedQueries(projectID uint64) ([]model.Queries, int)
 
 	// salesforce_document
 	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)

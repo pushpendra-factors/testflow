@@ -188,6 +188,7 @@ type BaseQuery interface {
 	GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error)
 	GetQueryCacheExpiry() float64
 	TransformDateTypeFilters() error
+	ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error
 }
 
 type Query struct {
@@ -310,6 +311,16 @@ func (query *Query) TransformDateTypeFilters() error {
 	return nil
 }
 
+func (query *Query) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	for _, ewp := range query.EventsWithProperties {
+		ewp.ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+	}
+	for i := range query.GlobalUserProperties {
+		query.GlobalUserProperties[i].ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+	}
+	return nil
+}
+
 type QueryProperty struct {
 	// Entity: user or event.
 	Entity string `json:"en"`
@@ -363,6 +374,39 @@ func (qp *QueryProperty) TransformDateTypeFilters(timezoneString U.TimeZoneStrin
 	return nil
 }
 
+func (qp *QueryProperty) ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone string) error {
+	var dateTimeValue *DateTimePropertyValue
+	var err error
+	if qp.Type == U.PropertyTypeDateTime {
+		dateTimeValue, err = DecodeDateTimePropertyValue(qp.Value)
+		if err != nil {
+			log.WithError(err).Error("Failed reading dateTimeValue.")
+			return err
+		}
+		transformedFrom, err := getEpochInSecondsFromMilliseconds(dateTimeValue.From)
+		if err != nil {
+			return err
+		}
+		transformedTo, err := getEpochInSecondsFromMilliseconds(dateTimeValue.To)
+		if err != nil {
+			return err
+		}
+		if qp.Operator == BetweenStr || qp.Operator == NotInBetweenStr {
+			transformedFrom = U.GetStartOfDateEpochInOtherTimezone(transformedFrom, currentTimezone, nextTimezone)
+			transformedTo = U.GetEndOfDateEpochInOtherTimezone(transformedTo, currentTimezone, nextTimezone)
+		} else if qp.Operator == BeforeStr {
+			transformedTo = U.GetStartOfDateEpochInOtherTimezone(transformedTo, currentTimezone, nextTimezone)
+		} else if qp.Operator == SinceStr {
+			transformedFrom = U.GetStartOfDateEpochInOtherTimezone(transformedFrom, currentTimezone, nextTimezone)
+		}
+		dateTimeValue.From = transformedFrom
+		dateTimeValue.To = transformedTo
+		transformedValue, _ := json.Marshal(dateTimeValue)
+		qp.Value = string(transformedValue)
+	}
+	return nil
+}
+
 func getEpochInSecondsFromMilliseconds(epoch int64) (int64, error) {
 	if epoch == 0 {
 		return epoch, nil
@@ -400,6 +444,16 @@ type QueryEventWithProperties struct {
 func (ewp *QueryEventWithProperties) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
 	for i := range ewp.Properties {
 		err := ewp.Properties[i].TransformDateTypeFilters(timezoneString)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ewp *QueryEventWithProperties) ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone string) error {
+	for i := range ewp.Properties {
+		err := ewp.Properties[i].ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
 		if err != nil {
 			return err
 		}
@@ -481,6 +535,13 @@ func (q *QueryGroup) TransformDateTypeFilters() error {
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (q *QueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	for i := range q.Queries {
+		q.Queries[i].ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone)
 	}
 	return nil
 }
@@ -650,6 +711,10 @@ func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery
 		baseQuery = &query
 	case QueryClassWeb:
 		var query DashboardUnitsWebAnalyticsQuery
+		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+		baseQuery = &query
+	case QueryClassProfiles:
+		var query ProfileQueryGroup
 		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
 		baseQuery = &query
 	default:

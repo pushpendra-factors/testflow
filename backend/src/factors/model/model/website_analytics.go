@@ -245,6 +245,10 @@ func (q *DashboardUnitsWebAnalyticsQuery) TransformDateTypeFilters() error {
 	return nil
 }
 
+func (q *DashboardUnitsWebAnalyticsQuery) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	return nil
+}
+
 func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64,
 	from, to int64, timezoneString U.TimeZoneString) (WebAnalyticsCacheResult, int) {
 
