@@ -294,15 +294,27 @@ function getPropertiesFromForm(form) {
 
 function getPropertiesFromAllNonFormInputs() {
     var inputs = document.querySelectorAll('input');
+    var properties = {};
+    var formProperties = {};
     
     var nonFormInputs = [];
     for (var i=0; i<inputs.length; i++) {
         if (!FormCapture.isPartOfForm(inputs[i])) {
             nonFormInputs.push(inputs[i]);
+
+            var formElement = inputs[i].form? inputs[i].form : null
+            formProperties = getFormMetaAttributes(formElement);
         }
     }
 
-    return getPropertiesFromInputs(nonFormInputs);
+    properties = getPropertiesFromInputs(nonFormInputs);
+
+    if(formProperties && Object.keys(formProperties).length > 0) {
+        logger.debug("Collecting form meta attributes", false);
+        properties = Object.assign(formProperties, properties);
+    }
+
+    return properties;
 }
 
 function getPropertiesFromInputs(inputs) {

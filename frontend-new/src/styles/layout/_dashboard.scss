@@ -201,3 +201,45 @@
         background-color: $fa-color--mono-1; 
     } 
 }
+
+.fa-global-search--input-new
+{
+    border: 1px solid $fa-color--mono-2;
+    // background-color: $fa-color--mono-1;
+    border-radius: 38px;
+    width: 312px;
+    height: 40px;
+    box-shadow: none;
+    transition: all 0.2s;
+    &:hover{
+        // transform: scale(1.05);
+        width: 324px;
+        border: 1px solid $fa-color--mono-3;
+        cursor: pointer;
+    }
+    input{ 
+        background-color: transparent;
+        ::-webkit-input-placeholder {
+            text-align: center !important;
+         }
+         
+         :-moz-placeholder { /* Firefox 18- */
+            text-align: center !important;  
+         }
+         
+         ::-moz-placeholder {  /* Firefox 19+ */
+            text-align: center !important;  
+         }
+         
+         :-ms-input-placeholder {  
+            text-align: center !important; 
+         }
+    }
+
+}
+.fa-global-search--input-fw-new{
+    width: 100%; 
+    &:hover{
+        width: 100% !important;
+    }
+}

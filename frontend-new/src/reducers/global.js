@@ -42,6 +42,19 @@ export default function (state = defaultState, action) {
         projectsError: action.payload,
       };
     }
+    case 'CREATE_PROJECT_TIMEZONE_FULFILLED': {
+      let _state = { ...state };
+      _state.projects = [..._state.projects, action.payload];
+      // Set currentProjectId to this newly created project
+      _state.active_project = action.payload;
+      //Update timezone
+      if (_state.currentProjectSettings)
+        _state.currentProjectSettings = {
+          ..._state.currentProjectSettings,
+          ...action.payload.time_zone,
+        };
+      return _state;
+    }
     case 'UPDATE_PROJECT_SETTINGS_FULFILLED': {
       let _state = { ...state };
       if (_state.currentProjectSettings)
@@ -199,7 +212,7 @@ export function fetchProjects() {
 export function createProject(projectName) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects', { name: projectName })
+      post(dispatch, host + 'projects?create_dashboard=false', { name: projectName })
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'CREATE_PROJECT_FULFILLED', payload: r.data });
@@ -220,10 +233,78 @@ export function createProject(projectName) {
   };
 }
 
+export function createProjectWithTimeZone(data) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'projects?create_dashboard=false', data)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'CREATE_PROJECT_TIMEZONE_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({
+              type: 'CREATE_PROJECT_TIMEZONE_REJECTED',
+              payload: 'Failed to create project.',
+            });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'CREATE_PROJECT_TIMEZONE_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
 export function fetchProjectSettings(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
       get(dispatch, host + 'projects/' + projectId + '/settings')
+        .then((r) => {
+          if (r.ok) {
+            dispatch({
+              type: 'FETCH_PROJECT_SETTINGS_FULFILLED',
+              payload: {
+                currentProjectId: projectId,
+                settings: r.data,
+              },
+            });
+
+            resolve(r);
+          } else {
+            dispatch({
+              type: 'FETCH_PROJECT_SETTINGS_REJECTED',
+              payload: {
+                currentProjectId: projectId,
+                settings: {},
+                err: 'Failed to get project settings.',
+              },
+            });
+
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({
+            type: 'FETCH_PROJECT_SETTINGS_REJECTED',
+            payload: {
+              currentProjectId: projectId,
+              settings: {},
+              err: err,
+            },
+          });
+
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchProjectSettingsV1(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectId + '/v1/settings')
         .then((r) => {
           if (r.ok) {
             dispatch({
@@ -563,6 +644,44 @@ export function deleteContentGroup(projectId, id) {
             resolve(res);
         }).catch((err) => {
             reject(err);
+        });
+    });
+  };
+}
+
+export function createHubspotContact(email, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'hubspot/createcontact?email=' + email, payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'CREATE_HUBSPOT_CONTACT', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function getHubspotContact(email) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'hubspot/getcontact?email=' + email, {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_HUBSPOT_CONTACT', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
         });
     });
   };

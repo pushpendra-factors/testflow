@@ -117,8 +117,8 @@ export const SortData = (arr, key, order) => {
   const result = [...arr];
   result.sort((a, b) => {
     // type of a[key] can be an object when the comparison is applied
-    let val1 = typeof a[key] === 'object' ? a[key].value : a[key];
-    let val2 = typeof b[key] === 'object' ? b[key].value : b[key];
+    let val1 = typeof a[key] === 'object' ? a[key]?.value : a[key];
+    let val2 = typeof b[key] === 'object' ? b[key]?.value : b[key];
 
     if (isNaN(val1)) {
       val1 = 0;

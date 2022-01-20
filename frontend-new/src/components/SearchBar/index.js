@@ -33,13 +33,13 @@ function SearchBar({ setQueryToState }) {
   return (
     <> 
         <Input
+          data-tour = 'step-2'
           ref={inputRef}
           size="large"
           placeholder="Search Reports"
           prefix={(
             <SVG name={'search'} size={16} color={'grey'} />
           )}
-          // className={styles.searchBarBox}
           className={'fa-global-search--input'}
           onFocus={handleFocus}
         /> 

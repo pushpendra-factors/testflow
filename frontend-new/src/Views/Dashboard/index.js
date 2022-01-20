@@ -4,20 +4,37 @@ import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import ProjectTabs from './ProjectTabs';
 import AddDashboard from './AddDashboard';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
 import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { setItemToLocalStorage } from '../../utils/dataFormatter';
 import { getDashboardDateRange } from './utils';
 import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
+import EmptyDashboard from './EmptyDashboard';
+import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration'
+import ProjectDropdown from './ProjectDropdown';
 
 function Dashboard() {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
+  const { dashboards } = useSelector((state) => state.dashboard);
+  let integration = useSelector((state) => state.global.currentProjectSettings);
   const dispatch = useDispatch();
+
+  integration = integration?.project_settings || integration;
+
+  const checkIntegration = integration?.int_segment || 
+  integration?.int_adwords_enabled_agent_uuid ||
+  integration?.int_linkedin_agent_uuid ||
+  integration?.int_facebook_user_id ||
+  integration?.int_hubspot ||
+  integration?.int_salesforce_enabled_agent_uuid ||
+  integration?.int_drift ||
+  integration?.int_google_organic_enabled_agent_uuid ||
+  integration?.int_clear_bit || integration?.int_completed;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -61,6 +78,7 @@ function Dashboard() {
     };
   }, [dispatch]);
 
+  // if (dashboards.data.length) {
   return (
     <>
       <ErrorBoundary
@@ -81,8 +99,8 @@ function Dashboard() {
           </div>
         </Header>
 
-        <div className={'mt-20'}>
-          <ProjectTabs
+        <div className={`mt-20 h-full`}>
+          <ProjectDropdown
             handleEditClick={handleEditClick}
             setaddDashboardModal={setaddDashboardModal}
             durationObj={durationObj}
@@ -101,6 +119,25 @@ function Dashboard() {
       </ErrorBoundary>
     </>
   );
+  // } else {
+  //   return (
+  //     <>
+  //     {checkIntegration?
+  //     <>
+  //       <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal}/>
+  //         <AddDashboard
+  //             setEditDashboard={setEditDashboard}
+  //             editDashboard={editDashboard}
+  //             addDashboardModal={addDashboardModal}
+  //             setaddDashboardModal={setaddDashboardModal}
+  //           />
+  //     </>
+  //     :
+  //       <EmptyDashboard />
+  //     } 
+  //   </>
+  //   );
+  // }
 }
 
 export default Dashboard;

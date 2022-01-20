@@ -7,11 +7,11 @@ import {
   SortResults,
 } from '../../../../utils/dataFormatter';
 
-export const getDefaultSortProp = (queries) => {
-  if (Array.isArray(queries) && queries.length) {
+export const getDefaultSortProp = (kpis) => {
+  if (Array.isArray(kpis) && kpis.length) {
     return [
       {
-        key: `${queries[0]} - 0`,
+        key: `${kpis[0]} - 0`,
         type: 'numerical',
         subtype: null,
         order: 'descend',
@@ -32,34 +32,29 @@ export const getDefaultDateSortProp = () => {
   ];
 };
 
-export const formatData = (data, queries) => {
+export const formatData = (data, kpis) => {
   try {
-    const result = queries.map((query, index) => {
-      const totalIndex = index * 2;
-      const dateSplitIndex = totalIndex + 1;
+    const result = kpis.map((kpi, index) => {
+      const totalIndex = 1;
+      const dateSplitIndex = 0;
       const obj = {
         index,
-        name: query,
+        name: kpi,
       };
       if (data[totalIndex] && data[dateSplitIndex]) {
-        const aggregateIndex = data[totalIndex].headers.findIndex(
-          (h) => h === 'aggregate'
-        );
         const dateIndex = data[dateSplitIndex].headers.findIndex(
           (h) => h === 'datetime'
         );
-        const queryIndex = data[dateSplitIndex].headers.findIndex(
-          (h) => h === 'aggregate'
-        );
+        const kpiIndex = index + 1;
         return {
           ...obj,
           total: data[totalIndex].rows.length
-            ? data[totalIndex].rows[0][aggregateIndex]
+            ? data[totalIndex].rows[0][index]
             : 0,
           dataOverTime: data[dateSplitIndex].rows.map((row) => {
             return {
               date: new Date(row[dateIndex]),
-              [query]: row[queryIndex],
+              [kpi]: row[kpiIndex],
             };
           }),
         };
@@ -123,7 +118,7 @@ export const formatDataInSeriesFormat = (aggData) => {
 };
 
 export const getTableColumns = (
-  queries,
+  kpis,
   currentSorter,
   handleSorting,
   eventNames,
@@ -149,7 +144,7 @@ export const getTableColumns = (
       },
     },
   ];
-  const eventColumns = queries.map((e, idx) => {
+  const eventColumns = kpis.map((e, idx) => {
     return {
       title: getClickableTitleSorter(
         eventNames[e] || e,

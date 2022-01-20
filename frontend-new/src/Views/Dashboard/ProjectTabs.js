@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { Tabs, Button, Spin, Select } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
 import {
@@ -17,9 +18,6 @@ import {
   FaErrorComp,
   FaErrorLog,
 } from '../../components/factorsComponents';
-import { ErrorBoundary } from 'react-error-boundary';
-// import InfoCard from '../../components/InfoCard';
-// import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 
 const { TabPane } = Tabs;
 
@@ -39,6 +37,11 @@ function ProjectTabs({
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
+  const {
+    loading: savedQueriesLoading,
+    error: savedQueriesError,
+  } = useSelector((state) => state.queries);
+
   const MAX_DASHBOARD_TABS = 5;
   const dispatch = useDispatch();
 
@@ -52,7 +55,7 @@ function ProjectTabs({
         payload: dashboards.data.find((d) => d.id === parseInt(value)),
       });
     },
-    [dashboards, dispatch, activeDashboard.id]
+    [dashboards, dispatch, activeDashboard?.id]
   );
 
   const handleTabChange = useCallback(
@@ -74,12 +77,12 @@ function ProjectTabs({
   );
 
   const fetchUnits = useCallback(() => {
-    if (active_project.id && activeDashboard.id) {
+    if (active_project.id && activeDashboard?.id) {
       dispatch(
         fetchActiveDashboardUnits(active_project.id, activeDashboard.id)
       );
     }
-  }, [active_project.id, activeDashboard.id, dispatch]);
+  }, [active_project.id, activeDashboard?.id, dispatch]);
 
   useEffect(() => {
     fetchUnits();
@@ -123,12 +126,12 @@ function ProjectTabs({
         (elem) => parseInt(elem.id) === parseInt(activeDashboard.id)
       );
       if (dbIndex <= MAX_DASHBOARD_TABS - 2) {
-        return activeDashboard.id.toString();
+        return activeDashboard?.id?.toString();
       } else {
         return dashboards.data[MAX_DASHBOARD_TABS - 1].id.toString();
       }
     } else {
-      return activeDashboard.id.toString();
+      return activeDashboard?.id?.toString();
     }
   }, [activeDashboard, dashboards]);
 
@@ -168,12 +171,13 @@ function ProjectTabs({
       }
       // return d.name;
     },
-    [dashboards.data, activeDashboard.id, changeActiveDashboard]
+    [dashboards?.data, activeDashboard?.id, changeActiveDashboard]
   );
 
   const operations = (
     <>
       <Button
+        data-tour = 'step-4'
         className={styles.operations}
         type='text'
         onClick={() => setaddDashboardModal(true)}
@@ -183,7 +187,11 @@ function ProjectTabs({
     </>
   );
 
-  if (dashboards.loading || activeDashboardUnits.loading) {
+  if (
+    dashboards.loading ||
+    activeDashboardUnits.loading ||
+    savedQueriesLoading
+  ) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
         <Spin size='large' />
@@ -191,21 +199,13 @@ function ProjectTabs({
     );
   }
 
-  if (dashboards.error || activeDashboardUnits.error) {
+  if (dashboards.error || activeDashboardUnits.error || savedQueriesError) {
     return (
       <div className='flex justify-center items-center w-full h-64'>
         <NoDataChart />
       </div>
     );
   }
-
-  // const Footer = (type) => {
-  //   if (type === 'pr') {
-  //     return (<div className={''}> <LockOutlined/> Private </div>);
-  //   } if (type === 'pv') {
-  //     return (<div className={''}> <UnlockOutlined/> Public </div>);
-  //   }
-  // };
 
   if (dashboards.data.length) {
     return (

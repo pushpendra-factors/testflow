@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar, Popover, Button, Modal, Col, notification, Tooltip, Tag
+  Layout, Row, Avatar, Popover, Button, Modal, Col, notification, Tooltip, Tag, Badge
 } from 'antd';
 import { NavLink, useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject } from 'Reducers/global';
+import { updateAgentInfo, fetchAgentInfo } from 'Reducers/agentActions';
 import { signout } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
 import CreateNewProject from './CreateNewProject';
 import _ from 'lodash';
-
+import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
+import { useTour } from "@reactour/tour";
 
 // const ColorCollection = ['#4C9FC8','#4CBCBD', '#86D3A3', '#F9C06E', '#E89E7B', '#9982B5'];
 
@@ -20,6 +22,7 @@ function Sidebar(props) {
   const { Sider } = Layout;
 
   const [visible, setVisible] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(null);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
@@ -27,14 +30,35 @@ function Sidebar(props) {
   const [searchProjectName, setsearchProjectName] = useState('');
   const [CreateNewProjectModal, setCreateNewProjectModal] = useState(false);
   const history = useHistory();
+  const {isOpen, setIsOpen} = useTour();
 
   const searchProject = (e) => {
     setsearchProjectName(e.target.value);
   };
 
+  // useEffect(() => {
+  //   let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);
+  //   if(!agent || !agent[0]?.invited_by) {
+  //     if (props.currentAgent?.is_onboarding_flow_seen) {
+  //         setShowProjectModal(false);
+  //     } else {
+  //       setShowProjectModal(true);
+  //         props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
+  //             props.fetchAgentInfo().then(() => {
+  //                 console.log('Profile details updated!');
+  //             });
+  //         }).catch((err) => {
+  //             console.log('updateAgentInfo failed-->', err);
+  //         });
+  //     }
+  //   } else {
+  //     setShowProjectModal(false);
+  //   }
+  // }, [])
+
   const popOvercontent = () => {
     return (
-        <div className={'fa-popupcard'}>
+        <div data-tour = 'step-9' className={'fa-popupcard'}>
           <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Projects</Text>
           {props.projects.length > 6 ? <input onChange={(e) => searchProject(e)} value={searchProjectName} placeholder={'Search Project'} className={'fa-project-list--search'}/> : null}
           <div className={'flex flex-col items-start fa-project-list--wrapper'} >
@@ -118,17 +142,17 @@ function Sidebar(props) {
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Dashboard" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-              <NavLink activeClassName="active" exact to="/"><SVG name={'dashboard'} size={24} color="white"/></NavLink>
+              <NavLink data-tour = 'step-1' isOpen={isOpen} onClick={() => setIsOpen(!isOpen)} activeClassName="active" exact to="/"><SVG name={'dashboard'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Analyse" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-               <NavLink activeClassName="active" exact to="/analyse"><SVG name={'corequery'} size={24} color="white"/></NavLink>
+              <NavLink data-tour = 'step-5' activeClassName="active" exact to="/analyse"><SVG name={'corequery'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Explain" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-                <NavLink activeClassName="active" to="/explain"><SVG name={'key'} size={24} color="white"/></NavLink> 
+                <NavLink data-tour = 'step-6' activeClassName="active" to="/explain"><SVG name={'key'} size={24} color="white"/></NavLink> 
               </Tooltip>
             </Row>
             {/* <Row justify="center" align="middle" className=" w-full py-2">
@@ -142,12 +166,18 @@ function Sidebar(props) {
             </Row> */}
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Settings" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-                <NavLink activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
+                <NavLink data-tour = 'step-7' activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
-
           </div>
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
+            {/* <Row justify="center" align="middle" className=" w-full py-2">
+              <Tooltip title="Setup Assist" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
+                <NavLink activeClassName="active" to="/project-setup"><SVG name={'Emoji'} size={40} color="white"/></NavLink>
+                <Badge dot offset={[25,-35]}></Badge>
+              </Tooltip>
+            </Row> */}
+
             <Row justify="center" align="middle" className=" w-full py-2">
               <Popover placement="top" overlayClassName={'fa-popupcard--wrapper'} title={false}
               content={popOvercontent}
@@ -160,7 +190,7 @@ function Sidebar(props) {
                 setShowPopOver(true);
               }}
                 trigger="click"> 
-                  <Avatar shape={'square'}  className={'flex justify-center flex-col items-center fa-aside--avatar'} style={{ color: '#fff', backgroundColor: '#52BE95', fontSize: '16px', textTransform: 'uppercase', fontWeight:'400' }}>{`${props.active_project?.name?.charAt(0)}`}</Avatar>
+                  <Avatar data-tour = 'step-8' shape={'square'}  className={'flex justify-center flex-col items-center fa-aside--avatar'} style={{ color: '#fff', backgroundColor: '#52BE95', fontSize: '16px', textTransform: 'uppercase', fontWeight:'400' }}>{`${props.active_project?.name?.charAt(0)}`}</Avatar>
               </Popover>
             </Row>
           </div>
@@ -171,6 +201,7 @@ function Sidebar(props) {
         {/* Modals triggered from sidebar */}
         <ModalLib visible={visible} handleCancel={handleCancel} />
         <UserSettings visible={ShowUserSettings} handleCancel={closeUserSettingsModal} />
+        {/* <NewProject visible={showProjectModal} handleCancel={() => setShowProjectModal(false)} /> */}
 
         <CreateNewProject
           visible={CreateNewProjectModal}
@@ -215,7 +246,8 @@ const mapStateToProps = (state) => {
   return {
     projects: state.global.projects,
     active_project: state.global.active_project,
-    currentAgent: state.agent.agent_details
+    currentAgent: state.agent.agent_details,
+    agents: state.agent.agents
   };
 };
-export default connect(mapStateToProps, { setActiveProject, signout })(Sidebar);
+export default connect(mapStateToProps, { setActiveProject, signout, updateAgentInfo, fetchAgentInfo })(Sidebar);

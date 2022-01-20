@@ -37,13 +37,13 @@
 
 .dashboardDropdown {
   min-width: 150px;
-  
+
   :global(.ant-select-selector) {
     border: none !important;
   }
 
   :global(span.ant-select-selection-item) {
-    color: #8692A3;
+    color: #8692a3;
     font-weight: 600;
     font-size: 14px;
   }
@@ -60,7 +60,7 @@
 }
 
 .widgetCard {
-  border-bottom: 2px solid rgb(231,233,237);
+  border-bottom: 2px solid rgb(231, 233, 237);
   &_text:hover {
     text-decoration: underline;
     .expand_icon {
@@ -69,8 +69,29 @@
   }
 }
 
-.operations {
-  position: absolute;
-  top:0;
-  right: 42px;
+.dropdownbtn {
+  font-weight: bolder !important;
+  font-size: 20px !important;
+  padding: 0;
+
+  &:hover,
+  &:focus {
+    background: #fff !important;
+  }
+}
+
+.event_selector {
+  position: relative;
+  &__btn {
+    position: relative;
+  }
+
+  .ant-select-selector {
+    border-radius: 12px;
+  }
+}
+.additionalops {
+  top: 44px;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
 }

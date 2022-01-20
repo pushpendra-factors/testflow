@@ -2,11 +2,9 @@ package model
 
 import (
 	U "factors/util"
-	"fmt"
-	"sort"
+	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func ValidateKPIQuery(kpiQuery KPIQuery) bool {
@@ -207,29 +205,41 @@ func GetTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGr
 	var currentRows [][]interface{}
 	currentRows = make([][]interface{}, 0)
 	if len(rows) == 0 {
-		currentRow := make([]interface{}, headersLen)
-		for index := range currentRow[:len(currentRow)-1] {
+		var currentRow []interface{}
+		currentRow = make([]interface{}, headersLen)
+		for index := range currentRow[:headersLen-1] {
 			currentRow[index] = ""
 		}
 		currentRow[len(currentRow)-1] = 0
-		currentRows = append(currentRows, currentRow)
-		return currentRows
-	}
-	for _, row := range rows {
-		if len(row) == 0 {
-			currentRow := make([]interface{}, headersLen)
-			for index := range currentRow[:len(currentRow)-1] {
-				currentRow[index] = ""
-			}
-			currentRow[len(currentRow)-1] = 0
-			currentRows = append(currentRows, currentRow)
-		} else if hasAnyGroupBy && hasGroupByTimestamp {
-			currentRow := append(row[1:2], row[3:]...)
+		if hasAnyGroupBy && hasGroupByTimestamp {
+			currentRow = append(currentRow[1:2], currentRow[3:]...)
 			currentRows = append(currentRows, currentRow)
 		} else if !hasAnyGroupBy && hasGroupByTimestamp {
-			currentRows = append(currentRows, row)
+			currentRows = append(currentRows, currentRow)
 		} else {
-			currentRows = append(currentRows, row[2:])
+			currentRows = append(currentRows, currentRow[2:])
+		}
+		return currentRows
+	}
+
+	for _, row := range rows {
+		var currentRow []interface{}
+		if len(row) == 0 {
+			currentRow = make([]interface{}, headersLen)
+			for index := range currentRow[:headersLen-1] {
+				currentRow[index] = ""
+			}
+			currentRow[headersLen-1] = 0
+		} else {
+			currentRow = row
+		}
+		if hasAnyGroupBy && hasGroupByTimestamp {
+			currentRow = append(currentRow[1:2], currentRow[3:]...)
+			currentRows = append(currentRows, currentRow)
+		} else if !hasAnyGroupBy && hasGroupByTimestamp {
+			currentRows = append(currentRows, currentRow)
+		} else {
+			currentRows = append(currentRows, currentRow[2:])
 		}
 	}
 	return currentRows
@@ -247,7 +257,7 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, transforma
 			resultKeys = addValuesToHashMap(resultKeys, result.Rows)
 		} else {
 			for _, row := range result.Rows {
-				key := getkeyFromRow(row)
+				key := U.GetkeyFromRow(row)
 				value1 := resultKeys[key]
 				value2 := row[len(row)-1]
 				operator := transformations[index-1].Metrics.Operator
@@ -257,10 +267,9 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, transforma
 		}
 	}
 
-	sortedKeys := getSortedKeys(resultKeys)
-	for _, sortedKey := range sortedKeys {
+	for key, value := range resultKeys {
 		row := make([]interface{}, 0)
-		columns := strings.Split(sortedKey, ":;")
+		columns := strings.Split(key, ":;")
 		for _, column := range columns[:len(columns)-1] {
 			if strings.HasPrefix(column, "dat$") {
 				unixValue, _ := strconv.ParseInt(strings.TrimPrefix(column, "dat$"), 10, 64)
@@ -270,10 +279,10 @@ func HandlingEventResultsByApplyingOperations(results []*QueryResult, transforma
 				row = append(row, column)
 			}
 		}
-		value := resultKeys[sortedKey]
 		row = append(row, value)
 		finalResultRows = append(finalResultRows, row)
 	}
+	finalResultRows = U.GetSorted2DArrays(finalResultRows)
 	finalResult.Headers = results[0].Headers
 	finalResult.Rows = finalResultRows
 	return finalResult
@@ -284,7 +293,7 @@ func getAllKeysFromResults(results []*QueryResult) map[string]interface{} {
 	var key string
 	for _, result := range results {
 		for _, row := range result.Rows {
-			key = getkeyFromRow(row)
+			key = U.GetkeyFromRow(row)
 			resultKeys[key] = 0
 		}
 	}
@@ -293,19 +302,10 @@ func getAllKeysFromResults(results []*QueryResult) map[string]interface{} {
 
 func addValuesToHashMap(resultKeys map[string]interface{}, rows [][]interface{}) map[string]interface{} {
 	for _, row := range rows {
-		key := getkeyFromRow(row)
+		key := U.GetkeyFromRow(row)
 		resultKeys[key] = row[len(row)-1]
 	}
 	return resultKeys
-}
-
-func getSortedKeys(hashMap map[string]interface{}) []string {
-	keys := make([]string, 0)
-	for k, _ := range hashMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func getValueFromValuesAndOperator(value1 interface{}, value2 interface{}, operator string) float64 {
@@ -325,25 +325,122 @@ func getValueFromValuesAndOperator(value1 interface{}, value2 interface{}, opera
 func makeHashWithKeyAsGroupBy(rows [][]interface{}) map[string][]interface{} {
 	var hashMap map[string][]interface{} = make(map[string][]interface{})
 	for _, row := range rows {
-		key := getkeyFromRow(row)
+		key := U.GetkeyFromRow(row)
 		hashMap[key] = row
 	}
 	return hashMap
 }
 
-func getkeyFromRow(row []interface{}) string {
-	if len(row) <= 1 {
-		return "1"
-	}
-	var key string
-	for _, value := range row[:len(row)-1] {
-		if valueTime, ok := (value.(time.Time)); ok {
-			valueInUnix := valueTime.Unix()
-			key = key + fmt.Sprintf("dat$%v:;", valueInUnix)
+func SplitQueryResultsIntoGBTAndNonGBT(queryResults []QueryResult, kpiQueryGroup KPIQueryGroup, finalStatusCode int) ([]QueryResult, []QueryResult, []KPIQuery, []KPIQuery) {
+	gbtRelatedQueryResults := make([]QueryResult, 0)
+	gbtRelatedQueries := make([]KPIQuery, 0)
+	nonGbtRelatedQueryResults := make([]QueryResult, 0)
+	nonGbtRelatedQueries := make([]KPIQuery, 0)
+	for index, kpiQuery := range kpiQueryGroup.Queries {
+		if kpiQuery.GroupByTimestamp != "" {
+			gbtRelatedQueryResults = append(gbtRelatedQueryResults, queryResults[index])
+			gbtRelatedQueries = append(gbtRelatedQueries, kpiQuery)
 		} else {
-			key = key + fmt.Sprintf("%v", value) + ":;"
+			nonGbtRelatedQueryResults = append(nonGbtRelatedQueryResults, queryResults[index])
+			nonGbtRelatedQueries = append(nonGbtRelatedQueries, kpiQuery)
+		}
+	}
+	if len(nonGbtRelatedQueries) == 0 {
+		nonGbtRelatedQueryResults = nil
+	}
+	if len(gbtRelatedQueries) == 0 {
+		gbtRelatedQueryResults = nil
+	}
+	return gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries
+}
+
+func MergeQueryResults(queryResults []QueryResult, queries []KPIQuery, timezoneString string, finalStatusCode int, isTimezoneEnabled bool) QueryResult {
+	if finalStatusCode != http.StatusOK || len(queryResults) == 0 {
+		queryResult := QueryResult{}
+		return queryResult
+	}
+
+	queryResult := QueryResult{}
+	queryResult.Headers = TransformColumnResultGroup(queryResults, queries, timezoneString)
+	queryResult.Rows = TransformRowsResultGroup(queryResults, timezoneString, isTimezoneEnabled)
+	return queryResult
+}
+
+// NOTE: Basing on single metric being sent per query.
+func TransformColumnResultGroup(queryResults []QueryResult, queries []KPIQuery, timezoneString string) []string {
+	finalResultantColumns := make([]string, 0)
+	for index, queryResult := range queryResults {
+		if index == 0 {
+			finalResultantColumns = append(queryResult.Headers[:len(queryResult.Headers)-1], queries[index].Metrics...)
+		} else {
+			finalResultantColumns = append(finalResultantColumns, queries[index].Metrics...)
+		}
+	}
+	return finalResultantColumns
+}
+
+// Form Map with key as combination of columns and values.
+// Steps involved are as follows.
+// 1. Make an empty hashMap with key and value as array of 0's as prefixed values.
+// 2. Add the values to hashMap. Here keys are contextual to kpi and will not be duplicate.
+// 3. Convert Map to 2d Array and then sort.
+func TransformRowsResultGroup(queryResults []QueryResult, timezoneString string, isTimezoneEnabled bool) [][]interface{} {
+	resultAsMap := make(map[string][]interface{})
+	numberOfQueryResults := len(queryResults)
+
+	// finalResultants := make([][]interface{}, 0)
+	finalResultantRow := make([]interface{}, 0)
+	finalResultantHeader := make([]string, 0)
+	// BASE CASE with no key.
+	if len(queryResults[0].Rows) == 1 {
+		for _, queryResult := range queryResults {
+			finalResultantRow = append(finalResultantRow, queryResult.Rows[0])
+		}
+
+		for _, queryResult := range queryResults {
+			finalResultantHeader = append(finalResultantHeader, queryResult.Headers[0])
 		}
 	}
 
-	return key
+	// Step 1
+	for _, queryResult := range queryResults {
+		for _, row := range queryResult.Rows {
+			key := U.GetkeyFromRow(row)
+			emptyValues := make([]interface{}, numberOfQueryResults)
+			for index := range emptyValues {
+				emptyValues[index] = 0
+			}
+			resultAsMap[key] = emptyValues
+		}
+	}
+
+	// Step 2
+	for queryIndex, queryResult := range queryResults {
+		for _, row := range queryResult.Rows {
+			key := U.GetkeyFromRow(row)
+			val := row[len(row)-1]
+			resultAsMap[key][queryIndex] = val
+		}
+	}
+
+	// Step 3
+	finalResultantRows := make([][]interface{}, 0, 0)
+	for key, value := range resultAsMap {
+		currentRow := make([]interface{}, 0)
+		columns := strings.Split(key, ":;")
+		for _, column := range columns[:len(columns)-1] {
+			if strings.HasPrefix(column, "dat$") {
+				unixValue, _ := strconv.ParseInt(strings.TrimPrefix(column, "dat$"), 10, 64)
+				columnValue, _ := U.GetTimeFromUnixTimestampWithZone(unixValue, timezoneString, isTimezoneEnabled)
+				currentRow = append(currentRow, columnValue)
+			} else {
+				currentRow = append(currentRow, column)
+			}
+		}
+		currentRow = append(currentRow, value...)
+
+		finalResultantRows = append(finalResultantRows, currentRow)
+	}
+	finalResultantRows = U.GetSorted2DArrays(finalResultantRows)
+	return finalResultantRows
 }

@@ -58,6 +58,22 @@
     //     width: 50%;
     // }
 }
+.modal_new {
+    top: 0 !important;
+    position: absolute;
+    width: 450px !important;
+    left: calc(50% - 180px);
+    padding: 0 !important;
+
+    :global(.ant-modal-content) {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+
+    :global(.ant-modal-body) {
+        padding: 0px;
+    }
+}
 
 .searchHeadings {
     font-family: 'Work Sans', sans-serif;

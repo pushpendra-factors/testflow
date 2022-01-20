@@ -29,7 +29,7 @@ const ViewSetup = ({ activeProject }) => {
             </pre>
           </Col>
           <Col span={24}>
-            <Text type={'title'} level={5} weight={'bold'} color={'grey'} extraClass={'m-0 mt-4'}>Setup 2</Text>
+            <Text type={'title'} level={5} weight={'bold'} color={'grey'} extraClass={'m-0 mt-4'}>Setup 2 (Optional)</Text>
             <Text type={'paragraph'} extraClass={'m-0'}>Send us an event (Enable Auto-track for capturing user visits automatically).</Text>
           </Col>
           <Col span={24}>

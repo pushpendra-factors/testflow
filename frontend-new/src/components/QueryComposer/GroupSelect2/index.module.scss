@@ -2,7 +2,7 @@
     &__filter_select {
         position: absolute; 
         top: 0;
-        padding: 0px 9px 15px;
+        padding: 0px 9px;
 
         display: flex;
         flex-direction: column;
@@ -11,6 +11,14 @@
             position: sticky;
             top: 0;
             padding-top: 15px;
+            background-color: white;
+            z-index: 10;
+        }
+
+        &__additionalAction {
+            position: sticky;
+            bottom: 0;
+            padding: 9px 0px;
             background-color: white;
             z-index: 10;
         }

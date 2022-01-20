@@ -223,23 +223,23 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	model.SetQueryCachePlaceholder(projectID, &request)
 	H.SleepIfHeaderSet(c)
 
-	queryResults, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, reqID, request)
+	queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, reqID, request)
 	if statusCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectID, &request)
 		logCtx.Error("Failed to process query from DB")
 		if statusCode == http.StatusPartialContent {
-			return queryResults, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
+			return queryResult, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
 		}
 		return nil, statusCode, PROCESSING_FAILED, "Failed to process query from DB", true
 	}
-	model.SetQueryCacheResult(projectID, &request, queryResults)
+	model.SetQueryCacheResult(projectID, &request, queryResult)
 
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
-		model.SetCacheResultByDashboardIdAndUnitId(queryResults, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, request.GetTimeZone())
-		return H.DashboardQueryResponsePayload{Result: queryResults, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
+		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, request.GetTimeZone())
+		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
 	}
-	return gin.H{"result": queryResults}, http.StatusOK, "", "", false
+	return gin.H{"result": queryResult}, http.StatusOK, "", "", false
 }
 
 func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam, unitIdParam, refreshParam, isQueryParam string) (uint64, uint64, int64, int64, bool, bool, bool, error) {
