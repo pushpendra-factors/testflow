@@ -66,10 +66,10 @@ CREATE TABLE IF NOT EXISTS users (
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, id) USING CLUSTERED COLUMNSTORE,
     KEY (project_id) USING HASH,
-    KEY (id) USING HASH,
     KEY (customer_user_id) USING HASH,
     KEY (segment_anonymous_id) USING HASH,
     KEY (amp_user_id) USING HASH,
+    UNIQUE KEY (project_id, id) USING HASH,
     SHARD KEY (id)
 
     -- Required constraints.

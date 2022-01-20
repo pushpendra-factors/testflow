@@ -597,10 +597,12 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 		// add user filter
 		gupStmt, gupParam, err = getFilterSQLStmtForLatestUserProperties(
 			projectId, globalUserFilter, from)
+
 		if err != nil {
 			return errors.New("invalid user properties for global filter")
 		}
 		rStmnt = rStmnt + " AND " + gupStmt
+
 		*qParams = append(*qParams, gupParam...)
 	}
 

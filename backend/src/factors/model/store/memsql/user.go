@@ -58,14 +58,6 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		user.ID = U.GetUUID()
 	}
 
-	// Unique constraint (project_id, id)
-	errCode := store.IsUserExistByID(user.ProjectId, user.ID)
-	if errCode == http.StatusFound {
-		return user, nil
-	} else if errCode == http.StatusInternalServerError {
-		return nil, errors.New("unique constraint check failure")
-	}
-
 	// Add join timestamp before creation.
 	// Increamenting count based on EventNameId, not by EventName.
 	if user.JoinTimestamp <= 0 {
@@ -139,6 +131,18 @@ func (store *MemSQL) CreateUser(user *model.User) (string, int) {
 	newUser, err := store.createUserWithError(user)
 	if err == nil {
 		return newUser.ID, http.StatusCreated
+	}
+
+	if IsDuplicateRecordError(err) {
+		if user.ID != "" {
+			// Multiple requests trying to create user at the
+			// same time should not lead failure permanently,
+			// so get the user and return.
+			return user.ID, http.StatusCreated
+		}
+
+		logCtx.WithError(err).Error("Failed to create user. Integrity violation.")
+		return "", http.StatusNotAcceptable
 	}
 
 	logCtx.WithError(err).Error("Failed to create user.")

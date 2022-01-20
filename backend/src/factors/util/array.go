@@ -6,6 +6,15 @@ import (
 
 const DefaultPrecision = 3
 
+func ContainsUint64InArray(s []uint64, e uint64) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func ContainsStringInArray(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
