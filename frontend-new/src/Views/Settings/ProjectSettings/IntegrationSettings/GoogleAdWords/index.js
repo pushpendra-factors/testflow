@@ -382,7 +382,7 @@ const GoogleIntegration = ({
         <div>{customerAccountsLoaded && renderAccountsList()}</div>
 
         <div className={'mt-4 flex'}>
-          {!currentProjectSettings?.int_adwords_enabled_agent_uuid && (
+          {!currentProjectSettings?.int_adwords_enabled_agent_uuid ? 
             <Button
               className={'mr-2'}
               type={'primary'}
@@ -391,15 +391,15 @@ const GoogleIntegration = ({
             >
               Enable using Google
             </Button>
-            //   ) : (
-            //     <Button
-            //       className={'mr-2'}
-            //       loading={loading}
-            //       onClick={() => onDisconnect()}
-            //     >
-            //       Disconnect
-            //     </Button>
-          )}
+              :
+            <Button
+              className={'mr-2'}
+              loading={loading}
+              onClick={() => onDisconnect()}
+            >
+              Disconnect
+            </Button>
+          }
           {kbLink && (
             <a className={'ant-btn'} target={'_blank'} href={kbLink}>
               View documentation
