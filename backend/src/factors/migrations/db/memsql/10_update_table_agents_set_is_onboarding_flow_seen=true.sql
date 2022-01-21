@@ -1,0 +1,1 @@
+UPDATE agents SET is_onboarding_flow_seen = true;

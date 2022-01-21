@@ -147,6 +147,12 @@ func AgentInvite(c *gin.Context) {
 
 	invitedByAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
+	createDefaultDashBoard := c.Query("create_dashboard")
+	var createDashboard bool = true // by default
+	if createDefaultDashBoard == "false" {
+		createDashboard = false
+	}
+
 	createProjectAgentMapping, errCode := store.GetStore().IsNewProjectAgentMappingCreationAllowed(projectId, emailOfAgentToInvite)
 	if errCode != http.StatusOK {
 		c.AbortWithStatus(errCode)
@@ -191,21 +197,41 @@ func AgentInvite(c *gin.Context) {
 	if roleOfAgent == model.ADMIN {
 		newProjectAgentRole = uint64(model.ADMIN)
 	}
-	pam, errCode := store.GetStore().CreateProjectAgentMappingWithDependencies(
-		&model.ProjectAgentMapping{
-			ProjectID: projectId,
-			AgentUUID: invitedAgent.UUID,
-			InvitedBy: &invitedByAgentUUID,
-			Role:      newProjectAgentRole,
-		})
-	if errCode == http.StatusInternalServerError {
-		logCtx.Error("Failed to createProjectAgentMapping")
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	} else if errCode == http.StatusFound {
-		c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "User is already mapped to project"})
-		return
+	var pam *model.ProjectAgentMapping
+	if createDashboard {
+		pam, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(
+			&model.ProjectAgentMapping{
+				ProjectID: projectId,
+				AgentUUID: invitedAgent.UUID,
+				InvitedBy: &invitedByAgentUUID,
+				Role:      newProjectAgentRole,
+			})
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to createProjectAgentMapping")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		} else if errCode == http.StatusFound {
+			c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "User is already mapped to project"})
+			return
+		}
+	}else {
+		pam, errCode = store.GetStore().CreateProjectAgentMappingWithDependenciesWithoutDashboard(
+			&model.ProjectAgentMapping{
+				ProjectID: projectId,
+				AgentUUID: invitedAgent.UUID,
+				InvitedBy: &invitedByAgentUUID,
+				Role:      newProjectAgentRole,
+			})
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to createProjectAgentMapping")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		} else if errCode == http.StatusFound {
+			c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "User is already mapped to project"})
+			return
+		}
 	}
+
 
 	sendVerifyProfileLink := createNewAgent
 
