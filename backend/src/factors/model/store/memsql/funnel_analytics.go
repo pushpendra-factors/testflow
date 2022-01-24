@@ -563,7 +563,6 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 		}
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
 			"", stepName, addSelect, addParams, addJoinStatement, groupBy, "", q.GlobalUserProperties)
-
 		if len(q.EventsWithProperties) > 1 && i == 0 {
 			qStmnt = qStmnt + ", "
 		}
@@ -753,7 +752,6 @@ func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEven
 		}
 
 	}
-
 	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep, timezoneString)
 	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }

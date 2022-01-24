@@ -310,7 +310,7 @@ func (store *MemSQL) UpdateDashboardUnit(projectId uint64, agentUUID string,
 }
 
 // CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
-func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map) {
+func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs, dashboardUnitIDsList string, numRoutines int, reportCollector *sync.Map) {
 	logCtx := log.WithFields(log.Fields{
 		"Method": "CacheDashboardUnitsForProjects",
 	})
@@ -320,7 +320,8 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
 		logCtx.Info("Starting to cache units for the project")
 		startTime := U.TimeNowUnix()
-		unitsCount := store.CacheDashboardUnitsForProjectID(projectID, numRoutines, reportCollector)
+		dashboardUnitIDs := C.GetDashboardUnitIDs(dashboardUnitIDsList)
+		unitsCount := store.CacheDashboardUnitsForProjectID(projectID, dashboardUnitIDs, numRoutines, reportCollector)
 
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
@@ -330,13 +331,28 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 }
 
 // CacheDashboardUnitsForProjectID Caches all the dashboard units for the given `projectID`.
-func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int, reportCollector *sync.Map) int {
+func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnitIDs []uint64, numRoutines int, reportCollector *sync.Map) int {
 	if numRoutines == 0 {
 		numRoutines = 1
 	}
 	dashboardUnits, errCode := store.GetDashboardUnitsForProjectID(projectID)
 	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
 		return 0
+	}
+	isPresent := false
+	finalDashboardUnits := make([]model.DashboardUnit, 0)
+	for _, dashboardUnit := range dashboardUnits {
+		if U.ContainsUint64InArray(dashboardUnitIDs, dashboardUnit.ID) {
+			isPresent = true
+			finalDashboardUnits = append(finalDashboardUnits, dashboardUnit)
+		}
+	}
+	if len(dashboardUnitIDs) != 0 {
+		if isPresent {
+			dashboardUnits = finalDashboardUnits
+		} else {
+			return 0
+		}
 	}
 
 	var waitGroup sync.WaitGroup
@@ -362,6 +378,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, numRoutin
 	return len(dashboardUnits)
 }
 
+// Main method kark2 current
 // GetQueryAndClassFromDashboardUnit returns query and query-class of dashboard unit.
 func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string) {
 	projectID := dashboardUnit.ProjectID

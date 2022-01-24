@@ -33,9 +33,38 @@ type AttributionQuery struct {
 	Timezone        string `json:"time_zone"`
 }
 
+// ToDo change here as well.
 func (query *AttributionQuery) TransformDateTypeFilters() error {
-	for _, ewp := range query.ConversionEvent.Properties {
+	err := query.ConversionEvent.TransformDateTypeFilters(query.GetTimeZone())
+	if err != nil {
+		return err
+	}
+	err = query.ConversionEventCompare.TransformDateTypeFilters(query.GetTimeZone())
+	if err != nil {
+		return err
+	}
+	for _, ewp := range query.LinkedEvents {
 		err := ewp.TransformDateTypeFilters(query.GetTimeZone())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// There can be..
+func (query *AttributionQuery) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	err := query.ConversionEvent.ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+	if err != nil {
+		return err
+	}
+	err = query.ConversionEventCompare.ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+	if err != nil {
+		return err
+	}
+
+	for _, ewp := range query.LinkedEvents {
+		err = ewp.ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
 		if err != nil {
 			return err
 		}
@@ -114,6 +143,11 @@ func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
 
 func (query *AttributionQueryUnit) TransformDateTypeFilters() error {
 	return query.Query.TransformDateTypeFilters()
+}
+
+func (query *AttributionQueryUnit) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	query.Query.ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone)
+	return nil
 }
 
 const (

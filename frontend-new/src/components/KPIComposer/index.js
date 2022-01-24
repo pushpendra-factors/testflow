@@ -210,8 +210,8 @@ function KPIComposer({
       queryOptionsState.date_range.from &&
       queryOptionsState.date_range.to
     ) {
-      ranges[0].startDate = MomentTz(queryOptionsState.date_range.from).toDate();
-      ranges[0].endDate = MomentTz(queryOptionsState.date_range.to).toDate();
+      ranges[0].startDate = MomentTz(queryOptionsState.date_range.from);
+      ranges[0].endDate = MomentTz(queryOptionsState.date_range.to);
     }
 
     return ranges;

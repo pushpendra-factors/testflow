@@ -61,23 +61,28 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 
-	// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
-	_sessions, sessionUsers, err := pg.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
-	logCtx.Info("Done getAllTheSessions error not checked")
-	if err != nil {
-		return nil, err
-	}
-
-	logCtx.Info("Done getAllTheSessions")
-
-	usersInfo, err := pg.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
-	if err != nil {
-		return nil, err
-	}
-	logCtx.Info("Done GetCoalesceIDFromUserIDs")
 	sessions := make(map[string]map[string]model.UserSessionData)
-	model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo, &sessions)
 
+	// Pull Sessions for the cases: "Tactic"  and "TacticOffer"
+	if query.TacticOfferType != model.MarketingEventTypeOffer {
+		// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
+		_sessions, sessionUsers, err := pg.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
+		logCtx.Info("Done getAllTheSessions error not checked")
+		if err != nil {
+			return nil, err
+		}
+
+		logCtx.Info("Done getAllTheSessions")
+
+		usersInfo, err := pg.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
+		if err != nil {
+			return nil, err
+		}
+		logCtx.Info("Done GetCoalesceIDFromUserIDs")
+		model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo, &sessions)
+	}
+
+	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
 	pg.AppendOTPSessions(projectID, query, &sessions, logCtx)
 
 	if C.GetAttributionDebug() == 1 {

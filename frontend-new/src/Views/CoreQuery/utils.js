@@ -240,10 +240,7 @@ export const getProfileQuery = (
 
   const period = {};
   period.from = MomentTz(dateRange.from).utc().unix();
-  period.to =
-    MomentTz().format('dddd') === 'Sunday'
-      ? MomentTz().utc().unix()
-      : MomentTz().subtract(1, 'day').utc().unix();
+  period.to = MomentTz().utc().unix();
 
   query.from = period.from;
   query.to = period.to;

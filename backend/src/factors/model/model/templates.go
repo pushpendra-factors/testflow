@@ -88,6 +88,10 @@ func (q *TemplateQuery) GetTimeZone() U.TimeZoneString {
 	return U.TimeZoneString(q.Timezone)
 }
 
+func (q *TemplateQuery) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	return nil
+}
+
 var DefaultThresholds = RequestThresholds{
 	PercentageChange: 10,
 	AbsoluteChange:   0,

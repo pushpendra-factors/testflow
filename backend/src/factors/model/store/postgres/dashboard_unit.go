@@ -295,7 +295,7 @@ func (pg *Postgres) UpdateDashboardUnit(projectId uint64, agentUUID string,
 }
 
 // CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
-func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map) {
+func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs, dashboardUnitIDsList string, numRoutines int, reportCollector *sync.Map) {
 	logCtx := log.WithFields(log.Fields{
 		"Method": "CacheDashboardUnitsForProjects",
 	})
@@ -305,7 +305,8 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
 		logCtx.Info("Starting to cache units for the project")
 		startTime := U.TimeNowUnix()
-		unitsCount := pg.CacheDashboardUnitsForProjectID(projectID, numRoutines, reportCollector)
+		dashboardUnitIDs := C.GetDashboardUnitIDs(dashboardUnitIDsList)
+		unitsCount := pg.CacheDashboardUnitsForProjectID(projectID, dashboardUnitIDs, numRoutines, reportCollector)
 
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
@@ -315,7 +316,7 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 }
 
 // CacheDashboardUnitsForProjectID Caches all the dashboard units for the given `projectID`.
-func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int, reportCollector *sync.Map) int {
+func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnitIDs []uint64, numRoutines int, reportCollector *sync.Map) int {
 	if numRoutines == 0 {
 		numRoutines = 1
 	}
@@ -323,6 +324,21 @@ func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, numRoutine
 	dashboardUnits, errCode := pg.GetDashboardUnitsForProjectID(projectID)
 	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
 		return 0
+	}
+	isPresent := false
+	finalDashboardUnits := make([]model.DashboardUnit, 0)
+	for _, dashboardUnit := range dashboardUnits {
+		if U.ContainsUint64InArray(dashboardUnitIDs, dashboardUnit.ID) {
+			isPresent = true
+			finalDashboardUnits = append(finalDashboardUnits, dashboardUnit)
+		}
+	}
+	if len(dashboardUnitIDs) != 0 {
+		if isPresent {
+			dashboardUnits = finalDashboardUnits
+		} else {
+			return 0
+		}
 	}
 
 	var waitGroup sync.WaitGroup

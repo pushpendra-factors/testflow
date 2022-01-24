@@ -169,6 +169,10 @@ func (q *ChannelQueryUnit) TransformDateTypeFilters() error {
 	return nil
 }
 
+func (q *ChannelQueryUnit) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	return nil
+}
+
 // ChannelGroupQueryV1 - @TODO Kark v1
 type ChannelGroupQueryV1 struct {
 	Class   string           `json:"cl"`
@@ -239,6 +243,10 @@ func (q *ChannelGroupQueryV1) GetQueryCacheExpiry() float64 {
 }
 
 func (q *ChannelGroupQueryV1) TransformDateTypeFilters() error {
+	return nil
+}
+
+func (q *ChannelGroupQueryV1) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
 	return nil
 }
 
