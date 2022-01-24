@@ -110,6 +110,7 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	}
 
 	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
+	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
 
 	// copying global filters and groupby into sparate queries and datetime transformations
 	for index, _ := range profileQueryGroup.Queries {
@@ -124,6 +125,16 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 			logCtx.WithError(err).Error("Query failed. Invalid user source.")
 			message := fmt.Sprintf("Query failed. Invalid user source provided : %s", profileQueryGroup.Queries[index].Type)
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, message, true
+		}
+
+		if allowProfilesGroupSupport {
+			if !model.IsValidProfileQueryGroupName(profileQueryGroup.GroupAnalysis) {
+				logCtx.WithError(err).Error("Query failed. Invalid group name.")
+				message := fmt.Sprintf("Query failed. Invalid group name provided : %s", profileQueryGroup.GroupAnalysis)
+				return nil, http.StatusBadRequest, V1.INVALID_INPUT, message, true
+			} else {
+				profileQueryGroup.Queries[index].GroupAnalysis = profileQueryGroup.GroupAnalysis
+			}
 		}
 
 		// setting up the timezone for individual queries from the global value

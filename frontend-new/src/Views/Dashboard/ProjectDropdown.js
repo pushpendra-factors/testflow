@@ -307,7 +307,7 @@ function ProjectDropdown({
             </div>
           </div>
           <div
-            className={'pl-10 pr-6 py-6 h-full'}
+            className={'pl-10 pr-6 py-6 flex-1'}
             style={{ backgroundColor: '#f6f6f8' }}
           >
             <DashboardSubMenu

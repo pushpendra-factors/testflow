@@ -212,7 +212,7 @@ export function fetchProjects() {
 export function createProject(projectName) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects', { name: projectName })
+      post(dispatch, host + 'projects?create_dashboard=false', { name: projectName })
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'CREATE_PROJECT_FULFILLED', payload: r.data });

@@ -14,15 +14,26 @@ import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
 import EmptyDashboard from './EmptyDashboard';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration'
 import ProjectDropdown from './ProjectDropdown';
+import { connect } from 'react-redux';
+import { fetchProjectSettingsV1 } from 'Reducers/global';
 
-function Dashboard() {
+function Dashboard({ fetchProjectSettingsV1 }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
+  const [sdkCheck, setsdkCheck] = useState();
   const { dashboards } = useSelector((state) => state.dashboard);
   let integration = useSelector((state) => state.global.currentProjectSettings);
+  const activeProject = useSelector((state) => state.global.active_project) 
   const dispatch = useDispatch();
+
+  useEffect(() => {
+      fetchProjectSettingsV1(activeProject.id).then((res) => {
+          console.log('fetch project settings success');
+          setsdkCheck(res.data.int_completed);
+      });
+  }, [activeProject, sdkCheck]);
 
   integration = integration?.project_settings || integration;
 
@@ -34,7 +45,7 @@ function Dashboard() {
   integration?.int_salesforce_enabled_agent_uuid ||
   integration?.int_drift ||
   integration?.int_google_organic_enabled_agent_uuid ||
-  integration?.int_clear_bit || integration?.int_completed;
+  integration?.int_clear_bit || sdkCheck;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -78,66 +89,69 @@ function Dashboard() {
     };
   }, [dispatch]);
 
-  // if (dashboards.data.length) {
-  return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp
-            size={'medium'}
-            title={'Dashboard Overview Error'}
-            subtitle={
-              'We are facing trouble loading dashboards overview. Drop us a message on the in-app chat.'
-            }
-          />
-        }
-        onError={FaErrorLog}
-      >
-        <Header>
-          <div className='w-full h-full py-4 flex flex-col justify-center items-center'>
-            <SearchBar />
+  if (dashboards.data.length) {
+    return (
+      <>
+        <ErrorBoundary
+          fallback={
+            <FaErrorComp
+              size={'medium'}
+              title={'Dashboard Overview Error'}
+              subtitle={
+                'We are facing trouble loading dashboards overview. Drop us a message on the in-app chat.'
+              }
+            />
+          }
+          onError={FaErrorLog}
+        >
+          <div className='flex flex-col h-full'>
+            <Header>
+              <div className='w-full h-full py-4 flex flex-col justify-center items-center'>
+                <SearchBar />
+              </div>
+            </Header>
+
+            <div className={`mt-20 flex-1 flex flex-col`}>
+              <ProjectDropdown
+                handleEditClick={handleEditClick}
+                setaddDashboardModal={setaddDashboardModal}
+                durationObj={durationObj}
+                handleDurationChange={handleDurationChange}
+                refreshClicked={refreshClicked}
+                setRefreshClicked={setRefreshClicked}
+              />
+            </div>
           </div>
-        </Header>
 
-        <div className={`mt-20 h-full`}>
-          <ProjectDropdown
-            handleEditClick={handleEditClick}
+
+          <AddDashboard
+            setEditDashboard={setEditDashboard}
+            editDashboard={editDashboard}
+            addDashboardModal={addDashboardModal}
             setaddDashboardModal={setaddDashboardModal}
-            durationObj={durationObj}
-            handleDurationChange={handleDurationChange}
-            refreshClicked={refreshClicked}
-            setRefreshClicked={setRefreshClicked}
           />
-        </div>
-
-        <AddDashboard
-          setEditDashboard={setEditDashboard}
-          editDashboard={editDashboard}
-          addDashboardModal={addDashboardModal}
-          setaddDashboardModal={setaddDashboardModal}
-        />
-      </ErrorBoundary>
-    </>
-  );
-  // } else {
-  //   return (
-  //     <>
-  //     {checkIntegration?
-  //     <>
-  //       <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal}/>
-  //         <AddDashboard
-  //             setEditDashboard={setEditDashboard}
-  //             editDashboard={editDashboard}
-  //             addDashboardModal={addDashboardModal}
-  //             setaddDashboardModal={setaddDashboardModal}
-  //           />
-  //     </>
-  //     :
-  //       <EmptyDashboard />
-  //     } 
-  //   </>
-  //   );
-  // }
+        </ErrorBoundary>
+      </>
+    );
+  } else {
+    return (
+      <>
+        {checkIntegration ?
+          <>
+            <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal} />
+            <AddDashboard
+              setEditDashboard={setEditDashboard}
+              editDashboard={editDashboard}
+              addDashboardModal={addDashboardModal}
+              setaddDashboardModal={setaddDashboardModal}
+            />
+          </>
+          :
+          <EmptyDashboard />
+        }
+      </>
+    );
+  }
 }
 
-export default Dashboard;
+export default connect(null,{ fetchProjectSettingsV1 })(Dashboard);

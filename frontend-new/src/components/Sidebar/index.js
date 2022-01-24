@@ -36,25 +36,32 @@ function Sidebar(props) {
     setsearchProjectName(e.target.value);
   };
 
-  // useEffect(() => {
-  //   let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);
-  //   if(!agent || !agent[0]?.invited_by) {
-  //     if (props.currentAgent?.is_onboarding_flow_seen) {
-  //         setShowProjectModal(false);
-  //     } else {
-  //       setShowProjectModal(true);
-  //         props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
-  //             props.fetchAgentInfo().then(() => {
-  //                 console.log('Profile details updated!');
-  //             });
-  //         }).catch((err) => {
-  //             console.log('updateAgentInfo failed-->', err);
-  //         });
-  //     }
-  //   } else {
-  //     setShowProjectModal(false);
-  //   }
-  // }, [])
+  useEffect(() => {
+    let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);
+    if(!agent || !agent[0]?.invited_by) {
+      if (props.currentAgent?.is_onboarding_flow_seen) {
+          setShowProjectModal(false);
+      } else {
+        setShowProjectModal(true);
+          props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
+              props.fetchAgentInfo().then(() => {
+                  console.log('Profile details updated!');
+              });
+          }).catch((err) => {
+              console.log('updateAgentInfo failed-->', err);
+          });
+      }
+    } else {
+      setShowProjectModal(false);
+      props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
+          props.fetchAgentInfo().then(() => {
+              console.log('Profile details updated!');
+          });
+      }).catch((err) => {
+          console.log('updateAgentInfo failed-->', err);
+      });
+    }
+  }, [])
 
   const popOvercontent = () => {
     return (
@@ -171,12 +178,12 @@ function Sidebar(props) {
             </Row>
           </div>
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
-            {/* <Row justify="center" align="middle" className=" w-full py-2">
+            <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Setup Assist" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
                 <NavLink activeClassName="active" to="/project-setup"><SVG name={'Emoji'} size={40} color="white"/></NavLink>
                 <Badge dot offset={[25,-35]}></Badge>
               </Tooltip>
-            </Row> */}
+            </Row>
 
             <Row justify="center" align="middle" className=" w-full py-2">
               <Popover placement="top" overlayClassName={'fa-popupcard--wrapper'} title={false}
@@ -201,7 +208,7 @@ function Sidebar(props) {
         {/* Modals triggered from sidebar */}
         <ModalLib visible={visible} handleCancel={handleCancel} />
         <UserSettings visible={ShowUserSettings} handleCancel={closeUserSettingsModal} />
-        {/* <NewProject visible={showProjectModal} handleCancel={() => setShowProjectModal(false)} /> */}
+        <NewProject visible={showProjectModal} handleCancel={() => setShowProjectModal(false)} />
 
         <CreateNewProject
           visible={CreateNewProjectModal}

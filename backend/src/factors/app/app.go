@@ -127,6 +127,7 @@ func main() {
 	useOLAPPoolForAnalytics := flag.Bool("use_olap_pool_for_analytics", false,
 		"Will use the pool_olap if set, else use user-level default pool.")
 	hubspotAPIOnboardingHAPIKey := flag.String("hubspot_API_onboarding_HAPI_key", "", "")
+	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 
 	flag.Parse()
 
@@ -213,6 +214,7 @@ func main() {
 		AllowSupportForSourceColumnInUsers:      *allowSupportForSourceColumnInUsers,
 		UseOLAPPoolForAnalytics:                 *useOLAPPoolForAnalytics,
 		HubspotAPIOnboardingHAPIKey:             *hubspotAPIOnboardingHAPIKey,
+		AllowProfilesGroupSupport:               *allowProfilesGroupSupport,
 	}
 	C.InitConf(config)
 

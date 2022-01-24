@@ -116,6 +116,8 @@ var UserSourceMap = map[string]int{
 	"salesforce": 3,
 }
 
+const USERS = "users"
+
 func GetRequestSourcePointer(requestSource int) *int {
 	var requestSourcePointer = requestSource
 	return &requestSourcePointer
