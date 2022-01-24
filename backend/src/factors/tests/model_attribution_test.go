@@ -873,6 +873,142 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestAttributionTacticOffer(t *testing.T) {
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	customerAccountId := U.RandomLowerAphaNumString(5)
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountId,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID1)
+
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, createdUserID2)
+
+	timestamp := int64(1589068800)
+
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1, timestamp, "", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1", createdUserID2, timestamp, "", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	query := &model.AttributionQuery{
+		From:                   timestamp - 1*U.SECONDS_IN_A_DAY,
+		To:                     timestamp + 2*U.SECONDS_IN_A_DAY,
+		AttributionKey:         model.AttributionKeyCampaign,
+		AttributionMethodology: model.AttributionMethodLastTouch,
+		ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+		LookbackDays:           0,
+		QueryType:              model.AttributionQueryTypeConversionBased,
+	}
+
+	//both user should be treated different
+	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+	assert.Nil(t, err)
+	// Lookback is 0. There should be no attribution.
+	// Attribution Time: 1589068798, Conversion Time: 1589068800, diff = 2 secs
+
+	customerUserId := U.RandomLowerAphaNumString(15)
+	_, errCode = store.GetStore().UpdateUser(project.ID, createdUserID1, &model.User{CustomerUserId: customerUserId}, timestamp+1*U.SECONDS_IN_A_DAY)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	_, errCode = store.GetStore().UpdateUser(project.ID, createdUserID2, &model.User{CustomerUserId: customerUserId}, timestamp+1*U.SECONDS_IN_A_DAY)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	query = &model.AttributionQuery{
+		From:                   timestamp - 1*U.SECONDS_IN_A_DAY,
+		To:                     timestamp + 2*U.SECONDS_IN_A_DAY,
+		AttributionKey:         model.AttributionKeyCampaign,
+		AttributionMethodology: model.AttributionMethodLastTouch,
+		ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+		LookbackDays:           5,
+		QueryType:              model.AttributionQueryTypeConversionBased,
+	}
+
+	result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+	assert.Nil(t, err)
+	// both user should be treated same
+	assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "$none"))
+	// continuation to previous users
+	_, status := store.GetStore().UpdateUserProperties(project.ID, createdUserID1, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+	assert.Equal(t, http.StatusAccepted, status)
+	_, status = store.GetStore().UpdateUserProperties(project.ID, createdUserID2, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+	assert.True(t, status == http.StatusAccepted)
+	/*
+		t+3day -> first time $initial_campaign set with event for user1 and user2
+		t+6day -> session event for user1 and user2
+	*/
+	status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, status)
+	status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, status)
+	status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, status)
+	status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+	assert.Equal(t, http.StatusCreated, status)
+
+	t.Run("TestAttributionTacticOffer", func(t *testing.T) {
+
+		query := &model.AttributionQuery{
+			From:                   timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 7*U.SECONDS_IN_A_DAY,
+			AttributionKey:         model.AttributionKeyCampaign,
+			AttributionMethodology: model.AttributionMethodFirstTouch,
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           4,
+			QueryType:              model.AttributionQueryTypeEngagementBased,
+			TacticOfferType:        model.MarketingEventTypeTacticOffer,
+		}
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		// The attribution didn't happen in the query period. First touch is on 3rd day and which
+		// is not between 4th to 7th (query period). Hence count is 0.
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "12345"))
+	})
+	t.Run("TestAttributionTactic", func(t *testing.T) {
+
+		query := &model.AttributionQuery{
+			From:                   timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 7*U.SECONDS_IN_A_DAY,
+			AttributionKey:         model.AttributionKeyCampaign,
+			AttributionMethodology: model.AttributionMethodFirstTouch,
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           4,
+			QueryType:              model.AttributionQueryTypeEngagementBased,
+			TacticOfferType:        model.MarketingEventTypeTactic,
+		}
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		// The attribution didn't happen in the query period. First touch is on 3rd day and which
+		// is not between 4th to 7th (query period). Hence count is 0.
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "12345"))
+	})
+	t.Run("TestAttributionOffer", func(t *testing.T) {
+
+		query := &model.AttributionQuery{
+			From:                   timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 7*U.SECONDS_IN_A_DAY,
+			AttributionKey:         model.AttributionKeyCampaign,
+			AttributionMethodology: model.AttributionMethodFirstTouch,
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           4,
+			QueryType:              model.AttributionQueryTypeEngagementBased,
+			TacticOfferType:        model.MarketingEventTypeOffer,
+		}
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		// The query contains sessions only, hence no attribution for OTP i.e. for "Offer"
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "12345"))
+	})
+
+}
+
 func TestAttributionWithUserIdentification(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)

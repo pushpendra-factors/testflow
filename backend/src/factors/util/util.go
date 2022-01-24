@@ -1072,6 +1072,22 @@ func ConvertPostgresJSONBToMap(sourceJsonb postgres.Jsonb) (map[string]interface
 	return targetMap, nil
 }
 
+func GetStartOfDateEpochInOtherTimezone(value int64, currentTimezone, nextTimezone string) int64 {
+	currentLocation, _ := time.LoadLocation(currentTimezone)
+	nextLocation, _ := time.LoadLocation(nextTimezone)
+	dateTimeInCurrentTimezone := time.Unix(value, 0).In(currentLocation)
+	beginningOfDateInNextTimezone := time.Date(dateTimeInCurrentTimezone.Year(), dateTimeInCurrentTimezone.Month(), dateTimeInCurrentTimezone.Day(), 0, 0, 0, 0, nextLocation).Unix()
+	return beginningOfDateInNextTimezone
+}
+
+func GetEndOfDateEpochInOtherTimezone(value int64, currentTimezone, nextTimezone string) int64 {
+	currentLocation, _ := time.LoadLocation(currentTimezone)
+	nextLocation, _ := time.LoadLocation(nextTimezone)
+	dateTimeInCurrentTimezone := time.Unix(value, 0).In(currentLocation)
+	beginningOfDateInNextTimezone := time.Date(dateTimeInCurrentTimezone.Year(), dateTimeInCurrentTimezone.Month(), dateTimeInCurrentTimezone.Day(), 23, 59, 59, int(time.Second-time.Nanosecond), nextLocation).Unix()
+	return beginningOfDateInNextTimezone
+}
+
 // Most of the rows will have groupBy keys and/or timestamp followed by a single value pattern.
 // To get Keys - we have taken (groupBy keys and/or timestamp values) as hashKey and metric value as hashValue against it.
 func GetkeyFromRow(row []interface{}) string {

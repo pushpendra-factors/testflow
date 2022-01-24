@@ -233,20 +233,21 @@ type Services struct {
 // Use flag --healthcheck_ping_id to override default ping_id for duplicate/special jobs.
 const (
 	// Cron ping IDs.
-	HealthcheckAddSessionPingID              = "8da15fff-15f0-4410-9efc-524f624fd388"
-	HealthcheckArchiveEventsPingID           = "b2d0f1df-901e-4113-bb45-eed95539790b"
-	HealthcheckBigqueryUploadPingID          = "03e0fba3-d660-4679-8595-29b6cd04e87c"
-	HealthcheckCleanupEventUserCachePingID   = "85e21b5c-5503-4172-af40-de918741a4d1"
-	HealthcheckDashboardCachingPingID        = "72e5eadc-b46e-45ca-ba78-29819532307d"
-	HealthcheckHubspotEnrichPingID           = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
-	HealthcheckMonitoringJobPingID           = "18db44be-c193-4f11-84e5-5ff144e272e9"
-	HealthcheckSalesforceEnrichPingID        = "e56175aa-3407-4595-bb94-d8325952b224"
-	HealthcheckYourstoryAddPropertiesPingID  = "acf7faab-c56f-415e-aa10-ca2aa9246172"
-	HealthCheckSmartPropertiesPingID         = "ead84671-b84c-481b-bfa5-59403d626652"
-	HealthCheckSmartPropertiesDupPingID      = "d2b55241-52d8-4cc5-a49c-5b57f6a96642"
-	HealthcheckBeamDashboardCachingPingID    = "ecb259b9-4ff8-4825-b989-81d47bd34d93"
-	HealthcheckBeamDashboardCachingNowPingID = "be2f00de-57e1-401b-b2c9-9df305c3f528"
-	HealthcheckMonitoringJobMemSQLPingID     = "de2b64d4-952e-47ca-ac70-1bf9d8e1587e"
+	HealthcheckAddSessionPingID                 = "8da15fff-15f0-4410-9efc-524f624fd388"
+	HealthcheckArchiveEventsPingID              = "b2d0f1df-901e-4113-bb45-eed95539790b"
+	HealthcheckBigqueryUploadPingID             = "03e0fba3-d660-4679-8595-29b6cd04e87c"
+	HealthcheckCleanupEventUserCachePingID      = "85e21b5c-5503-4172-af40-de918741a4d1"
+	HealthcheckDashboardCachingPingID           = "72e5eadc-b46e-45ca-ba78-29819532307d"
+	HealthcheckHubspotEnrichPingID              = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
+	HealthcheckMonitoringJobPingID              = "18db44be-c193-4f11-84e5-5ff144e272e9"
+	HealthcheckSalesforceEnrichPingID           = "e56175aa-3407-4595-bb94-d8325952b224"
+	HealthcheckYourstoryAddPropertiesPingID     = "acf7faab-c56f-415e-aa10-ca2aa9246172"
+	HealthCheckSmartPropertiesPingID            = "ead84671-b84c-481b-bfa5-59403d626652"
+	HealthCheckSmartPropertiesDupPingID         = "d2b55241-52d8-4cc5-a49c-5b57f6a96642"
+	HealthcheckBeamDashboardCachingPingID       = "ecb259b9-4ff8-4825-b989-81d47bd34d93"
+	HealthcheckBeamDashboardCachingNowPingID    = "be2f00de-57e1-401b-b2c9-9df305c3f528"
+	HealthcheckMonitoringJobMemSQLPingID        = "de2b64d4-952e-47ca-ac70-1bf9d8e1587e"
+	HealthcheckSavedQueriesTimezoneChangePingID = "42f96466-c467-44cc-899d-7e55b8a1aa4e"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
