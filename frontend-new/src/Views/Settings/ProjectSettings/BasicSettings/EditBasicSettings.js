@@ -122,7 +122,7 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
                   onChange={handleChange}
               >
               {dataLoading ? <Skeleton.Avatar active={true} size={104} shape={'square'} />
-                : imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px'}} /> : <Avatar size={104} shape={'square'} icon={<UserOutlined />} />
+                : imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px'}} /> : activeProject?.profile_picture ? <img src={activeProject?.profile_picture} alt="avatar" style={{width:'105px'}} /> : <Avatar size={104} shape={'square'} icon={<UserOutlined />} />
               }
               </Upload>
               <Text type={'paragraph'} mini extraClass={'m-0 mt-1'} color={'grey'} >A logo helps personalise your Project</Text>

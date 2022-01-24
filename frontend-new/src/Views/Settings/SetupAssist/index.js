@@ -18,6 +18,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
     const [ownerID, setownerID] = useState();
+    const [sdkCheck, setsdkCheck] = useState();
     const history = useHistory();
 
     
@@ -33,7 +34,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
     
     let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
                     :ownerID === '116047122'? 'https://calendly.com/priyanka-267/30min'
-                    :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': null;
+                    :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': 'https://calendly.com/factors-ai/30min';
 
     const defaultOptions = {
         loop: true,
@@ -45,10 +46,11 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
     };
 
     useEffect(() => {
-        fetchProjectSettingsV1(activeProject.id).then(() => {
+        fetchProjectSettingsV1(activeProject.id).then((res) => {
             console.log('fetch project settings success');
+            setsdkCheck(res.data.int_completed);
         });
-    }, [activeProject]);
+    }, [activeProject, sdkCheck]);
 
     integration = integration?.project_settings || integration;
 
@@ -60,7 +62,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
     integration?.int_salesforce_enabled_agent_uuid ||
     integration?.int_drift ||
     integration?.int_google_organic_enabled_agent_uuid ||
-    integration?.int_clear_bit || integration?.int_completed;
+    integration?.int_clear_bit || sdkCheck;
 
     return (
         <>
@@ -95,7 +97,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                         </Row>
                     </Col>
                     <Col span={16} style={{padding: '0px 0px 0px 30px'}}>
-                        {current === 0 ? <Website />: current === 1 ? <AdPlatforms />: current === 2 ? <CRMS /> : <OtherIntegrations />}
+                        {current === 0 ? <Website setsdkCheck={setsdkCheck} sdkCheck={sdkCheck}/>: current === 1 ? <AdPlatforms />: current === 2 ? <CRMS /> : <OtherIntegrations />}
                     </Col>
                 </Row>
             </div>

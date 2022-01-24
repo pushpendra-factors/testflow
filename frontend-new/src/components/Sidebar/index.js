@@ -53,8 +53,15 @@ function Sidebar(props) {
       }
     } else {
       setShowProjectModal(false);
+      props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
+          props.fetchAgentInfo().then(() => {
+              console.log('Profile details updated!');
+          });
+      }).catch((err) => {
+          console.log('updateAgentInfo failed-->', err);
+      });
     }
-  }, [])
+  }, [props.active_project])
 
   const popOvercontent = () => {
     return (

@@ -14,27 +14,38 @@ import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
 import EmptyDashboard from './EmptyDashboard';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration'
 import ProjectDropdown from './ProjectDropdown';
+import { connect } from 'react-redux';
+import { fetchProjectSettingsV1 } from 'Reducers/global';
 
-function Dashboard() {
+function Dashboard({ fetchProjectSettingsV1 }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
+  const [sdkCheck, setsdkCheck] = useState();
   const { dashboards } = useSelector((state) => state.dashboard);
   let integration = useSelector((state) => state.global.currentProjectSettings);
+  const activeProject = useSelector((state) => state.global.active_project) 
   const dispatch = useDispatch();
+
+  useEffect(() => {
+      fetchProjectSettingsV1(activeProject.id).then((res) => {
+          console.log('fetch project settings success');
+          setsdkCheck(res.data.int_completed);
+      });
+  }, [activeProject, sdkCheck]);
 
   integration = integration?.project_settings || integration;
 
-  const checkIntegration = integration?.int_segment ||
-    integration?.int_adwords_enabled_agent_uuid ||
-    integration?.int_linkedin_agent_uuid ||
-    integration?.int_facebook_user_id ||
-    integration?.int_hubspot ||
-    integration?.int_salesforce_enabled_agent_uuid ||
-    integration?.int_drift ||
-    integration?.int_google_organic_enabled_agent_uuid ||
-    integration?.int_clear_bit || integration?.int_completed;
+  const checkIntegration = integration?.int_segment || 
+  integration?.int_adwords_enabled_agent_uuid ||
+  integration?.int_linkedin_agent_uuid ||
+  integration?.int_facebook_user_id ||
+  integration?.int_hubspot ||
+  integration?.int_salesforce_enabled_agent_uuid ||
+  integration?.int_drift ||
+  integration?.int_google_organic_enabled_agent_uuid ||
+  integration?.int_clear_bit || sdkCheck;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -143,4 +154,4 @@ function Dashboard() {
   }
 }
 
-export default Dashboard;
+export default connect(null,{ fetchProjectSettingsV1 })(Dashboard);
