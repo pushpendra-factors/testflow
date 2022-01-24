@@ -53,14 +53,22 @@ func (pg *Postgres) runSingleProfilesQuery(projectID uint64, query model.Profile
 }
 
 func (pg *Postgres) ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
-	if model.IsValidUserSource(query.Type) {
+	if model.GetSourceFromQueryTypeOrGroupName(query) != 0 {
 		return pg.ExecuteAllUsersProfilesQuery(projectID, query)
 	} else {
-		return &model.QueryResult{}, http.StatusBadRequest, "Invalid query type for profiles"
+		return &model.QueryResult{}, http.StatusBadRequest,
+			fmt.Sprintf("Invalid QueryType or GroupName for profiles. QueryType: %s, GroupName: %s", query.Type, query.GroupAnalysis)
 	}
 }
 
 func (pg *Postgres) ExecuteAllUsersProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
+	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
+	if allowProfilesGroupSupport && model.IsValidProfileQueryGroupName(query.GroupAnalysis) && query.GroupAnalysis != model.USERS {
+		group, status := pg.GetGroup(projectID, query.GroupAnalysis)
+		if status == http.StatusFound {
+			query.GroupId = group.ID
+		}
+	}
 	query = model.TransformProfilesQuery(query)
 	sql, params, err := buildAllUsersQuery(projectID, query)
 	if err != nil {
@@ -116,6 +124,7 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	}
 
 	allowSupportForSourceColumnInUsers := C.IsProfileQuerySourceSupported(projectID)
+	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
 
 	var stepSqlStmnt string
 	stepSqlStmnt = fmt.Sprintf("SELECT %s FROM users WHERE project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterStmnt)
@@ -130,9 +139,15 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 		} else {
 			stepSqlStmnt = fmt.Sprintf("%s AND source=?", stepSqlStmnt)
 		}
-		params = append(params, model.UserSourceMap[query.Type])
-		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=false OR is_group_user IS NULL)", stepSqlStmnt)
+		params = append(params, model.GetSourceFromQueryTypeOrGroupName(query))
 	}
+
+	if !allowProfilesGroupSupport || (allowProfilesGroupSupport && query.GroupAnalysis == model.USERS) {
+		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=false OR is_group_user IS NULL)", stepSqlStmnt)
+	} else {
+		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=true AND group_%d_id IS NOT NULL)", stepSqlStmnt, query.GroupId)
+	}
+
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s LIMIT 10000", stepSqlStmnt, groupByStmnt, model.AliasAggr)
 
 	finalSQLStmnt := ""
