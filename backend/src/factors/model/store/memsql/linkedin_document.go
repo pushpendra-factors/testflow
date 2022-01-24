@@ -874,7 +874,6 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 	} else {
 		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
 	}
-
 	// SelectKeys
 
 	for _, groupBy := range query.GroupBy {
@@ -912,7 +911,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 		finalParams = append(finalParams, whereParams...)
 	}
 
-	resultSQLStatement := selectQuery + fromLinkedinDocuments + staticWhereStatementForLinkedin + whereConditionForFilters
+	resultSQLStatement := selectQuery + fromLinkedinDocuments + staticWhereStatementForLinkedin + finalFilterStatement
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
@@ -1000,6 +999,7 @@ func getLinkedinFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 			resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
 		}
 	}
+
 	return resultStatement
 }
 func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1, smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {

@@ -192,8 +192,8 @@ const FaDatepicker = ({
       onSelect(newDateData);
     }
     if (type == 'last_week') {
-      let startDate = MomentTz(today).subtract(1, 'weeks').startOf('week').toDate();
-      let endDate = MomentTz(today).subtract(1, 'weeks').endOf('week').toDate();
+      let startDate = MomentTz(today).subtract(1, 'weeks').startOf('week');
+      let endDate = MomentTz(today).subtract(1, 'weeks').endOf('week');
       let newDateData = {
         ...dateData,
         startDate,
@@ -219,8 +219,8 @@ const FaDatepicker = ({
       onSelect(newDateData);
     }
     if (type == 'last_month') { 
-      let startDate = MomentTz().subtract(1,'months').startOf('month').toDate();
-      let endDate = MomentTz().subtract(1,'months').endOf('month').toDate();
+      let startDate = MomentTz().subtract(1,'months').startOf('month');
+      let endDate = MomentTz().subtract(1,'months').endOf('month');
       let newDateData = {
         ...dateData,
         startDate,

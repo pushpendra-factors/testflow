@@ -77,6 +77,31 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID uint64) ([]model.Queri
 	return q, http.StatusFound
 }
 
+// fetching deleted, non-deleted queries.
+func (store *MemSQL) GetAllNonConvertedQueries(projectID uint64) ([]model.Queries, int) {
+	db := C.GetServices().Db
+
+	queries := make([]model.Queries, 0, 0)
+	err := db.Table("queries").Select("*").
+		Where("project_id = ? AND converted = false ", projectID).
+		Order("created_at DESC").Find(&queries).Error
+	if err != nil {
+		log.WithField("project_id", projectID).Error("Failed to fetch rows from queries table for project")
+		return queries, http.StatusInternalServerError
+	}
+	if len(queries) == 0 {
+		return queries, http.StatusFound
+	}
+	q, errCode := store.addCreatedByNameInQueries(queries, projectID)
+	if errCode != http.StatusFound {
+		// logging error but still sending the queries
+		log.WithField("project_id", projectID).Error("could not update created " +
+			"by name for queries")
+		return queries, http.StatusFound
+	}
+	return q, http.StatusFound
+}
+
 // addCreatedByName Adds agent name in the query.CreatedByName
 func (store *MemSQL) addCreatedByNameInQueries(queries []model.Queries, projectID uint64) ([]model.Queries, int) {
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import moment from 'moment';
+import MomentTz from 'Components/MomentTz';
 import {
   getClickableTitleSorter,
   SortResults,
@@ -74,7 +74,7 @@ export const getColumns = (
       ),
       dataIndex: 'date',
       render: (d) => {
-        return moment(d).format(format);
+        return MomentTz(d).format(format);
       },
     },
   ];
@@ -244,9 +244,9 @@ export const getDateBasedColumns = (
   const dateColumns = data.map((elem) => {
     return {
       title: getClickableTitleSorter(
-        moment(elem.date).format(format),
+        MomentTz(elem.date).format(format),
         {
-          key: moment(elem.date).format(format),
+          key: MomentTz(elem.date).format(format),
           type: 'numerical',
           subtype: null,
         },
@@ -254,7 +254,7 @@ export const getDateBasedColumns = (
         handleSorting
       ),
       width: frequency === 'hour' ? 150 : 100,
-      dataIndex: moment(elem.date).format(format),
+      dataIndex: MomentTz(elem.date).format(format),
       render: (d) => {
         return <NumFormat number={d} />;
       },
@@ -275,7 +275,7 @@ export const getNoGroupingTablularDatesBasedData = (
     elem.eventName.toLowerCase().includes(searchText.toLowerCase())
   );
   const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
-  const dates = data.map((elem) => moment(elem.date).format(format));
+  const dates = data.map((elem) => MomentTz(elem.date).format(format));
   const result = filteredMapper.map((elem, index) => {
     let total = 0;
     if (
@@ -301,7 +301,7 @@ export const getNoGroupingTablularDatesBasedData = (
     const eventsData = {};
     dates.forEach((date) => {
       eventsData[date] = data.find(
-        (d) => moment(d.date).format(format) === date
+        (d) => MomentTz(d.date).format(format) === date
       )[elem.mapper];
     });
     return {

@@ -155,6 +155,18 @@ func (q *KPIQueryGroup) TransformDateTypeFilters() error {
 	return nil
 }
 
+func (q *KPIQueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error {
+	for i := range q.GlobalFilters {
+		q.GlobalFilters[i].ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+	}
+	for i := range q.Queries {
+		for j := range q.Queries[i].Filters {
+			q.Queries[i].Filters[j].ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone)
+		}
+	}
+	return nil
+}
+
 func transformDateTypeFiltersForKPIFilters(filters []KPIFilter, timezoneString U.TimeZoneString) error {
 	for i := range filters {
 		err := filters[i].TransformDateTypeFilters(timezoneString)
@@ -186,6 +198,39 @@ type KPIFilter struct {
 	Condition        string `json:"co"`
 	Value            string `json:"va"`
 	LogicalOp        string `json:"lOp"`
+}
+
+func (qFilter *KPIFilter) ConvertAllDatesFromTimezone1ToTimzone2(currentTimezone, nextTimezone string) error {
+	var dateTimeValue *DateTimePropertyValue
+	var err error
+	if qFilter.PropertyDataType == U.PropertyTypeDateTime {
+		dateTimeValue, err = DecodeDateTimePropertyValue(qFilter.Value)
+		if err != nil {
+			log.WithError(err).Error("Failed reading dateTimeValue.")
+			return err
+		}
+		transformedFrom, err := getEpochInSecondsFromMilliseconds(dateTimeValue.From)
+		if err != nil {
+			return err
+		}
+		transformedTo, err := getEpochInSecondsFromMilliseconds(dateTimeValue.To)
+		if err != nil {
+			return err
+		}
+		if qFilter.Condition == BetweenStr || qFilter.Condition == NotInBetweenStr {
+			transformedFrom = U.GetStartOfDateEpochInOtherTimezone(transformedFrom, currentTimezone, nextTimezone)
+			transformedTo = U.GetEndOfDateEpochInOtherTimezone(transformedTo, currentTimezone, nextTimezone)
+		} else if qFilter.Condition == BeforeStr {
+			transformedTo = U.GetStartOfDateEpochInOtherTimezone(transformedTo, currentTimezone, nextTimezone)
+		} else if qFilter.Condition == SinceStr {
+			transformedFrom = U.GetStartOfDateEpochInOtherTimezone(transformedFrom, currentTimezone, nextTimezone)
+		}
+		dateTimeValue.From = transformedFrom
+		dateTimeValue.To = transformedTo
+		transformedValue, _ := json.Marshal(dateTimeValue)
+		qFilter.Value = string(transformedValue)
+	}
+	return nil
 }
 
 // Duplicate code present between QueryProperty and KPIFilter

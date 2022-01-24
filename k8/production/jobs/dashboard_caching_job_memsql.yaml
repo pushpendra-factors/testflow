@@ -60,6 +60,8 @@ spec:
             - 11535a45-e2ff-419f-84b4-fc7754f030fe
             - --app_name
             - dashboard-caching-job-memsql
+            - --dashboard_unit_id
+            - "*"            
             envFrom:
             - configMapRef:
                 name: config-env

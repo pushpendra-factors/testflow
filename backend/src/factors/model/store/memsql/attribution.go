@@ -61,29 +61,30 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		return nil, err
 	}
 
-	// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
-	_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
-	logCtx.Info("Done getAllTheSessions 1 error not checked")
-	logCtx.Info(len(sessionUsers))
-	logCtx.Info(len(_sessions))
-	logCtx.Info(err)
-	logCtx.Info("Done getAllTheSessions 2 error checked")
-	if err != nil {
-		logCtx.Info("Done getAllTheSessions 3 return from  checked")
-		return nil, err
-	}
-	logCtx.Info("Done getAllTheSessions")
-
-	usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
-	if err != nil {
-		return nil, err
-	}
-
-	logCtx.Info("Done GetCoalesceIDFromUserIDs")
 	sessions := make(map[string]map[string]model.UserSessionData)
-	model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo, &sessions)
-	logCtx.Info("Done UpdateSessionsMapWithCoalesceID")
 
+	// Pull Sessions for the cases: "Tactic"  and "TacticOffer"
+	if query.TacticOfferType != model.MarketingEventTypeOffer {
+		// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
+		_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
+		logCtx.Info("Done getAllTheSessions 1 error not checked")
+		if err != nil {
+			logCtx.Info("Done getAllTheSessions 3 return from  checked")
+			return nil, err
+		}
+		logCtx.Info("Done getAllTheSessions")
+
+		usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
+		if err != nil {
+			return nil, err
+		}
+
+		logCtx.Info("Done GetCoalesceIDFromUserIDs")
+		model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo, &sessions)
+		logCtx.Info("Done UpdateSessionsMapWithCoalesceID")
+	}
+
+	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
 	store.AppendOTPSessions(projectID, query, &sessions, logCtx)
 
 	if C.GetAttributionDebug() == 1 {

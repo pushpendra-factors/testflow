@@ -52,7 +52,7 @@ function ProjectDropdown({
 
   const changeActiveDashboard = useCallback(
     (val) => {
-      if (parseInt(val) === activeDashboard.id) {
+      if (parseInt(val) === activeDashboard?.id) {
         return false;
       }
       dispatch({
@@ -60,12 +60,12 @@ function ProjectDropdown({
         payload: dashboards.data.find((d) => d.id === parseInt(val)),
       });
     },
-    [dashboards, dispatch, activeDashboard.id]
+    [dashboards, dispatch, activeDashboard?.id]
   );
 
   useEffect(() => {
-    setDashboardName(activeDashboard.name);
-    setDashboardDesc(activeDashboard.description);
+    setDashboardName(activeDashboard?.name);
+    setDashboardDesc(activeDashboard?.description);
   }, [activeDashboard]);
 
   const handleOptChange = useCallback(
@@ -79,12 +79,12 @@ function ProjectDropdown({
   );
 
   const fetchUnits = useCallback(() => {
-    if (active_project.id && activeDashboard.id) {
+    if (active_project.id && activeDashboard?.id) {
       dispatch(
-        fetchActiveDashboardUnits(active_project.id, activeDashboard.id)
+        fetchActiveDashboardUnits(active_project.id, activeDashboard?.id)
       );
     }
-  }, [active_project.id, activeDashboard.id, dispatch]);
+  }, [active_project.id, activeDashboard?.id, dispatch]);
 
   useEffect(() => {
     fetchUnits();
@@ -103,13 +103,13 @@ function ProjectDropdown({
   const confirmDeleteDashboard = useCallback(async () => {
     try {
       setDashboardDeleteApi(true);
-      await deleteDashboard(active_project.id, activeDashboard.id);
+      await deleteDashboard(active_project.id, activeDashboard?.id);
       setDashboardDeleteApi(false);
       dispatch({ type: DASHBOARD_DELETED, payload: activeDashboard });
       showdeleteDashboardModal(false);
-      setDashboardName(dashboards.data[0].name);
-      setDashboardDesc(dashboards.data[0].description);
-      changeActiveDashboard(dashboards.data[0].id);
+      setDashboardName(dashboards.data[0]?.name);
+      setDashboardDesc(dashboards.data[0]?.description);
+      changeActiveDashboard(dashboards.data[0]?.id);
     } catch (err) {
       console.log(err);
       setDashboardDeleteApi(false);
@@ -148,7 +148,7 @@ function ProjectDropdown({
         {selectVisible ? (
           <GroupSelect2
             groupedProperties={generateDBList()}
-            placeholder='Select Event'
+            placeholder='Search Dashboard'
             iconColor='#3E516C'
             optionClick={handleOptChange}
             onClickOutside={() => setSelectVisible(false)}
@@ -290,7 +290,6 @@ function ProjectDropdown({
                 type={'title'}
                 weight={'medium'}
                 color={'grey'}
-                extraClass={showDashboardDesc.length ? '' : 'italic'}
               >
                 {showDashboardDesc}
               </Text>

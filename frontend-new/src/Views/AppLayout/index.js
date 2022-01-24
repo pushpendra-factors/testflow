@@ -128,7 +128,7 @@ function AppLayout({
                     component={CoreQuery}
                   />
                   <Route path="/explain" name="Factors" component={Factors} />
-                  <Route path="/project-setup" component={SetupAssist} />
+                  {/* <Route path="/project-setup" component={SetupAssist} /> */}
                 </Switch>
               </Suspense>
             </Content>

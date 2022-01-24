@@ -32,8 +32,9 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
     <Modal
       centered={true}
       visible={visible}
+      width={700}
       title={null}
-      className={`fa-modal--regular fa-modal--slideInDown ${styles.modal_new} fa-global-search--modal`}
+      className={`fa-modal--regular fa-modal--slideInDown ${styles.modal} fa-global-search--modal`}
       okText={'Save'}
       confirmLoading={false}
       closable={false}
@@ -44,7 +45,6 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
       footer={false}
       transitionName=''
       maskTransitionName=''
-      style={{ maxHeight: '600px' }}
       mask={false}
     >
       <div data-tour = 'step-3' className='search-bar'>
@@ -56,8 +56,8 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
             // onFocus={handleFocus}
             autoFocus
             // className={`${styles.inputBox} ${focused ? styles.focused : ''}`}
-            className={`fa-global-search--input-new fa-global-search--input-fw-new py-4 mt-4`}
-            placeholder='Lookup factors.ai'
+            className={`fa-global-search--input fa-global-search--input-fw py-4 mt-4`}
+            placeholder='Search Reports'
             prefix={<SVG name='search' size={16} color={'grey'} />}
           />
         </div>

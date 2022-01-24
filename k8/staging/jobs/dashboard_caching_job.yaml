@@ -50,6 +50,8 @@ spec:
             - "2"
             - --num_routines
             - "4"
+            - --dashboard_unit_id
+            - "*"            
             envFrom:
             - configMapRef:
                 name: config-env
