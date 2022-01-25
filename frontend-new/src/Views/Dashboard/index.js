@@ -16,6 +16,7 @@ import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegratio
 import ProjectDropdown from './ProjectDropdown';
 import { connect } from 'react-redux';
 import { fetchProjectSettingsV1 } from 'Reducers/global';
+import { useHistory } from 'react-router-dom';
 
 function Dashboard({ fetchProjectSettingsV1 }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
@@ -27,6 +28,7 @@ function Dashboard({ fetchProjectSettingsV1 }) {
   let integration = useSelector((state) => state.global.currentProjectSettings);
   const activeProject = useSelector((state) => state.global.active_project) 
   const dispatch = useDispatch();
+  const history = useHistory();
 
   useEffect(() => {
       fetchProjectSettingsV1(activeProject.id).then((res) => {
@@ -46,6 +48,12 @@ function Dashboard({ fetchProjectSettingsV1 }) {
   integration?.int_drift ||
   integration?.int_google_organic_enabled_agent_uuid ||
   integration?.int_clear_bit || sdkCheck;
+
+  useEffect(() => {
+    if(!checkIntegration) {
+      history.push('/project-setup')
+    }
+  },[checkIntegration])
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);

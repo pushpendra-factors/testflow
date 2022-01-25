@@ -179,7 +179,7 @@ export function activate(password, token){
     return new Promise((resolve, reject) => {
       dispatch({type: "AGENT_VERIFY"});
 
-      post(dispatch, host+"agents/activate?token="+token, { 
+      post(dispatch, host+"agents/activate?skip_project=true&token="+token, { 
         password: password
       })
       .then(() => {
