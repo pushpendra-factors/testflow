@@ -192,13 +192,16 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
                 rules={[{ required: true, message: 'Please choose an option' }]}
                 disabled={!activeProject?.is_multiple_project_timezone_enabled}
               >
-                <Select 
+                {activeProject?.is_multiple_project_timezone_enabled ? <Select 
                 disabled={!activeProject?.is_multiple_project_timezone_enabled}
                 className={'fa-select w-full'} placeholder={'Time Zone'} size={'large'}>
-                   { Object.keys(TimeZoneName).map((item)=>{
+                   { activeProject?.is_multiple_project_timezone_enabled && Object.keys(TimeZoneName).map((item)=>{
                     return  <Option value={item}>{TimeZoneName[item]}</Option> 
                   })} 
-                </Select>
+                </Select> 
+                : 
+                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{(activeProject?.time_zone) ? TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject.time_zone)] : '---'}</Text>
+                }
               </Form.Item>
             </Col>
           </Row>

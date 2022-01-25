@@ -99,7 +99,7 @@ function ViewBasicSettings({
           <Col span={12}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Time Zone</Text>
             { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} /> 
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{(activeProject?.time_zone && activeProject?.is_multiple_project_timezone_enabled) ? TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject.time_zone)] : '---'}</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{(activeProject?.time_zone) ? TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject.time_zone)] : '---'}</Text>
             }
           </Col>
         </Row>
