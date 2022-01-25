@@ -431,8 +431,9 @@ func UpdateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[s
 // AddDefaultMarketingEventTypeTacticOffer adds default tactic or offer for older queries
 func AddDefaultMarketingEventTypeTacticOffer(query *AttributionQuery) {
 
+	// Default is set as Tactic
 	if (*query).TacticOfferType == "" {
-		(*query).TacticOfferType = MarketingEventTypeTacticOffer
+		(*query).TacticOfferType = MarketingEventTypeTactic
 	}
 }
 
@@ -1117,9 +1118,9 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 			continue
 		}
 
-		grandTotalRow[keyIndex+1] = grandTotalRow[keyIndex+1].(int64) + row[keyIndex+1].(int64)     // Impressions.
-		grandTotalRow[keyIndex+2] = grandTotalRow[keyIndex+2].(int64) + row[keyIndex+2].(int64)     // Clicks.
-		grandTotalRow[keyIndex+3] = grandTotalRow[keyIndex+3].(float64) + row[keyIndex+3].(float64) // Spend.
+		grandTotalRow[keyIndex+1] = grandTotalRow[keyIndex+1].(int64) + row[keyIndex+1].(int64)                                                        // Impressions.
+		grandTotalRow[keyIndex+2] = grandTotalRow[keyIndex+2].(int64) + row[keyIndex+2].(int64)                                                        // Clicks.
+		grandTotalRow[keyIndex+3], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+3].(float64)+row[keyIndex+3].(float64), U.DefaultPrecision) // Spend.
 
 		grandTotalRow[keyIndex+8] = grandTotalRow[keyIndex+8].(int64) + row[keyIndex+8].(int64) // Sessions.
 		grandTotalRow[keyIndex+9] = grandTotalRow[keyIndex+9].(int64) + row[keyIndex+9].(int64) // Users.
@@ -1153,8 +1154,8 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 		}
 
 		if spend > 0 {
-			spendCPC = spendCPC + spend
-			conversionsCPC = conversionsCPC + row[keyIndex+12].(float64)
+			spendCPC, _ = U.FloatRoundOffWithPrecision(spendCPC+spend, U.DefaultPrecision)
+			conversionsCPC, _ = U.FloatRoundOffWithPrecision(conversionsCPC+row[keyIndex+12].(float64), U.DefaultPrecision)
 		}
 
 		// Remaining linked funnel events & CPCs
@@ -1162,8 +1163,8 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 		for i := keyIndex + 18; i < len(grandTotalRow); i += 3 {
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) {
-				spendFunnelConversionCPC[j] = spendFunnelConversionCPC[j] + spend
-				conversionFunnelConversionCPC[j] = conversionFunnelConversionCPC[j] + grandTotalRow[i].(float64)
+				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
+				conversionFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(conversionFunnelConversionCPC[j]+grandTotalRow[i].(float64), U.DefaultPrecision)
 			}
 
 			if grandTotalRow[keyIndex+12].(float64) > 0 {

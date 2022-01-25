@@ -101,9 +101,9 @@ func TestAttributionModel(t *testing.T) {
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
-	// Should return error for non adwords customer account id
+	// Should not return error for non adwords customer account id
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
@@ -243,9 +243,9 @@ func TestAttributionEngagementModel(t *testing.T) {
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
-	// Should return error for non adwords customer account id
+	// Should not return error for no adwords customer account id
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
@@ -385,9 +385,9 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	// Should return error for non adwords customer account id
+	// Should not return error for no adwords customer account id
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 
 	addMarketingData(t, project)
 

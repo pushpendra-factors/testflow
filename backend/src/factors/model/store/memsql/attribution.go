@@ -38,9 +38,6 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	if errCode != http.StatusFound {
 		return nil, errors.New("failed to get project Settings")
 	}
-	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
-		return &model.QueryResult{}, errors.New(model.AttributionErrorIntegrationNotFound)
-	}
 
 	marketingReports, err := store.FetchMarketingReports(projectID, *query, *projectSetting)
 	if err != nil {
@@ -159,9 +156,6 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	result.Rows = model.AddGrandTotalRow(result.Headers, result.Rows, model.GetLastKeyValueIndex(result.Headers))
 	currency, err := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
 	logCtx.Info("Done sort GetAdwordsCurrency")
-	if err != nil {
-		return result, err
-	}
 	result.Meta.Currency = currency
 	logCtx.Info("Done result")
 	return result, nil
@@ -748,6 +742,10 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 // GetAdwordsCurrency Returns currency used for adwords customer_account_id
 func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID string, from, to int64) (string, error) {
 
+	// Check for no-adwords account linked
+	if customerAccountID == "" {
+		return "", errors.New("no ad-words customer account id found")
+	}
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	if len(customerAccountIDs) == 0 {
 		return "", errors.New("no ad-words customer account id found")
