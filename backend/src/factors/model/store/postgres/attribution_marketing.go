@@ -20,7 +20,12 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 	effectiveFrom := q.From
 	effectiveTo := q.To
 
-	adwordsCustomerID := *projectSetting.IntAdwordsCustomerAccountId
+	adwordsCustomerID := ""
+	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
+		adwordsCustomerID = ""
+	} else {
+		adwordsCustomerID = *projectSetting.IntAdwordsCustomerAccountId
+	}
 	var adwordsGCLIDData map[string]model.MarketingData
 	var reportType int
 	var adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData map[string]model.MarketingData
