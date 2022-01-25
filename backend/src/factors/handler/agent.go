@@ -214,7 +214,7 @@ func AgentInvite(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "User is already mapped to project"})
 			return
 		}
-	}else {
+	} else {
 		pam, errCode = store.GetStore().CreateProjectAgentMappingWithDependenciesWithoutDashboard(
 			&model.ProjectAgentMapping{
 				ProjectID: projectId,
@@ -231,7 +231,6 @@ func AgentInvite(c *gin.Context) {
 			return
 		}
 	}
-
 
 	sendVerifyProfileLink := createNewAgent
 
@@ -359,7 +358,7 @@ func AgentInviteBatch(c *gin.Context) {
 				failedToInviteAgentIndexes[idx] = "User is already mapped to project"
 				continue
 			}
-		}else{
+		} else {
 			projectAgentMapping, errCode = store.GetStore().CreateProjectAgentMappingWithDependenciesWithoutDashboard(
 				&model.ProjectAgentMapping{
 					ProjectID: projectId,
@@ -597,6 +596,11 @@ func AgentActivate(c *gin.Context) {
 		return
 	}
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	var skipProject bool
+	skip_project := c.Query("skip_project")
+	if skip_project == "true" {
+		skipProject = true
+	}
 	ts := time.Now().UTC()
 	errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, params.Password, params.FirstName, params.LastName, true, ts)
 	if errCode == http.StatusInternalServerError {
@@ -609,10 +613,11 @@ func AgentActivate(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
-	_, errCode = store.GetStore().CreateDefaultProjectForAgent(agentUUID)
-	if errCode != http.StatusConflict && errCode != http.StatusCreated {
-		logCtx.WithField("agent_uuid", agentUUID).Error("Failed to create default project for agent.")
+	if !skipProject {
+		_, errCode = store.GetStore().CreateDefaultProjectForAgent(agentUUID)
+		if errCode != http.StatusConflict && errCode != http.StatusCreated {
+			logCtx.WithField("agent_uuid", agentUUID).Error("Failed to create default project for agent.")
+		}
 	}
 
 	resp := map[string]string{
