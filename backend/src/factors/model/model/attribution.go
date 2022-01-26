@@ -2046,13 +2046,13 @@ func enrichDimensions(attributionData *map[string]*AttributionData, dimensions [
 			if _, exists := adwordsData[customDimKey]; exists {
 				foundInAdwords = "Found"
 			}
-			log.WithFields(log.Fields{"CustomDebug": "True1", "CustomDimKey": customDimKey, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel})
+			log.WithFields(log.Fields{"CustomDebug": "True1", "CustomDimKey": customDimKey, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Custom Dimension")
 
 			switch (*attributionData)[k].Channel {
 			case ChannelAdwords:
 				if d, exists := adwordsData[customDimKey]; exists {
 					if val, found := d.CustomDimensions[dim]; found {
-						log.WithFields(log.Fields{"CustomDebug": "True2", "CustomDimKey": customDimKey, "data": adwordsData[customDimKey], "Val": val, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel})
+						log.WithFields(log.Fields{"CustomDebug": "True2", "CustomDimKey": customDimKey, "data": adwordsData[customDimKey], "Val": val, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel}).Info("Enrich Adwords Custom Dimension")
 						(*attributionData)[k].CustomDimensions[dim] = val
 					}
 				}

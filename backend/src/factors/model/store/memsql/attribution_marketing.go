@@ -416,6 +416,6 @@ func (store *MemSQL) PullSmartProperties(projectID uint64, campaignIDPlaceHolder
 		}
 
 	}
-	log.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder, "DataKeyDimensions": dataKeyDimensions})
+	log.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder, "DataKeyDimensions": dataKeyDimensions}).Info("Pull Smart Properties")
 	return dataKeyDimensions, nil
 }
