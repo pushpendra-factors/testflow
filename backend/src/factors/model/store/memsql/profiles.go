@@ -149,9 +149,9 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	}
 
 	if !allowProfilesGroupSupport || (allowProfilesGroupSupport && query.GroupAnalysis == model.USERS) {
-		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=false OR is_group_user IS NULL)", stepSqlStmnt)
+		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=0 or is_group_user IS NULL)", stepSqlStmnt)
 	} else {
-		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=true AND group_%d_id IS NOT NULL)", stepSqlStmnt, query.GroupId)
+		stepSqlStmnt = fmt.Sprintf("%s AND (is_group_user=1 AND group_%d_id IS NOT NULL)", stepSqlStmnt, query.GroupId)
 	}
 
 	stepSqlStmnt = fmt.Sprintf("%s %s ORDER BY %s LIMIT 10000", stepSqlStmnt, groupByStmnt, model.AliasAggr)
