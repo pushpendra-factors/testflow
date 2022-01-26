@@ -2033,32 +2033,46 @@ func enrichDimensions(attributionData *map[string]*AttributionData, dimensions [
 
 		for _, dim := range dimensions {
 
-			customDimKey := GetKeyForCustomDimensions(v.MarketingInfo.CampaignID, v.MarketingInfo.CampaignName, v.MarketingInfo.AdgroupID, v.MarketingInfo.AdgroupName, attributionKey)
-
 			if (*attributionData)[k].CustomDimensions == nil {
 				(*attributionData)[k].CustomDimensions = make(map[string]interface{})
 			}
 			(*attributionData)[k].CustomDimensions[dim] = PropertyValueNone
 
+			customDimKey := GetKeyForCustomDimensions(v.MarketingInfo.CampaignID, v.MarketingInfo.CampaignName, v.MarketingInfo.AdgroupID, v.MarketingInfo.AdgroupName, attributionKey)
+			if customDimKey == "" {
+				continue
+			}
+			foundInAdwords := "NotFound"
+			if _, exists := adwordsData[customDimKey]; exists {
+				foundInAdwords = "Found"
+			}
+			log.WithFields(log.Fields{"CustomDebug": "True1", "CustomDimKey": customDimKey, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel})
+
 			switch (*attributionData)[k].Channel {
 			case ChannelAdwords:
 				if d, exists := adwordsData[customDimKey]; exists {
 					if val, found := d.CustomDimensions[dim]; found {
+						log.WithFields(log.Fields{"CustomDebug": "True2", "CustomDimKey": customDimKey, "data": adwordsData[customDimKey], "Val": val, "Found": foundInAdwords, "AttributionDataKey": k, "AttributionDataValue": v, "Channel": (*attributionData)[k].Channel})
 						(*attributionData)[k].CustomDimensions[dim] = val
 					}
 				}
+				break
 			case ChannelFacebook:
 				if d, exists := fbData[customDimKey]; exists {
 					if val, found := d.CustomDimensions[dim]; found {
 						(*attributionData)[k].CustomDimensions[dim] = val
 					}
 				}
+				break
 			case ChannelLinkedin:
 				if d, exists := linkedinData[customDimKey]; exists {
 					if val, found := d.CustomDimensions[dim]; found {
 						(*attributionData)[k].CustomDimensions[dim] = val
 					}
 				}
+				break
+			default:
+				break
 			}
 		}
 	}

@@ -393,6 +393,9 @@ func (store *MemSQL) PullSmartProperties(projectID uint64, campaignIDPlaceHolder
 			Channel: sourceChannelPlaceHolder,
 		}
 		key := model.GetKeyForCustomDimensions(_campaignID, _campaignName, _adgroupID, _adgroupName, attributionKey)
+		if key == "" {
+			continue
+		}
 		if objectType == model.SmartPropertyRulesTypeAliasToType["ad_group"] { // 1: "campaign", 2: "ad_group"
 			marketData.Name = _adgroupName
 			marketData.ID = _adgroupID
@@ -413,5 +416,6 @@ func (store *MemSQL) PullSmartProperties(projectID uint64, campaignIDPlaceHolder
 		}
 
 	}
+	log.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder, "DataKeyDimensions": dataKeyDimensions})
 	return dataKeyDimensions, nil
 }
