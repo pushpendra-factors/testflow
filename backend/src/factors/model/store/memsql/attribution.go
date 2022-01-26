@@ -154,9 +154,12 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	})
 
 	result.Rows = model.AddGrandTotalRow(result.Headers, result.Rows, model.GetLastKeyValueIndex(result.Headers))
-	currency, err := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
+	result.Meta.Currency = ""
+	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
+		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
+		result.Meta.Currency = currency
+	}
 	logCtx.Info("Done sort GetAdwordsCurrency")
-	result.Meta.Currency = currency
 	logCtx.Info("Done result")
 	return result, nil
 }

@@ -152,8 +152,12 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	})
 
 	result.Rows = model.AddGrandTotalRow(result.Headers, result.Rows, model.GetLastKeyValueIndex(result.Headers))
-	currency, err := pg.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
-	result.Meta.Currency = currency
+	result.Meta.Currency = ""
+	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
+		currency, _ := pg.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
+		result.Meta.Currency = currency
+	}
+
 	return result, nil
 }
 
