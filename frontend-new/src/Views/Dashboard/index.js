@@ -34,7 +34,10 @@ function Dashboard({ fetchProjectSettingsV1 }) {
       fetchProjectSettingsV1(activeProject.id).then((res) => {
           console.log('fetch project settings success');
           setsdkCheck(res.data.int_completed);
-      });
+      }).catch((err) => {
+        console.log(err.data.error)
+        history.push('/');
+    })
   }, [activeProject, sdkCheck]);
 
   integration = integration?.project_settings || integration;
@@ -51,9 +54,13 @@ function Dashboard({ fetchProjectSettingsV1 }) {
 
   useEffect(() => {
     if(!checkIntegration) {
-      history.push('/project-setup')
+      if(activeProject.id === 51) {
+        history.push('/')
+      } else {
+        history.push('/project-setup')
+      }
     }
-  },[checkIntegration])
+  },[checkIntegration, activeProject])
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);

@@ -82,6 +82,8 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
     setsdkCheck(checked);
   };
 
+  currentProjectSettings = currentProjectSettings?.project_settings || currentProjectSettings;
+
   return (
     <>
     <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
