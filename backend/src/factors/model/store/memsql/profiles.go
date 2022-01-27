@@ -145,7 +145,7 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 		} else {
 			stepSqlStmnt = fmt.Sprintf("%s AND source=?", stepSqlStmnt)
 		}
-		params = append(params, model.GetSourceFromQueryTypeOrGroupName)
+		params = append(params, model.GetSourceFromQueryTypeOrGroupName(query))
 	}
 
 	if !allowProfilesGroupSupport || (allowProfilesGroupSupport && query.GroupAnalysis == model.USERS) {
