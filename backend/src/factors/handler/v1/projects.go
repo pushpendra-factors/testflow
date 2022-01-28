@@ -108,3 +108,17 @@ func GetProjectsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 	return
 }
+
+func GetDemoProjects(c *gin.Context) {
+	demoProjects := make([]uint64, 0)
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	projects := C.GetConfig().DemoProjectIds
+
+	if C.IsLoggedInUserWhitelistedForProjectAnalytics(loggedInAgentUUID) {
+		c.JSON(http.StatusOK, demoProjects)
+		return
+	} else {
+		c.JSON(http.StatusOK, projects)
+		return
+	}
+}
