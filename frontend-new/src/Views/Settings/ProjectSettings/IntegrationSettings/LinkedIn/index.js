@@ -150,30 +150,6 @@ const LinkedInIntegration = ({
         }
     }
 
-    const onDisconnect = () =>{
-        setLoading(true);
-            udpateProjectSettings(activeProject.id, 
-            { "int_linkedin_ad_account": "",
-            "int_linkedin_access_token": "",
-            "int_linkedin_refresh_token": "",
-            "int_linkedin_refresh_token_expiry": 0,
-            "int_linkedin_access_token_expiry": 0,
-            "int_linkedin_agent_uuid": null,
-        }).then(() => {
-            setLoading(false);
-            setShowForm(false); 
-            setTimeout(() => {
-                message.success('LinkedIn integration disconnected!'); 
-            }, 500);
-            setIsActive(false);
-        }).catch((err) => {
-            message.error(`${err?.data?.error}`);  
-            setShowForm(false);
-            setLoading(false);
-            console.log('change password failed-->', err); 
-        });
-      }
-
     const getAdAccountsOptSrc = () => {
         let opts = {}
         for (let i in adAccounts) {
@@ -260,7 +236,6 @@ const LinkedInIntegration = ({
                         <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Connected Account</Text>
                         <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Selected LinkedIn Ad Account</Text>
                         <Input size="large" disabled={true} value={currentProjectSettings?.int_linkedin_ad_account} style={{ width: '400px' }} />
-                        <Button loading={loading} className={'mt-4'} onClick={()=>onDisconnect()}>Disconnect</Button>
                     </div>
                 )
             }
