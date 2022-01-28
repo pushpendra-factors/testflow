@@ -58,8 +58,6 @@ const TEST = "test"
 const STAGING = "staging"
 const PRODUCTION = "production"
 
-const MemSQLResourcePoolOLAP = "pool_olap"
-
 // Warning: Any changes to the cookie name has to be
 // in sync with other services which uses the cookie.
 const FactorsSessionCookieName = "factors-sid"
@@ -204,7 +202,7 @@ type Configuration struct {
 	EnableOLTPQueriesMemSQLImprovements         string
 	CaptureSourceInUsersTable                   string
 	AllowSupportForSourceColumnInUsers          string
-	UseOLAPPoolForAnalytics                     bool
+	ResourcePoolForAnalytics                    string
 	RestrictReusingUsersByCustomerUserId        string
 	HubspotAPIOnboardingHAPIKey                 string
 	AllowProfilesGroupSupport                   string
@@ -725,8 +723,8 @@ func GetMemSQLDSNString(dbConf *DBConf) string {
 	return memsqlDBConfig.FormatDSN()
 }
 
-func UseOLAPPoolForAnalytics() bool {
-	return configuration.UseOLAPPoolForAnalytics
+func UseResourcePoolForAnalytics() (bool, string) {
+	return configuration.ResourcePoolForAnalytics != "", configuration.ResourcePoolForAnalytics
 }
 
 func SetMemSQLResourcePoolQueryCallbackUsingSQLTx(db *sql.Tx, pool string) {

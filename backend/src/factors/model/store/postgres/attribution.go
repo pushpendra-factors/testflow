@@ -38,9 +38,6 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	if errCode != http.StatusFound {
 		return nil, errors.New("failed to get project Settings")
 	}
-	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
-		return &model.QueryResult{}, errors.New(model.AttributionErrorIntegrationNotFound)
-	}
 
 	marketingReports, err := pg.FetchMarketingReports(projectID, *query, *projectSetting)
 	if err != nil {
@@ -155,13 +152,12 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	})
 
 	result.Rows = model.AddGrandTotalRow(result.Headers, result.Rows, model.GetLastKeyValueIndex(result.Headers))
-	currency, err := pg.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
-	logCtx.Info("Done sort GetAdwordsCurrency")
-	if err != nil {
-		return result, err
+	result.Meta.Currency = ""
+	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
+		currency, _ := pg.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
+		result.Meta.Currency = currency
 	}
-	result.Meta.Currency = currency
-	logCtx.Info("Done result")
+
 	return result, nil
 }
 
@@ -714,6 +710,10 @@ func (pg *Postgres) GetConvertedUsersWithFilter(projectID uint64, goalEventName 
 // GetAdwordsCurrency Returns currency used for adwords customer_account_id
 func (pg *Postgres) GetAdwordsCurrency(projectID uint64, customerAccountID string, from, to int64) (string, error) {
 
+	// Check for no-adwords account linked
+	if customerAccountID == "" {
+		return "", errors.New("no ad-words customer account id found")
+	}
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	if len(customerAccountIDs) == 0 {
 		return "", errors.New("no ad-words customer account id found")

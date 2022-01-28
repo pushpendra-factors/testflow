@@ -200,6 +200,10 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     if (opts.track_on_init === false) {
         trackOnInit = false;
     }
+
+    if (opts.track_page_on_spa === true) {
+        factorsWindow().trackPageOnSPA = true
+    }
     
     // Gets settings using temp client with given token, if succeeds, 
     // set temp client as app client and set response as app config 
@@ -409,9 +413,9 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
 
     // Todo(Dinesh): Find ways to automate tests for SPA support.
     
-    // AutoTrack SPA
+    // AutoTrack SPA using history.
     // checks support for history and onpopstate listener.
-    if (window.history && window.onpopstate !== undefined) {
+    if ( !factorsWindow().trackPageOnSPA && window.history && window.onpopstate !== undefined) {
         var prevLocation = window.location.href;
         window.addEventListener('popstate', function() {
             logger.debug("Triggered window.onpopstate goto: "+window.location.href+", prev: "+prevLocation);
@@ -426,6 +430,20 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
             }
         })
     }
+
+    if (factorsWindow().trackPageOnSPA) {
+        setInterval(function(){
+            if (factorsWindow().currentPageURLEventName != getAutoTrackURL()) {
+                _this.track(
+                    getAutoTrackURL(), 
+                    Properties.getFromQueryParams(window.location), 
+                    true, 
+                    afterCallback,
+                );
+            }
+        }, 1000);
+    }
+    
 }
 
 App.prototype.captureAndTrackFormSubmit = function(appInstance, formElement) {

@@ -20,7 +20,12 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 	effectiveFrom := q.From
 	effectiveTo := q.To
 
-	adwordsCustomerID := *projectSetting.IntAdwordsCustomerAccountId
+	adwordsCustomerID := ""
+	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
+		adwordsCustomerID = ""
+	} else {
+		adwordsCustomerID = *projectSetting.IntAdwordsCustomerAccountId
+	}
 	var adwordsGCLIDData map[string]model.MarketingData
 	var reportType int
 	var adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData map[string]model.MarketingData
@@ -386,6 +391,9 @@ func (pg *Postgres) PullSmartProperties(projectID uint64, campaignIDPlaceHolder 
 			Channel: sourceChannelPlaceHolder,
 		}
 		key := model.GetKeyForCustomDimensions(_campaignID, _campaignName, _adgroupID, _adgroupName, attributionKey)
+		if key == "" {
+			continue
+		}
 		if objectType == model.SmartPropertyRulesTypeAliasToType["ad_group"] { // 1: "campaign", 2: "ad_group"
 			marketData.Name = _adgroupName
 			marketData.ID = _adgroupID
@@ -407,5 +415,6 @@ func (pg *Postgres) PullSmartProperties(projectID uint64, campaignIDPlaceHolder 
 		}
 
 	}
+	log.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder, "DataKeyDimensions": dataKeyDimensions}).Info("Pull Smart Properties")
 	return dataKeyDimensions, nil
 }

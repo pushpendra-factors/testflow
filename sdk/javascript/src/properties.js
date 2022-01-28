@@ -2,6 +2,7 @@
 
 const util = require("./utils/util");
 const FormCapture = require("./utils/form_capture");
+const logger = require("./utils/logger");
 
 const PLATFORM_WEB = "web";
 
