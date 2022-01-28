@@ -14,6 +14,7 @@ import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import EventFilterBy from './DrawerUtil/EventFilterBy';
 // import MomentTz from 'Components/MomentTz';
 import moment from 'moment-timezone';  
+import factorsai from 'factorsai';
 
 const title = (props) => {
   return (
@@ -260,7 +261,10 @@ const getInsights = (projectID, isJourney=false) =>{
       const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`;
       message.error(ErrMsg);
       setInsightBtnLoading(false);
-  }); 
+  });
+
+  //Factors RUN_EXPLAIN tracking
+  factorsai.track('RUN_EXPLAIN',{'query_type': 'explain'});
 
 }  
 

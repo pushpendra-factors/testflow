@@ -23,6 +23,7 @@ import FaSelect from 'Components/FaSelect';
 import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import { deleteDashboard } from '../../reducers/dashboard/services';
 import { DASHBOARD_DELETED } from '../../reducers/types';
+import factorsai from 'factorsai';
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -67,6 +68,16 @@ function ProjectDropdown({
     setDashboardName(activeDashboard?.name);
     setDashboardDesc(activeDashboard?.description);
   }, [activeDashboard]);
+
+
+
+  useEffect(()=>{ 
+    if(activeDashboard){ 
+      //Factors VIEW_DASHBOARD tracking
+    factorsai.track('VIEW_DASHBOARD',{'dashboard_name': activeDashboard?.name, 'dashboard_type': activeDashboard?.type, 'dashboard_id': activeDashboard?.id});
+    }
+  },[activeDashboard]);
+
 
   const handleOptChange = useCallback(
     (group, data) => {
@@ -256,7 +267,7 @@ function ProjectDropdown({
         <NoDataChart />
       </div>
     );
-  }
+  } 
 
   if (dashboards.data.length) {
     return (

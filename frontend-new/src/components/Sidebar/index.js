@@ -15,6 +15,7 @@ import CreateNewProject from './CreateNewProject';
 import _ from 'lodash';
 import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
 import { useTour } from "@reactour/tour";
+import factorsai from 'factorsai';
 
 // const ColorCollection = ['#4C9FC8','#4CBCBD', '#86D3A3', '#F9C06E', '#E89E7B', '#9982B5'];
 
@@ -55,6 +56,17 @@ function Sidebar(props) {
   //     setShowProjectModal(false);
   //   }
   // }, [])
+
+
+
+  useEffect(() => {
+    if(props?.agent_details){
+      //Factors identify users
+      factorsai.identify(props?.agent_details?.email,props?.agent_details); 
+    }
+  }, [props?.agent_details]);
+
+
 
   const popOvercontent = () => {
     return (
@@ -247,7 +259,8 @@ const mapStateToProps = (state) => {
     projects: state.global.projects,
     active_project: state.global.active_project,
     currentAgent: state.agent.agent_details,
-    agents: state.agent.agents
+    agents: state.agent.agents,
+    agent_details: state.agent.agent_details
   };
 };
 export default connect(mapStateToProps, { setActiveProject, signout, updateAgentInfo, fetchAgentInfo })(Sidebar);

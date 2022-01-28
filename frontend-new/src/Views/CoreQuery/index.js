@@ -90,6 +90,7 @@ import {
 } from '../../utils/dataFormatter';
 import ProfileComposer from '../../components/ProfileComposer';
 import _ from 'lodash';
+import factorsai from 'factorsai';
 
 function CoreQuery({
   activeProject,
@@ -315,7 +316,11 @@ function CoreQuery({
           user_type,
           durationObj,
           globalFilters
-        );
+        ); 
+        
+        //Factors RUN_QUERY tracking
+        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_EVENT});
+
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
           setBreakdownType(user_type);
@@ -409,6 +414,10 @@ function CoreQuery({
           durationObj,
           globalFilters
         );
+        
+        //Factors RUN_QUERY tracking
+        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_FUNNEL});
+
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
           updateResultState({ ...initialState, loading: true });
@@ -471,7 +480,11 @@ function CoreQuery({
           linkedEvents,
           durationObj,
           tacticOfferType
-        );
+        ); 
+
+        //Factors RUN_QUERY tracking
+        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_ATTRIBUTION});
+
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
           updateResultState({ ...initialState, loading: true });
@@ -568,6 +581,9 @@ function CoreQuery({
           groupBy,
           queryOptions
         );
+        
+        //Factors RUN_QUERY tracking
+        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_KPI});
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -633,7 +649,11 @@ function CoreQuery({
           camp_filters,
           camp_groupBy,
           durationObj
-        );
+        );  
+
+        //Factors RUN_QUERY tracking
+        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_CAMPAIGN});
+
         setCampaignState({
           channel: query.query_group[0].channel,
           filters: query.query_group[0].filters,
@@ -685,7 +705,12 @@ function CoreQuery({
           groupBy,
           globalFilters,
           durationObj
-        );
+        ); 
+
+        //Factors RUN_QUERY tracking
+        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_PROFILE});
+
+
         configActionsOnRunningQuery(isQuerySaved);
         updateRequestQuery(query);
         updateResultState({ ...initialState, loading: true });

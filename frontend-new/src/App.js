@@ -12,6 +12,8 @@ import LogRocket from "logrocket";
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary'; 
+import factorsai from 'factorsai';
+
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
 const ForgotPassword = lazyWithRetry(() => import("./Views/Pages/ForgotPassword"));
@@ -115,6 +117,9 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
       })();
 
     }
+
+    factorsai.init("we0jyjxcs0ix4ggnkptymjh48ur8y7q7");
+
   }, [agent_details]); 
 
   useEffect(()=>{  

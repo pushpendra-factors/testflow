@@ -20,6 +20,7 @@ import {
 } from "../../../reducers/types";
 import styles from "./index.module.scss";
 import ConfirmationModal from "../../../components/ConfirmationModal";
+import factorsai from 'factorsai';
 
 function AddDashboard({
   addDashboardModal,
@@ -198,7 +199,10 @@ function AddDashboard({
           active_project.id,
           editDashboard.id
         );
-      }
+      } 
+      
+      //Factors EDIT_DASHBOARD tracking
+      factorsai.track('EDIT_DASHBOARD',{'dashboard_name': title, 'dashboard_type': dashboardType, 'dashboard_id': editDashboard.id}); 
 
       setApisCalled(false);
       resetState();

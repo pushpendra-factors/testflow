@@ -5,6 +5,7 @@ import { connect, useDispatch } from 'react-redux';
 import _ from 'lodash';
 import moment from 'moment';
 import { fetchWeeklyIngishts, updateInsightFeedback } from 'Reducers/insights';
+import factorsai from 'factorsai';
 
 const { Option } = Select;
 
@@ -361,7 +362,10 @@ const WeeklyInishgts = ({
     useEffect(()=>{ 
          if(insights){
             setInsightsData(insights)
-        }  
+        }
+        //Factors VIEW_INSIGHTS tracking
+        factorsai.track('VIEW_INSIGHTS',{'query_type': queryType}); 
+
     }, [insights]); 
 
     const renderData = (insightsData) =>{
