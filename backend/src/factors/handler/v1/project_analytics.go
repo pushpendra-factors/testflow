@@ -4,12 +4,13 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"html/template"
 	"net/http"
 	"sort"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 func GetFactorsAnalyticsHandler(c *gin.Context) {
@@ -41,7 +42,7 @@ func ReturnReadableHtml(c *gin.Context, analytics map[string][]*model.ProjectAna
 	for k := range analytics {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 	for _, date := range keys {
 		heading := CreateHeadingTemplate(date)
 		data := analytics[date]
@@ -52,24 +53,34 @@ func ReturnReadableHtml(c *gin.Context, analytics map[string][]*model.ProjectAna
 			return
 		}
 		t.Execute(c.Writer, nil)
-		htmlStr := ""
-		htmlStr += CreateTable()
-		for _, analyticsData := range data {
-			newHtmlStr := htmlStr
-			newHtmlStr += InsertDataToTable(*analyticsData)
-			t := template.New("table")
-			t, err := t.Parse(newHtmlStr)
-			if err != nil {
-				log.Error(err)
-				return
+
+		var HtmlStr = ""
+		for index, analyticsData := range data {
+			if index%20 == 0 {
+				HtmlStr = ""
+				HtmlStr += CreateTable() //creating table for each 20 rows.
 			}
-			t.Execute(c.Writer, nil)
+			HtmlStr += InsertDataToTable(*analyticsData)
+			if (index+1)%20 == 0 || index == len(data)-1 {
+				HtmlStr += "</table><br>" //closing table after every 20th row or before data ends.
+				t := template.New("table")
+				t, err := t.Parse(HtmlStr)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+				t.Execute(c.Writer, nil)
+			}
 		}
+
 	}
+
 }
+
 func CreateHeadingTemplate(date string) string {
-	html := fmt.Sprintf(`<h1> Date &nbsp; %s</h1>
-						`, date)
+	formated_date := date[0:4] + "-" + date[4:6] + "-" + date[6:8] //yyyy-mm-dd
+	html := fmt.Sprintf(`<h1> Date: &nbsp; %s</h1>
+						`, formated_date)
 	return html
 }
 func CreateTable() string {
@@ -101,8 +112,7 @@ func InsertDataToTable(data model.ProjectAnalytics) string {
 		<td width="150px" align="center">&nbsp;%s</td>
 		<td width="150px" align="center">&nbsp;%s</td>
 		<td width="150px" align="center">&nbsp;%s</td>
-		</tr>
-		</table>
+		</tr>  
 		`, strconv.Itoa(int(data.ProjectID)), data.ProjectName, strconv.Itoa(int(data.AdwordsEvents)), strconv.Itoa(int(data.FacebookEvents)), strconv.Itoa(int(data.HubspotEvents)), strconv.Itoa(int(data.LinkedinEvents)), strconv.Itoa(int(data.SalesforceEvents)), strconv.Itoa(int(data.TotalEvents)), strconv.Itoa(int(data.TotalUniqueEvents)), strconv.Itoa(int(data.TotalUniqueUsers)))
 	return html
 }

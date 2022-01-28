@@ -31,7 +31,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
 
     let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
                     :ownerID === '116047122'? 'https://calendly.com/priyanka-267/30min'
-                    :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': null;
+                    :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': 'https://calendly.com/factors-ai/30min';
 
     return (
         <>

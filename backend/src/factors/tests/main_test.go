@@ -92,6 +92,7 @@ func TestMain(m *testing.M) {
 		EnableOLTPQueriesMemSQLImprovements:         "*",
 		CaptureSourceInUsersTable:                   "*",
 		AllowSupportForSourceColumnInUsers:          "*",
+		AllowProfilesGroupSupport:                   "*",
 	}
 	C.InitConf(config)
 

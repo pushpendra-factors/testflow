@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Row, Col, Tag, Avatar, Skeleton, Button, Tooltip } from "antd";
+import { Row, Col, Tag, Avatar, Skeleton, Button, Tooltip, Switch } from "antd";
 import { Text, SVG, FaErrorComp, FaErrorLog } from "factorsComponents";
 import { connect } from "react-redux";
 import { fetchProjectSettings } from "Reducers/global";
@@ -69,7 +69,7 @@ const IntegrationCard = ({ item, index }) => {
     </div>
   );
 };
-function IntegrationSettings({ currentProjectSettings, activeProject, fetchProjectSettings }) {
+function IntegrationSettings({ currentProjectSettings, activeProject, fetchProjectSettings, setsdkCheck, sdkCheck }) {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -77,6 +77,12 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
       setDataLoading(false); 
     }); 
   },[activeProject]);
+
+  const onSDKcheck = (checked) => { 
+    setsdkCheck(checked);
+  };
+
+  currentProjectSettings = currentProjectSettings?.project_settings || currentProjectSettings;
 
   return (
     <>
@@ -96,6 +102,12 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
           </Col>
         </Row>
         <JavascriptSDK />
+
+        <Col span={24}>
+          <div span={24} className={'flex flex-start items-center mt-8'}>
+            <span style={{ width: '50px' }}><Switch checkedChildren="On"  unCheckedChildren="OFF" onChange={onSDKcheck} defaultChecked={sdkCheck} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>I’m finished</Text>
+          </div>
+        </Col>
 
         <Text type={'title'} level={5} weight={'bold'} align={'center'} color={'grey'} extraClass={'pb-2 m-0'}>OR</Text>
 

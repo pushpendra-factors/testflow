@@ -181,6 +181,10 @@ func InitAppRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		V1.GetProjectsHandler)
+	r.GET(routePrefix+"/v1/demoprojects",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		V1.GetDemoProjects)
 
 	// Tracked Events
 	authRouteGroup.POST("/:project_id/v1/factors/tracked_event", V1.CreateFactorsTrackedEventsHandler)

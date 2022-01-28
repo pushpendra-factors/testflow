@@ -137,6 +137,8 @@ function EditUserDetails({
     console.log(key);
   };
 
+  currentProjectSettings = currentProjectSettings?.project_settings || currentProjectSettings;
+
   return (
     <>
       <div className={'mb-10 pl-4'}>

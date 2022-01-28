@@ -38,11 +38,12 @@ func TestProfiles(t *testing.T) {
 
 	t.Run("No filters, no groupby", func(t *testing.T) {
 		query := model.ProfileQuery{
-			Type:     "web",
-			Filters:  []model.QueryProperty{},
-			GroupBys: []model.QueryGroupByProperty{},
-			From:     joinTime - 100,
-			To:       nextUserJoinTime + 100,
+			Type:          "web",
+			Filters:       []model.QueryProperty{},
+			GroupBys:      []model.QueryGroupByProperty{},
+			From:          joinTime - 100,
+			To:            nextUserJoinTime + 100,
+			GroupAnalysis: "users",
 		}
 		queryGroup := model.ProfileQueryGroup{
 			Class:          "profiles",
@@ -66,9 +67,10 @@ func TestProfiles(t *testing.T) {
 			Filters: []model.QueryProperty{
 				{Type: "categorical", Property: "country", Operator: "equals", Value: "india", LogicalOp: "AND"},
 			},
-			GroupBys: []model.QueryGroupByProperty{},
-			From:     joinTime - 100,
-			To:       nextUserJoinTime + 100,
+			GroupBys:      []model.QueryGroupByProperty{},
+			From:          joinTime - 100,
+			To:            nextUserJoinTime + 100,
+			GroupAnalysis: "users",
 		}
 		queryGroup := model.ProfileQueryGroup{
 			Class:          "profiles",
@@ -87,11 +89,12 @@ func TestProfiles(t *testing.T) {
 	})
 	t.Run("joinTime check", func(t *testing.T) {
 		query := model.ProfileQuery{
-			Type:     "web",
-			Filters:  []model.QueryProperty{},
-			GroupBys: []model.QueryGroupByProperty{},
-			From:     joinTime - 100,
-			To:       joinTime + 100,
+			Type:          "web",
+			Filters:       []model.QueryProperty{},
+			GroupBys:      []model.QueryGroupByProperty{},
+			From:          joinTime - 100,
+			To:            joinTime + 100,
+			GroupAnalysis: "users",
 		}
 		queryGroup := model.ProfileQueryGroup{
 			Class:          "profiles",
@@ -111,11 +114,12 @@ func TestProfiles(t *testing.T) {
 
 	t.Run("No filter, 1 group by", func(t *testing.T) {
 		query := model.ProfileQuery{
-			Type:     "web",
-			Filters:  []model.QueryProperty{},
-			GroupBys: []model.QueryGroupByProperty{{Entity: "user_g", Property: "country", Type: "categorical"}},
-			From:     joinTime - 100,
-			To:       nextUserJoinTime + 100,
+			Type:          "web",
+			Filters:       []model.QueryProperty{},
+			GroupBys:      []model.QueryGroupByProperty{{Entity: "user_g", Property: "country", Type: "categorical"}},
+			From:          joinTime - 100,
+			To:            nextUserJoinTime + 100,
+			GroupAnalysis: "users",
 		}
 		queryGroup := model.ProfileQueryGroup{
 			Class:          "profiles",
@@ -164,9 +168,10 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 		// normal query to fetch users from initialTimestamp to finalTimestamp
 		// since a total 11 users were created, the query should return count 11 in result
 		query := model.ProfileQuery{
-			Type: "web",
-			From: initialTimestamp,
-			To:   finalTimestamp,
+			Type:          "web",
+			From:          initialTimestamp,
+			To:            finalTimestamp,
+			GroupAnalysis: "users",
 		}
 
 		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query)
@@ -205,6 +210,7 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 					Type:     "categorical",
 				},
 			},
+			GroupAnalysis: "users",
 		}
 
 		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2)
@@ -239,6 +245,7 @@ func TestProfilesDateRangeQuery(t *testing.T) {
 					Type:     "categorical",
 				},
 			},
+			GroupAnalysis: "users",
 		}
 
 		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3)
@@ -260,7 +267,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 	project, newUser, _, err := SetupProjectUserEventNameReturnDAO()
 	assert.Nil(t, err)
 
-	t.Run("QueryWithDateRange", func(t *testing.T) {
+	t.Run("QueryWithUserSource", func(t *testing.T) {
 		initialTimestamp := time.Now().AddDate(0, 0, -10).Unix()
 		var finalTimestamp int64
 		var users []model.User
@@ -299,6 +306,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 					Type:     "categorical",
 				},
 			},
+			GroupAnalysis: "users",
 		}
 
 		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query)
@@ -345,6 +353,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 					Type:     "categorical",
 				},
 			},
+			GroupAnalysis: "users",
 		}
 
 		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2)
@@ -391,6 +400,7 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 					Type:     "categorical",
 				},
 			},
+			GroupAnalysis: "users",
 		}
 
 		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3)
@@ -400,5 +410,211 @@ func TestProfilesUserSourceQuery(t *testing.T) {
 		assert.Equal(t, "$source", result3.Headers[1])
 		assert.Equal(t, fmt.Sprintf("%d", model.UserSourceSalesforce), result3.Rows[0][1])
 		assert.Equal(t, float64(len(sourceSalesforceUsers)), result3.Rows[0][0])
+	})
+}
+
+func TestProfilesGroupSupport(t *testing.T) {
+	project, _, _, err := SetupProjectUserEventNameReturnDAO()
+	assert.Nil(t, err)
+
+	t.Run("QueryForProfilesGroupSupport", func(t *testing.T) {
+		initialTimestamp := time.Now().AddDate(0, 0, -10).Unix()
+		var finalTimestamp int64
+		var sourceHubspotUsers1 []model.User
+
+		// create new group with name = $hubspot_company
+		group, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+		assert.Equal(t, http.StatusCreated, status)
+		assert.NotNil(t, group)
+
+		// create 10 group users, source = hubspot and group_name = $hubspot_company
+		for i := 0; i < 10; i++ {
+			createdUserID, errCode := store.GetStore().CreateGroupUser(&model.User{ProjectId: project.ID,
+				Source: model.GetRequestSourcePointer(model.UserSourceHubspot)}, group.Name, fmt.Sprintf("%d", group.ID))
+			assert.Equal(t, http.StatusCreated, errCode)
+			user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+			assert.Equal(t, http.StatusFound, errCode)
+			assert.True(t, len(user.ID) > 30)
+			sourceHubspotUsers1 = append(sourceHubspotUsers1, *user)
+		}
+		finalTimestamp = time.Now().Unix()
+
+		// update user properties to add $group_id property = group.ID of created user
+		for i := 0; i < len(sourceHubspotUsers1); i++ {
+			newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+				`{"$group_id": "%d"}`, group.ID)))}
+			_, status := store.GetStore().UpdateUserPropertiesV2(project.ID, sourceHubspotUsers1[i].ID, newProperties, time.Now().Unix(), "", "")
+			assert.Equal(t, http.StatusAccepted, status)
+		}
+
+		// group query to fetch users from initialTimestamp to finalTimestamp
+		// since a total 10 users were created for $hubspot_company group, the query should return count 10 in result
+		query := model.ProfileQuery{
+			From: initialTimestamp,
+			To:   finalTimestamp,
+			GroupBys: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:   model.PropertyEntityUser,
+					Property: "$group_id",
+					Type:     "categorical",
+				},
+			},
+			GroupAnalysis: model.GROUP_NAME_HUBSPOT_COMPANY,
+		}
+
+		result, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, model.AliasAggr, result.Headers[0])
+		assert.Equal(t, "$group_id", result.Headers[1])
+		assert.Equal(t, fmt.Sprintf("%d", group.ID), result.Rows[0][1])
+		assert.Equal(t, float64(len(sourceHubspotUsers1)), result.Rows[0][0])
+
+		// create new group with name = $salesforce_opportunity
+		var sourceSalesforceUsers1 []model.User
+		group, status = store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
+		assert.Equal(t, http.StatusCreated, status)
+		assert.NotNil(t, group)
+
+		// create 10 group users, source = salesforce and group_name = $salesforce_opportunity
+		for i := 0; i < 10; i++ {
+			createdUserID, errCode := store.GetStore().CreateGroupUser(&model.User{ProjectId: project.ID,
+				Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)}, group.Name, fmt.Sprintf("%d", group.ID))
+			assert.Equal(t, http.StatusCreated, errCode)
+			user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+			assert.Equal(t, http.StatusFound, errCode)
+			assert.True(t, len(user.ID) > 30)
+			sourceSalesforceUsers1 = append(sourceSalesforceUsers1, *user)
+		}
+		finalTimestamp = time.Now().Unix()
+
+		// update user properties to add $group_id property = group.ID of created user
+		for i := 0; i < len(sourceSalesforceUsers1); i++ {
+			newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+				`{"$group_id": "%d"}`, group.ID)))}
+			_, status := store.GetStore().UpdateUserPropertiesV2(project.ID, sourceSalesforceUsers1[i].ID, newProperties, time.Now().Unix(), "", "")
+			assert.Equal(t, http.StatusAccepted, status)
+		}
+
+		// group query to fetch users from initialTimestamp to finalTimestamp
+		// since a total 10 users were created for $salesforce_opportunity group, the query should return count 10 in result
+		query2 := model.ProfileQuery{
+			From: initialTimestamp,
+			To:   finalTimestamp,
+			GroupBys: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:   model.PropertyEntityUser,
+					Property: "$group_id",
+					Type:     "categorical",
+				},
+			},
+			GroupAnalysis: model.GROUP_NAME_SALESFORCE_OPPORTUNITY,
+		}
+
+		result2, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query2)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result2)
+		assert.Equal(t, model.AliasAggr, result2.Headers[0])
+		assert.Equal(t, "$group_id", result2.Headers[1])
+		assert.Equal(t, fmt.Sprintf("%d", group.ID), result2.Rows[0][1])
+		assert.Equal(t, float64(len(sourceSalesforceUsers1)), result2.Rows[0][0])
+
+		// create new group with name = $hubspot_deal
+		var sourceHubspotUsers2 []model.User
+		group, status = store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, model.AllowedGroupNames)
+		assert.Equal(t, http.StatusCreated, status)
+		assert.NotNil(t, group)
+
+		// create 10 group users, source = hubspot and group_name = $hubspot_deal
+		for i := 0; i < 10; i++ {
+			createdUserID, errCode := store.GetStore().CreateGroupUser(&model.User{ProjectId: project.ID,
+				Source: model.GetRequestSourcePointer(model.UserSourceHubspot)}, group.Name, fmt.Sprintf("%d", group.ID))
+			assert.Equal(t, http.StatusCreated, errCode)
+			user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+			assert.Equal(t, http.StatusFound, errCode)
+			assert.True(t, len(user.ID) > 30)
+			sourceHubspotUsers2 = append(sourceHubspotUsers2, *user)
+		}
+		finalTimestamp = time.Now().Unix()
+
+		// update user properties to add $group_id property = group.ID of created user
+		for i := 0; i < len(sourceHubspotUsers2); i++ {
+			newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+				`{"$group_id": "%d"}`, group.ID)))}
+			_, status := store.GetStore().UpdateUserPropertiesV2(project.ID, sourceHubspotUsers2[i].ID, newProperties, time.Now().Unix(), "", "")
+			assert.Equal(t, http.StatusAccepted, status)
+		}
+
+		// group query to fetch users from initialTimestamp to finalTimestamp
+		// since a total 10 users were created for $hubspot_deal group, the query should return count 10 in result
+		query3 := model.ProfileQuery{
+			From: initialTimestamp,
+			To:   finalTimestamp,
+			GroupBys: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:   model.PropertyEntityUser,
+					Property: "$group_id",
+					Type:     "categorical",
+				},
+			},
+			GroupAnalysis: model.GROUP_NAME_HUBSPOT_DEAL,
+		}
+
+		result3, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query3)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result3)
+		assert.Equal(t, model.AliasAggr, result3.Headers[0])
+		assert.Equal(t, "$group_id", result3.Headers[1])
+		assert.Equal(t, fmt.Sprintf("%d", group.ID), result3.Rows[0][1])
+		assert.Equal(t, float64(len(sourceHubspotUsers2)), result3.Rows[0][0])
+
+		// create new group with name = $salesforce_account
+		var sourceSalesforceUsers2 []model.User
+		group, status = store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+		assert.Equal(t, http.StatusCreated, status)
+		assert.NotNil(t, group)
+
+		// create 10 group users, source = salesforce and group_name = $salesforce_account
+		for i := 0; i < 10; i++ {
+			createdUserID, errCode := store.GetStore().CreateGroupUser(&model.User{ProjectId: project.ID,
+				Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)}, group.Name, fmt.Sprintf("%d", group.ID))
+			assert.Equal(t, http.StatusCreated, errCode)
+			user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+			assert.Equal(t, http.StatusFound, errCode)
+			assert.True(t, len(user.ID) > 30)
+			sourceSalesforceUsers2 = append(sourceSalesforceUsers2, *user)
+		}
+		finalTimestamp = time.Now().Unix()
+
+		// update user properties to add $group_id property = group.ID of created user
+		for i := 0; i < len(sourceSalesforceUsers2); i++ {
+			newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+				`{"$group_id": "%d"}`, group.ID)))}
+			_, status := store.GetStore().UpdateUserPropertiesV2(project.ID, sourceSalesforceUsers2[i].ID, newProperties, time.Now().Unix(), "", "")
+			assert.Equal(t, http.StatusAccepted, status)
+		}
+
+		// group query to fetch users from initialTimestamp to finalTimestamp
+		// since a total 10 users were created for $salesforce_account group, the query should return count 10 in result
+		query4 := model.ProfileQuery{
+			From: initialTimestamp,
+			To:   finalTimestamp,
+			GroupBys: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:   model.PropertyEntityUser,
+					Property: "$group_id",
+					Type:     "categorical",
+				},
+			},
+			GroupAnalysis: model.GROUP_NAME_SALESFORCE_ACCOUNT,
+		}
+
+		result4, errCode, _ := store.GetStore().ExecuteProfilesQuery(project.ID, query4)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result4)
+		assert.Equal(t, model.AliasAggr, result4.Headers[0])
+		assert.Equal(t, "$group_id", result4.Headers[1])
+		assert.Equal(t, fmt.Sprintf("%d", group.ID), result4.Rows[0][1])
+		assert.Equal(t, float64(len(sourceSalesforceUsers2)), result4.Rows[0][0])
 	})
 }

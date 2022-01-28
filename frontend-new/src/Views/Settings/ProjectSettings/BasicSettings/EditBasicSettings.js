@@ -68,17 +68,17 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
   }
 
   const handleChange = info => {
-    if (info.file.status === 'uploading') {
-      // setLoading(true);
-      return;
-    }
-    if (info.file.status === 'done') {
+    // if (info.file.status === 'uploading') {
+    //   // setLoading(true);
+    //   return;
+    // }
+    // if (info.file.status === 'done') {
       // Get this url from response in real world.
       getBase64(info.file.originFileObj, imageUrl => {
         setImageUrl(imageUrl);
         // setLoading(false);
       });
-    }
+    // }
   };
 
 
@@ -117,12 +117,11 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
                   name="avatar"
                   accept={''}
                   showUploadList={false}
-                  action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
                   beforeUpload={beforeUpload}
                   onChange={handleChange}
               >
               {dataLoading ? <Skeleton.Avatar active={true} size={104} shape={'square'} />
-                : imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px'}} /> : <Avatar size={104} shape={'square'} icon={<UserOutlined />} />
+                : imageUrl ? <img src={imageUrl} alt="avatar" style={{width:'105px'}} /> : activeProject?.profile_picture ? <img src={activeProject?.profile_picture} alt="avatar" style={{width:'105px'}} /> : <Avatar size={104} shape={'square'} icon={<UserOutlined />} />
               }
               </Upload>
               <Text type={'paragraph'} mini extraClass={'m-0 mt-1'} color={'grey'} >A logo helps personalise your Project</Text>

@@ -205,6 +205,7 @@ type Configuration struct {
 	ResourcePoolForAnalytics                    string
 	RestrictReusingUsersByCustomerUserId        string
 	HubspotAPIOnboardingHAPIKey                 string
+	AllowProfilesGroupSupport                   string
 	DebugEnabled                                bool
 }
 
@@ -1983,6 +1984,14 @@ func IsProfileQuerySourceSupported(projectId uint64) bool {
 
 func CheckRestrictReusingUsersByCustomerUserId(projectId uint64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RestrictReusingUsersByCustomerUserId, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
+}
+
+func IsProfileGroupSupportEnabled(projectId uint64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowProfilesGroupSupport, "")
 	if allProjects || projectIDsMap[projectId] {
 		return true
 	}

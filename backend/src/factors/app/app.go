@@ -127,6 +127,7 @@ func main() {
 	resourcePoolForAnalytics := flag.String("resource_pool_for_analytics", "",
 		"Given resource_pool will be used for analytics queries.")
 	hubspotAPIOnboardingHAPIKey := flag.String("hubspot_API_onboarding_HAPI_key", "", "")
+	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 
 	flag.Parse()
 
@@ -213,6 +214,7 @@ func main() {
 		AllowSupportForSourceColumnInUsers:      *allowSupportForSourceColumnInUsers,
 		ResourcePoolForAnalytics:                *resourcePoolForAnalytics,
 		HubspotAPIOnboardingHAPIKey:             *hubspotAPIOnboardingHAPIKey,
+		AllowProfilesGroupSupport:               *allowProfilesGroupSupport,
 	}
 	C.InitConf(config)
 

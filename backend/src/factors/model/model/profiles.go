@@ -4,6 +4,7 @@ import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -16,16 +17,19 @@ type ProfileQueryGroup struct {
 	From           int64                  `json:"from"`
 	To             int64                  `json:"to"`
 	Timezone       string                 `json:"tz"`
+	GroupAnalysis  string                 `json:"grpa"`
 }
 
 // From and to refer to JoinTime
 type ProfileQuery struct {
-	Type     string                 `json:"ty"` // all_users, hubspot_events, etc
-	Filters  []QueryProperty        `json:"pr"`
-	GroupBys []QueryGroupByProperty `json:"group_bys"`
-	From     int64                  `json:"from"`
-	To       int64                  `json:"to"`
-	Timezone string                 `json:"tz"`
+	Type          string                 `json:"ty"` // all_users, hubspot_events, etc
+	Filters       []QueryProperty        `json:"pr"`
+	GroupBys      []QueryGroupByProperty `json:"group_bys"`
+	From          int64                  `json:"from"`
+	To            int64                  `json:"to"`
+	Timezone      string                 `json:"tz"`
+	GroupAnalysis string                 `json:"grpa"`
+	GroupId       int                    `json:"grpid"`
 }
 
 func (q *ProfileQueryGroup) GetClass() string {
@@ -165,4 +169,27 @@ func TransformProfilesQuery(query ProfileQuery) ProfileQuery {
 	}
 	query.Filters = transformedFilters
 	return query
+}
+
+func IsValidProfileQueryGroupName(source string) bool {
+	_, exists := AllowedGroupNames[source]
+	if exists || source == USERS {
+		return true
+	} else {
+		return false
+	}
+}
+
+func GetSourceFromQueryTypeOrGroupName(query ProfileQuery) int {
+	source, exists := UserSourceMap[query.Type]
+	if exists {
+		return source
+	}
+	if strings.HasPrefix(query.GroupAnalysis, U.HUBSPOT_PROPERTY_PREFIX) {
+		return UserSourceHubspot
+	}
+	if strings.HasPrefix(query.GroupAnalysis, U.SALESFORCE_PROPERTY_PREFIX) {
+		return UserSourceSalesforce
+	}
+	return 0
 }

@@ -284,7 +284,7 @@ export function projectAgentInvite(projectId, payload){
 export function projectAgentBatchInvite(projectId, payload){
   return function(dispatch){ 
     return new Promise((resolve, reject) => {
-      post(dispatch, host + "projects/" + projectId + "/agents/batchinvite", payload)
+      post(dispatch, host + "projects/" + projectId + "/agents/batchinvite?create_dashboard=false", payload)
       .then((r) => { 
         if (r.ok && r.status && r.status == 201){ 
           dispatch({type: "PROJECT_AGENT_BATCH_INVITE_FULFILLED", payload: r.data });
