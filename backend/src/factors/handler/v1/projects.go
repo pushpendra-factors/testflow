@@ -61,24 +61,29 @@ func GetProjectsHandler(c *gin.Context) {
 	} else if errCode == http.StatusNoContent || errCode == http.StatusBadRequest {
 		resp := make(map[string]interface{})
 		resp["projects"] = []model.Project{}
-		c.JSON(http.StatusNotFound, resp)
-		return
-	}
-	projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByProjectIds(authorizedProjects.([]uint64))
-	if errCode != http.StatusFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
-	projectRoleMap := make(map[uint64]uint64)
-	for _, projectAgent := range projectAgentMappings {
-		if projectAgent.AgentUUID == loggedInAgentUUID {
-			projectRoleMap[projectAgent.ProjectID] = projectAgent.Role
+		if !C.EnableDemoReadAccess() {
+			c.JSON(http.StatusNotFound, resp)
+			return
 		}
 	}
+	projectRoleMap := make(map[uint64]uint64)
 	resp := make(map[uint64][]interface{})
-	for _, project := range projects {
-		project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(project.ID)
-		resp[projectRoleMap[project.ID]] = append(resp[projectRoleMap[project.ID]], project)
+	if len(projects) > 0 {
+		projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByProjectIds(authorizedProjects.([]uint64))
+		if errCode != http.StatusFound {
+			c.AbortWithStatus(errCode)
+			return
+		}
+
+		for _, projectAgent := range projectAgentMappings {
+			if projectAgent.AgentUUID == loggedInAgentUUID {
+				projectRoleMap[projectAgent.ProjectID] = projectAgent.Role
+			}
+		}
+		for _, project := range projects {
+			project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(project.ID)
+			resp[projectRoleMap[project.ID]] = append(resp[projectRoleMap[project.ID]], project)
+		}
 	}
 	if C.EnableDemoReadAccess() {
 		trimmedDemoProjects := make([]model.Project, 0)
