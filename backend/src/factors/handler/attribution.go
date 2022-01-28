@@ -3,7 +3,6 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	C "factors/config"
 	H "factors/handler/helpers"
 	V1 "factors/handler/v1"
 	mid "factors/middleware"
@@ -61,11 +60,11 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
-	isQuery := false
+	/*isQuery := false
 	isQueryParam := c.Query("is_query")
 	if isQueryParam != "" {
 		isQuery, _ = strconv.ParseBool(isQueryParam)
-	}
+	}*/
 
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
@@ -160,10 +159,10 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 	}
 
-	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
+	/*if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
 		logCtx.WithField("request_payload", requestPayload).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
 		return nil, resCode, V1.PROCESSING_FAILED, "Not found in cache. Execution suspended temporarily.", true
-	}
+	}*/
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)
