@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import moment from 'moment';
-import { generateTableColumns, generateTableData } from '../utils';
+import { getTableColumns, getTableData } from '../utils';
 import DataTable from '../../../../components/DataTable';
 import { GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
@@ -42,7 +42,7 @@ function FunnelsResultTable({
 
   useEffect(() => {
     setColumns(
-      generateTableColumns(
+      getTableColumns(
         queries,
         sorter,
         handleSorting,
@@ -67,7 +67,7 @@ function FunnelsResultTable({
   // const columns = ;
   useEffect(() => {
     setTableData(
-      generateTableData(
+      getTableData(
         chartData,
         queries,
         groups,
@@ -98,75 +98,80 @@ function FunnelsResultTable({
   ]);
 
   const getCSVData = () => {
-    if (!comparisonChartData) {
-      return {
-        fileName: `${reportTitle}.csv`,
-        data: tableData.map(({ index, value, name, nonConvertedName, ...rest }) => {
+    try {
+      if (!comparisonChartData) {
+        return {
+          fileName: `${reportTitle}.csv`,
+          data: tableData.map(({ index, value, name, nonConvertedName, ...rest }) => {
+            arrayMapper.forEach((elem) => {
+              delete rest[`${elem.mapper}`];
+            });
+            console.log("getCSVData -> rest", rest)
+            return { ...rest, Conversion: rest.Conversion + '%' };
+          }),
+        };
+      } else {
+        const data = [];
+        const duration_from = moment(durationObj.from).format('MMM DD');
+        const duration_to = moment(durationObj.to).format('MMM DD');
+        const compare_duration_from = moment(comparison_duration.from).format(
+          'MMM DD'
+        );
+        const compare_duration_to = moment(comparison_duration.to).format(
+          'MMM DD'
+        );
+        tableData.forEach(({ index, ...rest }) => {
+          rest['Users'] = 'All';
+
+          rest[`Conversion (${duration_from} - ${duration_to})`] =
+            rest[`Conversion`].conversion;
+          rest[`Conversion (${compare_duration_from} - ${compare_duration_to})`] =
+            rest[`Conversion`].comparsion_conversion;
+
+          rest[`Conversion Time (${duration_from} - ${duration_to})`] =
+            rest[`Conversion Time`].overallDuration;
+          rest[
+            `Conversion Time (${compare_duration_from} - ${compare_duration_to})`
+          ] = rest[`Conversion Time`].comparisonOverallDuration;
+
+          delete rest[`Conversion Time`];
+          delete rest[`Conversion`];
+          delete rest['Grouping'];
+
           arrayMapper.forEach((elem, index) => {
-            rest[`${elem.displayName}-${index}`] =
-              rest[`${elem.displayName}-${index}`].value;
+            rest[
+              `${elem.displayName}-${index} (${duration_from} - ${duration_to})`
+            ] = rest[`${elem.displayName}-${index}-count`].count;
+            rest[
+              `${elem.displayName}-${index} (${compare_duration_from} - ${compare_duration_to})`
+            ] = rest[`${elem.displayName}-${index}-count`].compare_count;
+
+            if (index < arrayMapper.length - 1) {
+              rest[
+                `time[${index}-${index + 1}] (${duration_from} - ${duration_to})`
+              ] = rest[`time[${index}-${index + 1}]`].time;
+              rest[
+                `time[${index}-${
+                index + 1
+                }] (${compare_duration_from} - ${compare_duration_to})`
+              ] = rest[`time[${index}-${index + 1}]`].compare_time;
+              delete rest[`time[${index}-${index + 1}]`];
+            }
+
             delete rest[`${elem.mapper}`];
           });
-          return { ...rest, Conversion: rest.Conversion + '%' };
-        }),
-      };
-    } else {
-      const data = [];
-      const duration_from = moment(durationObj.from).format('MMM DD');
-      const duration_to = moment(durationObj.to).format('MMM DD');
-      const compare_duration_from = moment(comparison_duration.from).format(
-        'MMM DD'
-      );
-      const compare_duration_to = moment(comparison_duration.to).format(
-        'MMM DD'
-      );
-      tableData.forEach(({ index, ...rest }) => {
-        rest['Users'] = 'All';
-
-        rest[`Conversion (${duration_from} - ${duration_to})`] =
-          rest[`Conversion`].conversion;
-        rest[`Conversion (${compare_duration_from} - ${compare_duration_to})`] =
-          rest[`Conversion`].comparsion_conversion;
-
-        rest[`Conversion Time (${duration_from} - ${duration_to})`] =
-          rest[`Conversion Time`].overallDuration;
-        rest[
-          `Conversion Time (${compare_duration_from} - ${compare_duration_to})`
-        ] = rest[`Conversion Time`].comparisonOverallDuration;
-
-        delete rest[`Conversion Time`];
-        delete rest[`Conversion`];
-        delete rest['Grouping'];
-
-        arrayMapper.forEach((elem, index) => {
-          rest[
-            `${elem.displayName}-${index} (${duration_from} - ${duration_to})`
-          ] = rest[`${elem.displayName}-${index}`].value;
-          rest[
-            `${elem.displayName}-${index} (${compare_duration_from} - ${compare_duration_to})`
-          ] = rest[`${elem.displayName}-${index}`].compare_count;
-
-          if (index < arrayMapper.length - 1) {
-            rest[
-              `time[${index}-${index + 1}] (${duration_from} - ${duration_to})`
-            ] = rest[`time[${index}-${index + 1}]`].time;
-            rest[
-              `time[${index}-${
-                index + 1
-              }] (${compare_duration_from} - ${compare_duration_to})`
-            ] = rest[`time[${index}-${index + 1}]`].compare_time;
-            delete rest[`time[${index}-${index + 1}]`];
-          }
-
-          delete rest[`${elem.mapper}`];
+          data.push(rest);
         });
-        data.push(rest);
-      });
-      return {
-        fileName: `${reportTitle}.csv`,
-        data,
-      };
+        return {
+          fileName: `${reportTitle}.csv`,
+          data,
+        };
+      }
+    } catch (err) {
+      console.log("err", err)
+      return "bannat"
     }
+
   };
 
   const onSelectionChange = useCallback(

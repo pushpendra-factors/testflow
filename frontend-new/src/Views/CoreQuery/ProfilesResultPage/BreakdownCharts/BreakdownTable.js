@@ -59,7 +59,7 @@ function BreakdownTable({
   const getCSVData = () => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, color, ...rest }) => {
+      data: tableData.map(({ index, color, label, ...rest }) => {
         return rest;
       }),
     };

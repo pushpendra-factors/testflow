@@ -61,11 +61,6 @@ export const getColumns = (
 
   const result = [
     {
-      title: '',
-      dataIndex: '',
-      width: 37,
-    },
-    {
       title: getClickableTitleSorter(
         'Date',
         { key: 'date', type: 'datetime', subtype: 'date' },
@@ -89,8 +84,10 @@ export const getColumns = (
           subtype: null,
         },
         currentSorter,
-        handleSorting
+        handleSorting,
+        'right'
       ),
+      className: 'text-right',
       dataIndex: arrayMapper.find((elem) => elem.index === idx).mapper,
       render: (d) => {
         return <NumFormat number={d} />;
@@ -204,9 +201,11 @@ export const getDateBasedColumns = (
       'Overall',
       { key: `Overall`, type: 'numerical', subtype: null },
       currentSorter,
-      handleSorting
+      handleSorting,
+      'right'
     ),
     dataIndex: `Overall`,
+    className: 'text-right',
     width: 150,
   };
 
@@ -242,10 +241,12 @@ export const getDateBasedColumns = (
           subtype: null,
         },
         currentSorter,
-        handleSorting
+        handleSorting,
+        'right'
       ),
-      width: frequency === 'hour' ? 150 : 100,
+      width: frequency === 'hour' ? 200 : 150,
       dataIndex: MomentTz(elem.date).format(format),
+      className: 'text-right',
       render: (d) => {
         return <NumFormat number={d} />;
       },

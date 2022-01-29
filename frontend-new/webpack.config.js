@@ -7,9 +7,9 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 const cssRegex = /\.css$/;
 const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
-const sassModuleRegex = /\.module\.(scss|sass)$/; 
-const analyzerArg = JSON.parse(process.env.npm_config_argv); 
-const analyzer = analyzerArg.original.includes('--analyze'); 
+const sassModuleRegex = /\.module\.(scss|sass)$/;
+const analyzerArg = JSON.parse(process.env.npm_config_argv);
+const analyzer = analyzerArg.original.includes('--analyze');
 
 const getStyleLoaders = (cssOptions, preProcessor) => {
   const loaders = [
@@ -123,7 +123,8 @@ module.exports = {
       Components: path.resolve(__dirname, './src/components'),
       svgIcons: path.resolve(__dirname, './src/components/svgIcons'),
       Reducers: path.resolve(__dirname, './src/reducers'),
-      Utils: path.resolve(__dirname, './src/utils')
+      Utils: path.resolve(__dirname, './src/utils'),
+      Styles: path.resolve(__dirname, './src/styles')
     }
   },
   plugins: [
@@ -131,13 +132,13 @@ module.exports = {
     HtmlPlugin,
     new CopyWebpackPlugin([{ from: './src/assets', to: 'assets' }]),
     new BundleAnalyzerPlugin({
-      analyzerMode: analyzer ? 'server' : "disabled", 
+      analyzerMode: analyzer ? 'server' : 'disabled',
     }),
   ],
   output: {
     path: getBuildPath(),
     publicPath: '/',
-    filename: '[name].[hash].js', 
+    filename: '[name].[hash].js',
   },
   devServer: {
     historyApiFallback: true,

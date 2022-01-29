@@ -3,6 +3,7 @@ import { Table } from 'antd';
 import SearchBar from './SearchBar';
 import styles from './index.module.scss';
 import { useHistory } from 'react-router-dom';
+import useToggle from '../../hooks/useToggle';
 
 function DataTable({
   tableData,
@@ -18,12 +19,13 @@ function DataTable({
   renderSearch = true,
   isPaginationEnabled = true,
   defaultPageSize = 10,
+  controlsPopover
 }) {
   const componentRef = useRef(null);
   const downloadBtnRef = useRef(null);
   const [pageSize, setPageSize] = useState(defaultPageSize);
 
-  const [searchBar, showSearchBar] = useState(false);
+  const [searchBar, toggleSearchBar] = useToggle(false);
 
   const history = useHistory();
 
@@ -45,18 +47,13 @@ function DataTable({
       if (ignoreDocumentClick) {
         return false;
       }
-      if (componentRef && !componentRef.current.contains(e.target)) {
-        showSearchBar(false);
+      if (
+        componentRef &&
+        searchBar &&
+        !componentRef.current.contains(e.target)
+      ) {
+        toggleSearchBar();
         handleSearchTextChange('');
-      } else {
-        if (
-          !searchBar &&
-          downloadBtnRef &&
-          downloadBtnRef.current?.contains(e.target)
-        ) {
-          document.getElementById('csvLink').click();
-        }
-        showSearchBar(true);
       }
     },
     [handleSearchTextChange, searchBar]
@@ -81,7 +78,8 @@ function DataTable({
           handleSearchTextChange={handleSearchTextChange}
           searchBar={searchBar}
           getCSVData={getCSVData}
-          downloadBtnRef={downloadBtnRef}
+          toggleSearchBar={toggleSearchBar}
+          controlsPopover={controlsPopover}
         />
       ) : null}
       <Table
