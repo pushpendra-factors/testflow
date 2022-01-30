@@ -4,6 +4,7 @@ from typing import Dict, List
 
 import requests
 import logging as log
+import time
 
 from requests import Response
 
