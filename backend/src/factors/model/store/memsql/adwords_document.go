@@ -447,17 +447,17 @@ func (store *MemSQL) CreateMultipleAdwordsDocument(adwordsDocuments []model.Adwo
 		return status
 	}
 
-	uniqueDocuments := make([]model.AdwordsDocument, 0)
-	for _, document := range adwordsDocuments {
-		statusCode := store.satisfiesAdwordsDocumentUniquenessConstraints(&document)
-		if statusCode != http.StatusOK {
-			status = statusCode
-			log.WithField("adwordsDocuments", document).Error("Failed to create an adwords doc. Duplicate.")
-		} else {
-			uniqueDocuments = append(uniqueDocuments, document)
-		}
-	}
-	adwordsDocuments = uniqueDocuments
+	// uniqueDocuments := make([]model.AdwordsDocument, 0)
+	// for _, document := range adwordsDocuments {
+	// 	statusCode := store.satisfiesAdwordsDocumentUniquenessConstraints(&document)
+	// 	if statusCode != http.StatusOK {
+	// 		status = statusCode
+	// 		log.WithField("adwordsDocuments", document).Error("Failed to create an adwords doc. Duplicate.")
+	// 	} else {
+	// 		uniqueDocuments = append(uniqueDocuments, document)
+	// 	}
+	// }
+	// adwordsDocuments = uniqueDocuments
 	db := C.GetServices().Db
 
 	insertStatement := insertAdwordsStr
