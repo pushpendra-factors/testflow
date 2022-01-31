@@ -6,6 +6,7 @@ import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { fetchTemplateConfig } from 'Reducers/templates';
+import factorsai from 'factorsai';
 
 const TemplatesModal = ({
   templatesModalVisible,
@@ -19,7 +20,11 @@ const TemplatesModal = ({
     history.push(url);
   };
 
-  const ChooseTemplate = (templateID) => {
+  const ChooseTemplate = (templateID) => { 
+
+    //Factors RUN_QUERY tracking
+    factorsai.track('RUN_QUERY',{'query_type': 'template', 'templateID': templateID});
+
     fetchTemplateConfig(activeProject.id, templateID).then(() => {
       routeChange('/templates');
     }).catch((e) => console.log("fetch template config error", e));

@@ -23,9 +23,9 @@ func TestAttributionModelCompare(t *testing.T) {
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
-	// Should return error for non adwords customer account id
+	// Should not return error for no adwords customer account id
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
@@ -258,9 +258,9 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
-	// Should return error for non adwords customer account id
+	// Should not return error for no adwords customer account id
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,

@@ -26,7 +26,7 @@ SUCCESS_MESSAGE = "Successfully synced."
 
 # metrics constants
 REQUEST_COUNT = "request_count"
-RECORDS_COUNT = "request_count"
+RECORDS_COUNT = "records_count"
 LATENCY_COUNT = "latency_count"
 TO_IN_MEMORY = "to_in_memory"
 TO_FILE = "to_file"

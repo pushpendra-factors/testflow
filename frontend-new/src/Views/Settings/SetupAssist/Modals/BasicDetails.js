@@ -77,15 +77,15 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
   }
 
   const handleChange = info => {
-    if (info.file.status === 'uploading') {
-      return;
-    }
-    if (info.file.status === 'done') {
+    // if (info.file.status === 'uploading') {
+    //   return;
+    // }
+    // if (info.file.status === 'done') {
       // Get this url from response in real world.
       getBase64(info.file.originFileObj, imageUrl => {
         setImageUrl(imageUrl);
       });
-    }
+    // }
   };
 
   return (
@@ -149,7 +149,6 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                                         name="avatar"
                                         accept={''}
                                         showUploadList={false}
-                                        action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
                                         beforeUpload={beforeUpload}
                                         onChange={handleChange}
                                     >

@@ -68,17 +68,17 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
   }
 
   const handleChange = info => {
-    if (info.file.status === 'uploading') {
-      // setLoading(true);
-      return;
-    }
-    if (info.file.status === 'done') {
+    // if (info.file.status === 'uploading') {
+    //   // setLoading(true);
+    //   return;
+    // }
+    // if (info.file.status === 'done') {
       // Get this url from response in real world.
       getBase64(info.file.originFileObj, imageUrl => {
         setImageUrl(imageUrl);
         // setLoading(false);
       });
-    }
+    // }
   };
 
 
@@ -117,7 +117,6 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
                   name="avatar"
                   accept={''}
                   showUploadList={false}
-                  action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
                   beforeUpload={beforeUpload}
                   onChange={handleChange}
               >
@@ -192,13 +191,16 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
                 rules={[{ required: true, message: 'Please choose an option' }]}
                 disabled={!activeProject?.is_multiple_project_timezone_enabled}
               >
-                <Select 
+                {activeProject?.is_multiple_project_timezone_enabled ? <Select 
                 disabled={!activeProject?.is_multiple_project_timezone_enabled}
                 className={'fa-select w-full'} placeholder={'Time Zone'} size={'large'}>
-                   { Object.keys(TimeZoneName).map((item)=>{
+                   { activeProject?.is_multiple_project_timezone_enabled && Object.keys(TimeZoneName).map((item)=>{
                     return  <Option value={item}>{TimeZoneName[item]}</Option> 
                   })} 
-                </Select>
+                </Select> 
+                : 
+                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{(activeProject?.time_zone) ? TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject.time_zone)] : '---'}</Text>
+                }
               </Form.Item>
             </Col>
           </Row>

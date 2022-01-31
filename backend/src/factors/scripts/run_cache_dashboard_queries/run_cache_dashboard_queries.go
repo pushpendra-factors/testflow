@@ -59,6 +59,9 @@ func main() {
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 
+	resourcePoolForAnalytics := flag.String("resource_pool_for_analytics", "",
+		"Given resource_pool will be used for analytics queries.")
+
 	enableFilterOptimisation := flag.Bool("enable_filter_optimisation", false,
 		"Enables filter optimisation changes for memsql implementation.")
 	filterPropertiesStartTimestamp := flag.Int64("filter_properties_start_timestamp", -1,
@@ -127,6 +130,7 @@ func main() {
 		SkipEventNameStepByProjectID:        *skipEventNameStepByProjectID,
 		SkipUserJoinInEventQueryByProjectID: *skipUserJoinInEventQueryByProjectID,
 		DebugEnabled:                        *debugEnabled,
+		ResourcePoolForAnalytics:            *resourcePoolForAnalytics,
 	}
 
 	C.InitConf(config)

@@ -24,6 +24,7 @@
     "d3": "^5.16.0",
     "dns-packet": "^5.3.0",
     "elliptic": "^6.5.4",
+    "factorsai": "^0.2.6",
     "formik": "^2.1.7",
     "glob-parent": "^6.0.2",
     "highcharts": "^9.0.1",

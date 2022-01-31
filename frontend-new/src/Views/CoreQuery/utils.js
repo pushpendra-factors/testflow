@@ -465,12 +465,7 @@ export const getKPIQuery = (
         ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
         : MomentTz().utc().unix();
     period.frequency = date_range.frequency || 'date';
-  }
-
-  // console.clear();
-  console.log('KPIQuery debugging...');
-  console.log('KPIQuery --> queries, time-period', queries, period);
-  console.log('KPIQuery --> groupBy, queryOptions', groupBy, queryOptions);
+  } 
 
   const eventGrpBy = [...groupBy.event];
   query.qG = getKPIqueryGroup(queries, eventGrpBy, period);
@@ -1568,8 +1563,6 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
 };
 
 export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
-  console.log('requestQuery-->>', requestQuery);
-  console.log('requestQuery kpiConfig-->>', kpiConfig);
   const queryType = requestQuery.cl;
   const queries = [];
   for (let i = 0; i < requestQuery.qG.length; i = i + 2) {

@@ -20,7 +20,7 @@
                 s.async = true;
                 d = !!document.body ? document.body : document.head;
                 d.appendChild(s);
-            })(function() { factors.init("dummy", { host: "http://localhost:8085" }); });
+            })(function() { factors.init("dummy", { host: "http://localhost:8085", track_page_on_spa: true }); });
         </script>
     </head>
     <body> 

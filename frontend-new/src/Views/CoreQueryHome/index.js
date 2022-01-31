@@ -58,6 +58,7 @@ import { fetchWeeklyIngishts } from '../../reducers/insights';
 import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
 import { fetchAgentInfo } from 'Reducers/agentActions';
+import factorsai from 'factorsai';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -369,7 +370,7 @@ function CoreQuery({
               dispatch({
                 type: SET_PERFORMANCE_CRITERIA,
                 payload: EACH_USER_TYPE,
-              });
+              }); 
               if (record.query.query_group.length === 2) {
                 dispatch({
                   type: SET_SHOW_CRITERIA,
@@ -432,6 +433,10 @@ function CoreQuery({
           settings: record.settings,
           query_id: record.key || record.id,
         });
+
+        //Factors VIEW_QUERY tracking 
+        factorsai.track('VIEW_QUERY',{'query_type': equivalentQuery?.queryType, 'saved_query_id':record?.key || record?.id, 'query_title': record?.title});   
+
       } catch (err) {
         console.log(err);
       }
@@ -714,7 +719,7 @@ function CoreQuery({
                   return {
                     onClick: (e) => {
                       getWeeklyIngishts(record);
-                      setQueryToState(record);
+                      setQueryToState(record); 
                     },
                   };
                 }}

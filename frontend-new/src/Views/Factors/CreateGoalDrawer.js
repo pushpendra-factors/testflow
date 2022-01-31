@@ -15,6 +15,8 @@ import EventFilterBy from './DrawerUtil/EventFilterBy';
 // import MomentTz from 'Components/MomentTz';
 import moment from 'moment-timezone';  
 
+
+
 const title = (props) => {
   return (
       <div className={'flex justify-between items-center'}>
@@ -32,6 +34,10 @@ const title = (props) => {
 const CreateGoalDrawer = (props) => {
   const history = useHistory();
   const { Option } = Select;
+
+  const timeZone = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';  
+  moment.tz.setDefault(timeZone);
+
 
   const [TrackedEventNames, SetTrackedEventNames] = useState([]);
 
@@ -262,6 +268,9 @@ const getInsights = (projectID, isJourney=false) =>{
       setInsightBtnLoading(false);
   }); 
 
+  //Factors RUN_EXPLAIN tracking
+  factorsai.track('RUN_EXPLAIN',{'query_type': 'explain'});
+  
 }  
 
 

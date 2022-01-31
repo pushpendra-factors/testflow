@@ -4,6 +4,7 @@ import { SVG, Text} from 'factorsComponents';
 import { Link } from 'react-router-dom';
 import {saveGoalInsights} from 'Reducers/factors';
 import {connect} from 'react-redux';
+import factorsai from 'factorsai';
 
 function Header({saveGoalInsights, activeProject, factors_insight_rules, setSavedName}) {
   const { Header } = Layout;
@@ -37,6 +38,9 @@ function Header({saveGoalInsights, activeProject, factors_insight_rules, setSave
         setisLoading(false); 
       });
     }
+
+      //Factors SAVE_EXPLAIN tracking
+    factorsai.track('SAVE_EXPLAIN',{'query_type': 'explain', 'query_title': payload?.title});
 
   }; 
   const onChange = () => {

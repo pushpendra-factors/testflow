@@ -29,6 +29,8 @@ import {
 import { getSaveChartOptions } from '../../Views/CoreQuery/utils';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
 import { fetchWeeklyIngishtsMetaData } from '../../reducers/insights';
+import factorsai from 'factorsai';
+
 
 function SaveQuery({
   requestQuery,
@@ -124,7 +126,7 @@ function SaveQuery({
       const querySettings = {
         ...getCurrentSorter(),
         chart: dashboardPresentation,
-      };
+      }; 
       if (queryType === QUERY_TYPE_FUNNEL) {
         query = {
           ...requestQuery,
@@ -219,10 +221,20 @@ function SaveQuery({
         };
         await saveQueryToDashboard(
           active_project.id,
-          selectedDashboards.join(', '),
+          selectedDashboards.join(','),
           reqBody
         );
       }
+
+       //Factors SAVE_QUERY EDIT_QUERY tracking
+       if(savedQueryId){
+        factorsai.track('EDIT_QUERY',{'query_type': queryType, 'saved_query_id':savedQueryId, 'query_title': title, 'add_to_dashboard': `${addToDashboard}`});         
+      }
+      else{
+        factorsai.track('SAVE_QUERY',{'query_type': queryType, 'query_title': title, 'add_to_dashboard': `${addToDashboard}`}); 
+      }
+
+
       notification.success({
         message: 'Report Saved Successfully',
         duration: 5,

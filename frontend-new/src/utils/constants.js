@@ -53,7 +53,7 @@ export const UNGROUPED_FUNNEL_TICK_LENGTH = 50;
 export const EVENT_BREADCRUMB = {
   [QUERY_TYPE_EVENT]: 'Events',
   [QUERY_TYPE_FUNNEL]: 'Funnel',
-  [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
+  [QUERY_TYPE_ATTRIBUTION]: 'Attribution',
   [QUERY_TYPE_CAMPAIGN]: 'Campaigns',
   [QUERY_TYPE_KPI]: 'KPI',
   [QUERY_TYPE_PROFILE]: 'Profiles',
