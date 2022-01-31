@@ -1,6 +1,5 @@
 import React from 'react';
 import moment from 'moment';
-import _ from 'lodash';
 import {
   calculatePercentage,
   formatDuration,
@@ -12,15 +11,12 @@ import {
 import {
   Number as NumFormat,
   Text,
-  SVG,
 } from '../../../components/factorsComponents';
 import styles from './index.module.scss';
 import { parseForDateTimeLabel } from '../EventsAnalytics/SingleEventSingleBreakdown/utils';
-import {
-  GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES,
-  DISPLAY_PROP,
-} from '../../../utils/constants';
-import NonClickableTableHeader from '../../../components/NonClickableTableHeader';
+import { GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../utils/constants';
+import DurationCol from './FunnelsResultTable/DurationCol';
+import { DISPLAY_PROP } from '../../../utils/constants';
 
 const windowSize = {
   w: window.outerWidth,
@@ -165,8 +161,10 @@ export const formatData = (response, arrayMapper) => {
 
       const percent = calculatePercentage(row[eventIdx], row[firstEventIdx]);
 
-      groupEventData[`${am.displayName}-${idx}-percent`] = percent;
-      groupEventData[`${am.displayName}-${idx}-count`] = row[eventIdx];
+      groupEventData[`${am.displayName}-${idx}`] = {
+        percentage: percent,
+        value: row[eventIdx],
+      };
       groupEventData[am.mapper] = percent;
 
       eventsData[idx].data[name] = row[eventIdx];
@@ -188,11 +186,11 @@ export const formatData = (response, arrayMapper) => {
       index,
       name,
       value: `${value}%`,
-      ...breakdownData,
-      ...groupEventData,
       Conversion: value, //used for sorting, value will be removed soon
       nonConvertedName,
       'Conversion Time': formatDuration(totalDuration),
+      ...groupEventData,
+      ...breakdownData,
       ...timeData,
     };
   });
@@ -237,14 +235,44 @@ const RenderConversionTime = (d, breakdown, isComparisonApplied) => {
   }
 };
 
+const RenderEventData = (d, breakdown, isComparisonApplied) => {
+  if (breakdown.length || !isComparisonApplied) {
+    return (
+      <>
+        <NumFormat number={d.value} /> ({d.percentage}%)
+      </>
+    );
+  } else {
+    const val1 = (
+      <>
+        <NumFormat number={d.value} /> ({d.percentage}%)
+      </>
+    );
+    const val2 = (
+      <>
+        <NumFormat number={d.compare_count} /> ({d.compare_percent}%)
+      </>
+    );
+    return compareSkeleton(val1, val2);
+  }
+};
+
+const RenderDurations = (d, breakdown, isComparisonApplied) => {
+  if (breakdown.length || !isComparisonApplied) {
+    return d;
+  } else {
+    return compareSkeleton(d.time, d.compare_time);
+  }
+};
+
 export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   const charArr = ['1', '2', '3', '4', '5', '6'];
   const displayTitle =
     breakdown.en === 'user'
       ? userPropNames[breakdown.pr] || breakdown.pr
       : breakdown.en === 'event'
-        ? eventPropNames[breakdown.pr] || breakdown.pr
-        : breakdown.pr;
+      ? eventPropNames[breakdown.pr] || breakdown.pr
+      : breakdown.pr;
 
   if (!breakdown.eni) {
     return displayTitle;
@@ -262,7 +290,7 @@ export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   );
 };
 
-export const getTableColumns = (
+export const generateTableColumns = (
   queries,
   currentSorter,
   handleSorting,
@@ -272,224 +300,168 @@ export const getTableColumns = (
   userPropNames,
   eventPropNames
 ) => {
-  const unsortedBreakdown = _.get(resultData, 'meta.query.gbp', []);
-  const isBreakdownApplied = unsortedBreakdown.length > 0;
-  const breakdown = SortData(unsortedBreakdown, 'eni', 'ascend')
+  console.log('funnels generateTableColumns');
+  let breakdown = resultData?.meta?.query?.gbp;
 
-  const getBreakdownColConfig = (e, index) => {
-    return {
-      title: getClickableTitleSorter(
-        getBreakdownTitle(e, userPropNames, eventPropNames),
-        {
-          key: `${e.pr} - ${e.eni}`,
-          type: e.pty,
-          subtype: e.grn,
-        },
-        currentSorter,
-        handleSorting,
-        'left',
-        'end',
-        'pb-3'
-      ),
-      dataIndex: `${e.pr} - ${e.eni}`,
-      width: 200,
-      fixed: !index ? 'left' : ''
-    };
-  };
+  const isBreakdownApplied =
+    !!breakdown && Array.isArray(breakdown) && breakdown.length > 0;
 
+  if (isBreakdownApplied) {
+    breakdown = SortData(breakdown, 'eni', 'ascend');
+  }
   const eventBreakdownColumns = isBreakdownApplied
     ? breakdown
-      .filter((e) => e.eni)
-      .map((e, index) => {
-        return getBreakdownColConfig(e, index)
-      })
+        .filter((e) => e.eni)
+        .map((e, index) => {
+          return {
+            title: getClickableTitleSorter(
+              getBreakdownTitle(e, userPropNames, eventPropNames),
+              {
+                key: `${e.pr} - ${e.eni}`,
+                type: e.pty,
+                subtype: e.grn,
+              },
+              currentSorter,
+              handleSorting
+            ),
+            dataIndex: `${e.pr} - ${e.eni}`,
+            fixed: !index ? 'left' : '',
+            width: 200,
+          };
+        })
     : [];
 
   const globalBreakdownColumns = isBreakdownApplied
     ? breakdown
-      .filter((e) => !e.eni)
-      .map((e, index) => {
-        return { ...getBreakdownColConfig(e), fixed: !index && !eventBreakdownColumns.length ? 'left' : '' };
-      })
+        .filter((e) => !e.eni)
+        .map((e, index) => {
+          return {
+            title: getClickableTitleSorter(
+              getBreakdownTitle(e, userPropNames, eventPropNames),
+              {
+                key: `${e.pr} - ${e.eni}`,
+                type: e.pty,
+                subtype: e.grn,
+              },
+              currentSorter,
+              handleSorting
+            ),
+            dataIndex: `${e.pr} - ${e.eni}`,
+            fixed: !index && !eventBreakdownColumns.length ? 'left' : '',
+            width: 200,
+          };
+        })
     : [];
 
   const UserCol = !isBreakdownApplied
     ? [
-      {
-        title: <NonClickableTableHeader title='Users' />,
-        dataIndex: 'Grouping',
-        fixed: 'left',
-        width: isComparisonApplied ? 300 : 150,
-        className: isComparisonApplied ? styles.usersColumn : '',
-        render: (d) =>
-          NoBreakdownUsersColumn(d, breakdown, isComparisonApplied),
-      },
-    ]
+        {
+          title: 'Users',
+          dataIndex: 'Grouping',
+          fixed: 'left',
+          width: isComparisonApplied ? 300 : 100,
+          className: isComparisonApplied ? styles.usersColumn : '',
+          render: (d) =>
+            NoBreakdownUsersColumn(d, breakdown, isComparisonApplied),
+        },
+      ]
     : [];
-
-  const conversionRateColumn = {
-    title: isBreakdownApplied ? (
-      getClickableTitleSorter(
-        'Conversion Rate',
-        {
-          key: `Conversion`,
-          type: 'numerical',
-          subtype: null,
-        },
-        currentSorter,
-        handleSorting,
-        'right',
-        'end',
-        'pb-3'
-      )
-    ) : (
-        <NonClickableTableHeader verticalAlignment='end' alignment='right' title='Conversion Rate' />
-      ),
-    dataIndex: 'Conversion',
-    className: 'text-right border-none',
-    width: 150,
-    render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied),
-  };
-
-  const conversionTimeColumn = {
-    title: isBreakdownApplied ? (
-      getClickableTitleSorter(
-        'Time to Convert',
-        {
-          key: `Conversion Time`,
-          type: 'duration',
-          subtype: null,
-        },
-        currentSorter,
-        handleSorting,
-        'right',
-        'end',
-        'pb-3'
-      )
-    ) : (
-        <NonClickableTableHeader verticalAlignment='end' alignment='right' title='Time to Convert' />
-      ),
-    dataIndex: 'Conversion Time',
-    className: 'text-right has-border',
-    width: 150,
-    render: (d) => RenderConversionTime(d, breakdown, isComparisonApplied),
-  };
-
-
-
-  const eventColumns = queries.map((_, index) => {
-    const queryColumn = {
-      title: arrayMapper[index].displayName,
-      className: 'bg-white',
-    };
-
-    const percentCol = {
-      width: 100,
-      className: 'text-right border-none',
-      dataIndex: `${arrayMapper[index].displayName}-${index}-percent`,
-      title: isBreakdownApplied ? getClickableTitleSorter(
-        <SVG name='percentconversion' />,
-        {
-          key: `${arrayMapper[index].displayName}-${index}-percent`,
-          type: 'numerical',
-          subtype: null,
-        },
-        currentSorter,
-        handleSorting,
-        'right',
-        'center',
-        '',
-        'Conv. from prev. step'
-      ) : (
-          <NonClickableTableHeader
-            titleTooltip='Conv. from prev. step'
-            verticalAlignment='end'
-            alignment='right'
-            title={<SVG name='percentconversion' />}
-          />
-        ),
-      render: (d) => {
-        return (isBreakdownApplied || !isComparisonApplied) ? (<><NumFormat number={d} />%</>) : compareSkeleton(d.percent + '%', d.compare_percent + '%')
-      },
-    };
-    const countCol = {
-      width: 100,
-      className: `text-right ${
-        index < queries.length - 1 ? 'has-border' : 'border-none'
-        }`,
-      dataIndex: `${arrayMapper[index].displayName}-${index}-count`,
-      title: isBreakdownApplied ? getClickableTitleSorter(
-        <SVG name='countconversion' />,
-        {
-          key: `${arrayMapper[index].displayName}-${index}-count`,
-          type: 'numerical',
-          subtype: null,
-        },
-        currentSorter,
-        handleSorting,
-        'right',
-        'center',
-        '',
-        'count'
-      ) : (
-          <NonClickableTableHeader
-            titleTooltip='count'
-            verticalAlignment='end'
-            alignment='right'
-            title={<SVG name='countconversion' />}
-          />
-        ),
-      render: (d) => {
-        return (isBreakdownApplied || !isComparisonApplied) ? (<NumFormat shortHand={true} number={d} />) : compareSkeleton(<NumFormat shortHand={true} number={d.count} />, <NumFormat shortHand={true} number={d.compare_count} />)
-      },
-    };
-    const timeCol = [];
-    if (index > 0) {
-      timeCol.push({
-        width: 100,
-        className: 'text-right border-none',
-        dataIndex: `time[${index - 1}-${index}]`,
-        title: isBreakdownApplied ? getClickableTitleSorter(
-          <SVG name='timeconversion' />,
-          {
-            key: `time[${index - 1}-${index}]`,
-            type: 'duration',
-            subtype: null,
-          },
-          currentSorter,
-          handleSorting,
-          'right',
-          'center',
-          '',
-          'Duration from prev. step'
-        ) : (
-            <NonClickableTableHeader
-              titleTooltip='Duration from prev. step'
-              verticalAlignment='end'
-              alignment='right'
-              title={<SVG name='timeconversion' />}
-            />
-          ),
-        render: (d) => {
-          return (isBreakdownApplied || !isComparisonApplied) ? d : compareSkeleton(d.time, d.compare_time)
-        },
-      });
-    }
-    queryColumn.children = [percentCol, ...timeCol, countCol];
-    return queryColumn;
-  });
-
-  return [
+  const result = [
     ...eventBreakdownColumns,
     ...globalBreakdownColumns,
     ...UserCol,
-    conversionRateColumn,
-    conversionTimeColumn,
-    ...eventColumns
+    {
+      title: isBreakdownApplied
+        ? getClickableTitleSorter(
+            'Total Conversion',
+            {
+              key: `Conversion`,
+              type: 'numerical',
+              subtype: null,
+            },
+            currentSorter,
+            handleSorting
+          )
+        : 'Total Conversion',
+      dataIndex: 'Conversion',
+      width: 150,
+      render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied),
+    },
+    {
+      title: isBreakdownApplied
+        ? getClickableTitleSorter(
+            'Conversion Time',
+            {
+              key: `Conversion Time`,
+              type: 'duration',
+              subtype: null,
+            },
+            currentSorter,
+            handleSorting
+          )
+        : 'Conversion Time',
+      dataIndex: 'Conversion Time',
+      width: 150,
+      render: (d) => RenderConversionTime(d, breakdown, isComparisonApplied),
+    },
   ];
+  const eventColumns = [];
+
+  const clockCol = <DurationCol />;
+
+  queries.forEach((q, index) => {
+    eventColumns.push({
+      title: isBreakdownApplied
+        ? getClickableTitleSorter(
+            arrayMapper[index].displayName,
+            {
+              key: `${arrayMapper[index].displayName}-${index}`,
+              type: 'numerical',
+              subtype: null,
+            },
+            currentSorter,
+            handleSorting
+          )
+        : arrayMapper[index].displayName,
+      dataIndex: `${arrayMapper[index].displayName}-${index}`,
+      width: 200,
+      render: (d) => RenderEventData(d, breakdown, isComparisonApplied),
+    });
+    if (index < queries.length - 1) {
+      eventColumns.push({
+        title: isBreakdownApplied
+          ? getClickableTitleSorter(
+              clockCol,
+              {
+                key: `time[${index}-${index + 1}]`,
+                type: 'duration',
+                subtype: null,
+              },
+              currentSorter,
+              handleSorting
+            )
+          : clockCol,
+        dataIndex: `time[${index}-${index + 1}]`,
+        width: isBreakdownApplied ? 90 : 75,
+        render: (d) => RenderDurations(d, breakdown, isComparisonApplied),
+      });
+    }
+  });
+
+  const blankCol = {
+    title: '',
+    dataIndex: '',
+    width: 37,
+    fixed: 'left',
+  };
+  if (isBreakdownApplied) {
+    return [...result, ...eventColumns];
+  } else {
+    return [blankCol, ...result, ...eventColumns];
+  }
 };
 
-export const getTableData = (
+export const generateTableData = (
   data,
   queries,
   groups,
@@ -503,7 +475,7 @@ export const getTableData = (
   comparison_duration,
   resultData
 ) => {
-  console.log('funnels getTableData');
+  console.log('funnels generateTableData');
   const breakdown = resultData?.meta?.query?.gbp;
   const isBreakdownApplied =
     !!breakdown && Array.isArray(breakdown) && breakdown.length > 0;
@@ -514,18 +486,14 @@ export const getTableData = (
       comparisonChartDurations
     );
     queries.forEach((_, index) => {
-      const percent = data[index].value;
-      const compare_percent = comparisonChartData && comparisonChartData[index].value;
-      const count = data[index].netCount;
-      const compare_count = comparisonChartData && comparisonChartData[index].netCount;
-      queryData[`${arrayMapper[index].displayName}-${index}-percent`] = comparisonChartData ? {
-        percent,
-        compare_percent
-      } : percent;
-      queryData[`${arrayMapper[index].displayName}-${index}-count`] = comparisonChartData ? {
-        count,
-        compare_count
-      } : count;
+      queryData[`${arrayMapper[index].displayName}-${index}`] = {
+        percentage: data[index].value,
+        value: data[index].netCount,
+        compare_percent:
+          comparisonChartData && comparisonChartData[index].value,
+        compare_count:
+          comparisonChartData && comparisonChartData[index].netCount,
+      };
       if (index < queries.length - 1) {
         const time = getStepDuration(durations, index, index + 1);
         const compare_time =
@@ -533,9 +501,9 @@ export const getTableData = (
           getStepDuration(comparisonChartDurations, index, index + 1);
         queryData[`time[${index}-${index + 1}]`] = comparisonChartData
           ? {
-            time,
-            compare_time,
-          }
+              time,
+              compare_time,
+            }
           : time;
       }
     });
@@ -672,7 +640,6 @@ const getConvertedValuesForScatterPlot = (metric, originalValue) => {
   if (metric === 'Conversion Time' || metric.includes('time')) {
     return Number(getDurationInSeconds(originalValue));
   }
-  console.log("getConvertedValuesForScatterPlot -> originalValue", originalValue)
   return originalValue.value || originalValue.value === 0
     ? Number(originalValue.value)
     : Number(originalValue);
@@ -724,8 +691,8 @@ export const getAxisMetricOptions = (arrayMapper) => {
     result.push({
       title: `${
         arrayMapper[i].displayName || arrayMapper[i].displayName
-        } (Event ${i + 1})`,
-      value: `${arrayMapper[i].displayName || arrayMapper[i].displayName}-${i}-count`,
+      } (Event ${i + 1})`,
+      value: `${arrayMapper[i].displayName || arrayMapper[i].displayName}-${i}`,
     });
     if (i < arrayMapper.length - 1) {
       result.push({

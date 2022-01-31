@@ -1,5 +1,3 @@
-@import '../styles/abstracts/variables';
-
 body {
   margin: 0;
   font-family: 'Work Sans', sans-serif;
@@ -30,7 +28,7 @@ code {
 }
 
 .tableParentHeader {
-  text-align: center !important;
+  background-color: #f5f6f8 !important;
 }
 
 .top-4 {
@@ -45,6 +43,6 @@ code {
 }
 
 #hatch-left path {
-  stroke: $fa-color--blue;
+  stroke: #4d7db4;
   stroke-width: 2px;
 }

@@ -19,7 +19,6 @@ function AttributionTable({
   tableData,
   setSearchText,
   searchText,
-  metricsOptionsPopover
 }) {
   const getCSVData = () => {
     const dt = tableData;
@@ -95,7 +94,6 @@ function AttributionTable({
       scroll={{ x: 250 }}
       getCSVData={getCSVData}
       ignoreDocumentClick={section === DASHBOARD_WIDGET_SECTION}
-      controlsPopover={metricsOptionsPopover}
     />
   );
 }

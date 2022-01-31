@@ -17,7 +17,6 @@ import {
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { parseForDateTimeLabel } from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
 import { DISPLAY_PROP } from '../../../../utils/constants';
-import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
 export const defaultSortProp = () => {
   return [
@@ -118,11 +117,11 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
       result.push({
         index,
         label: Object.values(breakdownVals).join(),
-        color,
-        ...breakdownVals,
         value: DISPLAY_PROP[elem[valIndex]]
           ? DISPLAY_PROP[elem[valIndex]]
           : elem[valIndex],
+        color,
+        ...breakdownVals,
       });
     });
     return result;
@@ -146,8 +145,8 @@ export const getTableColumns = (
       e.prop_category === 'user'
         ? userPropNames[e.property] || e.property
         : e.prop_category === 'event'
-          ? eventPropNames[e.property] || `${e.property}`
-          : e.property;
+        ? eventPropNames[e.property] || `${e.property}`
+        : e.property;
 
     return {
       title: getClickableTitleSorter(
@@ -169,10 +168,8 @@ export const getTableColumns = (
         : queries[currentEventIndex],
       { key: 'value', type: 'numerical', subtype: null },
       currentSorter,
-      handleSorting,
-      'right'
+      handleSorting
     ),
-    className: 'text-right',
     dataIndex: 'value',
     width: 150,
     render: (d) => {
@@ -302,7 +299,7 @@ export const getHorizontalBarChartColumns = (
     );
 
     return {
-      title: <NonClickableTableHeader title={displayTitle} />,
+      title: displayTitle,
       dataIndex: `${e.property} - ${index}`,
       width: cardSize !== 1 ? 100 : 200,
       className: tableStyles.horizontalBarTableHeader,

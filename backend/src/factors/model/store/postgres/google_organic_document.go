@@ -579,14 +579,11 @@ func (pg *Postgres) DeleteGoogleOrganicIntegration(projectID uint64) (int, error
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
-
-	if projectSetting.IntGoogleOrganicEnabledAgentUUID != nil {
-		agentUpdateValues := make(map[string]interface{})
-		agentUpdateValues["int_google_organic_refresh_token"] = nil
-		err = db.Model(&model.Agent{}).Where("uuid = ?", *projectSetting.IntGoogleOrganicEnabledAgentUUID).Update(agentUpdateValues).Error
-		if err != nil {
-			return http.StatusInternalServerError, err
-		}
+	agentUpdateValues := make(map[string]interface{})
+	agentUpdateValues["int_google_organic_refresh_token"] = nil
+	err = db.Model(&model.Agent{}).Where("uuid = ?", *projectSetting.IntGoogleOrganicEnabledAgentUUID).Update(agentUpdateValues).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
 	}
 
 	projectSettingUpdateValues := make(map[string]interface{})

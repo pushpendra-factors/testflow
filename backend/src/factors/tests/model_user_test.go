@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"sync"
 	"testing"
 	"time"
 
@@ -1424,64 +1423,4 @@ func TestUserSourceColumn(t *testing.T) {
 	user, status = store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, model.UserSourceWeb, *user.Source)
-}
-
-func TestUserDuplicates(t *testing.T) {
-	project, err := SetupProjectReturnDAO()
-	assert.Nil(t, err)
-	assert.NotNil(t, project)
-
-	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
-		ampUserID := getRandomEmail()
-
-		timeStamp := time.Now().Unix()
-		for j := 0; j < 5; j++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampUserID, timeStamp, model.UserSourceWeb)
-				assert.Contains(t, []int{http.StatusCreated, http.StatusFound}, errCode)
-				assert.NotEqual(t, "", userID)
-			}()
-
-		}
-	}
-	wg.Wait()
-
-	users, _ := store.GetStore().GetUsers(project.ID, 0, 50)
-	assert.Len(t, users, 5)
-
-	for i := range users {
-		assert.NotEqual(t, "", users[i].AMPUserId)
-	}
-
-	// test segment_user
-	project, err = SetupProjectReturnDAO()
-	assert.Nil(t, err)
-	assert.NotNil(t, project)
-
-	for i := 0; i < 5; i++ {
-		segAnonID := getRandomEmail()
-
-		timeStamp := time.Now().Unix()
-		for j := 0; j < 5; j++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				user, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, segAnonID, "", timeStamp, model.UserSourceWeb)
-				assert.Contains(t, []int{http.StatusCreated, http.StatusFound}, errCode)
-				assert.NotNil(t, user)
-			}()
-
-		}
-	}
-	wg.Wait()
-
-	users, _ = store.GetStore().GetUsers(project.ID, 0, 50)
-	assert.Len(t, users, 5)
-
-	for i := range users {
-		assert.NotEqual(t, "", users[i].SegmentAnonymousId)
-	}
 }

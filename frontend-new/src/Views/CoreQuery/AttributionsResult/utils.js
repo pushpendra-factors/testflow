@@ -1,11 +1,5 @@
 import React from 'react';
-import cx from 'classnames';
 import moment from 'moment';
-import {
-  SVG,
-  Number as NumFormat,
-  Text,
-} from 'factorsComponents';
 import {
   SortData,
   formatCount,
@@ -17,9 +11,16 @@ import {
   FIRST_METRIC_IN_ATTR_RESPOSE,
   ARR_JOINER,
   ATTRIBUTION_METRICS,
-  DISPLAY_PROP
 } from '../../../utils/constants';
 import styles from './index.module.scss';
+
+import {
+  SVG,
+  Number as NumFormat,
+  Text,
+} from '../../../components/factorsComponents';
+import { Popover } from 'antd';
+import { DISPLAY_PROP } from '../../../utils/constants';
 
 export const defaultSortProp = () => {
   return [
@@ -59,8 +60,8 @@ export const getSingleTouchPointChartData = (
   const categories = slicedTableData.map((d) => {
     const cat = enabledDimensions.length
       ? enabledDimensions.map((dimension) => {
-        return d[dimension.title];
-      })
+          return d[dimension.title];
+        })
       : [d[touchpoint]];
     return cat.join(', ');
   });
@@ -139,8 +140,8 @@ export const getDualTouchPointChartData = (
   const result = slicedTableData.map((d) => {
     const name = enabledDimensions.length
       ? enabledDimensions.map((dimension) => {
-        return d[dimension.title];
-      })
+          return d[dimension.title];
+        })
       : [d[touchpoint]];
     return {
       name: name.join(', '),
@@ -361,16 +362,16 @@ const renderMetric = (d, comparison_data) => {
     );
   }
   return (
-    <div className='flex gap-x-2 justify-end items-start'>
-      <div className='flex flex-col items-center'>
-        <div>
+    <div className='flex flex-col justify-center items-start'>
+      <div className='flex items-center'>
+        <div className='mr-2'>
           <NumFormat number={d.value} />
         </div>
-        <div className={styles.compareNumber}>
-          <NumFormat number={d.compare_value} />
-        </div>
+        <div className={styles.changePercent}>{compareText}</div>
       </div>
-      <div className={styles.changePercent}>{compareText}</div>
+      <div className={styles.compareNumber}>
+        <NumFormat number={d.compare_value} />
+      </div>
     </div>
   );
 };
@@ -385,67 +386,51 @@ export const getTableColumns = (
   event,
   eventNames,
   metrics,
+  OptionsPopover,
   attr_dimensions,
   durationObj,
   comparison_data,
   cmprDuration
 ) => {
-
-  const getEventColumnConfig = ({ title, key, method, hasBorder = false }) => {
-    return {
-      title: getClickableTitleSorter(
-        <div className='flex flex-col items-start justify-center'>
-          <div>{title}</div>
-          {!!method && (<div className={cx("w-full text-right", styles.attributionMethodLabel)}>
-            {
-              ATTRIBUTION_METHODOLOGY.find(
-                (m) => m.value === method
-              ).text
-            }
-          </div>)}
-        </div>,
-        { key, type: 'numerical', subtype: null },
-        currentSorter,
-        handleSorting,
-        'right'
-      ),
-      className: cx('text-right', { 'border-none': !hasBorder }),
-      dataIndex: key,
-      width: 200,
-      render: (d) => {
-        return renderMetric(d, comparison_data);
-      },
-    }
-  }
-
-  const getDimensionsColConfig = (d, index) => {
-    return {
-      title: getClickableTitleSorter(
-        d.title,
-        { key: d.title, type: 'categorical', subtype: null },
-        currentSorter,
-        handleSorting,
-        'left',
-        'end',
-        'pb-3'
-      ),
-      dataIndex: d.title,
-      fixed: !index ? 'left' : '',
-      width: (comparison_data && !index) ? 300 : 200,
-      className: cx({ [styles.touchPointCol]: comparison_data && !index }),
-      render: (d) =>
-        !index ? firstColumn(d, durationObj, comparison_data ? cmprDuration : null) : d,
-    }
-  }
-
   const enabledDimensions = attr_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
-
   let dimensionColumns;
-
   if (enabledDimensions.length) {
-    dimensionColumns = enabledDimensions.map(getDimensionsColConfig);
+    dimensionColumns = enabledDimensions.map((d, index) => {
+      if (!index) {
+        return {
+          title: getClickableTitleSorter(
+            d.title,
+            { key: d.title, type: 'categorical', subtype: null },
+            currentSorter,
+            handleSorting,
+            'items-end'
+          ),
+          dataIndex: d.title,
+          fixed: 'left',
+          width: comparison_data ? 300 : 200,
+          className: `${styles.headerAlignBottom} ${
+            comparison_data ? styles.touchPointCol : ''
+          }`,
+          render: (d) =>
+            firstColumn(d, durationObj, comparison_data ? cmprDuration : null),
+        };
+      } else {
+        return {
+          title: getClickableTitleSorter(
+            d.title,
+            { key: d.title, type: 'categorical', subtype: null },
+            currentSorter,
+            handleSorting,
+            'items-end'
+          ),
+          dataIndex: d.title,
+          width: 200,
+          className: styles.headerAlignBottom,
+        };
+      }
+    });
   } else {
     dimensionColumns = [
       {
@@ -454,37 +439,56 @@ export const getTableColumns = (
           { key: touchpoint, type: 'categorical', subtype: null },
           currentSorter,
           handleSorting,
-          'left',
-          'end',
-          'pb-3'
+          'items-end'
         ),
         dataIndex: touchpoint,
         fixed: 'left',
         width: 200,
+        className: styles.headerAlignBottom,
         render: (d) =>
           firstColumn(d, durationObj, comparison_data ? cmprDuration : null),
       },
     ];
   }
-
   const metricsColumns = metrics
     .filter((metric) => metric.enabled && !metric.isEventMetric)
-    .map((metric) => {
+    .map((metric, index, arr) => {
       return {
-        title: (
-          getClickableTitleSorter(
-            metric.title,
-            { key: metric.title, type: 'numerical', subtype: null },
-            currentSorter,
-            handleSorting,
-            'right',
-            'end',
-            'pb-3'
-          )
-        ),
+        title:
+          index !== arr.length - 1 ? (
+            getClickableTitleSorter(
+              metric.title,
+              { key: metric.title, type: 'numerical', subtype: null },
+              currentSorter,
+              handleSorting,
+              'items-end'
+            )
+          ) : (
+            <div className='flex flex-col'>
+              <div className='mb-6 flex justify-end '>
+                <Popover
+                  placement='bottomLeft'
+                  trigger='click'
+                  content={OptionsPopover}
+                >
+                  <span
+                    className={`text-2xl font-normal inline-flex items-center justify-center cursor-pointer absolute bg-white top-4 -right-4 z-10 shadow ${styles.metricOptionsToggler}`}
+                  >
+                    +
+                  </span>
+                </Popover>
+              </div>
+              {getClickableTitleSorter(
+                metric.title,
+                { key: metric.title, type: 'numerical', subtype: null },
+                currentSorter,
+                handleSorting
+              )}
+            </div>
+          ),
         dataIndex: metric.title,
         width: 180,
-        className: `text-right`,
+        className: styles.headerAlignBottom,
         render: (d) => {
           return renderMetric(d, comparison_data);
         },
@@ -493,56 +497,254 @@ export const getTableColumns = (
 
   const showCPC = metrics.find((elem) => elem.header === 'ALL CPC')?.enabled;
   const showCR = metrics.find((elem) => elem.header === 'ALL CR')?.enabled;
-
-  const conversionBorderCondition = !showCPC && !showCR;
-  const costBorderCondition = !showCR;
-
-  const eventColumns = [getEventColumnConfig({ title: 'Conversion', key: 'Conversion', method: attribution_method, hasBorder: conversionBorderCondition })];
+  const eventColumns = [
+    {
+      title: getClickableTitleSorter(
+        <div className='flex flex-col items-start justify-center'>
+          <div>Conversion</div>
+          <div style={{ fontSize: '10px', color: '#8692A3' }}>
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method
+              ).text
+            }
+          </div>
+        </div>,
+        { key: 'Conversion', type: 'numerical', subtype: null },
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: 'Conversion',
+      width: 180,
+      render: (d) => {
+        return renderMetric(d, comparison_data);
+      },
+    },
+  ];
   if (showCPC) {
-    eventColumns.push(getEventColumnConfig({ title: 'Cost Per Conversion', key: 'Cost per Conversion', method: attribution_method, hasBorder: costBorderCondition }))
-  }
-  if (showCR) {
-    eventColumns.push(getEventColumnConfig({ title: 'Conversion Rate', key: 'Conversion Rate', method: attribution_method, hasBorder: true }))
-  }
-
-  if (attribution_method_compare) {
-    eventColumns.push(getEventColumnConfig({ title: 'Conversion', key: 'conversion_compare', method: attribution_method_compare, hasBorder: conversionBorderCondition }))
-    if (showCPC) {
-      eventColumns.push(getEventColumnConfig({ title: 'Cost Per Conversion', key: 'cost_compare', method: attribution_method_compare, hasBorder: costBorderCondition }))
-    }
-    if (showCR) {
-      eventColumns.push(getEventColumnConfig({ title: 'Conversion Rate', key: 'conversion_rate_compare', method: attribution_method_compare, hasBorder: true }))
-    }
-  }
-
-  let linkedEventsColumns = [];
-  if (linkedEvents.length) {
-    linkedEventsColumns = linkedEvents.map((le) => {
-      const linkedEventsChildren = [getEventColumnConfig({ title: 'Conversion', key: 'Linked Event - ' + le.label + ' - Users', hasBorder: conversionBorderCondition })];
-      if (showCPC) {
-        linkedEventsChildren.push(getEventColumnConfig({ title: 'Cost Per Conversion', key: 'Linked Event - ' + le.label + ' - CPC', hasBorder: costBorderCondition }))
-      }
-      if (showCR) {
-        linkedEventsChildren.push(getEventColumnConfig({ title: 'Conversion Rate', key: 'Linked Event - ' + le.label + ' - Conversion Rate', hasBorder: true }))
-      }
-      return {
-        title: eventNames[le.label] || le.label,
-        className: 'bg-white tableParentHeader ',
-        children: linkedEventsChildren,
-      };
+    eventColumns.push({
+      title: getClickableTitleSorter(
+        <div className='flex flex-col items-start justify-ceneter'>
+          <div>Cost Per Conversion</div>
+          <div style={{ fontSize: '10px', color: '#8692A3' }}>
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method
+              ).text
+            }
+          </div>
+        </div>,
+        { key: 'Cost per Conversion', type: 'numerical', subtype: null },
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: 'Cost per Conversion',
+      width: 180,
+      render: (d) => {
+        return renderMetric(d, comparison_data);
+      },
     });
   }
-
-  return [
+  if (showCR) {
+    eventColumns.push({
+      title: getClickableTitleSorter(
+        <div className='flex flex-col items-start justify-ceneter'>
+          <div>Conversion Rate</div>
+          <div style={{ fontSize: '10px', color: '#8692A3' }}>
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method
+              ).text
+            }
+          </div>
+        </div>,
+        { key: 'Conversion Rate', type: 'numerical', subtype: null },
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: 'Conversion Rate',
+      width: 180,
+      render: (d) => {
+        return renderMetric(d, comparison_data);
+      },
+    });
+  }
+  const result = [
     ...dimensionColumns,
     ...metricsColumns,
     {
       title: eventNames[event] || event,
-      className: 'bg-white tableParentHeader ',
+      className: 'tableParentHeader',
       children: eventColumns,
     },
-    ...linkedEventsColumns
   ];
+  if (attribution_method_compare) {
+    result[result.length - 1].children.push({
+      title: getClickableTitleSorter(
+        <div className='flex flex-col items-start justify-ceneter'>
+          <div>Conversion</div>
+          <div style={{ fontSize: '10px', color: '#8692A3' }}>
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method_compare
+              ).text
+            }
+          </div>
+        </div>,
+        { key: 'conversion_compare', type: 'numerical', subtype: null },
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: 'conversion_compare',
+      width: 180,
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
+    });
+    if (showCPC) {
+      result[result.length - 1].children.push({
+        title: getClickableTitleSorter(
+          <div className='flex flex-col items-start justify-ceneter'>
+            <div>Cost Per Conversion</div>
+            <div style={{ fontSize: '10px', color: '#8692A3' }}>
+              {
+                ATTRIBUTION_METHODOLOGY.find(
+                  (m) => m.value === attribution_method_compare
+                ).text
+              }
+            </div>
+          </div>,
+          { key: 'cost_compare', type: 'numerical', subtype: null },
+          currentSorter,
+          handleSorting
+        ),
+        dataIndex: 'cost_compare',
+        width: 180,
+        render: (d) => {
+          return <NumFormat number={d} />;
+        },
+      });
+    }
+    if (showCR) {
+      result[result.length - 1].children.push({
+        title: getClickableTitleSorter(
+          <div className='flex flex-col items-start justify-ceneter'>
+            <div>Conversion Rate</div>
+            <div style={{ fontSize: '10px', color: '#8692A3' }}>
+              {
+                ATTRIBUTION_METHODOLOGY.find(
+                  (m) => m.value === attribution_method_compare
+                ).text
+              }
+            </div>
+          </div>,
+          { key: 'conversion_rate_compare', type: 'numerical', subtype: null },
+          currentSorter,
+          handleSorting
+        ),
+        dataIndex: 'conversion_rate_compare',
+        width: 180,
+        render: (d) => {
+          return <NumFormat number={d} />;
+        },
+      });
+    }
+  }
+  let linkedEventsColumns = [];
+  if (linkedEvents.length) {
+    linkedEventsColumns = linkedEvents.map((le) => {
+      const linkedEventsChildren = [
+        {
+          title: getClickableTitleSorter(
+            <div className='flex flex-col items-start justify-center'>
+              <div>Conversion</div>
+              <div style={{ fontSize: '10px', color: '#8692A3' }}>
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
+              </div>
+            </div>,
+            {
+              key: 'Linked Event - ' + le.label + ' - Users',
+              type: 'numerical',
+              subtype: null,
+            },
+            currentSorter,
+            handleSorting
+          ),
+          dataIndex: 'Linked Event - ' + le.label + ' - Users',
+          width: 180,
+          render: (d) => {
+            return renderMetric(d, comparison_data);
+          },
+        },
+      ];
+      if (showCPC) {
+        linkedEventsChildren.push({
+          title: getClickableTitleSorter(
+            <div className='flex flex-col items-start justify-ceneter'>
+              <div>Cost Per Conversion</div>
+              <div style={{ fontSize: '10px', color: '#8692A3' }}>
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
+              </div>
+            </div>,
+            {
+              key: 'Linked Event - ' + le.label + ' - CPC',
+              type: 'numerical',
+              subtype: null,
+            },
+            currentSorter,
+            handleSorting
+          ),
+          dataIndex: 'Linked Event - ' + le.label + ' - CPC',
+          width: 180,
+          render: (d) => {
+            return renderMetric(d, comparison_data);
+          },
+        });
+      }
+      if (showCR) {
+        linkedEventsChildren.push({
+          title: getClickableTitleSorter(
+            <div className='flex flex-col items-start justify-ceneter'>
+              <div>Conversion Rate</div>
+              <div style={{ fontSize: '10px', color: '#8692A3' }}>
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
+              </div>
+            </div>,
+            {
+              key: 'Linked Event - ' + le.label + ' - Conversion Rate',
+              type: 'numerical',
+              subtype: null,
+            },
+            currentSorter,
+            handleSorting
+          ),
+          dataIndex: 'Linked Event - ' + le.label + ' - Conversion Rate',
+          width: 180,
+          render: (d) => {
+            return renderMetric(d, comparison_data);
+          },
+        });
+      }
+      return {
+        title: eventNames[le.label] || le.label,
+        className: 'tableParentHeader',
+        children: linkedEventsChildren,
+      };
+    });
+  }
+  return [...result, ...linkedEventsColumns];
 };
 
 export const calcChangePerc = (val1, val2) => {
@@ -652,27 +854,27 @@ export const getTableData = (
         Conversion: !comparison_data
           ? formatCount(row[userIdx], 1)
           : {
-            value: formatCount(row[userIdx], 1),
-            compare_value: equivalent_compare_row
-              ? equivalent_compare_row[userIdx]
-              : 0,
-          },
+              value: formatCount(row[userIdx], 1),
+              compare_value: equivalent_compare_row
+                ? equivalent_compare_row[userIdx]
+                : 0,
+            },
         'Cost per Conversion': !comparison_data
           ? formatCount(row[costIdx], 1)
           : {
-            value: formatCount(row[costIdx], 1),
-            compare_value: equivalent_compare_row
-              ? formatCount(equivalent_compare_row[costIdx], 1)
-              : 0,
-          },
+              value: formatCount(row[costIdx], 1),
+              compare_value: equivalent_compare_row
+                ? formatCount(equivalent_compare_row[costIdx], 1)
+                : 0,
+            },
         'Conversion Rate': !comparison_data
           ? formatCount(row[conversionRateIdx], 1)
           : {
-            value: formatCount(row[conversionRateIdx], 1),
-            compare_value: equivalent_compare_row
-              ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
-              : 0,
-          },
+              value: formatCount(row[conversionRateIdx], 1),
+              compare_value: equivalent_compare_row
+                ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
+                : 0,
+            },
       };
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
@@ -684,24 +886,24 @@ export const getTableData = (
           resultantRow[`Linked Event - ${le.label} - Users`] = !comparison_data
             ? formatCount(row[eventUsersIdx], 1)
             : {
-              value: formatCount(row[eventUsersIdx], 1),
-              compare_value: equivalent_compare_row
-                ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
-                : 0,
-            };
+                value: formatCount(row[eventUsersIdx], 1),
+                compare_value: equivalent_compare_row
+                  ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
+                  : 0,
+              };
           resultantRow[`Linked Event - ${le.label} - CPC`] = !comparison_data
             ? formatCount(row[eventCPCIdx], 1)
             : {
-              value: formatCount(row[eventCPCIdx], 1),
-              compare_value: equivalent_compare_row
-                ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
-                : 0,
-            };
+                value: formatCount(row[eventCPCIdx], 1),
+                compare_value: equivalent_compare_row
+                  ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
+                  : 0,
+              };
           resultantRow[
             `Linked Event - ${le.label} - Conversion Rate`
           ] = !comparison_data
-              ? formatCount(row[eventConvRateIdx], 1)
-              : {
+            ? formatCount(row[eventConvRateIdx], 1)
+            : {
                 value: formatCount(row[eventConvRateIdx], 1),
                 compare_value: equivalent_compare_row
                   ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
@@ -806,9 +1008,9 @@ export const getAxisMetricOptions = (
   result.push({
     title: attribution_method_compare
       ? `Conversion - ${
-      ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-        .text
-      }`
+          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+            .text
+        }`
       : 'Conversion',
     value: 'Conversion',
   });
@@ -816,9 +1018,9 @@ export const getAxisMetricOptions = (
   result.push({
     title: attribution_method_compare
       ? `Cost per Conversion - ${
-      ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-        .text
-      }`
+          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+            .text
+        }`
       : 'Cost per Conversion',
     value: 'Cost per Conversion',
   });
@@ -826,9 +1028,9 @@ export const getAxisMetricOptions = (
   result.push({
     title: attribution_method_compare
       ? `Conversion Rate - ${
-      ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-        .text
-      }`
+          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+            .text
+        }`
       : 'Conversion Rate',
     value: 'Conversion Rate',
   });
@@ -839,7 +1041,7 @@ export const getAxisMetricOptions = (
         ATTRIBUTION_METHODOLOGY.find(
           (m) => m.value === attribution_method_compare
         ).text
-        }`,
+      }`,
       value: 'conversion_compare',
     });
 
@@ -848,7 +1050,7 @@ export const getAxisMetricOptions = (
         ATTRIBUTION_METHODOLOGY.find(
           (m) => m.value === attribution_method_compare
         ).text
-        }`,
+      }`,
       value: 'cost_compare',
     });
 
@@ -857,7 +1059,7 @@ export const getAxisMetricOptions = (
         ATTRIBUTION_METHODOLOGY.find(
           (m) => m.value === attribution_method_compare
         ).text
-        }`,
+      }`,
       value: 'conversion_rate_compare',
     });
   }

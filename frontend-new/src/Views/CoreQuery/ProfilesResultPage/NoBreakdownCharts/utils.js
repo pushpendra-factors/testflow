@@ -9,7 +9,6 @@ import { Number as NumFormat } from '../../../../components/factorsComponents';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import HorizontalBarChartCell from '../../EventsAnalytics/SingleEventMultipleBreakdown/HorizontalBarChartCell';
 import { ReverseProfileMapper } from '../../../../utils/constants';
-import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
 export const defaultSortProp = () => {
   return [
@@ -37,10 +36,8 @@ export const getTableColumns = (currentSorter, handleSorting) => {
       'Value',
       { key: 'value', type: 'numerical', subtype: null },
       currentSorter,
-      handleSorting,
-      'right'
+      handleSorting
     ),
-    className: 'text-right',
     dataIndex: 'value',
     render: (d) => {
       return <NumFormat number={d} />;
@@ -58,7 +55,7 @@ export const getTableData = (data, queries, currentSorter, searchText) => {
         index,
         Users: `${toLetters(index)}. ${
           ReverseProfileMapper[query] ? ReverseProfileMapper[query] : query
-          }`,
+        }`,
         value: rg.rows[0][1],
       };
     });
@@ -74,7 +71,7 @@ export const getTableData = (data, queries, currentSorter, searchText) => {
 
 export const getHorizontalBarChartColumns = () => {
   const row = {
-    title: <NonClickableTableHeader title="Users" />,
+    title: 'Users',
     dataIndex: `users`,
     className: tableStyles.horizontalBarTableHeader,
     render: (d) => {
@@ -124,7 +121,7 @@ export const getDataInHorizontalBarChartFormat = (
         ReverseProfileMapper[queries[queryIndex]]
           ? ReverseProfileMapper[queries[queryIndex]]
           : queries[queryIndex]
-        }`;
+      }`;
     });
 
     row['users'] = (

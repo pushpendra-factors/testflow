@@ -17,10 +17,8 @@ import {
   QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
 } from './constants';
-import { Text } from '../components/factorsComponents';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
 import { isArray } from 'lodash';
-import { Tooltip } from 'antd';
 
 const visualizationColors = [
   '#4D7DB4',
@@ -180,71 +178,27 @@ export const getClickableTitleSorter = (
   sorterProp,
   currentSorter,
   handleSorting,
-  alignment = 'left',
-  verticalAlignment = 'center',
-  containerClassName,
-  titleTooltip = null
+  alignmentClass = 'items-center'
 ) => {
   const sorter = isArray(currentSorter) ? currentSorter : [currentSorter];
   const sorterPropIndex = sorter.findIndex(
     (elem) => elem.key === sorterProp.key
   );
-
-  let titleText;
-
-  if (titleTooltip) {
-    titleText = (
-      <Tooltip title={titleTooltip}>
-        <Text weight='bold' color='grey-2' type='title' extraClass='mb-0'>
-          {title}
-        </Text>
-      </Tooltip>
-    );
-  } else {
-    titleText = (
-      <Text weight='bold' color='grey-2' type='title' extraClass='mb-0'>
-        {title}
-      </Text>
-    )
-  }
-
-  const icon = (
-    <>
+  return (
+    <div
+      onClick={() => handleSorting(sorterProp)}
+      className={`flex ${alignmentClass} justify-between cursor-pointer h-full`}
+    >
+      <div className='mr-2 break-all'>{title}</div>
       {sorterPropIndex > -1 && sorter[sorterPropIndex].order === 'descend' ? (
         <ArrowDownOutlined />
       ) : null}
       {sorterPropIndex > -1 && sorter[sorterPropIndex].order === 'ascend' ? (
         <ArrowUpOutlined />
       ) : null}
-    </>
-  );
-
-  const justifyAlignment = alignment === 'left' ? 'justify-start' : 'justify-end'
-  const verticalAlignmentClass = verticalAlignment === 'start' ? 'items-start' : verticalAlignment === 'end' ? 'items-end' : 'items-center';
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => handleSorting(sorterProp)}
-      className={`flex ${verticalAlignmentClass} ${justifyAlignment} cursor-pointer h-full px-4 ${containerClassName}`}
-    >
-      <div className="flex gap-x-1 items-center">
-        {alignment === 'left' ? (
-          <>
-            {titleText}
-            {icon}
-          </>
-        ) : (
-            <>
-              {icon}
-              {titleText}
-            </>
-          )}
-      </div>
     </div>
   );
-}
+};
 
 export const generateColors = (requiredCumberOfColors) => {
   const adder = Math.floor(visualizationColors.length / requiredCumberOfColors);
@@ -333,6 +287,30 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
       },
     ];
   }
+  // if (queryType === QUERY_TYPE_KPI) {
+  //   menuItems = [
+  //     {
+  //       key: CHART_TYPE_BARCHART,
+  //       name: 'Columns',
+  //     },
+  //     {
+  //       key: CHART_TYPE_HORIZONTAL_BAR_CHART,
+  //       name: 'Bars',
+  //     },
+  //     {
+  //       key: CHART_TYPE_LINECHART,
+  //       name: 'Line Chart',
+  //     },
+  //     {
+  //       key: CHART_TYPE_STACKED_AREA,
+  //       name: 'Stacked Area',
+  //     },
+  //     {
+  //       key: CHART_TYPE_STACKED_BAR,
+  //       name: 'Stacked Column',
+  //     },
+  //   ];
+  // }
   if (queryType === QUERY_TYPE_KPI && !breakdownLength) {
     menuItems = [
       {
@@ -477,8 +455,8 @@ export const getQueryType = (query) => {
   const cl = query.cl
     ? query.cl
     : Array.isArray(query.query_group) && query.query_group.length
-      ? query.query_group[0].cl
-      : QUERY_TYPE_EVENT;
+    ? query.query_group[0].cl
+    : QUERY_TYPE_EVENT;
   return cl;
 };
 
@@ -565,17 +543,6 @@ export const getNewSorterState = (currentSorter, newSortProp) => {
   const newSortPropIndex = currentSorter.findIndex(
     (elem) => elem.key === newSortProp.key
   );
-
-  // if user is sorting by a numerical column which is not already in use for sorting then we will just sort by this column
-  if (newSortPropIndex === -1 && newSortProp.type === 'numerical') {
-    return [
-      {
-        ...newSortProp,
-        order: 'descend',
-      },
-    ];
-  }
-
   if (currentSorter.length === 3) {
     // we already have three levels of sorting and user has applied sorting on fourth column then we will reset the sorting state and only kepp the newly selected one
     if (newSortPropIndex === -1) {
@@ -604,11 +571,11 @@ export const getNewSorterState = (currentSorter, newSortProp) => {
     if (newSortPropIndex === -1) {
       // we are inserting new level of sorting here
       return [
+        ...currentSorter,
         {
           ...newSortProp,
           order: 'descend',
         },
-        ...currentSorter,
       ];
     } else {
       // we are editing existing level of sorting here
@@ -780,8 +747,8 @@ export const getBreakdownDisplayTitle = (
     prop_category === 'user'
       ? userPropNames[property] || property
       : prop_category === 'event'
-        ? eventPropNames[property] || property
-        : property;
+      ? eventPropNames[property] || property
+      : property;
 
   if (breakdown.eventIndex) {
     displayTitle = displayTitle + ' (event)';

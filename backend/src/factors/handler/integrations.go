@@ -1161,8 +1161,8 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 func IntDeleteHandler(c *gin.Context) {
 
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projectID, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if projectID == 0 || err != nil {
+	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Delete Integration failed. Invalid project."})
 		return
 	}
@@ -1186,11 +1186,12 @@ func IntDeleteHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid channel name."})
 		return
 	}
+	log.Info("channel_name ", channelName)
 
-	errCode, err = store.GetStore().DeleteChannelIntegration(projectID, channelName)
+	errCode, err := store.GetStore().DeleteChannelIntegration(projectID, channelName)
 	if err != nil || errCode != http.StatusOK {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": err})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"msg": "Successfully deleted the integration"})
+	c.JSON(http.StatusOK, nil)
 }

@@ -92,7 +92,6 @@ func TestMain(m *testing.M) {
 		EnableOLTPQueriesMemSQLImprovements:         "*",
 		CaptureSourceInUsersTable:                   "*",
 		AllowSupportForSourceColumnInUsers:          "*",
-		MergeAmpIDAndSegmentIDWithUserIDByProjectID: "*",
 		AllowProfilesGroupSupport:                   "*",
 	}
 	C.InitConf(config)

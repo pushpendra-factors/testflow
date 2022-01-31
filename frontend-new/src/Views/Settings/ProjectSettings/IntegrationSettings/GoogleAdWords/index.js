@@ -18,7 +18,6 @@ import {
   fetchAdwordsCustomerAccounts,
   udpateProjectSettings,
   fetchProjectSettings,
-  deleteIntegration
 } from 'Reducers/global';
 const isDevelopment = () => {
   return ENV === 'development';
@@ -40,7 +39,6 @@ const GoogleIntegration = ({
   udpateProjectSettings,
   fetchProjectSettings,
   kbLink = false,
-  deleteIntegration
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -57,9 +55,11 @@ const GoogleIntegration = ({
   const onDisconnect = () => {
     setLoading(true);
     setCustomerAccounts(false);
-    deleteIntegration(activeProject.id, 'adwords')
+    udpateProjectSettings(activeProject.id, {
+      int_adwords_customer_account_id: '',
+      int_adwords_enabled_agent_uuid: '',
+    })
       .then(() => {
-        fetchProjectSettings(activeProject.id);
         setLoading(false);
         setShowModal(false);
         setShowURLModal(false);
@@ -474,5 +474,4 @@ export default connect(mapStateToProps, {
   enableAdwordsIntegration,
   fetchAdwordsCustomerAccounts,
   udpateProjectSettings,
-  deleteIntegration
 })(GoogleIntegration);

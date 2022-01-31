@@ -2446,13 +2446,11 @@ func (store *MemSQL) DeleteAdwordsIntegration(projectID uint64) (int, error) {
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
-	if projectSetting.IntAdwordsEnabledAgentUUID != nil {
-		agentUpdateValues := make(map[string]interface{})
-		agentUpdateValues["int_adwords_refresh_token"] = nil
-		err = db.Model(&model.Agent{}).Where("uuid = ?", *projectSetting.IntAdwordsEnabledAgentUUID).Update(agentUpdateValues).Error
-		if err != nil {
-			return http.StatusInternalServerError, err
-		}
+	agentUpdateValues := make(map[string]interface{})
+	agentUpdateValues["int_adwords_refresh_token"] = nil
+	err = db.Model(&model.Agent{}).Where("uuid = ?", *projectSetting.IntAdwordsEnabledAgentUUID).Update(agentUpdateValues).Error
+	if err != nil {
+		return http.StatusInternalServerError, err
 	}
 
 	projectSettingUpdateValues := make(map[string]interface{})

@@ -178,10 +178,8 @@ export const getTableColumns = (
       labelsObj[page],
       { key: `Event Count`, type: 'numerical', subtype: null },
       currentSorter,
-      handleSorting,
-      'right'
+      handleSorting
     ),
-    className: 'text-right',
     dataIndex: 'Event Count',
     width: 150,
     render: (d) => {
@@ -216,10 +214,8 @@ export const getDateBasedColumns = (
       'Overall',
       { key: `Event Count`, type: 'numerical', subtype: null },
       currentSorter,
-      handleSorting,
-      'right'
+      handleSorting
     ),
-    className: 'text-right',
     dataIndex: `Event Count`,
     width: 150,
   };
@@ -243,15 +239,13 @@ export const getDateBasedColumns = (
         moment(cat).format(format),
         { key: moment(cat).format(format), type: 'numerical', subtype: null },
         currentSorter,
-        handleSorting,
-        'right'
+        handleSorting
       ),
       width: 150,
       dataIndex: moment(cat).format(format),
       render: (d) => {
         return <NumFormat number={d} />;
       },
-      className: 'text-right',
     };
   });
   const eventCol = {

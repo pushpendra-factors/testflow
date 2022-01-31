@@ -16,7 +16,6 @@ import {
 import HorizontalBarChartCell from './HorizontalBarChartCell';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
-import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
 export const defaultSortProp = () => {
   return [
@@ -138,10 +137,8 @@ export const getTableColumns = (
       `${title}: ${labelsObj[page]}`,
       { key: 'Event Count', type: 'numerical', subtype: null },
       currentSorter,
-      handleSorting,
-      'right'
+      handleSorting
     ),
-    className: 'text-right',
     dataIndex: 'Event Count',
     width: 150,
     render: (d) => {
@@ -175,10 +172,8 @@ export const getDateBasedColumns = (
       'Overall',
       { key: `Event Count`, type: 'numerical', subtype: null },
       currentSorter,
-      handleSorting,
-      'right'
+      handleSorting
     ),
-    className: 'text-right',
     dataIndex: `Event Count`,
     width: 150,
   };
@@ -215,10 +210,8 @@ export const getDateBasedColumns = (
         moment(cat).format(format),
         { key: moment(cat).format(format), type: 'numerical', subtype: null },
         currentSorter,
-        handleSorting,
-        'right'
+        handleSorting
       ),
-      className: 'text-right',
       width: 150,
       dataIndex: moment(cat).format(format),
       render: (d) => {
@@ -462,7 +455,7 @@ export const getHorizontalBarChartColumns = (
     );
 
     return {
-      title: <NonClickableTableHeader title={displayTitle} />,
+      title: displayTitle,
       dataIndex: `${e.pr} - ${index}`,
       width: cardSize !== 1 ? 100 : 200,
       className: tableStyles.horizontalBarTableHeader,

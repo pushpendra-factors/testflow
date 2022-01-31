@@ -1,8 +1,6 @@
-@import 'Styles/abstracts/_variables.scss';
-
 .heading {
   &:hover {
-    border-bottom: 1px solid $fa-color--mono-5;
+    border-bottom: 1px solid #3e516c;
   }
 }
 
@@ -13,21 +11,21 @@
   &__first {
     font-weight: 600;
     font-size: 14px;
-    color: $fa-color--mono-6;
+    color: #0e2647;
     margin-bottom: 4px;
   }
 
   &__second {
     font-weight: 600;
     font-size: 12px;
-    color: $fa-color--mono-4;
+    color: #8692a3;
     margin-bottom: 4px;
   }
 
   &__change {
     display: flex;
     font-size: 12px;
-    color: $fa-color--mono-4;
+    color: #8692a3;
   }
 }
 
@@ -42,19 +40,18 @@ td.touchPointCol {
 }
 
 .compareNumber {
-  color: $fa-color--mono-4;
+  color: #8692a3;
   font-size: 12px;
   line-height: 16px;
 }
 
 .changePercent {
   display: flex;
-  color: $fa-color--mono-4;
+  color: #8692a3;
   font-size: 12px;
   line-height: 16px;
 }
 
-.attributionMethodLabel {
-  font-size: 0.625rem;
-  color: $fa-color--mono-4;
+th.headerAlignBottom {
+  vertical-align: bottom;
 }

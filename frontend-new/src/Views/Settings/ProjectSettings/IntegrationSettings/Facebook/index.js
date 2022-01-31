@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useEffect } from 'react';
 import { connect } from 'react-redux';
-import { fetchProjectSettings, udpateProjectSettings, addFacebookAccessToken, deleteIntegration } from 'Reducers/global';
+import { fetchProjectSettings, udpateProjectSettings, addFacebookAccessToken } from 'Reducers/global';
 import {
   Button, message, Select, Modal, Row, Col, Input
 } from 'antd';
@@ -17,8 +17,7 @@ const FacebookIntegration = ({
   currentProjectSettings,
   setIsActive,
   addFacebookAccessToken,
-  kbLink = false,
-  deleteIntegration
+  kbLink = false
 }) => {
   const [loading, setLoading] = useState(false);
   const [FbResponse, SetFbResponse] = useState(null);
@@ -115,9 +114,12 @@ const FacebookIntegration = ({
 
   const onDisconnect = () =>{
     setLoading(true);
-    deleteIntegration(activeProject.id, 'facebook')
-    .then(() => {
-        fetchProjectSettings(activeProject.id);
+        udpateProjectSettings(activeProject.id, 
+        { 'int_facebook_ad_account' : "",
+        'int_facebook_email' : "",
+        'int_facebook_access_token' : "",
+        'int_facebook_user_id' : ""
+    }).then(() => {
         setLoading(false);
         setShowForm(false); 
         setTimeout(() => {
@@ -237,4 +239,4 @@ const mapStateToProps = (state) => ({
   currentProjectSettings: state.global.currentProjectSettings
 });
 
-export default connect(mapStateToProps, { addFacebookAccessToken, fetchProjectSettings, udpateProjectSettings, deleteIntegration })(FacebookIntegration)
+export default connect(mapStateToProps, { addFacebookAccessToken, fetchProjectSettings, udpateProjectSettings })(FacebookIntegration)

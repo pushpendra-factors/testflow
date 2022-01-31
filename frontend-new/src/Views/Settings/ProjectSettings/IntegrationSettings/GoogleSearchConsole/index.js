@@ -18,7 +18,6 @@ import {
   fetchSearchConsoleCustomerAccounts,
   udpateProjectSettings,
   fetchProjectSettings,
-  deleteIntegration
 } from 'Reducers/global';
 const isDevelopment = () => {
   return ENV === 'development';
@@ -40,7 +39,6 @@ const GoogleSearchConsole = ({
   udpateProjectSettings,
   fetchProjectSettings,
   kbLink = false,
-  deleteIntegration
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -57,9 +55,11 @@ const GoogleSearchConsole = ({
   const onDisconnect = () => {
     setLoading(true);
     setCustomerAccounts(false);
-    deleteIntegration(activeProject.id, 'google_organic')
+    udpateProjectSettings(activeProject.id, {
+      int_google_organic_url_prefixes: '',
+      int_google_organic_enabled_agent_uuid: '',
+    })
       .then(() => {
-        fetchProjectSettings(activeProject.id);
         setLoading(false);
         setShowModal(false);
         setShowURLModal(false);
@@ -448,5 +448,4 @@ export default connect(mapStateToProps, {
   enableSearchConsoleIntegration,
   fetchSearchConsoleCustomerAccounts,
   udpateProjectSettings,
-  deleteIntegration
 })(GoogleSearchConsole);

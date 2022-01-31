@@ -457,22 +457,6 @@ func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID uint64, customerUser
 	return userIDs, http.StatusFound
 }
 
-func getUserIDByAmpUserID(ampUserID string) string {
-	if ampUserID == "" {
-		return ""
-	}
-
-	return "amp" + "-" + ampUserID
-}
-
-func getUserIDBySegementAnonymousID(segAnonID string) string {
-	if segAnonID == "" {
-		return ""
-	}
-
-	return "seg" + "-" + segAnonID
-}
-
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
 func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string,
@@ -522,9 +506,6 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 		// add seg_aid, if provided and not exist already.
 		if segAnonId != "" {
 			cUser.SegmentAnonymousId = segAnonId
-			if C.AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectId) {
-				cUser.ID = getUserIDBySegementAnonymousID(segAnonId)
-			}
 		}
 		if custUserId != "" {
 			cUser.CustomerUserId = custUserId
@@ -532,20 +513,6 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 
 		user, err := store.createUserWithError(cUser)
 		if err != nil {
-			if C.AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectId) {
-				if IsDuplicateRecordError(err) {
-					if cUser.ID != "" {
-						// Multiple requests trying to create user at the
-						// same time should not lead failure permanently,
-						// so get the user and return.
-						return cUser, http.StatusCreated
-					}
-
-					logCtx.WithError(err).Error("Failed to create segment user. Integrity violation.")
-					return nil, http.StatusNotAcceptable
-				}
-			}
-
 			logCtx.WithError(err).Error(
 				"Failed to create user by segment anonymous id on CreateOrGetSegmentUser")
 			return nil, http.StatusInternalServerError
@@ -620,32 +587,9 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 		return userID, errCode
 	}
 
-	cUser := model.User{ProjectId: projectId,
-		AMPUserId:     ampUserId,
-		JoinTimestamp: timestamp,
-		Source:        &requestSource,
-	}
-
-	if C.AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectId) {
-		cUser.ID = getUserIDByAmpUserID(ampUserId)
-	}
-
-	user, err := store.createUserWithError(&cUser)
+	user, err := store.createUserWithError(&model.User{ProjectId: projectId,
+		AMPUserId: ampUserId, JoinTimestamp: timestamp, Source: &requestSource})
 	if err != nil {
-		if C.AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectId) {
-			if IsDuplicateRecordError(err) {
-				if cUser.ID != "" {
-					// Multiple requests trying to create user at the
-					// same time should not lead failure permanently,
-					// so get the user and return.
-					return cUser.ID, http.StatusCreated
-				}
-
-				logCtx.WithError(err).Error("Failed to create amp user. Integrity violation.")
-				return "", http.StatusNotAcceptable
-			}
-		}
-
 		logCtx.WithError(err).Error(
 			"Failed to create user by amp user id on CreateOrGetAMPUser")
 		return "", http.StatusInternalServerError
