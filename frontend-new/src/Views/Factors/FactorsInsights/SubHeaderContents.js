@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {  Button , Badge, message, Spin} from 'antd';
 import { SVG, Text} from 'factorsComponents';
 import { Link } from 'react-router-dom'; 
@@ -23,6 +23,14 @@ moment.tz.setDefault(timeZone);
     return moment.unix(unixTime).utc().format('MMM DD, YYYY');
   } 
   const factorsModels = !_.isEmpty(factors_models) && _.isArray(factors_models) ? factors_models.map((item)=>{return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]}) : [];
+
+
+  useEffect(()=>{  
+    if(factors_models){ 
+      setDateTime(factorsModels[0]);
+    }
+  },[activeProject, factors_models, goal_insights])
+
 
   const onChangeDateTime = (grp, value) => {
     setDateTime(value); 
