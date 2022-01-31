@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, memo } from 'react';
+import moment from 'moment';
 import { useSelector } from 'react-redux';
 import {
   getTableColumns,
@@ -10,6 +11,7 @@ import DataTable from '../../../../components/DataTable';
 import {
   CHART_TYPE_SPARKLINES,
   DASHBOARD_WIDGET_SECTION,
+  DATE_FORMATS,
 } from '../../../../utils/constants';
 
 const NoBreakdownTable = ({
@@ -68,13 +70,14 @@ const NoBreakdownTable = ({
 
   const getCSVData = () => {
     const activeTableData =
-      (chartType === chartType) === CHART_TYPE_SPARKLINES
+      chartType !== CHART_TYPE_SPARKLINES
         ? dateBasedTableData
         : tableData;
+    const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
     return {
       fileName: `KPI.csv`,
-      data: activeTableData.map(({ index, label, ...rest }) => {
-        return { ...rest };
+      data: activeTableData.map(({ index, label, date, ...rest }) => {
+        return chartType === CHART_TYPE_SPARKLINES ? { date: moment(date).format(format), ...rest } : { ...rest };
       }),
     };
   };
@@ -83,7 +86,7 @@ const NoBreakdownTable = ({
     <DataTable
       tableData={
         chartType === CHART_TYPE_SPARKLINES ||
-        section === DASHBOARD_WIDGET_SECTION
+          section === DASHBOARD_WIDGET_SECTION
           ? tableData
           : dateBasedTableData
       }
@@ -91,7 +94,7 @@ const NoBreakdownTable = ({
       setSearchText={setSearchText}
       columns={
         chartType === CHART_TYPE_SPARKLINES ||
-        section === DASHBOARD_WIDGET_SECTION
+          section === DASHBOARD_WIDGET_SECTION
           ? columns
           : dateBasedColumns
       }

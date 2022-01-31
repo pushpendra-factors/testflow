@@ -1,6 +1,4 @@
-$factorsDarkColor: #0e2647;
-$boxShadowPrimaryColor: #b7bec8;
-$boxShadowSecondaryColor: #e7e9ed;
+@import '../../styles/abstracts/variables';
 
 .table {
   :global(.ant-pagination-item:focus),
@@ -8,7 +6,7 @@ $boxShadowSecondaryColor: #e7e9ed;
   :global(.ant-pagination-item-active),
   :global(.ant-pagination-item-active:focus),
   :global(.ant-pagination-item-active:hover) {
-    border-color: #5949bc !important;
+    border-color: $fa-color--brand-6 !important;
   }
 
   :global(.ant-pagination-item:focus a),
@@ -16,7 +14,7 @@ $boxShadowSecondaryColor: #e7e9ed;
   :global(.ant-pagination-item-active a),
   :global(.ant-pagination-item-active:focus a),
   :global(.ant-pagination-item-active:hover a) {
-    color: #5949bc;
+    color: $fa-color--brand-6;
   }
 
   :global(.ant-table.ant-table-bordered
@@ -36,39 +34,43 @@ $boxShadowSecondaryColor: #e7e9ed;
     border: none;
   }
 
-  th {
-    box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor,
-      inset -1px 0px 0px $boxShadowSecondaryColor;
+  :global(th.ant-table-cell),
+  :global(td.ant-table-cell) {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 16px;
+    color: $fa-color--mono-5;
+    height: 3rem !important;
+    padding: 1rem;
   }
 
-  td {
-    box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor,
-      inset -1px 0px 0px $boxShadowSecondaryColor;
+  :global(td.ant-table-cell:not(:last-child):not(.border-none)),
+  :global(th.ant-table-cell:not(:last-child):not(.border-none)) {
+    border-right: 1px solid #dadada !important;
+  }
+
+  :global(th.ant-table-cell.has-border),
+  :global(td.ant-table-cell.has-border) {
+    // msy be a last child with border
+    border-right: 1px solid #dadada !important;
   }
 
   :global(th.ant-table-cell) {
-    font-style: normal;
+    background: $fa-color--mono-1;
     font-weight: 600;
-    font-size: 12px;
-    line-height: 16px;
-    color: $factorsDarkColor;
-    height: 40px !important;
-    padding: 12px 8px;
-    font-weight: 600;
+    border-top-left-radius: 0px !important;
+    border-top-right-radius: 0px !important;
+    padding: 0 !important;
+    &:global(.bg-white) {
+      background-color: $fa-color--white;
+    }
+    &:hover {
+      background-color: $fa-color--mono-2;
+    }
   }
 
   :global(td.ant-table-cell) {
-    font-style: normal;
     font-weight: 400;
-    font-size: 14px;
-    line-height: 20px;
-    color: $factorsDarkColor;
-    height: 48px !important;
-    padding: 12px 8px;
-  }
-
-  :global(.ant-table-thead > tr > th) {
-    background-color: white;
   }
 
   :global(.ant-checkbox-inner) {
@@ -76,26 +78,50 @@ $boxShadowSecondaryColor: #e7e9ed;
   }
 
   :global(.ant-checkbox-checked .ant-checkbox-inner) {
-    background-color: $factorsDarkColor;
-    border-color: $factorsDarkColor;
+    background-color: $fa-color--mono-6;
+    border-color: $fa-color--mono-6;
   }
 
   :global(.ant-checkbox-input:focus + .ant-checkbox-inner) {
-    border-color: $factorsDarkColor;
+    border-color: $fa-color--mono-6;
   }
 
   :global(tr.ant-table-row-selected > td),
   :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
-    background: #fff;
+    background: $fa-color--white;
   }
 
   :global(.ant-table-selection) {
     display: none;
   }
+  :global(.ant-table-container) {
+    border: 1px solid #dadada !important;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    border-top-left-radius: 0px !important;
+    border-top-right-radius: 0px !important;
+    overflow: hidden;
+  }
 }
 
 .searchBar {
-  box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
+  border: 1px solid #dadada !important;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  height: 3.5rem;
+
+  :global(.ant-input-affix-wrapper) {
+    border: none !important;
+    &:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  :global(.ant-input-affix-wrapper-focused) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
 
   .breakupHeading {
     font-family: 'Work Sans', sans-serif;
@@ -104,7 +130,7 @@ $boxShadowSecondaryColor: #e7e9ed;
     font-size: 18px;
     line-height: 24px;
     letter-spacing: -0.01em;
-    color: $factorsDarkColor;
+    color: $fa-color--mono-6;
   }
 
   .downloadCSVHeading {
@@ -114,15 +140,11 @@ $boxShadowSecondaryColor: #e7e9ed;
     font-size: 14px;
     line-height: 20px;
     letter-spacing: -0.01em;
-    color: $factorsDarkColor;
+    color: $fa-color--mono-6;
     opacity: 0.56;
   }
 
   .inputSearchBar {
-    border: none;
-    box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
-    padding: 0rem 0rem 0.25rem 0;
-
     :global(input) {
       font-family: 'Work Sans', sans-serif;
       font-style: normal;
@@ -138,7 +160,7 @@ $boxShadowSecondaryColor: #e7e9ed;
     :global(input) {
       font-weight: 600;
       font-size: 18px;
-      color: $boxShadowPrimaryColor;
+      color: $fa-color--mono-3;
       line-height: 24px;
     }
   }
@@ -153,5 +175,11 @@ $boxShadowSecondaryColor: #e7e9ed;
 }
 
 th.horizontalBarTableHeader {
-  padding: 12px 24px !important;
+  padding-left: 1rem !important;
+}
+
+.downloadBtn {
+  display: flex;
+  align-items: center;
+  padding: 0;
 }

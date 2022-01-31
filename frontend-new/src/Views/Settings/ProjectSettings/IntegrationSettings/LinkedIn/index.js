@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useEffect } from 'react';
 import { connect } from 'react-redux';
-import { fetchProjectSettings, udpateProjectSettings, addLinkedinAccessToken } from 'Reducers/global';
+import { fetchProjectSettings, udpateProjectSettings, addLinkedinAccessToken, deleteIntegration } from 'Reducers/global';
 import {
     Button, message, Select, Modal, Row, Col, Input
 } from 'antd';  
@@ -15,7 +15,8 @@ const LinkedInIntegration = ({
     currentProjectSettings,
     setIsActive,
     addLinkedinAccessToken,
-    kbLink = false
+    kbLink = false,
+    deleteIntegration
 }) => {
     const [loading, setLoading] = useState(false);
     const [FbResponse, SetFbResponse] = useState(null);
@@ -152,14 +153,9 @@ const LinkedInIntegration = ({
 
     const onDisconnect = () =>{
         setLoading(true);
-            udpateProjectSettings(activeProject.id, 
-            { "int_linkedin_ad_account": "",
-            "int_linkedin_access_token": "",
-            "int_linkedin_refresh_token": "",
-            "int_linkedin_refresh_token_expiry": 0,
-            "int_linkedin_access_token_expiry": 0,
-            "int_linkedin_agent_uuid": null,
-        }).then(() => {
+        deleteIntegration(activeProject.id, 'linkedin')
+        .then(() => {
+            fetchProjectSettings(activeProject.id);
             setLoading(false);
             setShowForm(false); 
             setTimeout(() => {
@@ -289,4 +285,4 @@ const mapStateToProps = (state) => ({
     currentProjectSettings: state.global.currentProjectSettings
 });
 
-export default connect(mapStateToProps, { addLinkedinAccessToken, fetchProjectSettings, udpateProjectSettings })(LinkedInIntegration)
+export default connect(mapStateToProps, { addLinkedinAccessToken, fetchProjectSettings, udpateProjectSettings, deleteIntegration })(LinkedInIntegration)

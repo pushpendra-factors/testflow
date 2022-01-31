@@ -61,11 +61,6 @@ export const getColumns = (
 
   const result = [
     {
-      title: '',
-      dataIndex: '',
-      width: 37,
-    },
-    {
       title: getClickableTitleSorter(
         'Date',
         { key: 'date', type: 'datetime', subtype: 'date' },
@@ -89,8 +84,10 @@ export const getColumns = (
           subtype: null,
         },
         currentSorter,
-        handleSorting
+        handleSorting,
+        'right'
       ),
+      className: 'text-right',
       dataIndex: arrayMapper.find((elem) => elem.index === idx).mapper,
       render: (d) => {
         return <NumFormat number={d} />;
@@ -167,14 +164,7 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
   const initializedDatesData = differentDates.map(() => {
     return 0;
   });
-  const eventIndices = [];
   const resultantData = arrayMapper.map((m) => {
-    eventIndices.push(
-      headers.findIndex(
-        (header) =>
-          m.displayName === (eventNames[header] ? eventNames[header] : header)
-      )
-    );
     return {
       name: m.displayName
         ? m.displayName
@@ -189,17 +179,15 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
 
   data.rows.forEach((row) => {
     const idx = differentDates.indexOf(row[dateIndex]);
-    eventIndices.forEach((valIndex, index) => {
-      if (valIndex > -1) {
-        resultantData[index].data[idx] = row[valIndex];
-      }
+    arrayMapper.forEach((_, index) => {
+      resultantData[index].data[idx] = row[dateIndex + index + 1];
     });
   });
   return {
     categories: differentDates,
     data: resultantData,
   };
-};
+}
 
 export const getDateBasedColumns = (
   data,
@@ -213,9 +201,11 @@ export const getDateBasedColumns = (
       'Overall',
       { key: `Overall`, type: 'numerical', subtype: null },
       currentSorter,
-      handleSorting
+      handleSorting,
+      'right'
     ),
     dataIndex: `Overall`,
+    className: 'text-right',
     width: 150,
   };
 
@@ -251,10 +241,12 @@ export const getDateBasedColumns = (
           subtype: null,
         },
         currentSorter,
-        handleSorting
+        handleSorting,
+        'right'
       ),
-      width: frequency === 'hour' ? 150 : 100,
+      width: frequency === 'hour' ? 200 : 150,
       dataIndex: MomentTz(elem.date).format(format),
+      className: 'text-right',
       render: (d) => {
         return <NumFormat number={d} />;
       },

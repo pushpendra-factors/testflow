@@ -170,7 +170,7 @@ const NoBreakdownCharts = ({
                       level={3}
                       weight={'bold'}
                     >
-                      <NumFormat shortHand={true} number={chartData.total} />
+                      <NumFormat shortHand={chartData.total > 1000} number={chartData.total} />
                     </Text>
                     <div className='w-2/3'>
                       <SparkChart

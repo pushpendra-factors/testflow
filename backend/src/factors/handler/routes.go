@@ -300,7 +300,7 @@ func InitIntRoutes(r *gin.Engine) {
 	intRouteGroup.GET(SalesforceCallbackRoute,
 		SalesforceCallbackHandler)
 
-	intRouteGroup.DELETE("/:channel_name",
+	intRouteGroup.DELETE("/:project_id/:channel_name",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntDeleteHandler)
