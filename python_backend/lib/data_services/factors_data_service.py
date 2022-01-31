@@ -4,6 +4,7 @@ from typing import Dict, List
 
 import requests
 import logging as log
+import time
 
 from requests import Response
 
@@ -114,7 +115,7 @@ class FactorsDataService:
 
         response = requests.post(url, json=payload)
         if not response.ok:
-            log.error("Failed to add response %s to adwords warehouse: %d, %s",
+            log.error("Adwords etl - Failed to add response %s to adwords warehouse: %d, %s",
                       doc_type, response.status_code, response.text)
 
         return response
@@ -125,10 +126,17 @@ class FactorsDataService:
         batch_of_payloads = [cls.get_payload_for_adwords(project_id, customer_acc_id,
                                     doc, doc_type, timestamp) for doc in docs]
 
-        response = requests.post(url, json=batch_of_payloads)
-        if not response.ok:
-            log.error("Failed to add response %s to adwords warehouse: %d, %s",
-                      doc_type, response.status_code, response.text)
+        retries = 0
+        while retries < 3:
+            response = requests.post(url, json=batch_of_payloads)
+            if not response.ok:
+                log.error("Adwords etl - Failed to add response %s to adwords warehouse for retry: %d, %s, %d",
+                        doc_type, response.status_code, response.text, retries)
+                time.sleep(2)
+            else:
+                return response
+            retries += 1
+        log.error("Adwords etl - Failed to add response to adwords - Missing data.")
         return response
 
     @staticmethod

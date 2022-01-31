@@ -221,7 +221,7 @@ function SaveQuery({
         };
         await saveQueryToDashboard(
           active_project.id,
-          selectedDashboards.join(', '),
+          selectedDashboards.join(','),
           reqBody
         );
       }

@@ -1381,7 +1381,7 @@ func BuildNewItreeV1(reqId string,
 
 			startDateTime := time.Now()
 			if attributeChildNodes, err, debugInfo := itree.buildAndAddPropertyChildNodesV1(reqId,
-				parentNode.node, allActiveUsersPattern, patternWrapper, countType, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"], startEventConstraints, endEventConstraints, includedEventProperties, includedUserProperties); err != nil {
+				parentNode.node, allActiveUsersPattern, patternWrapper, countType, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"], startEventConstraints, endEventConstraints, includedEventProperties, includedUserProperties, projectId); err != nil {
 				log.Errorf(fmt.Sprintf("%s", err))
 				return nil, err, nil
 			} else {
@@ -1573,7 +1573,7 @@ func formatProperty(property string) string {
 func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	parentNode *ItreeNode, allActiveUsersPattern *P.Pattern,
 	patternWrapper PatternServiceWrapperInterface, countType string, level int, debugKey string, debugPropertyName string, debugPropertyValue string,
-	startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, includedEventProperties, includedUserProperties map[string]bool) ([]*ItreeNode, error, interface{}) {
+	startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, includedEventProperties, includedUserProperties map[string]bool, projectId uint64) ([]*ItreeNode, error, interface{}) {
 	// The top child nodes are obtained by adding constraints on the (N-1) event
 	// of parent pattern.
 	// i.e If parrent pattern is A -> B -> C -> Y with
@@ -1640,7 +1640,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	debugData["EPCat"] = make([][]P.EventConstraints, 0)
 	debugData["UPNum"] = make([][]P.EventConstraints, 0)
 	debugData["EPNum"] = make([][]P.EventConstraints, 0)
-	if pLen > 1 {
+	if pLen > 1 && projectId != 1125899911000001 {
 		child := it.buildCategoricalPropertyChildNodesV1(reqId,
 			eventCatProperties, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
 			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)
@@ -1666,7 +1666,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	// Add children by splitting on constraints on categorical properties.
 	pLen = len(parentPattern.EventNames)
 
-	if pLen > 1 {
+	if pLen > 1 && projectId != 1125899911000001 {
 		child := it.buildNumericalPropertyChildNodesV1(reqId,
 			eventNumProperties, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)

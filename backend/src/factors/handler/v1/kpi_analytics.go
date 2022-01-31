@@ -182,7 +182,7 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		U.DecodePostgresJsonbToStructType(&query.Query, &request)
 	}
 
-	dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, isQuery, err := getDashboardRelatedInformationFromRequest(request,
+	dashboardId, unitId, commonQueryFrom, commonQueryTo, hardRefresh, isDashboardQueryRequest, _, err := getDashboardRelatedInformationFromRequest(request,
 		c.Query("dashboard_id"), c.Query("dashboard_unit_id"), c.Query("refresh"), c.Query("is_query"))
 	if err != nil {
 		return nil, http.StatusBadRequest, INVALID_INPUT, err.Error(), true
@@ -215,10 +215,10 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		return data, statusCode, errorCode, errMsg, isErr
 	}
 
-	if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
+	/*if isDashboardQueryRequest && C.DisableDashboardQueryDBExecution() && !isQuery {
 		logCtx.WithField("request_payload", request).Warn("Skip hitting db for queries from dashboard, if not found on cache.")
 		return nil, statusCode, PROCESSING_FAILED, "Not found in cache. Execution suspended temporarily.", true
-	}
+	}*/
 
 	model.SetQueryCachePlaceholder(projectID, &request)
 	H.SleepIfHeaderSet(c)
