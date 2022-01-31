@@ -579,6 +579,19 @@ export function fetchSearchConsoleCustomerAccounts(payload) {
   };
 }
 
+export function deleteIntegration(projectId, name) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'integrations/'+ projectId +'/' + name)
+      .then((res) => {
+            resolve(res);
+        }).catch((err) => {
+            reject(err);
+        });
+    });
+  };
+}
+
 export function addContentGroup(projectId, payload) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {

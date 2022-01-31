@@ -127,7 +127,6 @@ const AttributionsChart = ({
         event,
         eventNames,
         attributionMetrics,
-        metricsOptionsPopover,
         attr_dimensions,
         durationObj
       )
@@ -141,7 +140,6 @@ const AttributionsChart = ({
     eventNames,
     handleSorting,
     linkedEvents,
-    metricsOptionsPopover,
     sorter,
     touchpoint,
     durationObj,

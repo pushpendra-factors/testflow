@@ -149,7 +149,6 @@ const AttributionsChart = forwardRef(
           event,
           eventNames,
           attributionMetrics,
-          metricsOptionsPopover,
           attr_dimensions,
           durationObj,
           comparison_data.data,
@@ -165,7 +164,6 @@ const AttributionsChart = forwardRef(
       eventNames,
       handleSorting,
       linkedEvents,
-      metricsOptionsPopover,
       sorter,
       touchpoint,
       durationObj,
@@ -327,6 +325,7 @@ const AttributionsChart = forwardRef(
             tableData={tableData}
             searchText={searchText}
             setSearchText={setSearchText}
+            metricsOptionsPopover={metricsOptionsPopover}
           />
         </div>
       </div>

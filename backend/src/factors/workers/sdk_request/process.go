@@ -63,6 +63,7 @@ func main() {
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
+	mergeAmpIDAndSegmentIDWithUserIDByProjectID := flag.String("allow_amp_id_and_segment_id_with_user_id_by_project_id", "", "")
 	flag.Parse()
 
 	workerName := defaultWorkerName
@@ -113,6 +114,7 @@ func main() {
 		CaptureSourceInUsersTable:                      *captureSourceInUsersTable,
 		EnableOLTPQueriesMemSQLImprovements:            *enableOLTPQueriesMemSQLImprovements,
 		RestrictReusingUsersByCustomerUserId:           *restrictReusingUsersByCustomerUserId,
+		MergeAmpIDAndSegmentIDWithUserIDByProjectID:    *mergeAmpIDAndSegmentIDWithUserIDByProjectID,
 	}
 	C.InitConf(config)
 

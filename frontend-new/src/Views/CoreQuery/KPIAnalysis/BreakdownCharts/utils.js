@@ -17,6 +17,7 @@ import {
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
+import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
 export const getDefaultSortProp = (kpis) => {
   console.log("getDefaultSortProp -> kpis", kpis)
@@ -125,14 +126,17 @@ export const getTableColumns = (
       width: 200,
     };
   });
+
   const kpiColumns = kpis.map((kpi, index) => {
     return {
       title: getClickableTitleSorter(
         kpi,
         { key: `${kpi} - ${index}`, type: 'numerical', subtype: null },
         currentSorter,
-        handleSorting
+        handleSorting,
+        'right'
       ),
+      className: 'text-right',
       dataIndex: `${kpi} - ${index}`,
       width: 200,
       render: (d) => {
@@ -168,7 +172,7 @@ export const getHorizontalBarChartColumns = (
     const displayTitle = e.property;
 
     return {
-      title: displayTitle,
+      title: <NonClickableTableHeader title={displayTitle} />,
       dataIndex: `${e.property} - ${index}`,
       width: cardSize !== 1 ? 100 : 200,
       className: tableStyles.horizontalBarTableHeader,
@@ -384,6 +388,20 @@ export const getDateBasedColumns = (
   eventPropNames
 ) => {
   console.log('kpi with breakdown getDateBasedColumns');
+
+  const OverallColumn = {
+    title: getClickableTitleSorter(
+      'Overall',
+      { key: `value`, type: 'numerical', subtype: null },
+      currentSorter,
+      handleSorting,
+      'right'
+    ),
+    className: 'text-right',
+    dataIndex: `value`,
+    width: 150,
+  };
+  
   const breakdownColumns = breakdown.map((e, index) => {
     return {
       title: getClickableTitleSorter(
@@ -404,8 +422,10 @@ export const getDateBasedColumns = (
         kpi,
         { key: `${kpi} - ${index}`, type: 'numerical', subtype: null },
         currentSorter,
-        handleSorting
+        handleSorting,
+        'right'
       ),
+      className: 'text-right',
       dataIndex: `${kpi} - ${index}`,
       width: 200,
       render: (d) => {
@@ -422,8 +442,10 @@ export const getDateBasedColumns = (
         moment(cat).format(format),
         { key: moment(cat).format(format), type: 'numerical', subtype: null },
         currentSorter,
-        handleSorting
+        handleSorting,
+        'right'
       ),
+      className: 'text-right',
       width: 150,
       dataIndex: moment(cat).format(format),
       render: (d) => {
