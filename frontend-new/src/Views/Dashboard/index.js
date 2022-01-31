@@ -52,15 +52,15 @@ function Dashboard({ fetchProjectSettingsV1 }) {
   integration?.int_google_organic_enabled_agent_uuid ||
   integration?.int_clear_bit || sdkCheck;
 
-  // useEffect(() => {
-  //   if(!checkIntegration) {
-  //     if(activeProject.id === 51) {
-  //       history.push('/')
-  //     } else {
-  //       history.push('/project-setup')
-  //     }
-  //   }
-  // },[checkIntegration, activeProject])
+  useEffect(() => {
+    if(!checkIntegration) {
+      if(activeProject.id === 51) {
+        history.push('/')
+      } else {
+        history.push('/project-setup')
+      }
+    }
+  },[checkIntegration, activeProject])
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -104,7 +104,7 @@ function Dashboard({ fetchProjectSettingsV1 }) {
     };
   }, [dispatch]);
 
-  // if (dashboards.data.length) {
+  if (dashboards.data.length) {
     return (
       <>
         <ErrorBoundary
@@ -148,25 +148,25 @@ function Dashboard({ fetchProjectSettingsV1 }) {
         </ErrorBoundary>
       </>
     );
-  // } else {
-  //   return (
-  //     <>
-  //       {checkIntegration ?
-  //         <>
-  //           <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal} />
-  //           <AddDashboard
-  //             setEditDashboard={setEditDashboard}
-  //             editDashboard={editDashboard}
-  //             addDashboardModal={addDashboardModal}
-  //             setaddDashboardModal={setaddDashboardModal}
-  //           />
-  //         </>
-  //         :
-  //         <EmptyDashboard />
-  //       }
-  //     </>
-  //   );
-  // }
+  } else {
+    return (
+      <>
+        {checkIntegration ?
+          <>
+            <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal} />
+            <AddDashboard
+              setEditDashboard={setEditDashboard}
+              editDashboard={editDashboard}
+              addDashboardModal={addDashboardModal}
+              setaddDashboardModal={setaddDashboardModal}
+            />
+          </>
+          :
+          <EmptyDashboard />
+        }
+      </>
+    );
+  }
 }
 
 export default connect(null,{ fetchProjectSettingsV1 })(Dashboard);

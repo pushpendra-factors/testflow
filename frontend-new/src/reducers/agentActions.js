@@ -179,7 +179,7 @@ export function activate(password, token){
     return new Promise((resolve, reject) => {
       dispatch({type: "AGENT_VERIFY"});
 
-      post(dispatch, host+"agents/activate?token="+token, { 
+      post(dispatch, host+"agents/activate?skip_project=true&token="+token, { 
         password: password
       })
       .then(() => {
@@ -260,7 +260,7 @@ export function fetchProjectAgents(projectId){
 export function projectAgentInvite(projectId, payload){
   return function(dispatch){ 
     return new Promise((resolve, reject) => {
-      post(dispatch, host + "projects/" + projectId + "/agents/invite", payload)
+      post(dispatch, host + "projects/" + projectId + "/agents/invite?create_dashboard=false", payload)
       .then((r) => { 
         if (r.ok && r.status && r.status == 201){ 
           dispatch({type: "PROJECT_AGENT_INVITE_FULFILLED", payload: r.data });
