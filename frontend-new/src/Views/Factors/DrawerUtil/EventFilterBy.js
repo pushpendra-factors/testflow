@@ -23,7 +23,8 @@ const EventFilterBy = (props) => {
 }); 
 // const [filterDD, setFilterDD] = useState(false);
 
- 
+const timeZone = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';  
+moment.tz.setDefault(timeZone);
 
   const readableTimstamp = (unixTime) => {
     return moment.unix(unixTime).utc().format('MMM DD, YYYY');

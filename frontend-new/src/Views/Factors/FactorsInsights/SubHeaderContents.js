@@ -15,6 +15,10 @@ function Header({factors_insight_rules, factors_models, fetchGoalInsights, activ
   const [dateTime, setDateTime] = useState(null);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
 
+  const timeZone = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';  
+moment.tz.setDefault(timeZone);
+
+
   const readableTimstamp = (unixTime) => {
     return moment.unix(unixTime).utc().format('MMM DD, YYYY');
   } 

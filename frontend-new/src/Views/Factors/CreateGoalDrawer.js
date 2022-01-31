@@ -14,7 +14,8 @@ import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import EventFilterBy from './DrawerUtil/EventFilterBy';
 // import MomentTz from 'Components/MomentTz';
 import moment from 'moment-timezone';  
-import factorsai from 'factorsai';
+
+
 
 const title = (props) => {
   return (
@@ -33,6 +34,10 @@ const title = (props) => {
 const CreateGoalDrawer = (props) => {
   const history = useHistory();
   const { Option } = Select;
+
+  const timeZone = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';  
+  moment.tz.setDefault(timeZone);
+
 
   const [TrackedEventNames, SetTrackedEventNames] = useState([]);
 
@@ -261,11 +266,11 @@ const getInsights = (projectID, isJourney=false) =>{
       const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`;
       message.error(ErrMsg);
       setInsightBtnLoading(false);
-  });
+  }); 
 
   //Factors RUN_EXPLAIN tracking
   factorsai.track('RUN_EXPLAIN',{'query_type': 'explain'});
-
+  
 }  
 
 
