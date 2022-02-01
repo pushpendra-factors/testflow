@@ -7,6 +7,7 @@ import {
   } from 'antd'; 
   import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
   import {ErrorBoundary} from 'react-error-boundary';
+  import factorsai from 'factorsai';
   
 const SalesForceIntegration = ({
     fetchProjectSettings,
@@ -41,6 +42,10 @@ useEffect(()=>{
   }
 
   const  onClickEnableSalesforce = () => {
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'salesforce','activeProjectID': activeProject.id});
+
     enableSalesforceIntegration(activeProject.id.toString())
       .then((r) => {
         if (r.status == 304) {

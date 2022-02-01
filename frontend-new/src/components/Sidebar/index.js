@@ -51,6 +51,9 @@ function Sidebar(props) {
           }).catch((err) => {
               console.log('updateAgentInfo failed-->', err);
           });
+
+          //Factors FIRST_TIME_LOGIN tracking
+          factorsai.track('FIRST_TIME_LOGIN',{'email':props.currentAgent.email, 'isInvited':'false'});
       }
     } else {
       setShowProjectModal(false);
@@ -61,6 +64,9 @@ function Sidebar(props) {
       }).catch((err) => {
           console.log('updateAgentInfo failed-->', err);
       });
+
+      //Factors FIRST_TIME_LOGIN tracking
+      factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'true'});
     }
   }, [])
 

@@ -9,6 +9,7 @@ import FacebookLogin from 'react-facebook-login';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import _ from 'lodash';
 import {ErrorBoundary} from 'react-error-boundary';
+import factorsai from 'factorsai';
 
 const FacebookIntegration = ({
   fetchProjectSettings,
@@ -90,6 +91,10 @@ const FacebookIntegration = ({
 
   const handleSubmit = e => {
     e.preventDefault();
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'facebook','activeProjectID': activeProject.id});
+
     if (SelectAdAccount != "") {
       const data = {
         "int_facebook_user_id": FbResponse.id,

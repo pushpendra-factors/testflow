@@ -25,6 +25,7 @@ const isDevelopment = () => {
 };
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
+import factorsai from 'factorsai';
 const getGSCHostURL = () => {
   // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
   return BUILD_CONFIG.backend_host;
@@ -168,6 +169,10 @@ const GoogleSearchConsole = ({
 
   const onClickFinishSetup = () => {
     let selectedGSCAcc = selectedGSCAccounts.join(', ');
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'google_organic','activeProjectID': activeProject.id});
+
     udpateProjectSettings(activeProject.id, {
       int_google_organic_url_prefixes: selectedGSCAcc,
     }).then(() => {

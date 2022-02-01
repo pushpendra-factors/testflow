@@ -50,7 +50,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
             console.log('fetch project settings success');
             setsdkCheck(res.data.int_completed);
         });
-    }, [activeProject, sdkCheck]);
+    }, [activeProject, sdkCheck, integration]);
 
     integration = integration?.project_settings || integration;
 
