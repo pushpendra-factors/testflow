@@ -4,6 +4,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm"
 
@@ -11,6 +12,10 @@ import (
 )
 
 func (store *MemSQL) satisfiesPAMForeignConstraints(pam model.ProjectAgentMapping) int {
+	logFields := log.Fields{
+		"pam": pam,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, agentErrCode := store.GetAgentByUUID(pam.AgentUUID)
 	_, projectErrCode := store.GetProject(pam.ProjectID)
 	if agentErrCode != http.StatusFound || projectErrCode != http.StatusFound {
@@ -29,6 +34,10 @@ func (store *MemSQL) satisfiesPAMForeignConstraints(pam model.ProjectAgentMappin
 // Add Check
 // Project should not have more than 100 Agents
 func createProjectAgentMapping(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int) {
+	logFields := log.Fields{
+		"pam": pam,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if pam == nil || pam.AgentUUID == "" || pam.ProjectID == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -51,6 +60,10 @@ func createProjectAgentMapping(pam *model.ProjectAgentMapping) (*model.ProjectAg
 }
 
 func (store *MemSQL) CreateProjectAgentMappingWithDependencies(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int) {
+	logFields := log.Fields{
+		"pam": pam,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if errCode := store.satisfiesPAMForeignConstraints(*pam); errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}
@@ -72,6 +85,10 @@ func (store *MemSQL) CreateProjectAgentMappingWithDependencies(pam *model.Projec
 	return cPam, http.StatusCreated
 }
 func (store *MemSQL) CreateProjectAgentMappingWithDependenciesWithoutDashboard(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int) {
+	logFields := log.Fields{
+		"pam": pam,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if errCode := store.satisfiesPAMForeignConstraints(*pam); errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}
@@ -83,6 +100,11 @@ func (store *MemSQL) CreateProjectAgentMappingWithDependenciesWithoutDashboard(p
 	return cPam, http.StatusCreated
 }
 func (store *MemSQL) GetProjectAgentMapping(projectId uint64, agentUUID string) (*model.ProjectAgentMapping, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"agent_uuid": agentUUID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if projectId == 0 || agentUUID == "" {
 		return nil, http.StatusBadRequest
@@ -101,6 +123,10 @@ func (store *MemSQL) GetProjectAgentMapping(projectId uint64, agentUUID string) 
 }
 
 func (store *MemSQL) GetProjectAgentMappingsByProjectId(projectId uint64) ([]model.ProjectAgentMapping, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectId == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -118,6 +144,10 @@ func (store *MemSQL) GetProjectAgentMappingsByProjectId(projectId uint64) ([]mod
 }
 
 func (store *MemSQL) GetProjectAgentMappingsByProjectIds(projectIds []uint64) ([]model.ProjectAgentMapping, int) {
+	logFields := log.Fields{
+		"project_ids": projectIds,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(projectIds) == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -136,6 +166,10 @@ func (store *MemSQL) GetProjectAgentMappingsByProjectIds(projectIds []uint64) ([
 }
 
 func (store *MemSQL) GetProjectAgentMappingsByAgentUUID(agentUUID string) ([]model.ProjectAgentMapping, int) {
+	logFields := log.Fields{
+		"agent_uuid": agentUUID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agentUUID == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -154,6 +188,10 @@ func (store *MemSQL) GetProjectAgentMappingsByAgentUUID(agentUUID string) ([]mod
 }
 
 func (store *MemSQL) DoesAgentHaveProject(agentUUID string) int {
+	logFields := log.Fields{
+		"agent_uuid": agentUUID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agentUUID == "" {
 		return http.StatusBadRequest
 	}
@@ -174,6 +212,11 @@ func (store *MemSQL) DoesAgentHaveProject(agentUUID string) int {
 }
 
 func (store *MemSQL) DeleteProjectAgentMapping(projectId uint64, agentUUIDToRemove string) int {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"agent_uuid_to_remove": agentUUIDToRemove,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectId == 0 || agentUUIDToRemove == "" {
 		return http.StatusBadRequest
 	}
@@ -195,6 +238,12 @@ func (store *MemSQL) DeleteProjectAgentMapping(projectId uint64, agentUUIDToRemo
 }
 
 func (store *MemSQL) EditProjectAgentMapping(projectId uint64, agentUUIDToEdit string, role int64) int {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"agent_uuid_to_edit": agentUUIDToEdit,
+		"role": role,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectId == 0 || agentUUIDToEdit == "" || role == 0 {
 		return http.StatusBadRequest
 	}

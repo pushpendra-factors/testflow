@@ -8,11 +8,17 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID uint64) (model.ResultGroup, int) {
+	logFields := log.Fields{
+		"queries_original": queriesOriginal,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	queries := make([]model.ProfileQuery, 0)
 	U.DeepCopy(&queriesOriginal, &queries)
 
@@ -40,6 +46,14 @@ func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery,
 
 func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.ProfileQuery,
 	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup, queryIndex int) {
+		logFields := log.Fields{
+			"query": query,
+			"project_id": projectID,
+			"result_holder": resultHolder,
+			"wait_group": waitGroup,
+			"query_index": queryIndex,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	defer waitGroup.Done()
 	result, errCode, errMsg := store.ExecuteProfilesQuery(projectID, query)
@@ -53,7 +67,12 @@ func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.Profil
 }
 
 func (store *MemSQL) ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
-	if model.GetSourceFromQueryTypeOrGroupName(query) != 0 {
+	logFields := log.Fields{
+		"query": query,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if model.IsValidUserSource(query.Type) {
 		return store.ExecuteAllUsersProfilesQuery(projectID, query)
 	} else {
 		return &model.QueryResult{}, http.StatusBadRequest,
@@ -62,6 +81,11 @@ func (store *MemSQL) ExecuteProfilesQuery(projectID uint64, query model.ProfileQ
 }
 
 func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
+	logFields := log.Fields{
+		"query": query,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
 	if allowProfilesGroupSupport && model.IsValidProfileQueryGroupName(query.GroupAnalysis) && query.GroupAnalysis != model.USERS {
@@ -76,8 +100,7 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "profiles_query": query,
-		"statement": sql, "params": params})
+	logCtx := log.WithFields(logFields)
 	if sql == "" || len(params) == 0 {
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -97,6 +120,11 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.
 }
 
 func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []interface{}, error) {
+	logFields := log.Fields{
+		"query": query,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var params []interface{}
 	var groupBySelectParams []interface{}
 	selectKeys := make([]string, 0)
@@ -173,6 +201,13 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 }
 
 func getNoneHandledGroupBySelectForProfiles(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
+	logFields := log.Fields{
+		"group_prop": groupProp,
+		"project_id": projectID,
+		"group_key": groupKey,
+		"timezone_string": timezoneString,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var groupSelect string
 	groupSelectParams := make([]interface{}, 0)
 	if groupProp.Type != U.PropertyTypeDateTime {
@@ -190,6 +225,11 @@ func getNoneHandledGroupBySelectForProfiles(projectID uint64, groupProp model.Qu
 }
 
 func SanitizeQueryResultProfiles(result *model.QueryResult, query *model.ProfileQuery) error {
+	logFields := log.Fields{
+		"result": result,
+		"query": query,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// Replace group keys with real column names. should be last step.
 	// of sanitization.
@@ -208,6 +248,11 @@ func SanitizeQueryResultProfiles(result *model.QueryResult, query *model.Profile
 }
 
 func sanitizeNumericalBucketRangesProfiles(result *model.QueryResult, query *model.ProfileQuery) {
+	logFields := log.Fields{
+		"result": result,
+		"query": query,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	headerIndexMap := make(map[string][]int)
 	for index, header := range result.Headers {
 		// If same group by is added twice, it will appear twice in headers.
@@ -230,6 +275,12 @@ func sanitizeNumericalBucketRangesProfiles(result *model.QueryResult, query *mod
 	}
 }
 func sanitizeNumericalBucketRangeProfiles(query *model.ProfileQuery, rows [][]interface{}, indexToSanitize int) {
+	logFields := log.Fields{
+		"rows": rows,
+		"query": query,
+		"index_to_sanitize": indexToSanitize,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, row := range rows {
 		// Remove trailing .0 in start and end value of range.
 		row[indexToSanitize] = trailingZeroRegex.ReplaceAllString(row[indexToSanitize].(string), "")

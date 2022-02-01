@@ -27,6 +27,11 @@ type ResultGroup struct {
 }
 
 func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectId uint64) (model.ResultGroup, int) {
+	logFields := log.Fields{
+		"queries_original": queriesOriginal,
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	queries := make([]model.Query, 0, 0)
 	U.DeepCopy(&queriesOriginal, &queries)
@@ -56,6 +61,13 @@ func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectI
 
 func (store *MemSQL) runSingleEventsQuery(projectId uint64, query model.Query,
 	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup) {
+		logFields := log.Fields{
+			"query": query,
+			"project_id": projectId,
+			"result_holder": resultHolder,
+			"wait_group": waitGroup,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	defer waitGroup.Done()
 	result, errCode, errMsg := store.ExecuteEventsQuery(projectId, query)
@@ -69,6 +81,11 @@ func (store *MemSQL) runSingleEventsQuery(projectId uint64, query model.Query,
 }
 
 func (store *MemSQL) ExecuteEventsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+	logFields := log.Fields{
+		"query": query,
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	if valid, errMsg := IsValidEventsQuery(&query); !valid {
 		return nil, http.StatusBadRequest, errMsg
@@ -77,6 +94,11 @@ func (store *MemSQL) ExecuteEventsQuery(projectId uint64, query model.Query) (*m
 }
 
 func (store *MemSQL) fillEventNameIDs(projectID uint64, query *model.Query) {
+	logFields := log.Fields{
+		"query": query,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for i := range query.EventsWithProperties {
 		eventNames, status := store.GetEventNamesByNames(projectID, []string{query.EventsWithProperties[i].Name})
 		if status != http.StatusFound {
@@ -94,6 +116,11 @@ func (store *MemSQL) fillEventNameIDs(projectID uint64, query *model.Query) {
 }
 
 func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+	logFields := log.Fields{
+		"query": query,
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	isTimezoneEnabled := false
 	if C.IsMultipleProjectTimezoneEnabled(projectId) {
 		isTimezoneEnabled = true
@@ -108,8 +135,8 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
-	logCtx := log.WithFields(log.Fields{"analytics_query": query,
-		"statement": stmnt, "params": params})
+	logCtx := log.WithFields(logFields)
+
 	if stmnt == "" || len(params) == 0 {
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -189,6 +216,10 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 
 // buildErrorResult takes the failure msg and wraps it into a model.QueryResult object
 func buildErrorResult(errMsg string) *model.QueryResult {
+	logFields := log.Fields{
+		"err_msg": errMsg,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	errMsg = "Query failed:" + " - " + errMsg
 	headers := []string{model.AliasError}
 	rows := make([][]interface{}, 0, 0)
@@ -202,6 +233,10 @@ func buildErrorResult(errMsg string) *model.QueryResult {
 // updateEventNameInHeaderAndAddMeta makes header from 0_$session to $session
 // and adds event's index, name and headerIndex in meta
 func updateEventNameInHeaderAndAddMeta(result *model.QueryResult) {
+	logFields := log.Fields{
+		"result": result,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var rows [][]interface{}
 	for i, key := range result.Headers {
@@ -226,6 +261,10 @@ func updateEventNameInHeaderAndAddMeta(result *model.QueryResult) {
 
 // addEventNameIndexInResult adds event_index and fills up the rows accordingly
 func addEventNameIndexInResult(result *model.QueryResult) {
+	logFields := log.Fields{
+		"result": result,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	eventNameIndex := -1
 	for i, key := range result.Headers {
@@ -260,6 +299,11 @@ func addEventNameIndexInResult(result *model.QueryResult) {
 
 // transformResultsForEachEventQuery transforms model.QueryResult with new header as datetime and events
 func transformResultsForEachEventQuery(oldResult *model.QueryResult, query model.Query) (*model.QueryResult, error) {
+	logFields := log.Fields{
+		"query": query,
+		"old_result": oldResult,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// for single event, oldResult has no 'event_name' column but only 2 columns: {datetime, count}
 	// adding  'event_name' with row values for standard transformation
@@ -412,6 +456,10 @@ func transformResultsForEachEventQuery(oldResult *model.QueryResult, query model
 // addEventMetricsMetaToQueryResult adds meta metrics in query result based on query type, event
 // condition and group by inputs
 func addEventMetricsMetaToQueryResult(result *model.QueryResult) {
+	logFields := log.Fields{
+		"result": result,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	metaMetricsEventCount := model.HeaderRows{}
 	metaMetricsEventCount.Title = MetaEachEventCountMetrics
@@ -448,6 +496,11 @@ func addEventMetricsMetaToQueryResult(result *model.QueryResult) {
 
 // BuildInsightsQuery - Dispatches corresponding build method for insights.
 func (store *MemSQL) BuildInsightsQuery(projectId uint64, query model.Query) (string, []interface{}, error) {
+	logFields := log.Fields{
+		"query": query,
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	addIndexToGroupByProperties(&query)
 
 	if query.Type == model.QueryTypeEventsOccurrence {
@@ -484,6 +537,11 @@ func (store *MemSQL) BuildInsightsQuery(projectId uint64, query model.Query) (st
 }
 
 func LimitQueryResult(result *model.QueryResult, groupPropsLen int, groupByTimestamp bool) error {
+	logFields := log.Fields{
+		"result": result,
+		"group_props_len": groupPropsLen,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if groupPropsLen > 0 && groupByTimestamp {
 		return limitGroupByTimestampResult(result, groupByTimestamp)
 	}
@@ -500,6 +558,11 @@ func LimitQueryResult(result *model.QueryResult, groupPropsLen int, groupByTimes
 // datetime, if exists on SQL result. Assumes result is sorted by count. Preserves all
 // datetime for the limited combination of group keys.
 func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp bool) error {
+	logFields := log.Fields{
+		"result": result,
+		"group_by_timestamp": groupByTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	limitedResult := make([][]interface{}, 0, 0)
 
@@ -534,6 +597,11 @@ func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp boo
 // sorted by count and all group keys are used on SQL group by (makes all three group by
 // values together as unique). Limited set dimension = ResultLimit * ResultLimit.
 func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimestamp bool) error {
+	logFields := log.Fields{
+		"result": result,
+		"group_by_timestamp": groupByTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	limitedResult := make([][]interface{}, 0, 0)
 
@@ -577,6 +645,11 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 
 // SanitizeQueryResult Converts DB results into plottable query results.
 func SanitizeQueryResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
+	logFields := log.Fields{
+		"query": query,
+		"result": result,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if query.GetGroupByTimestamp() != "" {
 		if err := sanitizeGroupByTimestampResult(result, query, isTimezoneEnabled); err != nil {
 			return err
@@ -600,6 +673,11 @@ func SanitizeQueryResult(result *model.QueryResult, query *model.Query, isTimezo
 }
 
 func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
+	logFields := log.Fields{
+		"query": query,
+		"result": result,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	aggrIndex, timeIndex, err := GetTimstampAndAggregateIndexOnQueryResult(result.Headers)
 	if err != nil {
 		return err
@@ -622,6 +700,11 @@ func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Quer
 }
 
 func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
+	logFields := log.Fields{
+		"result_rows": resultRows,
+		"timestamp_index": timestampIndex,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	sort.Slice(resultRows, func(i, j int) bool {
 		return (resultRows[i][timestampIndex].(time.Time)).Unix() <
 			(resultRows[j][timestampIndex].(time.Time)).Unix()
@@ -629,6 +712,14 @@ func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
 }
 
 func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimezoneEnabled bool) []time.Time {
+	logFields := log.Fields{
+		"from": from,
+		"to": to,
+		"typ": typ,
+		"timezone": timezone,
+		"is_timezone_enabled": isTimezoneEnabled,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if typ == model.GroupByTimestampDate {
 		return U.GetAllDatesAsTimestamp(from, to, timezone, isTimezoneEnabled)
 	}
@@ -652,6 +743,14 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimez
 
 func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
+		logFields := log.Fields{
+			"result": result,
+			"query": query,
+			"aggr_index": aggrIndex,
+			"timestamp_index": timestampIndex,
+			"is_timezone_enabled": isTimezoneEnabled,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	rowsByTimestamp := make(map[string][]interface{}, 0)
 	for _, row := range result.Rows {
@@ -687,6 +786,14 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 // on the limited result.
 func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
+		logFields := log.Fields{
+			"result": result,
+			"query": query,
+			"aggr_index": aggrIndex,
+			"timestamp_index": timestampIndex,
+			"is_timezone_enabled": isTimezoneEnabled,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	gkStart, gkEnd, err := getGroupKeyIndexesForSlicing(result.Headers)
 	if err != nil {
@@ -788,6 +895,13 @@ step1 AS (
 
 func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"q": q,
+			"q_stmnt": qStmnt,
+			"q_params": qParams,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var commonSelect string
 	var commonOrderBy string
@@ -889,6 +1003,14 @@ GROUP BY gk_0, gk_1 ORDER BY count DESC LIMIT 10000;
 */
 func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt *string,
 	qParams *[]interface{}, refStep string) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query": query,
+			"q_stmnt": qStmnt,
+			"q_params": qParams,
+			"ref_step": refStep,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	eventLevelGroupBys, otherGroupBys := separateEventLevelGroupBys(query.GroupByProperties)
 	var egKeys string
@@ -1041,6 +1163,11 @@ WITH
 */
 
 func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (string, []interface{}, error) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"q": q,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(q.EventsWithProperties) != 1 {
 		return "", nil, errors.New("invalid no.of events for single event query")
 	}
@@ -1169,6 +1296,11 @@ COUNT(DISTINCT(event_user_id)) AS count FROM each_users_union GROUP BY event_nam
 _group_key_1, _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
 */
 func buildUniqueUsersWithEachGivenEventsQuery(projectID uint64, query model.Query) (string, []interface{}, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query": query,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(query.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
 	}
@@ -1219,6 +1351,13 @@ func buildUniqueUsersWithEachGivenEventsQuery(projectID uint64, query model.Quer
     key for e3: '', '',  '',  gk3, gk4
 */
 func getKeysForStep(step string, steps []string, keysMap map[string][]string, totalKeys int) string {
+	logFields := log.Fields{
+		"step": step,
+		"steps": steps,
+		"keys_map": keysMap,
+		"total_keys": totalKeys,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	keys := ""
 	keyCnt := 0
@@ -1335,6 +1474,11 @@ LEFT JOIN users ON users_intersect.event_user_id=users.id GROUP BY date ORDER BY
 */
 func buildUniqueUsersWithAllGivenEventsQuery(projectID uint64,
 	query model.Query) (string, []interface{}, error) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query": query,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if len(query.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
@@ -1468,6 +1612,11 @@ WITH
 */
 func buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64,
 	query model.Query) (string, []interface{}, error) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query": query,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if len(query.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
@@ -1544,6 +1693,11 @@ ORDER BY _group_key_0_bucket LIMIT 100000
 */
 func buildUniqueUsersSingleEventQuery(projectID uint64,
 	query model.Query) (string, []interface{}, error) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query": query,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if len(query.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
@@ -1617,6 +1771,12 @@ _group_key_0_bucket, _group_key_2_bucket, count DESC LIMIT 100000
 */
 func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 	q model.Query) (string, []interface{}, error) {
+
+		logFields := log.Fields{
+			"project_id": projectID,
+			"q": q,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if len(q.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
@@ -1815,6 +1975,11 @@ _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100
 */
 func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 	query model.Query) (string, []interface{}, error) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query": query,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if len(query.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
@@ -1916,6 +2081,13 @@ ORDER BY event_id, _group_key_2, events.timestamp ASC),
 */
 func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string, error) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"q": q,
+			"q_stmnt": qStmnt,
+			"q_params": qParams,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var aggregatePropertyDetails model.QueryGroupByProperty
 	aggregateKey := model.AliasAggr
@@ -2031,6 +2203,14 @@ _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100
 */
 func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt *string,
 	qParams *[]interface{}, refStep string) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query": query,
+			"q_stmnt": qStmnt,
+			"q_params": qParams,
+			"ref_step": refStep,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	eventLevelGroupBys, otherGroupBys := separateEventLevelGroupBys(query.GroupByProperties)
 	var egKeys string

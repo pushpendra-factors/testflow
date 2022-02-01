@@ -14,6 +14,10 @@ import (
 )
 
 func (store *MemSQL) satisfiesAgentForeignConstraints(agent model.Agent) int {
+	logFields := log.Fields{
+		"agent": agent,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agent.InvitedBy != nil && *agent.InvitedBy != "" {
 		_, errCode := store.GetAgentByUUID(*agent.InvitedBy)
 		if errCode != http.StatusFound {
@@ -24,6 +28,10 @@ func (store *MemSQL) satisfiesAgentForeignConstraints(agent model.Agent) int {
 }
 
 func (store *MemSQL) createAgent(agent *model.Agent) (*model.Agent, int) {
+	logFields := log.Fields{
+		"agent": agent,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agent.Email == "" {
 		log.Error("CreateAgent Failed. Email not provided.")
 		return nil, http.StatusBadRequest
@@ -58,6 +66,10 @@ func (store *MemSQL) createAgent(agent *model.Agent) (*model.Agent, int) {
 }
 
 func (store *MemSQL) CreateAgentWithDependencies(params *model.CreateAgentParams) (*model.CreateAgentResponse, int) {
+	logFields := log.Fields{
+		"params": params,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if params == nil || params.PlanCode == "" || params.Agent == nil || params.Agent.Email == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -81,6 +93,10 @@ func (store *MemSQL) CreateAgentWithDependencies(params *model.CreateAgentParams
 }
 
 func (store *MemSQL) GetAgentByEmail(email string) (*model.Agent, int) {
+	logFields := log.Fields{
+		"email": email,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if email == "" {
 		log.Error("GetAgentByEmail Failed. Email not provided.")
@@ -102,6 +118,10 @@ func (store *MemSQL) GetAgentByEmail(email string) (*model.Agent, int) {
 }
 
 func (store *MemSQL) GetAgentByUUID(uuid string) (*model.Agent, int) {
+	logFields := log.Fields{
+		"uuid": uuid,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if uuid == "" {
 		log.Error("GetAgentByUUID Failed. UUID not provided.")
 		return nil, http.StatusBadRequest
@@ -123,6 +143,10 @@ func (store *MemSQL) GetAgentByUUID(uuid string) (*model.Agent, int) {
 }
 
 func (store *MemSQL) GetAgentsByUUIDs(uuids []string) ([]*model.Agent, int) {
+	logFields := log.Fields{
+		"uuids": uuids,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(uuids) == 0 {
 		log.Error("No uuids for agents")
 		return nil, http.StatusBadRequest
@@ -145,6 +169,10 @@ func (store *MemSQL) GetAgentsByUUIDs(uuids []string) ([]*model.Agent, int) {
 }
 
 func (store *MemSQL) GetAgentInfo(uuid string) (*model.AgentInfo, int) {
+	logFields := log.Fields{
+		"uuid": uuid,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	agent, errCode := store.GetAgentByUUID(uuid)
 	if errCode != http.StatusFound {
 		return nil, errCode
@@ -155,6 +183,11 @@ func (store *MemSQL) GetAgentInfo(uuid string) (*model.AgentInfo, int) {
 }
 
 func (store *MemSQL) UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string) int {
+	logFields := log.Fields{
+		"uuid": uuid,
+		"refresh_token": refreshToken,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if uuid == "" || refreshToken == "" {
 		log.WithField("agent_uuid", uuid).Error(
 			"UpdateAgentAdwordsRefreshToken failed. Invalid params.")
@@ -164,6 +197,11 @@ func (store *MemSQL) UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string
 	return updateAgent(uuid, model.IntAdwordsRefreshToken(refreshToken))
 }
 func (store *MemSQL) UpdateAgentIntGoogleOrganicRefreshToken(uuid, refreshToken string) int {
+	logFields := log.Fields{
+		"uuid": uuid,
+		"refresh_token": refreshToken,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if uuid == "" || refreshToken == "" {
 		log.WithField("agent_uuid", uuid).Error(
 			"UpdateAgentGSCRefreshToken failed. Invalid params.")
@@ -174,6 +212,12 @@ func (store *MemSQL) UpdateAgentIntGoogleOrganicRefreshToken(uuid, refreshToken 
 }
 
 func (store *MemSQL) UpdateAgentIntSalesforce(uuid, refreshToken string, instanceUrl string) int {
+	logFields := log.Fields{
+		"uuid": uuid,
+		"refresh_token": refreshToken,
+		"instance_url": instanceUrl,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if uuid == "" || refreshToken == "" || instanceUrl == "" {
 		log.WithField("agent_uuid", uuid).Error(
 			"UpdateAgentIntSalesforce failed. Invalid params.")
@@ -184,6 +228,11 @@ func (store *MemSQL) UpdateAgentIntSalesforce(uuid, refreshToken string, instanc
 }
 
 func (store *MemSQL) UpdateAgentSalesforceInstanceURL(uuid, instanceUrl string) int {
+	logFields := log.Fields{
+		"uuid": uuid,
+		"instance_url": instanceUrl,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if uuid == "" || instanceUrl == "" {
 		log.WithField("agent_uuid", uuid).Error(
 			"UpdateAgentInstanceURL failed. Invalid params.")
@@ -194,6 +243,12 @@ func (store *MemSQL) UpdateAgentSalesforceInstanceURL(uuid, instanceUrl string) 
 }
 
 func (store *MemSQL) UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
+	logFields := log.Fields{
+		"uuid": uuid,
+		"plain_text_password": plainTextPassword,
+		"pass_updated_at": passUpdatedAt,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if uuid == "" || plainTextPassword == "" {
 		log.Error("UpdateAgentPassword Failed. Missing params")
@@ -210,6 +265,11 @@ func (store *MemSQL) UpdateAgentPassword(uuid, plainTextPassword string, passUpd
 }
 
 func (store *MemSQL) UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int {
+	logFields := log.Fields{
+		"agent_uuid": agentUUID,
+		"ts": ts,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agentUUID == "" {
 		log.Error("UpdateAgentLastLoginInfo Failed. Missing params")
 		return http.StatusBadRequest
@@ -220,6 +280,15 @@ func (store *MemSQL) UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) in
 
 func (store *MemSQL) UpdateAgentVerificationDetails(agentUUID, password, firstName,
 	lastName string, verified bool, passUpdatedAt time.Time) int {
+		logFields := log.Fields{
+			"agent_uuid": agentUUID,
+			"password": password,
+			"first_name": firstName,
+			"last_name": lastName,
+			"verified": verified,
+			"pass_updated_at": passUpdatedAt,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if agentUUID == "" {
 		log.Error("UpdateAgentVerificationDetails Failed. Missing params")
@@ -244,6 +313,14 @@ func (store *MemSQL) UpdateAgentVerificationDetails(agentUUID, password, firstNa
 }
 
 func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int {
+	logFields := log.Fields{
+		"agent_uuid": agentUUID,
+		"first_name": firstName,
+		"last_name": lastName,
+		"phone": phone,
+		"in_onboarding_flow_seen": isOnboardingFlowSeen,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agentUUID == "" {
 		return http.StatusBadRequest
 	}
@@ -264,6 +341,11 @@ func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phon
 }
 
 func updateAgent(agentUUID string, options ...model.Option) int {
+	logFields := log.Fields{
+		"agent_uuid": agentUUID,
+		"options": options,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agentUUID == "" {
 		return http.StatusBadRequest
 	}
@@ -293,6 +375,10 @@ func updateAgent(agentUUID string, options ...model.Option) int {
 }
 
 func (store *MemSQL) GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	var projectAgentMappings []model.ProjectAgentMapping

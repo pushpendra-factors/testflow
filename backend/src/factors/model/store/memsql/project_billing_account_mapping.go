@@ -4,12 +4,17 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) satisfiesPBAMForeignConstraints(pbam model.ProjectBillingAccountMapping) int {
+	logFields := log.Fields{
+		"pbam": pbam,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, projectErrCode := store.GetProject(pbam.ProjectID)
 	baExists := store.existsBillingAccountByID(pbam.BillingAccountID)
 	if projectErrCode != http.StatusFound || !baExists {
@@ -20,7 +25,12 @@ func (store *MemSQL) satisfiesPBAMForeignConstraints(pbam model.ProjectBillingAc
 }
 
 func (store *MemSQL) createProjectBillingAccountMapping(projectID uint64, billingAccID string) (*model.ProjectBillingAccountMapping, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "billing_account_id": billingAccID})
+	logFields := log.Fields{
+		"project_id": projectID,
+		"billling_acc_id": billingAccID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 
 	if projectID == 0 || billingAccID == "" {
 		return nil, http.StatusBadRequest
@@ -39,6 +49,10 @@ func (store *MemSQL) createProjectBillingAccountMapping(projectID uint64, billin
 }
 
 func (store *MemSQL) GetProjectBillingAccountMappings(billingAccountID string) ([]model.ProjectBillingAccountMapping, int) {
+	logFields := log.Fields{
+		"billling_account_id": billingAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if billingAccountID == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -59,6 +73,10 @@ func (store *MemSQL) GetProjectBillingAccountMappings(billingAccountID string) (
 }
 
 func (store *MemSQL) GetProjectBillingAccountMapping(projectID uint64) (*model.ProjectBillingAccountMapping, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest
 	}

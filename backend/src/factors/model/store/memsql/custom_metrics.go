@@ -4,13 +4,18 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int) {
-	logCtx := log.WithField("project_id", customMetric.ProjectID)
+	logFields := log.Fields{
+		"custom_metric": customMetric,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
 	errMsg, isValidCustomMetric := model.ValidateCustomMetric(customMetric)
 	if !isValidCustomMetric {
@@ -28,7 +33,11 @@ func (store *MemSQL) CreateCustomMetric(customMetric model.CustomMetric) (*model
 }
 
 func (store *MemSQL) GetCustomMetricsByProjectId(projectID uint64) ([]model.CustomMetric, string, int) {
-	logCtx := log.WithField("project_id", projectID)
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
 	if projectID == 0 {
 		return make([]model.CustomMetric, 0), "Invalid project ID for custom metric", http.StatusBadRequest
