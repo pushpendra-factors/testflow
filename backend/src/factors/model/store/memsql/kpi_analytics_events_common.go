@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"reflect"
 	"sync"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -15,12 +14,6 @@ import (
 // statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
 // TODO handle errors and kpiFunction statusCode.
 func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"req_id": reqID,
-		"kpi_query_group": kpiQueryGroup,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var queryResults []model.QueryResult
 	finalStatusCode := http.StatusOK
 	isTimezoneEnabled := false
@@ -57,10 +50,6 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 }
 
 func (store *MemSQL) kpiQueryFunctionDeciderBasedOnCategory(category string) func(uint64, string, model.KPIQuery) ([]model.QueryResult, int) {
-	logFields := log.Fields{
-		"category": category,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var result func(uint64, string, model.KPIQuery) ([]model.QueryResult, int)
 	if category == model.ChannelCategory {
 		result = store.ExecuteKPIQueryForChannels
@@ -72,12 +61,6 @@ func (store *MemSQL) kpiQueryFunctionDeciderBasedOnCategory(category string) fun
 
 // We convert kpi Query to eventQueries by applying transformation.
 func (store *MemSQL) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"req_id": reqID,
-		"kpi_query": kpiQuery,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	queryResults := make([]model.QueryResult, len(kpiQuery.Metrics))
 	isValid := model.ValidateKPIQuery(kpiQuery)
 	if !isValid {
@@ -87,11 +70,6 @@ func (store *MemSQL) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kp
 }
 
 func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID uint64, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"kpi_query": kpiQuery,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var query model.Query
 	var queryResults []model.QueryResult
 	queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
@@ -122,15 +100,6 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID uint64
 // Each KPI Metric is mapped to array of operations containing metrics and aggregates, filters.
 func (store *MemSQL) ExecuteForSingleKPIMetric(projectID uint64, query model.Query, kpiQuery model.KPIQuery,
 	kpiMetric string, result *model.QueryResult, waitGroup *sync.WaitGroup) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"kpi_query": kpiQuery,
-			"kpi_metric": kpiMetric,
-			"result": result,
-			"wait_group": waitGroup,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer waitGroup.Done()
 	finalResult := model.QueryResult{}
 
@@ -140,13 +109,6 @@ func (store *MemSQL) ExecuteForSingleKPIMetric(projectID uint64, query model.Que
 
 func (store *MemSQL) wrappedExecuteForResult(projectID uint64, query model.Query, kpiQuery model.KPIQuery,
 	kpiMetric string) model.QueryResult {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"kpi_query": kpiQuery,
-			"kpi_metric": kpiMetric,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	transformations := model.TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
 	currentQuery := model.BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
@@ -156,13 +118,6 @@ func (store *MemSQL) wrappedExecuteForResult(projectID uint64, query model.Query
 }
 
 func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, kpiQuery model.KPIQuery, transformations []model.TransformQueryi) model.QueryResult {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"queries": queries,
-		"kpi_query": kpiQuery,
-		"transformation": transformations,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	results := make([]*model.QueryResult, len(queries))
 	hasGroupByTimestamp := false
 	displayCategory := kpiQuery.DisplayCategory

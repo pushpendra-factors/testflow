@@ -5,7 +5,6 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
-	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -15,16 +14,8 @@ import (
 const weeklyInsights string = "weekly_insights"
 
 func (store *MemSQL) PostFeedback(ProjectID uint64, agentUUID string, Feature string, Property *postgres.Jsonb, VoteType int) (int, string) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"agent_uuid": agentUUID,
-		"feature": Feature,
-		"property": Property,
-		"vote_type": VoteType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	transTime := gorm.NowFunc()
 
 	var feedback model.Feedback
@@ -48,11 +39,6 @@ func (store *MemSQL) PostFeedback(ProjectID uint64, agentUUID string, Feature st
 	return http.StatusCreated, ""
 }
 func (store *MemSQL) GetRecordsFromFeedback(projectID uint64, agentUUID string) ([]model.Feedback, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"agent_uuid": agentUUID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	var records []model.Feedback
 	if err := db.Where("project_id = ?", projectID).Where("created_by = (?) AND feature = (?)", agentUUID, weeklyInsights).Find(&records).Error; err != nil {

@@ -15,10 +15,6 @@ import (
 )
 
 func (store *MemSQL) satisfiesDisplayNameForeignConstraints(displayName model.DisplayName) int {
-	logFields := log.Fields{
-		"display_name": displayName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, errCode := store.GetProject(displayName.ProjectID)
 	if errCode != http.StatusFound {
 		return http.StatusBadRequest
@@ -27,14 +23,7 @@ func (store *MemSQL) satisfiesDisplayNameForeignConstraints(displayName model.Di
 }
 
 func (store *MemSQL) CreateOrUpdateDisplayName(projectID uint64, eventName, propertyName, displayName, tag string) int {
-	logFields := log.Fields{
-		"display_name": displayName,
-		"project_id": projectID,
-		"property_name": propertyName,
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_name": propertyName, "event_name": eventName, "display_name": displayName, "tag": tag})
 
 	if displayName == "" || projectID == 0 {
 		logCtx.Error("Missing required field.")
@@ -96,15 +85,7 @@ func (store *MemSQL) CreateOrUpdateDisplayName(projectID uint64, eventName, prop
 }
 
 func (store *MemSQL) CreateOrUpdateDisplayNameByObjectType(projectID uint64, propertyName, objectType, displayName, group string) int {
-	logFields := log.Fields{
-		"display_name": displayName,
-		"project_id": projectID,
-		"property_name": propertyName,
-		"object_type": objectType,
-		"group": group,	
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_name": propertyName, "object_type": objectType})
 
 	if objectType == "" || propertyName == "" || displayName == "" || group == "" || projectID == 0 {
 		logCtx.Error("Missing required field.")
@@ -150,10 +131,6 @@ func (store *MemSQL) CreateOrUpdateDisplayNameByObjectType(projectID uint64, pro
 }
 
 func (store *MemSQL) GetDisplayNamesForAllEvents(projectID uint64) (int, map[string]string) {
-	logFields := log.Fields{
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		return http.StatusBadRequest, nil
 	}
@@ -186,11 +163,6 @@ func (store *MemSQL) GetDisplayNamesForAllEvents(projectID uint64) (int, map[str
 }
 
 func (store *MemSQL) GetDisplayNamesForAllEventProperties(projectID uint64, eventName string) (int, map[string]string) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		return http.StatusBadRequest, nil
 	}
@@ -224,10 +196,6 @@ func (store *MemSQL) GetDisplayNamesForAllEventProperties(projectID uint64, even
 }
 
 func (store *MemSQL) GetDisplayNamesForAllUserProperties(projectID uint64) (int, map[string]string) {
-	logFields := log.Fields{
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		return http.StatusBadRequest, nil
 	}
@@ -260,10 +228,6 @@ func (store *MemSQL) GetDisplayNamesForAllUserProperties(projectID uint64) (int,
 }
 
 func (store *MemSQL) GetDisplayNamesForObjectEntities(projectID uint64) (int, map[string]string) {
-	logFields := log.Fields{
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		return http.StatusBadRequest, nil
 	}

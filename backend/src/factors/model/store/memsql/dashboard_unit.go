@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/rs/xid"
@@ -16,10 +15,6 @@ import (
 )
 
 func (store *MemSQL) satisfiesDashboardUnitForeignConstraints(dashboardUnit model.DashboardUnit) int {
-	logFields := log.Fields{
-		"dash_board_unit": dashboardUnit,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, errCode := store.GetProject(dashboardUnit.ProjectID)
 	if errCode != http.StatusFound {
 		return http.StatusBadRequest
@@ -39,13 +34,6 @@ func (store *MemSQL) satisfiesDashboardUnitForeignConstraints(dashboardUnit mode
 // list of dashboards
 func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64,
 	agentUUID string, unitPayload model.DashboardUnitRequestPayload) ([]*model.DashboardUnit, int, string) {
-		logFields := log.Fields{
-			"dash_board_ids": dashboardIds,
-			"project_id": projectId,
-			"agent_uuid": agentUUID,
-			"unit_payload": unitPayload,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var dashboardUnits []*model.DashboardUnit
 	for _, dashboardId := range dashboardIds {
@@ -67,13 +55,6 @@ func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []uin
 // CreateMultipleDashboardUnits creates multiple dashboard units for list of queries for single dashboard
 func (store *MemSQL) CreateMultipleDashboardUnits(requestPayload []model.DashboardUnitRequestPayload, projectId uint64,
 	agentUUID string, dashboardId uint64) ([]*model.DashboardUnit, int, string) {
-		logFields := log.Fields{
-			"request_payload": requestPayload,
-			"project_id": projectId,
-			"agent_uuid": agentUUID,
-			"dashboard_id": dashboardId,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var dashboardUnits []*model.DashboardUnit
 	for _, payload := range requestPayload {
 
@@ -97,27 +78,14 @@ func (store *MemSQL) CreateMultipleDashboardUnits(requestPayload []model.Dashboa
 }
 
 func (store *MemSQL) CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *model.DashboardUnit) (*model.DashboardUnit, int, string) {
-	logFields := log.Fields{
-		"dashboard_unit": dashboardUnit,
-		"project_id": projectId,
-		"agent_uuid": agentUUID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.CreateDashboardUnitForDashboardClass(projectId, agentUUID, dashboardUnit, model.DashboardClassUserCreated)
 }
 
 func (store *MemSQL) CreateDashboardUnitForDashboardClass(projectId uint64, agentUUID string, dashboardUnit *model.DashboardUnit,
 	dashboardClass string) (*model.DashboardUnit, int, string) {
-		logFields := log.Fields{
-			"dashboard_unit": dashboardUnit,
-			"project_id": projectId,
-			"agent_uuid": agentUUID,
-			"dashboard_class": dashboardClass,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"dashboard_unit": dashboardUnit, "project_id": projectId})
 	if projectId == 0 || agentUUID == "" {
 		return nil, http.StatusBadRequest, "Invalid request"
 	}
@@ -150,11 +118,10 @@ func (store *MemSQL) CreateDashboardUnitForDashboardClass(projectId uint64, agen
 
 // updateDashboardUnitPresentation updates Presentation for dashboard Unit using corresponding query settings
 func (store *MemSQL) updateDashboardUnitPresentation(unit *model.DashboardUnit) {
-	logFields := log.Fields{
-		"unit": unit,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"Method":    "CacheDashboardUnit",
+		"ProjectID": unit.ProjectID,
+	})
 	queryInfo, errC := store.GetQueryWithQueryId(unit.ProjectID, unit.QueryId)
 	if errC != http.StatusFound {
 		logCtx.Errorf("Failed to fetch query from query_id %d", unit.QueryId)
@@ -172,10 +139,6 @@ func (store *MemSQL) updateDashboardUnitPresentation(unit *model.DashboardUnit) 
 
 // GetDashboardUnitsForProjectID Returns all dashboard units for the given projectID.
 func (store *MemSQL) GetDashboardUnitsForProjectID(projectID uint64) ([]model.DashboardUnit, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	var dashboardUnits []model.DashboardUnit
@@ -192,12 +155,6 @@ func (store *MemSQL) GetDashboardUnitsForProjectID(projectID uint64) ([]model.Da
 }
 
 func (store *MemSQL) GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) ([]model.DashboardUnit, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"agent_uuid": agentUUID,
-		"dashboard_id": dashboardId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	var dashboardUnits []model.DashboardUnit
@@ -222,11 +179,6 @@ func (store *MemSQL) GetDashboardUnits(projectId uint64, agentUUID string, dashb
 
 // GetDashboardUnitByUnitID To get a dashboard unit by project id and unit id.
 func (store *MemSQL) GetDashboardUnitByUnitID(projectID, unitID uint64) (*model.DashboardUnit, int) {
-	logFields := log.Fields{
-		"unit_id": unitID,
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	var dashboardUnit model.DashboardUnit
 	if err := db.Model(&model.DashboardUnit{}).Where("project_id = ? AND id=? AND is_deleted = ?",
@@ -240,12 +192,6 @@ func (store *MemSQL) GetDashboardUnitByUnitID(projectID, unitID uint64) (*model.
 }
 
 func (store *MemSQL) GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID uint64, types []string) ([]model.DashboardUnit, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"types": types,
-		"dashboard_id": dashboardID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	var dashboardUnits []model.DashboardUnit
@@ -269,12 +215,6 @@ func (store *MemSQL) GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectI
 }
 
 func (store *MemSQL) DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64) int {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"agent_uuid": agentUUID,
-		"dashboard_id": dashboardId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if projectId == 0 || agentUUID == "" ||
 		dashboardId == 0 || id == 0 {
@@ -301,13 +241,6 @@ func (store *MemSQL) DeleteDashboardUnit(projectId uint64, agentUUID string, das
 // DeleteMultipleDashboardUnits deletes multiple dashboard units for given dashboard
 func (store *MemSQL) DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID uint64,
 	dashboardUnitIDs []uint64) (int, string) {
-		logFields := log.Fields{
-			"dashboard_unit_ids": dashboardUnitIDs,
-			"project_id": projectID,
-			"agent_uuid": agentUUID,
-			"dashboard_id": dashboardID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	for _, dashboardUnitID := range dashboardUnitIDs {
 		errCode := store.DeleteDashboardUnit(projectID, agentUUID, dashboardID, dashboardUnitID)
@@ -322,12 +255,6 @@ func (store *MemSQL) DeleteMultipleDashboardUnits(projectID uint64, agentUUID st
 }
 
 func (store *MemSQL) deleteDashboardUnit(projectID uint64, dashboardID uint64, ID uint64) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"id": ID,
-		"dashboard_id": dashboardID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	err := db.Model(&model.DashboardUnit{}).Where("id = ? AND project_id = ? AND dashboard_id = ?",
@@ -342,16 +269,8 @@ func (store *MemSQL) deleteDashboardUnit(projectID uint64, dashboardID uint64, I
 
 func (store *MemSQL) UpdateDashboardUnit(projectId uint64, agentUUID string,
 	dashboardId uint64, id uint64, unit *model.DashboardUnit) (*model.DashboardUnit, int) {
-		logFields := log.Fields{
-			"id": id,
-			"unit": unit,
-			"project_id": projectId,
-			"agent_uuid": agentUUID,
-			"dashboard_id": dashboardId,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "agentUUID": agentUUID, "dashboard_id": dashboardId})
 
 	if projectId == 0 || agentUUID == "" ||
 		dashboardId == 0 || id == 0 {
@@ -391,22 +310,18 @@ func (store *MemSQL) UpdateDashboardUnit(projectId uint64, agentUUID string,
 }
 
 // CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
-func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map) {
-	logFields := log.Fields{
-		"string_projects_ids": stringProjectsIDs,
-		"exclude_project_ids": excludeProjectIDs,
-		"num_routines": numRoutines,
-		"report_collector": reportCollector,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs, dashboardUnitIDsList string, numRoutines int, reportCollector *sync.Map) {
+	logCtx := log.WithFields(log.Fields{
+		"Method": "CacheDashboardUnitsForProjects",
+	})
 
 	projectIDs := store.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
 	for _, projectID := range projectIDs {
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
 		logCtx.Info("Starting to cache units for the project")
 		startTime := U.TimeNowUnix()
-		unitsCount := store.CacheDashboardUnitsForProjectID(projectID, numRoutines, reportCollector)
+		dashboardUnitIDs := C.GetDashboardUnitIDs(dashboardUnitIDsList)
+		unitsCount := store.CacheDashboardUnitsForProjectID(projectID, dashboardUnitIDs, numRoutines, reportCollector)
 
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
@@ -416,19 +331,28 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 }
 
 // CacheDashboardUnitsForProjectID Caches all the dashboard units for the given `projectID`.
-func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int, reportCollector *sync.Map) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"num_routines": numRoutines,
-		"report_collector": reportCollector,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnitIDs []uint64, numRoutines int, reportCollector *sync.Map) int {
 	if numRoutines == 0 {
 		numRoutines = 1
 	}
 	dashboardUnits, errCode := store.GetDashboardUnitsForProjectID(projectID)
 	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
 		return 0
+	}
+	isPresent := false
+	finalDashboardUnits := make([]model.DashboardUnit, 0)
+	for _, dashboardUnit := range dashboardUnits {
+		if U.ContainsUint64InArray(dashboardUnitIDs, dashboardUnit.ID) {
+			isPresent = true
+			finalDashboardUnits = append(finalDashboardUnits, dashboardUnit)
+		}
+	}
+	if len(dashboardUnitIDs) != 0 {
+		if isPresent {
+			dashboardUnits = finalDashboardUnits
+		} else {
+			return 0
+		}
 	}
 
 	var waitGroup sync.WaitGroup
@@ -454,12 +378,9 @@ func (store *MemSQL) CacheDashboardUnitsForProjectID(projectID uint64, numRoutin
 	return len(dashboardUnits)
 }
 
+// Main method kark2 current
 // GetQueryAndClassFromDashboardUnit returns query and query-class of dashboard unit.
 func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string) {
-	logFields := log.Fields{
-		"dashboard_unit": dashboardUnit,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	projectID := dashboardUnit.ProjectID
 	savedQuery, errCode := store.GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
@@ -477,11 +398,6 @@ func (store *MemSQL) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.Dash
 
 // GetQueryAndClassFromDashboardUnit returns query and query-class of dashboard unit.
 func (store *MemSQL) GetQueryAndClassFromQueryIdString(queryIdString string, projectId uint64) (queryClass string, queryInfo *model.Queries, errMsg string) {
-	logFields := log.Fields{
-		"query_id_string": queryIdString,
-		"project_id": projectId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	savedQuery, errCode := store.GetQueryWithQueryIdString(projectId, queryIdString)
 	if errCode != http.StatusFound {
 		errMsg = fmt.Sprintf("Failed to fetch query from query_id %v", queryIdString)
@@ -497,10 +413,6 @@ func (store *MemSQL) GetQueryAndClassFromQueryIdString(queryIdString string, pro
 }
 
 func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string) {
-	logFields := log.Fields{
-		"query": query,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var temp_query model.Query
 	var queryGroup model.QueryGroup
 	// try decoding for Query
@@ -521,13 +433,12 @@ func (store *MemSQL) GetQueryClassFromQueries(query model.Queries) (queryClass, 
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
-	logFields := log.Fields{
-		"dashboard_unit": dashboardUnit,
-		"wait_group": waitGroup,
-		"report_collector": reportCollector,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"Method":      "CacheDashboardUnit",
+		"ProjectID":   dashboardUnit.ProjectID,
+		"DashboardID": dashboardUnit.DashboardId,
+		"UnitID":      dashboardUnit.ID,
+	})
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
@@ -604,10 +515,6 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitG
 
 // CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
 func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string, model.CachingUnitReport) {
-	logFields := log.Fields{
-		"cache_payload": cachePayload,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// Catches any panic in query execution and logs as an error. Prevents jobs from crashing.
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
@@ -631,7 +538,13 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 		QueryRange:  U.SecondsToHMSString(to - from),
 	}
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"Method":          "CacheDashboardUnitForDateRange",
+		"ProjectID":       projectID,
+		"DashboardID":     dashboardID,
+		"DashboardUnitID": dashboardUnitID,
+		"FromTo":          fmt.Sprintf("%d-%d", from, to),
+	})
 	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, timezoneString, false) {
 		return http.StatusOK, "", unitReport
 	}
@@ -701,12 +614,6 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 
 func (store *MemSQL) cacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
 	waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
-		logFields := log.Fields{
-			"cache_payload": cachePayload,
-			"wait_group": waitGroup,
-			"report_collector": reportCollector,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
@@ -734,18 +641,13 @@ func (store *MemSQL) cacheDashboardUnitForDateRange(cachePayload model.Dashboard
 
 // CacheDashboardsForMonthlyRange To cache monthly dashboards for the project id.
 func (store *MemSQL) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map) {
-	logFields := log.Fields{
-		"project_ids": projectIDs,
-		"exclude_project_ids": excludeProjectIDs,
-		"num_months": numMonths,
-		"num_routines": numRoutines,
-		"report_collector": reportCollector,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	projectIDsToRun := store.GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDsToRun {
-		logCtx := log.WithFields(logFields)
+		logCtx := log.WithFields(log.Fields{
+			"Method":    "CacheDashboardUnit",
+			"ProjectID": projectID,
+		})
 		timezoneString, statusCode := store.GetTimezoneForProject(projectID)
 		if statusCode != http.StatusFound {
 			errMsg := fmt.Sprintf("Failed to get project Timezone for %d", projectID)

@@ -28,23 +28,15 @@ const usersLimitForProperties = 50000
 const constraintViolationError = "constraint violation"
 
 func isConstraintViolationError(err error) bool {
-	logFields := log.Fields{
-		"err": err,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return err.Error() == constraintViolationError
 }
 
 // createUserWithError - Returns error during create to match
 // with constraint errors.
 func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) {
-	logFields := log.Fields{
-		"user": user,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", user.ProjectId)
 
 	if user.ProjectId == 0 {
 		logCtx.Error("Failed to create user. ProjectId not provided.")
@@ -124,13 +116,10 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 }
 
 func (store *MemSQL) CreateUser(user *model.User) (string, int) {
-	logFields := log.Fields{
-		"user": user,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", user.ProjectId).
+		WithField("user_id", user.ID)
 
 	if user.SegmentAnonymousId != "" || user.AMPUserId != "" {
 		// Corresponding create methods should be used for
@@ -163,13 +152,7 @@ func (store *MemSQL) CreateUser(user *model.User) (string, int) {
 // UpdateUser updates user fields by Id.
 func (store *MemSQL) UpdateUser(projectId uint64, id string,
 	user *model.User, updateTimestamp int64) (*model.User, int) {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"id": id,
-			"user": user,
-			"update_timestamp": updateTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	// Todo(Dinesh): Move to validations.
 	// Ref: https://github.com/qor/validations
@@ -215,25 +198,14 @@ func (store *MemSQL) UpdateUser(projectId uint64, id string,
 // UpdateUserProperties only if there is a change in properties values.
 func (store *MemSQL) UpdateUserProperties(projectId uint64, id string,
 	newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int) {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"id": id,
-			"new_properties": newProperties,
-			"update_timestamp": updateTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	return store.UpdateUserPropertiesV2(projectId, id, newProperties, updateTimestamp, "", "")
 }
 
 func (store *MemSQL) IsUserExistByID(projectID uint64, id string) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"id": id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": id})
 
 	var user model.User
 	db := C.GetServices().Db
@@ -276,12 +248,7 @@ func (store *MemSQL) GetUser(projectId uint64, id string) (*model.User, int) {
 }
 
 func (store *MemSQL) GetUsers(projectId uint64, offset uint64, limit uint64) ([]model.User, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"offset": offset,
-		"limit": limit,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var users []model.User
 	db := C.GetServices().Db
@@ -297,13 +264,12 @@ func (store *MemSQL) GetUsers(projectId uint64, offset uint64, limit uint64) ([]
 
 // GetUsersByCustomerUserID Gets all the users indentified by given customer_user_id in increasing order of updated_at.
 func (store *MemSQL) GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"customer_user_id": customerUserID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"ProjectID":      projectID,
+		"CustomerUserID": customerUserID,
+	})
 
 	var users []model.User
 	db := C.GetServices().Db
@@ -327,15 +293,11 @@ func (store *MemSQL) GetUsersByCustomerUserID(projectID uint64, customerUserID s
 
 // GetSelectedUsersByCustomerUserID gets selected (top 50 & bottom 50) users identified by given customer_user_id in increasing order of updated_at.
 func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID uint64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"customer_user_id": customerUserID,
-		"limit": limit,
-		"num_users": numUsers,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"ProjectID":      projectID,
+		"CustomerUserID": customerUserID,
+	})
 
 	var ids []model.User
 	if err := db.Limit(limit).Order("created_at ASC").
@@ -378,13 +340,9 @@ func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID uint64, customer
 	return users, http.StatusFound
 }
 
-func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string, requestSource int) (*model.User, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"customer_user_id": customerUserId,
-		"request_source": requestSource,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string,
+	requestSource int) (*model.User, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var user model.User
 	db := C.GetServices().Db
@@ -416,11 +374,7 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUse
 }
 
 func (store *MemSQL) GetExistingCustomerUserID(projectId uint64, arrayCustomerUserID []string) (map[string]string, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"array_customer_user_id": arrayCustomerUserID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	customerUserIDMap := make(map[string]string)
 	if len(arrayCustomerUserID) == 0 {
@@ -451,11 +405,7 @@ func (store *MemSQL) GetExistingCustomerUserID(projectId uint64, arrayCustomerUs
 }
 
 func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*model.User, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"seg_anon_id": segAnonId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var users []model.User
 	db := C.GetServices().Db
@@ -476,11 +426,7 @@ func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId str
 
 // GetAllUserIDByCustomerUserID returns all users with same customer_user_id
 func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID uint64, customerUserID string) ([]string, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"customer_user_id": customerUserID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if projectID == 0 || customerUserID == "" {
 		return nil, http.StatusBadRequest
@@ -531,16 +477,10 @@ func getUserIDBySegementAnonymousID(segAnonID string) string {
 // and/or customer_user_id.
 func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string,
 	requestTimestamp int64, requestSource int) (*model.User, int) {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"cust_user_id": custUserId,
-			"seg_anon_id": segAnonId,
-			"request_timestamp": requestTimestamp,
-			"request_source": requestSource,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId,
+		"provided_c_uid": custUserId})
 
 	// seg_aid not provided.
 	if segAnonId == "" && custUserId == "" {
@@ -631,12 +571,8 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 }
 
 func (store *MemSQL) GetUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"amp_user_id": ampUserId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectId).WithField(
+		"amp_user_id", ampUserId)
 
 	userID, errCode := model.GetCacheUserIDByAMPUserID(projectId, ampUserId)
 	if errCode == http.StatusFound {
@@ -666,19 +602,14 @@ func (store *MemSQL) GetUserIDByAMPUserID(projectId uint64, ampUserId string) (s
 }
 
 func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64, requestSource int) (string, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"amp_user_id": ampUserId,
-		"timestamp": timestamp,
-		"request_source": requestSource,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if projectId == 0 || ampUserId == "" {
 		return "", http.StatusBadRequest
 	}
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id",
+		projectId).WithField("amp_user_id", ampUserId)
 
 	// Unique (project_id, amp_user_id) constraint.
 	userID, errCode := store.GetUserIDByAMPUserID(projectId, ampUserId)
@@ -725,19 +656,13 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 
 //GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
 func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"users_limit": usersLimit,
-		"property_limit": propertyLimit,
-		"seed_date": seedDate,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	properties := make([]U.Property, 0)
 	db := C.GetServices().Db
 	startTime := seedDate.AddDate(0, 0, -7).Unix()
 	endTime := seedDate.Unix()
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
 
 	var queryParams []interface{}
 	queryStmnt := fmt.Sprintf("WITH recent_user_events AS (SELECT user_id, FIRST(user_properties, FROM_UNIXTIME(events.timestamp)) AS user_properties, FIRST(timestamp, FROM_UNIXTIME(events.timestamp)) AS timestamp FROM events"+" "+
@@ -800,14 +725,7 @@ func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID uint64, users
 // from DB for a given project/property
 func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 	usersLimit, valuesLimit int, seedDate time.Time) ([]U.PropertyValue, string, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"users_limit": usersLimit,
-			"property_key": propertyKey,
-			"seed_date": seedDate,
-			"values_limit": valuesLimit,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	// limit on values returned.
 	values := make([]U.PropertyValue, 0, 0)
@@ -823,7 +741,8 @@ func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID uint64, pro
 	queryParams = make([]interface{}, 0, 0)
 	queryParams = append(queryParams, projectID, startTime, endTime, propertyKey, propertyKey, propertyKey)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_key": propertyKey, "values_limit": valuesLimit})
+
 	db := C.GetServices().Db
 	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
 	if err != nil {
@@ -853,12 +772,6 @@ func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID uint64, pro
 
 // Gets userProperties - sorted by count and time. Update list with required ones.
 func (store *MemSQL) GetRequiredUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map[string][]string, map[string]string, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"limit": limit,
-		"last_n_days": lastNDays,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	properties, err := store.GetUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {
 		return properties, make(map[string]string), err
@@ -891,12 +804,7 @@ func (store *MemSQL) GetRequiredUserPropertiesByProject(projectID uint64, limit 
 //GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project
 // Picks all past 24 hrs seen properties and sorts the remaining by count and returns top 'limit'
 func (store *MemSQL) GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map[string][]string, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"limit": limit,
-		"last_n_days": lastNDays,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	properties := make(map[string][]string)
 	if projectID == 0 {
@@ -944,13 +852,11 @@ func (store *MemSQL) GetUserPropertiesByProject(projectID uint64, limit int, las
 }
 
 func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.CachePropertyWithTimestamp, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"date_key": dateKey,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
 	if projectID == 0 {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetUserPropertiesByProjectFromCache")
 	}
@@ -980,13 +886,7 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 // remaining by count and returns top 'limit'
 func (store *MemSQL) GetPropertyValuesByUserProperty(projectID uint64,
 	propertyName string, limit int, lastNDays int) ([]string, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"limit": limit,
-			"last_n_days": lastNDays,
-			"property_name": propertyName,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if projectID == 0 {
 		return []string{}, errors.New("invalid project on GetPropertyValuesByUserProperty")
@@ -1024,14 +924,11 @@ func (store *MemSQL) GetPropertyValuesByUserProperty(projectID uint64,
 
 func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName string,
 	dateKey string) (U.CachePropertyValueWithTimestamp, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"date_key": dateKey,
-			"property_name": propertyName,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
 	if projectID == 0 {
 		return U.CachePropertyValueWithTimestamp{},
 			errors.New("invalid project on GetPropertyValuesByUserPropertyFromCache")
@@ -1063,13 +960,9 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 }
 
 func (store *MemSQL) GetLatestUserPropertiesOfUserAsMap(projectID uint64, id string) (*map[string]interface{}, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"id": id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).WithField("id", id)
 
 	var user model.User
 	db := C.GetServices().Db
@@ -1095,12 +988,9 @@ func (store *MemSQL) GetLatestUserPropertiesOfUserAsMap(projectID uint64, id str
 
 // GetDistinctCustomerUserIDSForProject Returns all distinct customer_user_id for Project.
 func (store *MemSQL) GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"ProjectID": projectID})
 
 	var customerUserIDS []string
 	db := C.GetServices().Db
@@ -1126,11 +1016,7 @@ func (store *MemSQL) GetDistinctCustomerUserIDSForProject(projectID uint64) ([]s
 
 // GetUserIdentificationPhoneNumber tries various patterns of phone number if exist in db and return the phone no based on priority
 func (store *MemSQL) GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"phone_no": phoneNo,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if len(phoneNo) < 5 {
 		return "", ""
@@ -1150,12 +1036,7 @@ func (store *MemSQL) GetUserIdentificationPhoneNumber(projectID uint64, phoneNo 
 }
 
 func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId uint64, isDryRun bool) error {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"db": db,
-		"is_dry_run": isDryRun,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	userRows, err := db.Raw("SELECT id, join_timestamp FROM users WHERE project_id = ?", projectId).Rows()
 	defer userRows.Close()
@@ -1198,13 +1079,9 @@ func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId u
 }
 
 func (store *MemSQL) GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"id": id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).WithField("user_id", id)
 
 	if projectID == 0 || id == "" {
 		logCtx.Error("Invalid values on arguments.")
@@ -1235,14 +1112,10 @@ func (store *MemSQL) GetUserPropertiesByUserID(projectID uint64, id string) (*po
 // given property with value. No specific order.
 func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
 	key string, value interface{}) (*model.User, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"key": key,
-			"value": value,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).WithField(
+		"key", key).WithField("value", value)
 
 	var user model.User
 	// $$$ is a gorm alias for ? jsonb operator.
@@ -1263,14 +1136,10 @@ func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
 
 func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint64,
 	customerUserID string, includeUser *model.User) ([]model.User, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"customer_user_id": customerUserID,
-			"include_user": includeUser,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).
+		WithField("customer_user_id", customerUserID)
 
 	if projectID == 0 || customerUserID == "" {
 		logCtx.Error("Invalid values for arguments.")
@@ -1318,19 +1187,9 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 	currentProperties *postgres.Jsonb, currentUpdateTimestamp int64,
 	newProperties *postgres.Jsonb, newUpdateTimestamp int64, source string, objectType string,
 ) (*postgres.Jsonb, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"user_id": userID,
-		"current_properties": currentProperties,
-		"current_update_timestamp": currentUpdateTimestamp,
-		"new_properties": newProperties,
-		"new_update_timestamp": newUpdateTimestamp,
-		"source": source,
-		"object_type": objectType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
 
 	var newPropertiesMap map[string]interface{}
 	err := json.Unmarshal((*newProperties).RawMessage, &newPropertiesMap)
@@ -1422,18 +1281,11 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 // merge the properties of user with same customer_user_id, then updates properties on users table.
 func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 	newProperties *postgres.Jsonb, newUpdateTimestamp int64, sourceValue string, objectType string) (*postgres.Jsonb, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"id": id,
-			"new_properties": newProperties,
-			"new_update_timestamp": newUpdateTimestamp,
-			"source_value": sourceValue,
-			"object_type": objectType,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).WithField("id", id).
+		WithField("new_properties", newProperties).
+		WithField("new_update_timestamp", newUpdateTimestamp)
 
 	newProperties = U.SanitizePropertiesJsonb(newProperties)
 
@@ -1559,15 +1411,9 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 // of all users which has the given customer_user_id, with given properties JSON.
 func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID uint64,
 	customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"customer_user_id": customerUserID,
-			"properties": properties,
-			"update_timestamp": updateTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).WithField("customer_user_id", customerUserID)
 
 	if properties == nil {
 		logCtx.Error("Failed to overwrite properties. Nil properties.")
@@ -1591,17 +1437,10 @@ func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID uint64,
 
 func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
 	properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64, source string) int {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"id": id,
-			"properties": properties,
-			"update_timestamp": updateTimestamp,
-			"with_update_timestamp": withUpdateTimestamp,
-			"source": source,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).WithField("id", id).
+		WithField("update_timestamp", updateTimestamp)
 
 	if projectID == 0 || id == "" {
 		logCtx.Error("Failed to overwrite properties. Empty or nil properties.")
@@ -1650,13 +1489,8 @@ func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
 }
 
 func (store *MemSQL) GetPropertiesUpdatedTimestampOfUser(projectId uint64, id string) (int64, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"id": id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": id})
 
 	var user model.User
 	if err := db.Limit(1).Where("project_id = ?", projectId).Where("id = ?", id).
@@ -1673,15 +1507,11 @@ func (store *MemSQL) GetPropertiesUpdatedTimestampOfUser(projectId uint64, id st
 
 func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint64,
 	updatedProperties map[string]interface{}, redundantProperty bool) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"user_id": userId,
-			"updated_properties": updatedProperties,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// If the cache is empty / cache is updated from more than 1 day - repopulate cache
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
 	currentTime := U.TimeNowZ()
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 	// Store Last updated from DB in cache as a key. and check and refresh cache accordingly
@@ -1776,11 +1606,6 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 // latest user properties for session.
 func (store *MemSQL) UpdateUserPropertiesForSession(projectID uint64,
 	sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"session_user_properties_record_map": sessionUserPropertiesRecordMap,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	return store.updateUserPropertiesForSessionV2(projectID, sessionUserPropertiesRecordMap)
 }
@@ -1788,14 +1613,8 @@ func (store *MemSQL) UpdateUserPropertiesForSession(projectID uint64,
 // GetCustomerUserIDAndUserPropertiesFromFormSubmit return customer_user_id na and validated user_properties from form submit properties
 func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID uint64, userID string,
 	formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"user_id": userID,
-			"form_submit_properties": formSubmitProperties,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID})
 
 	existingUserProperties, errCode := store.GetUserPropertiesByUserID(projectID, userID)
 	if errCode != http.StatusFound {
@@ -1869,13 +1688,8 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 
 func (store *MemSQL) updateUserPropertiesForSessionV2(projectID uint64,
 	sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"session_user_properties_record_map": sessionUserPropertiesRecordMap,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
 	latestSessionUserPropertiesByUserID := make(map[string]model.LatestUserPropertiesFromSession, 0)
 	sessionUpdateUserIDs := map[string]bool{}
 
@@ -1980,14 +1794,7 @@ func (pg *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 	latestSessionUserPropertiesByUserID *map[string]model.LatestUserPropertiesFromSession,
 ) int {
 
-	logFields := log.Fields{
-		"project_id": projectID,
-		"session_update_user_ids": sessionUpdateUserIDs,
-		"latest_session_user_properties_by_user_id": latestSessionUserPropertiesByUserID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
 
 	var hasFailure bool
 	for userID := range sessionUpdateUserIDs {
@@ -2036,11 +1843,6 @@ func (pg *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 }
 
 func shouldAllowCustomerUserID(current, incoming string) bool {
-	logFields := log.Fields{
-		"current": current,
-		"incoming": incoming,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if current == "" || incoming == "" {
 		return false
 	}
@@ -2063,17 +1865,6 @@ func shouldAllowCustomerUserID(current, incoming string) bool {
 
 // UpdateIdentifyOverwriteUserPropertiesMeta adds overwrite information to user properties for debuging purpose. Not available while querying
 func (store *MemSQL) UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"customer_user_id": customerUserID,
-		"user_id": userID,
-		"page_url": pageURL,
-		"user_properties": userProperties,
-		"source": source,
-		"time_stamp": timestamp,
-		"is_new_user": isNewUser,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 || customerUserID == "" {
 		return errors.New("invalid or empty parameter")
 	}
@@ -2081,7 +1872,8 @@ func (store *MemSQL) UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64,
 		return errors.New("source missing")
 	}
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "customer_user_id": customerUserID})
+
 	var existingUserProperties *map[string]interface{}
 	var errCode int
 	if !isNewUser {
@@ -2109,14 +1901,8 @@ func (store *MemSQL) UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64,
 }
 
 func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string) (string, int) {
-	logFields := log.Fields{
-		"user": user,
-		"group_name": groupName,
-		"group_id": groupID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(logFields)	
+	logCtx := log.WithFields(log.Fields{"project_id": user.ProjectId, "group_name": groupName, "group_id": groupID})
 	group, status := store.GetGroup(user.ProjectId, groupName)
 	if status != http.StatusFound {
 		if status == http.StatusNotFound {
@@ -2159,15 +1945,7 @@ func (store *MemSQL) CreateGroupUser(user *model.User, groupName, groupID string
 }
 
 func (store *MemSQL) UpdateUserGroup(projectID uint64, userID, groupName, groupID, groupUserID string) (*model.User, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"user_id": userID,
-		"group_name": groupName,
-		"group_id": groupID,
-		"group_user_id": groupUserID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)	
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName, "group_id": groupID})
 	group, status := store.GetGroup(projectID, groupName)
 	if status != http.StatusFound {
 		if status == http.StatusNotFound {
@@ -2229,14 +2007,8 @@ func (store *MemSQL) UpdateUserGroup(projectID uint64, userID, groupName, groupI
 
 func (store *MemSQL) UpdateUserGroupProperties(projectID uint64, userID string,
 	newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"user_id": userID,
-			"new_properties": newProperties,
-			"update_timestamp": updateTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID,
+		"new_user_properties": newProperties, "new_update_timestamp": updateTimestamp})
 
 	if projectID == 0 || userID == "" || newProperties == nil {
 		logCtx.Error("Invalid parameters.")

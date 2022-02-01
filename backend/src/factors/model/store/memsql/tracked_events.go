@@ -15,10 +15,6 @@ import (
 )
 
 func (store *MemSQL) satisfiesTrackedEventForeignConstraints(trackedEvent model.FactorsTrackedEvent) int {
-	logFields := log.Fields{
-		"tracked_event": trackedEvent,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, projectErrCode := store.GetProject(trackedEvent.ProjectID)
 	if projectErrCode != http.StatusFound {
 		return http.StatusBadRequest
@@ -35,16 +31,10 @@ func (store *MemSQL) satisfiesTrackedEventForeignConstraints(trackedEvent model.
 
 //CreateTrackedEvent - Inserts the tracked event to db
 func (store *MemSQL) CreateFactorsTrackedEvent(ProjectID uint64, EventName string, agentUUID string) (int64, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"event_name": EventName,
-		"agent_uuid": agentUUID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if store.isActiveFactorsTrackedEventsLimitExceeded(ProjectID) {
 		return 0, http.StatusBadRequest
 	}
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 	insertType := U.UserCreated
 	if agentUUID == "" {
@@ -111,12 +101,7 @@ func (store *MemSQL) CreateFactorsTrackedEvent(ProjectID uint64, EventName strin
 
 // DeactivateFactorsTrackedEvent - Mark the tracked event inactive
 func (store *MemSQL) DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (int64, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"id": ID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	transTime := gorm.NowFunc()
 	existingFactorsTrackedEvent, dbErr := store.GetFactorsTrackedEventByID(ID, ProjectID)
 	if dbErr == nil {
@@ -155,10 +140,6 @@ func (store *MemSQL) DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (
 
 // GetAllFactorsTrackedEventsByProject - get all the tracked events by project
 func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = %d LIMIT %d) "+
@@ -184,10 +165,6 @@ func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]mo
 
 // GetAllActiveFactorsTrackedEventsByProject - get all the tracked events by project
 func (store *MemSQL) GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = %d AND is_active = true LIMIT %d) "+
@@ -213,12 +190,7 @@ func (store *MemSQL) GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64)
 
 // GetFactorsTrackedEvent - Get details of tracked event
 func (store *MemSQL) GetFactorsTrackedEvent(EventNameID string, ProjectID uint64) (*model.FactorsTrackedEvent, error) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"event_name_id": EventNameID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 
 	var trackedEvent model.FactorsTrackedEvent
@@ -235,12 +207,7 @@ func (store *MemSQL) GetFactorsTrackedEvent(EventNameID string, ProjectID uint64
 
 // GetFactorsTrackedEventByID - Get details of tracked event
 func (store *MemSQL) GetFactorsTrackedEventByID(ID int64, ProjectID uint64) (*model.FactorsTrackedEvent, error) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"id": ID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 
 	var trackedEvent model.FactorsTrackedEvent
@@ -256,13 +223,7 @@ func (store *MemSQL) GetFactorsTrackedEventByID(ID int64, ProjectID uint64) (*mo
 }
 
 func updateFactorsTrackedEvent(FactorsTrackedEventID uint64, ProjectID uint64, updatedFields map[string]interface{}) (int64, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"factors_tracked_event_id": FactorsTrackedEventID,
-		"updated_fields": updatedFields,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 	dbErr := db.Model(&model.FactorsTrackedEvent{}).Where("project_id = ? AND id = ?", ProjectID, FactorsTrackedEventID).Update(updatedFields).Error
 	if dbErr != nil {
@@ -273,10 +234,6 @@ func updateFactorsTrackedEvent(FactorsTrackedEventID uint64, ProjectID uint64, u
 }
 
 func (store *MemSQL) isActiveFactorsTrackedEventsLimitExceeded(ProjectID uint64) bool {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	trackedEvents, errCode := store.GetAllActiveFactorsTrackedEventsByProject(ProjectID)
 	if errCode != http.StatusFound {
 		return true

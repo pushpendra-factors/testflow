@@ -19,11 +19,6 @@ const ENABLE_DEFAULT_WEB_ANALYTICS = false
 
 // Checks for the existence of token already.
 func isTokenExist(token string, private bool) (exists int, err error) {
-	logFields := log.Fields{
-		"token": token,
-		"private": private,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	whereCondition := "token = ?"
@@ -43,10 +38,6 @@ func isTokenExist(token string, private bool) (exists int, err error) {
 }
 
 func generateUniqueToken(private bool) (token string, err error) {
-	logFields := log.Fields{
-		"private": private,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for tryCount := 0; tryCount < TOKEN_GEN_RETRY_LIMIT; tryCount++ {
 		token = U.RandomLowerAphaNumString(32)
 		tokenExists, err := isTokenExist(token, private)
@@ -62,11 +53,7 @@ func generateUniqueToken(private bool) (token string, err error) {
 }
 
 func createProject(project *model.Project) (*model.Project, int) {
-	logFields := log.Fields{
-		"project": project,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project": project})
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
@@ -164,14 +151,9 @@ func createProject(project *model.Project) (*model.Project, int) {
 }
 
 func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"project": project,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", project.ID)
 	updateFields := make(map[string]interface{}, 0)
 	if project.Name != "" {
 		updateFields["name"] = project.Name
@@ -227,12 +209,7 @@ func (store *MemSQL) UpdateProject(projectId uint64, project *model.Project) int
 }
 
 func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID string) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"agent_uuid": agentUUID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
 
 	// Associated project setting creation with default state.
 	defaultAutoTrackState := true
@@ -260,14 +237,6 @@ func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID strin
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
 func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agentUUID string,
 	agentRole uint64, billingAccountID string, createDashboard bool) (*model.Project, int) {
-		logFields := log.Fields{
-			"project": project,
-			"agent_uuid": agentUUID,
-			"agent_role": agentRole,
-			"billing_account_id": billingAccountID,
-			"create_dashboard": createDashboard,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	cProject, errCode := createProject(project)
 	if errCode != http.StatusCreated {
@@ -303,10 +272,6 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 
 // CreateDefaultProjectForAgent creates project for an agent if there is no project
 func (store *MemSQL) CreateDefaultProjectForAgent(agentUUID string) (*model.Project, int) {
-	logFields := log.Fields{
-		"agent_uuid": agentUUID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agentUUID == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -337,12 +302,8 @@ func (store *MemSQL) CreateDefaultProjectForAgent(agentUUID string) (*model.Proj
 }
 
 func (store *MemSQL) GetProject(id uint64) (*model.Project, int) {
-	logFields := log.Fields{
-		"id": id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", id)
 
 	var project model.Project
 	if err := db.Where("id = ?", id).First(&project).Error; err != nil {
@@ -356,10 +317,6 @@ func (store *MemSQL) GetProject(id uint64) (*model.Project, int) {
 }
 
 func (store *MemSQL) GetProjectByToken(token string) (*model.Project, int) {
-	logFields := log.Fields{
-		"token": token,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	// Todo(Dinesh): Move to validations.
@@ -382,10 +339,6 @@ func (store *MemSQL) GetProjectByToken(token string) (*model.Project, int) {
 }
 
 func (store *MemSQL) GetProjectByPrivateToken(privateToken string) (*model.Project, int) {
-	logFields := log.Fields{
-		"private_token": privateToken,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	cleanToken := strings.TrimSpace(privateToken)
@@ -408,7 +361,6 @@ func (store *MemSQL) GetProjectByPrivateToken(privateToken string) (*model.Proje
 }
 
 func (store *MemSQL) GetProjects() ([]model.Project, int) {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 
 	var projects []model.Project
@@ -426,18 +378,10 @@ func (store *MemSQL) GetProjects() ([]model.Project, int) {
 
 // isValidProjectScope return false if projectId is invalid.
 func isValidProjectScope(id uint64) bool {
-	logFields := log.Fields{
-		"id": id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return id != 0
 }
 
 func (store *MemSQL) GetProjectsByIDs(ids []uint64) ([]model.Project, int) {
-	logFields := log.Fields{
-		"ids": ids,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(ids) == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -459,7 +403,6 @@ func (store *MemSQL) GetProjectsByIDs(ids []uint64) ([]model.Project, int) {
 
 // GetAllProjectIDs Gets the ids of all the existing projects.
 func (store *MemSQL) GetAllProjectIDs() ([]uint64, int) {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	projectIds := make([]uint64, 0, 0)
 
 	db := C.GetServices().Db
@@ -490,11 +433,7 @@ func (store *MemSQL) GetAllProjectIDs() ([]uint64, int) {
 // GetNextSessionStartTimestampForProject - Returns start timestamp for
 // pulling events, for add session job, by project.
 func (store *MemSQL) GetNextSessionStartTimestampForProject(projectID uint64) (int64, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
 
 	if projectID == 0 {
 		logCtx.WithField("project_id", projectID).Error("Invalid args to method.")
@@ -536,10 +475,6 @@ func (store *MemSQL) GetNextSessionStartTimestampForProject(projectID uint64) (i
 }
 
 func (store *MemSQL) GetTimezoneForProject(projectID uint64) (U.TimeZoneString, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	project, statusCode := store.GetProject(projectID)
 	if statusCode != http.StatusFound {
 		return U.TimeZoneStringIST, statusCode
@@ -563,12 +498,7 @@ func (store *MemSQL) GetTimezoneForProject(projectID uint64) (U.TimeZoneString, 
 // UpdateNextSessionStartTimestampForProject - Updates next session start timestamp
 // on project jobs metadata.
 func (store *MemSQL) UpdateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"timestamp": timestamp,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).WithField("timestamp", timestamp)
 
 	if projectID == 0 || timestamp == 0 {
 		logCtx.WithField("project_id", projectID).WithField("timestamp", 0).
@@ -594,11 +524,6 @@ func (store *MemSQL) UpdateNextSessionStartTimestampForProject(projectID uint64,
 // GetProjectsToRunForIncludeExcludeString For a given list of include / exclude comma separated strings,
 // returns a list of project ids handling * and other cases.
 func (store *MemSQL) GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []uint64 {
-	logFields := log.Fields{
-		"project_ids": projectIDs,
-		"exclude_project_ids": excludeProjectIDs,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var projectIDsToRun []uint64
 	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(
 		projectIDs, excludeProjectIDs)
@@ -622,12 +547,7 @@ func (store *MemSQL) GetProjectsToRunForIncludeExcludeString(projectIDs, exclude
 // FillNextSessionStartTimestampForProject - Fills the initial next session start timestamp.
 // Postgres only implementation.
 func (store *MemSQL) FillNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"timestamp": timestamp,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).WithField("timestamp", timestamp)
 
 	if projectID == 0 || timestamp == 0 {
 		logCtx.WithField("project_id", projectID).WithField("timestamp", 0).
@@ -649,12 +569,8 @@ func (store *MemSQL) FillNextSessionStartTimestampForProject(projectID uint64, t
 }
 
 func (store *MemSQL) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[uint64]bool) (projectIds []uint64, errCode int) {
-	logFields := log.Fields{
-		"only_projects_map": onlyProjectsMap,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("projects", onlyProjectsMap)
 
 	onlyProjectIds := make([]uint64, 0, len(onlyProjectsMap))
 	for k := range onlyProjectsMap {
@@ -704,10 +620,6 @@ func (store *MemSQL) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map
 }
 
 func (store *MemSQL) GetProjectIDByToken(token string) (uint64, int) {
-	logFields := log.Fields{
-		"token": token,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	projectID, errCode := model.GetCacheProjectIDByToken(token)
 	if errCode == http.StatusFound {
 		return projectID, errCode

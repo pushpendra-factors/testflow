@@ -14,12 +14,6 @@ import (
 // GetNextArchivalBatches Returns a list of EventsArchivalBatch from the give startTime to 1 day before.
 func (store *MemSQL) GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error) {
 	var eventsArchivalBatches []model.EventsArchivalBatch
-	logFields := log.Fields{
-		"project_id": projectID,
-		"start_time": startTime,
-		"max_look_back_days": maxLookbackDays,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var completedBatches map[int64]int64
 	endTime := time.Unix(U.GetBeginningOfDayTimestampZ(U.TimeNowUnix())-1, 0)
 

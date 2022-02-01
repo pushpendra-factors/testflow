@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -15,12 +14,8 @@ import (
 )
 
 func (store *MemSQL) GetProjectModelMetadata(projectId uint64) ([]model.ProjectModelMetadata, int, string) {
-	logFields := log.Fields{
-		"project_id": projectId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectId)
 
 	if valid := isValidProjectScope(projectId); !valid {
 		return nil, http.StatusBadRequest, "Invalid project"
@@ -43,7 +38,6 @@ func (store *MemSQL) GetProjectModelMetadata(projectId uint64) ([]model.ProjectM
 }
 
 func (store *MemSQL) GetAllProjectModelMetadata() ([]model.ProjectModelMetadata, int, string) {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 
 	modelMetadata := make([]model.ProjectModelMetadata, 0)
@@ -63,10 +57,6 @@ func (store *MemSQL) GetAllProjectModelMetadata() ([]model.ProjectModelMetadata,
 }
 
 func (store *MemSQL) CreateProjectModelMetadata(pmm *model.ProjectModelMetadata) (int, string) {
-	logFields := log.Fields{
-		"pmm": pmm,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	if valid := isValidProjectScope(pmm.ProjectId); !valid {

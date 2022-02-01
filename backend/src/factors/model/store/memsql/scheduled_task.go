@@ -16,10 +16,6 @@ import (
 )
 
 func (store *MemSQL) satisfiesScheduledTaskForeignConstraints(task model.ScheduledTask) int {
-	logFields := log.Fields{
-		"task": task,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// TODO: Add for project_id, user_id.
 	_, errCode := store.GetProject(task.ProjectID)
 	if errCode != http.StatusFound {
@@ -30,11 +26,12 @@ func (store *MemSQL) satisfiesScheduledTaskForeignConstraints(task model.Schedul
 
 // CreateScheduledTask Creates a new task entry in scheduled_tasks table.
 func (store *MemSQL) CreateScheduledTask(task *model.ScheduledTask) int {
-	logFields := log.Fields{
-		"task": task,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"Prefix":    "Model#model.ScheduledTask#Create",
+		"ProjectID": task.ProjectID,
+		"JobID":     task.JobID,
+		"JobType":   task.TaskType,
+	})
 
 	err := validateScheduledTask(task)
 	if err != nil {
@@ -62,15 +59,10 @@ func (store *MemSQL) CreateScheduledTask(task *model.ScheduledTask) int {
 
 // UpdateScheduledTask Updates runtime details for the task.
 func (store *MemSQL) UpdateScheduledTask(taskID string, taskDetails *postgres.Jsonb, endTime int64, status model.ScheduledTaskStatus) (int64, int) {
-	
-	logFields := log.Fields{
-		"task_id": taskID,
-		"task_details": taskDetails,
-		"end_time": endTime,
-		"status": status,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"Prefix": "Model#Update",
+		"TaskID": taskID,
+	})
 
 	updates := map[string]interface{}{
 		"task_end_time": endTime,
@@ -94,11 +86,10 @@ func (store *MemSQL) UpdateScheduledTask(taskID string, taskDetails *postgres.Js
 
 // GetScheduledTaskByID To get scheduled task by task id.
 func (store *MemSQL) GetScheduledTaskByID(taskID string) (*model.ScheduledTask, int) {
-	logFields := log.Fields{
-		"task_id": taskID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"Prefix": "Model#model.ScheduledTask#GetByID",
+		"TaskID": taskID,
+	})
 	db := C.GetServices().Db
 
 	var scheduledTask model.ScheduledTask
@@ -114,12 +105,9 @@ func (store *MemSQL) GetScheduledTaskByID(taskID string) (*model.ScheduledTask, 
 
 // GetScheduledTaskInProgressCount Returns the count of IN_PROGRESS jobs for particular task.
 func (store *MemSQL) GetScheduledTaskInProgressCount(projectID uint64, taskType model.ScheduledTaskType) (int64, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"task_type": taskType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"Prefix": "Model#model.ScheduledTask#GetInProgress",
+	})
 	db := C.GetServices().Db
 
 	var inProgressCount int64
@@ -136,11 +124,6 @@ func (store *MemSQL) GetScheduledTaskInProgressCount(projectID uint64, taskType 
 
 // GetScheduledTaskLastRunTimestamp To get the timestamp of last for project and task_type.
 func (store *MemSQL) GetScheduledTaskLastRunTimestamp(projectID uint64, taskType model.ScheduledTaskType) (int64, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"task_type": taskType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	var maxTaskStartTime sql.NullInt64
 
@@ -161,12 +144,6 @@ func (store *MemSQL) GetScheduledTaskLastRunTimestamp(projectID uint64, taskType
 
 // GetArchivalFileNamesForProject Get archived fileNames for a time range.
 func (store *MemSQL) GetArchivalFileNamesForProject(projectID uint64, startTime, endTime time.Time) ([]string, []string, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"start_time": startTime,
-		"end_time": endTime,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	fileNames := make([]string, 0, 0)
@@ -197,13 +174,6 @@ func (store *MemSQL) GetArchivalFileNamesForProject(projectID uint64, startTime,
 // GetNewArchivalFileNamesAndEndTimeForProject Lists names of files created during archival process.
 func (store *MemSQL) GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 	lastRunAt int64, hardStartTime, hardEndTime time.Time) (map[int64]map[string]interface{}, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"last_run_at": lastRunAt,
-			"hard_start_time": hardStartTime,
-			"hard_end_time": hardEndTime,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	db := C.GetServices().Db
 	var startTime, endTime int64
@@ -258,10 +228,6 @@ func (store *MemSQL) GetNewArchivalFileNamesAndEndTimeForProject(projectID uint6
 
 // FailScheduleTask Set status as FAILED for the given taskID.
 func (store *MemSQL) FailScheduleTask(taskID string) {
-	logFields := log.Fields{
-		"task_id": taskID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	rowsUpdated, status := store.UpdateScheduledTask(taskID, nil, U.TimeNowUnix(), model.TASK_STATUS_FAILED)
 	if status != http.StatusAccepted || rowsUpdated == 0 {
 		log.Errorf("Error while marking task %s as failed", taskID)
@@ -270,12 +236,6 @@ func (store *MemSQL) FailScheduleTask(taskID string) {
 
 // GetCompletedArchivalBatches Returns completed archival batches for a given range.
 func (store *MemSQL) GetCompletedArchivalBatches(projectID uint64, startTime, endTime time.Time) (map[int64]int64, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"start_time": startTime,
-		"end_time": endTime,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	completedBatches := make(map[int64]int64)
 
@@ -301,11 +261,6 @@ func (store *MemSQL) GetCompletedArchivalBatches(projectID uint64, startTime, en
 
 // Filters all completed bigquery tasks from the list of allTasksMap.
 func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]interface{}, projectID uint64) (map[int64]map[string]interface{}, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"all_tasks_map": allTasksMap,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var archivalTaskIDs, completedTaskIDs, pendingTaskIDs []string
 	pendingTasksMap := make(map[int64]map[string]interface{})
 	db := C.GetServices().Db
@@ -344,10 +299,6 @@ func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]interface{}, 
 }
 
 func validateScheduledTask(task *model.ScheduledTask) error {
-	logFields := log.Fields{
-		"task": task,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var validationError error
 	if task.ProjectID == 0 {
 		validationError = fmt.Errorf("Invalid project id %d", task.ProjectID)

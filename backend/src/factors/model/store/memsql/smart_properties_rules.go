@@ -41,10 +41,6 @@ var smartPropertyObjects = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 var smartPropertySources = []string{"all", "facebook", "adwords", "linkedin"}
 
 func (store *MemSQL) satisfiesSmartPropertyRulesForeignConstraints(rule model.SmartPropertyRules) int {
-	logFields := log.Fields{
-		"rule": rule,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// TODO: Add for project_id, user_id.
 	_, errCode := store.GetProject(rule.ProjectID)
 	if errCode != http.StatusFound {
@@ -54,11 +50,6 @@ func (store *MemSQL) satisfiesSmartPropertyRulesForeignConstraints(rule model.Sm
 }
 
 func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"object_type": objectType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var result model.SmartPropertyRulesConfig
 	sources := make([]model.Source, 0)
 	objectAndProperty, isExists := mapOfObjectAndProperty[objectType]
@@ -81,12 +72,6 @@ func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType st
 	return result, http.StatusOK
 }
 func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, name string, objectType int) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"name": name,
-		"object_type": objectType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	err := db.Model(&model.SmartPropertyRules{}).
@@ -98,13 +83,6 @@ func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, 
 	return http.StatusFound
 }
 func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, name string, ruleID string, objectType int) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"name": name,
-		"object_type": objectType,
-		"rule_id": ruleID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	err := db.Model(&model.SmartPropertyRules{}).
@@ -116,11 +94,6 @@ func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, 
 	return http.StatusFound
 }
 func validateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.SmartPropertyRules) (string, bool) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"smart_property_rules_doc": smartPropertyRulesDoc,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		return "Invalid project ID.", false
 	}
@@ -143,12 +116,7 @@ func validateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.S
 }
 
 func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"smart_property_rules_doc": smartPropertyRulesDoc,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", smartPropertyRulesDoc.ProjectID)
 
 	errMsg, isValidRule := validateSmartPropertyRules(projectID, smartPropertyRulesDoc)
 	if !isValidRule {
@@ -203,13 +171,7 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 	return &smartPropertyRule, "", http.StatusCreated
 }
 func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, smartPropertyRulesDoc model.SmartPropertyRules) (model.SmartPropertyRules, string, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"smart_property_rules_doc": smartPropertyRulesDoc,
-		"rule_id": ruleID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", smartPropertyRulesDoc.ProjectID)
 
 	errMsg, isValidRule := validateSmartPropertyRules(projectID, &smartPropertyRulesDoc)
 	if !isValidRule {
@@ -256,10 +218,6 @@ func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, s
 }
 
 func validationRules(rulesJsonb *postgres.Jsonb) bool {
-	logFields := log.Fields{
-		"rules_jsonb": rulesJsonb,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var rules []model.Rule
 	err := U.DecodePostgresJsonbToStructType(rulesJsonb, &rules)
 	if err != nil {
@@ -293,10 +251,6 @@ func validationRules(rulesJsonb *postgres.Jsonb) bool {
 }
 
 func (store *MemSQL) GetSmartPropertyRules(projectID uint64) ([]model.SmartPropertyRules, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
@@ -319,10 +273,6 @@ func (store *MemSQL) GetSmartPropertyRules(projectID uint64) ([]model.SmartPrope
 }
 
 func (store *MemSQL) GetAllChangedSmartPropertyRulesForProject(projectID uint64) ([]model.SmartPropertyRules, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND evaluation_status != ?", projectID, model.EvaluationStatusMap["picked"]).Order("updated_at asc").Find(&smartPropertyRules).Error
@@ -334,11 +284,6 @@ func (store *MemSQL) GetAllChangedSmartPropertyRulesForProject(projectID uint64)
 }
 
 func (store *MemSQL) GetSmartPropertyRule(projectID uint64, ruleID string) (model.SmartPropertyRules, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"rule_id": ruleID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var smartPropertyRule model.SmartPropertyRules
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
@@ -364,11 +309,6 @@ func (store *MemSQL) GetSmartPropertyRule(projectID uint64, ruleID string) (mode
 }
 
 func (store *MemSQL) DeleteSmartPropertyRules(projectID uint64, ruleID string) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"rule_id": ruleID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
 		return http.StatusBadRequest
@@ -387,7 +327,6 @@ func (store *MemSQL) DeleteSmartPropertyRules(projectID uint64, ruleID string) i
 }
 
 func (store *MemSQL) GetProjectIDsHavingSmartPropertyRules() ([]uint64, int) {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 	var projectIDs []uint64
 	rows, err := db.Table("smart_property_rules").Select("DISTINCT(project_id)").Rows()

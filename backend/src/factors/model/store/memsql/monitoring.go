@@ -5,9 +5,7 @@ import (
 	"factors/metrics"
 	"factors/util"
 	U "factors/util"
-	"factors/model/model"
 	"fmt"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -23,7 +21,6 @@ type SlowQueries struct {
 }
 
 func (store *MemSQL) MonitorSlowQueries() ([]interface{}, []interface{}, error) {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 	sqlAdminSlowQueries := make([]interface{}, 0, 0)
 	factorsSlowQueries := make([]interface{}, 0, 0)
@@ -79,7 +76,6 @@ type MemSQLNodeUsageStatsWithErrors struct {
 }
 
 func (store *MemSQL) MonitorMemSQLDiskUsage() MemSQLNodeUsageStatsWithErrors {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 	queryStr := "select ip_addr, type, state, available_data_disk_mb*100/total_data_disk_mb as available_data_disk_percent, available_data_disk_mb, " +
 		"(max_memory_mb - memory_used_mb)*100/max_memory_mb as available_memory_percent, (max_memory_mb - memory_used_mb) as available_memory_mb, " +
@@ -133,7 +129,6 @@ func (store *MemSQL) MonitorMemSQLDiskUsage() MemSQLNodeUsageStatsWithErrors {
 
 // CollectTableSizes Captures size for major tables as metrics.
 func (store *MemSQL) CollectTableSizes() map[string]string {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	// Tables with size in GBs. Not including all tables to avoid cluttering in the chart.
 	tableNameToMetricMap := map[string]string{
 		"adwords_documents": metrics.BytesTableSizeAdwordsDocuments,
@@ -176,10 +171,6 @@ func (store *MemSQL) CollectTableSizes() map[string]string {
 }
 
 func getTableSizeMap(query string) map[string]float64 {
-	logFields := log.Fields{
-		"query": query,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	tableBytesSize := make(map[string]float64)

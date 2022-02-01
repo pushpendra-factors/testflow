@@ -5,20 +5,14 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
-	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) RegisterTaskDependency(taskId uint64, dependentTaskId uint64, offset int) (int, string) {
-	logFields := log.Fields{
-		"task_id": taskId,
-		"dependent_task_id": dependentTaskId,
-		"offset": offset,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"task_id": taskId, "dependentTaskId": dependentTaskId, "offset": offset})
+
 	if taskId == 0 || dependentTaskId == 0 {
 		logCtx.Error("Missing required field.")
 		return http.StatusBadRequest, "Missing task id/dependent task id"
@@ -70,12 +64,7 @@ func (store *MemSQL) RegisterTaskDependency(taskId uint64, dependentTaskId uint6
 }
 
 func (store *MemSQL) DeregisterTaskDependency(taskId uint64, dependentTaskId uint64) (int, string) {
-	logFields := log.Fields{
-		"task_id": taskId,
-		"dependent_task_id": dependentTaskId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"task_id": taskId, "dependentTaskId": dependentTaskId})
 
 	if taskId == 0 || dependentTaskId == 0 {
 		logCtx.Error("Missing required field.")
@@ -100,12 +89,7 @@ func (store *MemSQL) DeregisterTaskDependency(taskId uint64, dependentTaskId uin
 }
 
 func (store *MemSQL) GetAllDependentTasks(taskID uint64) ([]model.TaskExecutionDependencyDetails, int, string) {
-	logFields := log.Fields{
-		"task_id": taskID,
-
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"taskID": taskID})
 	taskDeltas := make([]model.TaskExecutionDependencyDetails, 0)
 	if taskID == 0 {
 		logCtx.Error("missing taskID")
@@ -130,11 +114,6 @@ func (store *MemSQL) GetAllDependentTasks(taskID uint64) ([]model.TaskExecutionD
 }
 
 func (store *MemSQL) IsDependencyCircular(taskId, dependentTaskId uint64) bool {
-	logFields := log.Fields{
-		"task_id": taskId,
-		"dependent_task_id": dependentTaskId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	dependencyTasksChain := make([]uint64, 0)
 	dependencyTasksChain = append(dependencyTasksChain, dependentTaskId)
 	for {

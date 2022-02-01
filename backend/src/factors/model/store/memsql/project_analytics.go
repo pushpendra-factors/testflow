@@ -11,10 +11,6 @@ import (
 )
 
 func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error) {
-	logFields := log.Fields{
-		"last_n_days": lastNDays,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	currentDate := time.Now().UTC()
 	projects, _ := store.GetProjects()
 	projectIDNameMap := make(map[uint64]string)
@@ -82,12 +78,7 @@ func (store *MemSQL) GetEventUserCountsOfAllProjects(lastNDays int) (map[string]
 	return result, nil
 }
 func UpdateCountCacheByDocumentType(projectID uint64,time *time.Time, documentType string) (status bool) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"time": time,
-		"document_type": documentType,
-	}
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
 	timeDatePart := time.Format(U.DATETIME_FORMAT_YYYYMMDD)
 	key, err := model.EventCountKeyByDocumentType(documentType, timeDatePart)
 	if err != nil {
@@ -107,14 +98,8 @@ func UpdateCountCacheByDocumentType(projectID uint64,time *time.Time, documentTy
 	return true
 }
 func GetEventsFromCacheByDocumentType(projectID, documentType, dateKey string) (documentEvents uint64, err error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"document_type": documentType,
-		"date_key": dateKey,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	typeEvents, err := model.EventCountKeyByDocumentType(documentType, dateKey)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to fetch keys")
 		return 0, err

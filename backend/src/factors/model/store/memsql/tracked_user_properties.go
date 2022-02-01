@@ -14,10 +14,6 @@ import (
 )
 
 func (store *MemSQL) satisfiesTrackedUserPropertiesForeignConstraints(trackedUserProperty model.FactorsTrackedUserProperty) int {
-	logFields := log.Fields{
-		"tracked_user_property": trackedUserProperty,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, projectErrCode := store.GetProject(trackedUserProperty.ProjectID)
 	if projectErrCode != http.StatusFound {
 		return http.StatusBadRequest
@@ -34,16 +30,10 @@ func (store *MemSQL) satisfiesTrackedUserPropertiesForeignConstraints(trackedUse
 
 //CreateFactorsTrackedUserProperty - Inserts the tracked event to db
 func (store *MemSQL) CreateFactorsTrackedUserProperty(ProjectID uint64, UserPropertyName string, agentUUID string) (int64, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"user_property_name": UserPropertyName,
-		"agent_uuid": agentUUID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if store.isActiveFactorsTrackedUserPropertiesLimitExceeded(ProjectID) {
 		return 0, http.StatusBadRequest
 	}
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 	insertType := U.UserCreated
 	if agentUUID == "" {
@@ -106,12 +96,7 @@ func (store *MemSQL) CreateFactorsTrackedUserProperty(ProjectID uint64, UserProp
 
 // RemoveFactorsTrackedUserProperty - Mark the tracked event inactive
 func (store *MemSQL) RemoveFactorsTrackedUserProperty(ID int64, ProjectID uint64) (int64, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"id": ID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	transTime := gorm.NowFunc()
 	existingFactorsTrackedUserProperty, dbErr := store.GetFactorsTrackedUserPropertyByID(ID, ProjectID)
 	if dbErr == nil {
@@ -147,11 +132,6 @@ func (store *MemSQL) RemoveFactorsTrackedUserProperty(ID int64, ProjectID uint64
 }
 
 func isUserPropertyInList(properties []model.KeyValueTuple, searchKey string) bool {
-	logFields := log.Fields{
-		"properties": properties,
-		"search_key": searchKey,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, property := range properties {
 		if property.Key == searchKey {
 			return true
@@ -162,11 +142,7 @@ func isUserPropertyInList(properties []model.KeyValueTuple, searchKey string) bo
 
 // GetAllFactorsTrackedUserPropertiesByProject - get all the tracked user properties by project
 func (store *MemSQL) GetAllFactorsTrackedUserPropertiesByProject(ProjectID uint64) ([]model.FactorsTrackedUserProperty, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 
 	var trackedUserProperties []model.FactorsTrackedUserProperty
@@ -182,11 +158,7 @@ func (store *MemSQL) GetAllFactorsTrackedUserPropertiesByProject(ProjectID uint6
 
 // GetAllActiveFactorsTrackedUserPropertiesByProject - get all the tracked user properties by project
 func (store *MemSQL) GetAllActiveFactorsTrackedUserPropertiesByProject(ProjectID uint64) ([]model.FactorsTrackedUserProperty, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 
 	var trackedUserProperties []model.FactorsTrackedUserProperty
@@ -202,12 +174,7 @@ func (store *MemSQL) GetAllActiveFactorsTrackedUserPropertiesByProject(ProjectID
 
 // GetFactorsTrackedUserProperty - Get tracked user property
 func (store *MemSQL) GetFactorsTrackedUserProperty(UserPropertyName string, ProjectID uint64) (*model.FactorsTrackedUserProperty, error) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"user_property_name": UserPropertyName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 
 	var trackedUserProperty model.FactorsTrackedUserProperty
@@ -224,12 +191,7 @@ func (store *MemSQL) GetFactorsTrackedUserProperty(UserPropertyName string, Proj
 
 // GetFactorsTrackedUserPropertyByID - Get tracked user property
 func (store *MemSQL) GetFactorsTrackedUserPropertyByID(ID int64, ProjectID uint64) (*model.FactorsTrackedUserProperty, error) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"id": ID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 
 	var trackedUserProperty model.FactorsTrackedUserProperty
@@ -245,13 +207,7 @@ func (store *MemSQL) GetFactorsTrackedUserPropertyByID(ID int64, ProjectID uint6
 }
 
 func updateFactorsTrackedUserProperty(FactorsTrackedUserPropertyID uint64, ProjectID uint64, updatedFields map[string]interface{}) (int64, int) {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"factors_tracked_user_property_id": FactorsTrackedUserPropertyID,
-		"updated_fields": updatedFields,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 	dbErr := db.Model(&model.FactorsTrackedUserProperty{}).Where("project_id = ? AND id = ?", ProjectID, FactorsTrackedUserPropertyID).Update(updatedFields).Error
 	if dbErr != nil {
@@ -262,12 +218,7 @@ func updateFactorsTrackedUserProperty(FactorsTrackedUserPropertyID uint64, Proje
 }
 
 func (store *MemSQL) IsUserPropertyValid(ProjectID uint64, UserProperty string) bool {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-		"user_property": UserProperty,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	allUserPropertiesByCategory, err := store.GetUserPropertiesByProject(ProjectID, 10000, 30)
 	if err != nil {
 		log.WithError(err).Error("Get user Properties from cache failed")
@@ -287,10 +238,6 @@ func (store *MemSQL) IsUserPropertyValid(ProjectID uint64, UserProperty string) 
 }
 
 func (store *MemSQL) isActiveFactorsTrackedUserPropertiesLimitExceeded(ProjectID uint64) bool {
-	logFields := log.Fields{
-		"project_id": ProjectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	trackedUserProperties, errCode := store.GetAllActiveFactorsTrackedUserPropertiesByProject(ProjectID)
 	if errCode != http.StatusFound {
 		return true

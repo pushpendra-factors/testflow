@@ -26,13 +26,13 @@ const eventsLimitForProperites = 50000
 const OneDayInSeconds int64 = 24 * 60 * 60
 
 func satisfiesEventConstraints(event model.Event) int {
-	logFields := log.Fields{
-		"event": event,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"method":     "satisfiesEventsConstaints",
+		"project_id": event.ProjectId,
+		"event_id":   event.ID,
+	})
 
 	// Unique (project_id, customer_event_id)
 	if event.CustomerEventId != nil && *event.CustomerEventId != "" {
@@ -59,12 +59,7 @@ func satisfiesEventConstraints(event model.Event) int {
 }
 
 func existsIDForProject(projectID uint64, userID, eventID string) bool {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"user_id": userID,
-		"event_id": eventID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	db := C.GetServices().Db
 
@@ -85,12 +80,7 @@ func existsIDForProject(projectID uint64, userID, eventID string) bool {
 }
 
 func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId string) (uint64, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"user_id": userId,
-		"event_name_id": eventNameId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var count uint64
 
@@ -107,12 +97,7 @@ func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId str
 
 // GetEventCountOfUsersByEventName Get count of events for event_name_id for multiple users.
 func (store *MemSQL) GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID string) (uint64, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"user_ids": userIDs,
-		"event_name_id": eventNameID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var count uint64
 
@@ -128,12 +113,7 @@ func (store *MemSQL) GetEventCountOfUsersByEventName(projectID uint64, userIDs [
 }
 
 func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event, isUpdateEventProperty bool) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"event": event,
-		"is_update_event_property": isUpdateEventProperty,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	// TODO: Remove this check after enabling caching realtime.
 	blackListedForUpdate := make(map[string]bool)
@@ -143,7 +123,8 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 	eventsToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	propertiesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	valuesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
+
 	eventNameDetails, err := store.GetEventNameFromEventNameId(event.EventNameId, projectID)
 	if err != nil {
 		logCtx.WithError(err).Info("Failed to get event name from id")
@@ -275,12 +256,9 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 }
 
 func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
-	logFields := log.Fields{
-		"event": event,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", event.ProjectId)
+
 	if event.ProjectId == 0 || event.UserId == "" || event.EventNameId == "" {
 		logCtx.Error("CreateEvent Failed. Invalid projectId or userId or eventNameId.")
 		return nil, http.StatusBadRequest
@@ -374,12 +352,7 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 
 // existsEventByCustomerEventID Get events by projectID and customerEventID.
 func existsEventByCustomerEventID(projectID uint64, userID, customerEventID string) bool {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"user_id": userID,
-		"ecustomer_event_id": customerEventID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var event model.Event
 
@@ -399,12 +372,7 @@ func existsEventByCustomerEventID(projectID uint64, userID, customerEventID stri
 }
 
 func (store *MemSQL) GetEvent(projectId uint64, userId string, id string) (*model.Event, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"user_id": userId,
-		"id": id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if !U.IsValidUUID(id) {
 		return nil, http.StatusInternalServerError
@@ -424,12 +392,7 @@ func (store *MemSQL) GetEvent(projectId uint64, userId string, id string) (*mode
 }
 
 func (store *MemSQL) GetEventById(projectId uint64, id, userID string) (*model.Event, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"user_id": userID,
-		"id": id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var event model.Event
 
@@ -455,14 +418,7 @@ func (store *MemSQL) GetEventById(projectId uint64, id, userID string) (*model.E
 
 func (store *MemSQL) GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId string,
 	startTimestamp int64, endTimestamp int64) (*model.Event, int) {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"user_id": userId,
-			"event_name_id": eventNameId,
-			"start_timestamp": startTimestamp,
-			"end_timestamp": endTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if startTimestamp == 0 || endTimestamp == 0 {
 		return nil, http.StatusBadRequest
@@ -489,16 +445,10 @@ func (store *MemSQL) GetLatestEventOfUserByEventNameId(projectId uint64, userId 
 // from DB for a given project/event
 func (store *MemSQL) GetRecentEventPropertyKeysWithLimits(projectID uint64, eventName string,
 	starttime int64, endtime int64, eventsLimit int) ([]U.Property, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"events_limit": eventsLimit,
-			"event_name": eventName,
-			"starttime": starttime,
-			"endtime": endtime,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "eventName": eventName,
+		"starttime": starttime, "endtime": endtime, "eventsLimit": eventsLimit})
 	properties := make([]U.Property, 0)
 
 	queryStr := "SELECT properties, " +
@@ -561,20 +511,11 @@ func (store *MemSQL) GetRecentEventPropertyKeysWithLimits(projectID uint64, even
 func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string,
 	property string, valuesLimit int, rowsLimit int, starttime int64,
 	endtime int64) ([]U.PropertyValue, string, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"property": property,
-			"event_name": eventName,
-			"starttime": starttime,
-			"endtime": endtime,
-			"rows_limit": rowsLimit,
-			"values_limit": valuesLimit,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	db := C.GetServices().Db
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"projectId": projectID, "eventName": eventName, "property": property,
+		"valuesLimit": valuesLimit, "rowsLimit": rowsLimit, "starttime": starttime, "endtime": endtime})
 
 	values := make([]U.PropertyValue, 0)
 	// TODO: Use additional table for property value fetching, if this is slow.
@@ -613,15 +554,7 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id, userID string,
 	properties *U.PropertiesMap, updateTimestamp int64,
 	optionalEventUserProperties *postgres.Jsonb) int {
 
-		logFields := log.Fields{
-			"project_id": projectId,
-			"id": id,
-			"user_id": userID,
-			"properties": properties,
-			"updateTimestamp": updateTimestamp,
-			"optional_event_user_properties": optionalEventUserProperties,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if projectId == 0 || id == "" {
 		return http.StatusBadRequest
@@ -689,12 +622,7 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id, userID string,
 }
 
 func (store *MemSQL) GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId string) ([]model.Event, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"user_id": userId,
-		"event_name_id": eventNameId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	if projectId == 0 {
 		return nil, http.StatusBadRequest
@@ -717,11 +645,6 @@ func (store *MemSQL) GetUserEventsByEventNameId(projectId uint64, userId string,
 }
 
 func getPageCountAndTimeSpentFromEventsList(events []*model.Event, sessionEvent *model.Event) (float64, float64) {
-	logFields := log.Fields{
-		"events": events,
-		"session_event": sessionEvent,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(events) == 0 {
 		return 0, 0
 	}
@@ -741,15 +664,10 @@ func getPageCountAndTimeSpentFromEventsList(events []*model.Event, sessionEvent 
 
 func getPageCountAndTimeSpentForContinuedSession(projectId uint64, userId string,
 	continuedSessionEvent *model.Event, events []*model.Event) (float64, float64, float64, float64, int) {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"user_id": userId,
-			"continued_session_event": continuedSessionEvent,
-			"events": events,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
 	existingPropertiesMap, err := U.DecodePostgresJsonb(&continuedSessionEvent.Properties)
 	if err != nil {
 		return 0, 0, 0, 0, http.StatusInternalServerError
@@ -781,13 +699,6 @@ func getPageCountAndTimeSpentForContinuedSession(projectId uint64, userId string
 
 func (store *MemSQL) OverwriteEventProperties(projectId uint64, userId string, eventId string,
 	newEventProperties *postgres.Jsonb) int {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"user_id": userId,
-			"event_id": eventId,
-			"new_event_properties": newEventProperties,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if newEventProperties == nil {
 		return http.StatusBadRequest
@@ -808,15 +719,10 @@ func (store *MemSQL) OverwriteEventProperties(projectId uint64, userId string, e
 
 func (store *MemSQL) OverwriteEventPropertiesByID(projectId uint64, id string,
 	newEventProperties *postgres.Jsonb) int {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"id": id,
-			"new_event_properties": newEventProperties,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
+	logCtx := log.WithFields(log.Fields{"projectId": projectId, "id": id})
 
-		logCtx := log.WithFields(logFields)
 	if newEventProperties == nil {
 		return http.StatusBadRequest
 	}
@@ -835,10 +741,6 @@ func (store *MemSQL) OverwriteEventPropertiesByID(projectId uint64, id string,
 }
 
 func doesEventIsPageViewAndHasMarketingProperty(event *model.Event) (bool, error) {
-	logFields := log.Fields{
-		"event": event,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if event == nil {
 		return false, errors.New("nil event")
 	}
@@ -855,11 +757,6 @@ func doesEventIsPageViewAndHasMarketingProperty(event *model.Event) (bool, error
 }
 
 func filterEventsForSession(events []model.Event, endTimestamp int64) []*model.Event {
-	logFields := log.Fields{
-		"events": events,
-		"end_timestamp": endTimestamp,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	filteredEvents := make([]*model.Event, 0, 0)
 	// Filter events by user specific end_timestamp.
@@ -890,18 +787,12 @@ func filterEventsForSession(events []model.Event, endTimestamp int64) []*model.E
 
 func (store *MemSQL) AssociateSessionByEventIds(projectId uint64,
 	userID string, events []*model.Event, sessionId string, sessionEventNameId string) int {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"user_id": userID,
-			"events": events,
-			"session_id": sessionId,
-			"session_event_name_id": sessionEventNameId,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	fromTimestamp, toTimestamp, eventIds, eventNameIds := model.GetEventsMinMaxTimestampsAndEventnameIds(events)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "event_ids": eventIds,
+		"session_id": sessionId, "user_id": userID})
 
 	if projectId == 0 || len(eventIds) == 0 || sessionId == "" || userID == "" {
 		logCtx.Error("Invalid args on associateSessionToEvents.")
@@ -932,15 +823,6 @@ func (store *MemSQL) AssociateSessionByEventIds(projectId uint64,
 
 func (store *MemSQL) associateSessionToEventsInBatch(projectId uint64, userID string, events []*model.Event,
 	sessionId string, batchSize int, sessionEventNameId string) int {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"user_id": userID,
-			"events": events,
-			"session_id": sessionId,
-			"session_event_name_id": sessionEventNameId,
-			"batch_size": batchSize,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	batchEvents := model.GetEventListAsBatch(events, batchSize)
 	for i := range batchEvents {
@@ -957,14 +839,7 @@ func (store *MemSQL) associateSessionToEventsInBatch(projectId uint64, userID st
 // new session for last event when new session conditions met.
 func (store *MemSQL) AddSessionForUser(projectId uint64, userId string, userEvents []model.Event,
 	bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, int) {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"user_id": userId,
-			"user_events": userEvents,
-			"buffer_time_before_session_create_in_secs": bufferTimeBeforeSessionCreateInSecs,
-			"session_event_name_id": sessionEventNameId,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 		noOfUserPropertiesUpdated, isLastEventToBeProcessed,
@@ -1007,16 +882,10 @@ e3 - t3
 */
 func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents []model.Event,
 	bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, bool, int) {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"user_id": userId,
-			"user_events": userEvents,
-			"buffer_time_before_session_create_in_secs": bufferTimeBeforeSessionCreateInSecs,
-			"session_event_name_id": sessionEventNameId,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
 	if len(userEvents) == 0 {
 		return 0, 0, false, 0, false, http.StatusNotModified
 	}
@@ -1172,7 +1041,8 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 			} else {
 				firstEvent := events[sessionStartIndex]
 
-				logCtx := log.WithFields(logFields)
+				logCtx = logCtx.WithField("event_id", firstEvent.ID)
+
 				var userPropertiesMap U.PropertiesMap
 				isEmptyUserProperties := firstEvent.UserProperties == nil ||
 					U.IsEmptyPostgresJsonb(firstEvent.UserProperties)
@@ -1373,11 +1243,6 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 // GetDatesForNextEventsArchivalBatch Get dates for events since startTime, excluding today's date.
 func (store *MemSQL) GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
-	logFields := log.Fields{
-		"project_id": projectID,
-		"start_time": startTime,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	countByDates := make(map[string]int64)
 
@@ -1409,14 +1274,7 @@ func (store *MemSQL) GetDatesForNextEventsArchivalBatch(projectID uint64, startT
 
 func (store *MemSQL) GetNextSessionEventInfoFromDB(projectID uint64, withSession bool,
 	sessionEventNameId uint64, maxLookbackTimestamp int64) (int64, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"with_session": withSession,
-			"max_lookback_timestamp": maxLookbackTimestamp,
-			"session_event_name_id": sessionEventNameId,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	sessionExistStr := "NOT NULL"
 	startTimestampAggrFunc := "max"
@@ -1467,13 +1325,10 @@ func (store *MemSQL) GetNextSessionEventInfoFromDB(projectID uint64, withSession
 }
 
 func (store *MemSQL) GetLastSessionEventTimestamp(projectID uint64, sessionEventNameID uint64) (int64, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"session_event_name_id": sessionEventNameID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
+
 	// This is a faster query.
 	// ORDER BY project_id, event_name_id, timestamp DESC is used to instead of
 	// MIN to avoid ordering and use the ordered index on that column.
@@ -1511,16 +1366,10 @@ func (store *MemSQL) GetLastSessionEventTimestamp(projectID uint64, sessionEvent
 // excluding session event and event with session_id.
 func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId uint64, sessionEventNameId string,
 	startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int) {
-		logFields := log.Fields{
-			"project_id": projectId,
-			"session_event_name_id": sessionEventNameId,
-			"start_timestamp": startTimestamp,
-			"end_timestamp": endTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"project_id": projectId,
+		"start_timestamp": startTimestamp, "end_timestamp": endTimestamp})
 
 	var userEventsMap map[string][]model.Event
 	var events []model.Event
@@ -1584,11 +1433,7 @@ func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId uin
 }
 
 func doesPropertiesMapHaveKeys(propertiesMap U.PropertiesMap, keys []string) (bool, bool, U.PropertiesMap) {
-	logFields := log.Fields{
-		"properties_map": propertiesMap,
-		"keys": keys,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	filteredPropertiesMap := U.PropertiesMap{}
 
@@ -1612,10 +1457,7 @@ func doesPropertiesMapHaveKeys(propertiesMap U.PropertiesMap, keys []string) (bo
 func getPropertiesByNameAndMaxOccurrence(
 	propertiesByNameAndOccurence *map[string]map[string]*model.EventPropertiesWithCount,
 ) *map[string]U.PropertiesMap {
-	logFields := log.Fields{
-		"proiperties_by_name_ans_occurence": propertiesByNameAndOccurence,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	propertiesWithCount := make(map[string]model.EventPropertiesWithCount, 0)
 	for name, propertiesByAuthor := range *propertiesByNameAndOccurence {
@@ -1644,15 +1486,11 @@ func getPropertiesByNameAndMaxOccurrence(
 // and use it for updating the events which doesn't have the values. User for fixing data for YourStory.
 func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from,
 	to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"from": from,
-			"to": to,
-			"mandatory_properties": mandatoryProperties,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).
+		WithField("from", from).
+		WithField("to", to)
 
 	eventsWithoutProperties := make([]model.EventWithProperties, 0, 0)
 	// map[event_name]map[authorName]*PropertiesWithCount
@@ -1764,14 +1602,11 @@ func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourSto
 }
 
 func (store *MemSQL) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"start_timestamp": startTimestamp,
-		"end_timesstamp": endTimestamp,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID).
+		WithField("start_timestamp", startTimestamp).
+		WithField("end_timestamp", endTimestamp)
 
 	var unusedSessions []string
 	if projectID == 0 || startTimestamp == 0 || endTimestamp == 0 {
@@ -1836,16 +1671,10 @@ func (store *MemSQL) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp,
 }
 
 func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name_id": eventNameID,
-		"ids": ids,
-		"batch_size": batchSize,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
-		if projectID == 0 || batchSize == 0 {
+	logCtx := log.WithField("project_id", projectID).WithField("batch_size", batchSize)
+	if projectID == 0 || batchSize == 0 {
 		logCtx.Error("Invalid params.")
 		return http.StatusInternalServerError
 	}
@@ -1865,14 +1694,10 @@ func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameI
 }
 
 func (store *MemSQL) DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name_id": eventNameID,
-		"ids": ids,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectID)
+
 	db := C.GetServices().Db
 	exec := db.Where("project_id = ? AND id IN (?)", projectID, ids).Delete(&model.Event{})
 	if err := exec.Error; err != nil {
@@ -1890,16 +1715,10 @@ func (store *MemSQL) DeleteEventByIDs(projectID uint64, eventNameID string, ids 
 
 func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64, userID,
 	id string, userProperties *postgres.Jsonb) int {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"user_id": userID,
-			"id": id,
-			"user_properties": userProperties,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-		logCtx := log.WithFields(logFields)
-			if projectID == 0 || id == "" {
+	logCtx := log.WithField("project_id", projectID).WithField("id", id).WithField("user_id", userID)
+	if projectID == 0 || id == "" {
 		logCtx.Error("Invalid values for arguments.")
 		return http.StatusBadRequest
 	}
@@ -1927,12 +1746,7 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64, userID,
 
 // PullEventRowsForBuildSequenceJob - Function to pull events for factors model building sequentially.
 func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"start_time": startTime,
-		"end_time": endTime,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 		" events.properties, users.join_timestamp, events.user_properties FROM events "+
@@ -1947,12 +1761,7 @@ func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTim
 
 // PullEventsForArchivalJob - Function to pull events for archival.
 func (store *MemSQL) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"start_time": startTime,
-		"end_time": endTime,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
 		"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, events.user_properties FROM events "+

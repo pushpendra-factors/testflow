@@ -16,10 +16,6 @@ import (
 )
 
 func (store *MemSQL) satisfiesSmartPropertyForeignConstraints(properties model.SmartProperties) int {
-	logFields := log.Fields{
-		"properties": properties,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, errCode := store.GetProject(properties.ProjectID)
 	if errCode != http.StatusFound {
 		return http.StatusBadRequest
@@ -28,11 +24,7 @@ func (store *MemSQL) satisfiesSmartPropertyForeignConstraints(properties model.S
 }
 
 func (store *MemSQL) CreateSmartProperty(smartPropertyDoc *model.SmartProperties) int {
-	logFields := log.Fields{
-		"smart_property_doc": smartPropertyDoc,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", smartPropertyDoc.ProjectID)
 
 	if smartPropertyDoc.ProjectID == 0 {
 		logCtx.Error("Invalid project ID.")
@@ -59,11 +51,7 @@ func (store *MemSQL) CreateSmartProperty(smartPropertyDoc *model.SmartProperties
 	return http.StatusCreated
 }
 func (store *MemSQL) UpdateSmartProperty(smartPropertyDoc *model.SmartProperties) int {
-	logFields := log.Fields{
-		"smart_property_doc": smartPropertyDoc,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", smartPropertyDoc.ProjectID)
 
 	if smartPropertyDoc.ProjectID == 0 {
 		logCtx.Error("Invalid project ID.")
@@ -87,12 +75,6 @@ func (store *MemSQL) UpdateSmartProperty(smartPropertyDoc *model.SmartProperties
 	return http.StatusAccepted
 }
 func (store *MemSQL) GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID uint64, source string, objectType int) ([]model.SmartProperties, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"source": source,
-		"object_type": objectType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	smartProperty := []model.SmartProperties{}
 	err := db.Table("smart_properties").Where("project_id = ? AND source = ? AND object_type = ?", projectID, source, objectType).Find(&smartProperty).Error
@@ -105,12 +87,6 @@ func (store *MemSQL) GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID
 	}
 }
 func (store *MemSQL) DeleteSmartPropertyByProjectIDAndSourceAndObjectID(projectID uint64, source string, objectID string) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"source": source,
-		"object_id": objectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if !C.IsDryRunSmartProperties() {
 		db := C.GetServices().Db
 		err := db.Table("smart_properties").Where("project_id = ? AND source = ? AND object_id = ?", projectID, source, objectID).Delete(&model.SmartProperties{}).Error
@@ -122,12 +98,6 @@ func (store *MemSQL) DeleteSmartPropertyByProjectIDAndSourceAndObjectID(projectI
 }
 
 func (store *MemSQL) GetSmartPropertyByProjectIDAndObjectIDAndObjectType(projectID uint64, objectID string, objectType int) (model.SmartProperties, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"object_id": objectID,
-		"object_type": objectType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	smartProperty := model.SmartProperties{}
 	err := db.Table("smart_properties").Where("project_id = ? AND object_id = ? AND object_type = ?", projectID, objectID, objectType).Find(&smartProperty).Error
@@ -141,13 +111,6 @@ func (store *MemSQL) GetSmartPropertyByProjectIDAndObjectIDAndObjectType(project
 }
 func (store *MemSQL) BuildAndCreateSmartPropertyFromChannelDocumentAndRule(smartPropertyRule *model.SmartPropertyRules, rule model.Rule,
 	channelDocument model.ChannelDocumentsWithFields, source string) int {
-		logFields := log.Fields{
-			"smart_property_rule": smartPropertyRule,
-			"source": source,
-			"rule": rule,
-			"channel_document": channelDocument,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var objectID string
 	if smartPropertyRule.Type == 1 {
 		objectID = channelDocument.CampaignID
@@ -210,15 +173,6 @@ func (store *MemSQL) BuildAndCreateSmartPropertyFromChannelDocumentAndRule(smart
 
 func getUpdatedSmartPropertyObjectForExistingSmartProperty(smartPropertyRule *model.SmartPropertyRules, objectID string,
 	objectPropertiesJsonb *postgres.Jsonb, rule model.Rule, smartProperty model.SmartProperties, source string) (model.SmartProperties, int) {
-		logFields := log.Fields{
-			"smart_property_rule": smartPropertyRule,
-			"source": source,
-			"rule": rule,
-			"object_id": objectID,
-			"object_properties_jsonb": objectPropertiesJsonb,
-			"smart_property": smartProperty,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	properties := make(map[string]interface{})
 	rulesRef := make(map[string]interface{})
 	err := U.DecodePostgresJsonbToStructType(smartProperty.Properties, &properties)
@@ -259,11 +213,6 @@ func getUpdatedSmartPropertyObjectForExistingSmartProperty(smartPropertyRule *mo
 }
 
 func (store *MemSQL) DeleteSmartPropertyByRuleID(projectID uint64, ruleID string) (int, int, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"rule_id": ruleID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	smartProperty := make([]model.SmartProperties, 0, 0)
 
@@ -340,11 +289,6 @@ func (store *MemSQL) DeleteSmartPropertyByRuleID(projectID uint64, ruleID string
 }
 
 func checkSmartProperty(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) bool {
-	logFields := log.Fields{
-		"filters": filters,
-		"group_bys": groupBys,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, filter := range filters {
 		_, isPresent := Const.SmartPropertyReservedNames[filter.Property]
 		if !isPresent {
@@ -360,12 +304,6 @@ func checkSmartProperty(filters []model.ChannelFilterV1, groupBys []model.Channe
 	return false
 }
 func checkSmartPropertyWithTypeAndSource(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy, source string) (bool, bool) {
-	logFields := log.Fields{
-		"filters": filters,
-		"group_bys": groupBys,
-		"source": source,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	campaignProperty := false
 	adGroupProperty := false
 	for _, filter := range filters {

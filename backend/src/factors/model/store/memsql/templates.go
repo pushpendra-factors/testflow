@@ -6,19 +6,11 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
-	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if query.Type == model.TemplateAliasToType[model.SEMChecklist] {
 		templateResponse, errCode := store.ExecuteAdwordsSEMChecklistQuery(projectID, query, reqID)
 		if errCode != http.StatusOK {
@@ -31,11 +23,6 @@ func (store *MemSQL) RunTemplateQuery(projectID uint64, query model.TemplateQuer
 
 //get the list of metrics and thresholds for that project in the form of { metrics: [], thresholds:[]}
 func (store *MemSQL) GetTemplateConfig(projectID uint64, templateType int) (model.TemplateConfig, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"template_type": templateType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 || templateType < 1 || templateType > 1 {
 		return model.TemplateConfig{}, http.StatusBadRequest
 	}
@@ -50,11 +37,6 @@ func (store *MemSQL) GetTemplateConfig(projectID uint64, templateType int) (mode
 	return templateConfig, http.StatusOK
 }
 func (store *MemSQL) getTemplateThresholds(projectID uint64, templateType int) ([]model.TemplateThreshold, error) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"template_type": templateType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var templateThresholds []model.TemplateThreshold
 	db := C.GetServices().Db
 	err := db.Table("templates").Select("thresholds").Where("project_id = ? AND type = ?", projectID, templateType).Find(&templateThresholds).Error
@@ -65,12 +47,6 @@ func (store *MemSQL) getTemplateThresholds(projectID uint64, templateType int) (
 }
 
 func (store *MemSQL) UpdateTemplateConfig(projectID uint64, templateType int, thresholds []model.TemplateThreshold) ([]model.TemplateThreshold, string) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"template_type": templateType,
-		"thresholds": thresholds,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	isValidConfig := model.ValidateTemplateThresholds(thresholds)
 	if !isValidConfig {
 		return []model.TemplateThreshold{}, "Invalid config input"

@@ -10,17 +10,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 func satisfiesEventNameConstraints(eventName model.EventName) int {
-	logFields := log.Fields{
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// Unique (project_id, name, type) WHERE type != 'FE'.
 	_, errCode := getNonFilterEventsByName(eventName.ProjectId, eventName.Name)
 	if errCode == http.StatusFound {
@@ -40,10 +35,6 @@ func satisfiesEventNameConstraints(eventName model.EventName) int {
 }
 
 func (store *MemSQL) satisfiesEventNameForeignConstraints(eventName model.EventName) int {
-	logFields := log.Fields{
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, errCode := store.GetProject(eventName.ProjectId)
 	if errCode != http.StatusFound {
 		return http.StatusBadRequest
@@ -52,12 +43,7 @@ func (store *MemSQL) satisfiesEventNameForeignConstraints(eventName model.EventN
 }
 
 func (store *MemSQL) CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int) {
-	
-	logFields := log.Fields{
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"event_name": &eventName})
 
 	// Validation.
 	if eventName.ProjectId == 0 || !isValidType(eventName.Type) ||
@@ -95,28 +81,16 @@ func (store *MemSQL) CreateOrGetEventName(eventName *model.EventName) (*model.Ev
 }
 
 func (store *MemSQL) CreateOrGetUserCreatedEventName(eventName *model.EventName) (*model.EventName, int) {
-	logFields := log.Fields{
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	eventName.Type = model.TYPE_USER_CREATED_EVENT_NAME
 	return store.CreateOrGetEventName(eventName)
 }
 
 func (store *MemSQL) CreateOrGetAutoTrackedEventName(eventName *model.EventName) (*model.EventName, int) {
-	logFields := log.Fields{
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	eventName.Type = model.TYPE_AUTO_TRACKED_EVENT_NAME
 	return store.CreateOrGetEventName(eventName)
 }
 
 func (store *MemSQL) CreateOrGetFilterEventName(eventName *model.EventName) (*model.EventName, int) {
-	logFields := log.Fields{
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	filterExpr, valid := getValidatedFilterExpr(eventName.FilterExpr)
 	if !valid {
 		return nil, http.StatusBadRequest
@@ -129,11 +103,6 @@ func (store *MemSQL) CreateOrGetFilterEventName(eventName *model.EventName) (*mo
 }
 
 func (store *MemSQL) checkDuplicateSmartEventFilter(projectID uint64, inFilterExpr *model.SmartCRMEventFilter) (*model.EventName, bool) {
-	logFields := log.Fields{
-		"project_id":     projectID,
-		"in_filter_expr": inFilterExpr,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	eventNames, status := store.GetSmartEventFilterEventNames(projectID, true)
 	if status == http.StatusNotFound {
 		return nil, false
@@ -160,15 +129,9 @@ func (store *MemSQL) checkDuplicateSmartEventFilter(projectID uint64, inFilterEx
 // Deleted event_name will be enabled if conflict found
 func (store *MemSQL) CreateOrGetCRMSmartEventFilterEventName(projectID uint64, eventName *model.EventName,
 	filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id":  projectID,
-		"event_name":  eventName,
-		"filter_expr": filterExpr,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(logFields)
-		if !model.IsValidSmartEventFilterExpr(filterExpr) || filterExpr == nil || eventName.Type != "" ||
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name": *eventName, "filter_exp": *filterExpr})
+	if !model.IsValidSmartEventFilterExpr(filterExpr) || filterExpr == nil || eventName.Type != "" ||
 		eventName.Name == "" {
 		logCtx.Error("Invalid fields.")
 		return nil, http.StatusBadRequest
@@ -221,20 +184,10 @@ func (store *MemSQL) CreateOrGetCRMSmartEventFilterEventName(projectID uint64, e
 }
 
 func (store *MemSQL) GetSmartEventEventName(eventName *model.EventName) (*model.EventName, int) {
-	logFields := log.Fields{
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.GetSmartEventEventNameByNameANDType(eventName.ProjectId, eventName.Name, eventName.Type)
 }
 
 func (store *MemSQL) GetSmartEventEventNameByNameANDType(projectID uint64, name, typ string) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"name":       name,
-		"typ":        typ,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 || name == "" || typ == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -257,33 +210,22 @@ func (store *MemSQL) GetSmartEventEventNameByNameANDType(projectID uint64, name,
 }
 
 func (store *MemSQL) CreateOrGetSessionEventName(projectId uint64) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.CreateOrGetEventName(&model.EventName{ProjectId: projectId, Name: U.EVENT_NAME_SESSION,
 		Type: model.TYPE_INTERNAL_EVENT_NAME})
 }
 
 func (store *MemSQL) CreateOrGetOfflineTouchPointEventName(projectId uint64) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.CreateOrGetEventName(&model.EventName{ProjectId: projectId, Name: U.EVENT_NAME_OFFLINE_TOUCH_POINT,
 		Type: model.TYPE_INTERNAL_EVENT_NAME})
 }
 
 func (store *MemSQL) GetSessionEventName(projectId uint64) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectId == 0 {
 		return nil, http.StatusBadRequest
 	}
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectId)
+
 	var eventNames []model.EventName
 
 	db := C.GetServices().Db
@@ -303,10 +245,6 @@ func (store *MemSQL) GetSessionEventName(projectId uint64) (*model.EventName, in
 }
 
 func isValidType(nameType string) bool {
-	logFields := log.Fields{
-		"name_type": nameType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if nameType == "" {
 		return false
 	}
@@ -320,11 +258,6 @@ func isValidType(nameType string) bool {
 }
 
 func isValidName(name string, typ string) bool {
-	logFields := log.Fields{
-		"name": name,
-		"typ":  typ,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if name == "" {
 		return false
 	}
@@ -343,11 +276,6 @@ func isValidName(name string, typ string) bool {
 }
 
 func (store *MemSQL) GetEventName(name string, projectId uint64) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"name":       name,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// Input Validation. (ID is to be auto generated)
 	if name == "" || name == "null" || projectId == 0 {
 		log.Error("GetEventName Failed. Missing name or projectId")
@@ -370,10 +298,6 @@ func (store *MemSQL) GetEventName(name string, projectId uint64) (*model.EventNa
 }
 
 func (store *MemSQL) GetEventNames(projectId uint64) ([]model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectId == 0 {
 		log.Error("GetEventNames Failed. Missing projectId")
 		return nil, http.StatusBadRequest
@@ -394,18 +318,12 @@ func (store *MemSQL) GetEventNames(projectId uint64) ([]model.EventName, int) {
 // GetOrderedEventNamesFromDb - Get 'limit' events from DB sort by occurence for a given time period
 func (store *MemSQL) GetOrderedEventNamesFromDb(
 	projectID uint64, startTimestamp int64, endTimestamp int64, limit int) ([]model.EventNameWithAggregation, error) {
-	logFields := log.Fields{
-		"project_id":      projectID,
-		"start_timestamp": startTimestamp,
-		"end_timestamp":   endTimestamp,
-		"limit":           limit,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	hasLimit := limit > 0
 	eventNames := make([]model.EventNameWithAggregation, 0)
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"projectId": projectID,
+		"startTimestamp": startTimestamp, "endTimestamp": endTimestamp})
 
 	// Gets occurrence count of event from events table for a
 	// limited time window and upto 100k and order by count
@@ -452,14 +370,6 @@ func (store *MemSQL) GetOrderedEventNamesFromDb(
 // Picks all last 24 hours values and sorts the remaining by occurence and returns top 'limit' values
 func (store *MemSQL) GetPropertyValuesByEventProperty(projectID uint64, eventName string,
 	propertyName string, limit int, lastNDays int) ([]string, error) {
-	logFields := log.Fields{
-		"project_id":    projectID,
-		"event_name":    eventName,
-		"property_name": propertyName,
-		"limit":         limit,
-		"last_N_days":   lastNDays,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if projectID == 0 {
 		return []string{}, errors.New("invalid project on GetPropertyValuesByEventProperty")
@@ -500,14 +410,9 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID uint64, eventNam
 }
 
 func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName string, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
-	logFields := log.Fields{
-		"project_id":    projectID,
-		"event_name":    eventName,
-		"property_name": propertyName,
-		"date_key":      dateKey,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
 	if projectID == 0 {
 		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid project on GetPropertyValuesByEventPropertyFromCache")
 	}
@@ -555,13 +460,6 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 // top 'limit' properties for the given event. Picks all last 24 hours properties and sorts the remaining by occurence
 // and returns top 'limit' properties
 func (store *MemSQL) GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error) {
-	logFields := log.Fields{
-		"project_id":  projectID,
-		"event_name":  eventName,
-		"limit":       limit,
-		"last_N_days": lastNDays,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	properties := make(map[string][]string)
 	if projectID == 0 {
 		return properties, errors.New("invalid project on GetPropertiesByEvent")
@@ -610,13 +508,9 @@ func (store *MemSQL) GetPropertiesByEvent(projectID uint64, eventName string, li
 }
 
 func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
-	logFields := log.Fields{
+	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
-		"event_name": eventName,
-		"date_key":   dateKey,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	})
 	if projectID == 0 {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetPropertiesByEventFromCache")
 	}
@@ -657,10 +551,6 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 }
 
 func aggregateEventsAcrossDate(events []model.CacheEventNamesWithTimestamp) []U.NameCountTimestampCategory {
-	logFields := log.Fields{
-		"events": events,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	eventsAggregated := make(map[string]U.CountTimestampTuple)
 	// Sort Event Properties by timestamp, count and return top n
 	for _, event := range events {
@@ -689,13 +579,6 @@ func aggregateEventsAcrossDate(events []model.CacheEventNamesWithTimestamp) []U.
 
 // Hacked solution - to fetch a type of EventNames.
 func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID uint64, limit int, lastNDays int, typeOfEvent string) ([]string, error) {
-	logFields := log.Fields{
-		"project_id":    projectID,
-		"type_of_event": typeOfEvent,
-		"limit":         limit,
-		"last_N_days":   lastNDays,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	mostFrequentEventNames := make([]string, 0)
 	var eventNameType string
 	var exists bool
@@ -754,12 +637,6 @@ func (store *MemSQL) GetMostFrequentlyEventNamesByType(projectID uint64, limit i
 // get all the top 'limit' events for the given project. Picks all last 24 hours events and sorts the remaining by
 // occurence and returns top 'limit' events
 func (store *MemSQL) GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error) {
-	logFields := log.Fields{
-		"project_id":  projectID,
-		"limit":       limit,
-		"last_N_days": lastNDays,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	eventsSorted, err := getEventNamesAggregatedAndSortedAcrossDate(projectID, limit, lastNDays)
 	if err != nil {
 		return nil, err
@@ -788,12 +665,6 @@ func (store *MemSQL) GetEventNamesOrderedByOccurenceAndRecency(projectID uint64,
 }
 
 func getEventNamesAggregatedAndSortedAcrossDate(projectID uint64, limit int, lastNDays int) ([]U.NameCountTimestampCategory, error) {
-	logFields := log.Fields{
-		"project_id":  projectID,
-		"limit":       limit,
-		"last_N_days": lastNDays,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		return nil, errors.New("invalid project on get event names ordered by occurence and recency")
 	}
@@ -815,12 +686,9 @@ func getEventNamesAggregatedAndSortedAcrossDate(projectID uint64, limit int, las
 }
 
 func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string) (model.CacheEventNamesWithTimestamp, error) {
-	logFields := log.Fields{
+	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
-		"date_key":   dateKey,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	logCtx := log.WithFields(logFields)
+	})
 	if projectID == 0 {
 		return model.CacheEventNamesWithTimestamp{},
 			errors.New("invalid project on get event names ordered by occurence and recency from cache")
@@ -844,11 +712,6 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 }
 
 func getNonFilterEventsByName(projectID uint64, eventName string) ([]model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	var eventNames []model.EventName
@@ -867,12 +730,6 @@ func getNonFilterEventsByName(projectID uint64, eventName string) ([]model.Event
 }
 
 func isEventNameExistByTypeAndFitlerExpr(projectID uint64, typ string, filterExpr string) int {
-	logFields := log.Fields{
-		"project_id":  projectID,
-		"typ":         typ,
-		"filter_expr": filterExpr,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	var eventNames model.EventName
@@ -893,10 +750,6 @@ func isEventNameExistByTypeAndFitlerExpr(projectID uint64, typ string, filterExp
 }
 
 func (store *MemSQL) GetFilterEventNames(projectId uint64) ([]model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	var eventNames []model.EventName
@@ -916,11 +769,6 @@ func (store *MemSQL) GetFilterEventNames(projectId uint64) ([]model.EventName, i
 
 // GetSmartEventFilterEventNames returns a list of all smart events
 func (store *MemSQL) GetSmartEventFilterEventNames(projectID uint64, includeDeleted bool) ([]model.EventName, int) {
-	logFields := log.Fields{
-		"project_id":       projectID,
-		"included_deleted": includeDeleted,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	whereStmnt := "project_id = ? AND type IN(?)"
@@ -945,12 +793,6 @@ func (store *MemSQL) GetSmartEventFilterEventNames(projectID uint64, includeDele
 
 // GetSmartEventFilterEventNameByID returns the smart event by event_name id
 func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID uint64, id string, isDeleted bool) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"id":         id,
-		"is_deleted": isDeleted,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if id == "" || projectID == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -975,11 +817,6 @@ func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID uint64, id strin
 
 // GetEventNamesByNames returns list of EventNames objects for given names
 func (store *MemSQL) GetEventNamesByNames(projectId uint64, names []string) ([]model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"names":      names,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var eventNames []model.EventName
 
 	db := C.GetServices().Db
@@ -1002,11 +839,6 @@ func (store *MemSQL) GetEventNamesByNames(projectId uint64, names []string) ([]m
 }
 
 func (store *MemSQL) GetFilterEventNamesByExprPrefix(projectId uint64, prefix string) ([]model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"prefix":     prefix,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var eventNames []model.EventName
 
 	db := C.GetServices().Db
@@ -1030,13 +862,6 @@ func (store *MemSQL) GetFilterEventNamesByExprPrefix(projectId uint64, prefix st
 
 func (store *MemSQL) UpdateEventName(projectId uint64, id string,
 	nameType string, eventName *model.EventName) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"id":         id,
-		"name_type":  nameType,
-		"event_name": eventName,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	// update not allowed for internal event names.
@@ -1076,16 +901,9 @@ func (store *MemSQL) UpdateEventName(projectId uint64, id string,
 
 func (store *MemSQL) updateCRMSmartEventFilter(projectID uint64, id string, nameType string,
 	eventName *model.EventName, filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id":  projectID,
-		"event_name":  eventName,
-		"id":          id,
-		"name_type":   nameType,
-		"filter_expr": filterExpr,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(logFields)	// Validation
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name_id": id, "event_name_type": nameType})
+	// Validation
 	if id == "" || projectID == 0 || eventName.ProjectId != 0 ||
 		!isValidName(eventName.Name, eventName.Type) {
 		logCtx.Error("Missing required Fields")
@@ -1166,10 +984,6 @@ func (store *MemSQL) updateCRMSmartEventFilter(projectID uint64, id string, name
 }
 
 func getCRMSmartEventNameType(source string) string {
-	logFields := log.Fields{
-		"source": source,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if source == model.SmartCRMEventSourceSalesforce {
 		return model.TYPE_CRM_SALESFORCE
 	}
@@ -1182,13 +996,6 @@ func getCRMSmartEventNameType(source string) string {
 
 func (store *MemSQL) UpdateCRMSmartEventFilter(projectID uint64, id string, eventName *model.EventName,
 	filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id":  projectID,
-		"event_name":  eventName,
-		"id":          id,
-		"filter_expr": filterExpr,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	_, duplicate := store.checkDuplicateSmartEventFilter(projectID, filterExpr)
 	if duplicate {
@@ -1202,11 +1009,6 @@ func (store *MemSQL) UpdateCRMSmartEventFilter(projectID uint64, id string, even
 
 // DeleteSmartEventFilter soft delete smart event name with filter expression
 func (store *MemSQL) DeleteSmartEventFilter(projectID uint64, id string) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"id":         id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	eventName, status := store.GetSmartEventFilterEventNameByID(projectID, id, false)
 	if status != http.StatusFound {
 		return nil, http.StatusBadRequest
@@ -1221,23 +1023,11 @@ func (store *MemSQL) DeleteSmartEventFilter(projectID uint64, id string) (*model
 }
 
 func (store *MemSQL) UpdateFilterEventName(projectId uint64, id string, eventName *model.EventName) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"event_name": eventName,
-		"id":         id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.UpdateEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME, eventName)
 }
 
 func DeleteEventName(projectId uint64, id string,
 	nameType string) int {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"id":         id,
-		"name_type":  nameType,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	// Validation
@@ -1265,20 +1055,11 @@ func DeleteEventName(projectId uint64, id string,
 }
 
 func (store *MemSQL) DeleteFilterEventName(projectId uint64, id string) int {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"id":         id,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return DeleteEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME)
 }
 
 // Returns sanitized filter expression and valid or not bool.
 func getValidatedFilterExpr(filterExpr string) (string, bool) {
-	logFields := log.Fields{
-		"filter_expr": filterExpr,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if filterExpr == "" {
 		return "", false
 	}
@@ -1312,10 +1093,6 @@ func getValidatedFilterExpr(filterExpr string) (string, bool) {
 // ["u1", "u2", ":v1"] -> 1
 // ["u1", "u2", ":v1", ":v2"] -> 0
 func calculateDefinitionScore(tokenizedFilter []string) int16 {
-	logFields := log.Fields{
-		"tokenized_filter": tokenizedFilter,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(tokenizedFilter) == 0 {
 		return -9999
 	}
@@ -1340,10 +1117,6 @@ type FilterInfo struct {
 
 // getHighDefinitionFilter - Returns filter with high definition score.
 func getHighDefinitionFilter(filters []*FilterInfo) *FilterInfo {
-	logFields := log.Fields{
-		"filters": filters,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if filtersLen := len(filters); filtersLen == 0 {
 		return nil
 	} else if filtersLen == 1 {
@@ -1369,11 +1142,6 @@ func getHighDefinitionFilter(filters []*FilterInfo) *FilterInfo {
 // matchEventNameWithFilters match uri by passing through filters.
 func matchEventURIWithFilters(filters *[]FilterInfo,
 	tokenizedEventURI []string) (*FilterInfo, bool) {
-		logFields := log.Fields{
-			"tokenized_event_uri": tokenizedEventURI,
-			"filters": filters,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(tokenizedEventURI) == 0 {
 		return nil, false
 	}
@@ -1398,11 +1166,6 @@ func matchEventURIWithFilters(filters *[]FilterInfo,
 // compare after_popped_uri with filter.
 func popAndMatchEventURIWithFilters(filters *[]FilterInfo,
 	eventURI string) (*FilterInfo, bool) {
-		logFields := log.Fields{
-			"filters": filters,
-			"event_uri": eventURI,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	for afterPopURI := eventURI; afterPopURI != ""; afterPopURI, _ = U.PopURIBySlash(afterPopURI) {
 		tokenizedEventURI := U.TokenizeURI(afterPopURI)
@@ -1417,10 +1180,6 @@ func popAndMatchEventURIWithFilters(filters *[]FilterInfo,
 }
 
 func makeFilterInfos(eventNames []model.EventName) (*[]FilterInfo, error) {
-	logFields := log.Fields{
-		"event_names": eventNames,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// Selected list of filters to use after pruning.
 	filters := make([]FilterInfo, len(eventNames))
 	for i := 0; i < len(eventNames); i++ {
@@ -1446,11 +1205,6 @@ func makeFilterInfos(eventNames []model.EventName) (*[]FilterInfo, error) {
 
 // FilterEventNameByEventURL - Filter and return an event_name by event_url.
 func (store *MemSQL) FilterEventNameByEventURL(projectId uint64, eventURL string) (*model.EventName, int) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"event_url": eventURL,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectId == 0 && eventURL == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -1488,11 +1242,6 @@ func (store *MemSQL) FilterEventNameByEventURL(projectId uint64, eventURL string
 }
 
 func (store *MemSQL) GetEventNameFromEventNameId(eventNameId string, projectId uint64) (*model.EventName, error) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"event_name_id": eventNameId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	var eventName model.EventName
 	queryStr := "SELECT * FROM event_names WHERE id = ? AND project_id = ?"
@@ -1505,10 +1254,6 @@ func (store *MemSQL) GetEventNameFromEventNameId(eventNameId string, projectId u
 }
 
 func convert(eventNamesWithAggregation []model.EventNameWithAggregation) []model.EventName {
-	logFields := log.Fields{
-		"event_names_with_aggregation": eventNamesWithAggregation,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	eventNames := make([]model.EventName, 0)
 	for _, event := range eventNamesWithAggregation {
 		eventNames = append(eventNames, model.EventName{
@@ -1527,17 +1272,12 @@ func convert(eventNamesWithAggregation []model.EventNameWithAggregation) []model
 
 func (store *MemSQL) GetEventTypeFromDb(
 	projectID uint64, eventNames []string, limit int64) (map[string]string, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"event_names": eventNames,
-			"limit": limit,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// var err string
 	db := C.GetServices().Db
 	hasLimit := limit > 0
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(log.Fields{"projectId": projectID})
+
 	type allEventNameAndType struct {
 		Name string
 		Type string

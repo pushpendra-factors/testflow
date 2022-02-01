@@ -13,10 +13,6 @@ import (
 )
 
 func (store *MemSQL) CreateWeeklyInsightsMetadata(wim *model.WeeklyInsightsMetadata) (int, string) {
-	logFields := log.Fields{
-		"wim": wim,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	if valid := isValidProjectScope(wim.ProjectId); !valid {
@@ -51,13 +47,8 @@ func (store *MemSQL) CreateWeeklyInsightsMetadata(wim *model.WeeklyInsightsMetad
 }
 
 func (store *MemSQL) GetWeeklyInsightsMetadata(projectId uint64) ([]model.WeeklyInsightsMetadata, int, string) {
-	logFields := log.Fields{
-		"project_id": projectId,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
 	db := C.GetServices().Db
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithField("project_id", projectId)
 
 	if valid := isValidProjectScope(projectId); !valid {
 		return nil, http.StatusBadRequest, "Invalid project"
