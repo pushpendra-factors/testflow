@@ -530,6 +530,10 @@ func GetHubspotProjectOverAllStatus(success []HubspotProjectSyncStatus,
 // GetHubspotSyncUpdatedInfo return merged sync info
 func GetHubspotSyncUpdatedInfo(incomingSyncInfo, existingSyncInfo *map[string]int64) *map[string]int64 {
 	mergedSyncInfo := make(map[string]int64)
+	for docType, timestamp := range *existingSyncInfo {
+		mergedSyncInfo[docType] = timestamp
+	}
+
 	for docType, timestamp := range *incomingSyncInfo {
 		var hubspotLastSyncInfo HubspotLastSyncInfo
 		hubspotLastSyncInfo.TypeAlias = docType
