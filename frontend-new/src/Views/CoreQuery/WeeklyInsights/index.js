@@ -47,7 +47,10 @@ const NoData = ({data}) => {
     )
 }
 
-const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, userPropNames, fetchWeeklyIngishts, updateInsightFeedback }) => {    
+const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, userPropNames, fetchWeeklyIngishts, updateInsightFeedback }) => {
+
+    const timeZone = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';  
+    moment.tz.setDefault(timeZone);
 
     const [defaultActive, setDefaultActive] = useState(null);
     const [expandAll, setExpandAll] = useState(true);
