@@ -5,13 +5,20 @@ import (
 	"factors/model/model"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) CreateGroup(projectID uint64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName})
+	logFields := log.Fields{
+		"project_id": projectID,
+		"group_name": groupName,
+		"allowed_group_names": allowedGroupNames,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	if projectID < 1 || groupName == "" {
 		logCtx.Error("Invalid parameters.")
 		return nil, http.StatusBadRequest
@@ -71,7 +78,12 @@ func (store *MemSQL) CreateGroup(projectID uint64, groupName string, allowedGrou
 }
 
 func (store *MemSQL) GetGroup(projectID uint64, groupName string) (*model.Group, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName})
+	logFields := log.Fields{
+		"project_id": projectID,
+		"group_name": groupName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	if projectID < 1 || groupName == "" {
 		logCtx.Error("Invalid parameters.")
 		return nil, http.StatusBadRequest

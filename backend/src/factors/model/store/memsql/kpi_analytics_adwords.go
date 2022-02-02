@@ -3,11 +3,17 @@ package memsql
 import (
 	"factors/model/model"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) GetKPIConfigsForAdwords(projectID uint64, reqID string) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id": reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	adwordsSettings, errCode := store.GetIntAdwordsProjectSettingsForProjectID(projectID)
 	if errCode != http.StatusOK {
 		return nil, http.StatusOK
@@ -22,7 +28,13 @@ func (store *MemSQL) GetKPIConfigsForAdwords(projectID uint64, reqID string) (ma
 }
 
 func (store *MemSQL) ExecuteKPIQueryForChannels(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
-	logCtx := log.WithField("projectId", projectID).WithField("reqId", reqID)
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id": reqID,
+		"kpi_query": kpiQuery,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	channelsV1Query, err := model.TransformKPIQueryToChannelsV1Query(kpiQuery)
 	queryResults := make([]model.QueryResult, 0)
 	hasAnyGroupByTimestamp := (kpiQuery.GroupByTimestamp != "")

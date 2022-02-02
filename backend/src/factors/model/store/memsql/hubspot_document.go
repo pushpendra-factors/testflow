@@ -35,7 +35,7 @@ func (store *MemSQL) satisfiesHubspotDocumentUniquenessConstraints(document *mod
 func (store *MemSQL) isHubspotDocumentExistByPrimaryKey(document *model.HubspotDocument) int {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"document": document})
 
-	logCtx := log.WithField("document", document)
+	logCtx := log.WithFields(log.Fields{"document": document})
 
 	if document.ProjectId == 0 || document.ID == "" || document.Type == 0 ||
 		document.Action == 0 || document.Timestamp == 0 {
@@ -252,6 +252,11 @@ func (store *MemSQL) GetSyncedHubspotDocumentByFilter(projectID uint64,
 }
 
 func (store *MemSQL) getUpdatedDealAssociationDocument(projectID uint64, incomingDocument *model.HubspotDocument) (*model.HubspotDocument, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"incoming_document": incomingDocument,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "incoming_document": incomingDocument})
 	if projectID <= 0 || incomingDocument.Type != model.HubspotDocumentTypeDeal || incomingDocument.ID == "" {
 		logCtx.Error("Invalid record on getUpdatedDealAssociationDocument.")
@@ -297,6 +302,7 @@ func (store *MemSQL) getUpdatedDealAssociationDocument(projectID uint64, incomin
 }
 
 func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.HubspotDocument) int {
+	
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectId})
 
 	logCtx := log.WithField("project_id", document.ProjectId)
@@ -444,6 +450,10 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 	return http.StatusCreated
 }
 func getHubspotTypeAlias(t int) string {
+	logFields := log.Fields{
+		"t": t,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for alias, typ := range model.HubspotDocumentTypeAlias {
 		if t == typ {
 			return alias
@@ -807,6 +817,12 @@ func (store *MemSQL) GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, 
 
 func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.HubspotDocument,
 	propertyName string, limit int) []interface{} {
+		logFields := log.Fields{
+			"hubspot_documents": hubspotDocuments,
+			"property_name": propertyName,
+			"limit": limit,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if len(hubspotDocuments) < 1 || propertyName == "" {
 		return nil
@@ -845,6 +861,10 @@ func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.Hub
 }
 
 func getHubspotDocumentPropertiesNameByType(hubspotDocuments []model.HubspotDocument) ([]string, []string) {
+	logFields := log.Fields{
+		"hubspot_documents": hubspotDocuments,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	dateTimeProperties := make(map[string]interface{})
 	categoricalProperties := make(map[string]interface{})
 	currentTimestamp := U.TimeNowUnix() * 1000
@@ -945,7 +965,7 @@ func (store *MemSQL) GetHubspotObjectPropertiesName(ProjectID uint64, objectType
 		return nil, nil
 	}
 
-	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "object_type": objectType})
 
 	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
 	if err != nil {
@@ -972,7 +992,8 @@ func (store *MemSQL) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64,
 		return nil
 	}
 
-	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID,
+	"object_type": objectType, "property_name": propertyName})
 
 	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
 	if err != nil {
@@ -1019,6 +1040,12 @@ func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, 
 
 // GetLastSyncedHubspotUpdateDocumentByID returns latest synced record by document id with preference to the Update doc if timestamp is same.
 func (store *MemSQL) GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"doc_id": docID,
+		"doc_type": docType,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_id": docID, "doc_type": docType})
 
 	if projectID == 0 || docType == 0 || docID == "" {
@@ -1093,9 +1120,19 @@ func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID uint64, docID st
 
 func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
 	enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"group_name": groupName,
+			"group_id": groupID,
+			"group_user_id": groupUserID,
+			"en_properties": enProperties,
+			"created_timestamp": createdTimestamp,
+			"updated_timestamp": updatedTimestamp,
+			"source": source,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName,
-		"group_id": groupUserID, "created_timestamp": createdTimestamp, "updated_timestamp": updatedTimestamp})
+	logCtx := log.WithFields(logFields)
 	if projectID < 1 || enProperties == nil || createdTimestamp == 0 || updatedTimestamp == 0 {
 		logCtx.Error("Invalid parameters on CreateOrUpdateGroupPropertiesBySource.")
 		return "", errors.New("invalid parameters")

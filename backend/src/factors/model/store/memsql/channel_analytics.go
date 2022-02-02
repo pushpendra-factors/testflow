@@ -106,6 +106,12 @@ var allChannelsPropertyToRelated = map[string]model.PropertiesAndRelated{
 
 // GetChannelConfig - @TODO Kark v1
 func (store *MemSQL) GetChannelConfig(projectID uint64, channel string, reqID string) (*model.ChannelConfigResult, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"channel": channel,
+		"req_id": reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if !(isValidChannel(channel)) {
 		return &model.ChannelConfigResult{}, http.StatusBadRequest
 	}
@@ -128,6 +134,10 @@ func (store *MemSQL) GetChannelConfig(projectID uint64, channel string, reqID st
 
 // @TODO Kark v0, v1
 func isValidFilterKey(filter string) bool {
+	logFields := log.Fields{
+		"filter": filter,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, f := range CAFilters {
 		if filter == f {
 			return true
@@ -139,6 +149,10 @@ func isValidFilterKey(filter string) bool {
 
 // @TODO Kark v1
 func isValidChannel(channel string) bool {
+	logFields := log.Fields{
+		"channel": channel,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, c := range CAChannels {
 		if channel == c {
 			return true
@@ -150,6 +164,10 @@ func isValidChannel(channel string) bool {
 
 // @TODO Kark v1
 func (store *MemSQL) buildAllChannelConfig(projectID uint64) *model.ChannelConfigResult {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	objectsAndProperties := store.buildObjectAndPropertiesForAllChannel(projectID, objectsForAllChannels)
 
 	return &model.ChannelConfigResult{
@@ -158,6 +176,11 @@ func (store *MemSQL) buildAllChannelConfig(projectID uint64) *model.ChannelConfi
 	}
 }
 func (store *MemSQL) buildObjectAndPropertiesForAllChannel(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"objects": objects,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 	for _, currentObject := range objects {
 		currentProperties := buildProperties(allChannelsPropertyToRelated)
@@ -172,6 +195,11 @@ func (store *MemSQL) buildObjectAndPropertiesForAllChannel(projectID uint64, obj
 // @TODO Kark v1
 func buildObjectsAndProperties(properties []model.ChannelProperty,
 	filterObjectNames []string) []model.ChannelObjectAndProperties {
+		logFields := log.Fields{
+			"properties": properties,
+			"filter_object_names": filterObjectNames,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var objectsAndProperties []model.ChannelObjectAndProperties
 	for _, filterObjectName := range filterObjectNames {
@@ -185,6 +213,10 @@ func buildObjectsAndProperties(properties []model.ChannelProperty,
 
 // @TODO Kark v1
 func buildProperties(PropertiesAndRelated map[string]model.PropertiesAndRelated) []model.ChannelProperty {
+	logFields := log.Fields{
+		"properties_and_related": PropertiesAndRelated,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var properties []model.ChannelProperty
 	for propertyName, propertyRelated := range PropertiesAndRelated {
 		var property model.ChannelProperty
@@ -201,6 +233,14 @@ func buildProperties(PropertiesAndRelated map[string]model.PropertiesAndRelated)
 // @TODO Kark v1
 func (store *MemSQL) GetChannelFilterValuesV1(projectID uint64, channel, filterObject,
 	filterProperty string, reqID string) (model.ChannelFilterValues, int) {
+
+		logFields := log.Fields{
+			"project_id": projectID,
+			"channel": channel,
+			"filter_property": filterObject,
+			"req_id": reqID,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var channelFilterValues model.ChannelFilterValues
 	if !isValidChannel(channel) || !isValidFilterKey(filterObject) {
@@ -232,7 +272,14 @@ func (store *MemSQL) GetChannelFilterValuesV1(projectID uint64, channel, filterO
 
 // GetAllChannelFilterValues - @Kark TODO v1
 func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty string, reqID string) ([]interface{}, int) {
-	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	logFields := log.Fields{
+		"project_id": projectID,
+		"filter_object": filterObject,
+		"filter_property": filterProperty,
+		"req_id": reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	_, isPresent := Const.SmartPropertyReservedNames[filterProperty]
 	if !isPresent {
 		filterValues, errCode := store.getSmartPropertyFilterValues(projectID, filterObject, filterProperty, "all", reqID)
@@ -267,6 +314,12 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, f
 
 // RunChannelGroupQuery - @TODO Kark v1
 func (store *MemSQL) RunChannelGroupQuery(projectID uint64, queriesOriginal []model.ChannelQueryV1, reqID string) (model.ChannelResultGroupV1, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"queries_original": queriesOriginal,
+		"req_id": reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 559 {
 		log.WithField("queriesOriginal", queriesOriginal).WithField("reqID", reqID).Warn("Inside RunChannelGroupQuery - memsql caching test.")
 	}
@@ -300,6 +353,14 @@ func (store *MemSQL) RunChannelGroupQuery(projectID uint64, queriesOriginal []mo
 // TODO Handling errorcase.
 func (store *MemSQL) runSingleChannelQuery(projectID uint64, query model.ChannelQueryV1,
 	resultHolder *model.ChannelQueryResultV1, waitGroup *sync.WaitGroup, reqID string) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query": query,
+			"result_holder": resultHolder,
+			"wait_group": waitGroup,
+			"req_id": reqID,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 559 {
 		log.WithField("query", query).WithField("reqID", reqID).Warn("Inside runSingleChannelQuery - memsql caching test.")
 	}
@@ -313,9 +374,15 @@ func (store *MemSQL) runSingleChannelQuery(projectID uint64, query model.Channel
 // TODO error handling.
 func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.ChannelQueryV1,
 	reqID string) (*model.ChannelQueryResultV1, int) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query": query,
+			"req_id": reqID,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
-	logCtx := log.WithField("req_id", reqID)
+	logCtx := log.WithFields(logFields)
 	queryResult := &model.ChannelQueryResultV1{}
 	var columns []string
 	var resultMetrics [][]interface{}
@@ -359,9 +426,15 @@ func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.Channe
 // removed source as we want aggregated results for all channels
 func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.ChannelQueryV1,
 	reqID string) ([]string, [][]interface{}, int) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query": query,
+			"req_id": reqID,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
-	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	logCtx := log.WithFields(logFields)
 	var finalQuery string
 	var finalParams []interface{}
 	var selectMetrics, columns []string
@@ -453,6 +526,13 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 }
 
 func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query": query,
+		"req_id": reqID,
+		"fetch_source": fetchSource,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	isGroupBytimestamp := query.GetGroupByTimestamp() != ""
 	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := store.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
 	facebookSQL, facebookParams, facebookSelectKeys, facebookMetrics, facebookErr := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
@@ -490,6 +570,12 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, q
 
 // GetChannelFilterValues - @Kark TODO v0
 func (store *MemSQL) GetChannelFilterValues(projectID uint64, channel, filter string) ([]string, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"channel": channel,
+		"filter": filter,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if !isValidChannel(channel) || !isValidFilterKey(filter) {
 		return []string{}, http.StatusBadRequest
 	}
@@ -512,6 +598,11 @@ func (store *MemSQL) GetChannelFilterValues(projectID uint64, channel, filter st
 // ExecuteChannelQuery - @Kark TODO v0
 func (store *MemSQL) ExecuteChannelQuery(projectID uint64,
 	queryOriginal *model.ChannelQuery) (*model.ChannelQueryResult, int) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"query_original": queryOriginal,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	var query *model.ChannelQuery
@@ -554,6 +645,10 @@ func (store *MemSQL) ExecuteChannelQuery(projectID uint64,
 // Convert2DArrayTo1DArray ...
 // @Kark TODO v1
 func Convert2DArrayTo1DArray(inputArray [][]interface{}) []interface{} {
+	logFields := log.Fields{
+		"input_array": inputArray,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	result := make([]interface{}, 0, 0)
 	for _, row := range inputArray {
 		result = append(result, row...)
@@ -563,6 +658,10 @@ func Convert2DArrayTo1DArray(inputArray [][]interface{}) []interface{} {
 
 // format yyyymmdd
 func ChangeUnixTimestampToDate(timestamp int64) int64 {
+	logFields := log.Fields{
+		"timestamp": timestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	time := time.Unix(timestamp, 0)
 	date, _ := strconv.ParseInt(time.Format("20060102"), 10, 64)
 	return date
@@ -570,6 +669,10 @@ func ChangeUnixTimestampToDate(timestamp int64) int64 {
 
 // @Kark TODO v1
 func hasAllIDsOnlyInGroupBy(query *model.ChannelQueryV1) bool {
+	logFields := log.Fields{
+		"query": query,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, groupBy := range query.GroupBy {
 		if !(strings.Contains(groupBy.Property, "id") || strings.Contains(groupBy.Property, "ID")) {
 			return false
@@ -580,6 +683,12 @@ func hasAllIDsOnlyInGroupBy(query *model.ChannelQueryV1) bool {
 
 // @Kark TODO v1
 func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp string, timezone string) string {
+	logFields := log.Fields{
+		"stmnt": stmnt,
+		"group_by_timestamp": groupByTimestamp,
+		"timezone": timezone,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if groupByTimestamp == "" {
 		return stmnt
 	}
@@ -590,6 +699,11 @@ func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp s
 
 // @Kark TODO v1
 func getSelectTimestampByTypeForChannels(timestampType, timezone string) string {
+	logFields := log.Fields{
+		"timestamp_type": timestampType,
+		"timezone": timezone,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var selectTz string
 	var selectStr string
 	selectTz = model.DefaultTimezone
@@ -612,6 +726,11 @@ func getSelectTimestampByTypeForChannels(timestampType, timezone string) string 
 
 // @Kark TODO v1
 func getOrderByClause(isGroupByTimestamp bool, selectMetrics []string) string {
+	logFields := log.Fields{
+		"is_group_by_timestamp": isGroupByTimestamp,
+		"select_metrics": selectMetrics,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	selectMetricsWithDesc := make([]string, 0, 0)
 	if isGroupByTimestamp {
 		selectMetricsWithDesc = append(selectMetricsWithDesc, model.AliasDateTime+" ASC")
@@ -623,6 +742,11 @@ func getOrderByClause(isGroupByTimestamp bool, selectMetrics []string) string {
 	return joinWithComma(selectMetricsWithDesc...)
 }
 func getOrderByClauseForSearchConsole(isGroupByTimestamp bool, selectMetrics []string) string {
+	logFields := log.Fields{
+		"is_group_by_timestamp": isGroupByTimestamp,
+		"select_metrics": selectMetrics,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	selectMetricsWithDesc := make([]string, 0)
 	if isGroupByTimestamp {
 		selectMetricsWithDesc = append(selectMetricsWithDesc, model.AliasDateTime+" ASC")
@@ -640,6 +764,12 @@ func getOrderByClauseForSearchConsole(isGroupByTimestamp bool, selectMetrics []s
 
 // ExecuteSQL - @Kark TODO v1
 func (store *MemSQL) ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error) {
+	logFields := log.Fields{
+		"sql_statement": sqlStatement,
+		"params": params,
+		"log_ctx": logCtx,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	rows, tx, err := store.ExecQueryWithContext(sqlStatement, params)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", sqlStatement).WithField("params", params).Error("SQL Query failed.")
@@ -658,6 +788,12 @@ func (store *MemSQL) ExecuteSQL(sqlStatement string, params []interface{}, logCt
 }
 
 func (store *MemSQL) GetSmartPropertyAndRelated(projectID uint64, object string, source string) map[string]model.PropertiesAndRelated {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"object": object,
+		"source": source,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	var smartPropertyRules []model.SmartPropertyRules
 	object_type, isPresent := model.SmartPropertyRulesTypeAliasToType[object]

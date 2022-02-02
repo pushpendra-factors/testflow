@@ -19,6 +19,10 @@ import (
 )
 
 func (store *MemSQL) satisfiesProjectSettingForeignConstraints(setting model.ProjectSetting) int {
+	logFields := log.Fields{
+		"setting": setting,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, errCode := store.GetProject(setting.ProjectId)
 	if errCode != http.StatusFound {
 		return http.StatusBadRequest
@@ -55,8 +59,12 @@ func (store *MemSQL) satisfiesProjectSettingForeignConstraints(setting model.Pro
 }
 
 func (store *MemSQL) GetProjectSetting(projectId uint64) (*model.ProjectSetting, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
-	logCtx := log.WithField("project_id", projectId)
+	logCtx := log.WithFields(logFields)
 
 	if valid := isValidProjectScope(projectId); !valid {
 		return nil, http.StatusBadRequest
@@ -84,6 +92,12 @@ type ProjectSettingChannelResponse struct {
 // the given duration. Returns default project_settings immediately, if the
 // config/flag use_default_project_setting_for_sdk is set to true.
 func (store *MemSQL) GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int) {
+	logFields := log.Fields{
+		"key": key,
+		"value": value,
+		"timeout": timeout,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if C.GetConfig().UseDefaultProjectSettingForSDK {
 		// Returning not_modified to avoid caching default.
 		return getProjectSettingDefault(), http.StatusNotModified
@@ -117,8 +131,12 @@ func (store *MemSQL) GetProjectSettingByKeyWithTimeout(key, value string, timeou
 
 // EnableBigqueryArchivalForProject To enable archival and bigquery in project_settings.
 func (store *MemSQL) EnableBigqueryArchivalForProject(projectID uint64) int {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
-	logCtx := log.WithField("project_id", projectID)
+	logCtx := log.WithFields(logFields)
 
 	if valid := isValidProjectScope(projectID); !valid {
 		return http.StatusBadRequest
@@ -135,11 +153,16 @@ func (store *MemSQL) EnableBigqueryArchivalForProject(projectID uint64) int {
 
 // getProjectSettingByKey - Get project settings by a column on projects.
 func getProjectSettingByKey(key, value string) (*model.ProjectSetting, int) {
+	logFields := log.Fields{
+		"key": key,
+		"value": value,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if key == "" || value == "" {
 		return nil, http.StatusBadRequest
 	}
 
-	logCtx := log.WithField("key", key).WithField("value", value)
+	logCtx := log.WithFields(logFields)
 
 	var setting model.ProjectSetting
 	db := C.GetServices().Db
@@ -159,13 +182,23 @@ func getProjectSettingByKey(key, value string) (*model.ProjectSetting, int) {
 }
 
 func getProjectSettingCacheKey(tokenKey, tokenValue string) (*cacheRedis.Key, error) {
+	logFields := log.Fields{
+		"token_key": tokenKey,
+		"token_value": tokenValue,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// table_name:column_name
 	prefix := fmt.Sprintf("%s:%s", "project_settings", tokenKey)
 	return cacheRedis.NewKeyWithProjectUID(tokenValue, prefix, "")
 }
 
 func getCacheProjectSetting(tokenKey, tokenValue string) (*model.ProjectSetting, int) {
-	logCtx := log.WithField("token_value", tokenValue)
+	logFields := log.Fields{
+		"token_key": tokenKey,
+		"token_value": tokenValue,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 
 	if tokenValue == "" {
 		return nil, http.StatusBadRequest
@@ -201,7 +234,13 @@ func getCacheProjectSetting(tokenKey, tokenValue string) (*model.ProjectSetting,
 }
 
 func setCacheProjectSetting(tokenKey, tokenValue string, settings *model.ProjectSetting) int {
-	logCtx := log.WithField("token_value", tokenValue)
+	logFields := log.Fields{
+		"token_key": tokenKey,
+		"token_value": tokenValue,
+		"settings": settings,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 
 	if tokenValue == "" || settings == nil {
 		return http.StatusBadRequest
@@ -232,7 +271,12 @@ func setCacheProjectSetting(tokenKey, tokenValue string, settings *model.Project
 }
 
 func delCacheProjectSetting(tokenKey, tokenValue string) int {
-	logCtx := log.WithField("token_key", tokenKey)
+	logFields := log.Fields{
+		"token_key": tokenKey,
+		"token_value": tokenValue,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 
 	if tokenValue == "" {
 		return http.StatusBadRequest
@@ -255,6 +299,8 @@ func delCacheProjectSetting(tokenKey, tokenValue string) int {
 }
 
 func getProjectSettingDefault() *model.ProjectSetting {
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	enabled := true
 	disabled := false
 	return &model.ProjectSetting{
@@ -269,6 +315,11 @@ func getProjectSettingDefault() *model.ProjectSetting {
 
 // getProjectSettingByKeyWithDefault - Get from cache or db, if not use default.
 func (store *MemSQL) getProjectSettingByKeyWithDefault(tokenKey, tokenValue string) (*model.ProjectSetting, int) {
+	logFields := log.Fields{
+		"token_key": tokenKey,
+		"token_value": tokenValue,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	settings, errCode := getCacheProjectSetting(tokenKey, tokenValue)
 	if errCode == http.StatusFound {
 		return settings, http.StatusFound
@@ -288,17 +339,29 @@ func (store *MemSQL) getProjectSettingByKeyWithDefault(tokenKey, tokenValue stri
 }
 
 func (store *MemSQL) GetProjectSettingByTokenWithCacheAndDefault(token string) (*model.ProjectSetting, int) {
+	logFields := log.Fields{
+		"token": token,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.getProjectSettingByKeyWithDefault(model.ProjectSettingKeyToken, token)
 }
 
 func (store *MemSQL) GetProjectSettingByPrivateTokenWithCacheAndDefault(
 	privateToken string) (*model.ProjectSetting, int) {
+		logFields := log.Fields{
+			"private_token": privateToken,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	return store.getProjectSettingByKeyWithDefault(
 		model.ProjectSettingKeyPrivateToken, privateToken)
 }
 
 func (store *MemSQL) createProjectSetting(ps *model.ProjectSetting) (*model.ProjectSetting, int) {
+	logFields := log.Fields{
+		"ps": ps,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	if valid := isValidProjectScope(ps.ProjectId); !valid {
@@ -319,6 +382,10 @@ func (store *MemSQL) createProjectSetting(ps *model.ProjectSetting) (*model.Proj
 }
 
 func (store *MemSQL) delAllProjectSettingsCacheForProject(projectId uint64) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	project, errCode := store.GetProject(projectId)
 	if errCode != http.StatusFound {
 		log.Error("Failed to get project on delAllProjectSettingsCacheKeys.")
@@ -331,6 +398,11 @@ func (store *MemSQL) delAllProjectSettingsCacheForProject(projectId uint64) {
 }
 
 func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.ProjectSetting) (*model.ProjectSetting, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"settings": settings,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	if projectId == 0 || settings == nil {
@@ -401,10 +473,18 @@ func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.Pro
 }
 
 func (store *MemSQL) IsPSettingsIntShopifyEnabled(projectId uint64) bool {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return true
 }
 
 func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId uint64) (string, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	settings, errCode := store.GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
 		return "", errCode
@@ -414,8 +494,7 @@ func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId uint64) (stri
 		return "", http.StatusNotFound
 	}
 
-	logCtx := log.WithField("agent_uuid",
-		*settings.IntAdwordsEnabledAgentUUID).WithField("project_id", projectId)
+	logCtx := log.WithFields(logFields)
 
 	agent, errCode := store.GetAgentByUUID(*settings.IntAdwordsEnabledAgentUUID)
 	if errCode != http.StatusFound {
@@ -433,6 +512,10 @@ func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId uint64) (stri
 }
 
 func (store *MemSQL) GetIntGoogleOrganicRefreshTokenForProject(projectId uint64) (string, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	settings, errCode := store.GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
 		return "", errCode
@@ -442,8 +525,7 @@ func (store *MemSQL) GetIntGoogleOrganicRefreshTokenForProject(projectId uint64)
 		return "", http.StatusNotFound
 	}
 
-	logCtx := log.WithField("agent_uuid",
-		*settings.IntGoogleOrganicEnabledAgentUUID).WithField("project_id", projectId)
+	logCtx := log.WithFields(logFields)
 
 	agent, errCode := store.GetAgentByUUID(*settings.IntGoogleOrganicEnabledAgentUUID)
 	if errCode != http.StatusFound {
@@ -461,6 +543,10 @@ func (store *MemSQL) GetIntGoogleOrganicRefreshTokenForProject(projectId uint64)
 }
 
 func (store *MemSQL) GetIntAdwordsProjectSettingsForProjectID(projectID uint64) ([]model.AdwordsProjectSettings, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
 		" " + "project_settings.int_google_ingestion_timezone as int_google_ingestion_timezone," +
@@ -475,6 +561,7 @@ func (store *MemSQL) GetIntAdwordsProjectSettingsForProjectID(projectID uint64) 
 }
 
 func (store *MemSQL) GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
 		" " + "project_settings.int_google_ingestion_timezone as int_google_ingestion_timezone," +
@@ -488,6 +575,11 @@ func (store *MemSQL) GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSe
 }
 
 func (store *MemSQL) getIntAdwordsProjectSettings(query string, params []interface{}) ([]model.AdwordsProjectSettings, int) {
+	logFields := log.Fields{
+		"query": query,
+		"params": params,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	adwordsProjectSettings := make([]model.AdwordsProjectSettings, 0, 0)
 	rows, err := db.Raw(query, params).Rows()
@@ -511,6 +603,10 @@ func (store *MemSQL) getIntAdwordsProjectSettings(query string, params []interfa
 }
 
 func (store *MemSQL) GetIntGoogleOrganicProjectSettingsForProjectID(projectID uint64) ([]model.GoogleOrganicProjectSettings, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	queryStr := "SELECT project_settings.project_id, project_settings.int_google_organic_url_prefixes as url_prefix," +
 		" " + "agents.int_google_organic_refresh_token as refresh_token, project_settings.int_google_organic_enabled_agent_uuid as agent_uuid" +
@@ -524,6 +620,7 @@ func (store *MemSQL) GetIntGoogleOrganicProjectSettingsForProjectID(projectID ui
 }
 
 func (store *MemSQL) GetAllIntGoogleOrganicProjectSettings() ([]model.GoogleOrganicProjectSettings, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	queryStr := "SELECT project_settings.project_id, project_settings.int_google_organic_url_prefixes as url_prefix," +
 		" " + "agents.int_google_organic_refresh_token as refresh_token, project_settings.int_google_organic_enabled_agent_uuid as agent_uuid" +
@@ -535,6 +632,11 @@ func (store *MemSQL) GetAllIntGoogleOrganicProjectSettings() ([]model.GoogleOrga
 	return store.getIntGoogleOrganicProjectSettings(queryStr, params)
 }
 func (store *MemSQL) getIntGoogleOrganicProjectSettings(query string, params []interface{}) ([]model.GoogleOrganicProjectSettings, int) {
+	logFields := log.Fields{
+		"query": query,
+		"params": params,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	gscProjectSettings := make([]model.GoogleOrganicProjectSettings, 0, 0)
 	rows, err := db.Raw(query, params).Rows()
@@ -558,6 +660,7 @@ func (store *MemSQL) getIntGoogleOrganicProjectSettings(query string, params []i
 }
 
 func (store *MemSQL) GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	var hubspotProjectSettings []model.HubspotProjectSettings
 
 	db := C.GetServices().Db
@@ -575,6 +678,10 @@ func (store *MemSQL) GetAllHubspotProjectSettings() ([]model.HubspotProjectSetti
 }
 
 func (store *MemSQL) GetAllHubspotProjectSettingsForProjectID(projectID uint64) ([]model.HubspotProjectSettings, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var hubspotProjectSettings []model.HubspotProjectSettings
 
 	db := C.GetServices().Db
@@ -636,6 +743,10 @@ var productionShopifyInfo = map[string]shopifyInfoStruct{
 
 func (store *MemSQL) GetProjectDetailsByShopifyDomain(
 	shopifyDomain string) (uint64, string, bool, int) {
+		logFields := log.Fields{
+			"shopify_domain": shopifyDomain,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var shopifyInfo map[string]shopifyInfoStruct
 	if C.IsDevelopment() {
 		shopifyInfo = developmentShopifyInfo
@@ -653,6 +764,7 @@ func (store *MemSQL) GetProjectDetailsByShopifyDomain(
 }
 
 func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettings() ([]uint64, []model.FacebookProjectSettings, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 
 	facebookProjectSettings := make([]model.FacebookProjectSettings, 0, 0)
@@ -670,6 +782,10 @@ func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettings() ([]uint64, []mode
 }
 
 func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettingsForProject(projectIDs []uint64) ([]uint64, []model.FacebookProjectSettings, int) {
+	logFields := log.Fields{
+		"project_ids": projectIDs,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	facebookProjectSettings := make([]model.FacebookProjectSettings, 0, 0)
@@ -687,6 +803,7 @@ func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettingsForProject(projectID
 }
 
 func (store *MemSQL) GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 
 	linkedinProjectSettings := make([]model.LinkedinProjectSettings, 0, 0)
@@ -699,6 +816,10 @@ func (store *MemSQL) GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjec
 	return linkedinProjectSettings, http.StatusOK
 }
 func (store *MemSQL) GetLinkedinEnabledProjectSettingsForProjects(projectIDs []string) ([]model.LinkedinProjectSettings, int) {
+	logFields := log.Fields{
+		"project_ids": projectIDs,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	linkedinProjectSettings := make([]model.LinkedinProjectSettings, 0, 0)
@@ -713,6 +834,7 @@ func (store *MemSQL) GetLinkedinEnabledProjectSettingsForProjects(projectIDs []s
 
 // GetArchiveEnabledProjectIDs Returns list of project ids which have archive enabled.
 func (store *MemSQL) GetArchiveEnabledProjectIDs() ([]uint64, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	var projectIDs []uint64
 	db := C.GetServices().Db
 
@@ -736,6 +858,7 @@ func (store *MemSQL) GetArchiveEnabledProjectIDs() ([]uint64, int) {
 
 // GetBigqueryEnabledProjectIDs Returns list of project ids which have bigquery enabled.
 func (store *MemSQL) GetBigqueryEnabledProjectIDs() ([]uint64, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	var projectIDs []uint64
 	db := C.GetServices().Db
 
@@ -759,6 +882,7 @@ func (store *MemSQL) GetBigqueryEnabledProjectIDs() ([]uint64, int) {
 
 // GetAllSalesforceProjectSettings return list of all enabled salesforce projects and their meta data
 func (store *MemSQL) GetAllSalesforceProjectSettings() ([]model.SalesforceProjectSettings, int) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(),nil)
 	var salesforceProjectSettings []model.SalesforceProjectSettings
 
 	db := C.GetServices().Db
@@ -775,6 +899,10 @@ func (store *MemSQL) GetAllSalesforceProjectSettings() ([]model.SalesforceProjec
 }
 
 func (store *MemSQL) GetAllSalesforceProjectSettingsForProject(projectID uint64) ([]model.SalesforceProjectSettings, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var salesforceProjectSettings []model.SalesforceProjectSettings
 
 	db := C.GetServices().Db
@@ -791,6 +919,7 @@ func (store *MemSQL) GetAllSalesforceProjectSettingsForProject(projectID uint64)
 }
 
 func (store *MemSQL) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings() (map[uint64][]string, error) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 
 	projectSettings := make([]model.ProjectSetting, 0, 0)
@@ -818,6 +947,11 @@ func (store *MemSQL) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings
 }
 
 func (store *MemSQL) DeleteChannelIntegration(projectID uint64, channelName string) (int, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"channel_name": channelName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		return http.StatusBadRequest, errors.New("invalid projectID")
 	}

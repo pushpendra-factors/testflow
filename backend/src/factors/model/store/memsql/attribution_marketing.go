@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"factors/model/model"
 	U "factors/util"
-	"fmt"
+	"time"
+	
 	"strings"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -13,6 +14,12 @@ import (
 )
 
 func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.AttributionQuery, projectSetting model.ProjectSetting) (*model.MarketingReports, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"q": q,
+		"project_setting": projectSetting,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	data := &model.MarketingReports{}
 	var err error
@@ -229,9 +236,21 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 // PullAdwordsMarketingData Pulls Adds channel data for Adwords.
 func (store *MemSQL) PullAdwordsMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
 	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"from": from,
+			"to": to,
+			"customer_account_id": customerAccountID,
+			"key_id": keyID,
+			"key_name": keyName,
+			"extra_value1": extraValue1,
+			"report_name": reportName,
+			"time_zone": timeZone,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
-	customerAccountIDs := strings.Split(customerAccountID, ",")
+		logCtx := log.WithFields(logFields)
+		customerAccountIDs := strings.Split(customerAccountID, ",")
 	performanceQuery := "SELECT campaign_id as campaignID, ad_group_id as adgroupID, keyword_id as keywordID, ad_id as adID, " +
 		"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
@@ -255,9 +274,21 @@ func (store *MemSQL) PullAdwordsMarketingData(projectID uint64, from, to int64, 
 // PullFacebookMarketingData Pulls Adds channel data for Facebook.
 func (store *MemSQL) PullFacebookMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
 	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"from": from,
+			"to": to,
+			"customer_account_id": customerAccountID,
+			"key_id": keyID,
+			"key_name": keyName,
+			"extra_value1": extraValue1,
+			"report_name": reportName,
+			"time_zone": timeZone,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
-	customerAccountIDs := strings.Split(customerAccountID, ",")
+		logCtx := log.WithFields(logFields)
+		customerAccountIDs := strings.Split(customerAccountID, ",")
 	performanceQuery := "SELECT campaign_id as campaignID, ad_set_id as adgroupID, '$none' as keywordID, ad_id as adID, " +
 		"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
@@ -281,9 +312,21 @@ func (store *MemSQL) PullFacebookMarketingData(projectID uint64, from, to int64,
 // PullLinkedinMarketingData Pulls Adds channel data for Linkedin.
 func (store *MemSQL) PullLinkedinMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
 	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"from": from,
+			"to": to,
+			"customer_account_id": customerAccountID,
+			"key_id": keyID,
+			"key_name": keyName,
+			"extra_value1": extraValue1,
+			"report_name": reportName,
+			"time_zone": timeZone,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
-	customerAccountIDs := strings.Split(customerAccountID, ",")
+		logCtx := log.WithFields(logFields)
+		customerAccountIDs := strings.Split(customerAccountID, ",")
 	performanceQuery := "SELECT campaign_group_id as campaignID, campaign_id as adgroupID, '$none' as keywordID, creative_id as adID, " +
 		"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
@@ -305,6 +348,12 @@ func (store *MemSQL) PullLinkedinMarketingData(projectID uint64, from, to int64,
 }
 
 func (store *MemSQL) PullCustomDimensionData(projectID uint64, attributionKey string, marketingReport *model.MarketingReports) error {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"attribution_key": model.AttributionMethodFirstTouch,
+		"marketing_report": marketingReport,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// Custom Dimensions are support only for Campaign and Adgroup currently
 	if attributionKey != model.AttributionKeyCampaign && attributionKey != model.AttributionKeyAdgroup {
@@ -346,9 +395,20 @@ func (store *MemSQL) PullCustomDimensionData(projectID uint64, attributionKey st
 
 // PullSmartProperties Pulls Smart Properties
 func (store *MemSQL) PullSmartProperties(projectID uint64, campaignIDPlaceHolder string, campaignNamePlaceHolder string, adgroupIDPlaceHolder string, adgroupNamePlaceHolder string, sourceChannelPlaceHolder string, objectType int, attributionKey string) (map[string]model.MarketingData, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"campaign_id_place_holder": campaignIDPlaceHolder,
+		"campaign_name_place_holder": campaignNamePlaceHolder,
+		"adgroup_id_place_holder": adgroupIDPlaceHolder,
+		"ad_group_name_place_holder": adgroupNamePlaceHolder,
+		"source_channel_place_holder": sourceChannelPlaceHolder,
+		"object_type": objectType,
+		"attribution_key": attributionKey,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder})
+	logCtx := log.WithFields(logFields)
 	stmt := "SELECT JSON_EXTRACT_STRING(object_property, ?) AS campaignID,  JSON_EXTRACT_STRING(object_property, ?) AS campaignName, " +
 		"JSON_EXTRACT_STRING(object_property, ?) AS adgroupID,  JSON_EXTRACT_STRING(object_property, ?) AS adgroupName, " +
 		"properties FROM smart_properties " +

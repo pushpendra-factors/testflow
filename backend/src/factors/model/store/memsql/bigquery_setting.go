@@ -6,12 +6,17 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) satisfiesBigquerySettingsForeignConstraints(setting model.BigquerySetting) int {
+	logFields := log.Fields{
+		"setting": setting,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, errCode := store.GetProject(setting.ProjectID)
 	if errCode != http.StatusFound {
 		return http.StatusBadRequest
@@ -21,11 +26,12 @@ func (store *MemSQL) satisfiesBigquerySettingsForeignConstraints(setting model.B
 
 // CreateBigquerySetting Validates and creates a new bigquery entry for the given setting.
 func (store *MemSQL) CreateBigquerySetting(setting *model.BigquerySetting) (*model.BigquerySetting, int) {
-	logCtx := log.WithFields(log.Fields{
-		"Prefix":            "Model#BigquerySetting",
-		"ProjectID":         setting.ProjectID,
-		"BigqueryProjectId": setting.BigqueryProjectID,
-	})
+	logFields := log.Fields{
+		"setting": setting,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
 
 	if setting.ID == "" {
 		setting.ID = U.GetUUID()
@@ -55,6 +61,11 @@ func (store *MemSQL) CreateBigquerySetting(setting *model.BigquerySetting) (*mod
 
 // UpdateBigquerySettingLastRunAt Updates LastRunAt for a given setting. Other fields are not updated.
 func (store *MemSQL) UpdateBigquerySettingLastRunAt(settingID string, lastRunAt int64) (int64, int) {
+	logFields := log.Fields{
+		"setting_id": settingID,
+		"last_run_at": lastRunAt,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	db = db.Model(&model.BigquerySetting{}).Where("id = ?", settingID).
 		Updates(map[string]interface{}{
@@ -71,6 +82,10 @@ func (store *MemSQL) UpdateBigquerySettingLastRunAt(settingID string, lastRunAt 
 
 // GetBigquerySettingByProjectID Return bigquery setting for a given project_id of projects table.
 func (store *MemSQL) GetBigquerySettingByProjectID(projectID uint64) (*model.BigquerySetting, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		log.Error("Invalid project id")
 		return nil, http.StatusInternalServerError

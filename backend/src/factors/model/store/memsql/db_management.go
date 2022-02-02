@@ -4,11 +4,18 @@ import (
 	C "factors/config"
 	"fmt"
 	"net/http"
+	"time"
+	"factors/model/model"
+	
 
 	log "github.com/sirupsen/logrus"
 )
 
 func getNonAnalyzedTablesInAnInterval(intervalInMinutes int) ([]string, int) {
+	logFields := log.Fields{
+		"interval_in_minutes": intervalInMinutes,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	tableNames := make([]string, 0, 0)
 
 	query := "SELECT distinct(table_name) FROM information_schema.OPTIMIZER_STATISTICS" + " " +
@@ -37,6 +44,10 @@ func getNonAnalyzedTablesInAnInterval(intervalInMinutes int) ([]string, int) {
 }
 
 func analyzeTables(tables []string) (int, []string) {
+	logFields := log.Fields{
+		"tables": tables,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	failedTables := make([]string, 0, 0)
 	for i := range tables {
 		table := tables[i]
@@ -64,6 +75,10 @@ func analyzeTables(tables []string) (int, []string) {
 }
 
 func AnalyzeTableInAnInterval(intervalInMinutes int) (int, []string) {
+	logFields := log.Fields{
+		"interval_in_minutes": intervalInMinutes,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if intervalInMinutes <= 0 {
 		log.Error("Invalid interval")
 		return http.StatusInternalServerError, []string{}
