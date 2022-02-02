@@ -38,6 +38,7 @@ const enableSegment = () => {
         udpateProjectSettings(activeProject.id, 
         { 'int_segment' : true 
     }).then(() => {
+        fetchProjectSettings(activeProject.id);
         setLoading(false);
         setShowForm(false); 
         setTimeout(() => {
@@ -58,6 +59,7 @@ const enableSegment = () => {
         udpateProjectSettings(activeProject.id, 
         { 'int_segment' : false 
     }).then(() => {
+        fetchProjectSettings(activeProject.id);
         setLoading(false);
         setShowForm(false); 
         setTimeout(() => {

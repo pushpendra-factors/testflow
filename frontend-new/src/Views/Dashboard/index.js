@@ -32,7 +32,6 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
 
   useEffect(() => {
       fetchProjectSettingsV1(activeProject.id).then((res) => {
-          console.log('fetch project settings success');
           setsdkCheck(res.data.int_completed);
       }).catch((err) => {
         console.log(err.data.error)
@@ -51,20 +50,6 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
   integration?.int_drift ||
   integration?.int_google_organic_enabled_agent_uuid ||
   integration?.int_clear_bit || sdkCheck;
-
-  useEffect(() => {
-    fetchDemoProject().then((res) => {
-      const projectId = res.data[0];
-      console.log(res.data[0]);
-      if(activeProject.id === projectId) {
-        history.push('/')
-      } else if (!checkIntegration) {
-        history.push('/project-setup')
-      }
-    }).catch((err) => {
-      console.log(err.data.error);
-    })
-  },[checkIntegration, activeProject])
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
