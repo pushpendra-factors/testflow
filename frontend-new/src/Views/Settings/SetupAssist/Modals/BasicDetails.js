@@ -58,10 +58,10 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
       });
   };
 
-//   const onSkip = () => {
-//     form.resetFields();
-//     setFormData(true)
-//   };
+  const onSkip = () => {
+    form.resetFields();
+    setFormData(true);
+  };
 
   function getBase64(img, callback) {
     const reader = new FileReader();
@@ -185,7 +185,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                                 </Form.Item>
                             </div>
                         </Col>
-                        {/* <Col span={24}>
+                        <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
                                     <Button size={'large'} type={'text'} style={{width:'28vw', height:'36px'}} htmlType="text" onClick={onSkip}>
@@ -193,7 +193,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                                     </Button>
                                 </Form.Item>
                             </div>
-                        </Col> */}
+                        </Col>
                     </Row>
                     </Form>
                         

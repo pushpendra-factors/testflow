@@ -23,7 +23,7 @@ function Sidebar(props) {
   const { Sider } = Layout;
 
   const [visible, setVisible] = useState(false);
-  const [showProjectModal, setShowProjectModal] = useState(null);
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
@@ -68,16 +68,21 @@ function Sidebar(props) {
       //Factors FIRST_TIME_LOGIN tracking
       factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'true'});
     }
-  }, [])
+  }, [props.agents])
 
 
 
   useEffect(() => {
     if(props?.agent_details){
       //Factors identify users
-      factorsai.identify(props?.agent_details?.email,props?.agent_details); 
+      let userAndProjectDetails = {
+        ...props?.agent_details,
+        project_name: props?.active_project?.name,
+        project_id: props?.active_project?.id
+      };
+      factorsai.identify(props?.agent_details?.email,userAndProjectDetails); 
     }
-  }, [props?.agent_details]);
+  }, [props?.agent_details, props?.active_project]);
 
 
 
