@@ -37,49 +37,56 @@ function Sidebar(props) {
     setsearchProjectName(e.target.value);
   };
 
+
+  const UpdateOnboardingSeen = () =>{
+    props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
+      props.fetchAgentInfo();
+    });
+      //Factors FIRST_TIME_LOGIN tracking for NON_INVITED
+      factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email});
+  }
+
   useEffect(() => {
 
-    const getData = async () => {
-      await props.fetchProjectAgents(props.active_project?.id);
-      await props.fetchAgentInfo(); 
-    };
-    getData();  
-    let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);
-    if(!agent || !agent[0]?.invited_by) {
-          if (props.currentAgent?.is_onboarding_flow_seen) {
-              setShowProjectModal(false);
-            } else {
-              setShowProjectModal(true);
-          }
-          props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
-              props.fetchAgentInfo().then(() => {
-                  console.log('Profile details updated!');
-              });
-          }).catch((err) => {
-              console.log('updateAgentInfo failed-->', err);
-          }); 
-          //Factors FIRST_TIME_LOGIN tracking for NON_INVITED
-          factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'false'});
-      } else {
-         //Factors FIRST_TIME_LOGIN tracking for INVITED
-         factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'true'});
+    //checks if project agents are available. for demo projects no agents! API throws error
+      if(!props.agents){
+        props.fetchProjectAgents(props.active_project?.id); 
+      }
+    //checks for current agent details, will work for demo projects also.
+      if(!props.currentAgent){
+        props.fetchAgentInfo();
       } 
+      //for all non-demo projects
+      if(props.agents && props.currentAgent){ 
+        let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);  
+        if(agent[0]?.invited_by) {
+          setShowProjectModal(false);
+        }
+        else if(!props.currentAgent?.is_onboarding_flow_seen){
+          setShowProjectModal(true);
+          UpdateOnboardingSeen(); 
+        } 
+      } //for demo-projects only
+      else if(props.currentAgent && !props.currentAgent?.is_onboarding_flow_seen){
+        setShowProjectModal(true);
+        UpdateOnboardingSeen(); 
+      }   
 
-  }, [props.active_project]);
+  }, [props.active_project, props.agents, props.currentAgent]);
 
 
 
   useEffect(() => {
-    if(props?.agent_details){
+    if(props?.currentAgent){
       //Factors identify users
       let userAndProjectDetails = {
-        ...props?.agent_details,
+        ...props?.currentAgent,
         project_name: props?.active_project?.name,
         project_id: props?.active_project?.id
       };
-      factorsai.identify(props?.agent_details?.email,userAndProjectDetails); 
+      factorsai.identify(props?.currentAgent?.email,userAndProjectDetails); 
     }
-  }, [props?.agent_details, props?.active_project]);
+  }, [props?.currentAgent, props?.active_project]);
 
 
 
@@ -274,8 +281,7 @@ const mapStateToProps = (state) => {
     projects: state.global.projects,
     active_project: state.global.active_project,
     currentAgent: state.agent.agent_details,
-    agents: state.agent.agents,
-    agent_details: state.agent.agent_details
+    agents: state.agent.agents, 
   };
 };
 export default connect(mapStateToProps, { fetchProjectAgents, setActiveProject, signout, updateAgentInfo, fetchAgentInfo })(Sidebar);
