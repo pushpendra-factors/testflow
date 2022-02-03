@@ -319,7 +319,7 @@ function CoreQuery({
         ); 
         
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_EVENT});
+        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_EVENT});
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -416,7 +416,7 @@ function CoreQuery({
         );
         
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_FUNNEL});
+        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_FUNNEL});
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -483,7 +483,7 @@ function CoreQuery({
         ); 
 
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_ATTRIBUTION});
+        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_ATTRIBUTION});
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -583,7 +583,7 @@ function CoreQuery({
         );
         
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_KPI});
+        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_KPI});
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -652,7 +652,7 @@ function CoreQuery({
         );  
 
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_CAMPAIGN});
+        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_CAMPAIGN});
 
         setCampaignState({
           channel: query.query_group[0].channel,
@@ -708,7 +708,7 @@ function CoreQuery({
         ); 
 
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_PROFILE});
+        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_PROFILE});
 
 
         configActionsOnRunningQuery(isQuerySaved);

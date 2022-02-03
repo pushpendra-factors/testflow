@@ -893,13 +893,28 @@ def hubspot_sync(configs):
 
     for info in next_sync_info:
         log.warning("Current processing sync_info: "+str(info))
-        response = sync(info.get("project_id"), info.get("api_key"), 
-                info.get("doc_type"), info.get("sync_all"), info.get("last_sync_timestamp"))
-        if response["status"] == "failed":
-            next_sync_failures.append(response)
-        else:
-            next_sync_success.append(response)
-    
+        notification_payload = {}
+        try:
+            response = sync(info.get("project_id"), info.get("api_key"),
+                    info.get("doc_type"), info.get("sync_all"), info.get("last_sync_timestamp"))
+            if response["status"] == "failed":
+                next_sync_failures.append(response)
+                notification_payload["status"]= "Failures on sync."
+                notification_payload["failures"] = [response]
+                notification_payload["success"] = []
+            else:
+                next_sync_success.append(response)
+                notification_payload["status"]= "Successfully synced."
+                notification_payload["failures"] = []
+                notification_payload["success"] = [response]
+            
+            update_sync_status(notification_payload, first_sync)
+        except Exception as e:
+            project_id = info.get("project_id")
+            doc_type = info.get("doc_type")
+            log.warning("Failed to process doc type %s for project_id %d. exception: %s", doc_type, project_id, str(e))
+            next_sync_failures.append(str(project_id)+":"+doc_type+" -> "+str(e))
+
     sync_status = {
         "next_sync_failures":next_sync_failures,
         "next_sync_success": next_sync_success
@@ -993,10 +1008,10 @@ if __name__ == "__main__":
     }
 
     log.warning("Successfully synced. End of hubspot sync job.")
-    try:
-        update_sync_status(notification_payload, options.first_sync)
-        if err!="": # append error after processing data
+    if err!="": # append error after processing data
             next_sync_failures.insert(0,err)
+    
+    try:
         if options.first_sync == True:
             ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload)
         else:
@@ -1006,6 +1021,7 @@ if __name__ == "__main__":
                 ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload)
 
     except Exception as e:
+        log.warning(e)
         next_sync_failures.append(str(e))
         if options.first_sync == True:
             ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload, endpoint="/fail")
