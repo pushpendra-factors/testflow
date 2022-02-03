@@ -7,7 +7,7 @@ import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject } from 'Reducers/global';
-import { updateAgentInfo, fetchAgentInfo } from 'Reducers/agentActions';
+import { updateAgentInfo, fetchAgentInfo, fetchProjectAgents } from 'Reducers/agentActions';
 import { signout } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
@@ -15,7 +15,7 @@ import CreateNewProject from './CreateNewProject';
 import _ from 'lodash';
 import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
 import { useTour } from "@reactour/tour";
-import factorsai from 'factorsai';
+import factorsai from 'factorsai'; 
 
 // const ColorCollection = ['#4C9FC8','#4CBCBD', '#86D3A3', '#F9C06E', '#E89E7B', '#9982B5'];
 
@@ -38,37 +38,34 @@ function Sidebar(props) {
   };
 
   useEffect(() => {
+
+    const getData = async () => {
+      await props.fetchProjectAgents(props.active_project?.id);
+      await props.fetchAgentInfo(); 
+    };
+    getData();  
     let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);
     if(!agent || !agent[0]?.invited_by) {
-      if (props.currentAgent?.is_onboarding_flow_seen) {
-          setShowProjectModal(false);
-      } else {
-        setShowProjectModal(true);
+          if (props.currentAgent?.is_onboarding_flow_seen) {
+              setShowProjectModal(false);
+            } else {
+              setShowProjectModal(true);
+          }
           props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
               props.fetchAgentInfo().then(() => {
                   console.log('Profile details updated!');
               });
           }).catch((err) => {
               console.log('updateAgentInfo failed-->', err);
-          });
-
-          //Factors FIRST_TIME_LOGIN tracking
+          }); 
+          //Factors FIRST_TIME_LOGIN tracking for NON_INVITED
           factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'false'});
-      }
-    } else {
-      setShowProjectModal(false);
-      props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
-          props.fetchAgentInfo().then(() => {
-              console.log('Profile details updated!');
-          });
-      }).catch((err) => {
-          console.log('updateAgentInfo failed-->', err);
-      });
+      } else {
+         //Factors FIRST_TIME_LOGIN tracking for INVITED
+         factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'true'});
+      } 
 
-      //Factors FIRST_TIME_LOGIN tracking
-      factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'true'});
-    }
-  }, [props.agents])
+  }, [props.active_project]);
 
 
 
@@ -281,4 +278,4 @@ const mapStateToProps = (state) => {
     agent_details: state.agent.agent_details
   };
 };
-export default connect(mapStateToProps, { setActiveProject, signout, updateAgentInfo, fetchAgentInfo })(Sidebar);
+export default connect(mapStateToProps, { fetchProjectAgents, setActiveProject, signout, updateAgentInfo, fetchAgentInfo })(Sidebar);
