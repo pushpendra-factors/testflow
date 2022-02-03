@@ -38,7 +38,8 @@ function Sidebar(props) {
   };
 
   useEffect(() => {
-    if(!props.currentAgent?.last_logged_in) {
+    let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);
+    if(!agent || !agent[0]?.invited_by) {
       if (props.currentAgent?.is_onboarding_flow_seen) {
           setShowProjectModal(false);
       } else {
