@@ -9,6 +9,7 @@ import { createProjectWithTimeZone, udpateProjectDetails } from 'Reducers/global
 import { TimeZoneOffsetValues } from 'Utils/constants'; 
 import Congrates from './Congrates';
 import 'animate.css';
+import factorsai from 'factorsai';
 const { Option } = Select;
 
 const getKeyByValue = (obj, value) =>  Object.keys(obj).find(key => obj[key]?.city === value);
@@ -34,6 +35,10 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
         name: values.projectName,
         time_zone: TimeZoneOffsetValues[values.time_zone]?.city
       }; 
+
+      //Factors CREATE_PROJECT_TIMEZONE tracking
+      factorsai.track('CREATE_PROJECT_TIMEZONE',{'ProjectName':projectData?.name,'time_zone':projectData?.time_zone});
+
       createProjectWithTimeZone(projectData).then((res) => {
         const projectId = res.data.id;
         if(imageUrl) {

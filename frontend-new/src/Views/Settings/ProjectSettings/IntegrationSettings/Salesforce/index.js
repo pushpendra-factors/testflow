@@ -7,6 +7,7 @@ import {
   } from 'antd'; 
   import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
   import {ErrorBoundary} from 'react-error-boundary';
+  import factorsai from 'factorsai';
   
 const SalesForceIntegration = ({
     fetchProjectSettings,
@@ -41,12 +42,35 @@ useEffect(()=>{
   }
 
   const  onClickEnableSalesforce = () => {
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'salesforce','activeProjectID': activeProject.id});
+
     enableSalesforceIntegration(activeProject.id.toString())
       .then((r) => {
         if (r.status == 304) {
           handleRedirectToURL();
         }
       });
+  }
+
+  const onDisconnect = () =>{
+    setLoading(true);
+        udpateProjectSettings(activeProject.id, 
+        { 'int_salesforce_enabled_agent_uuid' : ""
+    }).then(() => {
+        setLoading(false);
+        setShowForm(false); 
+        setTimeout(() => {
+            message.success('Salesforce integration disconnected!'); 
+        }, 500);
+        setIsActive(false);
+    }).catch((err) => {
+        message.error(`${err?.data?.error}`);  
+        setShowForm(false);
+        setLoading(false);
+        console.log('change password failed-->', err); 
+    });
   }
 
 const isEnabled = isSalesforceEnabled();
@@ -58,6 +82,7 @@ return (
       <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}>
             <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Account Connected</Text>
             <Text type={'title'} level={7} color={'grey'}  extraClass={'m-0 mt-2'}>Salesforce sync is enabled</Text>
+            <Button loading={loading} className={'mt-4'} onClick={()=>onDisconnect()}>Disconnect</Button>
       </div>
     </>} 
     {!isEnabled && <>

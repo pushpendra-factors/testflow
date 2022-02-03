@@ -18,12 +18,14 @@ import {
   fetchSearchConsoleCustomerAccounts,
   udpateProjectSettings,
   fetchProjectSettings,
+  deleteIntegration
 } from 'Reducers/global';
 const isDevelopment = () => {
   return ENV === 'development';
 };
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
+import factorsai from 'factorsai';
 const getGSCHostURL = () => {
   // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
   return BUILD_CONFIG.backend_host;
@@ -39,6 +41,7 @@ const GoogleSearchConsole = ({
   udpateProjectSettings,
   fetchProjectSettings,
   kbLink = false,
+  deleteIntegration
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -55,11 +58,9 @@ const GoogleSearchConsole = ({
   const onDisconnect = () => {
     setLoading(true);
     setCustomerAccounts(false);
-    udpateProjectSettings(activeProject.id, {
-      int_google_organic_url_prefixes: '',
-      int_google_organic_enabled_agent_uuid: '',
-    })
+    deleteIntegration(activeProject.id, 'google_organic')
       .then(() => {
+        fetchProjectSettings(activeProject.id);
         setLoading(false);
         setShowModal(false);
         setShowURLModal(false);
@@ -168,6 +169,10 @@ const GoogleSearchConsole = ({
 
   const onClickFinishSetup = () => {
     let selectedGSCAcc = selectedGSCAccounts.join(', ');
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'google_organic','activeProjectID': activeProject.id});
+
     udpateProjectSettings(activeProject.id, {
       int_google_organic_url_prefixes: selectedGSCAcc,
     }).then(() => {
@@ -356,7 +361,7 @@ const GoogleSearchConsole = ({
         <div>{customerAccountsLoaded && renderAccountsList()}</div>
 
         <div className={'mt-4 flex'}>
-          {!currentProjectSettings?.int_google_organic_enabled_agent_uuid && (
+          {!currentProjectSettings?.int_google_organic_enabled_agent_uuid ?
             <Button
               className={'mr-2'}
               type={'primary'}
@@ -365,15 +370,15 @@ const GoogleSearchConsole = ({
             >
               Enable using Google
             </Button>
-            // ) : (
-            //   <Button
-            //     className={'mr-2'}
-            //     loading={loading}
-            //     onClick={() => onDisconnect()}
-            //   >
-            //     Disconnect
-            //   </Button>
-          )}
+              :
+            <Button
+              className={'mr-2'}
+              loading={loading}
+              onClick={() => onDisconnect()}
+            >
+              Disconnect
+            </Button>
+          }
           {kbLink && (
             <a className={'ant-btn'} target={'_blank'} href={kbLink}>
               View documentation
@@ -448,4 +453,5 @@ export default connect(mapStateToProps, {
   enableSearchConsoleIntegration,
   fetchSearchConsoleCustomerAccounts,
   udpateProjectSettings,
+  deleteIntegration
 })(GoogleSearchConsole);

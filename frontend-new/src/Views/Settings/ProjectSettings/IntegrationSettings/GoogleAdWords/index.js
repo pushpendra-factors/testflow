@@ -18,12 +18,14 @@ import {
   fetchAdwordsCustomerAccounts,
   udpateProjectSettings,
   fetchProjectSettings,
+  deleteIntegration
 } from 'Reducers/global';
 const isDevelopment = () => {
   return ENV === 'development';
 };
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
+import factorsai from 'factorsai';
 const getAdwordsHostURL = () => {
   // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
   return BUILD_CONFIG.backend_host;
@@ -39,6 +41,7 @@ const GoogleIntegration = ({
   udpateProjectSettings,
   fetchProjectSettings,
   kbLink = false,
+  deleteIntegration
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -55,11 +58,9 @@ const GoogleIntegration = ({
   const onDisconnect = () => {
     setLoading(true);
     setCustomerAccounts(false);
-    udpateProjectSettings(activeProject.id, {
-      int_adwords_customer_account_id: '',
-      int_adwords_enabled_agent_uuid: '',
-    })
+    deleteIntegration(activeProject.id, 'adwords')
       .then(() => {
+        fetchProjectSettings(activeProject.id);
         setLoading(false);
         setShowModal(false);
         setShowURLModal(false);
@@ -168,6 +169,10 @@ const GoogleIntegration = ({
 
   const onClickFinishSetup = () => {
     let selectedAdwordsAcc = selectedAdwordsAccounts.join(', ');
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'adwords','activeProjectID': activeProject.id});
+
     udpateProjectSettings(activeProject.id, {
       int_adwords_customer_account_id: selectedAdwordsAcc,
     }).then(() => {
@@ -382,7 +387,7 @@ const GoogleIntegration = ({
         <div>{customerAccountsLoaded && renderAccountsList()}</div>
 
         <div className={'mt-4 flex'}>
-          {!currentProjectSettings?.int_adwords_enabled_agent_uuid && (
+          {!currentProjectSettings?.int_adwords_enabled_agent_uuid ? 
             <Button
               className={'mr-2'}
               type={'primary'}
@@ -391,15 +396,15 @@ const GoogleIntegration = ({
             >
               Enable using Google
             </Button>
-            //   ) : (
-            //     <Button
-            //       className={'mr-2'}
-            //       loading={loading}
-            //       onClick={() => onDisconnect()}
-            //     >
-            //       Disconnect
-            //     </Button>
-          )}
+              :
+            <Button
+              className={'mr-2'}
+              loading={loading}
+              onClick={() => onDisconnect()}
+            >
+              Disconnect
+            </Button>
+          }
           {kbLink && (
             <a className={'ant-btn'} target={'_blank'} href={kbLink}>
               View documentation
@@ -474,4 +479,5 @@ export default connect(mapStateToProps, {
   enableAdwordsIntegration,
   fetchAdwordsCustomerAccounts,
   udpateProjectSettings,
+  deleteIntegration
 })(GoogleIntegration);

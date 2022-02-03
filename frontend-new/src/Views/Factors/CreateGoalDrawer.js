@@ -14,7 +14,8 @@ import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 import EventFilterBy from './DrawerUtil/EventFilterBy';
 // import MomentTz from 'Components/MomentTz';
 import moment from 'moment-timezone';  
-import factorsai from 'factorsai';
+
+
 
 
 const title = (props) => {

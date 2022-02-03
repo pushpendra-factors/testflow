@@ -7,6 +7,7 @@ import {
   } from 'antd';
   import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
   import {ErrorBoundary} from 'react-error-boundary'
+  import factorsai from 'factorsai';
 
 
 const HubspotIntegration = ({
@@ -30,6 +31,10 @@ const HubspotIntegration = ({
 
 const onFinish = values => { 
     setLoading(true);
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'hubspot','activeProjectID': activeProject.id});
+
         udpateProjectSettings(activeProject.id, 
         { 'int_hubspot_api_key': values.api_key, 
         'int_hubspot' : true 

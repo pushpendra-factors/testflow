@@ -85,6 +85,7 @@ function AppLayout({
       dispatch(fetchQueries(active_project.id));
       dispatch(fetchKPIConfig(active_project.id));
       dispatch(fetchPageUrls(active_project.id));
+      // dispatch(deleteQueryTest())
       fetchEventNames(active_project.id);
       getUserProperties(active_project.id);
       dispatch(fetchSmartPropertyRules(active_project.id));
@@ -128,7 +129,7 @@ function AppLayout({
                     component={CoreQuery}
                   />
                   <Route path="/explain" name="Factors" component={Factors} />
-                  {/* <Route path="/project-setup" component={SetupAssist} /> */}
+                  <Route path="/project-setup" component={SetupAssist} />
                 </Switch>
               </Suspense>
             </Content>

@@ -41,7 +41,6 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
             const owner = getOwner();
 
             getHubspotContact(data.email).then((res) => {
-                console.log('get hubspot contact succes')
                 setownerID(res.data.hubspot_owner_id)
             }).catch((err) => {
                 console.log(err.data.error)
@@ -68,11 +67,11 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
                     },
                     {
                         "property": "monthly_tracked_users",
-                        "value": values.monthly_tracked_users
+                        "value": values.monthly_tracked_users ? values.monthly_tracked_users : ''
                     },
                     {
                         "property": "team_size",
-                        "value": values.team_size
+                        "value": values.team_size ? values.team_size : ''
                     },
                     {
                         "property": "hubspot_owner_id",
@@ -154,7 +153,7 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
                                             <Input
                                                 className={'fa-input w-full'}
                                                 size={'large'}
-                                                placeholder="Company Website"
+                                                placeholder="Example: Acme.com"
                                                 disabled={dataLoading}
                                             />
                                             </Form.Item>
@@ -164,7 +163,7 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
                                     <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
                                             <Form.Item label={null}
                                             name="monthly_tracked_users"
-                                            rules={[{ required: true, message: 'Please select Estimated monthly tracked users' }]}
+                                            // rules={[{ required: true, message: 'Please select Estimated monthly tracked users' }]}
                                             >
                                             <Select
                                                 placeholder="Estimated monthly tracked users"
@@ -182,7 +181,7 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
                                     <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
                                             <Form.Item label={null}
                                             name="team_size"
-                                            rules={[{ required: true, message: 'Please select team size' }]}
+                                            // rules={[{ required: true, message: 'Please select team size' }]}
                                             >
                                             <Select
                                                 placeholder="Team Size"

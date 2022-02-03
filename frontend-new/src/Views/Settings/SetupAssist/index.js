@@ -25,7 +25,6 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
     useEffect(() => {
         let email = currentAgent.email;
         getHubspotContact(email).then((res) => {
-            console.log('get hubspot contact succes', res.data)
             setownerID(res.data.hubspot_owner_id)
         }).catch((err) => {
             console.log(err.data.error)
@@ -47,7 +46,6 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
 
     useEffect(() => {
         fetchProjectSettingsV1(activeProject.id).then((res) => {
-            console.log('fetch project settings success');
             setsdkCheck(res.data.int_completed);
         });
     }, [activeProject, sdkCheck]);

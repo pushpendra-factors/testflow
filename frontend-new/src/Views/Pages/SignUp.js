@@ -7,6 +7,7 @@ import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 import { signup } from 'Reducers/agentActions';
 import UserData from './UserData';
+import factorsai from 'factorsai';
 
 function SignUp({ signup }) {
   const [form] = Form.useForm();
@@ -23,6 +24,10 @@ function SignUp({ signup }) {
     setDataLoading(true);
     form.validateFields().then((values) => {
         setDataLoading(true);
+
+        //Factors SIGNUP tracking
+        factorsai.track('SIGNUP',{'first_name':values?.first_name,'last_name':values?.last_name,'email':values?.email});
+
         const filteredValues = Object.fromEntries(
         Object.entries(values).filter(([key, value]) => key !== 'terms_and_conditions') );
         

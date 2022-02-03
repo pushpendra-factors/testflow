@@ -207,6 +207,7 @@ type Configuration struct {
 	HubspotAPIOnboardingHAPIKey                 string
 	AllowProfilesGroupSupport                   string
 	DebugEnabled                                bool
+	MergeAmpIDAndSegmentIDWithUserIDByProjectID string
 }
 
 type Services struct {
@@ -1988,6 +1989,15 @@ func CheckRestrictReusingUsersByCustomerUserId(projectId uint64) bool {
 		return true
 	}
 	return false
+}
+
+func AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(configuration.MergeAmpIDAndSegmentIDWithUserIDByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }
 
 func IsProfileGroupSupportEnabled(projectId uint64) bool {

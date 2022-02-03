@@ -127,16 +127,11 @@ export const getTableColumns = (
   const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
   const result = [
     {
-      title: '',
-      dataIndex: '',
-      width: 37,
-    },
-    {
       title: getClickableTitleSorter(
         'Date',
         { key: 'date', type: 'datetime', subtype: 'date' },
         currentSorter,
-        handleSorting
+        handleSorting,
       ),
       dataIndex: 'date',
       render: (d) => {
@@ -154,8 +149,10 @@ export const getTableColumns = (
           subtype: null,
         },
         currentSorter,
-        handleSorting
+        handleSorting,
+        'right'
       ),
+      className: 'text-right',
       dataIndex: `${e} - ${idx}`,
       render: (d) => {
         return <NumFormat number={d} />;
@@ -196,8 +193,10 @@ export const getDateBasedColumns = (
       'Overall',
       { key: `Overall`, type: 'numerical', subtype: null },
       currentSorter,
-      handleSorting
+      handleSorting,
+      'right'
     ),
+    className: 'text-right',
     dataIndex: `Overall`,
     width: 150,
     render: (d) => {
@@ -235,9 +234,11 @@ export const getDateBasedColumns = (
           subtype: null,
         },
         currentSorter,
-        handleSorting
+        handleSorting,
+        'right'
       ),
-      width: frequency === 'hour' ? 150 : 100,
+      className: 'text-right',
+      width: frequency === 'hour' ? 200 : 150,
       dataIndex: moment(cat).format(format),
       render: (d) => {
         return <NumFormat number={d} />;

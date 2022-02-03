@@ -209,10 +209,25 @@ export function fetchProjects() {
   };
 }
 
+export function fetchDemoProject() {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'v1/demoprojects')
+        .then((response) => {
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_PROJECTS_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
 export function createProject(projectName) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(dispatch, host + 'projects', { name: projectName })
+      post(dispatch, host + 'projects?create_dashboard=false', { name: projectName })
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'CREATE_PROJECT_FULFILLED', payload: r.data });
@@ -574,6 +589,19 @@ export function fetchSearchConsoleCustomerAccounts(payload) {
         })
         .catch((err) => {
           reject(err);
+        });
+    });
+  };
+}
+
+export function deleteIntegration(projectId, name) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'integrations/'+ projectId +'/' + name)
+      .then((res) => {
+            resolve(res);
+        }).catch((err) => {
+            reject(err);
         });
     });
   };

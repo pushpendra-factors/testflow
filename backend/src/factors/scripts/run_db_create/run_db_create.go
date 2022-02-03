@@ -724,6 +724,14 @@ func main() {
 	} else {
 		log.Info("Created feedback table.")
 	}
+
+	// create weekly_insights_metadata table
+	if err := db.CreateTable(&model.WeeklyInsightsMetadata{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("weekly_insights_metadata table creation failed.")
+	} else {
+		log.Info("Created weekly_insights_metadata table.")
+	}
+
 	if err := db.Exec("ALTER TABLE events DROP CONSTRAINT events_project_id_event_name_id_event_names_project_id_id_foreign_key;").Error; err != nil {
 		log.WithError(err).Error("Failed to drop constraint on events table")
 	} else {

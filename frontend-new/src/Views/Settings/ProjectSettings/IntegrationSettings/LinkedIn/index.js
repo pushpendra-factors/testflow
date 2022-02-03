@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useEffect } from 'react';
 import { connect } from 'react-redux';
-import { fetchProjectSettings, udpateProjectSettings, addLinkedinAccessToken } from 'Reducers/global';
+import { fetchProjectSettings, udpateProjectSettings, addLinkedinAccessToken, deleteIntegration } from 'Reducers/global';
 import {
     Button, message, Select, Modal, Row, Col, Input
 } from 'antd';  
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
+import factorsai from 'factorsai';
 
 const LinkedInIntegration = ({
     fetchProjectSettings,
@@ -15,7 +16,8 @@ const LinkedInIntegration = ({
     currentProjectSettings,
     setIsActive,
     addLinkedinAccessToken,
-    kbLink = false
+    kbLink = false,
+    deleteIntegration
 }) => {
     const [loading, setLoading] = useState(false);
     const [FbResponse, SetFbResponse] = useState(null);
@@ -126,6 +128,10 @@ const LinkedInIntegration = ({
 
     const handleSubmit = e => {
         e.preventDefault(); 
+
+        //Factors INTEGRATION tracking
+        factorsai.track('INTEGRATION',{'name': 'linkedin','activeProjectID': activeProject.id});
+
         if (SelectedAdAccount != "") {
             const data = {
                 "int_linkedin_ad_account": SelectedAdAccount,
@@ -149,6 +155,25 @@ const LinkedInIntegration = ({
 
         }
     }
+
+    const onDisconnect = () =>{
+        setLoading(true);
+        deleteIntegration(activeProject.id, 'linkedin')
+        .then(() => {
+            fetchProjectSettings(activeProject.id);
+            setLoading(false);
+            setShowForm(false); 
+            setTimeout(() => {
+                message.success('LinkedIn integration disconnected!'); 
+            }, 500);
+            setIsActive(false);
+        }).catch((err) => {
+            message.error(`${err?.data?.error}`);  
+            setShowForm(false);
+            setLoading(false);
+            console.log('change password failed-->', err); 
+        });
+      }
 
     const getAdAccountsOptSrc = () => {
         let opts = {}
@@ -236,6 +261,7 @@ const LinkedInIntegration = ({
                         <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Connected Account</Text>
                         <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Selected LinkedIn Ad Account</Text>
                         <Input size="large" disabled={true} value={currentProjectSettings?.int_linkedin_ad_account} style={{ width: '400px' }} />
+                        <Button loading={loading} className={'mt-4'} onClick={()=>onDisconnect()}>Disconnect</Button>
                     </div>
                 )
             }
@@ -264,4 +290,4 @@ const mapStateToProps = (state) => ({
     currentProjectSettings: state.global.currentProjectSettings
 });
 
-export default connect(mapStateToProps, { addLinkedinAccessToken, fetchProjectSettings, udpateProjectSettings })(LinkedInIntegration)
+export default connect(mapStateToProps, { addLinkedinAccessToken, fetchProjectSettings, udpateProjectSettings, deleteIntegration })(LinkedInIntegration)
