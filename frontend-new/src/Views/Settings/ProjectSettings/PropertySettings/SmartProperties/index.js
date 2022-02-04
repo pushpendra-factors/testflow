@@ -144,11 +144,11 @@ function SmartProperties({ activeProject,
 
 
     useEffect(() => {
-        if (activeProject?.id) {
+        if (activeProject?.id && (!config?.name || config?.name !== smartPropState.type_alias)) {
             fetchSmartPropertiesConfig(activeProject.id, smartPropState?.type_alias ? smartPropState.type_alias : 'campaign');
         }
 
-    }, [activeProject]);
+    }, [activeProject, smartPropState]);
 
     useEffect(() => {
         const columData = [];

@@ -64,7 +64,7 @@ const defaultState = {
   touchpoint: '',
   touchpoint_filters: [],
   attr_query_type: 'EngagementBased',
-  tacticOfferType: '',
+  tacticOfferType: 'Tactic',
   attr_dateRange: {
     ...DefaultDateRangeFormat,
     dateStr: '',
