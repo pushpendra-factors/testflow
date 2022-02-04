@@ -1296,10 +1296,10 @@ func BuildNewItreeV1(reqId string,
 		EndEvent: endEvent,
 	}
 
-	events, _ := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 8)
+	events, _ := store.GetStore().GetSmartEventFilterEventNames(projectId, true)
 	crmEvents := make(map[string]bool)
-	for _, event := range events[U.SmartEvent] {
-		crmEvents[event] = true
+	for _, event := range events {
+		crmEvents[event.Name] = true
 	}
 	var rootNodePattern *P.Pattern = nil
 	var allActiveUsersPattern *P.Pattern = nil
@@ -1334,6 +1334,11 @@ func BuildNewItreeV1(reqId string,
 			"error": err.Error()}).Error("explain_debug_GetAllPatterns")
 		return nil, err, nil
 	}
+	// allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
+	// if allActiveUsersPattern == nil {
+	// 	return nil, fmt.Errorf("all active users pattern not found"), nil
+	// }
+
 	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
 	if allActiveUsersPattern == nil {
 		return nil, fmt.Errorf("all active users pattern not found"), nil

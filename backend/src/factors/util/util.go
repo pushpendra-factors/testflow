@@ -1023,7 +1023,26 @@ func FilterOnFrequency(itms map[string]int, topk int) {
 	pl := SortOnPriority(ll, itms, false)
 	// pl := RankByWordCount(itms)
 	for idx, v := range pl {
-		if idx > topk {
+		if idx >= topk {
+			delete(itms, v)
+		}
+	}
+}
+
+func FilterOnFrequencySpl(itms map[string]int, topk int) {
+	ll := make([]string, 0)
+	for k := range itms {
+		ll = append(ll, k)
+	}
+	sort.Strings(ll)
+	pl := SortOnPriority(ll, itms, false)
+	// pl := RankByWordCount(itms)
+	for idx, v := range pl {
+		if idx >= topk {
+			if _, ok := itms["$others"]; !ok {
+				itms["$others"] = 0
+			}
+			itms["$others"] += itms[v]
 			delete(itms, v)
 		}
 	}
@@ -1138,4 +1157,13 @@ func GetSorted2DArrays(rows [][]interface{}) [][]interface{} {
 		return false
 	})
 	return rows
+}
+
+func HasPrefixFromList(propKey string, prefixList []string) bool {
+	for _, prefix := range prefixList {
+		if strings.HasPrefix(propKey, prefix) {
+			return true
+		}
+	}
+	return false
 }
