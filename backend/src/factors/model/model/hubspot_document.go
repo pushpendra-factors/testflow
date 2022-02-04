@@ -612,3 +612,16 @@ func IsDealUpdatedRequired(incoming, existing *HubspotDocument) (bool, error) {
 
 	return false, nil
 }
+
+func GetCurrentGroupIdAndColumnName(user *User) (string, string) {
+	if user.Group1ID != "" {
+		return user.Group1ID, "group_1_id"
+	}
+	if user.Group2ID != "" {
+		return user.Group2ID, "group_2_id"
+	}
+	if user.Group3ID != "" {
+		return user.Group3ID, "group_3_id"
+	}
+	return user.Group4ID, "group_4_id"
+}

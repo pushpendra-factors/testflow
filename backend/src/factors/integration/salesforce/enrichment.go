@@ -341,7 +341,11 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	return eventID, userID, finalPayload, nil
 }
 
-func getAccountGroupID(enProperties *map[string]interface{}) string {
+func getAccountGroupID(enProperties *map[string]interface{}, document *model.SalesforceDocument) string {
+
+	if document.ID != "" {
+		return document.ID
+	}
 
 	accountName := util.GetPropertyValueAsString((*enProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
 		model.SalesforceDocumentTypeNameAccount, "name")])
@@ -378,7 +382,7 @@ func enrichGroupAcccount(projectID uint64, document *model.SalesforceDocument) i
 		return http.StatusInternalServerError
 	}
 
-	accountID := getAccountGroupID(enProperties)
+	accountID := getAccountGroupID(enProperties, document)
 
 	groupAccountUserID, status := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_ACCOUNT, accountID)
 	if status != http.StatusOK {
@@ -920,7 +924,7 @@ func enrichGroupOpportunity(projectID uint64, document *model.SalesforceDocument
 		return nil, http.StatusOK
 	}
 
-	groupUserID, status := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "")
+	groupUserID, status := createOrUpdateSalesforceGroupsProperties(projectID, document, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
 	if status != http.StatusOK {
 		return nil, status
 	}
