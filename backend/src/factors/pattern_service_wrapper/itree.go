@@ -1295,10 +1295,10 @@ func BuildNewItreeV1(reqId string,
 		EndEvent: endEvent,
 	}
 
-	events, _ := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 8)
+	events, _ := store.GetStore().GetSmartEventFilterEventNames(projectId, true)
 	crmEvents := make(map[string]bool)
-	for _, event := range events[U.SmartEvent] {
-		crmEvents[event] = true
+	for _, event := range events {
+		crmEvents[event.Name] = true
 	}
 	var rootNodePattern *P.Pattern = nil
 	var allActiveUsersPattern *P.Pattern = nil
