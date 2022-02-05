@@ -1023,11 +1023,11 @@ func enrichOpportunityContactRoles(projectID uint64, document *model.SalesforceD
 		return http.StatusInternalServerError
 	}
 
-	if documents[0].Synced == false {
-		return http.StatusOK
-	}
-
 	if status == http.StatusFound {
+		if documents[0].Synced == false {
+			return http.StatusOK
+		}
+
 		groupUserID = documents[0].GroupUserID
 		if groupUserID == "" {
 			return http.StatusOK
