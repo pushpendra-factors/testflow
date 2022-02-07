@@ -1168,6 +1168,15 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID uint64, gro
 			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user group properties.")
 			return "", errors.New("failed to update company group properties")
 		}
+
+		currentGroupID, columnName := model.GetCurrentGroupIdAndColumnName(user)
+		if currentGroupID != groupID {
+			status = store.UpdateGroupUserGroupId(projectID, user.ID, groupID, columnName)
+			if status != http.StatusAccepted {
+				logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user groupID.")
+				return "", errors.New("failed to update company groupID")
+			}
+		}
 		return groupUserID, nil
 	}
 

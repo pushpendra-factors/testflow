@@ -52,12 +52,17 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
       });
     }
 
-
+    //Factorsai init
+    factorsai.init("we0jyjxcs0ix4ggnkptymjh48ur8y7q7");
+    
 
     if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
       // DEV env
     } else {
       // PROD ENV
+
+      //Checking if it is PROD and not STAG
+      if (window.location.href.indexOf("app.factors.ai") != -1){
 
       //LogRocket
       if (LogRocket) {
@@ -117,8 +122,7 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
       })();
 
     }
-
-    factorsai.init("we0jyjxcs0ix4ggnkptymjh48ur8y7q7");
+  }
 
   }, [agent_details]); 
 

@@ -71,7 +71,8 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
             : [];
         setTouchPointsData(touchpointObjs);
 
-        getEventProperties(activeProject.id, '$sf_contact_updated')
+        getEventProperties(activeProject.id, '$sf_campaign_member_updated');
+        getEventProperties(activeProject.id, '$sf_campaign_member_created')
     }
 
     const setHubspotContactDate = () => {

@@ -4,6 +4,7 @@ package pattern_service_wrapper
 
 import (
 	"errors"
+	"factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
 	U "factors/util"
@@ -114,19 +115,6 @@ var MAX_NUM_PROPERTIES_EVALUATED int
 var log2Value float64 = math.Log(2)
 
 // events in "*" are blacklisted for any goal
-var BLACKLISTED_JOURNEYS = map[string][]string{
-	// "$hubspot_contact_created": []string{"$hubspot_contact_updated","ANY_CRM"},
-	// "$sf_opportunity_created":  []string{"$sf_opportunity_updated","ANY_CRM"},
-	// "$sf_lead_created":         []string{"$sf_lead_updated","ANY_CRM"},
-	"Deal Won": []string{"Deal Created"},
-	"*":        []string{"$hubspot_contact_updated", "$sf_lead_updated", "$sf_opportunity_updated", "$sf_account_updated", "$sf_contact_updated", "ANY_CRM"},
-}
-
-var BLACKLISTED_PROPERTIES = map[string][]string{
-	"$hubspot_contact_created": {"$hubspot_"},
-	"$sf_opportunity_created":  {"$salesforce_"},
-	"$sf_lead_created":         {"$salesforce_"},
-}
 
 func log2(x float64) float64 {
 	if x == 0 {
@@ -600,6 +588,17 @@ func isChildSequenceBlacklisted(crmEvents map[string]bool, ToBeAdded string, pre
 	for _, eventName := range preSequence {
 		preSequenceMap[eventName] = true
 	}
+
+	BLACKLISTED_JOURNEYS := map[string][]string{
+		// "$hubspot_contact_created": []string{"$hubspot_contact_updated","ANY_CRM"},
+		// "$sf_opportunity_created":  []string{"$sf_opportunity_updated","ANY_CRM"},
+		// "$sf_lead_created":         []string{"$sf_lead_updated","ANY_CRM"},
+		"Deal Won": []string{"Deal Created"},
+		"*":        []string{"ANY_CRM"},
+	}
+
+	BLACKLISTED_JOURNEYS["*"] = append(BLACKLISTED_JOURNEYS["*"], model.AllowedEventNamesForHubspot...)
+	BLACKLISTED_JOURNEYS["*"] = append(BLACKLISTED_JOURNEYS["*"], model.AllowedEventNamesForSalesforce...)
 
 	for _, blacklisted := range BLACKLISTED_JOURNEYS["*"] {
 		if ToBeAdded == blacklisted {
@@ -1382,7 +1381,7 @@ func BuildNewItreeV1(reqId string,
 	for len(queue) > 0 && numNodesEvaluated < MAX_NODES_TO_EVALUATE {
 		numNodesEvaluated++
 		parentNode := queue[0]
-		if parentNode.node.NodeType != NODE_TYPE_CAMPAIGN {
+		if parentNode.node.NodeType == NODE_TYPE_USER_PROPERTY || parentNode.node.NodeType == NODE_TYPE_EVENT_PROPERTY || parentNode.node.NodeType == NODE_TYPE_ROOT {
 
 			startDateTime := time.Now()
 			if attributeChildNodes, err, debugInfo := itree.buildAndAddPropertyChildNodesV1(reqId,
@@ -1645,18 +1644,6 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	debugData["EPCat"] = make([][]P.EventConstraints, 0)
 	debugData["UPNum"] = make([][]P.EventConstraints, 0)
 	debugData["EPNum"] = make([][]P.EventConstraints, 0)
-	if pLen > 1 && projectId != 1125899911000001 {
-		child := it.buildCategoricalPropertyChildNodesV1(reqId,
-			eventCatProperties, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
-			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)
-		debugKey = fmt.Sprintf("itree_attribute_totaleventCategorical_filtered_level%v", level)
-		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
-		for _, node := range child {
-			debugData["EPCat"] = append(debugData["EPCat"], node.PatternConstraints)
-		}
-		childNodes = append(childNodes, child...)
-	}
-
 	if pLen > 1 || countType == P.COUNT_TYPE_PER_USER {
 		child := it.buildCategoricalPropertyChildNodesV1(reqId,
 			userCatProperties, NODE_TYPE_USER_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
@@ -1670,18 +1657,6 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	}
 	// Add children by splitting on constraints on categorical properties.
 	pLen = len(parentPattern.EventNames)
-
-	if pLen > 1 && projectId != 1125899911000001 {
-		child := it.buildNumericalPropertyChildNodesV1(reqId,
-			eventNumProperties, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
-			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)
-		debugKey = fmt.Sprintf("itree_attribute_totaleventNumerical_filtered_level%v", level)
-		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
-		for _, node := range child {
-			debugData["EPNum"] = append(debugData["EPNum"], node.PatternConstraints)
-		}
-		childNodes = append(childNodes, child...)
-	}
 
 	if pLen > 1 || countType == P.COUNT_TYPE_PER_USER {
 		child := it.buildNumericalPropertyChildNodesV1(reqId,
@@ -1756,7 +1731,12 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 }
 
 func isPropertyGoalEventBlacklisted(goalEvent string, propertyName string) bool {
-	for _, propertyPrefix := range BLACKLISTED_PROPERTIES[goalEvent] {
+
+	BLACKLISTED_PROPERTIES := map[string][]string{
+		"*": {"$hubspot_", "$salesforce_"},
+	}
+
+	for _, propertyPrefix := range BLACKLISTED_PROPERTIES["*"] {
 		if strings.HasPrefix(propertyName, propertyPrefix) {
 			return true
 		}

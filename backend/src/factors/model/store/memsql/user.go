@@ -2303,3 +2303,23 @@ func (store *MemSQL) UpdateUserGroupProperties(projectID uint64, userID string,
 
 	return mergedPropertiesJSON, http.StatusAccepted
 }
+
+func (store *MemSQL) UpdateGroupUserGroupId(projectID uint64, userID string,
+	groupID string, columnName string) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "id": userID, "group_id": groupID, "columnName": columnName})
+	if projectID == 0 || userID == "" || groupID == "" || columnName == "" {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+	updatedField := map[string]interface{}{
+		columnName: groupID,
+	}
+	db := C.GetServices().Db
+	err := db.Table("users").Where("project_id = ? AND id = ? AND is_group_user = true", projectID, userID).
+		Updates(updatedField).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update groupID.")
+		return http.StatusInternalServerError
+	}
+	return http.StatusAccepted
+}

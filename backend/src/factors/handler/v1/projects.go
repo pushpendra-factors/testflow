@@ -101,7 +101,7 @@ func GetProjectsHandler(c *gin.Context) {
 		for _, project := range trimmedDemoProjects {
 			if !H.IsDemoProjectInAuthorizedProjects(authorizedProjects.([]uint64), project.ID) {
 				project.IsMultipleProjectTimezoneEnabled = C.IsMultipleProjectTimezoneEnabled(project.ID)
-				resp[1] = append(resp[projectRoleMap[project.ID]], project)
+				resp[1] = append(resp[1], project)
 			}
 		}
 	}

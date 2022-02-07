@@ -31,7 +31,7 @@ export default function reducer(state = {
       return { ...state, agentError: action.payload };
     } 
     case 'UPDATE_AGENT_INFO_FULFILLED': {
-      return { ...state, agent: action.payload };
+      return { ...state, agent_details: action.payload };
     }
     case 'UPDATE_AGENT_INFO_REJECTED': {
       return { ...state, agentError: action.payload };

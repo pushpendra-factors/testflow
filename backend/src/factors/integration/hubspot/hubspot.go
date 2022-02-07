@@ -1173,7 +1173,10 @@ func getCompanyNameAndDomainName(document *model.HubspotDocument) (string, strin
 	return companyName, domainName, nil
 }
 
-func getCompanyGroupID(companyName, domainName string) string {
+func getCompanyGroupID(document *model.HubspotDocument, companyName, domainName string) string {
+	if document.ID != "" {
+		return document.ID
+	}
 	if companyName != "" {
 		return companyName
 	}
@@ -1608,7 +1611,7 @@ func syncGroupCompany(projectID uint64, document *model.HubspotDocument, enPrope
 		return "", "", err
 	}
 
-	companyGroupID := getCompanyGroupID(companyName, domainName)
+	companyGroupID := getCompanyGroupID(document, companyName, domainName)
 	companyUserID, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_COMPANY, companyGroupID)
 	if status != http.StatusOK {
 		return "", "", errors.New("failed to update company group properties")
@@ -1628,7 +1631,7 @@ func syncGroupDeal(projectID uint64, enProperties *map[string]interface{}, docum
 		return document.GroupUserId, http.StatusOK
 	}
 
-	dealGroupUserID, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_DEAL, "")
+	dealGroupUserID, status := createOrUpdateHubspotGroupsProperties(projectID, document, enProperties, model.GROUP_NAME_HUBSPOT_DEAL, document.ID)
 	if status != http.StatusOK {
 		logCtx.Error("Failed to update deal group properties.")
 		return "", http.StatusInternalServerError

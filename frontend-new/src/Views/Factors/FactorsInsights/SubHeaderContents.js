@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {  Button , Badge, message, Spin} from 'antd';
 import { SVG, Text} from 'factorsComponents';
 import { Link } from 'react-router-dom'; 
 import {connect} from 'react-redux'; 
 import _, { isEmpty } from 'lodash';  
 import GroupSelect2 from '../../../components/QueryComposer/GroupSelect2';  
-import { fetchGoalInsights} from 'Reducers/factors';
-// import MomentTz from 'Components/MomentTz';
+import { fetchGoalInsights} from 'Reducers/factors'; 
 import moment from 'moment-timezone';
 
 function Header({factors_insight_rules, factors_models, fetchGoalInsights, activeProject, goal_insights, factors_insight_model, savedName}) {
@@ -24,7 +23,7 @@ moment.tz.setDefault(timeZone);
   } 
   const factorsModels = !_.isEmpty(factors_models) && _.isArray(factors_models) ? factors_models.map((item)=>{return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]}) : [];
 
-  const onChangeDateTime = (grp, value) => {
+  const onChangeDateTime = (grp, value) => { 
     setDateTime(value); 
     setShowDateTime(false);  
     SetfetchingIngishts(true);

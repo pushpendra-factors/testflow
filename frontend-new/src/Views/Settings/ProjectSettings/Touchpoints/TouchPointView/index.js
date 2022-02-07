@@ -78,7 +78,8 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
 
 
     const setValuesByProps = (props) => {
-        const eventToCall = tchType === '2' ? '$hubspot_contact_updated' : '$sf_contact_updated';
+        const eventToCall = tchType === '2' ? 
+            '$hubspot_contact_updated' : timestampRef === 'campaign_member_created_date'? '$sf_campaign_member_created' :  '$sf_campaign_member_updated';
         fetchEventPropertyValues(activeProject.id, eventToCall, props[1]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
             ddValues[props[1]] = [...res.data, '$none'];
@@ -91,7 +92,8 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     }
 
     useEffect(() => {
-        const eventToCall = tchType === '2' ? '$hubspot_contact_updated' : '$sf_contact_updated';
+        const eventToCall = tchType === '2' ? 
+            '$hubspot_contact_updated' : timestampRef === 'campaign_member_created_date'? '$sf_campaign_member_created' :  '$sf_campaign_member_updated';
         const tchUserProps = [];
         const filterDD = Object.assign({}, filterDropDownOptions);
         const propState = [];
@@ -111,7 +113,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         filterDD.props = propState;
         setFiltDD(filterDD);
 
-    }, [eventProperties]);
+    }, [eventProperties, timestampRef]);
 
     const applyFilter = (fil, index) => {
 
@@ -288,7 +290,8 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     }
 
     const renderEventPropertyCampOptions = () => {
-        const eventToCall = tchType === '2' ? '$hubspot_contact_updated' : '$sf_contact_updated';
+        const eventToCall = tchType === '2' ? 
+            '$hubspot_contact_updated' : timestampRef === 'campaign_member_created_date'? '$sf_campaign_member_created' :  '$sf_campaign_member_updated';
         const propertiesMp = [...eventProperties[eventToCall]];
         if(tchType === '2') {
             userProperties.forEach((prop) => {if(prop[1]?.startsWith('$hubspot')){propertiesMp.push(prop)}})
@@ -325,7 +328,14 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                 </Col>
 
                 <Col>
-                    <Input value={propertyMap['$source']['va']} onChange={setPropSource}></Input>
+                    {   tchType === '2'?
+                        <Input value={propertyMap['$source']['va']} onChange={setPropSource}></Input>
+                        :
+                        <Select className={'fa-select w-full'} size={'large'} value={propertyMap['$source']['va']} onSelect={setPropSource} defaultValue={``}>
+                            <Option value={``}>Select Source Property </Option>
+                            {renderEventPropertyCampOptions()}
+                        </Select>
+                    }
                 </Col>
             </Row>
 
@@ -383,9 +393,10 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
 
     return (
         <div>
-            {renderFilterBlock()}
 
-            {renderTimestampSelector()}
+            {renderTimestampSelector()} 
+
+            {renderFilterBlock()}
 
             {renderPropertyMap()}
 
