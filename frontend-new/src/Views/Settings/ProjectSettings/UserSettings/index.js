@@ -146,6 +146,9 @@ function UserSettings({
         setdataSource(formattedArray);
       });
     }
+    else{
+      setdataSource([]);
+    }
     setDataLoading(false);
   }, [agents]);
 

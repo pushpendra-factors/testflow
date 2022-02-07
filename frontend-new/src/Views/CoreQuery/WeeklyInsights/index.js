@@ -47,7 +47,10 @@ const NoData = ({data}) => {
     )
 }
 
-const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, userPropNames, fetchWeeklyIngishts, updateInsightFeedback }) => {    
+const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject , queryType, queryTitle, eventPropNames, userPropNames, fetchWeeklyIngishts, updateInsightFeedback }) => {
+
+    const timeZone = localStorage.getItem('project_timeZone') || 'Asia/Kolkata';  
+    moment.tz.setDefault(timeZone);
 
     const [defaultActive, setDefaultActive] = useState(null);
     const [expandAll, setExpandAll] = useState(true);
@@ -220,9 +223,9 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
 
     const dateData = activeInsight?.InsightsRange;
 
-    let dataObjArr = Object.keys(dateData).map((item,index)=>{
+    let dataObjArr = Object.keys(dateData).map((item,index)=>{ 
         return {
-            text:`${moment.unix(item).format("MMM DD, YYYY")} - ${moment.unix(item).endOf('week').format("MMM DD, YYYY")}`,
+            text:`${moment.unix(item).utc().format("MMM DD, YYYY")} - ${moment.unix(item).utc().endOf('week').format("MMM DD, YYYY")}`,
             value: item
         }
     }); 
@@ -252,7 +255,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
           }); 
     }
     let insightsLen =  Object.keys(dateData)?.length || 0; 
-    const defaultDate = `${moment.unix(Object.keys(dateData)[insightsLen-1]).format("MMM DD, YYYY")} - ${moment.unix(Object.keys(dateData)[insightsLen-1]).endOf('week').format("MMM DD, YYYY")}`;
+    const defaultDate = `${moment.unix(Object.keys(dateData)[insightsLen-1]).utc().format("MMM DD, YYYY")} - ${moment.unix(Object.keys(dateData)[insightsLen-1]).utc().endOf('week').format("MMM DD, YYYY")}`;
     // const WeekData = `${moment.unix(1624147200).format("MMM DD, YYYY")} - ${moment.unix(1624147200).endOf('week').format("MMM DD, YYYY")}`; 
     const baseName = requestQuery?.cl == "funnel" ? requestQuery?.ewp[0].na : "Sessions";
 

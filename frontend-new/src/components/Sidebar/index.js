@@ -7,7 +7,7 @@ import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject } from 'Reducers/global';
-import { updateAgentInfo, fetchAgentInfo } from 'Reducers/agentActions';
+import { updateAgentInfo, fetchAgentInfo, fetchProjectAgents } from 'Reducers/agentActions';
 import { signout } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
@@ -15,7 +15,7 @@ import CreateNewProject from './CreateNewProject';
 import _ from 'lodash';
 import NewProject from '../../Views/Settings/SetupAssist/Modals/NewProject';
 import { useTour } from "@reactour/tour";
-import factorsai from 'factorsai';
+import factorsai from 'factorsai'; 
 
 // const ColorCollection = ['#4C9FC8','#4CBCBD', '#86D3A3', '#F9C06E', '#E89E7B', '#9982B5'];
 
@@ -23,7 +23,7 @@ function Sidebar(props) {
   const { Sider } = Layout;
 
   const [visible, setVisible] = useState(false);
-  const [showProjectModal, setShowProjectModal] = useState(null);
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
@@ -37,46 +37,56 @@ function Sidebar(props) {
     setsearchProjectName(e.target.value);
   };
 
-  useEffect(() => {
-    if(!props.currentAgent?.last_logged_in) {
-      if (props.currentAgent?.is_onboarding_flow_seen) {
-          setShowProjectModal(false);
-      } else {
-        setShowProjectModal(true);
-          props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
-              props.fetchAgentInfo().then(() => {
-                  console.log('Profile details updated!');
-              });
-          }).catch((err) => {
-              console.log('updateAgentInfo failed-->', err);
-          });
 
-          //Factors FIRST_TIME_LOGIN tracking
-          factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'false'});
+  const UpdateOnboardingSeen = () =>{
+    props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
+      props.fetchAgentInfo();
+    });
+      //Factors FIRST_TIME_LOGIN tracking for NON_INVITED
+      factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email});
+  }
+
+  useEffect(() => {
+
+    //checks if project agents are available. for demo projects no agents! API throws error
+      if(!props.agents){
+        props.fetchProjectAgents(props.active_project?.id); 
       }
-    } else {
-      setShowProjectModal(false);
-      props.updateAgentInfo({"is_onboarding_flow_seen": true}).then(() => {
-          props.fetchAgentInfo().then(() => {
-              console.log('Profile details updated!');
-          });
-      }).catch((err) => {
-          console.log('updateAgentInfo failed-->', err);
-      });
+    //checks for current agent details, will work for demo projects also.
+      if(!props.currentAgent){
+        props.fetchAgentInfo();
+      } 
+      //for all non-demo projects
+      if(props.agents && props.currentAgent){ 
+        let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);  
+        if(agent[0]?.invited_by) {
+          setShowProjectModal(false);
+        }
+        else if(!props.currentAgent?.is_onboarding_flow_seen){
+          setShowProjectModal(true);
+          UpdateOnboardingSeen(); 
+        } 
+      } //for demo-projects only
+      else if(props.currentAgent && !props.currentAgent?.is_onboarding_flow_seen){
+        setShowProjectModal(true);
+        UpdateOnboardingSeen(); 
+      }   
 
-      //Factors FIRST_TIME_LOGIN tracking
-      factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'true'});
-    }
-  }, [])
+  }, [props.active_project, props.agents, props.currentAgent]);
 
 
 
   useEffect(() => {
-    if(props?.agent_details){
+    if(props?.currentAgent){
       //Factors identify users
-      factorsai.identify(props?.agent_details?.email,props?.agent_details); 
+      let userAndProjectDetails = {
+        ...props?.currentAgent,
+        project_name: props?.active_project?.name,
+        project_id: props?.active_project?.id
+      };
+      factorsai.identify(props?.currentAgent?.email,userAndProjectDetails); 
     }
-  }, [props?.agent_details]);
+  }, [props?.currentAgent, props?.active_project]);
 
 
 
@@ -271,8 +281,7 @@ const mapStateToProps = (state) => {
     projects: state.global.projects,
     active_project: state.global.active_project,
     currentAgent: state.agent.agent_details,
-    agents: state.agent.agents,
-    agent_details: state.agent.agent_details
+    agents: state.agent.agents, 
   };
 };
-export default connect(mapStateToProps, { setActiveProject, signout, updateAgentInfo, fetchAgentInfo })(Sidebar);
+export default connect(mapStateToProps, { fetchProjectAgents, setActiveProject, signout, updateAgentInfo, fetchAgentInfo })(Sidebar);

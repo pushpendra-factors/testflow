@@ -17,6 +17,7 @@ import moment from 'moment-timezone';
 
 
 
+
 const title = (props) => {
   return (
       <div className={'flex justify-between items-center'}>
@@ -160,7 +161,7 @@ const getFilters = (filters) => {
     // }
     if(props.factors_models){ 
       setDateTime(factorsModels[0]);
-    }
+    } 
     if(props.activeProject && props.activeProject.id) {
       props.getUserProperties(props.activeProject.id, 'channel')
     }
@@ -255,8 +256,7 @@ const getInsights = (projectID, isJourney=false) =>{
     }  
   }  
   
-  props.fetchGoalInsights(projectID, isJourney, factorsData, calcModelId[0].mid).then((data)=>{
-    // console.log("fetchGoalInsights then",data);
+  props.fetchGoalInsights(projectID, isJourney, factorsData, calcModelId[0].mid).then((data)=>{ 
       props.saveGoalInsightRules(factorsData); 
       props.saveGoalInsightModel(dateTime); 
       setInsightBtnLoading(false);

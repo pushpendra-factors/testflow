@@ -250,7 +250,7 @@ const MarkTouchpointBlock = ({
           <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-2'}>Type</Text>
         </Row>
         <Row className={`mt-2 ml-2`}>
-          <Radio.Group onChange={setTouchpointRef} value={touchPointRef}>
+          <Radio.Group onChange={setTouchpointRef} value={touchPointRef? touchPointRef : 'Tactic'}>
             <Radio value={`Tactic`}>Tactics</Radio>
             <Radio value={`Offer`}>Offers</Radio>
             <Radio value={`TacticOffer`}>Tactics and Offers</Radio>
