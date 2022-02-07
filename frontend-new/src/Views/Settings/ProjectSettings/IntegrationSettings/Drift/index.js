@@ -7,6 +7,7 @@ import {
   } from 'antd'; 
   import { FaErrorComp, FaErrorLog } from 'factorsComponents';
   import {ErrorBoundary} from 'react-error-boundary'
+  import factorsai from 'factorsai';
 
 const DriftIntegration = ({
     fetchProjectSettings,
@@ -26,6 +27,10 @@ const DriftIntegration = ({
 
 const enableDrift = () => { 
     setLoading(true); 
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'drift','activeProjectID': activeProject.id});
+
         udpateProjectSettings(activeProject.id, 
         { 'int_drift' : true 
     }).then(() => {

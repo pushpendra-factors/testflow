@@ -15,10 +15,10 @@ import EmptyDashboard from './EmptyDashboard';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration'
 import ProjectDropdown from './ProjectDropdown';
 import { connect } from 'react-redux';
-import { fetchProjectSettingsV1 } from 'Reducers/global';
+import { fetchProjectSettingsV1, fetchDemoProject } from 'Reducers/global';
 import { useHistory } from 'react-router-dom';
 
-function Dashboard({ fetchProjectSettingsV1 }) {
+function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
@@ -32,7 +32,6 @@ function Dashboard({ fetchProjectSettingsV1 }) {
 
   useEffect(() => {
       fetchProjectSettingsV1(activeProject.id).then((res) => {
-          console.log('fetch project settings success');
           setsdkCheck(res.data.int_completed);
       }).catch((err) => {
         console.log(err.data.error)
@@ -51,16 +50,6 @@ function Dashboard({ fetchProjectSettingsV1 }) {
   integration?.int_drift ||
   integration?.int_google_organic_enabled_agent_uuid ||
   integration?.int_clear_bit || sdkCheck;
-
-  useEffect(() => {
-    if(!checkIntegration) {
-      if(activeProject.id === 51) {
-        history.push('/')
-      } else {
-        history.push('/project-setup')
-      }
-    }
-  },[checkIntegration, activeProject])
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -169,4 +158,4 @@ function Dashboard({ fetchProjectSettingsV1 }) {
   }
 }
 
-export default connect(null,{ fetchProjectSettingsV1 })(Dashboard);
+export default connect(null,{ fetchProjectSettingsV1, fetchDemoProject })(Dashboard);

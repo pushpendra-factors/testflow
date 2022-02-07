@@ -6,6 +6,7 @@ import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useSelector } from 'react-redux';
 import { udpateProjectSettings } from 'Reducers/global';
+import factorsai from 'factorsai';
 
 const RevealIntegration = ({
   udpateProjectSettings,
@@ -27,6 +28,10 @@ const RevealIntegration = ({
 
   const enableClearbitReveal = () => {
     setLoading(true);
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'reveal','activeProjectID': activeProject.id});
+
     udpateProjectSettings(activeProject.id, { int_clear_bit: true })
       .then(() => {
         setLoading(false);

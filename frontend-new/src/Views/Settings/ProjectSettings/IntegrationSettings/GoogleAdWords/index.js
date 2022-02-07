@@ -25,6 +25,7 @@ const isDevelopment = () => {
 };
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
+import factorsai from 'factorsai';
 const getAdwordsHostURL = () => {
   // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
   return BUILD_CONFIG.backend_host;
@@ -168,6 +169,10 @@ const GoogleIntegration = ({
 
   const onClickFinishSetup = () => {
     let selectedAdwordsAcc = selectedAdwordsAccounts.join(', ');
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'adwords','activeProjectID': activeProject.id});
+
     udpateProjectSettings(activeProject.id, {
       int_adwords_customer_account_id: selectedAdwordsAcc,
     }).then(() => {

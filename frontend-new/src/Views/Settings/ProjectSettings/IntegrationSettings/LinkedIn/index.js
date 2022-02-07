@@ -7,6 +7,7 @@ import {
 } from 'antd';  
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
+import factorsai from 'factorsai';
 
 const LinkedInIntegration = ({
     fetchProjectSettings,
@@ -127,6 +128,10 @@ const LinkedInIntegration = ({
 
     const handleSubmit = e => {
         e.preventDefault(); 
+
+        //Factors INTEGRATION tracking
+        factorsai.track('INTEGRATION',{'name': 'linkedin','activeProjectID': activeProject.id});
+
         if (SelectedAdAccount != "") {
             const data = {
                 "int_linkedin_ad_account": SelectedAdAccount,

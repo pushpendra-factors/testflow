@@ -5,6 +5,7 @@ import {
 import { Text } from 'factorsComponents';
 import { connect } from 'react-redux';
 import { projectAgentInvite, fetchProjectAgents } from 'Reducers/agentActions';
+import factorsai from 'factorsai';
 const { Option } = Select;
 
 function InviteUsers(props) {
@@ -13,6 +14,10 @@ function InviteUsers(props) {
 
   const inviteUser = (payload) => {
     // console.log('Success! payload values:', payload);
+
+    //Factors INVITE tracking
+    factorsai.track('INVITE',{'email':payload?.email,'role': payload?.role, 'activeProjectID': props?.activeProjectID});
+
     seterrorInfo(null);
     props.projectAgentInvite(props.activeProjectID, payload).then(() => {
       props.fetchProjectAgents(props.activeProjectID);

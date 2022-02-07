@@ -14,14 +14,15 @@ import {
 } from 'Reducers/coreQuery/middleware';
 import GLobalFilter from './GlobalFilter';
 import MomentTz from 'Components/MomentTz';
-import moment from 'moment';
-
-const { Option } = Select;
-
-const { Panel } = Collapse;
+import FaSelect from '../FaSelect';
+import {
+  ProfileGroupMapper,
+  revProfileGroupMapper,
+} from '../../utils/constants';
 
 function ProfileComposer({
   queries,
+  setQueries,
   runProfileQuery,
   eventChange,
   queryType,
@@ -33,11 +34,17 @@ function ProfileComposer({
   collapse = false,
   setCollapse,
 }) {
-  // const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
+  const [isDDVisible, setDDVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDatePickerStr, setShowDatePickerStr] = useState('Select Date');
 
-  const userProperties = useSelector((state) => state.coreQuery.userProperties);
+  const groupOptions = [
+    ['Users'],
+    ['Salesforce Opportunity'],
+    ['Salesforce Accounts'],
+    ['Hubspot Deals'],
+    ['Hubspot Companies'],
+  ];
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -45,6 +52,80 @@ function ProfileComposer({
       getUserProperties(activeProject.id, queryType);
     }
   }, [activeProject, fetchEventNames]);
+
+  const setGroupAnalysis = (group) => {
+    const opts = Object.assign({}, queryOptions);
+    opts.group_analysis = ProfileGroupMapper[group]
+      ? ProfileGroupMapper[group]
+      : group;
+    setQueryOptions(opts);
+  };
+
+  const onChange = (value) => {
+    setGroupAnalysis(value);
+    setDDVisible(false);
+    setQueries([]);
+  };
+
+  const triggerDropDown = () => {
+    setDDVisible(true);
+  };
+
+  const selectGroup = () => {
+    return (
+      <div className={`${styles.groupsection_dropdown}`}>
+        {isDDVisible ? (
+          <FaSelect
+            extraClass={`${styles.groupsection_dropdown_menu}`}
+            options={groupOptions}
+            onClickOutside={() => setDDVisible(false)}
+            optionClick={(val) => onChange(val[0])}
+          ></FaSelect>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderGroupSection = () => {
+    try {
+      return (
+        <div className={`flex items-center pt-6`}>
+          <Text
+            type={'title'}
+            level={6}
+            weight={'normal'}
+            extraClass={`m-0 mr-3`}
+          >
+            Analyse
+          </Text>{' '}
+          <div className={`${styles.groupsection}`}>
+            <Button
+              className={`${styles.groupsection_button}`}
+              type='text'
+              onClick={triggerDropDown}
+            >
+              <div className={`flex items-center`}>
+                <Text
+                  type={'title'}
+                  level={6}
+                  weight={'bold'}
+                  extraClass={`m-0 mr-1`}
+                >
+                  {queryOptions?.group_analysis
+                    ? revProfileGroupMapper[queryOptions.group_analysis]
+                    : 'Select Group'}
+                </Text>
+                <SVG name='caretDown' />
+              </div>
+            </Button>
+            {selectGroup()}
+          </div>
+        </div>
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   const queryList = () => {
     const blockList = [];
@@ -58,6 +139,7 @@ function ProfileComposer({
             event={event}
             queries={queries}
             eventChange={eventChange}
+            groupAnalysis={queryOptions.group_analysis}
           ></ProfileBlock>
         </div>
       );
@@ -72,11 +154,31 @@ function ProfileComposer({
             queries={queries}
             eventChange={eventChange}
             groupBy={queryOptions.groupBy}
+            groupAnalysis={queryOptions.group_analysis}
           ></ProfileBlock>
         </div>
       );
     }
     return blockList;
+  };
+
+  const renderProfileQueryList = () => {
+    const [profileBlockOpen, setProfileBlockOpen] = useState(true);
+    try {
+      return (
+        <ComposerBlock
+          blockTitle={'PROFILES TO ANALYSE'}
+          isOpen={profileBlockOpen}
+          showIcon={true}
+          onClick={() => setProfileBlockOpen(!profileBlockOpen)}
+          extraClass={`pt-2 no-padding-l no-padding-r`}
+        >
+          {queryList()}
+        </ComposerBlock>
+      );
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const setGlobalFiltersOption = (filters) => {
@@ -159,7 +261,7 @@ function ProfileComposer({
     }
   }, [runProfileQuery, queryType]);
 
-  const footer = () => {
+  const renderFooter = () => {
     try {
       if (queryType === QUERY_TYPE_PROFILE && queries.length < 1) {
         return null;
@@ -241,31 +343,13 @@ function ProfileComposer({
     }
   };
 
-  const renderProfileQueryList = () => {
-    const [profileBlockOpen, setProfileBlockOpen] = useState(true);
-    try {
-      return (
-        <ComposerBlock
-          blockTitle={'Profiles to Analyse'}
-          isOpen={profileBlockOpen}
-          showIcon={true}
-          onClick={() => setProfileBlockOpen(!profileBlockOpen)}
-          extraClass={`pt-2 no-padding-l no-padding-r`}
-        >
-          {queryList()}
-        </ComposerBlock>
-      );
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
   return (
     <div className={styles.composer_body}>
+      {renderGroupSection()}
       {renderProfileQueryList()}
       {renderGlobalFilterBlock()}
       {groupByBlock()}
-      {footer()}
+      {renderFooter()}
     </div>
   );
 }

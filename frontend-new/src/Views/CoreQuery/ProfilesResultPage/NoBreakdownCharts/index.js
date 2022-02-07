@@ -12,7 +12,7 @@ import HorizontalBarChartTable from './HorizontalBarChartTable';
 import NoBreakdownTable from './NoBreakdownTable';
 
 const NoBreakdownCharts = forwardRef(
-  ({ data, title = 'Profile-chart', section, queries }, ref) => {
+  ({ data, title = 'Profile-chart', section, queries, groupAnalysis }, ref) => {
     const {
       coreQueryState: { savedQuerySettings },
     } = useContext(CoreQueryContext);
@@ -37,7 +37,7 @@ const NoBreakdownCharts = forwardRef(
 
     const chart = (
       <div className='w-full'>
-        <HorizontalBarChartTable queries={queries} data={data} />
+        <HorizontalBarChartTable queries={queries} groupAnalysis={groupAnalysis} data={data} />
       </div>
     );
 
@@ -51,6 +51,7 @@ const NoBreakdownCharts = forwardRef(
           section={section}
           queries={queries}
           reportTitle={title}
+          groupAnalysis={groupAnalysis}
         />
       </div>
     );

@@ -45,10 +45,10 @@ function EmptyDashboard() {
                         We don’t have enough data yet
                     </Text>
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>
-                        Few more steps to go
+                        But we're almost there
                     </Text>
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
-                        To Start moniter your metrics, complete setting using
+                        Connect to at least one data source using
                     </Text>
                     <Button type={'link'} style={{backgroundColor:'white'}} onClick={()=> history.push('/project-setup')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
                     <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />} onClick={handleClick}>Invite a teammate for help</Button>

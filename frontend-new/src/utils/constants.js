@@ -460,12 +460,33 @@ export const ProfileMapper = {
   'Website Visitors': 'web',
   'Hubspot Contacts': 'hubspot',
   'Salesforce Users': 'salesforce',
+  'All Opportunities': 'salesforce',
+  'All Deals': 'hubspot',
+  'All Accounts': 'salesforce',
+  'All Companies': 'hubspot',
 };
 
 export const ReverseProfileMapper = {
-  web: 'Website Visitors',
-  hubspot: 'Hubspot Contacts',
-  salesforce: 'Salesforce Users',
+  web: {users:'Website Visitors'},
+  hubspot: {users:'Hubspot Contacts', $hubspot_deal:'All Deals', $hubspot_company:'All Companies'},
+  salesforce: {users:'Salesforce Users', $salesforce_opportunity:'All Opportunities', $salesforce_account:'All Accounts'},
 };
+
 export const DISPLAY_PROP = { $none: '(Not Set)' };
 export const REV_DISPLAY_PROP = { '(Not Set)': '$none' };
+
+export const ProfileGroupMapper = {
+  Users: 'users',
+  'Hubspot Companies': '$hubspot_company',
+  'Hubspot Deals': '$hubspot_deal',
+  'Salesforce Accounts': '$salesforce_account',
+  'Salesforce Opportunity': '$salesforce_opportunity',
+};
+
+export const revProfileGroupMapper = {
+  users: 'Users',
+  $hubspot_company: 'Hubspot Companies',
+  $hubspot_deal: 'Hubspot Deals',
+  $salesforce_account: 'Salesforce Accounts',
+  $salesforce_opportunity: 'Salesforce Opportunity',
+};

@@ -12,6 +12,7 @@ function BreakdownTable({
   aggregateData,
   queries,
   breakdown,
+  groupAnalysis,
   currentEventIndex,
   chartType,
   isWidgetModal,
@@ -35,6 +36,7 @@ function BreakdownTable({
       getTableColumns(
         queries,
         breakdown,
+        groupAnalysis,
         currentEventIndex,
         sorter,
         handleSorting,

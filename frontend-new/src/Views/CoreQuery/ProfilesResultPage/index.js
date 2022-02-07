@@ -4,6 +4,7 @@ import BreakdownCharts from './BreakdownCharts';
 
 function ProfilesResultPage({
   queries,
+  groupAnalysis,
   resultState,
   chartType,
   section,
@@ -15,6 +16,7 @@ function ProfilesResultPage({
     return (
       <BreakdownCharts
         queries={queries}
+        groupAnalysis={groupAnalysis}
         chartType={chartType}
         data={resultState.data}
         breakdown={breakdown}
@@ -27,6 +29,7 @@ function ProfilesResultPage({
     return (
       <NoBreakdownCharts
         queries={queries}
+        groupAnalysis={groupAnalysis}
         chartType={chartType}
         data={resultState.data}
         section={section}

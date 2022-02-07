@@ -150,6 +150,7 @@ function ReportsLayout({
       return (
         <ProfileComposer
           queries={rest.composerFunctions.profileQueries}
+          setQueries={rest.composerFunctions.setProfileQueries}
           runProfileQuery={rest.composerFunctions.runProfileQuery}
           eventChange={rest.composerFunctions.profileQueryChange}
           queryType={queryType}

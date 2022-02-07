@@ -120,6 +120,7 @@ function CoreQuery({
 
   const [profileQueries, setProfileQueries] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
+    group_analysis: 'users',
     groupBy: [
       {
         prop_category: '', // user / event
@@ -190,6 +191,7 @@ function CoreQuery({
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
   const { globalFilters } = queryOptions;
+  const groupAnalysis = queryOptions.group_analysis
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -704,12 +706,12 @@ function CoreQuery({
           profileQueries,
           groupBy,
           globalFilters,
-          durationObj
+          durationObj,
+          groupAnalysis
         ); 
-
+        console.log('Index Query---->', query)
         //Factors RUN_QUERY tracking
         factorsai.track('RUN_QUERY',{'query_type': QUERY_TYPE_PROFILE});
-
 
         configActionsOnRunningQuery(isQuerySaved);
         updateRequestQuery(query);
@@ -735,6 +737,7 @@ function CoreQuery({
       groupBy,
       globalFilters,
       dateRange,
+      groupAnalysis,
       updateResultState,
       getDashboardConfigs,
     ]
@@ -1132,6 +1135,7 @@ function CoreQuery({
       return (
         <ProfileComposer
           queries={profileQueries}
+          setQueries ={setProfileQueries}
           runProfileQuery={runProfileQuery}
           eventChange={profileQueryChange}
           queryType={queryType}
@@ -1211,7 +1215,7 @@ function CoreQuery({
           closable={false}
           className={'fa-modal--full-width'}
         >
-          <div className='mt-8 px-20'>
+          <div className='px-20'>
             <ErrorBoundary
               fallback={
                 <FaErrorComp
@@ -1243,6 +1247,7 @@ function CoreQuery({
     activeKey,
     queries,
     profileQueries,
+    setProfileQueries,
     showResult,
     runKPIQuery,
     setQueries,

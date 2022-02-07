@@ -42,6 +42,7 @@ import {
   DefaultChartTypes,
   LOCAL_STORAGE_ITEMS,
   QUERY_TYPE_PROFILE,
+  PREDEFINED_DATES,
 } from '../../utils/constants';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -97,7 +98,6 @@ const coreQueryoptions = [
     icon: 'events_cq',
     desc: 'Create charts from events and related properties',
   },
-  
   {
     title: 'Campaigns',
     icon: 'campaigns_cq',
@@ -108,8 +108,6 @@ const coreQueryoptions = [
     icon: 'templates_cq',
     desc: 'A list of advanced queries crafted by experts',
   },
-  
-  
 ];
 
 const columns = [
@@ -257,6 +255,7 @@ function CoreQuery({
         if (navigatedFromDashboard) {
           newDateRange = { date_range: getDashboardDateRange() };
         }
+
         return {
           ...currData,
           session_analytics_seq: equivalentQuery.session_analytics_seq,
@@ -274,20 +273,25 @@ function CoreQuery({
 
   const updateProfileQueryState = useCallback(
     (equivalentQuery) => {
+      const dateRange = { ...equivalentQuery.dateRange };
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: equivalentQuery.breakdown,
       });
       setProfileQueries(equivalentQuery.events);
       setQueryOptions((currData) => {
-        return {
+        let queryOpts = {};
+        queryOpts = {
           ...currData,
           groupBy: [
             ...equivalentQuery.breakdown.global,
             ...equivalentQuery.breakdown.event,
           ],
           globalFilters: equivalentQuery.globalFilters,
+          group_analysis: equivalentQuery.groupAnalysis,
+          date_range: { ...DefaultDateRangeFormat, ...dateRange },
         };
+        return queryOpts;
       });
     },
     [dispatch]
@@ -370,7 +374,7 @@ function CoreQuery({
               dispatch({
                 type: SET_PERFORMANCE_CRITERIA,
                 payload: EACH_USER_TYPE,
-              }); 
+              });
               if (record.query.query_group.length === 2) {
                 dispatch({
                   type: SET_SHOW_CRITERIA,
@@ -434,9 +438,12 @@ function CoreQuery({
           query_id: record.key || record.id,
         });
 
-        //Factors VIEW_QUERY tracking 
-        factorsai.track('VIEW_QUERY',{'query_type': equivalentQuery?.queryType, 'saved_query_id':record?.key || record?.id, 'query_title': record?.title});   
-
+        //Factors VIEW_QUERY tracking
+        factorsai.track('VIEW_QUERY', {
+          query_type: equivalentQuery?.queryType,
+          saved_query_id: record?.key || record?.id,
+          query_title: record?.title,
+        });
       } catch (err) {
         console.log(err);
       }
@@ -566,6 +573,7 @@ function CoreQuery({
         return {
           ...currData,
           globalFilters: [],
+          group_analysis: 'users',
           date_range: { ...DefaultDateRangeFormat },
         };
       });
@@ -719,7 +727,7 @@ function CoreQuery({
                   return {
                     onClick: (e) => {
                       getWeeklyIngishts(record);
-                      setQueryToState(record); 
+                      setQueryToState(record);
                     },
                   };
                 }}

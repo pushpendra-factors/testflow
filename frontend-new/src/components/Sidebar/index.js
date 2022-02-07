@@ -38,8 +38,7 @@ function Sidebar(props) {
   };
 
   useEffect(() => {
-    let agent = props.agents?.filter(agent => agent.email === props.currentAgent.email);
-    if(!agent || !agent[0]?.invited_by) {
+    if(!props.currentAgent?.last_logged_in) {
       if (props.currentAgent?.is_onboarding_flow_seen) {
           setShowProjectModal(false);
       } else {
@@ -51,6 +50,9 @@ function Sidebar(props) {
           }).catch((err) => {
               console.log('updateAgentInfo failed-->', err);
           });
+
+          //Factors FIRST_TIME_LOGIN tracking
+          factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'false'});
       }
     } else {
       setShowProjectModal(false);
@@ -61,6 +63,9 @@ function Sidebar(props) {
       }).catch((err) => {
           console.log('updateAgentInfo failed-->', err);
       });
+
+      //Factors FIRST_TIME_LOGIN tracking
+      factorsai.track('FIRST_TIME_LOGIN',{'email':props?.currentAgent?.email, 'isInvited':'true'});
     }
   }, [])
 

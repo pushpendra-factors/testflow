@@ -7,6 +7,7 @@ import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 import { login } from '../../reducers/agentActions';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
+import factorsai from 'factorsai';
 
 function Login(props) {
   const [form] = Form.useForm();
@@ -22,6 +23,10 @@ function Login(props) {
     setDataLoading(true);
     form.validateFields().then((value) => {
       setDataLoading(true);
+
+      //Factors LOGIN tracking
+      factorsai.track('LOGIN',{'username':value?.form_username});
+
       setTimeout(() => {
         props.login(value.form_username, value.form_password)
           .then(() => {

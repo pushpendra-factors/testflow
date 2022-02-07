@@ -7,6 +7,7 @@ import {
   } from 'antd'; 
   import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
   import {ErrorBoundary} from 'react-error-boundary';
+  import factorsai from 'factorsai';
 
 const SegmentIntegration = ({
     fetchProjectSettings,
@@ -29,10 +30,15 @@ const SegmentIntegration = ({
 
 const enableSegment = () => { 
     setLoading(true);
+
+    //Factors INTEGRATION tracking
+    factorsai.track('INTEGRATION',{'name': 'segment','activeProjectID': activeProject.id});
+
     setShowForm(true);
         udpateProjectSettings(activeProject.id, 
         { 'int_segment' : true 
     }).then(() => {
+        fetchProjectSettings(activeProject.id);
         setLoading(false);
         setShowForm(false); 
         setTimeout(() => {
@@ -53,6 +59,7 @@ const enableSegment = () => {
         udpateProjectSettings(activeProject.id, 
         { 'int_segment' : false 
     }).then(() => {
+        fetchProjectSettings(activeProject.id);
         setLoading(false);
         setShowForm(false); 
         setTimeout(() => {

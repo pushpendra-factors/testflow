@@ -8,6 +8,7 @@ import styles from './index.module.scss';
 import { Text, SVG } from 'factorsComponents';
 import { projectAgentBatchInvite, fetchProjectAgents } from 'Reducers/agentActions';
 import { useHistory } from 'react-router-dom';
+import factorsai from 'factorsai';
 const { Option } = Select;
 
 function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite, activeProjectID}) {
@@ -35,6 +36,9 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
     for(let val in data) {
       finalData[val] = data[val];
     }
+
+    //Factors BATCH_INVITE tracking
+    factorsai.track('BATCH_INVITE',{'isInvited': 'true','activeProjectID': activeProjectID});
 
     projectAgentBatchInvite(activeProjectID, finalData).then((res) => {
       fetchProjectAgents(activeProjectID);

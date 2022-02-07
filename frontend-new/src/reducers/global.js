@@ -209,6 +209,21 @@ export function fetchProjects() {
   };
 }
 
+export function fetchDemoProject() {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'v1/demoprojects')
+        .then((response) => {
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_PROJECTS_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
 export function createProject(projectName) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {

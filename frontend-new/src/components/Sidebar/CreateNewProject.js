@@ -6,12 +6,17 @@ import { Text } from 'factorsComponents';
 import { createProject } from '../../reducers/global';
 import { connect } from 'react-redux';
 import { useHistory } from 'react-router-dom';
+import factorsai from 'factorsai';
 
 function CreateNewProject(props) {
   const [form] = Form.useForm();
   const history = useHistory();
 
   const onFinish = values => {
+
+    //Factors CREATE_PROJECT tracking
+    factorsai.track('CREATE_PROJECT',{'ProjectName':values?.projectName});
+
     props.createProject(values.projectName).then(() => {
       props.setCreateNewProjectModal(false);
       history.push('/');
