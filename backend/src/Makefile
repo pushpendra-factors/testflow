@@ -154,6 +154,13 @@ upload-enrich-smart-properties: export IMAGE_NAME=enrich-smart-properties-job
 upload-enrich-smart-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/enrich-smart-properties-job:$(TAG)
 
+pack-ingest-leadgen:
+	docker build -t us.gcr.io/factors-$(ENV)/ingest-leadgen-job:$(TAG) -f Dockerfile.ingest_leadgen_job .
+
+upload-ingest-leadgen: export IMAGE_NAME=ingest-leadgen-job
+upload-ingest-leadgen: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/ingest-leadgen-job:$(TAG)
+
 pack-salesforce-enrich:
 	docker build -t us.gcr.io/factors-$(ENV)/salesforce-enrich-job:$(TAG) -f Dockerfile.salesforce_enrich_job .
 

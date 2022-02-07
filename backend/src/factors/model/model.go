@@ -542,4 +542,9 @@ type Model interface {
 	DeleteContentGroup(id string, projectID uint64) (int, string)
 	UpdateContentGroup(id string, projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string)
 	CheckURLContentGroupValue(pageUrl string, projectID uint64) map[string]string
+
+	//leadgen
+	GetLeadgenSettingsForProject(projectID uint64) ([]model.LeadgenSettings, error)
+	GetLeadgenSettings() ([]model.LeadgenSettings, error)
+	UpdateRowRead(projectID uint64, source int, rowRead int64) (int, error)
 }
