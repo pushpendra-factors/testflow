@@ -223,11 +223,11 @@ function QueryBlock({
   const eventFilters = () => {
     const filters = [];
     if (event && event?.filters?.length) {
-      event.filters.forEach((filter, index) => {
+      event.filters.forEach((filter, filtInd) => {
         filters.push(
-          <div key={index} className={'fa--query_block--filters'}>
+          <div key={filtInd} className={'fa--query_block--filters'}>
             <EventFilterWrapper
-              index={index}
+              index={filtInd}
               filter={filter}
               event={event}
               filterProps={filterProps}
