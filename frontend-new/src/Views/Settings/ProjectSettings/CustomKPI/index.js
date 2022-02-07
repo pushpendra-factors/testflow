@@ -293,7 +293,7 @@ const CustomKPI = ({
                     >
                         <Row>
                             <Col span={12}>
-                                <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>New Custom Metrics/KPI</Text>
+                                <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>New Custom KPI</Text>
                             </Col>
                             <Col span={12}>
                                 <div className={'flex justify-end'}>
