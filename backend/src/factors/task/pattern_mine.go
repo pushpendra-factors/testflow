@@ -1307,12 +1307,11 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *f
 	referrerEventsMap := make(map[string]int)
 	AdgroupEventsMap := make(map[string]int)
 
-	events, _ := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 8)
+	events, _ := store.GetStore().GetSmartEventFilterEventNames(projectId, true)
 	crmEvents := make(map[string]bool)
-	for _, event := range events[U.SmartEvent] {
-		crmEvents[event] = true
+	for _, event := range events {
+		crmEvents[event.Name] = true
 	}
-	log.Info("crmEvents: ", crmEvents)
 
 	delEvent := 0
 	delUser := 0
@@ -1333,7 +1332,7 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *f
 				delUser += 1
 				continue
 			}
-			if P.IsCustomOrCrmEvent(ename, projectId) {
+			if P.IsCustomOrCrmEvent(ename, crmEvents) {
 				if U.HasPrefixFromList(uKey, BLACKLIST_USER_PROPERTIES["crm"]) {
 					delete(eventDetails.UserProperties, uKey)
 					delUser += 1

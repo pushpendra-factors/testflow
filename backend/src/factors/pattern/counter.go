@@ -254,7 +254,7 @@ func GetPattEndWithGoal(projectId uint64, combinationPatterns, goalPatterns []*P
 				log.WithField("Events", v.EventNames).Error("len of eventnames in pattern not equal to 2")
 			}
 
-			if goalsMap[v.EventNames[1]] && !IsCustomOrCrmEvent(v.EventNames[0], crmEvents, projectId) {
+			if goalsMap[v.EventNames[1]] && !IsCustomOrCrmEvent(v.EventNames[0], crmEvents) {
 				allGoals = append(allGoals, v)
 			}
 
@@ -1162,7 +1162,7 @@ func GetPropertiesCategoricalMapFromFile(cloudManager *filestore.FileManager, pr
 	return reqMap, nil
 }
 
-func IsCustomOrCrmEvent(event string, crmEvents map[string]bool, projectId uint64) bool {
+func IsCustomOrCrmEvent(event string, crmEvents map[string]bool) bool {
 
 	if _, ok := crmEvents[event]; ok || U.HasPrefixFromList(event, CRM_EVENT_PREFIXES) {
 		return true
