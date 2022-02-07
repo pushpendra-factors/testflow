@@ -11,5 +11,5 @@ RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/* && apk add 
 # Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
 ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 COPY --from=builder /go/bin/sdkserver /go/bin/sdkserver
-CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/bin/sdkserver --db_host=${DB_HOST} --redis_host_ps=${REDIS_HOST} --cache_with_sorted_set; break; fi; sleep 2; done"]
+CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/bin/sdkserver --primary_datastore=${PRI_DS} --memsql_host=${MEMSQL_HOST} --db_host=${DB_HOST} --redis_host_ps=${REDIS_HOST} --cache_with_sorted_set; break; fi; sleep 2; done"]
 EXPOSE 8085

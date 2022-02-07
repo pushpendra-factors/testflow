@@ -50,7 +50,8 @@ services:
                 -  REDIS_HOST=redis
                 -  ETCD=etcd:2379
                 -  PS=patternserver
-            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --env=development"]
+                -  PRI_DS=$PRIMARY_DATASTORE
+            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --env=development --memsql_host=memsql --primary_datastore=${PRIMARY_DATASTORE}"]
             image: testing/api:1.0
             restart: always
             ports:
@@ -58,10 +59,6 @@ services:
             volumes: 
                 - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
                 - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
-            links:
-                - postgres
-                - redis
-                - etcd
         memsql:
             build:
                 context: .
@@ -85,6 +82,8 @@ services:
                 -  GOPATH=/go/src/factors
                 -  DB_HOST=postgres
                 -  REDIS_HOST=redis
+                -  MEMSQL_HOST=memsql
+                -  PRI_DS=$PRIMARY_DATASTORE
             image: testing/sdk:1.0
             ports:
                 - "8085:8085"
@@ -92,9 +91,6 @@ services:
             volumes: 
                 - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
                 - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
-            links:
-                - postgres
-                - redis
         patternserver:
             build:
                 context: ../
@@ -103,11 +99,10 @@ services:
                 -   GOPATH=/go/src/factors
                 -   ETCD=etcd:2379
                 -   DB_HOST=postgres
+                -   PRI_DS=$PRIMARY_DATASTORE
             image: testing/pattern-server:1.0
             ports:
                 - "8100:8100"
-            links:
-                - postgres
         frontend:
             build: 
                 context: ../../../frontend-new
@@ -134,6 +129,8 @@ services:
             environment:
                 - REDIS_HOST=redis
                 - DB_HOST=postgres
+                - MEMSQL_HOST=memsql
+                - PRI_DS=$PRIMARY_DATASTORE
             image: testing/session:1.0
         rollupcache:
             build:
@@ -142,6 +139,8 @@ services:
             environment:
                 - REDIS_HOST=redis
                 - DB_HOST=postgres
+                - MEMSQL_HOST=memsql
+                - PRI_DS=$PRIMARY_DATASTORE
             image: testing/rollupcache:1.0
         documentdatagen:
             build:
