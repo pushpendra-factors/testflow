@@ -5,77 +5,18 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
-	"reflect"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
-// statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
-// TODO handle errors and kpiFunction statusCode.
-func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"req_id": reqID,
-		"kpi_query_group": kpiQueryGroup,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	var queryResults []model.QueryResult
-	finalStatusCode := http.StatusOK
-	isTimezoneEnabled := false
-	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
-	if C.IsMultipleProjectTimezoneEnabled(projectID) {
-		isTimezoneEnabled = true
-	}
-	for _, query := range kpiQueryGroup.Queries {
-		query.Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
-		query.GroupBy = kpiQueryGroup.GlobalGroupBy
-		kpiFunction := store.kpiQueryFunctionDeciderBasedOnCategory(query.Category)
-		result, statusCode := kpiFunction(projectID, reqID, query)
-		if statusCode != http.StatusOK {
-			finalStatusCode = statusCode
-		}
-		queryResults = append(queryResults, result...)
-	}
-	if finalStatusCode != http.StatusOK {
-		log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("queryResults", queryResults).Error("Failed in executing following KPI Query with status Not Ok.")
-		return []model.QueryResult{model.QueryResult{}, model.QueryResult{}}, finalStatusCode
-	}
-
-	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(queryResults, kpiQueryGroup, finalStatusCode)
-	finalQueryResult := make([]model.QueryResult, 0)
-	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
-	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
-	if (!reflect.DeepEqual(model.QueryResult{}, gbtRelatedMergedResults)) {
-		finalQueryResult = append(finalQueryResult, gbtRelatedMergedResults)
-	}
-	if (!reflect.DeepEqual(model.QueryResult{}, nonGbtRelatedMergedResults)) {
-		finalQueryResult = append(finalQueryResult, nonGbtRelatedMergedResults)
-	}
-	return finalQueryResult, finalStatusCode
-}
-
-func (store *MemSQL) kpiQueryFunctionDeciderBasedOnCategory(category string) func(uint64, string, model.KPIQuery) ([]model.QueryResult, int) {
-	logFields := log.Fields{
-		"category": category,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	var result func(uint64, string, model.KPIQuery) ([]model.QueryResult, int)
-	if category == model.ChannelCategory {
-		result = store.ExecuteKPIQueryForChannels
-	} else {
-		result = store.ExecuteKPIQueryForEvents
-	}
-	return result
-}
-
 // We convert kpi Query to eventQueries by applying transformation.
 func (store *MemSQL) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"req_id": reqID,
-		"kpi_query": kpiQuery,
+		"req_id":     reqID,
+		"kpi_query":  kpiQuery,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	queryResults := make([]model.QueryResult, len(kpiQuery.Metrics))
@@ -86,10 +27,11 @@ func (store *MemSQL) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kp
 	return store.transformToAndExecuteEventAnalyticsQueries(projectID, kpiQuery)
 }
 
+// query is being mutated. So, waitGroup can side effects.
 func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID uint64, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"kpi_query": kpiQuery,
+		"kpi_query":  kpiQuery,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var query model.Query
@@ -122,15 +64,15 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID uint64
 // Each KPI Metric is mapped to array of operations containing metrics and aggregates, filters.
 func (store *MemSQL) ExecuteForSingleKPIMetric(projectID uint64, query model.Query, kpiQuery model.KPIQuery,
 	kpiMetric string, result *model.QueryResult, waitGroup *sync.WaitGroup) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"kpi_query": kpiQuery,
-			"kpi_metric": kpiMetric,
-			"result": result,
-			"wait_group": waitGroup,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query":      query,
+		"kpi_query":  kpiQuery,
+		"kpi_metric": kpiMetric,
+		"result":     result,
+		"wait_group": waitGroup,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer waitGroup.Done()
 	finalResult := model.QueryResult{}
 
@@ -140,13 +82,13 @@ func (store *MemSQL) ExecuteForSingleKPIMetric(projectID uint64, query model.Que
 
 func (store *MemSQL) wrappedExecuteForResult(projectID uint64, query model.Query, kpiQuery model.KPIQuery,
 	kpiMetric string) model.QueryResult {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"kpi_query": kpiQuery,
-			"kpi_metric": kpiMetric,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query":      query,
+		"kpi_query":  kpiQuery,
+		"kpi_metric": kpiMetric,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	transformations := model.TransformationOfKPIMetricsToEventAnalyticsQuery[kpiQuery.DisplayCategory][kpiMetric]
 	currentQuery := model.BuildFiltersAndGroupByBasedOnKPIQuery(query, kpiQuery, kpiMetric)
@@ -157,9 +99,9 @@ func (store *MemSQL) wrappedExecuteForResult(projectID uint64, query model.Query
 
 func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, kpiQuery model.KPIQuery, transformations []model.TransformQueryi) model.QueryResult {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"queries": queries,
-		"kpi_query": kpiQuery,
+		"project_id":     projectID,
+		"queries":        queries,
+		"kpi_query":      kpiQuery,
 		"transformation": transformations,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

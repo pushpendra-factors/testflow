@@ -105,9 +105,11 @@ type IdentifyMeta struct {
 type UserPropertiesMeta map[string]IdentifyMeta
 
 const (
-	UserSourceWeb        = 1
-	UserSourceHubspot    = 2
-	UserSourceSalesforce = 3
+	UserSourceWeb              = 1
+	UserSourceHubspot          = 2
+	UserSourceSalesforce       = 3
+	UserSourceHubspotString    = "hubspot"
+	UserSourceSalesforceString = "salesforce"
 )
 
 var UserSourceMap = map[string]int{

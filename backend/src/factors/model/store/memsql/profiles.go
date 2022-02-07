@@ -130,7 +130,7 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	selectKeys := make([]string, 0)
 	groupByKeys := make([]string, 0)
 	groupByStmnt := ""
-	selectKeys = append(selectKeys, model.DefaultSelectForAllUsers)
+	selectKeys = append(selectKeys, getSelectKeysForProfile(query))
 
 	for _, groupBy := range query.GroupBys {
 		gKey := groupKeyByIndex(groupBy.Index)
@@ -160,8 +160,13 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
 
 	var stepSqlStmnt string
-	stepSqlStmnt = fmt.Sprintf(
-		"SELECT %s FROM users %s WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterJoinStmnt, filterStmnt)
+	if query.DateField != "" {
+		stepSqlStmnt = fmt.Sprintf(
+			"SELECT %s FROM users %s WHERE users.project_id = ? %s AND JSON_EXTRACT_STRING(properties, '%s')>=? AND JSON_EXTRACT_STRING(properties, '%s')<=?", selectStmnt, filterJoinStmnt, filterStmnt, query.DateField, query.DateField)
+	} else {
+		stepSqlStmnt = fmt.Sprintf(
+			"SELECT %s FROM users %s WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterJoinStmnt, filterStmnt)
+	}
 	params = append(params, groupBySelectParams...)
 	params = append(params, projectID)
 	params = append(params, filterParams...)
@@ -198,6 +203,14 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	}
 
 	return finalSQLStmnt, params, nil
+}
+
+func getSelectKeysForProfile(query model.ProfileQuery) string {
+	if query.AggregateProperty == "1" || query.AggregateProperty == "" || query.AggregateFunction == model.UniqueAggregationFunction { // Generally count is only used againt them.
+		return model.DefaultSelectForAllUsers
+	} else {
+		return fmt.Sprintf("%s(JSON_EXTRACT_STRING(%s.properties, '%s')) as %s", query.AggregateFunction, model.USERS, query.AggregateProperty, model.AliasAggr)
+	}
 }
 
 func getNoneHandledGroupBySelectForProfiles(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {

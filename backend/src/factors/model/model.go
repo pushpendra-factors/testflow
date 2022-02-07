@@ -112,6 +112,8 @@ type Model interface {
 	// Custom Metrics
 	CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int)
 	GetCustomMetricsByProjectId(projectID uint64) ([]model.CustomMetric, string, int)
+	GetCustomMetricByProjectIdAndObjectType(projectID uint64, queryType int, objectType string) ([]model.CustomMetric, string, int)
+	GetCustomMetricsByName(projectID uint64, name string) (model.CustomMetric, string, int)
 
 	//templates
 	RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)

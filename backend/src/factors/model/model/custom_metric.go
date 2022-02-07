@@ -17,7 +17,13 @@ type CustomMetricObjectTypeAndProperties struct {
 	Properties []map[string]string `json:"properties"`
 }
 
-var CustomMetricAggregateFunctions = []string{"COUNT", "SUM", "AVG", "MAX", "MIN", "RUNNING_TOTAL", "UNIQUE"}
+const (
+	SumAggregateFunction      = "sum"
+	UniqueAggregationFunction = "unique"
+)
+
+// var CustomMetricAggregateFunctions = []string{Count, SumAggregateFunction, UniqueAggregationFunction}
+var CustomMetricAggregateFunctions = []string{UniqueAggregationFunction}
 var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, SalesforceUsersDisplayCategory}
 var ProfileQueryType = 1
 

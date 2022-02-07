@@ -12,7 +12,7 @@ import (
 func (store *MemSQL) GetKPIConfigsForSalesforceUsers(projectID uint64, reqID string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"req_id": reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.GetKPIConfigsForSalesforce(projectID, reqID, model.SalesforceUsersDisplayCategory)
@@ -21,7 +21,7 @@ func (store *MemSQL) GetKPIConfigsForSalesforceUsers(projectID uint64, reqID str
 func (store *MemSQL) GetKPIConfigsForSalesforceAccounts(projectID uint64, reqID string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"req_id": reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.GetKPIConfigsForSalesforce(projectID, reqID, model.SalesforceAccountsDisplayCategory)
@@ -30,16 +30,17 @@ func (store *MemSQL) GetKPIConfigsForSalesforceAccounts(projectID uint64, reqID 
 func (store *MemSQL) GetKPIConfigsForSalesforceOpportunities(projectID uint64, reqID string) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"req_id": reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.GetKPIConfigsForSalesforce(projectID, reqID, model.SalesforceOpportunitiesDisplayCategory)
 }
 
+// Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
 func (store *MemSQL) GetKPIConfigsForSalesforce(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"req_id": reqID,
+		"project_id":       projectID,
+		"req_id":           reqID,
 		"display_category": displayCategory,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -56,17 +57,30 @@ func (store *MemSQL) GetKPIConfigsForSalesforce(projectID uint64, reqID string, 
 	return store.getConfigForSpecificSalesforceCategory(projectID, reqID, displayCategory), http.StatusOK
 }
 
+// Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
+// Only considering hubspot_contacts and salesforce_users for now.
 func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"req_id": reqID,
+		"project_id":       projectID,
+		"req_id":           reqID,
 		"display_category": displayCategory,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
+	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdAndObjectType(projectID, model.ProfileQueryType, displayCategory)
+	if statusCode != http.StatusFound {
+		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
+	}
+	customMetricNames := make([]string, 0)
+	for _, customMetric := range customMetrics {
+		customMetricNames = append(customMetricNames, customMetric.Name)
+	}
+
 	return map[string]interface{}{
-		"category":         model.EventCategory,
+		"category":         model.ProfileCategory,
 		"display_category": displayCategory,
-		"metrics":          model.GetMetricsForDisplayCategory(displayCategory),
+		"metrics":          customMetricNames,
 		"properties":       store.GetPropertiesForSalesforce(projectID, reqID),
 	}
 }
@@ -74,7 +88,7 @@ func (store *MemSQL) getConfigForSpecificSalesforceCategory(projectID uint64, re
 func (store *MemSQL) GetPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"req_id": reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)

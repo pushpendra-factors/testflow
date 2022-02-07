@@ -5,59 +5,10 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
-	"reflect"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
-
-// statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
-// TODO handle errors and kpiFunction statusCode.
-func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
-	var queryResults []model.QueryResult
-	finalStatusCode := http.StatusOK
-	isTimezoneEnabled := false
-	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
-	if C.IsMultipleProjectTimezoneEnabled(projectID) {
-		isTimezoneEnabled = true
-	}
-	for _, query := range kpiQueryGroup.Queries {
-		query.Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
-		query.GroupBy = kpiQueryGroup.GlobalGroupBy
-		kpiFunction := pg.kpiQueryFunctionDeciderBasedOnCategory(query.Category)
-		result, statusCode := kpiFunction(projectID, reqID, query)
-		if statusCode != http.StatusOK {
-			finalStatusCode = statusCode
-		}
-		queryResults = append(queryResults, result...)
-	}
-	if finalStatusCode != http.StatusOK {
-		log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("queryResults", queryResults).Error("Failed in executing following KPI Query with status Not Ok.")
-		return []model.QueryResult{model.QueryResult{}, model.QueryResult{}}, finalStatusCode
-	}
-
-	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(queryResults, kpiQueryGroup, finalStatusCode)
-	finalQueryResult := make([]model.QueryResult, 0)
-	gbtRelatedMergedResults := model.MergeQueryResults(gbtRelatedQueryResults, gbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
-	nonGbtRelatedMergedResults := model.MergeQueryResults(nonGbtRelatedQueryResults, nonGbtRelatedQueries, kpiTimezoneString, finalStatusCode, isTimezoneEnabled)
-	if (!reflect.DeepEqual(model.QueryResult{}, gbtRelatedMergedResults)) {
-		finalQueryResult = append(finalQueryResult, gbtRelatedMergedResults)
-	}
-	if (!reflect.DeepEqual(model.QueryResult{}, nonGbtRelatedMergedResults)) {
-		finalQueryResult = append(finalQueryResult, nonGbtRelatedMergedResults)
-	}
-	return finalQueryResult, finalStatusCode
-}
-
-func (pg *Postgres) kpiQueryFunctionDeciderBasedOnCategory(category string) func(uint64, string, model.KPIQuery) ([]model.QueryResult, int) {
-	var result func(uint64, string, model.KPIQuery) ([]model.QueryResult, int)
-	if category == model.ChannelCategory {
-		result = pg.ExecuteKPIQueryForChannels
-	} else {
-		result = pg.ExecuteKPIQueryForEvents
-	}
-	return result
-}
 
 // We convert kpi Query to eventQueries by applying transformation.
 func (pg *Postgres) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
@@ -136,6 +87,7 @@ func (pg *Postgres) executeForResults(projectID uint64, queries []model.Query, k
 			finalResult.Headers = results[0].Headers
 			return finalResult
 		}
+		// log.WithField("results", results).WithField("queries", queries).Warn("kark7")
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
 		finalResult = *results[0]
 	} else {

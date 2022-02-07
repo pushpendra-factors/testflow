@@ -1,4 +1,4 @@
-package postgres
+package memsql
 
 import (
 	C "factors/config"
@@ -11,7 +11,7 @@ import (
 
 // statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
 // TODO handle errors and kpiFunction statusCode.
-func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
+func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
 	var queryResults []model.QueryResult
 	finalStatusCode := http.StatusOK
 	isTimezoneEnabled := false
@@ -22,7 +22,7 @@ func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQuer
 	for _, query := range kpiQueryGroup.Queries {
 		query.Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
 		query.GroupBy = kpiQueryGroup.GlobalGroupBy
-		kpiFunction := pg.kpiQueryFunctionDeciderBasedOnCategory(query.Category)
+		kpiFunction := store.kpiQueryFunctionDeciderBasedOnCategory(query.Category, query)
 		result, statusCode := kpiFunction(projectID, reqID, query)
 		if statusCode != http.StatusOK {
 			finalStatusCode = statusCode
@@ -47,20 +47,20 @@ func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQuer
 	return finalQueryResult, finalStatusCode
 }
 
-// TO think if profiles category can be brought straight here.
-func (pg *Postgres) kpiQueryFunctionDeciderBasedOnCategory(category string) func(uint64, string, model.KPIQuery) ([]model.QueryResult, int) {
+func (store *MemSQL) kpiQueryFunctionDeciderBasedOnCategory(category string, query model.KPIQuery) func(uint64, string, model.KPIQuery) ([]model.QueryResult, int) {
 	var result func(uint64, string, model.KPIQuery) ([]model.QueryResult, int)
 	if category == model.ChannelCategory {
-		result = pg.ExecuteKPIQueryForChannels
+		result = store.ExecuteKPIQueryForChannels
 	} else if category == model.EventCategory {
-		result = pg.ExecuteKPIQueryForEvents
+		result = store.ExecuteKPIQueryForEvents
+		// Wait and remove by may 2022.
 		// else if category == model.EventCategory && !U.ContainsStringInArray([]string{model.HubspotContactsDisplayCategory, model.SalesforceUsersDisplayCategory}, query.DisplayCategory) {
-		// 	result = pg.ExecuteKPIQueryForEvents
+		// 	result = store.ExecuteKPIQueryForEvents
 		// } else if U.ContainsStringInArray([]string{model.HubspotContactsDisplayCategory, model.SalesforceUsersDisplayCategory}, query.DisplayCategory) &&
 		// 	U.ContainsStringInArray([]string{model.CountOfContactsCreated, model.CountOfContactsUpdated, model.CountOfLeadsCreated, model.CountOfLeadsUpdated}, query.Metrics[0]) {
-		// 	result = pg.ExecuteKPIQueryForEvents
+		// 	result = store.ExecuteKPIQueryForEvents
 	} else {
-		result = pg.ExecuteKPIQueryForProfiles
+		result = store.ExecuteKPIQueryForProfiles
 	}
 	return result
 }

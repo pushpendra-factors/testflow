@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const ProfileQueryClass = "profiles"
+
 // From and to refer to JoinTime
 type ProfileQueryGroup struct {
 	Class          string                 `json:"cl"`
@@ -17,19 +19,8 @@ type ProfileQueryGroup struct {
 	From           int64                  `json:"from"`
 	To             int64                  `json:"to"`
 	Timezone       string                 `json:"tz"`
+	DateField      string                 `json:"daFie"`
 	GroupAnalysis  string                 `json:"grpa"`
-}
-
-// From and to refer to JoinTime
-type ProfileQuery struct {
-	Type          string                 `json:"ty"` // all_users, hubspot_events, etc
-	Filters       []QueryProperty        `json:"pr"`
-	GroupBys      []QueryGroupByProperty `json:"group_bys"`
-	From          int64                  `json:"from"`
-	To            int64                  `json:"to"`
-	Timezone      string                 `json:"tz"`
-	GroupAnalysis string                 `json:"grpa"`
-	GroupId       int                    `json:"grpid"`
 }
 
 func (q *ProfileQueryGroup) GetClass() string {
@@ -99,6 +90,23 @@ func (q *ProfileQueryGroup) ConvertAllDatesFromTimezone1ToTimezone2(currentTimez
 	return nil
 }
 
+type ProfileQuery struct {
+	Type          string                 `json:"ty"` // all_users, hubspot_events, etc
+	Filters       []QueryProperty        `json:"pr"`
+	GroupBys      []QueryGroupByProperty `json:"group_bys"`
+	From          int64                  `json:"from"`
+	To            int64                  `json:"to"`
+	Timezone      string                 `json:"tz"`
+	GroupAnalysis string                 `json:"grpa"`
+	GroupId       int                    `json:"grpid"`
+
+	// For specific case of KPI - single eventType
+	AggregateFunction     string `json:"agFn"`
+	AggregateProperty     string `json:"agPr"`
+	AggregatePropertyType string `json:"agPrTy"`
+	DateField             string `json:"daFie"` // Currently used for replacement of jointimestamp in filters.
+}
+
 func (q *ProfileQuery) SetTimeZone(timezoneString U.TimeZoneString) {
 	q.Timezone = string(timezoneString)
 }
@@ -118,7 +126,8 @@ func (query *ProfileQuery) TransformDateTypeFilters() error {
 }
 
 const (
-	DefaultSelectForAllUsers = "COUNT(DISTINCT(COALESCE(users.customer_user_id, users.id))) as " + AliasAggr
+	DefaultSelectForAllUsers               = "COUNT(DISTINCT(COALESCE(users.customer_user_id, users.id))) as " + AliasAggr
+	DefaultSelectForProfilesWithProperties = "%s(CASE WHEN JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(properties, '%s')) ELSE 0) as " + AliasAggr
 )
 
 func SanitizeDateTypeRowsProfiles(result *QueryResult, query *ProfileQuery) {

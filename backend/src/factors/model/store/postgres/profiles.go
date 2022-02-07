@@ -101,7 +101,7 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	selectKeys := make([]string, 0)
 	groupByKeys := make([]string, 0)
 	groupByStmnt := ""
-	selectKeys = append(selectKeys, model.DefaultSelectForAllUsers)
+	selectKeys = append(selectKeys, getSelectKeysForProfile(query))
 
 	for _, groupBy := range query.GroupBys {
 		gKey := groupKeyByIndex(groupBy.Index)
@@ -127,7 +127,13 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
 
 	var stepSqlStmnt string
-	stepSqlStmnt = fmt.Sprintf("SELECT %s FROM users WHERE project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterStmnt)
+	if query.DateField != "" {
+		stepSqlStmnt = fmt.Sprintf(
+			"SELECT %s FROM users WHERE users.project_id = ? %s AND (properties->>'%s')::int >= ? AND (properties->>'%s')::int <= ?", selectStmnt, filterStmnt, query.DateField, query.DateField)
+	} else {
+		stepSqlStmnt = fmt.Sprintf(
+			"SELECT %s FROM users WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterStmnt)
+	}
 	params = append(params, groupBySelectParams...)
 	params = append(params, projectID)
 	params = append(params, filterParams...)
@@ -164,6 +170,14 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	}
 
 	return finalSQLStmnt, params, nil
+}
+
+func getSelectKeysForProfile(query model.ProfileQuery) string {
+	if query.AggregateProperty == "1" || query.AggregateProperty == "" || query.AggregateFunction == model.UniqueAggregationFunction { // Generally count is only used againt them.
+		return model.DefaultSelectForAllUsers
+	} else {
+		return fmt.Sprintf("%s((%s.properties->>'%s')::int) as %s", query.AggregateFunction, model.USERS, query.AggregateProperty, model.AliasAggr)
+	}
 }
 
 func getNoneHandledGroupBySelectForProfiles(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
