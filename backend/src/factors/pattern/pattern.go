@@ -270,7 +270,7 @@ func buildPropertiesHistogramTemplates(
 	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
 	if userPropertiesInfo != nil {
 		for i := 0; i < pLen; i++ {
-			for propertyName, _ := range userAndEventsInfo.UserPropertiesInfo.NumericPropertyKeys {
+			for propertyName, _ := range userPropertiesInfo.NumericPropertyKeys {
 				// User properties is tracked at each event level.
 				nptu := Hist.NumericHistogramTemplateUnit{
 					Name:       PatternPropertyKey(i, propertyName),
@@ -280,7 +280,7 @@ func buildPropertiesHistogramTemplates(
 				userPropertiesNTemplate = append(userPropertiesNTemplate, nptu)
 			}
 
-			for propertyName, _ := range userAndEventsInfo.UserPropertiesInfo.CategoricalPropertyKeyValues {
+			for propertyName, _ := range userPropertiesInfo.CategoricalPropertyKeyValues {
 				// User properties is tracked at each event level.
 				cptu := Hist.CategoricalHistogramTemplateUnit{
 					Name:       PatternPropertyKey(i, propertyName),
@@ -496,6 +496,16 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 	}
 	p.previousEventTimestamp = eventTimestamp
 
+	if p.waitIndex >= len(p.EventNames) {
+		log.Info("p.waitIndex: ", p.waitIndex, "\np.EventNames", p.EventNames)
+		// Reset.
+		p.waitIndex = 0
+		p.currentEPropertiesNMap = make(map[string]float64)
+		p.currentEPropertiesCMap = make(map[string]string)
+		p.currentUPropertiesNMap = make(map[string]float64)
+		p.currentUPropertiesCMap = make(map[string]string)
+	}
+
 	for _, eventName := range eventNames {
 		eventCardinality := evMap[eventName].EventCardinality
 
@@ -528,7 +538,6 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 	copy(eventNameCopy, eventNames)
 
 	for {
-
 		_, eventName, idx := U.StringIn(eventNameCopy, p.EventNames[p.waitIndex])
 		if idx < 0 {
 			break
@@ -627,7 +636,6 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 					}
 				}
 			}
-
 			// Reset.
 			p.waitIndex = 0
 			p.currentEPropertiesNMap = make(map[string]float64)

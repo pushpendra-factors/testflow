@@ -112,6 +112,8 @@ type Model interface {
 	// Custom Metrics
 	CreateCustomMetric(customMetric model.CustomMetric) (*model.CustomMetric, string, int)
 	GetCustomMetricsByProjectId(projectID uint64) ([]model.CustomMetric, string, int)
+	GetCustomMetricByProjectIdAndObjectType(projectID uint64, queryType int, objectType string) ([]model.CustomMetric, string, int)
+	GetCustomMetricsByName(projectID uint64, name string) (model.CustomMetric, string, int)
 
 	//templates
 	RunTemplateQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int)
@@ -540,4 +542,9 @@ type Model interface {
 	DeleteContentGroup(id string, projectID uint64) (int, string)
 	UpdateContentGroup(id string, projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string)
 	CheckURLContentGroupValue(pageUrl string, projectID uint64) map[string]string
+
+	//leadgen
+	GetLeadgenSettingsForProject(projectID uint64) ([]model.LeadgenSettings, error)
+	GetLeadgenSettings() ([]model.LeadgenSettings, error)
+	UpdateRowRead(projectID uint64, source int, rowRead int64) (int, error)
 }

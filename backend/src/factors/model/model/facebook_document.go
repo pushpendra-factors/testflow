@@ -143,6 +143,7 @@ var FacebookExternalRepresentationToInternalRepresentation = map[string]string{
 	"campaign":                      "campaign",
 	"ad_group":                      "ad_set",
 	"ad":                            "ad",
+	"channel":                       "channel",
 }
 
 var FacebookInternalRepresentationToExternalRepresentation = map[string]string{
@@ -183,6 +184,7 @@ var FacebookInternalRepresentationToExternalRepresentation = map[string]string{
 	"ad:name":                       "ad_name",
 	"ad:configured_status":          "ad_configured_status",
 	"ad:effective_status":           "ad_effective_status",
+	"channel:name":                  "channel_name",
 }
 var FacebookObjectMapForSmartProperty = map[string]string{
 	"campaign": "campaign",

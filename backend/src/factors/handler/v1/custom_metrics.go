@@ -43,7 +43,7 @@ func CreateCustomMetric(c *gin.Context) (interface{}, int, string, string, bool)
 	customMetric, errMsg, statusCode := store.GetStore().CreateCustomMetric(request)
 	if statusCode != http.StatusCreated {
 		logCtx.WithField("message finder", "Error during custom metric creation").Warn(errMsg)
-		return customMetric, statusCode, PROCESSING_FAILED, "Error during custom Metric creation.", true
+		return customMetric, statusCode, PROCESSING_FAILED, errMsg, true
 	}
 	return customMetric, http.StatusOK, "", "", false
 }
@@ -101,5 +101,3 @@ func getPropertiesFunctionBasedOnObjectType(objectType string) func(uint64, stri
 		return store.GetStore().GetPropertiesForSalesforce
 	}
 }
-
-//objectType == model.SalesforceUsersDisplayCategory

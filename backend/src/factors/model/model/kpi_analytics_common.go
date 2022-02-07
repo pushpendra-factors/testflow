@@ -62,6 +62,7 @@ const (
 
 	EventCategory   = "events"
 	ChannelCategory = "channels"
+	ProfileCategory = "profiles"
 
 	EventEntity = "event"
 	UserEntity  = "user"
@@ -293,36 +294,12 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		UniqueUsers:  {"display_name": "Unique users", "object_type": U.EVENT_NAME_FORM_SUBMITTED},
 		CountPerUser: {"display_name": "Count per user", "object_type": U.EVENT_NAME_FORM_SUBMITTED},
 	},
-	HubspotContactsDisplayCategory: {
-		CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_CREATED},
-		CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED},
-	},
-	HubspotCompaniesDisplayCategory: {
-		CountOfCompaniesCreated: {"display_name": "Companies created", "object_type": U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED},
-		CountOfCompaniesUpdated: {"display_name": "Companies updated", "object_type": U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED},
-	},
-	// HubspotDealsDisplayCategory: {
-	// 	CountOfContactsCreated: {"display_name": "Contacts created", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_CREATED},
-	// 	CountOfContactsUpdated: {"display_name": "Contacts updated", "object_type": U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED},
-	// },
-	SalesforceUsersDisplayCategory: {
-		CountOfContactsCreated: {"display_name": "Leads created", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_CREATED},
-		CountOfContactsUpdated: {"display_name": "Leads updated", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_UPDATED},
-	},
-	SalesforceAccountsDisplayCategory: {
-		CountOfLeadsCreated: {"display_name": "Leads created", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_CREATED},
-		CountOfLeadsUpdated: {"display_name": "Leads updated", "object_type": U.EVENT_NAME_SALESFORCE_LEAD_UPDATED},
-	},
-	SalesforceOpportunitiesDisplayCategory: {
-		CountOfOpportunitiesCreated: {"display_name": "Opportunities created", "object_type": U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED},
-		CountOfOpportunitiesUpdated: {"display_name": "Opportunities updated", "object_type": U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED},
-	},
 	AllChannelsDisplayCategory: {
 		"impressions": {"display_name": "Impressions"},
 		"clicks":      {"display_name": "Clicks"},
 		"spend":       {"display_name": "Spend"},
 	},
-	AdwordsDisplayCategory: {
+	GoogleAdsDisplayCategory: {
 		Conversion:                                 {"display_name": "Conversion"},
 		ClickThroughRate:                           {"display_name": "Click through rate"},
 		ConversionRate:                             {"display_name": "Conversion rate"},
@@ -407,6 +384,7 @@ var MapOfKPIPropertyNameToData = map[string]map[string]map[string]string{
 		EventEntity: {"name": U.UP_CITY, "display_name": U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES[U.UP_CITY], "data_type": U.PropertyTypeCategorical, "entity": UserEntity}},
 }
 
+// Removed constants for hubspot and salesforce kpi metrics in PR - .
 // 1 Represents agggregation equivalent to aggregateFunc(1) in sql. For eg - select count(1)
 var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]TransformQueryi{
 	WebsiteSessionDisplayCategory: {
@@ -617,26 +595,6 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 			},
 		},
 	},
-	HubspotContactsDisplayCategory: {
-		CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-		CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	},
-	// HubspotCompaniesDisplayCategory: {
-	// 	CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	// 	CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	// },
-	SalesforceUsersDisplayCategory: {
-		CountOfContactsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-		CountOfContactsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	},
-	// SalesforceAccountsDisplayCategory: {
-	// 	CountOfLeadsCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	// 	CountOfLeadsUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	// },
-	// SalesforceOpportunitiesDisplayCategory: {
-	// 	CountOfOpportunitiesCreated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	// 	CountOfOpportunitiesUpdated: []TransformQueryi{{Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: UserEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""}}},
-	// },
 }
 
 type TransformQueryi struct {
@@ -677,7 +635,7 @@ func AddObjectTypeToProperties(kpiConfig map[string]interface{}, value string) m
 func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string, propertiesToDisplayNames map[string]string, prefix string) []map[string]string {
 	var resultantKPIConfigProperties []map[string]string
 	var tempKPIConfigProperty map[string]string
-	for data_type, propertyNames := range properties {
+	for dataType, propertyNames := range properties {
 		for _, propertyName := range propertyNames {
 			if strings.HasPrefix(propertyName, prefix) {
 				var displayName string
@@ -688,7 +646,7 @@ func TransformCRMPropertiesToKPIConfigProperties(properties map[string][]string,
 				tempKPIConfigProperty = map[string]string{
 					"name":         propertyName,
 					"display_name": displayName,
-					"data_type":    data_type,
+					"data_type":    dataType,
 					"entity":       UserEntity,
 				}
 				resultantKPIConfigProperties = append(resultantKPIConfigProperties, tempKPIConfigProperty)

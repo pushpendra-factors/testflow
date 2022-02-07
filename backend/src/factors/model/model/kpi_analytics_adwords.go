@@ -1,16 +1,17 @@
 package model
 
 const (
-	AdwordsDisplayCategory = "adwords_metrics"
+	AdwordsDisplayCategory   = "adwords_metrics"
+	GoogleAdsDisplayCategory = "google_ads_metrics"
 )
 
 func GetKPIConfigsForAdwords() map[string]interface{} {
 	config := map[string]interface{}{
 		"category":         ChannelCategory,
-		"display_category": AdwordsDisplayCategory,
+		"display_category": GoogleAdsDisplayCategory,
 	}
 	allChannelMetrics := GetMetricsForDisplayCategory(AllChannelsDisplayCategory)
-	config["metrics"] = append(allChannelMetrics, GetMetricsForDisplayCategory(AdwordsDisplayCategory)...)
+	config["metrics"] = append(allChannelMetrics, GetMetricsForDisplayCategory(GoogleAdsDisplayCategory)...)
 	return config
 }
 
@@ -18,6 +19,7 @@ func GetKPIConfigsForAdwords() map[string]interface{} {
 var MapOfCategoryToChannel = map[string]string{
 	AllChannelsDisplayCategory:   "all_ads",
 	AdwordsDisplayCategory:       "google_ads",
+	GoogleAdsDisplayCategory:     "google_ads",
 	FacebookDisplayCategory:      "facebook_ads",
 	LinkedinDisplayCategory:      "linkedin_ads",
 	GoogleOrganicDisplayCategory: "search_console",

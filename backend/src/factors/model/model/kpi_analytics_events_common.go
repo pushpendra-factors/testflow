@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// TO Change.
 func ValidateKPIQuery(kpiQuery KPIQuery) bool {
 	if kpiQuery.DisplayCategory == WebsiteSessionDisplayCategory {
 		return ValidateKPISessions(kpiQuery)
@@ -14,16 +15,16 @@ func ValidateKPIQuery(kpiQuery KPIQuery) bool {
 		return ValidateKPIPageView(kpiQuery)
 	} else if kpiQuery.DisplayCategory == FormSubmissionsDisplayCategory {
 		return ValidateKPIFormSubmissions(kpiQuery)
-	} else if kpiQuery.DisplayCategory == HubspotContactsDisplayCategory {
-		return ValidateKPIHubspotContacts(kpiQuery)
-	} else if kpiQuery.DisplayCategory == HubspotCompaniesDisplayCategory {
-		return ValidateKPIHubspotCompanies(kpiQuery)
-	} else if kpiQuery.DisplayCategory == SalesforceUsersDisplayCategory {
-		return ValidateKPISalesforceUsers(kpiQuery)
-	} else if kpiQuery.DisplayCategory == SalesforceAccountsDisplayCategory {
-		return ValidateKPISalesforceAccounts(kpiQuery)
-	} else if kpiQuery.DisplayCategory == SalesforceOpportunitiesDisplayCategory {
-		return ValidateKPISalesforceOpportunities(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == HubspotContactsDisplayCategory {
+		// 	return ValidateKPIHubspotContacts(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == HubspotCompaniesDisplayCategory {
+		// 	return ValidateKPIHubspotCompanies(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceUsersDisplayCategory {
+		// 	return ValidateKPISalesforceUsers(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceAccountsDisplayCategory {
+		// 	return ValidateKPISalesforceAccounts(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceOpportunitiesDisplayCategory {
+		// 	return ValidateKPISalesforceOpportunities(kpiQuery)
 	} else {
 		return false
 	}

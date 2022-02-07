@@ -10,6 +10,7 @@ import (
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
+	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -572,25 +573,41 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 	trim_stage := 0
 	var patternsBytes int64
 	var cumulativeBytes int64
+	var totalFileSize int64
+	var readBytes int64
+	trimMap := make(map[int]int64)
+
+	// get totalFileSize
 	for _, partFileFullName := range listFiles {
 		partFNamelist := strings.Split(partFileFullName, "/")
 		partFileName := partFNamelist[len(partFNamelist)-1]
+		if !U.HasPrefixFromList(partFileName, []string{"part_"}) {
+			continue
+		}
+		fileSize, err := (*cloudManager).GetObjectSize(partFilesDir, partFileName)
+		if err != nil {
+			log.WithFields(log.Fields{"file": partFileName, "fileSize": fileSize, "err": err}).Fatal("Couldn't get part file size")
+		}
+		mineLog.Infof("part file: %s, fileSize : %d", partFileName, fileSize)
+		totalFileSize += fileSize
+	}
+
+	for _, partFileFullName := range listFiles {
+		partFNamelist := strings.Split(partFileFullName, "/")
+		partFileName := partFNamelist[len(partFNamelist)-1]
+		if !U.HasPrefixFromList(partFileName, []string{"part_"}) {
+			continue
+		}
 		mineLog.Infof("Reading part file : %s", partFileName)
 		file, err := (*cloudManager).Get(partFilesDir, partFileName)
 		if err != nil {
 			return nil, 0, err
 		}
-		fileSize, err := (*cloudManager).GetObjectSize(partFilesDir, partFileName)
-		if err != nil {
-			log.WithFields(log.Fields{"fileSize": fileSize, "err": err}).Fatal("Couldn't get part file size")
-		}
-		mineLog.Infof("fileSize : %d", fileSize)
+
 		scanner := bufio.NewScanner(file)
 		const maxCapacity = 10 * 1024 * 1024
 		buf := make([]byte, maxCapacity)
 		scanner.Buffer(buf, maxCapacity)
-		var readBytes int64
-		trimMap := make(map[int]int64)
 
 		for scanner.Scan() {
 
@@ -607,7 +624,7 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 				// if size exceeds and further trimming possible, trim
 				if trim_stage < 3 && (totalConsumedBytes+patternsBytes) > maxTotalBytes {
 					trim_stage++
-					totalPatternsSize := fileSize * patternsBytes / readBytes // estimating size of ALL +ve count patterns compressed to trim_stage-1
+					totalPatternsSize := totalFileSize * patternsBytes / readBytes // estimating size of ALL +ve count patterns compressed to trim_stage-1
 					trimMap[trim_stage] = totalPatternsSize
 					log.WithFields(log.Fields{"patternsBytes": patternsBytes, "trim_stage": trim_stage}).Info("BEFORE")
 					patterns, patternsBytes, err = compressPatternsList(patterns, maxTotalBytes, trimMap, trim_stage) //compress the patterns got uptil now
@@ -616,6 +633,7 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 					}
 					log.WithFields(log.Fields{"patternsBytes": patternsBytes, "trim_stage": trim_stage}).Info("AFTER")
 				}
+
 				pattern, pbytes, err := cumulativeCompressPattern(&pattern, maxTotalBytes, trimMap, trim_stage) //compress the new pattern to be added
 				if err != nil {
 					return []*P.Pattern{}, 0, err
@@ -624,6 +642,10 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 				patternsBytes += pbytes
 			}
 			readBytes += int64(len([]byte(line)))
+		}
+
+		if err := file.Close(); err != nil {
+			log.WithFields(log.Fields{"err": err}).Fatal("Error closing file")
 		}
 	}
 
@@ -672,33 +694,36 @@ func ReadFilterAndCompressPatternsFromFile(partFilesDir string, cloudManager *fi
 
 func compressPattern(pattern *P.Pattern, maxBytesSize int64, trimMap map[int]int64, trim_stage int) (*P.Pattern, int64, error) {
 
-	TRIM_MULTIPLIER := 0.8
-	trimFraction := float64(maxBytesSize) * TRIM_MULTIPLIER / float64(trimMap[trim_stage])
-	switch trim_stage {
-	case 1:
-		if pattern.PerUserUserCategoricalProperties != nil && pattern.PerUserEventCategoricalProperties != nil {
-			(*pattern.PerUserEventCategoricalProperties).TrimByFmapSize(trimFraction)
-			(*pattern.PerUserUserCategoricalProperties).TrimByFmapSize(trimFraction)
-			(*pattern.PerOccurrenceEventCategoricalProperties).TrimByFmapSize(trimFraction)
-			(*pattern.PerOccurrenceUserCategoricalProperties).TrimByFmapSize(trimFraction)
-		}
-	case 2:
-		if pattern.PerUserUserNumericProperties != nil && pattern.PerUserEventNumericProperties != nil {
-			(*pattern.PerUserEventNumericProperties).TrimByBinSize(trimFraction)
-			(*pattern.PerUserUserNumericProperties).TrimByBinSize(trimFraction)
-			(*pattern.PerOccurrenceEventNumericProperties).TrimByBinSize(trimFraction)
-			(*pattern.PerOccurrenceUserNumericProperties).TrimByBinSize(trimFraction)
-		}
-	case 3:
-		if pattern.PerUserEventCategoricalProperties != nil && pattern.PerUserUserCategoricalProperties != nil {
-			(*pattern.PerUserEventCategoricalProperties).TrimByBinSize(trimFraction)
-			(*pattern.PerUserUserCategoricalProperties).TrimByBinSize(trimFraction)
-			(*pattern.PerOccurrenceEventCategoricalProperties).TrimByBinSize(trimFraction)
-			(*pattern.PerOccurrenceUserCategoricalProperties).TrimByBinSize(trimFraction)
-		}
-	default:
+	if pattern.PatternVersion == 1 {
+		TRIM_MULTIPLIER := 0.8
+		trimFraction := float64(maxBytesSize) * TRIM_MULTIPLIER / float64(trimMap[trim_stage])
+		switch trim_stage {
+		case 1:
+			if pattern.PerUserUserCategoricalProperties != nil && pattern.PerUserEventCategoricalProperties != nil {
+				(*pattern.PerUserEventCategoricalProperties).TrimByFmapSize(trimFraction)
+				(*pattern.PerUserUserCategoricalProperties).TrimByFmapSize(trimFraction)
+				(*pattern.PerOccurrenceEventCategoricalProperties).TrimByFmapSize(trimFraction)
+				(*pattern.PerOccurrenceUserCategoricalProperties).TrimByFmapSize(trimFraction)
+			}
+		case 2:
+			if pattern.PerUserUserNumericProperties != nil && pattern.PerUserEventNumericProperties != nil {
+				(*pattern.PerUserEventNumericProperties).TrimByBinSize(trimFraction)
+				(*pattern.PerUserUserNumericProperties).TrimByBinSize(trimFraction)
+				(*pattern.PerOccurrenceEventNumericProperties).TrimByBinSize(trimFraction)
+				(*pattern.PerOccurrenceUserNumericProperties).TrimByBinSize(trimFraction)
+			}
+		case 3:
+			if pattern.PerUserEventCategoricalProperties != nil && pattern.PerUserUserCategoricalProperties != nil {
+				(*pattern.PerUserEventCategoricalProperties).TrimByBinSize(trimFraction)
+				(*pattern.PerUserUserCategoricalProperties).TrimByBinSize(trimFraction)
+				(*pattern.PerOccurrenceEventCategoricalProperties).TrimByBinSize(trimFraction)
+				(*pattern.PerOccurrenceUserCategoricalProperties).TrimByBinSize(trimFraction)
+			}
+		default:
 
+		}
 	}
+
 	b, err := json.Marshal(pattern)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")

@@ -638,15 +638,42 @@ func getLinkedinSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model
 
 // @Kark TODO v1
 func getLinkedinSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.ChannelGroupBy, error) {
-	groupBys := make([]model.ChannelGroupBy, 0)
-	for _, requestGroupBy := range requestGroupBys {
+	sortedGroupBys := make([]model.ChannelGroupBy, 0)
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterCampaign {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterAdGroup {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterAd {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterChannel {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	for _, requestGroupBy := range sortedGroupBys {
+		var resultGroupBy model.ChannelGroupBy
 		groupByObject, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
 			return make([]model.ChannelGroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 		}
-		groupBys = append(groupBys, model.ChannelGroupBy{Object: groupByObject, Property: requestGroupBy.Property})
+		resultGroupBy = requestGroupBy
+		resultGroupBy.Object = groupByObject
+		resultGroupBys = append(resultGroupBys, resultGroupBy)
 	}
-	return groupBys, nil
+	return resultGroupBys, nil
 }
 
 func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
@@ -707,9 +734,15 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 
 	for _, groupBy := range linkedinGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
-		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		if groupBy.Object == CAFilterChannel {
+			value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		} else {
+			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		}
 	}
 	for _, groupBy := range smartPropertyCampaignGroupBys {
 		value := fmt.Sprintf("campaign.properties->>'%s' as campaign_%s", groupBy.Property, groupBy.Property)
@@ -800,9 +833,15 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
-		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		if groupBy.Object == CAFilterChannel {
+			value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		} else {
+			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		}
 	}
 
 	finalSelectKeys = append(finalSelectKeys, selectKeys...)

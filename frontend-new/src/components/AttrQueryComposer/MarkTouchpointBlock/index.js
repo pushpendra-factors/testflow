@@ -87,13 +87,14 @@ const MarkTouchpointBlock = ({
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
-          <GroupSelect2
-            groupedProperties={touchPointOptions}
-            placeholder='Select Touchpoint'
-            optionClick={(group, val) => onEventSelect(val[0])}
+          <FaSelect
+            options={touchPointOptions[0].values.map(option=>new Array(option[0],option[0]))}
+            optionClick={(val) => onEventSelect(val[0])}
             onClickOutside={() => setSelectVisible(false)}
             extraClass={touchPoint ? styles.touchPointSelector : ''}
-          ></GroupSelect2>
+            showIcon={false}
+          ></FaSelect>
+
         ) : null}
       </div>
     );
@@ -101,8 +102,8 @@ const MarkTouchpointBlock = ({
 
   const renderTouchPointSelect = () => {
     return (
-      <div className={'flex justify-start items-center mt-3'}>
-        {<Button type="text" onClick={toggleTouchPointSelect} icon={<SVG name={'plus'} color={'grey'} />}>Add a Touchpoint</Button>}
+      <div className={`${styles.block_touchpoint_select} flex justify-start items-center mt-3`}>
+        {<Button type="text" onClick={toggleTouchPointSelect} icon={<SVG name={'plus'} color={'grey'} />}>Add a Property</Button>}
         {selectEvents()}
       </div>
     );
@@ -246,7 +247,7 @@ const MarkTouchpointBlock = ({
     <>
       <div className={styles.block}>
         <Row className={`mt-2`}>
-          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-2'}>Select Type</Text>
+          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-2'}>Type</Text>
         </Row>
         <Row className={`mt-2 ml-2`}>
           <Radio.Group onChange={setTouchpointRef} value={touchPointRef? touchPointRef : 'Tactic'}>
@@ -259,7 +260,7 @@ const MarkTouchpointBlock = ({
       </div>
       <div className={`${styles.block} mt-4`}>
         <Row className={`mt-2`}>
-          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-2'}>Select Property</Text>
+          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-2'}>Property</Text>
         </Row>
 
         <Row className={`mt-2 ml-2`}>

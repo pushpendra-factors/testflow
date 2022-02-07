@@ -5,6 +5,7 @@ import DataTable from '../../../../components/DataTable';
 function NoBreakdownTable({
   data,
   queries,
+  groupAnalysis,
   reportTitle = 'Profile Analytics',
   handleSorting,
   sorter,
@@ -19,8 +20,8 @@ function NoBreakdownTable({
   }, [sorter, handleSorting]);
 
   useEffect(() => {
-    setTableData(getTableData(data, queries, sorter, searchText));
-  }, [data, queries, searchText, sorter]);
+    setTableData(getTableData(data, queries, groupAnalysis, sorter, searchText));
+  }, [data, queries, groupAnalysis, searchText, sorter]);
 
   const getCSVData = () => {
     return {

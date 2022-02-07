@@ -63,6 +63,7 @@ function ReportContent({
   let content = null,
     queryDetail = null,
     durationObj = {},
+    groupAnalysis = '',
     metricsDropdown = <div className='mr-0'></div>;
 
   const {
@@ -300,15 +301,14 @@ function ReportContent({
 
   if (queryType === QUERY_TYPE_PROFILE) {
     durationObj = queryOptions.date_range;
+    groupAnalysis = queryOptions.group_analysis;
     if (queries.length > 1 && breakdown.length) {
       metricsDropdown = (
         <CampaignMetricsDropdown
           metrics={queries.map(
             (_, index) =>
               `${
-                ReverseProfileMapper[queries[index]]
-                  ? ReverseProfileMapper[queries[index]]
-                  : queries[index]
+                ReverseProfileMapper[queries[index]][groupAnalysis]
               } (${toLetters(index)})`
           )}
           currValue={currMetricsValue}
@@ -409,6 +409,7 @@ function ReportContent({
       content = (
         <ProfilesResultPage
           queries={queries}
+          groupAnalysis={groupAnalysis}
           resultState={resultState}
           chartType={chartType}
           section={section}

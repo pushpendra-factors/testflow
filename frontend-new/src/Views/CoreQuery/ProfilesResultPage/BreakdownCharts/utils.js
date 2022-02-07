@@ -135,6 +135,7 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
 export const getTableColumns = (
   queries,
   breakdown,
+  groupAnalysis,
   currentEventIndex,
   currentSorter,
   handleSorting,
@@ -164,9 +165,7 @@ export const getTableColumns = (
 
   const eventCol = {
     title: getClickableTitleSorter(
-      ReverseProfileMapper[queries[currentEventIndex]]
-        ? ReverseProfileMapper[queries[currentEventIndex]]
-        : queries[currentEventIndex],
+      ReverseProfileMapper[queries[currentEventIndex]][groupAnalysis],
       { key: 'value', type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,

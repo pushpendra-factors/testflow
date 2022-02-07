@@ -183,7 +183,7 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 	resultGroup, errCode := store.GetStore().RunProfilesGroupQuery(profileQueryGroup.Queries, projectID)
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectID, &profileQueryGroup)
-		logCtx.Error("Query failed. Failed to process query from DB")
+		logCtx.Error("Profile Query failed. Failed to process query from DB")
 		if errCode == http.StatusPartialContent {
 			return resultGroup, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
 		}

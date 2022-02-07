@@ -65,6 +65,7 @@ var LinkedinExternalRepresentationToInternalRepresentation = map[string]string{
 	"campaign":    "campaign_group",
 	"ad_group":    "campaign",
 	"ad":          "creative",
+	"channel":     "channel",
 }
 
 var LinkedinInternalRepresentationToExternalRepresentation = map[string]string{
@@ -77,6 +78,7 @@ var LinkedinInternalRepresentationToExternalRepresentation = map[string]string{
 	"campaign_group:id":   "campaign_id",
 	"campaign:id":         "ad_group_id",
 	"creative:id":         "ad_id",
+	"channel:name":        "channel_name",
 }
 var LinkedinInternalGroupByRepresentation = map[string]string{
 	"impressions":         "impressions",
@@ -88,6 +90,7 @@ var LinkedinInternalGroupByRepresentation = map[string]string{
 	"campaign_group:id":   "campaign_group_id",
 	"campaign:id":         "campaign_id",
 	"creative:id":         "creative_id",
+	"channel:name":        "channel_name",
 }
 var LinkedinObjectMapForSmartProperty = map[string]string{
 	"campaign_group": "campaign",

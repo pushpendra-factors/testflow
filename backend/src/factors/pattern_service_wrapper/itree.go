@@ -1333,6 +1333,11 @@ func BuildNewItreeV1(reqId string,
 			"error": err.Error()}).Error("explain_debug_GetAllPatterns")
 		return nil, err, nil
 	}
+	// allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
+	// if allActiveUsersPattern == nil {
+	// 	return nil, fmt.Errorf("all active users pattern not found"), nil
+	// }
+
 	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
 	if allActiveUsersPattern == nil {
 		return nil, fmt.Errorf("all active users pattern not found"), nil

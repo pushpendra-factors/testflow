@@ -4,6 +4,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -11,8 +12,15 @@ import (
 
 func (store *MemSQL) CreateGroupRelationship(projectID uint64, leftGroupName, leftGroupUserID,
 	rightGroupName, rightGroupUserID string) (*model.GroupRelationship, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "left_group_name": leftGroupName,
-		"right_group_name": rightGroupName, "left_group_user_id": leftGroupUserID, "right_group_user_id": rightGroupUserID})
+		logFields := log.Fields{
+			"project_id": projectID,
+			"left_group_name": leftGroupName,
+			"left_group_user_id": leftGroupUserID,
+			"right_group_name": rightGroupName,
+			"right_group_user_id": rightGroupUserID,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+		logCtx := log.WithFields(logFields)
 	if projectID < 1 || leftGroupName == "" || leftGroupUserID == "" || rightGroupName == "" || rightGroupUserID == "" {
 		logCtx.Error("Invalid parameters.")
 		return nil, http.StatusBadRequest
@@ -61,7 +69,12 @@ func (store *MemSQL) CreateGroupRelationship(projectID uint64, leftGroupName, le
 }
 
 func (store *MemSQL) GetGroupRelationshipByUserID(projectID uint64, leftGroupUserID string) ([]model.GroupRelationship, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "left_group_user_id": leftGroupUserID})
+	logFields := log.Fields{
+		"project_id": projectID,
+		"left_group_user_id": leftGroupUserID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	if projectID < 1 || leftGroupUserID == "" {
 		logCtx.Error("Invalid parameters")
 		return nil, http.StatusBadRequest

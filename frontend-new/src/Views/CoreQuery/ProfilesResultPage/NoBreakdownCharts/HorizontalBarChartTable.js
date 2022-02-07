@@ -8,6 +8,7 @@ import DataTable from '../../../../components/DataTable';
 const HorizontalBarChartTable = ({
   data,
   queries,
+  groupAnalysis,
   cardSize = 1,
   isDashboardWidget = false,
 }) => {
@@ -23,11 +24,12 @@ const HorizontalBarChartTable = ({
       getDataInHorizontalBarChartFormat(
         data,
         queries,
+        groupAnalysis,
         cardSize,
         isDashboardWidget
       )
     );
-  }, [data, cardSize, queries, isDashboardWidget]);
+  }, [data, cardSize, queries, groupAnalysis, isDashboardWidget]);
 
   useEffect(() => {
     formatData();
