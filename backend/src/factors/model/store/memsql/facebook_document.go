@@ -244,7 +244,7 @@ func (store *MemSQL) isFacebookDocumentExistByPrimaryKey(document *model.Faceboo
 // CreateFacebookDocument ...
 func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int {
 	logFields := log.Fields{
-		"document": document,
+		"document":   document,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -301,7 +301,7 @@ func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.Fa
 }
 func getFacebookHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (string, string, string, error) {
 	logFields := log.Fields{
-		"doc_type": docType,
+		"doc_type":   docType,
 		"value_json": valueJSON,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -333,7 +333,7 @@ func getFacebookHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 }
 
 func getFacebookDocumentTypeAliasByType() map[int]string {
-	
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	documentTypeMap := make(map[int]string, 0)
 	for alias, typ := range facebookDocumentTypeAlias {
@@ -362,7 +362,7 @@ func (store *MemSQL) buildFbChannelConfig(projectID uint64) *model.ChannelConfig
 func (store *MemSQL) buildObjectAndPropertiesForFacebook(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"objects": objects,
+		"objects":    objects,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
@@ -390,13 +390,13 @@ func (store *MemSQL) buildObjectAndPropertiesForFacebook(projectID uint64, objec
 // GetFacebookFilterValues - @TODO Kark v1
 func (store *MemSQL) GetFacebookFilterValues(projectID uint64, requestFilterObject string,
 	requestFilterProperty string, reqID string) ([]interface{}, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"request_filter_object": requestFilterObject,
-			"request_filter_property": requestFilterProperty,
-			"req_id": reqID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":              projectID,
+		"request_filter_object":   requestFilterObject,
+		"request_filter_property": requestFilterProperty,
+		"req_id":                  reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	_, isPresent := Const.SmartPropertyReservedNames[requestFilterProperty]
 	if !isPresent {
@@ -423,14 +423,14 @@ func (store *MemSQL) GetFacebookFilterValues(projectID uint64, requestFilterObje
 // GetFacebookSQLQueryAndParametersForFilterValues - @TODO Kark v1
 func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"request_filter_object": requestFilterObject,
+		"project_id":              projectID,
+		"request_filter_object":   requestFilterObject,
 		"request_filter_property": requestFilterProperty,
-		"req_id": reqID,
+		"req_id":                  reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
-		facebookInternalFilterProperty, docType, err := getFilterRelatedInformationForFacebook(requestFilterObject,
+	facebookInternalFilterProperty, docType, err := getFilterRelatedInformationForFacebook(requestFilterObject,
 		requestFilterProperty)
 	if err != http.StatusOK {
 		return "", make([]interface{}, 0, 0), http.StatusBadRequest
@@ -454,11 +454,11 @@ func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID u
 
 func getFilterRelatedInformationForFacebook(requestFilterObject string,
 	requestFilterProperty string) (string, int, int) {
-		logFields := log.Fields{
-			"request_filter_object": requestFilterObject,
-			"request_filter_property": requestFilterProperty,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"request_filter_object":   requestFilterObject,
+		"request_filter_property": requestFilterProperty,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	facebookInternalFilterObject, isPresent := model.FacebookExternalRepresentationToInternalRepresentation[requestFilterObject]
 	if !isPresent {
@@ -479,13 +479,13 @@ func getFilterRelatedInformationForFacebook(requestFilterObject string,
 func (store *MemSQL) getFacebookFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"doc_type": docType,
-		"property": property,
-		"req_id": reqID,
+		"doc_type":   docType,
+		"property":   property,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
-		projectSetting, errCode := store.GetProjectSetting(projectID)
+	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to fetch project setting in facebook filter values.")
 		return []interface{}{}, http.StatusInternalServerError
@@ -513,14 +513,14 @@ func (store *MemSQL) getFacebookFilterValuesByType(projectID uint64, docType int
 func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
+		"query":      query,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	var fetchSource = false
 	logCtx := log.WithFields(logFields)
-		if query.GroupByTimestamp == "" {
+	if query.GroupByTimestamp == "" {
 		sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID,
 			query, reqID, fetchSource, " LIMIT 10000", false, nil)
 		if errCode == http.StatusNotFound {
@@ -575,22 +575,22 @@ func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID uint64, query *mode
 // GetSQLQueryAndParametersForFacebookQueryV1 ...
 func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"fetch_source": fetchSource,
-			"req_id": reqID,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"fetch_source":                  fetchSource,
+		"req_id":                        reqID,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var selectMetrics []string
 	var selectKeys []string
 	var sql string
 	var params []interface{}
 	logCtx := log.WithFields(logFields)
-		transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForFacebook(
+	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForFacebook(
 		projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
 		logCtx.WithError(err).Info(model.FacebookSpecificError)
@@ -618,17 +618,17 @@ func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64
 
 func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID uint64,
 	query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"req_id": reqID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query":      query,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var transformedQuery model.ChannelQueryV1
 	var err error
 	logCtx := log.WithFields(logFields)
-		projectSetting, errCode := store.GetProjectSetting(projectID)
+	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return &model.ChannelQueryV1{}, "", errors.New("Project setting not found")
 	}
@@ -736,6 +736,12 @@ func getFacebookSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 		}
 	}
 
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterChannel {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
 	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	for _, requestGroupBy := range sortedGroupBys {
 		var resultGroupBy model.ChannelGroupBy
@@ -752,12 +758,12 @@ func getFacebookSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 
 func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"query": query,
-		"fetch_source": fetchSource,
-		"customer_account_id": customerAccountID,
-		"limit_string": limitString,
-		"is_group_by_timestamp": isGroupByTimestamp,
+		"project_id":                    projectID,
+		"query":                         query,
+		"fetch_source":                  fetchSource,
+		"customer_account_id":           customerAccountID,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
 		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -769,12 +775,12 @@ func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID uint64, custome
 }
 func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"query": query,
-		"fetch_source": fetchSource,
-		"customer_account_id": customerAccountID,
-		"limit_string": limitString,
-		"is_group_by_timestamp": isGroupByTimestamp,
+		"project_id":                    projectID,
+		"query":                         query,
+		"fetch_source":                  fetchSource,
+		"customer_account_id":           customerAccountID,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
 		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -787,19 +793,19 @@ func buildFacebookQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 
 func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQueryV1, projectID uint64, from, to int64, facebookAccountIDs string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"fetch_source": fetchSource,
-			"from": from,
-			"to": to,
-			"doc_type": docType,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-			"facebook_account_ids": facebookAccountIDs,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"fetch_source":                  fetchSource,
+		"from":                          from,
+		"to":                            to,
+		"doc_type":                      docType,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+		"facebook_account_ids":          facebookAccountIDs,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	customerAccountIDs := strings.Split(facebookAccountIDs, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
@@ -840,9 +846,15 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 
 	for _, groupBy := range facebookGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
-		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+		if groupBy.Object == CAFilterChannel {
+			value := fmt.Sprintf("'facebook' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+		} else {
+			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+		}
 	}
 	for _, groupBy := range smartPropertyCampaignGroupBys {
 		value := fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s') as campaign_%s", groupBy.Property, groupBy.Property)
@@ -896,7 +908,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 
 func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
 	logFields := log.Fields{
-		"filters": filters,
+		"filters":   filters,
 		"group_bys": groupBys,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -912,19 +924,19 @@ func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 }
 func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, facebookAccountIDs string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"fetch_source": fetchSource,
-			"from": from,
-			"to": to,
-			"doc_type": docType,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-			"facebook_account_ids": facebookAccountIDs,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"fetch_source":                  fetchSource,
+		"from":                          from,
+		"to":                            to,
+		"doc_type":                      docType,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+		"facebook_account_ids":          facebookAccountIDs,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	customerAccountIDs := strings.Split(facebookAccountIDs, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
@@ -950,9 +962,15 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
-		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+		if groupBy.Object == CAFilterChannel {
+			value := fmt.Sprintf("'facebook' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+		} else {
+			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+		}
 	}
 
 	finalSelectKeys = append(finalSelectKeys, selectKeys...)
@@ -1082,7 +1100,7 @@ func buildWhereConditionForGBTForFacebook(groupByCombinations []map[string]inter
 
 func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1, smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {
 	logFields := log.Fields{
-		"filters": filters,
+		"filters":                           filters,
 		"smart_property_campaign_group_bys": smartPropertyAdGroupGroupBys,
 		"smart_property_ad_group_group_bys": smartPropertyAdGroupGroupBys,
 	}
@@ -1179,7 +1197,7 @@ func getLowestHierarchyLevelForFacebook(query *model.ChannelQueryV1) string {
 // GetFacebookLastSyncInfo ...
 func (store *MemSQL) GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]model.FacebookLastSyncInfo, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":             projectID,
 		"customer_ad_account_id": CustomerAdAccountID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1226,11 +1244,11 @@ func (store *MemSQL) GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccount
 // ExecuteFacebookChannelQuery - @TODO Kark v0
 func (store *MemSQL) ExecuteFacebookChannelQuery(projectID uint64,
 	query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query":      query,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	logCtx := log.WithFields(logFields)
@@ -1284,14 +1302,14 @@ func (store *MemSQL) ExecuteFacebookChannelQuery(projectID uint64,
 // @TODO Kark v0
 func (store *MemSQL) GetFacebookMetricBreakdown(projectID uint64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelBreakdownResult, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"customer_account_id": customerAccountID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":          projectID,
+		"query":               query,
+		"customer_account_id": customerAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(logFields)
 	sqlQuery, documentType := getFacebookMetricsQuery(query, true)
 
 	rows, tx, err := store.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
@@ -1329,7 +1347,6 @@ func (store *MemSQL) GetFacebookMetricBreakdown(projectID uint64, customerAccoun
 func getFacebookDocumentType(query *model.ChannelQuery) int {
 	logFields := log.Fields{
 		"query": query,
-
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var documentType int
@@ -1350,7 +1367,7 @@ func getFacebookMetricsQuery(query *model.ChannelQuery, withBreakdown bool) (str
 
 	logFields := log.Fields{
 		"with_breakdown": withBreakdown,
-		"query": query,
+		"query":          query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	documentType := getFacebookDocumentType(query)
@@ -1390,14 +1407,14 @@ func getFacebookMetricsQuery(query *model.ChannelQuery, withBreakdown bool) (str
 // @TODO Kark v0
 func (store *MemSQL) GetFacebookChannelResult(projectID uint64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelQueryResult, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"customer_account_id": customerAccountID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":          projectID,
+		"query":               query,
+		"customer_account_id": customerAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(logFields)
 
 	sqlQuery, documentType := getFacebookMetricsQuery(query, false)
 
@@ -1435,7 +1452,7 @@ func (store *MemSQL) GetFacebookChannelResult(projectID uint64, customerAccountI
 func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"days": days,
+		"days":       days,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 

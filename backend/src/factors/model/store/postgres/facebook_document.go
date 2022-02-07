@@ -543,6 +543,12 @@ func getFacebookSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 		}
 	}
 
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterChannel {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
 	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	for _, requestGroupBy := range sortedGroupBys {
 		var resultGroupBy model.ChannelGroupBy
@@ -614,9 +620,15 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 
 	for _, groupBy := range facebookGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
-		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+		if groupBy.Object == CAFilterChannel {
+			value := fmt.Sprintf("'facebook' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+		} else {
+			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+		}
 	}
 	for _, groupBy := range smartPropertyCampaignGroupBys {
 		value := fmt.Sprintf("campaign.properties->>'%s' as campaign_%s", groupBy.Property, groupBy.Property)
@@ -705,6 +717,12 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
+		if groupBy.Object == CAFilterChannel {
+			value := fmt.Sprintf("'facebook' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+			continue
+		}
 		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
 		selectKeys = append(selectKeys, value)
 		responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])

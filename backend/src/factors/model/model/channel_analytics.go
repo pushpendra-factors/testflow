@@ -3,14 +3,18 @@ package model
 import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
+	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
 	CampaignPrefix = "campaign_"
 	AdgroupPrefix  = "ad_group_"
 	KeywordPrefix  = "keyword_"
+	Channel        = "channel"
 )
 
 type ChannelConfigResult struct {
@@ -331,4 +335,56 @@ func GetHeadersFromQuery(query ChannelQueryV1) []string {
 		headers = append(headers, metric)
 	}
 	return headers
+}
+
+func GetDecoupledFiltersForChannelBreakdownFilters(filters []ChannelFilterV1) ([]ChannelFilterV1, []ChannelFilterV1) {
+	channelBreakdownFilters := make([]ChannelFilterV1, 0)
+	genericFilters := make([]ChannelFilterV1, 0)
+	for _, filter := range filters {
+		if filter.Object == Channel {
+			channelBreakdownFilters = append(channelBreakdownFilters, filter)
+		} else {
+			genericFilters = append(genericFilters, filter)
+		}
+	}
+	return genericFilters, channelBreakdownFilters
+}
+
+func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, int) {
+	isAdwordsReq, isFacebookReq, isLinkedinReq := false, false, false
+	if len(filters) == 0 {
+		return true, true, true, http.StatusOK
+	}
+	for i, filter := range filters {
+		if i == 0 {
+			switch filter.Value {
+			case ChannelAdwords:
+				isAdwordsReq = true
+			case ChannelFacebook:
+				isFacebookReq = true
+			case ChannelLinkedin:
+				isLinkedinReq = true
+			default:
+				log.WithField("Filters", filters).Error("ChannelAnalyticsError: Invalid channel present in channel filter")
+				return false, false, false, http.StatusBadRequest
+			}
+		} else {
+			if filter.LogicalOp == LOGICAL_OP_AND {
+				return false, false, false, http.StatusOK
+			} else {
+				switch filter.Value {
+				case ChannelAdwords:
+					isAdwordsReq = true
+				case ChannelFacebook:
+					isFacebookReq = true
+				case ChannelLinkedin:
+					isLinkedinReq = true
+				default:
+					log.WithField("Filters", filters).Error("ChannelAnalyticsError: Invalid channel present in channel filter")
+					return false, false, false, http.StatusBadRequest
+				}
+			}
+		}
+	}
+	return isAdwordsReq, isFacebookReq, isLinkedinReq, http.StatusOK
 }

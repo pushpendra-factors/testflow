@@ -123,6 +123,7 @@ var AdwordsExtToInternal = map[string]string{
 	"campaign":                       "campaign",
 	"ad_group":                       "ad_group",
 	"ad":                             "ad",
+	"channel":                        "channel",
 	"name":                           "name",
 	"keyword":                        "keyword",
 	"id":                             "id",

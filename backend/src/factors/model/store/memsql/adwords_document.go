@@ -350,7 +350,7 @@ func getAdwordsIDFieldNameByType(docType int) string {
 func getAdwordsHierarchyColumnsByType(valueMap *map[string]interface{}, docType int) (int64, int64, int64, int64) {
 	logFields := log.Fields{
 		"value_map": valueMap,
-		"doc_type": docType,
+		"doc_type":  docType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	switch docType {
@@ -383,7 +383,7 @@ func GetAdwordsDateOnlyTimestamp(unixTimestamp int64) string {
 
 func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (string, int64, int64, int64, int64, error) {
 	logFields := log.Fields{
-		"doc_type": docType,
+		"doc_type":  docType,
 		"valueJSON": valueJSON,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -593,7 +593,7 @@ func addColumnInformationForAdwordsDocument(adwordsDocument *model.AdwordsDocume
 }
 
 func getDocumentTypeAliasByType() map[int]string {
-	
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	documentTypeMap := make(map[int]string, 0)
 	for alias, typ := range model.AdwordsDocumentTypeAlias {
@@ -621,7 +621,7 @@ func (store *MemSQL) GetAdwordsLastSyncInfoForProject(projectID uint64) ([]model
 
 // GetAllAdwordsLastSyncInfoForAllProjects - @TODO Kark v1
 func (store *MemSQL) GetAllAdwordsLastSyncInfoForAllProjects() ([]model.AdwordsLastSyncInfo, int) {
-	
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	params := make([]interface{}, 0, 0)
 	adwordsLastSyncInfos, status := getAdwordsLastSyncInfo(lastSyncInfoQueryForAllProjects, params)
@@ -639,7 +639,7 @@ func (store *MemSQL) GetAllAdwordsLastSyncInfoForAllProjects() ([]model.AdwordsL
 
 func getAdwordsLastSyncInfo(query string, params []interface{}) ([]model.AdwordsLastSyncInfo, int) {
 	logFields := log.Fields{
-		"query": query,
+		"query":  query,
 		"params": params,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -670,7 +670,7 @@ func getAdwordsLastSyncInfo(query string, params []interface{}) ([]model.Adwords
 func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, adwordsSettings []model.AdwordsProjectSettings) ([]model.AdwordsLastSyncInfo, int) {
 	logFields := log.Fields{
 		"adwords_last_sync_infos": adwordsLastSyncInfos,
-		"adword_settings": adwordsSettings,
+		"adword_settings":         adwordsSettings,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -777,16 +777,16 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 // PullGCLIDReport - It returns GCLID based campaign info ( Adgroup, Campaign and Ad) for given time range and adwords account
 func (store *MemSQL) PullGCLIDReport(projectID uint64, from, to int64, adwordsAccountIDs string,
 	campaignIDReport, adgroupIDReport, keywordIDReport map[string]model.MarketingData, timeZone string) (map[string]model.MarketingData, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"from": from,
-			"to": to,
-			"adwords_accounts_ids": adwordsAccountIDs,
-			"campaign_id_report": campaignIDReport,
-			"adgroup_id_report": adgroupIDReport,
-			"keyword_id_report": keywordIDReport,
-			"time_zone": timeZone,
-		}
+	logFields := log.Fields{
+		"project_id":           projectID,
+		"from":                 from,
+		"to":                   to,
+		"adwords_accounts_ids": adwordsAccountIDs,
+		"campaign_id_report":   campaignIDReport,
+		"adgroup_id_report":    adgroupIDReport,
+		"keyword_id_report":    keywordIDReport,
+		"time_zone":            timeZone,
+	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
@@ -913,7 +913,7 @@ func (store *MemSQL) buildAdwordsChannelConfig(projectID uint64) *model.ChannelC
 func (store *MemSQL) buildObjectAndPropertiesForAdwords(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"objects": objects,
+		"objects":    objects,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
@@ -945,10 +945,10 @@ type LatestTimestamp struct {
 // GetAdwordsFilterValues - @TODO Kark v1
 func (store *MemSQL) GetAdwordsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"request_filter_object": requestFilterObject,
+		"project_id":              projectID,
+		"request_filter_object":   requestFilterObject,
 		"request_filter_property": requestFilterProperty,
-		"req_id": reqID,
+		"req_id":                  reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, isPresent := model.AdwordsExtToInternal[requestFilterProperty]
@@ -972,11 +972,11 @@ func (store *MemSQL) GetAdwordsFilterValues(projectID uint64, requestFilterObjec
 }
 func (store *MemSQL) getSmartPropertyFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, source string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"request_filter_object": requestFilterObject,
+		"project_id":              projectID,
+		"request_filter_object":   requestFilterObject,
 		"request_filter_property": requestFilterProperty,
-		"source": source,
-		"req_id": reqID,
+		"source":                  source,
+		"req_id":                  reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -1015,10 +1015,10 @@ func (store *MemSQL) getSmartPropertyFilterValues(projectID uint64, requestFilte
 // Currently, properties in object dont vary with Object.
 func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"request_filter_object": requestFilterObject,
+		"project_id":              projectID,
+		"request_filter_object":   requestFilterObject,
 		"request_filter_property": requestFilterProperty,
-		"req_id": reqID,
+		"req_id":                  reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -1044,7 +1044,7 @@ func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID ui
 
 func getFilterRelatedInformationForAdwords(requestFilterObject string, requestFilterProperty string) (string, int, int) {
 	logFields := log.Fields{
-		"request_filter_object": requestFilterObject,
+		"request_filter_object":   requestFilterObject,
 		"request_filter_property": requestFilterProperty,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1074,9 +1074,9 @@ func getFilterRelatedInformationForAdwords(requestFilterObject string, requestFi
 func (store *MemSQL) getAdwordsFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"doc_type": docType,
-		"property": property,
-		"req_id": reqID,
+		"doc_type":   docType,
+		"property":   property,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -1133,8 +1133,8 @@ func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) int {
 func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
+		"query":      query,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
@@ -1205,12 +1205,12 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model
 // TODO Understand null cases.
 func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
-		"fetch_source": fetchSource,
-		"limit_string": limitString,
-		"is_group_by_time_stamp": isGroupByTimestamp,
+		"project_id":                    projectID,
+		"query":                         query,
+		"req_id":                        reqID,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_time_stamp":        isGroupByTimestamp,
 		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1253,8 +1253,8 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, *string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
+		"query":      query,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var transformedQuery model.ChannelQueryV1
@@ -1374,6 +1374,12 @@ func getAdwordsSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.
 		}
 	}
 
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterChannel {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
 	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	for _, requestGroupBy := range sortedGroupBys {
 		var resultGroupBy model.ChannelGroupBy
@@ -1407,7 +1413,7 @@ func getLowestHierarchyLevelForAdwords(query *model.ChannelQueryV1) string {
 // @TODO Kark v1
 func getLowestHierarchyLevelForAdwordsFiltersAndGroupBy(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
 	logFields := log.Fields{
-		"filters": filters,
+		"filters":   filters,
 		"group_bys": groupBys,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1457,13 +1463,13 @@ ORDER BY impressions DESC, clicks DESC LIMIT 2500 ;
 // - For reference of complex joins, PR which removed older/QueryV1 adwords is 1437.
 func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
-		"query": query,
-		"project_id": projectID,
-		"customer_account_id": customerAccountID,
-		"req_id": reqID,
-		"fetch_source": fetchSource,
-		"limit_string": limitString,
-		"is_group_by_timestamp": isGroupByTimestamp,
+		"query":                         query,
+		"project_id":                    projectID,
+		"customer_account_id":           customerAccountID,
+		"req_id":                        reqID,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
 		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1474,13 +1480,13 @@ func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID uint64, cu
 
 func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
-		"query": query,
-		"project_id": projectID,
-		"customer_account_id": customerAccountID,
-		"req_id": reqID,
-		"fetch_source": fetchSource,
-		"limit_string": limitString,
-		"is_group_by_timestamp": isGroupByTimestamp,
+		"query":                         query,
+		"project_id":                    projectID,
+		"customer_account_id":           customerAccountID,
+		"req_id":                        reqID,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
 		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1490,19 +1496,19 @@ func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, pro
 }
 func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
-		logFields := log.Fields{
-			"query": query,
-			"project_id": projectID,
-			"from": from,
-			"to": to,
-			"customer_account_id": customerAccountID,
-			"doc_type": docType,
-			"fetch_source": fetchSource,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"query":                         query,
+		"project_id":                    projectID,
+		"from":                          from,
+		"to":                            to,
+		"customer_account_id":           customerAccountID,
+		"doc_type":                      docType,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	computeHigherOrderMetricsHere := !fetchSource
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
@@ -1546,19 +1552,26 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	dimensions := fields{}
 
 	for _, groupBy := range adwordsGroupBys {
-		key := groupBy.Object + ":" + groupBy.Property
-		internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
-		externalValue := groupBy.Object + "_" + groupBy.Property
-		var expression string
-		if groupBy.Property == "id" {
-			expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
-		} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
-			expression = fmt.Sprintf("((JSON_EXTRACT_STRING(value, '%s')))/1000000 as %s", internalValue, externalValue)
+		if groupBy.Object == CAFilterChannel {
+			externalValue := groupBy.Object + "_" + groupBy.Property
+			expression := fmt.Sprintf("'adwords' as %s", externalValue)
+			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+			dimensions.values = append(dimensions.values, externalValue)
 		} else {
-			expression = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') as %s", internalValue, externalValue)
+			key := groupBy.Object + ":" + groupBy.Property
+			internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
+			externalValue := groupBy.Object + "_" + groupBy.Property
+			var expression string
+			if groupBy.Property == "id" {
+				expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
+			} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
+				expression = fmt.Sprintf("((JSON_EXTRACT_STRING(value, '%s')))/1000000 as %s", internalValue, externalValue)
+			} else {
+				expression = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') as %s", internalValue, externalValue)
+			}
+			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+			dimensions.values = append(dimensions.values, externalValue)
 		}
-		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, externalValue)
 	}
 	for _, groupBy := range smartPropertyCampaignGroupBys {
 		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s')", groupBy.Property), model.CampaignPrefix+groupBy.Property)
@@ -1707,7 +1720,7 @@ func buildWhereConditionForGBTForAdwords(groupByCombinations []map[string]interf
 }
 func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
 	logFields := log.Fields{
-		"filters": filters,
+		"filters":   filters,
 		"group_bys": groupBys,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1724,17 +1737,17 @@ func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 
 func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
 	docType int, fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
-		logFields := log.Fields{
-			"query": query,
-			"project_id": projectID,
-			"customer_account_id": customerAccountID,
-			"doc_type": docType,
-			"fetch_source": fetchSource,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"query":                         query,
+		"project_id":                    projectID,
+		"customer_account_id":           customerAccountID,
+		"doc_type":                      docType,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	computeHigherOrderMetricsHere := !fetchSource
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
@@ -1755,19 +1768,26 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	dimensions := fields{}
 
 	for _, groupBy := range query.GroupBy {
-		key := groupBy.Object + ":" + groupBy.Property
-		internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
-		externalValue := groupBy.Object + "_" + groupBy.Property
-		var expression string
-		if groupBy.Property == "id" {
-			expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
-		} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
-			expression = fmt.Sprintf("((JSON_EXTRACT_STRING(value, '%s')))/1000000 as %s", internalValue, externalValue)
+		if groupBy.Object == CAFilterChannel {
+			externalValue := groupBy.Object + "_" + groupBy.Property
+			expression := fmt.Sprintf("'adwords' as %s", externalValue)
+			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+			dimensions.values = append(dimensions.values, externalValue)
 		} else {
-			expression = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') as %s", internalValue, externalValue)
+			key := groupBy.Object + ":" + groupBy.Property
+			internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
+			externalValue := groupBy.Object + "_" + groupBy.Property
+			var expression string
+			if groupBy.Property == "id" {
+				expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
+			} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
+				expression = fmt.Sprintf("((JSON_EXTRACT_STRING(value, '%s')))/1000000 as %s", internalValue, externalValue)
+			} else {
+				expression = fmt.Sprintf("JSON_EXTRACT_STRING(value, '%s') as %s", internalValue, externalValue)
+			}
+			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+			dimensions.values = append(dimensions.values, externalValue)
 		}
-		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, externalValue)
 	}
 	if isGroupByTimestamp {
 		internalValue := getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone)
@@ -1983,19 +2003,19 @@ func getNotNullFilterStatementForSmartPropertyGroupBys(smartPropertyCampaignGrou
 // @TODO Kark v0
 func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelQueryResultMeta, error) {
-		logFields := log.Fields{
-			"query": query,
-			"project_id": projectID,
-			"customer_account_id": customerAccountID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"query":               query,
+		"project_id":          projectID,
+		"customer_account_id": customerAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	customerAccountIDArray := strings.Split(customerAccountID, ",")
 	stmnt := "SELECT JSON_EXTRACT_STRING(value, 'currency_code') as currency FROM adwords_documents" +
 		" " + "WHERE project_id=? AND customer_account_id IN (?) AND type=? AND timestamp BETWEEN ? AND ?" +
 		" " + "ORDER BY timestamp DESC LIMIT 1"
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(logFields)
 
 	rows, tx, err := store.ExecQueryWithContext(stmnt, []interface{}{projectID, customerAccountIDArray,
 		model.AdwordsDocumentTypeAlias["customer_account_properties"],
@@ -2024,7 +2044,7 @@ func (store *MemSQL) GetAdwordsChannelResultMeta(projectID uint64, customerAccou
 // ExecuteAdwordsChannelQuery - @TODO Kark v0
 func (store *MemSQL) ExecuteAdwordsChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
 	logFields := log.Fields{
-		"query": query,
+		"query":      query,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -2114,7 +2134,7 @@ func GetAdwordsFilterPropertyKeyByType(docType int) (string, error) {
 // GetAdwordsFilterValuesByType - @TODO Kark v0
 func (store *MemSQL) GetAdwordsFilterValuesByType(projectID uint64, docType int) ([]string, int) {
 	logFields := log.Fields{
-		"doc_type": docType,
+		"doc_type":   docType,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -2197,13 +2217,13 @@ GROUP BY (JSON_EXTRACT_STRING(value,'criteria';
 */
 func (store *MemSQL) getAdwordsMetricsQuery(projectID uint64, customerAccountID string, query *model.ChannelQuery,
 	withBreakdown bool) (string, []interface{}, error) {
-		logFields := log.Fields{
-			"query": query,
-			"project_id": projectID,
-			"customer_account_id": customerAccountID,
-			"with_break_down": withBreakdown,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"query":               query,
+		"project_id":          projectID,
+		"customer_account_id": customerAccountID,
+		"with_break_down":     withBreakdown,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	customerAccountIDArray := strings.Split(customerAccountID, ",")
 	// select handling.
@@ -2287,12 +2307,12 @@ func (store *MemSQL) getAdwordsMetricsQuery(projectID uint64, customerAccountID 
 // @TODO Kark v0
 func (store *MemSQL) getAdwordsMetrics(projectID uint64, customerAccountID string,
 	query *model.ChannelQuery) (*map[string]interface{}, error) {
-		logFields := log.Fields{
-			"query": query,
-			"project_id": projectID,
-			"customer_account_id": customerAccountID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"query":               query,
+		"project_id":          projectID,
+		"customer_account_id": customerAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	stmnt, params, err := store.getAdwordsMetricsQuery(projectID, customerAccountID, query, false)
 	if err != nil {
@@ -2329,14 +2349,14 @@ func (store *MemSQL) getAdwordsMetrics(projectID uint64, customerAccountID strin
 // @TODO Kark v0
 func (store *MemSQL) getAdwordsMetricsBreakdown(projectID uint64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelBreakdownResult, error) {
-		logFields := log.Fields{
-			"query": query,
-			"project_id": projectID,
-			"customer_account_id": customerAccountID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"query":               query,
+		"project_id":          projectID,
+		"customer_account_id": customerAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-		logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(logFields)
 
 	stmnt, params, err := store.getAdwordsMetricsQuery(projectID, customerAccountID, query, true)
 	if err != nil {
@@ -2377,7 +2397,7 @@ func (store *MemSQL) getAdwordsMetricsBreakdown(projectID uint64, customerAccoun
 
 func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	logFields := log.Fields{
-		"days": days,
+		"days":       days,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -2443,9 +2463,9 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 
 func (store *MemSQL) ExecuteAdwordsSEMChecklistQuery(projectID uint64, query model.TemplateQuery, reqID string) (model.TemplateResponse, int) {
 	logFields := log.Fields{
-		"query": query,
+		"query":      query,
 		"project_id": projectID,
-		"req_id": reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -2464,9 +2484,9 @@ func (store *MemSQL) ExecuteAdwordsSEMChecklistQuery(projectID uint64, query mod
 }
 func (store *MemSQL) validateIntegratonAndMetricsForAdwordsSEMChecklist(projectID uint64, query model.TemplateQuery, reqID string) (*string, error) {
 	logFields := log.Fields{
-		"query": query,
+		"query":      query,
 		"project_id": projectID,
-		"req_id": reqID,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -2502,8 +2522,8 @@ func buildSelectStmnForKeywordTemplates() string {
 }
 func (store *MemSQL) getKeywordLevelDataForTemplates(projectID uint64, customerAccountID []string, query model.TemplateQuery) ([]model.KeywordAnalysis, error) {
 	logFields := log.Fields{
-		"query": query,
-		"project_id": projectID,
+		"query":               query,
+		"project_id":          projectID,
 		"customer_account_id": customerAccountID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -2573,10 +2593,10 @@ func (store *MemSQL) getKeywordLevelDataForTemplates(projectID uint64, customerA
 }
 func (store *MemSQL) getCampaignLevelDataForTemplates(projectID uint64, customerAccountID []string, campaignArray []string, query model.TemplateQuery) ([]model.CampaignAnalysis, error) {
 	logFields := log.Fields{
-		"query": query,
-		"project_id": projectID,
+		"query":               query,
+		"project_id":          projectID,
 		"customer_account_id": customerAccountID,
-		"campaign_array": campaignArray,
+		"campaign_array":      campaignArray,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	finalCampaignQuery := ""
@@ -2618,8 +2638,8 @@ func (store *MemSQL) getCampaignLevelDataForTemplates(projectID uint64, customer
 }
 func (store *MemSQL) getOverallChangesDataForTemplates(projectID uint64, customerAccountID []string, query model.TemplateQuery) ([]model.OverallChanges, error) {
 	logFields := log.Fields{
-		"query": query,
-		"project_id": projectID,
+		"query":               query,
+		"project_id":          projectID,
 		"customer_account_id": customerAccountID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -2688,13 +2708,13 @@ func (store *MemSQL) getOverallChangesDataForTemplates(projectID uint64, custome
 }
 func (store *MemSQL) getAdwordsSEMChecklistQueryData(query model.TemplateQuery, projectID uint64, customerAccountID []string,
 	reqID string) (model.TemplateResponse, error) {
-		logFields := log.Fields{
-			"query": query,
-			"project_id": projectID,
-			"customer_account_id": customerAccountID,
-			"req_id": reqID,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"query":               query,
+		"project_id":          projectID,
+		"customer_account_id": customerAccountID,
+		"req_id":              reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var result model.TemplateResponse
 	keywordAnalysisResult, err := store.getKeywordLevelDataForTemplates(projectID, customerAccountID, query)
 	if err != nil {

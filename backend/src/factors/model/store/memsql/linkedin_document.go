@@ -185,8 +185,8 @@ func (store *MemSQL) isLinkedinDocumentExistByPrimaryKey(document *model.Linkedi
 }
 
 func getLinkedinDocumentTypeAliasByType() map[int]string {
-	
-	defer model.LogOnSlowExecutionWithParams(time.Now(),nil)
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	documentTypeMap := make(map[int]string, 0)
 	for alias, typ := range linkedinDocumentTypeAlias {
 		documentTypeMap[typ] = alias
@@ -197,7 +197,7 @@ func getLinkedinDocumentTypeAliasByType() map[int]string {
 
 func (store *MemSQL) GetLinkedinLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":             projectID,
 		"customer_ad_account_id": CustomerAdAccountID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -245,7 +245,7 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID uint64, CustomerAdAccount
 func (store *MemSQL) CreateLinkedinDocument(projectID uint64, document *model.LinkedinDocument) int {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"document": document,
+		"document":   document,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -301,7 +301,7 @@ func (store *MemSQL) CreateLinkedinDocument(projectID uint64, document *model.Li
 }
 func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (string, string, string, error) {
 	logFields := log.Fields{
-		"doc_type": docType,
+		"doc_type":   docType,
 		"value_json": valueJSON,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -324,7 +324,7 @@ func getLinkedinHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 func (store *MemSQL) ExecuteLinkedinChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query": query,
+		"query":      query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
@@ -375,9 +375,9 @@ func (store *MemSQL) ExecuteLinkedinChannelQuery(projectID uint64, query *model.
 }
 func getLinkedinChannelResult(projectID uint64, customerAccountID string, query *model.ChannelQuery) (*model.ChannelQueryResult, error) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":          projectID,
 		"customer_account_id": customerAccountID,
-		"query": query,
+		"query":               query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -418,9 +418,9 @@ func getLinkedinChannelResult(projectID uint64, customerAccountID string, query 
 }
 func (store *MemSQL) getLinkedinMetricBreakdown(projectID uint64, customerAccountID string, query *model.ChannelQuery) (*model.ChannelBreakdownResult, error) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":          projectID,
 		"customer_account_id": customerAccountID,
-		"query": query,
+		"query":               query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -477,7 +477,7 @@ func getLinkedinDocumentType(query *model.ChannelQuery) int {
 func getLinkedinMetricsQuery(query *model.ChannelQuery, withBreakdown bool) (string, int) {
 	logFields := log.Fields{
 		"with_breakdown": withBreakdown,
-		"query": query,
+		"query":          query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -524,7 +524,7 @@ func (store *MemSQL) buildLinkedinChannelConfig(projectID uint64) *model.Channel
 func (store *MemSQL) buildObjectAndPropertiesForLinkedin(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"objects": objects,
+		"objects":    objects,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
@@ -542,10 +542,10 @@ func (store *MemSQL) buildObjectAndPropertiesForLinkedin(projectID uint64, objec
 
 func (store *MemSQL) GetLinkedinFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"request_filter_object": requestFilterObject,
+		"project_id":              projectID,
+		"request_filter_object":   requestFilterObject,
 		"request_filter_property": requestFilterProperty,
-		"req_id": reqID,
+		"req_id":                  reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, isPresent := Const.SmartPropertyReservedNames[requestFilterProperty]
@@ -570,7 +570,7 @@ func (store *MemSQL) GetLinkedinFilterValues(projectID uint64, requestFilterObje
 
 func getFilterRelatedInformationForLinkedin(requestFilterObject string, requestFilterProperty string) (string, int, int) {
 	logFields := log.Fields{
-		"request_filter_object": requestFilterObject,
+		"request_filter_object":   requestFilterObject,
 		"request_filter_property": requestFilterProperty,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -592,9 +592,9 @@ func getFilterRelatedInformationForLinkedin(requestFilterObject string, requestF
 func (store *MemSQL) getLinkedinFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"doc_type": docType,
-		"property": property,
-		"req_id": reqID,
+		"doc_type":   docType,
+		"property":   property,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -621,10 +621,10 @@ func (store *MemSQL) getLinkedinFilterValuesByType(projectID uint64, docType int
 
 func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"request_filter_object": requestFilterObject,
+		"project_id":              projectID,
+		"request_filter_object":   requestFilterObject,
 		"request_filter_property": requestFilterProperty,
-		"req_id": reqID,
+		"req_id":                  reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -650,8 +650,8 @@ func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID u
 func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
+		"query":      query,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
@@ -711,16 +711,16 @@ func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID uint64, query *mode
 
 func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"fetch_source": fetchSource,
-			"req_id": reqID,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"fetch_source":                  fetchSource,
+		"req_id":                        reqID,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var selectMetrics []string
 	var sql string
 	var selectKeys []string
@@ -756,8 +756,8 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64
 func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"query": query,
-		"req_id": reqID,
+		"query":      query,
+		"req_id":     reqID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	query.From = U.GetDateAsStringIn(query.From, U.TimeZoneString(query.Timezone))
@@ -844,29 +844,56 @@ func getLinkedinSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 		"request_group_bys": requestGroupBys,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	groupBys := make([]model.ChannelGroupBy, 0)
-	for _, requestGroupBy := range requestGroupBys {
+	sortedGroupBys := make([]model.ChannelGroupBy, 0)
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterCampaign {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterAdGroup {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterAd {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterChannel {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	for _, requestGroupBy := range sortedGroupBys {
+		var resultGroupBy model.ChannelGroupBy
 		groupByObject, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
 			return make([]model.ChannelGroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 		}
-		groupBys = append(groupBys, model.ChannelGroupBy{Object: groupByObject, Property: requestGroupBy.Property})
+		resultGroupBy = requestGroupBy
+		resultGroupBy.Object = groupByObject
+		resultGroupBys = append(resultGroupBys, resultGroupBy)
 	}
-	return groupBys, nil
+	return resultGroupBys, nil
 }
 
 func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"fetch_source": fetchSource,
-			"customer_account_id": customerAccountID,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"fetch_source":                  fetchSource,
+		"customer_account_id":           customerAccountID,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinWithSmartPropertyReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
@@ -875,16 +902,16 @@ func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectI
 }
 func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
 	limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"customer_account_id": customerAccountID,
-			"fetch_source": fetchSource,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"customer_account_id":           customerAccountID,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
@@ -893,19 +920,19 @@ func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID uint64, custome
 }
 func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"from": from,
-			"to": to,
-			"linkedin_account_ids": linkedinAccountIDs,
-			"doc_type": docType,
-			"fetch_source": fetchSource,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"from":                          from,
+		"to":                            to,
+		"linkedin_account_ids":          linkedinAccountIDs,
+		"doc_type":                      docType,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	customerAccountIDs := strings.Split(linkedinAccountIDs, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
@@ -946,9 +973,15 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 
 	for _, groupBy := range linkedinGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
-		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		if groupBy.Object == CAFilterChannel {
+			value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		} else {
+			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		}
 	}
 	for _, groupBy := range smartPropertyCampaignGroupBys {
 		value := fmt.Sprintf("JSON_EXTRACT_STRING(campaign.properties, '%s') as campaign_%s", groupBy.Property, groupBy.Property)
@@ -1002,7 +1035,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 
 func getLinkedinFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
 	logFields := log.Fields{
-		"filters": filters,
+		"filters":   filters,
 		"group_bys": groupBys,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1019,19 +1052,19 @@ func getLinkedinFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys
 
 func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string, docType int,
 	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"query": query,
-			"from": from,
-			"to": to,
-			"linkedin_account_ids": linkedinAccountIDs,
-			"doc_type": docType,
-			"fetch_source": fetchSource,
-			"limit_string": limitString,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"group_by_combinations_for_gbt": groupByCombinationsForGBT,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":                    projectID,
+		"query":                         query,
+		"from":                          from,
+		"to":                            to,
+		"linkedin_account_ids":          linkedinAccountIDs,
+		"doc_type":                      docType,
+		"fetch_source":                  fetchSource,
+		"limit_string":                  limitString,
+		"is_group_by_timestamp":         isGroupByTimestamp,
+		"group_by_combinations_for_gbt": groupByCombinationsForGBT,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	customerAccountIDs := strings.Split(linkedinAccountIDs, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
@@ -1056,9 +1089,15 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
-		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		if groupBy.Object == CAFilterChannel {
+			value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		} else {
+			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			selectKeys = append(selectKeys, value)
+			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+		}
 	}
 
 	finalSelectKeys = append(finalSelectKeys, selectKeys...)
@@ -1190,7 +1229,7 @@ func getLinkedinFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 }
 func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1, smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {
 	logFields := log.Fields{
-		"filters": filters,
+		"filters":                           filters,
 		"smart_property_campaign_group_bys": smartPropertyCampaignGroupBys,
 		"smart_property_ad_group_group_bys": smartPropertyAdGroupGroupBys,
 	}
@@ -1286,7 +1325,7 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"days": days,
+		"days":       days,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
