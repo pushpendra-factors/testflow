@@ -239,8 +239,8 @@ const GoogleIntegration = ({
             level={3}
             weight={'bold'}
             extraClass={'my-2 pb-2'}
-          >
-            Google Search Console
+          > 
+            Google Ads
           </Text>
           <Text type={'title'} level={6} weight={'bold'} extraClass={'my-2'}>
             Add/Remove Accounts
