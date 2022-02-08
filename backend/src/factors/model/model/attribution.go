@@ -953,7 +953,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int) []in
 	if float64(row1[keyIndex+8].(int64)+row2[keyIndex+8].(int64)) > 0 {
 		row1[keyIndex+10], _ = U.FloatRoundOffWithPrecision((float64(row1[keyIndex+8].(int64))*row1[keyIndex+10].(float64)+float64(row2[keyIndex+8].(int64))*row2[keyIndex+10].(float64))/float64(row1[keyIndex+8].(int64)+row2[keyIndex+8].(int64)), U.DefaultPrecision) //AvgSessionTime.
 	} else {
-		row1[keyIndex+10] = 0
+		row1[keyIndex+10] = float64(0)
 	}
 
 	row1[keyIndex+8] = row1[keyIndex+8].(int64) + row2[keyIndex+8].(int64)        // Sessions.
@@ -1161,8 +1161,8 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 			spendCPC, _ = U.FloatRoundOffWithPrecision(spendCPC+spend, U.DefaultPrecision)
 			conversionsCPC, _ = U.FloatRoundOffWithPrecision(conversionsCPC+row[keyIndex+12].(float64), U.DefaultPrecision)
 		} else {
-			spendCPC = 0
-			conversionsCPC = 0
+			spendCPC = float64(0)
+			conversionsCPC = float64(0)
 		}
 
 		// Remaining linked funnel events & CPCs
@@ -1173,14 +1173,14 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
 				conversionFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(conversionFunnelConversionCPC[j]+grandTotalRow[i].(float64), U.DefaultPrecision)
 			} else {
-				spendFunnelConversionCPC[j] = 0
-				conversionFunnelConversionCPC[j] = 0
+				spendFunnelConversionCPC[j] = float64(0)
+				conversionFunnelConversionCPC[j] = float64(0)
 			}
 
 			if grandTotalRow[keyIndex+12].(float64) > 0 {
 				grandTotalRow[i+2], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+12].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate
 			} else {
-				grandTotalRow[i+2] = 0
+				grandTotalRow[i+2] = float64(0)
 			}
 			j += 1
 		}
@@ -1190,54 +1190,54 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 	if float64(impressionsCTR) > 0 {
 		grandTotalRow[keyIndex+4], _ = U.FloatRoundOffWithPrecision(float64(100*float64(clicksCTR)/float64(impressionsCTR)), U.DefaultPrecision)
 	} else {
-		grandTotalRow[keyIndex+4] = 0
+		grandTotalRow[keyIndex+4] = float64(0)
 	}
 
 	if float64(clickAvgCPC) > 0 {
 		grandTotalRow[keyIndex+5], _ = U.FloatRoundOffWithPrecision(float64(spendAvgCPC)/float64(clickAvgCPC), U.DefaultPrecision)
 	} else {
-		grandTotalRow[keyIndex+5] = 0
+		grandTotalRow[keyIndex+5] = float64(0)
 	}
 
 	if float64(impressionsCPM) > 0 {
 		grandTotalRow[keyIndex+6], _ = U.FloatRoundOffWithPrecision(float64(1000*float64(spendCPM))/float64(impressionsCPM), U.DefaultPrecision)
 	} else {
-		grandTotalRow[keyIndex+6] = 0
+		grandTotalRow[keyIndex+6] = float64(0)
 	}
 	if float64(clicksClickConversionRate) > 0 {
 		grandTotalRow[keyIndex+7], _ = U.FloatRoundOffWithPrecision(100*float64(conversionsClickConversionRate)/float64(clicksClickConversionRate), U.DefaultPrecision)
 	} else {
-		grandTotalRow[keyIndex+7] = 0
+		grandTotalRow[keyIndex+7] = float64(0)
 	}
 
 	if float64(SessionsAvgSessionTimeAST) > 0 {
 		grandTotalRow[keyIndex+10], _ = U.FloatRoundOffWithPrecision(float64(AvgSessionTimeMultipliedSessionAST)/float64(SessionsAvgSessionTimeAST), U.DefaultPrecision)
 	} else {
-		grandTotalRow[keyIndex+10] = 0
+		grandTotalRow[keyIndex+10] = float64(0)
 	}
 
 	if conversionsCPC > 0 {
 		grandTotalRow[keyIndex+13], _ = U.FloatRoundOffWithPrecision(spendCPC/conversionsCPC, U.DefaultPrecision)
 	} else {
-		grandTotalRow[keyIndex+13] = 0
+		grandTotalRow[keyIndex+13] = float64(0)
 	}
 
 	if grandTotalRow[keyIndex+9].(int64) > 0 {
 		grandTotalRow[keyIndex+14], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+12].(float64)/float64(grandTotalRow[keyIndex+9].(int64))*100, U.DefaultPrecision) //ConvUserRate
 	} else {
-		grandTotalRow[keyIndex+14] = 0
+		grandTotalRow[keyIndex+14] = float64(0)
 	}
 
 	if grandTotalRow[keyIndex+15].(float64) > 0 {
 		grandTotalRow[keyIndex+16], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+3].(float64)/grandTotalRow[keyIndex+15].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
 	} else {
-		grandTotalRow[keyIndex+16] = 0
+		grandTotalRow[keyIndex+16] = float64(0)
 	}
 
 	if grandTotalRow[keyIndex+9].(int64) > 0 {
 		grandTotalRow[keyIndex+17], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+15].(float64)/float64(grandTotalRow[keyIndex+9].(int64))*100, U.DefaultPrecision) // conversion rate
 	} else {
-		grandTotalRow[keyIndex+17] = 0
+		grandTotalRow[keyIndex+17] = float64(0)
 	}
 
 	// Remaining linked funnel events & CPCs
@@ -1246,7 +1246,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 		if conversionFunnelConversionCPC[k] > 0 && i < len(grandTotalRow) && k < len(spendFunnelConversionCPC) {
 			grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[k]/conversionFunnelConversionCPC[k], U.DefaultPrecision) // Funnel - Conversion - CPC.
 		} else {
-			grandTotalRow[i+1] = 0
+			grandTotalRow[i+1] = float64(0)
 		}
 		k += 1
 	}
