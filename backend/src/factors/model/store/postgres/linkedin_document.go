@@ -638,32 +638,9 @@ func getLinkedinSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model
 
 // @Kark TODO v1
 func getLinkedinSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.ChannelGroupBy, error) {
-	sortedGroupBys := make([]model.ChannelGroupBy, 0)
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterCampaign {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
 
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterAdGroup {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
-
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterAd {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
-
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterChannel {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
 	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	for _, requestGroupBy := range sortedGroupBys {
+	for _, requestGroupBy := range requestGroupBys {
 		var resultGroupBy model.ChannelGroupBy
 		groupByObject, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
