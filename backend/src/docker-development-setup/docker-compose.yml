@@ -100,6 +100,7 @@ services:
                 -   ETCD=etcd:2379
                 -   DB_HOST=postgres
                 -   PRI_DS=$PRIMARY_DATASTORE
+                -   MEMSQL_HOST=memsql
             image: testing/pattern-server:1.0
             ports:
                 - "8100:8100"

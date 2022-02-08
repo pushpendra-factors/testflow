@@ -9,4 +9,4 @@ RUN go build -o /go/src/factors/backend/bin/rollupcache scripts/run_rollup_sorte
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && apk add curl && rm -rf /var/cache/apk/*
 COPY --from=builder /go/src/factors/backend/bin/rollupcache /go/src/factors/backend/bin/rollupcache
-CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/src/factors/backend/bin/rollupcache --primary_datastore=${PRI_DS} --memsql_host=${MEMSQL_HOST} --db_host=${DB_HOST} --redis_host_ps=${REDIS_HOST}; break; fi; sleep 2; done"]
+CMD ["sh","-c", "/go/src/factors/backend/bin/rollupcache --primary_datastore=${PRI_DS} --memsql_host=${MEMSQL_HOST} --db_host=${DB_HOST} --redis_host_ps=${REDIS_HOST}"]
