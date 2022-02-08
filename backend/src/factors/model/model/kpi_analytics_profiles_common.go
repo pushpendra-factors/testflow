@@ -107,7 +107,10 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	if kpiQuery.GroupByTimestamp == "" {
 		profileQuery.GroupBys = profileQueryGroup.GlobalGroupBys
 	} else {
-		profileQuery.GroupBys = append(profileQueryGroup.GlobalGroupBys, GetProfileGroupByFromDateField(transformation.DateField, kpiQuery.GroupByTimestamp))
+		profileQuery.GroupBys = append([]QueryGroupByProperty{GetProfileGroupByFromDateField(transformation.DateField, kpiQuery.GroupByTimestamp)}, profileQueryGroup.GlobalGroupBys...)
+	}
+	for i, _ := range profileQuery.GroupBys {
+		profileQuery.GroupBys[i].Index = i
 	}
 	profileQuery.DateField = transformation.DateField
 	return profileQuery
