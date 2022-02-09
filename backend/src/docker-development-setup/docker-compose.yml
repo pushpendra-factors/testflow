@@ -15,6 +15,21 @@ services:
             restart: always
             ports:
                 - '5432:5432'
+        memsql:
+            build:
+                context: .
+                dockerfile: Dockerfile.memsql.testing
+                args:
+                    - MEMSQL_VERSION=latest
+            image: testing/memsql:1.0
+            restart: always
+            environment:
+                - LICENSE_KEY=$MEMSQL_LICENSE_KEY
+                - ROOT_PASSWORD=$ROOT_PASSWORD
+                - START_AFTER_INIT='Y'
+            ports:
+                - 3306:3306
+                - 8040:8080
         redis:  
             build:
                 context: ../
@@ -23,15 +38,6 @@ services:
             restart: always
             ports:
                 - "6379:6379"
-        builddb:
-            build:
-                context: ../
-                dockerfile: docker-development-setup/Dockerfile.db_create.testing
-            environment:
-                - DB_HOST=postgres
-            image: testing/builddb:1.0
-            links:
-                - postgres
         etcd:
             image: 'bitnami/etcd:latest'
             environment:
@@ -40,6 +46,18 @@ services:
             ports:
                 - 2379:2379
                 - 2380:2380
+        builddb:
+            build:
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.db_create.testing
+            environment:
+                - DB_HOST=postgres
+                - PRI_DS=$PRIMARY_DATASTORE
+                - ROOT_PASSWORD=$ROOT_PASSWORD
+            image: testing/builddb:1.0
+            depends_on:
+                - postgres
+                - memsql
         api:
             build:
                 context: ../
@@ -59,21 +77,11 @@ services:
             volumes: 
                 - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
                 - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
-        memsql:
-            build:
-                context: .
-                dockerfile: Dockerfile.memsql.testing
-                args:
-                    - MEMSQL_VERSION=latest
-            image: testing/memsql:1.0
-            restart: always
-            environment:
-                - LICENSE_KEY=$MEMSQL_LICENSE_KEY
-                - ROOT_PASSWORD=$ROOT_PASSWORD
-                - START_AFTER_INIT='Y'
-            ports:
-                - 3306:3306
-                - 8040:8080
+            depends_on:
+                - postgres
+                - memsql
+                - etcd
+                - redis
         sdkserver:
             build:
                 context: ../
@@ -91,6 +99,10 @@ services:
             volumes: 
                 - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
                 - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
+            depends_on:
+                - postgres
+                - memsql
+                - redis
         patternserver:
             build:
                 context: ../
@@ -104,6 +116,11 @@ services:
             image: testing/pattern-server:1.0
             ports:
                 - "8100:8100"
+            depends_on:
+                - postgres
+                - memsql
+                - etcd
+                - redis
         frontend:
             build: 
                 context: ../../../frontend-new
@@ -123,6 +140,8 @@ services:
                 - ENV=docker
                 - SEED_DATE=$SEED_DATE
             image: testing/datagen:1.0
+            depends_on:
+                - sdkserver
         session:
             build:
                 context: ../
@@ -149,4 +168,8 @@ services:
                 dockerfile: docker-development-setup/Dockerfile.documentdatagen.testing
             environment:
                 - DB_HOST=postgres
+                - MEMSQL_HOST=memsql
+                - PRI_DS=$PRIMARY_DATASTORE
             image: testing/documentdatagen:1.0
+            depends_on:
+                - sdkserver
