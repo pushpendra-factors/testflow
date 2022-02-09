@@ -221,6 +221,7 @@ const GlobalFilterSelect = ({
                             optionClick={(label, val, cat) => propSelect(label, val, cat)}
                             onClickOutside={() => setPropSelectOpen(false)}
                             hideTitle={true}
+                            textStartCase
                         ></GroupSelect2>
                     </div>
                 )

@@ -211,6 +211,7 @@ const FAFilterSelect = ({
                             onClickOutside={() => setPropSelectOpen(false)}
                             hideTitle={true}
                             isFilterDD={true}
+                            textStartCase
                         />
                     </div>
                 )

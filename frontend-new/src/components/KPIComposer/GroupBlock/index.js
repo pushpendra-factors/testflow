@@ -213,6 +213,7 @@ function GroupBlock({
                   optionClick={(group, val) => onChange([group, val], index)}
                   onClickOutside={() => triggerDropDown(index, true)}
                   hideTitle={true}
+                  textStartCase
                 ></GroupSelect2>
               </div>
             ) : null}
