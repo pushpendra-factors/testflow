@@ -82,6 +82,7 @@ type ChannelQueryResult struct {
 	Metrics          *map[string]interface{} `json:"metrics"`
 	MetricsBreakdown *ChannelBreakdownResult `json:"metrics_breakdown"`
 	Meta             *ChannelQueryResultMeta `json:"meta"`
+	Query            interface{}             `json:"query"`
 }
 
 // ChannelBreakdownResult - @TODO Kark v0

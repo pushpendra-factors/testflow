@@ -190,5 +190,6 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 		return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
 	}
 	model.SetQueryCacheResult(projectID, &profileQueryGroup, resultGroup)
+	resultGroup.Query = profileQueryGroup
 	return resultGroup, http.StatusOK, "", "", false
 }

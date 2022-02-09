@@ -224,5 +224,5 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
 		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
 	}
-	return gin.H{"result": queryResult}, http.StatusOK, "", "", false
+	return gin.H{"result": queryResult, "query": queryPayload}, http.StatusOK, "", "", false
 }
