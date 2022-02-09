@@ -461,8 +461,8 @@ func (pg *Postgres) getOfflineEventData(projectID uint64) (model.EventName, erro
 
 	eventNames, errCode := pg.GetEventNamesByNames(projectID, names)
 	if errCode != http.StatusFound || len(eventNames) != 1 {
-		logCtx.Error("failed to find offline touch point event names")
-		return model.EventName{}, errors.New("failed to find offline touch point event names")
+		logCtx.Info("failed to find offline touch point event names, skipping OTP attribution computation")
+		return model.EventName{}, errors.New("failed to find offline touch point event names, skipping OTP attribution computation")
 	}
 	return eventNames[0], nil
 }
