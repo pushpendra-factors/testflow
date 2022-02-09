@@ -88,7 +88,7 @@ func (pg *Postgres) executeForResults(projectID uint64, queries []model.Query, k
 			return finalResult
 		}
 		// log.WithField("results", results).WithField("queries", queries).Warn("kark7")
-		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
+		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
 		finalResult = *results[0]
 	} else {
 		for i, query := range queries {
@@ -100,7 +100,7 @@ func (pg *Postgres) executeForResults(projectID uint64, queries []model.Query, k
 			}
 		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
-		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
+		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
 		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations, kpiQuery.Timezone, isTimezoneEnabled)
 	}
 	return finalResult

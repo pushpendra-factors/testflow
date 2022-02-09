@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // TO Change.
@@ -176,14 +177,14 @@ func prependUserFiltersBasedOnInternalTransformation(filters []QueryProperty, us
 
 // Functions supporting transforming eventResults to KPIresults
 // Note: Considering the format to be generally... event_index, event_name,..., count.
-func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bool, hasAnyGroupBy bool, displayCategory string) []*QueryResult {
+func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bool, hasAnyGroupBy bool, displayCategory string, timezoneString string) []*QueryResult {
 	resultantResults := make([]*QueryResult, 0)
 	for _, result := range results {
 		var tmpResult *QueryResult
 		tmpResult = &QueryResult{}
 
 		tmpResult.Headers = getTransformedHeaders(result.Headers, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
-		tmpResult.Rows = GetTransformedRows(result.Rows, hasGroupByTimestamp, hasAnyGroupBy, len(result.Headers))
+		tmpResult.Rows = GetTransformedRows(result.Headers, result.Rows, hasGroupByTimestamp, hasAnyGroupBy, len(result.Headers), timezoneString)
 		resultantResults = append(resultantResults, tmpResult)
 	}
 	return resultantResults
@@ -202,24 +203,10 @@ func getTransformedHeaders(headers []string, hasGroupByTimestamp bool, hasAnyGro
 	return currentHeaders
 }
 
-func GetTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGroupBy bool, headersLen int) [][]interface{} {
+func GetTransformedRows(headers []string, rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGroupBy bool, headersLen int, timezoneString string) [][]interface{} {
 	var currentRows [][]interface{}
 	currentRows = make([][]interface{}, 0)
 	if len(rows) == 0 {
-		var currentRow []interface{}
-		currentRow = make([]interface{}, headersLen)
-		for index := range currentRow[:headersLen-1] {
-			currentRow[index] = ""
-		}
-		currentRow[len(currentRow)-1] = 0
-		if hasAnyGroupBy && hasGroupByTimestamp {
-			currentRow = append(currentRow[1:2], currentRow[3:]...)
-			currentRows = append(currentRows, currentRow)
-		} else if !hasAnyGroupBy && hasGroupByTimestamp {
-			currentRows = append(currentRows, currentRow)
-		} else {
-			currentRows = append(currentRows, currentRow[2:])
-		}
 		return currentRows
 	}
 
@@ -243,7 +230,29 @@ func GetTransformedRows(rows [][]interface{}, hasGroupByTimestamp bool, hasAnyGr
 			currentRows = append(currentRows, currentRow[2:])
 		}
 	}
+
+	currentRows = TransformDateTypeValueForEventsKPI(headers, rows, hasGroupByTimestamp, timezoneString)
 	return currentRows
+}
+
+func TransformDateTypeValueForEventsKPI(headers []string, rows [][]interface{}, groupByTimestampPresent bool, timezoneString string) [][]interface{} {
+	indexForDateTime := -1
+	if !groupByTimestampPresent {
+		return rows
+	}
+	for index, header := range headers {
+		if header == "datetime" {
+			indexForDateTime = index
+			break
+		}
+	}
+
+	for index, row := range rows {
+		currentValueInTimeFormat, _ := row[indexForDateTime].(time.Time)
+		rows[index][indexForDateTime] = U.GetTimestampAsStrWithTimezone(currentValueInTimeFormat, timezoneString)
+	}
+
+	return rows
 }
 
 // Each KPI metric is internally converted to event analytics.
