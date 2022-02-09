@@ -339,10 +339,22 @@ func (pg *Postgres) runAttribution(projectID uint64,
 		usersToBeAttributed = append(usersToBeAttributed, model.UserEventInfo{CoalUserID: key,
 			EventName: goalEventName})
 	}
+
+	logCtx := log.WithFields(log.Fields{"LinkedEventDebug": "True", "ProjectId": projectID})
+
 	err, linkedFunnelEventUsers := pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted)
 	if err != nil {
 		return nil, err
 	}
+	if projectID == 2251799820000000 {
+		logCtx.WithFields(log.Fields{
+			"count of usersToBeAttributed ":   len(usersToBeAttributed),
+			"count of linkedFunnelEventUsers": len(linkedFunnelEventUsers),
+			"usersToBeAttributed value:":      usersToBeAttributed,
+			"linkedFunnelEventUsers value ":   linkedFunnelEventUsers,
+		}).Info("values before applying attribution")
+	}
+
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
 
 	// 4. Apply attribution based on given attribution methodology
@@ -351,6 +363,16 @@ func (pg *Postgres) runAttribution(projectID uint64,
 		query.LookbackDays, query.From, query.To, query.AttributionKey)
 	if err != nil {
 		return nil, err
+	}
+	if projectID == 2251799820000000 {
+		logCtx.WithFields(log.Fields{
+			"count of  all usersToBeAttributed": len(usersToBeAttributed),
+			"count of userConversionHit":        len(userConversionHit),
+			"count of userLinkedFEHit":          len(userLinkedFEHit),
+			"all usersToBeAttributed value ":    usersToBeAttributed,
+			"userConversionHit value ":          userConversionHit,
+			"userLinkedFEHit value":             userLinkedFEHit,
+		}).Info("values after applying attribution")
 	}
 
 	attributionData := make(map[string]*model.AttributionData)
