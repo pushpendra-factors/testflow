@@ -70,12 +70,12 @@ function SignUp({ signup }) {
                                 </Row>
                                 <Row>
                                     <Col span={24}>
-                                        <img src="assets/images/Group 11.png" className={'m-0 mt-4 -ml-2'}/>
+                                        <img src="assets/images/Group 11.svg" className={'m-0 mt-4 -ml-2'}/>
                                     </Col>
                                 </Row>
                                 <Row>
                                     <Col span={24}>
-                                    <img src="assets/images/Frame 825.png" className={'m-0 -ml-2'}/>
+                                    <img src="assets/images/Frame 825.svg" className={'m-0 -ml-2'}/>
                                     </Col>
                                 </Row>
                             </Col>
