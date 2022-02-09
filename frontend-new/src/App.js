@@ -62,7 +62,7 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
       // PROD ENV
 
       //Checking if it is PROD and not STAG
-      if (window.location.href.indexOf("app.factors.ai") != -1){
+      if (window.location.href.indexOf("https://app.factors.ai/") != -1){
 
       //LogRocket
       if (LogRocket) {
