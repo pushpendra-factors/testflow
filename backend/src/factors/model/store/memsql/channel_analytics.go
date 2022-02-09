@@ -458,7 +458,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
-		if errCode == http.StatusNotFound {
+		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
 		}
@@ -479,7 +479,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 		columns = append(commonKeys, commonMetrics...)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
-		if errCode == http.StatusNotFound {
+		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
 		}
@@ -501,7 +501,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 		columns = append(commonKeys, commonMetrics...)
 	} else {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
-		if errCode == http.StatusNotFound {
+		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
 		}
