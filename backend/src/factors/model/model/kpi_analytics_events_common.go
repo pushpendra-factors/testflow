@@ -400,20 +400,6 @@ func TransformRowsResultGroup(queryResults []QueryResult, timezoneString string,
 	resultAsMap := make(map[string][]interface{})
 	numberOfQueryResults := len(queryResults)
 
-	// finalResultants := make([][]interface{}, 0)
-	finalResultantRow := make([]interface{}, 0)
-	finalResultantHeader := make([]string, 0)
-	// BASE CASE with no key.
-	if len(queryResults[0].Rows) == 1 {
-		for _, queryResult := range queryResults {
-			finalResultantRow = append(finalResultantRow, queryResult.Rows[0])
-		}
-
-		for _, queryResult := range queryResults {
-			finalResultantHeader = append(finalResultantHeader, queryResult.Headers[0])
-		}
-	}
-
 	// Step 1
 	for _, queryResult := range queryResults {
 		for _, row := range queryResult.Rows {
