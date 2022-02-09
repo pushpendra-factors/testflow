@@ -291,7 +291,7 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, f
 		return filterValues, http.StatusFound
 	}
 	if filterObject == CAFilterChannel && filterProperty == "name" {
-		return []interface{}{"adwords", "facebook", "linkedin"}, http.StatusFound
+		return []interface{}{"google ads", "facebook", "linkedin"}, http.StatusFound
 	}
 	adwordsSQL, adwordsParams, adwordsErr := store.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	facebookSQL, facebookParams, facebookErr := store.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
@@ -585,6 +585,9 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, q
 			linkedinSQL = fmt.Sprintf("( %s )", linkedinSQL[:len(linkedinSQL)-2])
 		}
 		finLinkedinSQL, finLinkedinParams = linkedinSQL, linkedinParams
+	}
+	if !isAdwordsReq && !isFacebookReq && !isLinkedinReq {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, http.StatusNotFound
 	}
 	return finAdwordsSQL, finAdwordsParams, finalKeys, finalMetrics, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, http.StatusOK
 }

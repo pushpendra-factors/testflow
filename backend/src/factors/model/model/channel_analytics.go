@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -293,6 +291,9 @@ func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [
 
 func TransformDateTypeValueForChannels(headers []string, rows [][]interface{}, groupByTimestampPresent bool, hasAnyGroupBy bool, timezoneString string) [][]interface{} {
 	indexForDateTime := -1
+	if headers[0] == AliasError {
+		return rows
+	}
 	if !groupByTimestampPresent {
 		return rows
 	}
@@ -350,41 +351,43 @@ func GetDecoupledFiltersForChannelBreakdownFilters(filters []ChannelFilterV1) ([
 	return genericFilters, channelBreakdownFilters
 }
 
+func evaluateFilter(channelName string, filter ChannelFilterV1) bool {
+	isChannelRequired := false
+	if filter.Condition == EqualsOpStr || filter.Condition == ContainsOpStr {
+		isChannelRequired = strings.Contains(channelName, strings.ToLower(filter.Value))
+	} else if filter.Condition == NotEqualOpStr || filter.Condition == NotContainsOpStr {
+		isChannelRequired = !(strings.Contains(channelName, strings.ToLower(filter.Value)))
+	} else {
+		return false
+	}
+	return isChannelRequired
+}
+func checkIfChannelReq(channelName string, filters []ChannelFilterV1) bool {
+	isChannelReq := false
+	for i, filter := range filters {
+		if i == 0 {
+			isChannelReq = evaluateFilter(channelName, filter)
+		} else {
+			if filter.LogicalOp == LOGICAL_OP_AND {
+				isChannelReq = isChannelReq && evaluateFilter(channelName, filter)
+				if !isChannelReq {
+					return isChannelReq
+				}
+			} else {
+				isChannelReq = isChannelReq || evaluateFilter(channelName, filter)
+			}
+		}
+	}
+	return isChannelReq
+}
+
 func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, int) {
 	isAdwordsReq, isFacebookReq, isLinkedinReq := false, false, false
 	if len(filters) == 0 {
 		return true, true, true, http.StatusOK
 	}
-	for i, filter := range filters {
-		if i == 0 {
-			switch filter.Value {
-			case ChannelAdwords:
-				isAdwordsReq = true
-			case ChannelFacebook:
-				isFacebookReq = true
-			case ChannelLinkedin:
-				isLinkedinReq = true
-			default:
-				log.WithField("Filters", filters).Error("ChannelAnalyticsError: Invalid channel present in channel filter")
-				return false, false, false, http.StatusBadRequest
-			}
-		} else {
-			if filter.LogicalOp == LOGICAL_OP_AND {
-				return false, false, false, http.StatusOK
-			} else {
-				switch filter.Value {
-				case ChannelAdwords:
-					isAdwordsReq = true
-				case ChannelFacebook:
-					isFacebookReq = true
-				case ChannelLinkedin:
-					isLinkedinReq = true
-				default:
-					log.WithField("Filters", filters).Error("ChannelAnalyticsError: Invalid channel present in channel filter")
-					return false, false, false, http.StatusBadRequest
-				}
-			}
-		}
-	}
+	isAdwordsReq = checkIfChannelReq(ChannelGoogleAds, filters)
+	isFacebookReq = checkIfChannelReq(ChannelFacebook, filters)
+	isLinkedinReq = checkIfChannelReq(ChannelLinkedin, filters)
 	return isAdwordsReq, isFacebookReq, isLinkedinReq, http.StatusOK
 }

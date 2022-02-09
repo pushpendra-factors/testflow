@@ -203,6 +203,7 @@ const (
 	ChannelAdwords    = "adwords"
 	ChannelFacebook   = "facebook"
 	ChannelLinkedin   = "linkedin"
+	ChannelGoogleAds  = "google ads"
 	SessionChannelOTP = "OfflineTouchPoint"
 
 	FieldChannelName      = "channel_name"

@@ -694,6 +694,9 @@ func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, confi
 }
 
 func GetTransformedHeadersForChannels(headers []string, hasAnyGroupByTimestamp bool, hasAnyGroupBy bool) []string {
+	if headers[0] == AliasError {
+		return headers
+	}
 	currentHeaders := headers
 	size := len(currentHeaders)
 	currentHeaders[size-1] = AliasAggr
