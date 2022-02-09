@@ -116,9 +116,9 @@ function Sidebar(props) {
           <Button size={'large'} type={'text'}
           onClick={() => {
             setShowPopOver(false);
-            setCreateNewProjectModal(true);
+            setShowProjectModal(true);
           }}>
-            <span className={'mr-4'}><PlusOutlined /></span> {'Add Projects'}</Button>
+            <span className={'mr-4'}><PlusOutlined /></span> {'New Project'}</Button>
           <div className={'fa-popupcard-divider'} />
           <div className={'flex justify-start items-center project-item'}
               onClick={() => {
@@ -208,7 +208,7 @@ function Sidebar(props) {
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Setup Assist" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
                 <NavLink activeClassName="active" to="/project-setup"><SVG name={'Emoji'} size={40} color="white"/></NavLink>
-                <Badge dot offset={[25,-35]}></Badge>
+                {/* <Badge dot offset={[25,-35]}></Badge> */}
               </Tooltip>
             </Row>
 
@@ -237,10 +237,10 @@ function Sidebar(props) {
         <UserSettings visible={ShowUserSettings} handleCancel={closeUserSettingsModal} />
         <NewProject visible={showProjectModal} handleCancel={() => setShowProjectModal(false)} />
 
-        <CreateNewProject
+        {/* <CreateNewProject
           visible={CreateNewProjectModal}
           setCreateNewProjectModal={setCreateNewProjectModal}
-        />
+        /> */}
 
         <Modal
         visible={changeProjectModal}

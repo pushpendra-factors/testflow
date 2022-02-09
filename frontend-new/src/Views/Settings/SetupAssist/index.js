@@ -82,13 +82,13 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                         <Timeline>
                             <Timeline.Item color ={current === 0 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 0 ? 'brand-color': null} onClick={() => setCurrent(0)}>Connect with your website data</Text></Timeline.Item>
                             <Timeline.Item color ={current === 1 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 1 ? 'brand-color': null} onClick={() => setCurrent(1)}>Connect with your Ad platforms</Text></Timeline.Item>
-                            <Timeline.Item color ={current === 2 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 2 ? 'brand-color': null} onClick={() => setCurrent(2)}>Connect with your CRMS</Text></Timeline.Item>
+                            <Timeline.Item color ={current === 2 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 2 ? 'brand-color': null} onClick={() => setCurrent(2)}>Connect with your CRMs</Text></Timeline.Item>
                             <Timeline.Item color ={current === 3 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 3 ? 'brand-color': null} onClick={() => setCurrent(3)}>Other integrations</Text></Timeline.Item>
                         </Timeline>
                         <Row className={'pt-16'}>
                             <Col>
-                                <Text type={'title'} level={4} weight={'bold'} extraClass={'pb-4 m-0'}>Setup a call with a rep</Text>
-                                <Text type={'title'} level={6} extraClass={'pb-6 m-0'}>We are always happy to assist you</Text>
+                                <Text type={'title'} level={4} weight={'bold'} extraClass={'pb-4 m-0'}>Need help? We’re here!</Text>
+                                <Text type={'title'} level={6} extraClass={'pb-6 m-0'}>We’d love to help out</Text>
                                 <a href={meetLink} target='_blank' ><Button type={'primary'}>Setup Call</Button></a>
                                 <img src='../../assets/images/character-1.png' style={{width: '100%',maxWidth: '80px',marginLeft:'110px', marginTop:'-30px'}}/>
                             </Col>

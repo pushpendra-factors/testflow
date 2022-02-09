@@ -3,21 +3,30 @@ import { Link, useHistory } from 'react-router-dom';
 import { SVG, Text } from '../../../components/factorsComponents';
 import { FaErrorComp, FaErrorLog } from '../../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Button } from 'antd';
+import { Button, message, notification } from 'antd';
 import Header from '../../AppLayout/Header';
 import { connect } from 'react-redux';
-import { getHubspotContact } from 'Reducers/global';
+import { getHubspotContact, setActiveProject, fetchDemoProject } from 'Reducers/global';
 
-function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, currentAgent}) {
+function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, currentAgent, setActiveProject, fetchDemoProject, projects}) {
     const [dataLoading, setdataLoading] = useState(true);
     const [ownerID, setownerID] = useState();
     const history = useHistory();
 
-    useEffect(() => {
-        setTimeout(() => {
-            setdataLoading(false)
-        },3000);
-    }, []);
+    const switchProject = () => {
+        fetchDemoProject().then((res) => {
+            let id = res.data[0];
+            let selectedProject = projects.filter(project => project.id === id);
+            selectedProject = selectedProject[0];
+            localStorage.setItem('activeProject', selectedProject?.id);
+            setActiveProject(selectedProject);
+            history.push('/');
+            notification.success({
+              message: 'Project Changed!',
+              description: `You are currently viewing data from ${selectedProject.name}`
+            });
+        });
+      };
 
     useEffect(() => {
         let email = currentAgent.email;
@@ -54,10 +63,10 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                             </div>
                             <div className={'mt-4 mb-4'}>
                                 <Text type={'title'} level={4} color={'grey-2'} weight={'bold'} extraClass={'m-0 mt-2 mb-1'}>
-                                    Complete project setup
+                                    Complete Project Setup
                                 </Text>
                                 <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mb-1'}>
-                                    A few things pending under your project setup
+                                    Are you done connecting to all your data sources?
                                 </Text>
                             </div>
                             <div className={'float-right -mt-20 pt-2 mr-8'}>
@@ -67,7 +76,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                 </Header>
 
                 <div
-                    style={{marginTop:'24em'}}
+                    style={{marginTop:'20em'}}
                     className={
                     'flex justify-center flex-col items-center fa-dashboard--no-data-container'
                     }
@@ -76,25 +85,26 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                     <Text type={'title'} level={6} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>
                         Create a dashboard to moniter your metrics in one place.
                     </Text>
+                    <Text type={'title'} level={7} color={'grey'} weight={'bold'} extraClass={'m-0'}>It should take us a day to bring in and process all your data.</Text>
                     <Text type={'title'} level={7} color={'grey'} weight={'bold'} extraClass={'m-0'}>
-                        Learn <Link to={'#!'}>Dashboard Basics{ dataLoading? <SVG name={'Arrowright'} size={16} extraClass={'inline ml-1'} color={'blue'} /> : null}</Link>
+                        Until then, explore the <Link onClick={()=> switchProject()}>Demo Project</Link>
                     </Text>
-                    { dataLoading ? 
+                    {/* { dataLoading ? 
                     <div className={'rounded-lg border-2 border-gray-400 w-11/12 mt-6'}>
                         <Text type={'title'} level={6} color={'grey'} extraClass={'m-0 mt-2 -mb-1'}>
                            We don’t have any data yet. While we fetching your metrics,
                         </Text>
-                        <Button type={'text'} color={'grey-2'} className={'mb-2'}>Explore our Demo Project<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'grey'} /></Button>
+                        <Button type={'text'} color={'grey-2'} className={'mb-2'} onClick={()=> switchProject()}>Explore our Demo Project<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'grey'} /></Button>
                     </div>
-                    :
+                    : */}
                     <div className={'mt-6'}>
                         <Button type={'primary'} size={'large'} className={'w-full'} onClick={() => setaddDashboardModal(true)}>Create your first dashboard</Button>
                         <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>
                             or
                         </Text>
-                        <a href={meetLink} target='_blank' ><Button type={'default'} size={'large'} className={'w-full'}>Setup Call</Button></a>
+                        <a href={meetLink} target='_blank' ><Button type={'default'} size={'large'} className={'w-full'}>Need Help?</Button></a>
                     </div>
-                    }
+                    {/* } */}
                 </div>
                 
             </ErrorBoundary>
@@ -104,7 +114,8 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
 }
 
 const mapStateToProps = (state) => ({
-    currentAgent: state.agent.agent_details
+    currentAgent: state.agent.agent_details,
+    projects: state.global.projects
 });
 
-export default connect(mapStateToProps, { getHubspotContact })(DashboardAfterIntegration);
+export default connect(mapStateToProps, { getHubspotContact , setActiveProject, fetchDemoProject})(DashboardAfterIntegration);

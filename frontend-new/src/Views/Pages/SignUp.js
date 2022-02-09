@@ -53,31 +53,46 @@ function SignUp({ signup }) {
   return (
     <>
     { !formData &&
-      <div className={'fa-container h-screen w-full'}>
-
-            <Row justify={'space-between'} className={'py-4 m-0 '}>
-              <Col>
-                <div className={'flex items-center'}>
-                    <SVG name={'BrandFull'} size={40} color="white"/>
-                </div>
-              </Col>
-              <Col>
-                <Button size={'large'} onClick={() => routeChange('/login')} >Sign In</Button>
-              </Col>
-            </Row>
+      <div className={'fa-content-container.no-sidebar h-screen w-full h-full'}>
 
             {/* //parent container starts here */}
-            <Row className={' signup-container w-full'}>
 
-                    <div className={'flex items-center '}>
-                    {/* //left side content starts here */}
+            <div className={'flex items-center w-full h-full '}>
+                {/* //left side content starts here */}
+                <Col span={12} style={{background: '#E6F7FF'}} className={'w-full h-full'}>
+                    <Row align="center" className={'my-40'}>
+                            <Col span={14}>
+                                <Row>
+                                    <Col span={24}>
+                                        <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Marketing Decisioning made Radically Smarter</Text>
+                                        <Text type={'title'} color={'grey'} level={7} extraClass={'m-0'} >An end-to-end marketing analytics platform that integrates across data silos to deliver focused AI-fueled actionable insights.</Text>
+                                    </Col>
+                                </Row>
+                                <Row>
+                                    <Col span={24}>
+                                        <img src="assets/images/Group 11.png" className={'m-0 mt-4 -ml-2'}/>
+                                    </Col>
+                                </Row>
+                                <Row>
+                                    <Col span={24}>
+                                    <img src="assets/images/Frame 825.png" className={'m-0 -ml-2'}/>
+                                    </Col>
+                                </Row>
+                            </Col>
+                    </Row>
+                </Col>
+                
+                {/* //left side content ends here */}
+
+                {/* //right side content starts here */}
+
                 <Col span={12} >
                     <Row align="center">
-                            <Col span={14}>
+                        <Col span={14}>
                         
 
                         <Row>
-                            <Col span={24}>
+                        <Col span={20}>
 
                         <Form
                         form={form}
@@ -89,8 +104,15 @@ function SignUp({ signup }) {
                         >
                             <Row>
                                 <Col span={24}>
-                                    <div className={'flex mb-2'} >
-                                        <Text type={'title'} level={5} extraClass={'m-0'} weight={'bold'}>Create your Factors account</Text>
+                                    <div style={{marginLeft: '5.5vw'}}>
+                                        <SVG name={'BrandFull'} size={40} color="white"/>
+                                    </div>
+                                </Col>
+                            </Row>
+                            <Row>
+                                <Col span={24}>
+                                    <div>
+                                        <Text type={'title'} level={6} align={'center'} color={'grey-2'} extraClass={'m-0 ml-1 mt-2'} weight={'bold'}>Sign Up to continue</Text>
                                     </div>
                                 </Col>
                             </Row>
@@ -98,28 +120,28 @@ function SignUp({ signup }) {
                             <Row gutter={[24, 0]}>
                                 <Col span={12}>
                                         <div className={'flex flex-col mt-5'} >
-                                        <Text type={'title'} level={7} extraClass={'m-0'}>First Name</Text>
+                                        {/* <Text type={'title'} level={7} extraClass={'m-0'}>First Name</Text> */}
                                             <Form.Item label={null}
                                                 name="first_name"
                                                 rules={[{ required: true, message: 'Please enter first name' }]}
                                                 className={'w-full'}
                                                 >
                                                 <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                // placeholder="First Name"
+                                                placeholder="First Name"
                                                  />
                                             </Form.Item>
                                         </div>
                                 </Col>
                                 <Col span={12}>
                                         <div className={'flex flex-col mt-5'} >
-                                        <Text type={'title'} level={7} extraClass={'m-0'}>Last Name</Text>
+                                        {/* <Text type={'title'} level={7} extraClass={'m-0'}>Last Name</Text> */}
                                             <Form.Item label={null}
                                                 name="last_name"
                                                 rules={[{ required: true, message: 'Please enter last name' }]}
                                                 className={'w-full'}
                                                 >
                                                 <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                // placeholder="Last Name"
+                                                placeholder="Last Name"
                                                  />
                                             </Form.Item>
                                         </div>
@@ -129,13 +151,13 @@ function SignUp({ signup }) {
                             <Row>
                                 <Col span={24}>
                                         <div className={'flex flex-col mt-5 w-full'} >
-                                            <Text type={'title'} level={7} extraClass={'m-0'}>Work Email</Text>
+                                            {/* <Text type={'title'} level={7} extraClass={'m-0'}>Work Email</Text> */}
                                             <Form.Item label={null}
                                                 name="email"
                                                 rules={[{ required: true, type: 'email', message: 'Please enter work email' }]}
                                                 >
                                                 <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                // placeholder="Work Email"
+                                                placeholder="Email"
                                                  />
                                             </Form.Item>
                                         </div>
@@ -177,7 +199,7 @@ function SignUp({ signup }) {
                                 <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5'} >
                                         <Form.Item className={'m-0 w-full'} loading={dataLoading}>
-                                            <Button htmlType="submit" loading={dataLoading} type={'primary'} size={'large'} className={'w-full'}>Get Started</Button>
+                                            <Button htmlType="submit" loading={dataLoading} type={'primary'} size={'large'} className={'w-full'}>Signup</Button>
                                         </Form.Item>
                                     </div>
                                 </Col>
@@ -191,7 +213,7 @@ function SignUp({ signup }) {
                                 </Col>
                                 }
                                 <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-10'} >
+                                    <div className={'flex flex-col justify-center items-center mt-6'} >
                                     <Text type={'paragraph'} mini color={'grey'}>Already have an account?<a disabled={dataLoading} onClick={() => routeChange('/login')}> Sign In</a></Text>
                                     </div>
                                 </Col>
@@ -203,33 +225,11 @@ function SignUp({ signup }) {
                         </Row>
 
                         </Col>
-                        </Row>
-                </Col>
-                        {/* //left side content ends here */}
-
-                        {/* //right side content starts here */}
-
-                <Col span={12}>
-                    <Row align="center">
-                            <Col span={14}>
-                                <Row>
-                                        <Col span={24}>
-                                            <img src="assets/images/illustration.png" className={'mb-10'} style={{ marginLeft: '-80px' }}/>
-                                        </Col>
-                                </Row>
-                                <Row>
-                                        <Col span={24}>
-                                        <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Marketing Decisioning made Radically Smarter</Text>
-                                        <Text type={'title'} color={'grey'} level={7} extraClass={'m-0'} >An end-to-end marketing analytics platform that integrates across data silos to deliver focussed AI-fueled actionable insights.</Text>
-                                        </Col>
-                                </Row>
-                            </Col>
                     </Row>
                 </Col>
-                        {/* //right side content ends here */}
+                {/* //right side content ends here */}
             </div>
-            </Row>
-                        {/* //parent container ends here */}
+            {/* //parent container ends here */}
       </div>
         }
         {formData &&

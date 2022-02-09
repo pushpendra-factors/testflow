@@ -59,8 +59,8 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
   };
 
   const onSkip = () => {
+    handleCancel();
     form.resetFields();
-    setFormData(true);
   };
 
   function getBase64(img, callback) {
