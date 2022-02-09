@@ -249,6 +249,8 @@ func TransformDateTypeValueForEventsKPI(headers []string, rows [][]interface{}, 
 
 	for index, row := range rows {
 		currentValueInTimeFormat, _ := row[indexForDateTime].(time.Time)
+		loc, _ := time.LoadLocation(timezoneString)
+		currentValueInTimeFormat = currentValueInTimeFormat.In(loc)
 		rows[index][indexForDateTime] = U.GetTimestampAsStrWithTimezone(currentValueInTimeFormat, timezoneString)
 	}
 
