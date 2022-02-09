@@ -562,7 +562,7 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 	logCtx = logCtx.WithField("fetched_c_uid", user.CustomerUserId)
 
 	// same seg_aid with different c_uid. log error. return user.
-	if user.CustomerUserId != custUserId {
+	if user.CustomerUserId != "" && (user.CustomerUserId != custUserId) {
 		logCtx.Warn("Different customer_user_id seen for existing user with segment_anonymous_id.")
 	}
 
