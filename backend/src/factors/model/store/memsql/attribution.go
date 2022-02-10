@@ -381,9 +381,19 @@ func (store *MemSQL) runAttribution(projectID uint64,
 			EventName: goalEventName})
 	}
 
+	logCtx := log.WithFields(log.Fields{"LinkedEventDebug": "True", "ProjectId": projectID})
+
 	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted)
 	if err != nil {
 		return nil, err
+	}
+	if projectID == 2251799820000000 {
+		logCtx.WithFields(log.Fields{
+			"count of usersToBeAttributed ":   len(usersToBeAttributed),
+			"count of linkedFunnelEventUsers": len(linkedFunnelEventUsers),
+			"usersToBeAttributed value:":      usersToBeAttributed,
+			"linkedFunnelEventUsers value ":   linkedFunnelEventUsers,
+		}).Info("values before applying attribution")
 	}
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
 
@@ -393,6 +403,17 @@ func (store *MemSQL) runAttribution(projectID uint64,
 		query.LookbackDays, query.From, query.To, query.AttributionKey)
 	if err != nil {
 		return nil, err
+	}
+
+	if projectID == 2251799820000000 {
+		logCtx.WithFields(log.Fields{
+			"count of  all usersToBeAttributed": len(usersToBeAttributed),
+			"count of userConversionHit":        len(userConversionHit),
+			"count of userLinkedFEHit":          len(userLinkedFEHit),
+			"all usersToBeAttributed value ":    usersToBeAttributed,
+			"userConversionHit value ":          userConversionHit,
+			"userLinkedFEHit value":             userLinkedFEHit,
+		}).Info("values after applying attribution")
 	}
 
 	attributionData := make(map[string]*model.AttributionData)
@@ -524,8 +545,8 @@ func (store *MemSQL) getOfflineEventData(projectID uint64) (model.EventName, err
 
 	eventNames, errCode := store.GetEventNamesByNames(projectID, names)
 	if errCode != http.StatusFound || len(eventNames) != 1 {
-		logCtx.Error("failed to find offline touch point event names")
-		return model.EventName{}, errors.New("failed to find offline touch point event names")
+		logCtx.Info("failed to find offline touch point event names, skipping OTP attribution computation")
+		return model.EventName{}, errors.New("failed to find offline touch point event names, skipping OTP attribution computation")
 	}
 	return eventNames[0], nil
 }

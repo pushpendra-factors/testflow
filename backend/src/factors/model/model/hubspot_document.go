@@ -519,7 +519,7 @@ func GetHubspotProjectOverAllStatus(success []HubspotProjectSyncStatus,
 	}
 
 	for i := range failure {
-		status[success[i].ProjectID] = false
+		status[failure[i].ProjectID] = false
 		log.WithFields(log.Fields{"project_id": failure[i].ProjectID, "doc_type": failure[i].DocType}).
 			Error("Failed to complete hubspot first time sync.")
 	}
