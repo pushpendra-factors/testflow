@@ -59,8 +59,8 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
   };
 
   const onSkip = () => {
+    handleCancel();
     form.resetFields();
-    setFormData(true);
   };
 
   function getBase64(img, callback) {
@@ -130,11 +130,9 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                             <Form.Item
                                 name="time_zone"
                                 className={'m-0'}
-                                rules={[{ required: true, message: 'Please choose an option' }]}
-                                // disabled={!activeProject?.is_multiple_project_timezone_enabled}
+                                rules={[{ required: true, message: 'Please choose an option' }]} 
                             >
-                                <Select 
-                                // disabled={!activeProject?.is_multiple_project_timezone_enabled}
+                                <Select  
                                 className={'fa-select'} placeholder={'Time Zone'} size={'large'}>
                                 { Object.keys(TimeZoneName).map((item)=>{
                                     return  <Option value={item}>{TimeZoneName[item]}</Option> 

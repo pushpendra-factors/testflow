@@ -62,7 +62,7 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
       // PROD ENV
 
       //Checking if it is PROD and not STAG
-      if (window.location.href.indexOf("app.factors.ai") != -1){
+      if (window.location.href.indexOf("https://app.factors.ai/") != -1){
 
       //LogRocket
       if (LogRocket) {
@@ -128,8 +128,8 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
 
   useEffect(()=>{  
     const tz = active_project?.time_zone;
-    const isTzEnabled = active_project?.is_multiple_project_timezone_enabled;
-    if(tz && isTzEnabled){ 
+    // const isTzEnabled = active_project?.is_multiple_project_timezone_enabled;
+    if(tz){
       localStorage.setItem('project_timeZone', tz); 
     }
     else{

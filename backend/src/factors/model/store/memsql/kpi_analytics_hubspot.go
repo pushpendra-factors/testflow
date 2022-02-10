@@ -4,19 +4,37 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) GetKPIConfigsForHubspotContacts(projectID uint64, reqID string) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotContactsDisplayCategory)
 }
 
 func (store *MemSQL) GetKPIConfigsForHubspotCompanies(projectID uint64, reqID string) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotCompaniesDisplayCategory)
 }
 
+// Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
 func (store *MemSQL) GetKPIConfigsForHubspot(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"req_id":           reqID,
+		"display_category": displayCategory,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	hubspotProjectSettings, errCode := store.GetAllHubspotProjectSettingsForProjectID(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusOK {
 		log.WithField("projectId", projectID).WithField("reqID", reqID).Warn(" Failed in getting hubspot project settings.")
@@ -30,17 +48,41 @@ func (store *MemSQL) GetKPIConfigsForHubspot(projectID uint64, reqID string, dis
 	return store.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory), http.StatusOK
 }
 
+// Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
+// Only considering hubspot_contacts and salesforce_users for now.
 func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {
-	return map[string]interface{}{
-		"category":         model.EventCategory,
+	logFields := log.Fields{
+		"project_id":       projectID,
+		"req_id":           reqID,
 		"display_category": displayCategory,
-		"metrics":          model.GetMetricsForDisplayCategory(displayCategory),
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
+	customMetrics, err, statusCode := store.GetCustomMetricByProjectIdAndObjectType(projectID, model.ProfileQueryType, displayCategory)
+	if statusCode != http.StatusFound {
+		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
+	}
+	customMetricNames := make([]string, 0)
+	for _, customMetric := range customMetrics {
+		customMetricNames = append(customMetricNames, customMetric.Name)
+	}
+
+	return map[string]interface{}{
+		"category":         model.ProfileCategory,
+		"display_category": displayCategory,
+		"metrics":          customMetricNames,
 		"properties":       store.GetPropertiesForHubspot(projectID, reqID),
 	}
 }
 
 func (store *MemSQL) GetPropertiesForHubspot(projectID uint64, reqID string) []map[string]string {
-	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 	properties, propertiesToDisplayNames, err := store.GetRequiredUserPropertiesByProject(projectID, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot properties. Internal error")

@@ -186,6 +186,7 @@ const EventGroupBlock = ({
           optionClick={(group, val) => onChange(group, val)}
           onClickOutside={() => closeDropDown()}
           hideTitle={true}
+          textStartCase
         ></GroupSelect2>
       </div>
     );

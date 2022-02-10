@@ -102,6 +102,8 @@ type WebAnalyticsAggregate struct {
 }
 
 func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	db := C.GetServices().Db
 
 	var projectIDs []uint64
@@ -129,10 +131,11 @@ func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
 }
 
 func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *model.WebAnalyticsQueries, int) {
-	logCtx := log.WithFields(log.Fields{
-		"Method":    "GetWebAnalyticsQueriesFromDashboardUnits",
-		"ProjectID": projectID,
-	})
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 
 	dashboardUnits, errCode := store.GetDashboardUnitsForProjectID(projectID)
 	if errCode != http.StatusFound {
@@ -232,15 +235,25 @@ func (store *MemSQL) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) 
 }
 
 func getQueryForNamedQueryUnit(class, queryName string) (*postgres.Jsonb, error) {
+	logFields := log.Fields{
+		"class": class,
+		"query_name": queryName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return U.EncodeStructTypeToPostgresJsonb(model.NamedQueryUnit{Class: class,
 		Type: QueryTypeNamed, QueryName: queryName})
 }
 
 func (store *MemSQL) addWebAnalyticsDefaultDashboardUnits(projectId uint64,
 	agentUUID string, dashboardId uint64) int {
+		logFields := log.Fields{
+			"project_id": projectId,
+			"agent_uuid": agentUUID,
+			"dashboard_id": dashboardId,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "agent_uuid": agentUUID,
-		"dashboard_id": dashboardId})
+		logCtx := log.WithFields(logFields)
 
 	hasFailure := false
 	for queryName, presentation := range model.DefaultWebAnalyticsQueries {
@@ -287,7 +300,12 @@ func (store *MemSQL) addWebAnalyticsDefaultDashboardUnits(projectId uint64,
 }
 
 func (store *MemSQL) CreateWebAnalyticsDefaultDashboardWithUnits(projectId uint64, agentUUID string) int {
-	logCtx := log.WithField("project_id", projectId).WithField("agent_uuid", agentUUID)
+	logFields := log.Fields{
+		"project_id": projectId,
+		"agent_uuid": agentUUID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
 
 	dashboard, errCode := store.CreateDashboard(projectId, agentUUID, &model.Dashboard{
 		Name:  model.DefaultDashboardWebsiteAnalytics,
@@ -308,16 +326,29 @@ func (store *MemSQL) CreateWebAnalyticsDefaultDashboardWithUnits(projectId uint6
 }
 
 func hasCampaign(campaign, campaignID string) bool {
+	logFields := log.Fields{
+		"campaign": campaign,
+		"campaign_id": campaignID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	return campaign != "" || campaignID != ""
 }
 
 func isSearchReferrer(referrerDomain string) bool {
+	logFields := log.Fields{
+		"referrer_domain": referrerDomain,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	referrerDomain = strings.ToLower(referrerDomain)
 
 	return U.IsContainsAnySubString(referrerDomain, "google", "bing")
 }
 
 func isSocialReferrer(referrerDomain string) bool {
+	logFields := log.Fields{
+		"referrer_domain": referrerDomain,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	referrerDomain = strings.ToLower(referrerDomain)
 
 	return U.IsContainsAnySubString(referrerDomain,
@@ -325,6 +356,11 @@ func isSocialReferrer(referrerDomain string) bool {
 }
 
 func getChannel(wep *WebAnalyticsEventProperties, isSessionEvent bool) string {
+	logFields := log.Fields{
+		"wep": wep,
+		"is_session_event": isSessionEvent,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var referrerDomain string
 	if isSessionEvent {
 		referrerDomain = wep.SessionInitialReferrerDomain
@@ -386,6 +422,11 @@ func getChannel(wep *WebAnalyticsEventProperties, isSessionEvent bool) string {
 // string as group_key and the original values of properties.
 func getUniqueGroupKeyAndPropertyValues(queryPropertyKeys []string,
 	propertyKeyValues *map[string]string) (string, []interface{}) {
+		logFields := log.Fields{
+			"query_property_keys": queryPropertyKeys,
+			"property_key_values": propertyKeyValues,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var groupKey string
 	groupPropertyValues := make([]interface{}, 0, 0)
@@ -412,6 +453,11 @@ func getUniqueGroupKeyAndPropertyValues(queryPropertyKeys []string,
 
 func initWACustomGroupMetricValue(m *map[string]*model.WebAnalyticsCustomGroupMetricValue,
 	metricName string) {
+		logFields := log.Fields{
+			"m": m,
+			"metric_name": metricName,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if metricValue, exists := (*m)[metricName]; !exists || metricValue == nil {
 		(*m)[metricName] = &model.WebAnalyticsCustomGroupMetricValue{
@@ -429,9 +475,19 @@ func buildWebAnalyticsAggregateForPageEvent(
 	customGroupPrevGroupBySession *map[string]map[string]*model.WebAnalyticsCustomGroupPrevGroup,
 	from, to int64,
 ) int {
+	logFields := log.Fields{
+		"web_event": webEvent,
+		"aggr_state": aggrState,
+		"custom_group_queries": customGroupQueries,
+		"custom_group_properties_map": customGroupPropertiesMap,
+		"custom_group_aggr_state": customGroupAggrState,
+		"custom_group_prev_group_by_session": customGroupPrevGroupBySession,
+		"from": from,
+		"to": to,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithField("project_id", webEvent.ProjectID).
-		WithField("event_id", webEvent.ID)
+	logCtx := log.WithFields(logFields)
 
 	pageURL := webEvent.Properties.PageURL
 	if pageURL == "" {
@@ -674,8 +730,16 @@ func buildWebAnalyticsAggregateForSessionEvent(
 	customGroupAggrState *map[string]map[string]*model.WebAnalyticsCustomGroupMetric,
 ) int {
 
-	logCtx := log.WithField("project_id", webEvent.ProjectID).
-		WithField("event_id", webEvent.ID)
+	logFields := log.Fields{
+		"web_event": webEvent,
+		"aggr_state": aggrState,
+		"custom_group_queries": customGroupQueries,
+		"custom_group_properties_map": customGroupPropertiesMap,
+		"custom_group_aggr_state": customGroupAggrState,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
 
 	aggrState.NoOfSessions++
 	aggrState.ChannelAggregates[webEvent.Properties.Channel].NoOfSessions++
@@ -739,6 +803,17 @@ func buildWebAnalyticsAggregate(
 	customGroupPrevGroupBySession *map[string]map[string]*model.WebAnalyticsCustomGroupPrevGroup,
 	from, to int64,
 ) int {
+	logFields := log.Fields{
+		"web_event": webEvent,
+		"aggr_state": aggrState,
+		"custom_group_queries": customGroupQueries,
+		"custom_group_properties_map": customGroupPropertiesMap,
+		"custom_group_aggr_state": customGroupAggrState,
+		"custom_group_prev_group_by_session": customGroupPrevGroupBySession,
+		"from": from,
+		"to": to,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if aggrState.UniqueUsersMap == nil {
 		aggrState.UniqueUsersMap = make(map[string]bool)
@@ -777,6 +852,10 @@ func buildWebAnalyticsAggregate(
 
 func getTopPagesReportAsWebAnalyticsResult(
 	webAggr *WebAnalyticsAggregate) model.GenericQueryResult {
+		logFields := log.Fields{
+			"web_aggr": webAggr,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	headers := []string{
 		"Page URL",
@@ -833,6 +912,10 @@ func getTopPagesReportAsWebAnalyticsResult(
 }
 
 func getTrafficChannelReport(webAggr *WebAnalyticsAggregate) model.GenericQueryResult {
+	logFields := log.Fields{
+		"web_aggr": webAggr,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	headers := []string{
 		"Channel",
 		"Page Views",
@@ -886,6 +969,12 @@ func getTrafficChannelReport(webAggr *WebAnalyticsAggregate) model.GenericQueryR
 // Converts single value aggregate to rows and headers format for compatibility.
 func fillValueAsWebAnalyticsResult(queryResultByName *map[string]model.GenericQueryResult,
 	queryName string, value interface{}) {
+		logFields := log.Fields{
+			"query_result_by_name": queryResultByName,
+			"query_name": queryName,
+			"value": value,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	webAResult := model.GenericQueryResult{
 		Headers: []string{"count"},
@@ -897,6 +986,10 @@ func fillValueAsWebAnalyticsResult(queryResultByName *map[string]model.GenericQu
 
 // getFormattedPercentage - Creates percentage string with required precision.
 func getFormattedPercentage(value float64) string {
+	logFields := log.Fields{
+		"value": value,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if value == 0 {
 		return "0%"
 	}
@@ -909,6 +1002,12 @@ func getFormattedPercentage(value float64) string {
 
 func getWebAnalyticsQueryResultByName(webAggrState *WebAnalyticsAggregate) (
 	queryResultByName *map[string]model.GenericQueryResult) {
+
+		logFields := log.Fields{
+			"web_aggr_state": webAggrState,
+			"query_result_by_name": queryResultByName,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	queryResultByName = &map[string]model.GenericQueryResult{}
 
@@ -959,6 +1058,12 @@ func getResultForCustomGroupQuery(
 	customGroupAggrState *map[string]map[string]*model.WebAnalyticsCustomGroupMetric,
 	webAggrState *WebAnalyticsAggregate,
 ) (queryResult map[string]*model.GenericQueryResult) {
+	logFields := log.Fields{
+		"group_queries": groupQueries,
+		"web_aggr_state": webAggrState,
+		"custom_group_aggr_state": customGroupAggrState,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	queryResult = map[string]*model.GenericQueryResult{}
 
@@ -1102,6 +1207,12 @@ func getResultForCustomGroupQuery(
 // ExecuteWebAnalyticsQueries - executes the web analytics query and returns result by query_name.
 func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model.WebAnalyticsQueries) (
 	queryResult *model.WebAnalyticsQueryResult, errCode int) {
+		logFields := log.Fields{
+			"project_id": projectId,
+			"queries": queries,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+		
 	funcStartTimestamp := U.TimeNowUnix()
 
 	webAggrState := WebAnalyticsAggregate{}
@@ -1118,7 +1229,7 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 	if projectId == 0 || queries == nil {
 		return queryResult, http.StatusBadRequest
 	}
-	logCtx := log.WithField("project_id", projectId).WithField("query", queries)
+	logCtx := log.WithFields(logFields)
 
 	sessionEventName, errCode := store.GetSessionEventName(projectId)
 	if errCode != http.StatusFound {
@@ -1358,6 +1469,10 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 
 // GetWebAnalyticsCachePayloadsForProject Returns web analytics cache payloads with date range and queries.
 func (store *MemSQL) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]model.WebAnalyticsCachePayload, int, string) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	dashboardID, webAnalyticsQueries, errCode := store.GetWebAnalyticsQueriesFromDashboardUnits(projectID)
 	if errCode != http.StatusFound {
 		errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)
@@ -1389,6 +1504,12 @@ func (store *MemSQL) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([
 }
 
 func (store *MemSQL) cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"wait_group": waitGroup,
+		"report_collector": reportCollector,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
@@ -1415,11 +1536,15 @@ func (store *MemSQL) cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGro
 
 // CacheWebsiteAnalyticsForDateRange Cache web analytics dashboard for with given payload.
 func (store *MemSQL) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload) (int, model.CachingUnitReport) {
+	logFields := log.Fields{
+		"cache_payload": cachePayload,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	projectID := cachePayload.ProjectID
 	dashboardID := cachePayload.DashboardID
 	from, to := cachePayload.From, cachePayload.To
 	queries := cachePayload.Queries
-	logCtx := log.WithFields(log.Fields{"did": dashboardID, "pid": projectID, "from": from, "to": to})
+	logCtx := log.WithFields(logFields)
 	timezoneString := cachePayload.Timezone
 
 	uniqueId := ""
@@ -1477,15 +1602,16 @@ func (store *MemSQL) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAna
 
 func (store *MemSQL) cacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload,
 	waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
+		logFields := log.Fields{
+			"cache_payload": cachePayload,
+			"wait_group": waitGroup,
+			"report_collector": reportCollector,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
-	logCtx := log.WithFields(log.Fields{
-		"Method":      "cacheWebsiteAnalyticsForDateRange",
-		"ProjectID":   cachePayload.ProjectID,
-		"DashboardID": cachePayload.DashboardID,
-		"FromTo":      fmt.Sprintf("%d-%d", cachePayload.From, cachePayload.To),
-	})
+	logCtx := log.WithFields(logFields)
 	errCode, report := store.CacheWebsiteAnalyticsForDateRange(cachePayload)
 	reportCollector.Store(model.GetCachingUnitReportUniqueKey(report), report)
 	if errCode != http.StatusOK {
@@ -1497,6 +1623,11 @@ func (store *MemSQL) cacheWebsiteAnalyticsForDateRange(cachePayload model.WebAna
 
 // GetWebAnalyticsEnabledProjectIDsFromList Returns only project ids for which web analytics is enabled.
 func (store *MemSQL) GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs string) []uint64 {
+	logFields := log.Fields{
+		"string_project_ids": stringProjectIDs,
+		"exclude_project_ids": excludeProjectIDs,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(stringProjectIDs, excludeProjectIDs)
 	allWebAnalyticsProjectIDs, errCode := getWebAnalyticsEnabledProjectIDs()
 	if errCode != http.StatusFound {
@@ -1523,6 +1654,13 @@ func (store *MemSQL) GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, 
 
 // CacheWebsiteAnalyticsForProjects Runs for all the projectIDs passed as comma separated.
 func (store *MemSQL) CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map) {
+	logFields := log.Fields{
+		"string_projects_ids": stringProjectsIDs,
+		"exclude_project_ids": excludeProjectIDs,
+		"num_routines": numRoutines,
+		"report_collector": reportCollector,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	projectIDsToRun := store.GetWebAnalyticsEnabledProjectIDsFromList(stringProjectsIDs, excludeProjectIDs)
 
 	var waitGroup sync.WaitGroup
@@ -1550,6 +1688,14 @@ func (store *MemSQL) CacheWebsiteAnalyticsForProjects(stringProjectsIDs, exclude
 
 // CacheWebsiteAnalyticsForMonthlyRange Cache monthly range dashboards for website analytics.
 func (store *MemSQL) CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int, reportCollector *sync.Map) {
+	logFields := log.Fields{
+		"project_ids": projectIDs,
+		"exclude_project_ids": excludeProjectIDs,
+		"num_routines": numRoutines,
+		"report_collector": reportCollector,
+		"num_months": numMonths,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	projectIDsToRun := store.GetWebAnalyticsEnabledProjectIDsFromList(projectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDsToRun {
 		timezoneString, statusCode := store.GetTimezoneForProject(projectID)

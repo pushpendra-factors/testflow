@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -18,6 +19,11 @@ const (
 )
 
 func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"query": query,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	if !isValidFunnelQuery(&query) {
 		return nil, http.StatusBadRequest, model.ErrMsgMaxFunnelStepsExceeded
@@ -33,7 +39,7 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
-	logCtx := log.WithFields(log.Fields{"analytics_query": query, "statement": stmnt, "params": params})
+	logCtx := log.WithFields(logFields)
 	if stmnt == "" || len(params) == 0 {
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -88,6 +94,10 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 
 // updatedMetaStepTimeInfoHeaders updates meta rows to match the result rows
 func updatedMetaStepTimeInfoHeaders(result *model.QueryResult) {
+	logFields := log.Fields{
+		"result": result,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// Update the row headers in MetaStepTimeInfo using result original group count
 	for idx := range result.Meta.MetaMetrics {
@@ -107,6 +117,11 @@ func updatedMetaStepTimeInfoHeaders(result *model.QueryResult) {
 
 // addStepTimeToMeta adds step time in result's meta metrics
 func addStepTimeToMeta(result *model.QueryResult, logCtx *log.Entry) error {
+	logFields := log.Fields{
+		"result": result,
+		"log_ctx": logCtx,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	headers := make([]string, 0, 0)
 	var groupKeyIndexes []int
@@ -169,6 +184,11 @@ func addStepTimeToMeta(result *model.QueryResult, logCtx *log.Entry) error {
 }
 
 func BuildFunnelQuery(projectId uint64, query model.Query) (string, []interface{}, error) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"query": query,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	addIndexToGroupByProperties(&query)
 
 	if query.EventsCondition == model.QueryTypeEventsOccurrence {
@@ -179,7 +199,12 @@ func BuildFunnelQuery(projectId uint64, query model.Query) (string, []interface{
 }
 
 func translateNullToZeroOnFunnelResult(result *model.QueryResult) {
+	logFields := log.Fields{
+		"result": result,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var percentageIndexes []int
+
 	var index int
 	for _, h := range result.Headers {
 		if strings.HasPrefix(h, model.FunnelConversionPrefix) || strings.HasPrefix(h, model.StepPrefix) {
@@ -198,6 +223,10 @@ func translateNullToZeroOnFunnelResult(result *model.QueryResult) {
 }
 
 func addStepConversionPercentageToFunnel(result *model.QueryResult) error {
+	logFields := log.Fields{
+		"result": result,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(result.Rows) == 0 {
 		return errors.New("invalid funnel result")
 	}
@@ -278,6 +307,11 @@ func addStepConversionPercentageToFunnel(result *model.QueryResult) error {
 }
 
 func getConversionPercentageAsString(prevCount float64, curCount float64) string {
+	logFields := log.Fields{
+		"prev_count": prevCount,
+		"cur_count": curCount,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var conversion float64
 
 	if prevCount == 0 {
@@ -392,6 +426,11 @@ WITH
 
 */
 func isSessionAnalysisReq(start int64, end int64) bool {
+	logFields := log.Fields{
+		"start": start,
+		"end": end,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if start != 0 && end != 0 && start < end {
 		return true
 	}
@@ -400,6 +439,15 @@ func isSessionAnalysisReq(start int64, end int64) bool {
 
 func buildStepXToYJoin(stepName string, prevStepName string, previousCombinedUsersStepName string,
 	isSessionAnalysisReqBool bool, q model.Query, i int) string {
+		logFields := log.Fields{
+			"step_name": stepName,
+			"prev_step_name": prevStepName,
+			"previous_combined_user_step_name": previousCombinedUsersStepName,
+			"is_session_analysis_req_bool": isSessionAnalysisReqBool,
+			"q": q,
+			"i": i,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	comparisonSymbol := ">="
 	if q.EventsWithProperties[i].Name == q.EventsWithProperties[i-1].Name {
@@ -426,6 +474,15 @@ func buildStepXToYJoin(stepName string, prevStepName string, previousCombinedUse
 
 func buildStepXToY(stepXToYSelect string, prevStepName string, previousCombinedUsersStepName string,
 	stepXToYJoin string, stepName string, i int) string {
+		logFields := log.Fields{
+			"step_name": stepName,
+			"prev_step_name": prevStepName,
+			"previous_combined_user_step_name": previousCombinedUsersStepName,
+			"step_x_to_y_join": stepXToYJoin,
+			"step_x_to_y_select": stepXToYSelect,
+			"i": i,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	stepXToY := fmt.Sprintf("SELECT %s FROM %s %s GROUP BY %s.coal_user_id", stepXToYSelect, previousCombinedUsersStepName, stepXToYJoin, stepName)
 	if i == 1 {
@@ -434,6 +491,11 @@ func buildStepXToY(stepXToYSelect string, prevStepName string, previousCombinedU
 	return stepXToY
 }
 func buildAddSelect(stepName string, i int) string {
+	logFields := log.Fields{
+		"step_name": stepName,
+		"i": i,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	addSelect := fmt.Sprintf("COALESCE(users.customer_user_id,events.user_id) as coal_user_id, FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as user_id,"+
 		" FIRST(events.timestamp, FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", stepName)
 
@@ -444,6 +506,10 @@ func buildAddSelect(stepName string, i int) string {
 }
 
 func removePresentPropertiesGroupBys(groupBys []model.QueryGroupByProperty) []model.QueryGroupByProperty {
+	logFields := log.Fields{
+		"group_bys": groupBys,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	filteredProps := make([]model.QueryGroupByProperty, 0)
 	for _, prop := range groupBys {
 		if prop.EventNameIndex == 0 && prop.EventName == model.UserPropertyGroupByPresent {
@@ -456,6 +522,10 @@ func removePresentPropertiesGroupBys(groupBys []model.QueryGroupByProperty) []mo
 }
 
 func buildNoneHandledGroupKeys(groupProps []model.QueryGroupByProperty) string {
+	logFields := log.Fields{
+		"group_props": groupProps,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	groupKeys := ""
 
 	// Empty handling and null case handling on funnel join.
@@ -520,6 +590,11 @@ funnel UNION ALL SELECT * FROM ( SELECT _group_key_0, COALESCE(NULLIF(concat(rou
 SUM(step_1) AS step_1 FROM bucketed GROUP BY _group_key_0, _group_key_1_bucket ORDER BY _group_key_1_bucket LIMIT 100 ) AS group_funnel
 */
 func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []interface{}, error) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"q": q,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(q.EventsWithProperties) == 0 {
 		return "", nil, errors.New("invalid no.of events for funnel query")
 	}
@@ -739,6 +814,14 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 // builds group keys for event properties for given step (event_with_properties).
 func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
 	groupProps []model.QueryGroupByProperty, ewpIndex int, timezoneString string) (string, []interface{}, string, bool) {
+		logFields := log.Fields{
+			"project_id": projectID,
+			"event_with_properties": eventWithProperties,
+			"group_props": groupProps,
+			"ewp_index": ewpIndex,
+			"timezone_string": timezoneString,
+		}
+		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	groupPropsByStep := make([]model.QueryGroupByProperty, 0, 0)
 	groupByUserProperties := false

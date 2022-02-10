@@ -296,12 +296,7 @@ function ProjectDropdown({
                 <SVG name='caretDown' size={20} />
               </Button>
               {setDashboard()}
-              <Text
-                level={7}
-                type={'title'}
-                weight={'medium'}
-                color={'grey'}
-              >
+              <Text level={7} type={'title'} weight={'medium'} color={'grey'}>
                 {showDashboardDesc}
               </Text>
             </div>

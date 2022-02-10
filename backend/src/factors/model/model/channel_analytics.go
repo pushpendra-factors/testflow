@@ -3,6 +3,7 @@ package model
 import (
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -11,6 +12,7 @@ const (
 	CampaignPrefix = "campaign_"
 	AdgroupPrefix  = "ad_group_"
 	KeywordPrefix  = "keyword_"
+	Channel        = "channel"
 )
 
 type ChannelConfigResult struct {
@@ -289,6 +291,9 @@ func GetGroupByCombinationsForChannelAnalytics(columns []string, resultMetrics [
 
 func TransformDateTypeValueForChannels(headers []string, rows [][]interface{}, groupByTimestampPresent bool, hasAnyGroupBy bool, timezoneString string) [][]interface{} {
 	indexForDateTime := -1
+	if headers[0] == AliasError {
+		return rows
+	}
 	if !groupByTimestampPresent {
 		return rows
 	}
@@ -331,4 +336,58 @@ func GetHeadersFromQuery(query ChannelQueryV1) []string {
 		headers = append(headers, metric)
 	}
 	return headers
+}
+
+func GetDecoupledFiltersForChannelBreakdownFilters(filters []ChannelFilterV1) ([]ChannelFilterV1, []ChannelFilterV1) {
+	channelBreakdownFilters := make([]ChannelFilterV1, 0)
+	genericFilters := make([]ChannelFilterV1, 0)
+	for _, filter := range filters {
+		if filter.Object == Channel {
+			channelBreakdownFilters = append(channelBreakdownFilters, filter)
+		} else {
+			genericFilters = append(genericFilters, filter)
+		}
+	}
+	return genericFilters, channelBreakdownFilters
+}
+
+func evaluateFilter(channelName string, filter ChannelFilterV1) bool {
+	isChannelRequired := false
+	if filter.Condition == EqualsOpStr || filter.Condition == ContainsOpStr {
+		isChannelRequired = strings.Contains(channelName, strings.ToLower(filter.Value))
+	} else if filter.Condition == NotEqualOpStr || filter.Condition == NotContainsOpStr {
+		isChannelRequired = !(strings.Contains(channelName, strings.ToLower(filter.Value)))
+	} else {
+		return false
+	}
+	return isChannelRequired
+}
+func checkIfChannelReq(channelName string, filters []ChannelFilterV1) bool {
+	isChannelReq := false
+	for i, filter := range filters {
+		if i == 0 {
+			isChannelReq = evaluateFilter(channelName, filter)
+		} else {
+			if filter.LogicalOp == LOGICAL_OP_AND {
+				isChannelReq = isChannelReq && evaluateFilter(channelName, filter)
+				if !isChannelReq {
+					return isChannelReq
+				}
+			} else {
+				isChannelReq = isChannelReq || evaluateFilter(channelName, filter)
+			}
+		}
+	}
+	return isChannelReq
+}
+
+func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, int) {
+	isAdwordsReq, isFacebookReq, isLinkedinReq := false, false, false
+	if len(filters) == 0 {
+		return true, true, true, http.StatusOK
+	}
+	isAdwordsReq = checkIfChannelReq(ChannelGoogleAds, filters)
+	isFacebookReq = checkIfChannelReq(ChannelFacebook, filters)
+	isLinkedinReq = checkIfChannelReq(ChannelLinkedin, filters)
+	return isAdwordsReq, isFacebookReq, isLinkedinReq, http.StatusOK
 }

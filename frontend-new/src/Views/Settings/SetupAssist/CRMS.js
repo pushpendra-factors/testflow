@@ -90,7 +90,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
       <div className={'animate__animated animate__fadeInUpBig animate__fast mb-10 pl-4'}>
         <Row gutter={[24, 24]} justify={'space-between'} className={'pb-2 mt-0 '}>
           <Col span={17}>
-            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Connect with your CRMS</Text>
+            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Connect with your CRMs</Text>
           </Col>
           <Col>
             {/* <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text> */}

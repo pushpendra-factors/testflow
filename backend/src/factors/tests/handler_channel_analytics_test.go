@@ -715,3 +715,195 @@ func TestWeeklyTrendForChannels(t *testing.T) {
 		assertIfResponseIsEqualToExpected(t, w.Body, successChannelResponse[index], index)
 	}
 }
+
+func TestExecuteAllChannelQuery(t *testing.T) {
+	Const.SetSmartPropertiesReservedNames()
+	project, agent, _ := SetupProjectWithAgentDAO()
+	assert.NotNil(t, project)
+	customerAccountIDAdwords := U.RandomNumericString(10)
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountIDAdwords,
+		IntAdwordsEnabledAgentUUID:  &agent.UUID,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	customerAccountIDLinkedin := U.RandomNumericString(10)
+	_, errCode = store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntLinkedinAdAccount: customerAccountIDLinkedin,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	customerAccountIDFacebook := U.RandomNumericString(10)
+	_, errCode = store.GetStore().UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntFacebookAdAccount: customerAccountIDFacebook,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	adwordsDocuments := []M.AdwordsDocument{
+		{ID: "1", Timestamp: 20210202, ProjectID: project.ID, CustomerAccountID: customerAccountIDAdwords, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "10000000","clicks": "1000","campaign_id":"1","impressions": "10000", "campaign_name": "test1"}`)}},
+		{ID: "2", Timestamp: 20210201, ProjectID: project.ID, CustomerAccountID: customerAccountIDAdwords, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "2000000","clicks": "200","campaign_id":"2","impressions": "15000", "campaign_name": "test2"}`)}},
+	}
+	for _, adwordsDocument := range adwordsDocuments {
+		status := store.GetStore().CreateAdwordsDocument(&adwordsDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	linkedinDocuments := []model.LinkedinDocument{
+		{ID: "1", Timestamp: 20210202, ProjectID: project.ID, CustomerAdAccountID: customerAccountIDLinkedin, TypeAlias: "campaign_group_insights",
+			Value: &postgres.Jsonb{json.RawMessage(`{"costInLocalCurrency": "1","clicks": "10","campaign_id":"1","impressions": "100", "campaign_group_name": "test1"}`)}},
+		{ID: "2", Timestamp: 20210201, ProjectID: project.ID, CustomerAdAccountID: customerAccountIDLinkedin, TypeAlias: "campaign_group_insights",
+			Value: &postgres.Jsonb{json.RawMessage(`{"costInLocalCurrency": "2","clicks": "20","campaign_id":"2","impressions": "150", "campaign_group_name": "test3"}`)}},
+	}
+	for _, linkedinDocument := range linkedinDocuments {
+		status := store.GetStore().CreateLinkedinDocument(project.ID, &linkedinDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	facebookDocuments := []model.FacebookDocument{
+		{ID: "1", Timestamp: 20210202, ProjectID: project.ID, CustomerAdAccountID: customerAccountIDFacebook, TypeAlias: "campaign_insights",
+			Value: &postgres.Jsonb{json.RawMessage(`{"spend": "10","clicks": "100","campaign_id":"1","impressions": "1000", "campaign_name": "test1"}`)}, Platform: "facebook"},
+		{ID: "2", Timestamp: 20210201, ProjectID: project.ID, CustomerAdAccountID: customerAccountIDFacebook, TypeAlias: "campaign_insights",
+			Value: &postgres.Jsonb{json.RawMessage(`{"spend": "20","clicks": "200","campaign_id":"2","impressions": "1500", "campaign_name": "test2"}`)}, Platform: "facebook"},
+	}
+	for _, facebookDocument := range facebookDocuments {
+		status := store.GetStore().CreateFacebookDocument(project.ID, &facebookDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	queries := []model.ChannelQueryV1{
+		{
+			Channel: "all_ads", SelectMetrics: []string{"clicks", "spend", "impressions"},
+			Filters: []model.ChannelFilterV1{}, GroupBy: []model.ChannelGroupBy{}, GroupByTimestamp: "", Timezone: "Asia/Kolkata", From: 1611964800, To: 1612396800,
+		},
+		{
+			Channel: "all_ads", SelectMetrics: []string{"clicks", "spend", "impressions"},
+			Filters: []model.ChannelFilterV1{
+				{
+					Object:    model.AdwordsCampaign,
+					Property:  "name",
+					Condition: model.EqualsOpStr,
+					Value:     "test1",
+					LogicalOp: model.LOGICAL_OP_AND,
+				},
+			}, GroupBy: []model.ChannelGroupBy{}, GroupByTimestamp: "", Timezone: "Asia/Kolkata", From: 1611964800, To: 1612396800,
+		},
+		{
+			Channel: "all_ads", SelectMetrics: []string{"clicks", "spend", "impressions"},
+			Filters: []model.ChannelFilterV1{
+				{
+					Object:    "channel",
+					Property:  "name",
+					Condition: model.EqualsOpStr,
+					Value:     "adwords",
+					LogicalOp: model.LOGICAL_OP_AND,
+				},
+			}, GroupBy: []model.ChannelGroupBy{}, GroupByTimestamp: "", Timezone: "Asia/Kolkata", From: 1611964800, To: 1612396800,
+		},
+		{
+			Channel: "all_ads", SelectMetrics: []string{"clicks", "spend", "impressions"},
+			Filters: []model.ChannelFilterV1{
+				{
+					Object:    "channel",
+					Property:  "name",
+					Condition: model.EqualsOpStr,
+					Value:     "adwords",
+					LogicalOp: model.LOGICAL_OP_AND,
+				},
+				{
+					Object:    "channel",
+					Property:  "name",
+					Condition: model.EqualsOpStr,
+					Value:     "linkedin",
+					LogicalOp: model.LOGICAL_OP_OR,
+				},
+			}, GroupBy: []model.ChannelGroupBy{}, GroupByTimestamp: "", Timezone: "Asia/Kolkata", From: 1611964800, To: 1612396800,
+		},
+		{
+			Channel: "all_ads", SelectMetrics: []string{"clicks", "spend", "impressions"},
+			Filters: []model.ChannelFilterV1{},
+			GroupBy: []model.ChannelGroupBy{{Object: model.AdwordsCampaign, Property: "name"}}, GroupByTimestamp: "", Timezone: "Asia/Kolkata", From: 1611964800, To: 1612396800,
+		},
+		{
+			Channel: "all_ads", SelectMetrics: []string{"clicks", "spend", "impressions"},
+			Filters: []model.ChannelFilterV1{},
+			GroupBy: []model.ChannelGroupBy{{Object: "channel", Property: "name"}}, GroupByTimestamp: "", Timezone: "Asia/Kolkata", From: 1611964800, To: 1612396800,
+		},
+		{
+			Channel: "all_ads", SelectMetrics: []string{"clicks", "spend", "impressions"},
+			Filters:          []model.ChannelFilterV1{},
+			GroupBy:          []model.ChannelGroupBy{{Object: "channel", Property: "name"}, {Object: model.AdwordsCampaign, Property: "name"}},
+			GroupByTimestamp: "", Timezone: "Asia/Kolkata", From: 1611964800, To: 1612396800,
+		},
+		{
+			Channel: "all_ads", SelectMetrics: []string{"clicks", "spend", "impressions"},
+			Filters: []model.ChannelFilterV1{
+				{
+					Object:    model.AdwordsCampaign,
+					Property:  "name",
+					Condition: model.EqualsOpStr,
+					Value:     "test3",
+					LogicalOp: model.LOGICAL_OP_AND,
+				},
+			}, GroupBy: []model.ChannelGroupBy{{Object: "channel", Property: "name"}}, GroupByTimestamp: "", Timezone: "Asia/Kolkata", From: 1611964800, To: 1612396800,
+		},
+	}
+
+	expectedResults := []model.ChannelQueryResultV1{
+		{
+			Headers: []string{"clicks", "spend", "impressions"},
+			Rows:    [][]interface{}{{float64(1530), float64(45), float64(27750)}},
+		},
+		{
+			Headers: []string{"clicks", "spend", "impressions"},
+			Rows:    [][]interface{}{{float64(1110), float64(21), float64(11100)}},
+		},
+		{
+			Headers: []string{"clicks", "spend", "impressions"},
+			Rows:    [][]interface{}{{float64(1200), float64(12), float64(25000)}},
+		},
+		{
+			Headers: []string{"clicks", "spend", "impressions"},
+			Rows:    [][]interface{}{{float64(1230), float64(15), float64(25250)}},
+		},
+		{
+			Headers: []string{"campaign_name", "clicks", "spend", "impressions"},
+			Rows: [][]interface{}{
+				{"test1", float64(1110), float64(21), float64(11100)},
+				{"test2", float64(400), float64(22), float64(16500)},
+				{"test3", float64(20), float64(2), float64(150)},
+			},
+		},
+		{
+			Headers: []string{"channel_name", "clicks", "spend", "impressions"},
+			Rows: [][]interface{}{
+				{"adwords", float64(1200), float64(12), float64(25000)},
+				{"facebook", float64(300), float64(30), float64(2500)},
+				{"linkedin", float64(30), float64(3), float64(250)},
+			},
+		},
+		{
+			Headers: []string{"campaign_name", "channel_name", "clicks", "spend", "impressions"},
+			Rows: [][]interface{}{
+				{"test1", "adwords", float64(1000), float64(10), float64(10000)},
+				{"test2", "facebook", float64(200), float64(20), float64(1500)},
+				{"test2", "adwords", float64(200), float64(2), float64(15000)},
+				{"test1", "facebook", float64(100), float64(10), float64(1000)},
+				{"test3", "linkedin", float64(20), float64(2), float64(150)},
+				{"test1", "linkedin", float64(10), float64(1), float64(100)},
+			},
+		},
+		{
+			Headers: []string{"channel_name", "clicks", "spend", "impressions"},
+			Rows: [][]interface{}{
+				{"linkedin", float64(20), float64(2), float64(150)},
+			},
+		},
+	}
+	assert.Equal(t, len(queries), len(expectedResults))
+	for i, query := range queries {
+		res, errCode := store.GetStore().ExecuteChannelQueryV1(project.ID, &query, U.RandomNumericString(5))
+		assert.Equal(t, errCode, 200)
+		assert.Equal(t, expectedResults[i], *res)
+	}
+}

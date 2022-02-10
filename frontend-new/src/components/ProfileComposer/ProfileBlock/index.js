@@ -5,6 +5,7 @@ import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import ProfileFilterWrapper from '../ProfileFilterWrapper';
 import FaSelect from 'Components/FaSelect';
+import { ProfileMapper, ReverseProfileMapper } from '../../../utils/constants';
 
 function ProfileBlock({
   index,
@@ -13,6 +14,7 @@ function ProfileBlock({
   queries,
   activeProject,
   userProperties,
+  groupAnalysis,
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -23,9 +25,17 @@ function ProfileBlock({
 
   const alphabetIndex = 'ABCDEF';
 
+  const profileOptions = {
+    users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users']],
+    $salesforce_opportunity: [['All Opportunities']],
+    $hubspot_deal: [['All Deals']],
+    $salesforce_account: [['All Accounts']],
+    $hubspot_company: [['All Companies']],
+  };
+
   const onChange = (value) => {
     const newEvent = { label: '', filters: [] };
-    newEvent.label = value;
+    newEvent.label = ProfileMapper[value] ? ProfileMapper[value] : value;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
   };
@@ -52,11 +62,7 @@ function ProfileBlock({
       <div className={`${styles.query_block__event_selector}`}>
         {isDDVisible ? (
           <FaSelect
-            options={[
-              ['Website Visitors'],
-              ['Hubspot Contacts'],
-              ['Salesforce Users'],
-            ]}
+            options={profileOptions[groupAnalysis]}
             onClickOutside={() => setDDVisible(false)}
             optionClick={(val) => onChange(val)}
             extraClass={styles.faselect}
@@ -226,14 +232,14 @@ function ProfileBlock({
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-1'}`}>
           <div className='max-w-7xl'>
-            <Tooltip title={event.label}>
+            <Tooltip title={ReverseProfileMapper[event.label][groupAnalysis]}>
               <Button
                 icon={<SVG name='mouseevent' size={16} color={'purple'} />}
                 className={``}
-                type='link'
+                type={'link'}
                 onClick={triggerDropDown}
               >
-                {event.label}
+                {ReverseProfileMapper[event.label][groupAnalysis]}
               </Button>
               {selectProfile()}
             </Tooltip>

@@ -24,9 +24,13 @@
     }
   }
 
+  &_touchpoint_select {
+    position:relative;
+  }
+  
   &__event_selector { 
     position: absolute;
-    top: 44px;
+    top: 0;
     left: 0;
 
     &__btn {

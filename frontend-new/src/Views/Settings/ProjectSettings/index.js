@@ -15,6 +15,7 @@ import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
 import ContentGroups from './ContentGroups';
 import Touchpoints from './Touchpoints';
+import CustomKPI from './CustomKPI';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -26,7 +27,8 @@ const MenuTabs = {
   Properties: 'Properties',
   MarketingInteractions: 'Marketing Touchpoints',
   ContentGroups: 'Content Groups',
-  Touchpoints: 'Touchpoints'
+  Touchpoints: 'Touchpoints',
+  CustomKPI: 'Custom KPIs'
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents }) {
@@ -82,6 +84,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               <Menu.Item key={MenuTabs.Events}>{MenuTabs.Events}</Menu.Item>
               <Menu.Item key={MenuTabs.Properties}>{MenuTabs.Properties}</Menu.Item>
               <Menu.Item key={MenuTabs.ContentGroups}>{MenuTabs.ContentGroups}</Menu.Item>
+              <Menu.Item key={MenuTabs.CustomKPI}>{MenuTabs.CustomKPI}</Menu.Item>
             </Menu>
 
           </Col>
@@ -94,6 +97,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
             {selectedMenu === MenuTabs.Events && <Events /> }
             {(selectedMenu === MenuTabs.Properties) && <Properties />}
             {(selectedMenu === MenuTabs.ContentGroups) && <ContentGroups />}
+            {(selectedMenu === MenuTabs.CustomKPI) && <CustomKPI />}
           </Col>
         </Row>
       </div>

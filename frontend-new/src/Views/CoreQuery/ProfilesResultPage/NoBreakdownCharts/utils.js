@@ -8,7 +8,10 @@ import {
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import HorizontalBarChartCell from '../../EventsAnalytics/SingleEventMultipleBreakdown/HorizontalBarChartCell';
-import { ReverseProfileMapper } from '../../../../utils/constants';
+import {
+  ReverseProfileMapper,
+  revProfileGroupMapper,
+} from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
 export const defaultSortProp = () => {
@@ -22,10 +25,14 @@ export const defaultSortProp = () => {
   ];
 };
 
-export const getTableColumns = (currentSorter, handleSorting) => {
+export const getTableColumns = (
+  currentSorter,
+  handleSorting,
+  groupAnalysis
+) => {
   const userCol = {
     title: getClickableTitleSorter(
-      'Users',
+      revProfileGroupMapper[groupAnalysis],
       { key: 'Users', type: 'categorical', subtype: null },
       currentSorter,
       handleSorting
@@ -49,7 +56,13 @@ export const getTableColumns = (currentSorter, handleSorting) => {
   return [userCol, valCol];
 };
 
-export const getTableData = (data, queries, currentSorter, searchText) => {
+export const getTableData = (
+  data,
+  queries,
+  groupAnalysis,
+  currentSorter,
+  searchText
+) => {
   try {
     const result = data.result_group.map((rg) => {
       const index = rg.rows[0][0];
@@ -57,8 +70,8 @@ export const getTableData = (data, queries, currentSorter, searchText) => {
       return {
         index,
         Users: `${toLetters(index)}. ${
-          ReverseProfileMapper[query] ? ReverseProfileMapper[query] : query
-          }`,
+          ReverseProfileMapper[query][groupAnalysis]
+        }`,
         value: rg.rows[0][1],
       };
     });
@@ -72,9 +85,11 @@ export const getTableData = (data, queries, currentSorter, searchText) => {
   }
 };
 
-export const getHorizontalBarChartColumns = () => {
+export const getHorizontalBarChartColumns = (groupAnalysis) => {
   const row = {
-    title: <NonClickableTableHeader title="Users" />,
+    title: (
+      <NonClickableTableHeader title={revProfileGroupMapper[groupAnalysis]} />
+    ),
     dataIndex: `users`,
     className: tableStyles.horizontalBarTableHeader,
     render: (d) => {
@@ -90,6 +105,7 @@ export const getHorizontalBarChartColumns = () => {
 export const getDataInHorizontalBarChartFormat = (
   data,
   queries,
+  groupAnalysis,
   cardSize,
   isDashboardWidget
 ) => {
@@ -121,10 +137,8 @@ export const getDataInHorizontalBarChartFormat = (
         color: colors[index % 10],
       });
       return `${toLetters(queryIndex)}. ${
-        ReverseProfileMapper[queries[queryIndex]]
-          ? ReverseProfileMapper[queries[queryIndex]]
-          : queries[queryIndex]
-        }`;
+        ReverseProfileMapper[queries[queryIndex]][groupAnalysis]
+      }`;
     });
 
     row['users'] = (

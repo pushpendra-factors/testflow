@@ -15,6 +15,11 @@ import (
 const contentGroupsLimt = 3
 
 func (store *MemSQL) DeleteContentGroup(id string, projectID uint64) (int, string) {
+	logFields := log.Fields{
+		"id": id,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
 		return http.StatusBadRequest, "Invalid project id"
@@ -33,6 +38,11 @@ func (store *MemSQL) DeleteContentGroup(id string, projectID uint64) (int, strin
 }
 
 func (store *MemSQL) GetContentGroupById(id string, projectID uint64) (model.ContentGroup, int) {
+	logFields := log.Fields{
+		"id": id,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var contentGroup model.ContentGroup
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
@@ -53,6 +63,10 @@ func (store *MemSQL) GetContentGroupById(id string, projectID uint64) (model.Con
 }
 
 func (store *MemSQL) GetAllContentGroups(projectID uint64) ([]model.ContentGroup, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	contentGroups := make([]model.ContentGroup, 0)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
@@ -68,6 +82,11 @@ func (store *MemSQL) GetAllContentGroups(projectID uint64) ([]model.ContentGroup
 }
 
 func (store *MemSQL) CreateContentGroup(projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"content_group": contentGroup,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// For a project the following validation should be followed
 	// 1. distinct content group name
@@ -78,7 +97,7 @@ func (store *MemSQL) CreateContentGroup(projectID uint64, contentGroup model.Con
 	// 6 n values inside a content group - not handling for now
 	// 7 minimum one rule for a content group
 
-	logCtx := log.WithField("project_id", contentGroup.ProjectID)
+	logCtx := log.WithFields(logFields)
 
 	if store.IsDuplicateNameCheck(projectID, contentGroup.ContentGroupName) {
 		logCtx.WithField("project_id", projectID).Error(
@@ -118,6 +137,11 @@ func (store *MemSQL) CreateContentGroup(projectID uint64, contentGroup model.Con
 }
 
 func (store *MemSQL) IsDuplicateNameCheck(projectID uint64, name string) bool {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"name": name,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	contentGroups, _ := store.GetAllContentGroups(projectID)
 	for _, contentGroup := range contentGroups {
 		if contentGroup.ContentGroupName == name {
@@ -128,6 +152,10 @@ func (store *MemSQL) IsDuplicateNameCheck(projectID uint64, name string) bool {
 }
 
 func (store *MemSQL) IsValidRule(contentGroup model.ContentGroup) (bool, string) {
+	logFields := log.Fields{
+		"content_group": contentGroup,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	filterConditions := map[string]bool{
 		model.EqualsOpStr:      true,
 		model.NotEqualOpStr:    true,
@@ -175,6 +203,10 @@ func (store *MemSQL) IsValidRule(contentGroup model.ContentGroup) (bool, string)
 }
 
 func (store *MemSQL) ContentGroupLimitCheck(projectID uint64) bool {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	contentGroups, _ := store.GetAllContentGroups(projectID)
 	if len(contentGroups) < contentGroupsLimt {
 		return true
@@ -183,6 +215,12 @@ func (store *MemSQL) ContentGroupLimitCheck(projectID uint64) bool {
 }
 
 func (store *MemSQL) UpdateContentGroup(id string, projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string) {
+	logFields := log.Fields{
+		"id": id,
+		"project_id": projectID,
+		"content_group": contentGroup,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	// only rule/description can be updated.
 	// New value inserts in a rule
@@ -191,7 +229,7 @@ func (store *MemSQL) UpdateContentGroup(id string, projectID uint64, contentGrou
 	// change order
 	// validate the rule again during update
 
-	logCtx := log.WithField("project_id", projectID)
+	logCtx := log.WithFields(logFields)
 
 	validRule, errString := store.IsValidRule(contentGroup)
 	if !validRule {
@@ -216,6 +254,11 @@ func (store *MemSQL) UpdateContentGroup(id string, projectID uint64, contentGrou
 }
 
 func (store *MemSQL) CheckURLContentGroupValue(pageUrl string, projectID uint64) map[string]string {
+	logFields := log.Fields{
+		"page_url": pageUrl,
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	contentGroups, _ := store.GetAllContentGroups(projectID)
 	resultCg := make(map[string]string)
 	for _, contentGroup := range contentGroups {

@@ -16,6 +16,7 @@ func (pg *Postgres) GetKPIConfigsForHubspotCompanies(projectID uint64, reqID str
 	return pg.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotCompaniesDisplayCategory)
 }
 
+// Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
 func (pg *Postgres) GetKPIConfigsForHubspot(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
 	hubspotProjectSettings, errCode := pg.GetAllHubspotProjectSettingsForProjectID(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusOK {
@@ -30,11 +31,23 @@ func (pg *Postgres) GetKPIConfigsForHubspot(projectID uint64, reqID string, disp
 	return pg.getConfigForSpecificHubspotCategory(projectID, reqID, displayCategory), http.StatusOK
 }
 
+// Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
+// Only considering hubspot_contacts and salesforce_users for now.
 func (pg *Postgres) getConfigForSpecificHubspotCategory(projectID uint64, reqID string, displayCategory string) map[string]interface{} {
+	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
+	customMetrics, err, statusCode := pg.GetCustomMetricByProjectIdAndObjectType(projectID, model.ProfileQueryType, displayCategory)
+	if statusCode != http.StatusFound {
+		logCtx.WithField("err", err).WithField("displayCategory", displayCategory).Warn("Failed to get the custom Metric by object type")
+	}
+	customMetricNames := make([]string, 0)
+	for _, customMetric := range customMetrics {
+		customMetricNames = append(customMetricNames, customMetric.Name)
+	}
+
 	return map[string]interface{}{
-		"category":         model.EventCategory,
+		"category":         model.ProfileCategory,
 		"display_category": displayCategory,
-		"metrics":          model.GetMetricsForDisplayCategory(displayCategory),
+		"metrics":          customMetricNames,
 		"properties":       pg.GetPropertiesForHubspot(projectID, reqID),
 	}
 }

@@ -248,6 +248,7 @@ const (
 	HealthcheckBeamDashboardCachingNowPingID    = "be2f00de-57e1-401b-b2c9-9df305c3f528"
 	HealthcheckMonitoringJobMemSQLPingID        = "de2b64d4-952e-47ca-ac70-1bf9d8e1587e"
 	HealthcheckSavedQueriesTimezoneChangePingID = "42f96466-c467-44cc-899d-7e55b8a1aa4e"
+	HealthcheckLeadgenInsertionJobPingID        = "830c0112-fc71-4257-b265-b3732f03115a"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.

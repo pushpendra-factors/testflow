@@ -10,8 +10,8 @@ import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
 import moment from 'moment';
 import _ from 'lodash'; 
-import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
-import { DISPLAY_PROP } from '../../../../utils/constants';
+import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils'; 
+const DISPLAY_PROP = { $none: '(Not Set)' };
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
 
@@ -221,6 +221,7 @@ const GlobalFilterSelect = ({
                             optionClick={(label, val, cat) => propSelect(label, val, cat)}
                             onClickOutside={() => setPropSelectOpen(false)}
                             hideTitle={true}
+                            textStartCase
                         ></GroupSelect2>
                     </div>
                 )

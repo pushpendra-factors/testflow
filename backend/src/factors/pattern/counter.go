@@ -2,7 +2,9 @@ package pattern
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"factors/filestore"
 	fp "factors/fptree"
 	"factors/model/store"
 	U "factors/util"
@@ -59,6 +61,8 @@ type EvSameTs struct {
 
 const CURRENT_MODEL_VERSION = 2.0
 const topK_patterns = 50
+
+var CRM_EVENT_PREFIXES = []string{"$sf_", "$hubspot_"}
 
 func NewUserAndEventsInfo() *UserAndEventsInfo {
 	eMap := make(map[string]*PropertiesInfo)
@@ -146,7 +150,7 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsI
 	var currentMinCount uint
 
 	if numPatterns == 0 {
-		return nil, currentMinCount, fmt.Errorf("Zero Patterns")
+		return nil, currentMinCount, fmt.Errorf("zero Patterns")
 	}
 	// Sort current patterns in decreasing order of frequency.
 	sort.Slice(
@@ -228,23 +232,29 @@ func GenRepeatedEventCandidates(repeatedEvents []string, pt *Pattern, userAndEve
 
 }
 
-func GetPattEndWithGoal(combinationPatterns, goalPatterns []*Pattern) []*Pattern {
+func GetPattEndWithGoal(projectId uint64, combinationPatterns, goalPatterns []*Pattern) []*Pattern {
 	// Filter combination ending in goal or repeated event
-	goalsMap := make(map[string]bool, 0)
+	goalsMap := make(map[string]bool)
 	allGoals := make([]*Pattern, 0)
-	allEventsMap := make(map[string]bool, 0)
+	allEventsMap := make(map[string]bool)
 	for _, v := range goalPatterns {
 		goalsMap[v.EventNames[0]] = true
 	}
 
+	events, _ := store.GetStore().GetSmartEventFilterEventNames(projectId, true)
+	crmEvents := make(map[string]bool)
+	for _, event := range events {
+		crmEvents[event.Name] = true
+	}
+
 	for _, v := range combinationPatterns {
 
-		if allEventsMap[strings.Join(v.EventNames, "_")] == false {
+		if !allEventsMap[strings.Join(v.EventNames, "_")] {
 			if len(v.EventNames) != 2 {
 				log.WithField("Events", v.EventNames).Error("len of eventnames in pattern not equal to 2")
 			}
 
-			if goalsMap[v.EventNames[1]] == true {
+			if goalsMap[v.EventNames[1]] && !IsCustomOrCrmEvent(v.EventNames[0], crmEvents) {
 				allGoals = append(allGoals, v)
 			}
 
@@ -257,7 +267,7 @@ func GetPattEndWithGoal(combinationPatterns, goalPatterns []*Pattern) []*Pattern
 }
 
 //GenSegmentsForTopGoals form candidated with topK goal events
-func GenCombinationPatternsEndingWithGoal(currentPatterns, GoalPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo) (
+func GenCombinationPatternsEndingWithGoal(projectId uint64, currentPatterns, GoalPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo) (
 	// create pairs of (startPattern, GoalPattern) to count from events file
 	[]*Pattern, uint, error) {
 	numPatterns := len(currentPatterns)
@@ -283,7 +293,7 @@ func GenCombinationPatternsEndingWithGoal(currentPatterns, GoalPatterns []*Patte
 			if strings.Compare(cr.EventNames[0], gl.EventNames[0]) != 0 {
 
 				if len(cr.EventNames) > 1 || len(gl.EventNames) > 1 {
-					return nil, currentMinCount, fmt.Errorf("Length of events more than 1")
+					return nil, currentMinCount, fmt.Errorf("length of events more than 1")
 				}
 
 				if c1, c2, ok := GenCandidatesPair(
@@ -298,9 +308,8 @@ func GenCombinationPatternsEndingWithGoal(currentPatterns, GoalPatterns []*Patte
 	}
 
 	lenTwoPatterns := candidatesMapToSlice(candidatesMap)
-	combinationGoalPatterns := GetPattEndWithGoal(lenTwoPatterns, GoalPatterns)
+	combinationGoalPatterns := GetPattEndWithGoal(projectId, lenTwoPatterns, GoalPatterns)
 	log.Info("number of patterns ending in goal : ", len(combinationGoalPatterns))
-
 	// removing max Candidates filtering condition
 	return combinationGoalPatterns, currentMinCount, nil
 }
@@ -314,7 +323,7 @@ func GenSegmentsForRepeatedEvents(currentPatterns []*Pattern, userAndEventsInfo 
 	var currentMinCount uint
 
 	if numPatterns == 0 {
-		return nil, currentMinCount, fmt.Errorf("Zero Patterns")
+		return nil, currentMinCount, fmt.Errorf("zero Patterns")
 	}
 	// Sort current patterns in decreasing order of frequency.
 	sort.Slice(
@@ -331,7 +340,7 @@ func GenSegmentsForRepeatedEvents(currentPatterns []*Pattern, userAndEventsInfo 
 			gl := repeatedEvents[j]
 			if strings.Compare(cr.EventNames[0], gl.EventNames[0]) == 0 {
 				if len(cr.EventNames) > 1 || len(gl.EventNames) > 1 {
-					return nil, currentMinCount, fmt.Errorf("Length of events more than 1")
+					return nil, currentMinCount, fmt.Errorf("length of events more than 1")
 				}
 
 				if c1, c2, ok := GenCandidatesPairRepeat(
@@ -371,6 +380,122 @@ func PatternPropertyKey(patternIndex int, propertyName string) string {
 // Collects event info for the events initilaized in userAndEventsInfo.
 const max_SEEN_PROPERTIES = 20000
 const max_SEEN_PROPERTY_VALUES = 1000
+
+func CollectPropertiesInfoFiltered(projectID uint64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo, upCount, epCount map[string]map[string]map[string]int) (*map[string]PropertiesCount, error) {
+	// same as CollectPropertiesInfo(get all props and userAndEventsInfo by reading file)
+	// except userAndEventsInfo contains keys and values filtered using count maps
+
+	lineNum := 0
+	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
+	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
+	numUniqueEvents := len(*eventInfoMap)
+	maxProperties := max_SEEN_PROPERTIES / (int(float64(numUniqueEvents)/150.0) + 1)
+	maxPropertyValues := max_SEEN_PROPERTY_VALUES / (int(float64(numUniqueEvents)/150.0) + 1)
+
+	log.Info("Maximum Properties ", maxProperties, " ")
+	log.Info("Maximum Properties Values ", maxPropertyValues, " ")
+
+	allProps := make(map[string]PropertiesCount)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		lineNum++
+		var eventDetails CounterEventFormat
+		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
+			return nil, err
+		}
+
+		eventName := eventDetails.EventName
+
+		for key, value := range eventDetails.UserProperties {
+			propKey := key + "_UP"
+			if Pval, ok := allProps[propKey]; ok {
+				Pval.Count = Pval.Count + 1
+				Pval.PropertyName = key
+				Pval.PropertyType = "UP"
+				allProps[propKey] = Pval
+			} else {
+				PrVal := PropertiesCount{key, "UP", 1}
+				allProps[propKey] = PrVal
+			}
+
+			propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectID, "", key, value, true)
+			if propertyType == U.PropertyTypeNumerical {
+				if len(userPropertiesInfo.NumericPropertyKeys) > maxProperties {
+					continue
+				}
+				userPropertiesInfo.NumericPropertyKeys[key] = true
+			} else if propertyType == U.PropertyTypeCategorical {
+				if len(userPropertiesInfo.CategoricalPropertyKeyValues) > maxProperties {
+					continue
+				}
+				categoricalValue := U.GetPropertyValueAsString(value)
+				if _, ok := upCount[eventName][key]; ok {
+					if _, ok := upCount[eventName][key][categoricalValue]; ok {
+						cmap, ok := userPropertiesInfo.CategoricalPropertyKeyValues[key]
+						if !ok {
+							cmap = make(map[string]bool)
+							userPropertiesInfo.CategoricalPropertyKeyValues[key] = cmap
+						}
+						if len(cmap) < maxPropertyValues {
+							cmap[categoricalValue] = true
+						}
+					}
+				}
+			} else {
+				log.WithFields(log.Fields{"property": key, "value": value, "line no": lineNum}).Debug(
+					"Ignoring non string, non numeric user property.")
+			}
+		}
+
+		eInfo, ok := (*eventInfoMap)[eventName]
+		if !ok {
+			log.WithFields(log.Fields{"event": eventName, "line no": lineNum}).Info("Unexpected event. Ignoring")
+			continue
+		}
+		for key, value := range eventDetails.EventProperties {
+			propKey := key + "_EP"
+			if Pval, ok := allProps[propKey]; ok {
+				Pval.Count = Pval.Count + 1
+				Pval.PropertyName = key
+				Pval.PropertyType = "EP"
+				allProps[propKey] = Pval
+			} else {
+				PrVal := PropertiesCount{key, "EP", 1}
+				allProps[propKey] = PrVal
+			}
+			propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventDetails.EventName, key, value, false)
+			if propertyType == U.PropertyTypeNumerical {
+				if len(eInfo.NumericPropertyKeys) > maxProperties {
+					continue
+				}
+				eInfo.NumericPropertyKeys[key] = true
+			} else if propertyType == U.PropertyTypeCategorical {
+				if len(eInfo.CategoricalPropertyKeyValues) > maxProperties {
+					continue
+				}
+				categoricalValue := U.GetPropertyValueAsString(value)
+				if _, ok := epCount[eventName][key]; ok {
+					if _, ok := epCount[eventName][key][categoricalValue]; ok {
+						cmap, ok := eInfo.CategoricalPropertyKeyValues[key]
+						if !ok {
+							cmap = make(map[string]bool)
+							eInfo.CategoricalPropertyKeyValues[key] = cmap
+						}
+						if len(cmap) < maxPropertyValues {
+							cmap[categoricalValue] = true
+						}
+					}
+				}
+			} else {
+				log.WithFields(log.Fields{"event": eventName, "property": key, "value": value, "line no": lineNum}).Debug(
+					"Ignoring non string, non numeric event property.")
+			}
+		}
+	}
+	return &allProps, nil
+}
 
 func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo) (*map[string]PropertiesCount, error) {
 	lineNum := 0
@@ -517,9 +642,11 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 				// Histogram of all user properties as seen in their first event is tracked.
 				AddNumericAndCategoricalProperties(projectID, eventDetails.EventName, 0, userProperties, nMap, cMap, true)
 				if err := pattern.PerUserUserNumericProperties.AddMap(nMap); err != nil {
+					// log.WithFields(log.Fields{"nMap": nMap, "cMap": cMap, "PerUserUserNumericProperties": pattern.PerUserUserNumericProperties.Template, "PerUserUserCategoricalProperties": pattern.PerUserUserCategoricalProperties.Template}).Info("Testing")
 					return err
 				}
 				if err := pattern.PerUserUserCategoricalProperties.AddMap(cMap); err != nil {
+					// log.WithFields(log.Fields{"nMap": nMap, "cMap": cMap, "PerUserUserNumericProperties": pattern.PerUserUserNumericProperties.Template, "PerUserUserCategoricalProperties": pattern.PerUserUserCategoricalProperties.Template}).Info("Testing")
 					return err
 				}
 			}
@@ -532,7 +659,6 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 					}
 				}
 			}
-
 		}
 		seenUsers[userId] = true
 	}
@@ -617,10 +743,6 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 
 		}
 
-		if lineNum%1000 == 0 {
-			log.Infof("Read lines :%d", lineNum)
-		}
-
 	}
 	if len(eventDetailsList) > 0 {
 		// process the last event
@@ -685,7 +807,7 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 		for _, p := range patterns {
 			num_patterns += 1
 			var err error
-			log.Infof("reading user  tree from: %d,%s ,%v", num_patterns, p.userTreePath, p.EventNames)
+			log.Infof("reading user tree from: %d,%s ,%v", num_patterns, p.userTreePath, p.EventNames)
 			p.userTree, err = fp.CreateTreeFromFile(p.userTreePath)
 			if err != nil {
 				log.Errorf("Unable to reconstruct user tree :%v", p.EventNames)
@@ -746,21 +868,20 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 	}
 
 	if countVersion == 2 {
-		if countVersion == 2 {
-			for _, p := range patterns {
-				// set all histogram properties to null
-				p.PerOccurrenceEventNumericProperties = nil
-				p.PerOccurrenceEventCategoricalProperties = nil
-				p.GenericPropertiesHistogram = nil
-				p.PerOccurrenceUserNumericProperties = nil
-				p.PerUserUserNumericProperties = nil
-				p.PerUserEventNumericProperties = nil
-				p.PerUserUserCategoricalProperties = nil
-				p.PerUserEventCategoricalProperties = nil
-				p.PerOccurrenceUserCategoricalProperties = nil
-			}
 
+		for _, p := range patterns {
+			// set all histogram properties to null
+			p.PerOccurrenceEventNumericProperties = nil
+			p.PerOccurrenceEventCategoricalProperties = nil
+			p.GenericPropertiesHistogram = nil
+			p.PerOccurrenceUserNumericProperties = nil
+			p.PerUserUserNumericProperties = nil
+			p.PerUserEventNumericProperties = nil
+			p.PerUserUserCategoricalProperties = nil
+			p.PerUserEventCategoricalProperties = nil
+			p.PerOccurrenceUserCategoricalProperties = nil
 		}
+
 	}
 
 	log.Infof("Total number of events Processed: %d", numEventsProcessed)
@@ -841,19 +962,19 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 	eventsWithEndMap := make(map[string]bool)
 	for i := 0; i < sLen; i++ {
 		if len(startPatterns[i].EventNames) != 2 {
-			return nil, fmt.Errorf("Start pattern %s of not length two.",
+			return nil, fmt.Errorf("start pattern %s of not length two",
 				startPatterns[i].String())
 		}
 		if strings.Compare(
 			startPatterns[i].EventNames[0], pattern.EventNames[0]) != 0 {
-			return nil, fmt.Errorf("Pattern %s does not match start event of %s",
+			return nil, fmt.Errorf("pattern %s does not match start event of %s",
 				startPatterns[i].String(), pattern.String())
 		}
 		eventsWithStartMap[startPatterns[i].EventNames[1]] = true
 	}
 	for i := 0; i < eLen; i++ {
 		if len(endPatterns[i].EventNames) != 2 {
-			return nil, fmt.Errorf("End pattern %s of not length two.",
+			return nil, fmt.Errorf("end pattern %s of not length two",
 				endPatterns[i].String())
 		}
 		if strings.Compare(
@@ -1011,4 +1132,40 @@ func GenCandidatesForGoals(patternA, patternB *Pattern,
 	}
 	return allPatterns, nil
 
+}
+
+func GetPropertiesMapFromFile(cloudManager *filestore.FileManager, fileDir, fileName string) (map[string]map[string]map[string]int, error) {
+	var reqMap map[string]map[string]map[string]int
+	var buf bytes.Buffer
+
+	file, _ := (*cloudManager).Get(fileDir, fileName)
+	_, err := buf.ReadFrom(file)
+	if err != nil {
+		log.Error("Error reading properties map from File")
+		return nil, err
+	}
+	json.Unmarshal(buf.Bytes(), &reqMap)
+	return reqMap, nil
+}
+
+func GetPropertiesCategoricalMapFromFile(cloudManager *filestore.FileManager, projectId, modelId uint64, fileDir, fileName string) (map[string]string, error) {
+	var reqMap map[string]string
+	var buf bytes.Buffer
+
+	file, _ := (*cloudManager).Get(fileDir, fileName)
+	_, err := buf.ReadFrom(file)
+	if err != nil {
+		log.Error("Error reading properties category map from File")
+		return nil, err
+	}
+	json.Unmarshal(buf.Bytes(), &reqMap)
+	return reqMap, nil
+}
+
+func IsCustomOrCrmEvent(event string, crmEvents map[string]bool) bool {
+
+	if _, ok := crmEvents[event]; ok || U.HasPrefixFromList(event, CRM_EVENT_PREFIXES) {
+		return true
+	}
+	return false
 }

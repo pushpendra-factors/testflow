@@ -3,12 +3,19 @@ package memsql
 import (
 	"factors/model/model"
 	U "factors/util"
+	"time"
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) fetchOTPSessions(projectID uint64, offlineTouchPointEventNameId string, query *model.AttributionQuery) (map[string]map[string]model.UserSessionData, []string, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"offline_touch_point_event_name_id": offlineTouchPointEventNameId,
+		"query": query,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
+	logCtx := log.WithFields(logFields)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
 	effectiveTo := query.To
 	// extend the campaign window for engagement based attribution

@@ -4,11 +4,17 @@ import (
 	"factors/model/model"
 	"net/http"
 	"strconv"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) GetKPIConfigsForLinkedin(projectID uint64, reqID string) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id": reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	projectIDInString := []string{strconv.FormatUint(projectID, 10)}
 	settings, errCode := store.GetLinkedinEnabledProjectSettingsForProjects(projectIDInString)
 	if errCode != http.StatusOK {

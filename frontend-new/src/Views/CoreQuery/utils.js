@@ -29,8 +29,6 @@ import {
   CHART_TYPE_SCATTER_PLOT,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   QUERY_TYPE_PROFILE,
-  ProfileMapper,
-  ReverseProfileMapper,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 import { formatFilterDate } from '../../utils/dataFormatter';
@@ -162,7 +160,7 @@ const getProfileWithProperties = (queries) => {
     });
     pwps.push({
       // an: ev.alias,
-      ty: ProfileMapper[ev.label] ? ProfileMapper[ev.label] : ev.label,
+      ty: ev.label,
       pr: filterProps,
       tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
     });
@@ -230,11 +228,12 @@ export const getProfileQuery = (
   queries,
   groupBy,
   globalFilters = [],
-  dateRange
+  dateRange,
+  groupAnalysis
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_PROFILE;
-
+  query.grpa = groupAnalysis;
   query.queries = getProfileWithProperties(queries);
   query.gup = getGlobalProfileFilters(globalFilters);
 
@@ -465,7 +464,7 @@ export const getKPIQuery = (
         ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
         : MomentTz().utc().unix();
     period.frequency = date_range.frequency || 'date';
-  } 
+  }
 
   const eventGrpBy = [...groupBy.event];
   query.qG = getKPIqueryGroup(queries, eventGrpBy, period);
@@ -497,7 +496,7 @@ export const getQuery = (
   query.cl = QUERY_TYPE_EVENT;
   query.ty =
     result_criteria === TOTAL_EVENTS_CRITERIA ||
-      result_criteria === FREQUENCY_CRITERIA
+    result_criteria === FREQUENCY_CRITERIA
       ? TYPE_EVENTS_OCCURRENCE
       : TYPE_UNIQUE_USERS;
 
@@ -1103,10 +1102,10 @@ export const getAttributionStateFromRequestQuery = (
         enabled: !requestQuery.attribution_key_dimensions
           ? dimension.defaultValue
           : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
-          -1 ||
-          requestQuery.attribution_key_custom_dimensions?.indexOf(
-            dimension.header
-          ) > -1,
+              -1 ||
+            requestQuery.attribution_key_custom_dimensions?.indexOf(
+              dimension.header
+            ) > -1,
       };
     }
     return dimension;
@@ -1415,11 +1414,11 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
       } else {
         const horizontalBarChart =
           requestQuery[0].gbp.length <= 3 &&
-            requestQuery[0].ewp.length === 1 ? (
-              <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
-                Display Bar Chart
-              </Radio>
-            ) : null;
+          requestQuery[0].ewp.length === 1 ? (
+            <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
+              Display Bar Chart
+            </Radio>
+          ) : null;
         return (
           <>
             <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
@@ -1481,11 +1480,14 @@ export const isComparisonEnabled = (queryType, events, groupBy, models) => {
 };
 
 export const getProfileQueryFromRequestQuery = (requestQuery) => {
-  const events = requestQuery.queries.map((e) => {
-    const filters = [];
+  const queryType = requestQuery.cl;
+  const groupAnalysis = requestQuery.grpa;
+
+  const queries = requestQuery.queries.map((e) => {
+    const evfilters = [];
     e.pr.forEach((pr) => {
       if (pr.lop === 'AND') {
-        filters.push({
+        evfilters.push({
           operator:
             pr.ty === 'datetime'
               ? reverseDateOperatorMap[pr.op]
@@ -1494,21 +1496,20 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
           values: [pr.va],
         });
       } else {
-        filters[filters.length - 1].values.push(pr.va);
+        evfilters[evfilters.length - 1].values.push(pr.va);
       }
     });
     return {
-      label: ReverseProfileMapper[e.ty] ? ReverseProfileMapper[e.ty] : e.ty,
-      filters,
+      label: e.ty,
+      filters: evfilters,
     };
   });
 
-  const globalFilters = [];
-
+  const filters = [];
   if (requestQuery && requestQuery.gup && Array.isArray(requestQuery.gup)) {
     requestQuery.gup.forEach((pr) => {
       if (pr.lop === 'AND') {
-        globalFilters.push({
+        filters.push({
           operator:
             pr.ty === 'datetime'
               ? reverseDateOperatorMap[pr.op]
@@ -1517,12 +1518,11 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
           values: [pr.va],
         });
       } else {
-        globalFilters[globalFilters.length - 1].values.push(pr.va);
+        filters[filters.length - 1].values.push(pr.va);
       }
     });
   }
 
-  const queryType = requestQuery.cl;
   const breakdown = requestQuery.gbp.map((opt) => {
     return {
       property: opt.pr,
@@ -1534,15 +1534,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
       gbty: opt.gbty,
     };
   });
-  const event = breakdown
-    .filter((b) => b.eventIndex)
-    .map((b, index) => {
-      return {
-        ...b,
-        overAllIndex: index,
-      };
-    });
-  const global = breakdown
+  const globalBreakdown = breakdown
     .filter((b) => !b.eventIndex)
     .map((b, index) => {
       return {
@@ -1550,14 +1542,22 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
         overAllIndex: index,
       };
     });
+
+  const groupBy = {
+    global: globalBreakdown,
+    event: [],
+  };
+  const dateRange = {
+    from: requestQuery.from * 1000,
+    to: requestQuery.to * 1000,
+  };
   const result = {
-    events,
     queryType,
-    globalFilters,
-    breakdown: {
-      event,
-      global,
-    },
+    groupAnalysis: groupAnalysis,
+    events: queries,
+    globalFilters: filters,
+    breakdown: groupBy,
+    dateRange: dateRange,
   };
   return result;
 };

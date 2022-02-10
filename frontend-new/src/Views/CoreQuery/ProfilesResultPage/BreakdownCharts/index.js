@@ -28,6 +28,7 @@ const BreakdownCharts = forwardRef(
       currentEventIndex,
       section,
       queries,
+      groupAnalysis,
     },
     ref
   ) => {
@@ -109,6 +110,7 @@ const BreakdownCharts = forwardRef(
           setVisibleProperties={setVisibleProperties}
           section={section}
           queries={queries}
+          groupAnalysis={groupAnalysis}
         />
       </div>
     );

@@ -1103,33 +1103,9 @@ func getAdwordsSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model.
 
 // @Kark TODO v1
 func getAdwordsSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.ChannelGroupBy, error) {
-	sortedGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterCampaign {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
-
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterAdGroup {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
-
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterAd {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
-
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterKeyword {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
 
 	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	for _, requestGroupBy := range sortedGroupBys {
+	for _, requestGroupBy := range requestGroupBys {
 		var resultGroupBy model.ChannelGroupBy
 		if requestGroupBy.Object == model.AdwordsSmartProperty {
 			resultGroupBys = append(resultGroupBys, resultGroupBy)
@@ -1256,19 +1232,26 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	dimensions := fields{}
 
 	for _, groupBy := range adwordsGroupBys {
-		key := groupBy.Object + ":" + groupBy.Property
-		internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
-		externalValue := groupBy.Object + "_" + groupBy.Property
-		var expression string
-		if groupBy.Property == "id" {
-			expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
-		} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
-			expression = fmt.Sprintf("((value->>'%s')::float)/1000000 as %s", internalValue, externalValue)
+		if groupBy.Object == CAFilterChannel {
+			externalValue := groupBy.Object + "_" + groupBy.Property
+			expression := fmt.Sprintf("'google_ads' as %s", externalValue)
+			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+			dimensions.values = append(dimensions.values, externalValue)
 		} else {
-			expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
+			key := groupBy.Object + ":" + groupBy.Property
+			internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
+			externalValue := groupBy.Object + "_" + groupBy.Property
+			var expression string
+			if groupBy.Property == "id" {
+				expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
+			} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
+				expression = fmt.Sprintf("((value->>'%s')::float)/1000000 as %s", internalValue, externalValue)
+			} else {
+				expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
+			}
+			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+			dimensions.values = append(dimensions.values, externalValue)
 		}
-		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, externalValue)
 	}
 	for _, groupBy := range smartPropertyCampaignGroupBys {
 		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("campaign.properties->>'%s'", groupBy.Property), model.CampaignPrefix+groupBy.Property)
@@ -1393,19 +1376,26 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	dimensions := fields{}
 
 	for _, groupBy := range query.GroupBy {
-		key := groupBy.Object + ":" + groupBy.Property
-		internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
-		externalValue := groupBy.Object + "_" + groupBy.Property
-		var expression string
-		if groupBy.Property == "id" {
-			expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
-		} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
-			expression = fmt.Sprintf("((value->>'%s')::float)/1000000 as %s", internalValue, externalValue)
+		if groupBy.Object == CAFilterChannel {
+			externalValue := groupBy.Object + "_" + groupBy.Property
+			expression := fmt.Sprintf("'google_ads' as %s", externalValue)
+			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+			dimensions.values = append(dimensions.values, externalValue)
 		} else {
-			expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
+			key := groupBy.Object + ":" + groupBy.Property
+			internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
+			externalValue := groupBy.Object + "_" + groupBy.Property
+			var expression string
+			if groupBy.Property == "id" {
+				expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
+			} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
+				expression = fmt.Sprintf("((value->>'%s')::float)/1000000 as %s", internalValue, externalValue)
+			} else {
+				expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
+			}
+			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+			dimensions.values = append(dimensions.values, externalValue)
 		}
-		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, externalValue)
 	}
 	if isGroupByTimestamp {
 		internalValue := getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone)

@@ -5,12 +5,17 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 func (store *MemSQL) satisfiesBillingAccountForeignConstraints(ba model.BillingAccount) int {
+	logFields := log.Fields{
+		"ba": ba,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if _, errCode := store.GetAgentByUUID(ba.AgentUUID); errCode != http.StatusFound {
 		return http.StatusBadRequest
 	}
@@ -18,6 +23,11 @@ func (store *MemSQL) satisfiesBillingAccountForeignConstraints(ba model.BillingA
 }
 
 func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*model.BillingAccount, int) {
+	logFields := log.Fields{
+		"plan_code": planCode,
+		"agent_uuid": AgentUUID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if planCode == "" || AgentUUID == "" {
 		return nil, http.StatusBadRequest
@@ -53,6 +63,10 @@ func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*m
 }
 
 func (store *MemSQL) existsBillingAccountByID(billingAccountID string) bool {
+	logFields := log.Fields{
+		"billin_account_id": billingAccountID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 
 	var billingAccount model.BillingAccount
@@ -71,6 +85,10 @@ func (store *MemSQL) existsBillingAccountByID(billingAccountID string) bool {
 }
 
 func (store *MemSQL) GetBillingAccountByProjectID(projectID uint64) (*model.BillingAccount, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -89,6 +107,10 @@ func (store *MemSQL) GetBillingAccountByProjectID(projectID uint64) (*model.Bill
 }
 
 func (store *MemSQL) GetBillingAccountByAgentUUID(AgentUUID string) (*model.BillingAccount, int) {
+	logFields := log.Fields{
+		"agent_uuid": AgentUUID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if AgentUUID == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -106,6 +128,15 @@ func (store *MemSQL) GetBillingAccountByAgentUUID(AgentUUID string) (*model.Bill
 }
 
 func (store *MemSQL) UpdateBillingAccount(id string, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int {
+	logFields := log.Fields{
+		"id": id,
+		"plan_id": planId,
+		"org_name": orgName,
+		"billing_addr": billingAddr,
+		"pincode": pinCode,
+		"phone_no": phoneNo,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if id == "" || planId == 0 {
 		log.WithFields(log.Fields{
 			"id":      id,
@@ -149,6 +180,10 @@ func (store *MemSQL) UpdateBillingAccount(id string, planId uint64, orgName, bil
 }
 
 func (store *MemSQL) GetProjectsUnderBillingAccountID(ID string) ([]model.Project, int) {
+	logFields := log.Fields{
+		"id": ID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	projects := make([]model.Project, 0, 0)
 
@@ -160,6 +195,10 @@ func (store *MemSQL) GetProjectsUnderBillingAccountID(ID string) ([]model.Projec
 }
 
 func (store *MemSQL) GetAgentsByProjectIDs(projectIDs []uint64) ([]*model.Agent, int) {
+	logFields := log.Fields{
+		"project_ids": projectIDs,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	agents := make([]*model.Agent, 0, 0)
 
@@ -171,6 +210,10 @@ func (store *MemSQL) GetAgentsByProjectIDs(projectIDs []uint64) ([]*model.Agent,
 }
 
 func (store *MemSQL) GetAgentsUnderBillingAccountID(ID string) ([]*model.Agent, int) {
+	logFields := log.Fields{
+		"id": ID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
 	agents := make([]*model.Agent, 0, 0)
 
@@ -185,6 +228,11 @@ func (store *MemSQL) GetAgentsUnderBillingAccountID(ID string) ([]*model.Agent, 
 }
 
 func (store *MemSQL) IsNewProjectAgentMappingCreationAllowed(projectID uint64, emailOfAgentToAdd string) (bool, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"email_of_agent_to_add": emailOfAgentToAdd,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	billingAccount, errCode := store.GetBillingAccountByProjectID(projectID)
 	if errCode != http.StatusFound {
 		return false, errCode
