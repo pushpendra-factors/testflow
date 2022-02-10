@@ -56,10 +56,12 @@ function ProjectDropdown({
       if (parseInt(val) === activeDashboard?.id) {
         return false;
       }
+      const active_dashboard = dashboards.data.find((d) => d.id === parseInt(val));
       dispatch({
         type: ACTIVE_DASHBOARD_CHANGE,
-        payload: dashboards.data.find((d) => d.id === parseInt(val)),
+        payload: active_dashboard,
       });
+      localStorage.setItem('active-dashboard-id',JSON.stringify(active_dashboard));
     },
     [dashboards, dispatch, activeDashboard?.id]
   );
