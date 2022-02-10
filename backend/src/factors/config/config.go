@@ -167,7 +167,6 @@ type Configuration struct {
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []uint64
-	MultipleTimezoneEnabledProjects        []uint64
 	DemoProjectIds                         []uint64
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -1902,12 +1901,7 @@ func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId uint64) bool {
 }
 
 func IsMultipleProjectTimezoneEnabled(projectId uint64) bool {
-	for _, id := range configuration.MultipleTimezoneEnabledProjects {
-		if id == projectId {
-			return true
-		}
-	}
-	return false
+	return true
 }
 
 func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
