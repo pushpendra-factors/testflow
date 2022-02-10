@@ -231,7 +231,7 @@ func GetTransformedRows(headers []string, rows [][]interface{}, hasGroupByTimest
 		}
 	}
 
-	currentRows = TransformDateTypeValueForEventsKPI(headers, rows, hasGroupByTimestamp, timezoneString)
+	currentRows = TransformDateTypeValueForEventsKPI(headers, currentRows, hasGroupByTimestamp, timezoneString)
 	return currentRows
 }
 
