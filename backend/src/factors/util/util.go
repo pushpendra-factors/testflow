@@ -481,6 +481,54 @@ func GetStringListAsBatch(list []string, batchSize int) [][]string {
 	return batchList
 }
 
+func GetPropertiesMapAsBatch(list []*PropertiesMap, batchSize int) [][]*PropertiesMap {
+	batchList := make([][]*PropertiesMap, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
+}
+
+func GetInt64AsBatch(list []int64, batchSize int) [][]int64 {
+	batchList := make([][]int64, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
+}
+
+func GetPostgresJsonbAsBatch(list []*postgres.Jsonb, batchSize int) [][]*postgres.Jsonb {
+	batchList := make([][]*postgres.Jsonb, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
+}
+
 // GetUint64ListAsBatch - Returns list of uint64 as batches of uint64 list.
 func GetUint64ListAsBatch(list []uint64, batchSize int) [][]uint64 {
 	batchList := make([][]uint64, 0, 0)
