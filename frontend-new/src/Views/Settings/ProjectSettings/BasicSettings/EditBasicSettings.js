@@ -21,7 +21,7 @@ const TimeZoneName =
 }
 const { Option } = Select;
 
-function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails }) {
+function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails, agent }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState('');
   const [form] = Form.useForm();
@@ -79,8 +79,7 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
         // setLoading(false);
       });
     // }
-  };
-
+  }; 
 
   return (
     <>
@@ -182,28 +181,30 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
             </Col>
           </Row>
 
-          <Row className={'mt-6'}>
+          {agent?.email=='solutions@factors.ai' ? <Row className={'mt-6'}>
             <Col span={24}>
               <Text type={'title'} level={7} extraClass={'m-0'}>Time Zone</Text>
               <Form.Item
                 name="time_zone"
                 className={'m-0'}
-                rules={[{ required: true, message: 'Please choose an option' }]}
-                disabled={!activeProject?.is_multiple_project_timezone_enabled}
+                rules={[{ required: true, message: 'Please choose an option' }]} 
               >
-                {activeProject?.is_multiple_project_timezone_enabled ? <Select 
-                disabled={!activeProject?.is_multiple_project_timezone_enabled}
-                className={'fa-select w-full'} placeholder={'Time Zone'} size={'large'}>
-                   { activeProject?.is_multiple_project_timezone_enabled && Object.keys(TimeZoneName).map((item)=>{
+                <Select className={'fa-select w-full'} placeholder={'Time Zone'} size={'large'}>
+                   { Object.keys(TimeZoneName).map((item)=>{
                     return  <Option value={item}>{TimeZoneName[item]}</Option> 
                   })} 
                 </Select> 
-                : 
-                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{(activeProject?.time_zone) ? TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject.time_zone)] : '---'}</Text>
-                }
-              </Form.Item>
+                </Form.Item>
             </Col>
           </Row>
+                : <Row className={'mt-6'}> 
+                    <Col span={24}>
+                      <Text type={'title'} level={7} extraClass={'m-0'}>Time Zone</Text>
+                      <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{(activeProject?.time_zone) ? TimeZoneName[getKeyByValue(TimeZoneOffsetValues,activeProject.time_zone)] : '---'}</Text>
+                    </Col>
+              </Row>
+                }
+              
         </Form>
       </div>
 
@@ -213,7 +214,8 @@ function EditBasicSettings({ activeProject, setEditMode, udpateProjectDetails })
 }
 
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project
+  activeProject: state.global.active_project,
+  agent: state.agent.agent_details
 });
 
 export default connect(mapStateToProps, { udpateProjectDetails })(EditBasicSettings);

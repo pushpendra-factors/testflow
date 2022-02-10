@@ -1163,7 +1163,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 			return http.StatusInternalServerError
 		}
 
-		logCtx.Error("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
+		logCtx.Warn("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
 	}
 
 	if eventUserID != "" && userID != eventUserID {

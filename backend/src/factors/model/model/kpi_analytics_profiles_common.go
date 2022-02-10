@@ -107,7 +107,10 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	if kpiQuery.GroupByTimestamp == "" {
 		profileQuery.GroupBys = profileQueryGroup.GlobalGroupBys
 	} else {
-		profileQuery.GroupBys = append(profileQueryGroup.GlobalGroupBys, GetProfileGroupByFromDateField(transformation.DateField, kpiQuery.GroupByTimestamp))
+		profileQuery.GroupBys = append([]QueryGroupByProperty{GetProfileGroupByFromDateField(transformation.DateField, kpiQuery.GroupByTimestamp)}, profileQueryGroup.GlobalGroupBys...)
+	}
+	for i, _ := range profileQuery.GroupBys {
+		profileQuery.GroupBys[i].Index = i
 	}
 	profileQuery.DateField = transformation.DateField
 	return profileQuery
@@ -145,20 +148,6 @@ func getTransformedRowsForProfileResults(rows [][]interface{}, hasGroupByTimesta
 	var currentRows [][]interface{}
 	currentRows = make([][]interface{}, 0)
 	if len(rows) == 0 {
-		currentRow := make([]interface{}, headersLen)
-		for index := range currentRow {
-			currentRow[index] = ""
-		}
-		currentRow[0] = 0
-		currentRow[1] = 0
-		if hasGroupByTimestamp || (!hasGroupByTimestamp && hasAnyGroupBys) {
-			currentRow = append(currentRow[2:], currentRow[1])
-			currentRows = append(currentRows, currentRow)
-		} else {
-			currentRow = make([]interface{}, 1)
-			currentRow[0] = 0
-			currentRows = append(currentRows, currentRow)
-		}
 		return currentRows
 	}
 

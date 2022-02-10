@@ -69,6 +69,12 @@ CREATE TABLE IF NOT EXISTS users (
     KEY (customer_user_id) USING HASH,
     KEY (segment_anonymous_id) USING HASH,
     KEY (amp_user_id) USING HASH,
+    KEY (join_timestamp) USING HASH,
+    KEY (is_group_user) USING HASH,
+    KEY (group_1_id) USING HASH,
+    KEY (group_2_id) USING HASH,
+    KEY (group_3_id) USING HASH,
+    KEY (group_4_id) USING HASH,
     UNIQUE KEY (project_id, id) USING HASH,
     SHARD KEY (id)
 

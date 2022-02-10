@@ -88,7 +88,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
     <>
     <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
       <div className={'animate__animated animate__fadeInUpBig animate__fast mb-10 pl-4'}>
-        <Row gutter={[24, 24]} justify={'space-between'} className={'mt-0 pl-3'}>
+        <Row justify={'space-between'} className={'mt-0 pl-3 mb-2'}>
           <Col span={17}>
             <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Connect with your website data</Text>
           </Col>
@@ -96,7 +96,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
             {/* <Text type={'title'} size={8} color={'grey'} extraClass={'m-0'}>LEARN MORE</Text> */}
           </Col>
         </Row>
-        <Row gutter={[24, 24]} justify={'center'} className={'mt-0 pl-3'}>
+        <Row justify={'center'} className={'mt-0 pl-3 mb-2'}>
           <Col>
             <Text type={'title'} level={7} color={'grey'} extraClass={'pb-2 m-0'}>Factors offers a native and lightweight Javascript SDK using which we collect, store, and process all events that occur on your website. Alternatively, you can also send us this data via a CDP such as Segment.</Text>
           </Col>
@@ -104,7 +104,7 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
         <JavascriptSDK />
 
         <Col span={24}>
-          <div span={24} className={'flex flex-start items-center mt-8'}>
+          <div span={24} className={'flex flex-start items-center mt-2'}>
             <span style={{ width: '50px' }}><Switch checkedChildren="On"  unCheckedChildren="OFF" onChange={onSDKcheck} defaultChecked={sdkCheck} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>I’m finished</Text>
           </div>
         </Col>

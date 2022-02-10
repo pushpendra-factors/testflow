@@ -244,7 +244,7 @@ func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, fi
 		return filterValues, http.StatusFound
 	}
 	if filterObject == CAFilterChannel && filterProperty == "name" {
-		return []interface{}{"adwords", "facebook", "linkedin"}, http.StatusFound
+		return []interface{}{"google ads", "facebook", "linkedin"}, http.StatusFound
 	}
 	adwordsSQL, adwordsParams, adwordsErr := pg.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	facebookSQL, facebookParams, facebookErr := pg.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
@@ -379,7 +379,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
-		if errCode == http.StatusNotFound {
+		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
 		}
@@ -400,7 +400,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 		columns = append(commonKeys, commonMetrics...)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
-		if errCode == http.StatusNotFound {
+		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
 		}
@@ -422,7 +422,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 		columns = append(commonKeys, commonMetrics...)
 	} else {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
-		if errCode == http.StatusNotFound {
+		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
 		}
@@ -499,6 +499,9 @@ func (pg *Postgres) getIndividualChannelsSQLAndParametersV1(projectID uint64, qu
 			linkedinSQL = fmt.Sprintf("( %s )", linkedinSQL[:len(linkedinSQL)-2])
 		}
 		finLinkedinSQL, finLinkedinParams = linkedinSQL, linkedinParams
+	}
+	if !isAdwordsReq && !isFacebookReq && !isLinkedinReq {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, http.StatusNotFound
 	}
 	return finAdwordsSQL, finAdwordsParams, finalKeys, finalMetrics, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, http.StatusOK
 }

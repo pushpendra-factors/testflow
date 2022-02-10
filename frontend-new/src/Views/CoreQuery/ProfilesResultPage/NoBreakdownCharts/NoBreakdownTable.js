@@ -16,11 +16,13 @@ function NoBreakdownTable({
   const [tableData, setTableData] = useState([]);
 
   useEffect(() => {
-    setColumns(getTableColumns(sorter, handleSorting));
+    setColumns(getTableColumns(sorter, handleSorting, groupAnalysis));
   }, [sorter, handleSorting]);
 
   useEffect(() => {
-    setTableData(getTableData(data, queries, groupAnalysis, sorter, searchText));
+    setTableData(
+      getTableData(data, queries, groupAnalysis, sorter, searchText)
+    );
   }, [data, queries, groupAnalysis, searchText, sorter]);
 
   const getCSVData = () => {

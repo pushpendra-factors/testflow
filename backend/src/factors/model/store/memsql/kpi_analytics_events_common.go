@@ -124,7 +124,7 @@ func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, 
 			finalResult.Headers = results[0].Headers
 			return finalResult
 		}
-		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
+		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
 		finalResult = *results[0]
 	} else {
 		for i, query := range queries {
@@ -136,7 +136,7 @@ func (store *MemSQL) executeForResults(projectID uint64, queries []model.Query, 
 			}
 		}
 		hasAnyGroupBy := len(queries[0].GroupByProperties) != 0
-		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
+		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
 		finalResult = model.HandlingEventResultsByApplyingOperations(results, transformations, kpiQuery.Timezone, isTimezoneEnabled)
 	}
 	return finalResult

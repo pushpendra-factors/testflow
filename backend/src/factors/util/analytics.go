@@ -24,8 +24,8 @@ func getTimezoneOffsetFromString(timezone string) string {
 
 // GetTimestampAsStrWithTimezone - Appends timezone doesn't converts.
 func GetTimestampAsStrWithTimezone(t time.Time, timezone string) string {
-	return fmt.Sprintf("%d-%02d-%02dT%02d:00:00%s", t.Year(),
-		t.Month(), t.Day(), t.Hour(), getTimezoneOffsetFromString(timezone))
+	return fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d%s", t.Year(),
+		t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), getTimezoneOffsetFromString(timezone))
 }
 
 // This relies on fact of above parse.

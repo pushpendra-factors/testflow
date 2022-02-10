@@ -7,6 +7,7 @@ import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import InviteUsers from './InviteUsers';
 import { connect } from 'react-redux';
 import { fetchProjectAgents, projectAgentRemove, updateAgentRole } from 'Reducers/agentActions';
+import { fetchDemoProject } from 'Reducers/global';
 import MomentTz from 'Components/MomentTz';
 
 const { confirm } = Modal;
@@ -17,12 +18,14 @@ function UserSettings({
   projectAgentRemove,
   activeProjectID,
   updateAgentRole,
-  fetchProjectAgents
+  fetchProjectAgents,
+  fetchDemoProject
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataSource, setdataSource] = useState(null);
   const [inviteModal, setInviteModal] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [demoProjectID, setdemoProjectID] = useState(null);
 
   const confirmRemove = (uuid) => {
     let agent = agents.filter(agent => agent.email === currentAgent.email);
@@ -127,6 +130,13 @@ function UserSettings({
   ];
 
   useEffect(() => {
+    fetchDemoProject().then((res) => {
+      let id = res.data[0];
+      setdemoProjectID(id);
+    })
+    if(activeProjectID === demoProjectID) {
+      setdataSource([]);
+    } else
     if (agents) {
       const formattedArray = [];
       agents.map((agent, index) => {
@@ -150,7 +160,7 @@ function UserSettings({
       setdataSource([]);
     }
     setDataLoading(false);
-  }, [agents]);
+  }, [agents, demoProjectID]);
 
   const handleOk = () => {
     setConfirmLoading(true);
@@ -198,7 +208,7 @@ const mapStateToProps = (state) => ({
   currentAgent: state.agent.agent_details
 });
 
-export default connect(mapStateToProps, { fetchProjectAgents, updateAgentRole, projectAgentRemove })(UserSettings);
+export default connect(mapStateToProps, { fetchProjectAgents, updateAgentRole, projectAgentRemove, fetchDemoProject })(UserSettings);
 
 // table datasource example
 // {

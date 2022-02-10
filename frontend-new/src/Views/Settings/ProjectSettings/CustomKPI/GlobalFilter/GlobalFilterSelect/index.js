@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents'; 
-import { Button, Input, InputNumber, Tooltip, DatePicker, Select } from 'antd';
-import GroupSelect2 from '../GroupSelect2';
+import { SVG, Text } from 'factorsComponents';
+import { Button, InputNumber, Tooltip, Select, DatePicker } from 'antd';
+import GroupSelect2 from '../../GroupSelect2';
 import FaDatepicker from 'Components/FaDatepicker';
-import FaSelect from '../FaSelect';
+import FaSelect from 'Components/FaSelect';
 import MomentTz from 'Components/MomentTz';
 import { isArray } from 'lodash';
-import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils';
 import moment from 'moment';
 import _ from 'lodash'; 
-import { DISPLAY_PROP } from '../../../utils/constants';
+import {DEFAULT_OPERATOR_PROPS} from 'Components/FaFilterSelect/utils'; 
+
+const DISPLAY_PROP = { $none: '(Not Set)' };
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
- 
+
 const {Option} = Select;
 
-const FAFilterSelect = ({
+const GlobalFilterSelect = ({
     propOpts = [],
     operatorOpts=defaultOpProps,
     valueOpts=[],
@@ -27,21 +28,19 @@ const FAFilterSelect = ({
 },
 ) => {
 
-    const [propState, setPropState] = useState({
-        icon: '',
-        name: '',
-        type: '',
-        extra: ''
-    });
-
     const rangePicker = ['=', '!='];
     const customRangePicker = ['between', 'not between'];
     const deltaPicker = ['in the previous', 'not in the previous'];
     const currentPicker = ['in the current', 'not in the current'];
     const datePicker = ['before', 'since'];
 
+    const [propState, setPropState] = useState({
+        icon: '',
+        name: '',
+        type: ''
+    });
 
-    const [operatorState, setOperatorState] = useState("="); 
+    const [operatorState, setOperatorState] = useState('between');
     const [valuesState, setValuesState] = useState(null);
 
     const [propSelectOpen, setPropSelectOpen] = useState(false);
@@ -52,13 +51,13 @@ const FAFilterSelect = ({
 
     const [updateState, updateStateApply] = useState(false);
     const [eventFilterInfo, seteventFilterInfo] = useState(null);
-
     const {userPropNames, eventPropNames} = useSelector((state) => state.coreQuery)
+    
 
     useEffect(() => {
-        if (filter) {  
+        if (filter) {
             const prop = filter.props; 
-            setPropState({ icon: prop[2], name: prop[0], type: prop[1]});
+            setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
             setOperatorState(filter.operator);
             // Set values state
             setValues();
@@ -69,6 +68,8 @@ const FAFilterSelect = ({
         }
 
     }, [filter])
+
+    
 
     useEffect(() => {
         if(updateState && valuesState && propState.type !== 'numerical') {
@@ -107,14 +108,32 @@ const FAFilterSelect = ({
         setOperSelectOpen(false);
     }
 
-    const propSelect = (label, val, cat) => { 
+    const renderDisplayName = (propState) => {
+        // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
+        let propertyName = '';
+        // if(propState.name && (propState.icon === 'user' || propState.icon === 'user_g')) {
+        //   propertyName = userPropNames[propState.name]?  userPropNames[propState.name] : propState.name;
+        // }
+        // if(propState.name && propState.icon === 'event') {
+        //   propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
+        // }
+
+        propertyName = _.startCase(propState?.name); 
+
+        if(!propState.name) {
+          propertyName = 'Select Property';
+        }
+        return propertyName;
+      }
+
+    const propSelect = (label, val, cat) => {  
         let prop = [label, ...val];
         setPropState({ icon: prop[0], name: prop[1], type: prop[3], extra: val});
         setPropSelectOpen(false);
         setOperatorState(prop[3] === 'datetime' ? 'between' : "=");
         setValuesState(null);
         setValuesByProps([...val]);
-        seteventFilterInfo(val)
+        seteventFilterInfo(val)  
     }
 
     const valuesSelect = (val) => {
@@ -172,20 +191,12 @@ const FAFilterSelect = ({
         //           MomentTz(toVal).format('MMM DD, YYYY'));
     }
 
-    const renderGroupDisplayName = (propState) => { 
-        // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
+    const renderGroupDisplayName = (propState) => {
         let propertyName = '';
-        // if(propState.name && propState.icon === 'user') {
-        //   propertyName = userPropNames[propState.name]?  userPropNames[propState.name] : propState.name;
-        // }
-        // if(propState.name && propState.icon === 'event') {
-        //   propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
-        // }
-        
-        propertyName = _.startCase(propState?.name); 
-
         if(!propState.name) {
           propertyName = 'Select Property';
+        } else {
+            propertyName = propState.name;
         }
         return propertyName;
       }
@@ -198,33 +209,33 @@ const FAFilterSelect = ({
                     // icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
                     className={`fa-button--truncate-xs`}
                     type="link"
-                    onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderGroupDisplayName(propState)}
+                    onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderDisplayName(propState)}
                 </Button>
             </Tooltip>
+
             <div className={styles.filter__event_selector}>
                 {propSelectOpen && (
                     <div className={styles.filter__event_selector__btn}>
-                        <GroupSelect2
+                        <GroupSelect2 
                             groupedProperties={propOpts}
-                            placeholder="Select Property"
+                            placeholder="Select Property" 
                             optionClick={(label, val, cat) => propSelect(label, val, cat)}
                             onClickOutside={() => setPropSelectOpen(false)}
                             hideTitle={true}
-                            isFilterDD={true}
-                            textStartCase
-                        />
+                        ></GroupSelect2>
                     </div>
                 )
                 }
             </div>
 
         </div>)
-    } 
+    }
+
     const renderOperatorSelector = () => {
         return (<div className={styles.filter__propContainer}>
 
             <Button
-                className={`fa-button--truncate ml-2`}
+                className={` ml-2`}
                 type="link"
                 onClick={() => setOperSelectOpen(true)}> {operatorState ? operatorState : 'Select Operator'}
             </Button>
@@ -234,14 +245,12 @@ const FAFilterSelect = ({
                     options={operatorOpts[propState.type].map(op => [op])}
                     optionClick={(val) => operatorSelect(val)}
                     onClickOutside={() => setOperSelectOpen(false)}
-                >
-                </FaSelect>
+                ></FaSelect>
             }
-
-        </div>);
+        </div>)
     }
 
-    const setDeltaNumber = (val = 1) => {
+    const setDeltaNumber = (val) => {
         const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
         parsedValues['num'] = val;
         parsedValues['gran'] = 'days';
@@ -256,18 +265,6 @@ const FAFilterSelect = ({
         setGrnSelectOpen(false);
         setDeltaFilt();
     }
-
-    const setCurrentFilt = () => {
-        const parsedValues = valuesState
-          ? typeof valuesState === 'string'
-            ? JSON.parse(valuesState)
-            : valuesState
-          : {};
-        if (parsedValues['gran']) {
-          updateStateApply(true);
-        }
-      };
-
     const setDeltaFilt = () => {
         const parsedValues = valuesState
           ? typeof valuesState === 'string'
@@ -278,6 +275,18 @@ const FAFilterSelect = ({
           updateStateApply(true);
         }
       };
+ 
+
+  const setCurrentFilt = () => {
+    const parsedValues = valuesState
+      ? typeof valuesState === 'string'
+        ? JSON.parse(valuesState)
+        : valuesState
+      : {};
+    if (parsedValues['gran']) {
+      updateStateApply(true);
+    }
+  };
 
     const onDatePickerSelect = (val) => {
         let dateT;
@@ -296,7 +305,6 @@ const FAFilterSelect = ({
         setValuesState(JSON.stringify(dateValue));
         updateStateApply(true);
     }
-
     const setCurrentGran = (val) => {
         const parsedValues = valuesState
           ? typeof valuesState === 'string'
@@ -308,7 +316,6 @@ const FAFilterSelect = ({
         setGrnSelectOpen(false);
         setCurrentFilt();
       };
-
 
     const selectDateTimeSelector = (operator, rang, parsedVals) => {
         let selectorComponent = null;
@@ -420,10 +427,10 @@ const FAFilterSelect = ({
       };
 
     const renderValuesSelector = () => {
-        let selectionComponent;
+        let selectionComponent = null;
         const values = [];
-        if (propState.type === 'categorical') {
-            selectionComponent = (<FaSelect
+        
+        selectionComponent = (<FaSelect
                 multiSelect={true}
                 options={valueOpts && valueOpts[propState.name]?.length ? valueOpts[propState.name].map(op => [op]) : []}
                 applClick={(val) => valuesSelect(val)}
@@ -432,7 +439,7 @@ const FAFilterSelect = ({
                 allowSearch={true}
             >
             </FaSelect>);
-        }
+        
 
         if (propState.type === 'datetime') {
             const parsedValues = (valuesState ? (typeof valuesState === 'string')? JSON.parse(valuesState) : valuesState : {});
@@ -441,8 +448,6 @@ const FAFilterSelect = ({
             const rang = {
                 startDate: dateRange.from,
                 endDate: dateRange.to,
-                num: dateRange.num,
-                gran: dateRange.gran
             }
 
             selectionComponent = selectDateTimeSelector(isArray(operatorState)? operatorState[0] : operatorState, rang);
@@ -451,39 +456,38 @@ const FAFilterSelect = ({
         if (propState.type === 'numerical') {
             selectionComponent = (<InputNumber value={valuesState} onBlur={emitFilter} onChange={setNumericalValue}></InputNumber>);
         }
+        if(!operatorState || !propState?.name) return null;
 
         return (
-          <div className={`${styles.filter__propContainer} ml-4`}>
+          <div className={`${styles.filter__propContainer} ml-4 w-7/12`}>
             {propState.type === 'categorical' ? (
-              <>
-                {' '}
-                <Tooltip
-                  title={
-                    valuesState && valuesState.length
-                      ? valuesState
-                          .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
-                          .join(', ')
-                      : null
-                  }
+              <Tooltip
+                title={
+                  valuesState && valuesState.length
+                    ? valuesState
+                        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                        .join(', ')
+                    : null
+                }
+              >
+                <Button
+                  className={`fa-button--truncate fa-button--truncate-lg`}
+                  type='link'
+                  onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
                 >
-                  <Button
-                    className={`fa-button--truncate fa-button--truncate-lg`}
-                    type='link'
-                    onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
-                  >
-                    {' '}
-                    {valuesState && valuesState.length
-                      ? valuesState
-                          .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
-                          .join(', ')
-                      : 'Select Values'}
-                  </Button>{' '}
-                </Tooltip>{' '}
-                {valuesSelectionOpen && selectionComponent}{' '}
-              </>
+                  {' '}
+                  {valuesState && valuesState.length
+                    ? valuesState
+                        .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
+                        .join(', ')
+                    : 'Select Values'}
+                </Button>{' '}
+              </Tooltip>
             ) : null}
 
-            {propState.type !== 'categorical' ? selectionComponent : null}
+            {valuesSelectionOpen || propState.type !== 'categorical'
+              ? selectionComponent
+              : null}
           </div>
         );
 
@@ -500,4 +504,4 @@ const FAFilterSelect = ({
 
 }
 
-export default FAFilterSelect;
+export default GlobalFilterSelect;

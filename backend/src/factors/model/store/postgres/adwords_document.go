@@ -1103,38 +1103,9 @@ func getAdwordsSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model.
 
 // @Kark TODO v1
 func getAdwordsSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.ChannelGroupBy, error) {
-	sortedGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterCampaign {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
-
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterAdGroup {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
-
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterAd {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
-
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterKeyword {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
-	for _, groupBy := range requestGroupBys {
-		if groupBy.Object == CAFilterChannel {
-			sortedGroupBys = append(sortedGroupBys, groupBy)
-		}
-	}
 
 	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	for _, requestGroupBy := range sortedGroupBys {
+	for _, requestGroupBy := range requestGroupBys {
 		var resultGroupBy model.ChannelGroupBy
 		if requestGroupBy.Object == model.AdwordsSmartProperty {
 			resultGroupBys = append(resultGroupBys, resultGroupBy)
@@ -1263,7 +1234,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	for _, groupBy := range adwordsGroupBys {
 		if groupBy.Object == CAFilterChannel {
 			externalValue := groupBy.Object + "_" + groupBy.Property
-			expression := fmt.Sprintf("'adwords' as %s", externalValue)
+			expression := fmt.Sprintf("'google_ads' as %s", externalValue)
 			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 			dimensions.values = append(dimensions.values, externalValue)
 		} else {
@@ -1407,7 +1378,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	for _, groupBy := range query.GroupBy {
 		if groupBy.Object == CAFilterChannel {
 			externalValue := groupBy.Object + "_" + groupBy.Property
-			expression := fmt.Sprintf("'adwords' as %s", externalValue)
+			expression := fmt.Sprintf("'google_ads' as %s", externalValue)
 			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 			dimensions.values = append(dimensions.values, externalValue)
 		} else {

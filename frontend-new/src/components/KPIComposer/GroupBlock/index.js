@@ -20,6 +20,7 @@ function GroupBlock({
   userPropNames,
   eventPropNames,
   KPIConfigProps,
+  textStartCase,
 }) {
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
@@ -102,6 +103,7 @@ function GroupBlock({
                 optionClick={(group, val) => onChange([group, val], index)}
                 onClickOutside={() => triggerDropDown(index, true)}
                 hideTitle={true}
+                textStartCase
               ></GroupSelect2>
             </div>
           ) : null}
@@ -211,6 +213,7 @@ function GroupBlock({
                   optionClick={(group, val) => onChange([group, val], index)}
                   onClickOutside={() => triggerDropDown(index, true)}
                   hideTitle={true}
+                  textStartCase
                 ></GroupSelect2>
               </div>
             ) : null}

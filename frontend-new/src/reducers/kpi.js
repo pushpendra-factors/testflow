@@ -14,6 +14,12 @@ export default function reducer(state = inititalState, action) {
     case 'FETCH_KPI_CONFIG_FULFILLED': {
       return { ...state, config: action.payload };
     }
+    case 'FETCH_CUSTOM_KPI_CONFIG_FULFILLED': {
+      return { ...state, custom_kpi_config: action.payload };
+    }
+    case 'FETCH_SAVED_CUSTOM_KPI_FULFILLED': {
+      return { ...state, saved_custom_kpi: action.payload };
+    }
     case 'FETCH_KPI_QUERY_FULFILLED': {
       return { ...state, query_result: action.payload };
     }
@@ -24,7 +30,7 @@ export default function reducer(state = inititalState, action) {
   return state;
 }
 
-export function fetchKPIConfig(projectID, templateID) {
+export function fetchKPIConfig(projectID) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
       get(dispatch, host + 'projects/' + projectID + '/v1/kpi/config')
@@ -37,6 +43,66 @@ export function fetchKPIConfig(projectID, templateID) {
         })
         .catch((err) => {
           dispatch({ type: 'FETCH_TEMPLATE_CONFIG_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchCustomKPIConfig(projectID) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectID + '/v1/custom_metrics/config')
+        .then((response) => {
+          dispatch({
+            type: 'FETCH_CUSTOM_KPI_CONFIG_FULFILLED',
+            payload: response.data,
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_CUSTOM_KPI_CONFIG_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+export function fetchSavedCustomKPI(projectID) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/' + projectID + '/v1/custom_metrics')
+        .then((response) => {
+          dispatch({
+            type: 'FETCH_SAVED_CUSTOM_KPI_FULFILLED',
+            payload: response.data,
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_SAVED_CUSTOM_KPI_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function addNewCustomKPI(projectID, data) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(
+        dispatch,
+        host + 'projects/' + projectID + `/v1/custom_metrics`,
+        data
+      )
+        .then((response) => {
+          dispatch({
+            type: 'ADD_CUSTOM_KPI_FULFILLED',
+            payload: response.data,
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'ADD_CUSTOM_KPI_REJECTED', payload: err });
           reject(err);
         });
     });

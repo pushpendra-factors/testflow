@@ -9,8 +9,7 @@ function GroupSelect2({
     groupedProperties, placeholder,
     optionClick, onClickOutside, extraClass,
     allowEmpty = false,
-    hideTitle=false,
-    textStartCase=false,
+    hideTitle=false
 }) {
     const [groupCollapseState, setGroupCollapseState] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
@@ -82,7 +81,7 @@ function GroupSelect2({
                                             <div key={i} title={val[0]} className={`fa-select-group-select--options`}
                                                 onClick={() => optionClick(group.label, val, group?.category)} >
                                                 {searchTerm.length > 0}
-                                                <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>{textStartCase ? _.startCase(val[0]) : val[0]}</Text>
+                                                <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>{_.startCase(val[0])}</Text>
                                             </div>
                                         );
                                     }

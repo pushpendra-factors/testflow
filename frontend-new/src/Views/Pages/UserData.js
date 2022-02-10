@@ -76,6 +76,10 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
                     {
                         "property": "hubspot_owner_id",
                         "value": ownerID ? ownerID: owner.value
+                    },
+                    {
+                        "property": "signup_method",
+                        "value": "Self-Serve Onboarding"
                     }                     
                 ]
             }
@@ -148,12 +152,25 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
                                     <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
                                             <Form.Item label={null}
                                             name="website"
-                                            rules={[{ required: true, message: 'Please enter company website' }]}
+                                            rules={[
+                                                { 
+                                                    required: true,
+                                                    message: 'Please enter company website' 
+                                                },
+                                                ({ getFieldValue }) => ({
+                                                    validator(rule, value) { 
+                                                      if (!value || value.match(/(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g)) {
+                                                        return Promise.resolve();
+                                                      }
+                                                      return Promise.reject(new Error('Please enter correct website url.'));
+                                                    }
+                                                }) 
+                                            ]}
                                             >
                                             <Input
                                                 className={'fa-input w-full'}
                                                 size={'large'}
-                                                placeholder="Example: Acme.com"
+                                                placeholder="Example: Factors.ai"
                                                 disabled={dataLoading}
                                             />
                                             </Form.Item>

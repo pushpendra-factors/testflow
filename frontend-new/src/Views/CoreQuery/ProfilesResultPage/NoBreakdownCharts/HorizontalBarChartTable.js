@@ -16,8 +16,8 @@ const HorizontalBarChartTable = ({
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    setColumns(getHorizontalBarChartColumns());
-  }, []);
+    setColumns(getHorizontalBarChartColumns(groupAnalysis));
+  }, [groupAnalysis]);
 
   const formatData = useCallback(async () => {
     setChartData(
