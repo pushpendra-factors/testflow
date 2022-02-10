@@ -76,6 +76,10 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
                     {
                         "property": "hubspot_owner_id",
                         "value": ownerID ? ownerID: owner.value
+                    },
+                    {
+                        "property": "signup_method",
+                        "value": "Self-Serve Onboarding"
                     }                     
                 ]
             }
