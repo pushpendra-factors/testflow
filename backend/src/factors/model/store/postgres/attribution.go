@@ -543,9 +543,9 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 
 	var usersToBeAttributed []model.UserEventInfo
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
-	var usersHitConversion []string
-	for key := range userIDInfo {
-		usersHitConversion = append(usersHitConversion, key)
+	var coalUserIdsHitConversion []string
+	for _, v := range userIDInfo {
+		coalUserIdsHitConversion = append(coalUserIdsHitConversion, v.CoalUserID)
 	}
 
 	for _, linkedEvent := range linkedEvents {
@@ -557,16 +557,18 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 		}
 		var userIDList []string
 		userIDHitGoalEventTimestamp := make(map[string]int64)
-		userPropertiesIdsInBatches := U.GetStringListAsBatch(usersHitConversion, model.UserBatchSize)
-		for _, users := range userPropertiesIdsInBatches {
+		userPropertiesIdsInBatches := U.GetStringListAsBatch(coalUserIdsHitConversion, model.UserBatchSize)
+		for _, coalUserIds := range userPropertiesIdsInBatches {
 
 			// Add user batching.
-			usersPlaceHolder := U.GetValuePlaceHolder(len(users))
-			value := U.GetInterfaceList(users)
-			queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND " +
+			coalUserIdPlaceHolder := U.GetValuePlaceHolder(len(coalUserIds))
+			value := U.GetInterfaceList(coalUserIds)
+			queryEventHits := "SELECT user_id, timestamp FROM events" +
+				" JOIN users ON events.user_id = users.id AND users.project_id= ? " +
+				" WHERE events.project_id=? AND " +
 				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
-				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
-			qParams := []interface{}{projectID, queryFrom, queryTo}
+				" AND COALESCE(users.customer_user_id,users.id) = ANY (VALUES " + coalUserIdPlaceHolder + " ) "
+			qParams := []interface{}{projectID, projectID, queryFrom, queryTo}
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
 
