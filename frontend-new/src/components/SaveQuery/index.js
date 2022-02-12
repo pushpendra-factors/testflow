@@ -1,402 +1,263 @@
-import React, { useState, useCallback, useContext } from 'react';
-import MomentTz from 'Components/MomentTz';
-import {
-  Button,
-  Modal,
-  Input,
-  Switch,
-  Select,
-  Radio,
-  notification,
-} from 'antd';
-import { SVG, Text } from '../factorsComponents';
-import styles from './index.module.scss';
-import { saveQuery, updateQuery } from '../../reducers/coreQuery/services';
-import { useSelector, useDispatch, connect } from 'react-redux';
-import { QUERY_CREATED, QUERY_UPDATED } from '../../reducers/types';
-import { saveQueryToDashboard } from '../../reducers/dashboard/services';
-import {
-  QUERY_TYPE_EVENT,
-  QUERY_TYPE_FUNNEL,
-  QUERY_TYPE_ATTRIBUTION,
-  QUERY_TYPE_CAMPAIGN,
-  apiChartAnnotations,
-  CHART_TYPE_TABLE,
-  DASHBOARD_TYPES,
-  QUERY_TYPE_PROFILE,
-  QUERY_TYPE_KPI,
-} from '../../utils/constants';
-import { getSaveChartOptions } from '../../Views/CoreQuery/utils';
+import React, { useCallback, useContext, useReducer } from 'react';
+import { notification } from 'antd';
+import { saveQuery, updateQuery } from 'Reducers/coreQuery/services';
+import { useSelector, useDispatch } from 'react-redux';
+import { isStringLengthValid } from 'Utils/global';
+import { QUERY_CREATED, QUERY_UPDATED } from 'Reducers/types';
+import { saveQueryToDashboard } from 'Reducers/dashboard/services';
+import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
+import { QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
-import { fetchWeeklyIngishtsMetaData } from '../../reducers/insights';
-import factorsai from 'factorsai';
+import SaveQueryModal from './SaveQueryModal';
+import {
+  ACTION_TYPES,
+  SAVE_QUERY_INITIAL_STATE,
+  TOGGLE_APIS_CALLED,
+  TOGGLE_MODAL_VISIBILITY,
+  SET_ACTIVE_ACTION,
+  TOGGLE_ADD_TO_DASHBOARD_MODAL,
+} from './saveQuery.constants';
+import SaveQueryReducer from './saveQuery.reducer';
 
+import factorsai from 'factorsai';
+import QueryActions from './QueryActions';
+import { deleteQuery } from '../../reducers/coreQuery/services';
+import { getQuery } from './saveQuery.helpers';
+import AddToDashboardModal from './AddToDashboardModal';
 
 function SaveQuery({
   requestQuery,
-  visible,
-  setVisible,
   queryType,
   setQuerySaved,
-  fetchWeeklyIngishtsMetaData,
   getCurrentSorter,
   savedQueryId,
+  queryTitle,
 }) {
-  const [title, setTitle] = useState('');
-  const [addToDashboard, setAddToDashboard] = useState(false);
-  const [selectedDashboards, setSelectedDashboards] = useState([]);
-  const [dashboardPresentation, setDashboardPresentation] = useState(
-    apiChartAnnotations[CHART_TYPE_TABLE]
-  );
-  const [apisCalled, setApisCalled] = useState(false);
-  const { attributionMetrics } = useContext(CoreQueryContext);
-  const { active_project } = useSelector((state) => state.global);
-  const { dashboards } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
 
-  const startOfWeek = MomentTz().startOf('week').utc().unix();
-  const todayNow = MomentTz().utc().unix();
+  const { active_project } = useSelector((state) => state.global);
 
-  const handleTitleChange = useCallback((e) => {
-    setTitle(e.target.value);
-  }, []);
+  const { attributionMetrics } = useContext(CoreQueryContext);
 
-  const resetModalState = useCallback(() => {
-    setTitle('');
-    setSelectedDashboards([]);
-    setAddToDashboard(false);
-    setDashboardPresentation(apiChartAnnotations[CHART_TYPE_TABLE]);
-    setVisible(false);
-  }, [setVisible]);
-
-  const handleSaveCancel = useCallback(() => {
-    if (!apisCalled) {
-      resetModalState();
-    }
-  }, [resetModalState, apisCalled]);
-
-  const handleSelectChange = useCallback(
-    (value) => {
-      const resp = value.map((v) => {
-        return dashboards.data.find((d) => d.name === v).id;
-      });
-      setSelectedDashboards(resp);
-    },
-    [dashboards.data]
+  const [saveQueryState, localDispatch] = useReducer(
+    SaveQueryReducer,
+    SAVE_QUERY_INITIAL_STATE
   );
 
-  const handlePresentationChange = useCallback((e) => {
-    setDashboardPresentation(e.target.value);
+  const {
+    activeAction,
+    apisCalled,
+    showSaveModal,
+    showAddToDashModal,
+  } = saveQueryState;
+
+  const updateLocalReducer = useCallback(({ type, payload }) => {
+    localDispatch({ type, payload });
   }, []);
 
-  const toggleAddToDashboard = useCallback(
-    (val) => {
-      setAddToDashboard(val);
-    },
-    [setAddToDashboard]
-  );
+  const toggleModal = useCallback(() => {
+    updateLocalReducer({ type: TOGGLE_MODAL_VISIBILITY });
+  }, [updateLocalReducer]);
 
-  const getSelectedDashboards = useCallback(() => {
-    return selectedDashboards.map((s) => {
-      return dashboards.data.find((d) => d.id === s).name;
-    });
-  }, [dashboards.data, selectedDashboards]);
+  const toggleAddToDashModal = useCallback(() => {
+    updateLocalReducer({ type: TOGGLE_ADD_TO_DASHBOARD_MODAL });
+  }, [updateLocalReducer]);
 
-  const handleSave = useCallback(async () => {
-    if (!title.trim().length) {
-      notification.error({
-        message: 'Incorrect Input!',
-        description: 'Please Enter query title',
-        duration: 5,
-      });
-      return false;
-    }
-    if (addToDashboard && !selectedDashboards.length) {
-      notification.error({
-        message: 'Incorrect Input!',
-        description: 'Please select atleast one dashboard',
-        duration: 5,
-      });
-      return false;
-    }
+  const handleSaveClick = useCallback(() => {
+    toggleModal();
+    updateLocalReducer({ type: SET_ACTIVE_ACTION, payload: ACTION_TYPES.SAVE });
+  }, [updateLocalReducer, toggleModal]);
 
-    try {
-      setApisCalled(true);
-      let query;
-      const querySettings = {
-        ...getCurrentSorter(),
-        chart: dashboardPresentation,
-      }; 
-      if (queryType === QUERY_TYPE_FUNNEL) {
-        query = {
-          ...requestQuery,
-          fr: startOfWeek,
-          to: todayNow,
-        };
-      } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
-        query = {
-          ...requestQuery,
-          query: {
-            ...requestQuery.query,
-            from: startOfWeek,
-            to: todayNow,
-          },
-        };
-        querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
-      } else if (queryType === QUERY_TYPE_EVENT) {
-        query = {
-          query_group: requestQuery.map((q) => {
-            return {
-              ...q,
-              fr: startOfWeek,
-              to: todayNow,
-              gbt: q.gbt ? 'date' : '',
-            };
-          }),
-        };
-      } else if (queryType === QUERY_TYPE_CAMPAIGN) {
-        query = {
-          ...requestQuery,
-          query_group: requestQuery.query_group.map((q) => {
-            return {
-              ...q,
-              fr: startOfWeek,
-              to: todayNow,
-              gbt: q.gbt ? 'date' : '',
-            };
-          }),
-        };
-      } else if (queryType === QUERY_TYPE_KPI) {
-        query = {
-          ...requestQuery,
-          qG: requestQuery.qG.map((q) => {
-            return {
-              ...q,
-              fr: startOfWeek,
-              to: todayNow,
-              gbt: q.gbt ? 'date' : '',
-            };
-          }),
-        };
-      } else if (queryType === QUERY_TYPE_PROFILE) {
-        query = {
-          ...requestQuery,
-        };
-      }
-      let res;
-      if (!savedQueryId) {
-        const type = addToDashboard ? 1 : 2;
-        res = await saveQuery(
-          active_project.id,
-          title,
-          query,
-          type,
-          querySettings
-        );
-        dispatch({ type: QUERY_CREATED, payload: res.data });
-        setQuerySaved({ name: title, id: res.data.id });
-      } else {
-        const reqBody = {
-          title,
-          settings: querySettings,
-        };
-        if (addToDashboard) {
-          reqBody.type = 1;
+  const handleEditClick = useCallback(() => {
+    toggleModal();
+    updateLocalReducer({ type: SET_ACTIVE_ACTION, payload: ACTION_TYPES.EDIT });
+  }, [updateLocalReducer, toggleModal]);
+
+  const handleDeleteReport = useCallback(() => {
+    setQuerySaved(null);
+    dispatch(deleteQuery({ project_id: active_project.id, id: savedQueryId }));
+  }, [setQuerySaved, savedQueryId, active_project, dispatch]);
+
+  const handleAddToDashboard = useCallback(
+    async ({ selectedDashboards, dashboardPresentation, onSuccess }) => {
+      try {
+        if (!selectedDashboards.length) {
+          notification.error({
+            message: 'Incorrect Input!',
+            description: 'Please select atleast one dashboard',
+            duration: 5,
+          });
+          return false;
         }
-        res = await updateQuery(active_project.id, savedQueryId, reqBody);
-        dispatch({
-          type: QUERY_UPDATED,
-          queryId: savedQueryId,
-          payload: {
-            title,
-            settings: querySettings,
-          },
-        });
-        setQuerySaved({ name: title, id: savedQueryId });
-      }
-
-      if (addToDashboard) {
-        const reqBody = {
-          query_id: savedQueryId ? savedQueryId : res.data.id,
+        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+        const querySettings = {
+          chart: dashboardPresentation,
         };
+        const updateReqBody = {
+          settings: querySettings,
+          type: 1,
+          title: queryTitle,
+        };
+        await updateQuery(active_project.id, savedQueryId, updateReqBody);
+
+        const reqBody = {
+          query_id: savedQueryId,
+        };
+
         await saveQueryToDashboard(
           active_project.id,
-          selectedDashboards.join(','),
+          selectedDashboards.join(', '),
           reqBody
         );
+
+        notification.success({
+          message: 'Report added to dashboard Successfully',
+          duration: 5,
+        });
+
+        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+        onSuccess();
+      } catch (err) {
+        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+        console.log(err);
+        console.log(err.response);
+        notification.error({
+          message: 'Error!',
+          description: 'Something went wrong.',
+          duration: 5,
+        });
       }
-
-       //Factors SAVE_QUERY EDIT_QUERY tracking
-       if(savedQueryId){
-        factorsai.track('EDIT_QUERY',{'query_type': queryType, 'saved_query_id':savedQueryId, 'query_title': title, 'add_to_dashboard': `${addToDashboard}`});         
-      }
-      else{
-        factorsai.track('SAVE_QUERY',{'query_type': queryType, 'query_title': title, 'add_to_dashboard': `${addToDashboard}`}); 
-      }
-
-
-      notification.success({
-        message: 'Report Saved Successfully',
-        duration: 5,
-      });
-
-      setApisCalled(false);
-      fetchWeeklyIngishtsMetaData(active_project.id);
-      resetModalState();
-    } catch (err) {
-      setApisCalled(false);
-      console.log(err);
-      console.log(err.response);
-      notification.error({
-        message: 'Error!',
-        description: 'Something went wrong.',
-        duration: 5,
-      });
-    }
-  }, [
-    title,
-    active_project.id,
-    requestQuery,
-    dispatch,
-    resetModalState,
-    addToDashboard,
-    dashboardPresentation,
-    selectedDashboards,
-    queryType,
-    setQuerySaved,
-    attributionMetrics,
-    fetchWeeklyIngishtsMetaData,
-    getCurrentSorter,
-    savedQueryId,
-  ]);
-
-  let dashboardHelpText = 'Create a dashboard widget for regular monitoring';
-  const chartOptions = (
-    <div className='mt-4'>
-      <Radio.Group
-        value={dashboardPresentation}
-        onChange={handlePresentationChange}
-        className={styles.radioGroup}
-      >
-        {getSaveChartOptions(queryType, requestQuery)}
-      </Radio.Group>
-    </div>
+    },
+    [savedQueryId, active_project, updateLocalReducer, queryTitle]
   );
 
-  let dashboardList;
+  const handleSave = useCallback(
+    async ({ title, onSuccess }) => {
+      try {
+        if (!isStringLengthValid(title)) {
+          notification.error({
+            message: 'Incorrect Input!',
+            description: 'Please Enter query title',
+            duration: 5,
+          });
+          return false;
+        }
 
-  if (addToDashboard) {
-    dashboardHelpText = 'This widget will appear on the following dashboards:';
-    dashboardList = (
-      <div className='mt-5'>
-        <Select
-          mode='multiple'
-          style={{ width: '100%' }}
-          placeholder={'Please Select'}
-          onChange={handleSelectChange}
-          className={styles.multiSelectStyles}
-          value={getSelectedDashboards()}
-        >
-          {dashboards.data
-            .filter((d) => d.class === DASHBOARD_TYPES.USER_CREATED)
-            .map((d) => {
-              return (
-                <Select.Option value={d.name} key={d.id}>
-                  {d.name}
-                </Select.Option>
-              );
-            })}
-        </Select>
-      </div>
-    );
-  }
+        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+        const query = getQuery({ queryType, requestQuery });
+
+        const querySettings = {
+          ...getCurrentSorter(),
+        };
+
+        if (queryType === QUERY_TYPE_ATTRIBUTION) {
+          querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
+        }
+
+        if (activeAction === ACTION_TYPES.SAVE) {
+          const type = 2;
+          const res = await saveQuery(
+            active_project.id,
+            title,
+            query,
+            type,
+            querySettings
+          );
+          dispatch({ type: QUERY_CREATED, payload: res.data });
+          setQuerySaved({ name: title, id: res.data.id });
+        } else {
+          const reqBody = {
+            title,
+            settings: querySettings,
+          };
+          await updateQuery(active_project.id, savedQueryId, reqBody);
+          dispatch({
+            type: QUERY_UPDATED,
+            queryId: savedQueryId,
+            payload: {
+              title,
+              settings: querySettings,
+            },
+          });
+          setQuerySaved({ name: title, id: savedQueryId });
+        }
+
+        //Factors SAVE_QUERY EDIT_QUERY tracking
+        factorsai.track(activeAction, {
+          query_type: queryType,
+          saved_query_id: savedQueryId,
+          query_title: title,
+        });
+
+        notification.success({
+          message: 'Report Saved Successfully',
+          duration: 5,
+        });
+
+        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+        dispatch(fetchWeeklyIngishtsMetaData(active_project.id));
+        onSuccess();
+      } catch (err) {
+        updateLocalReducer({ type: TOGGLE_APIS_CALLED });
+        console.log(err);
+        console.log(err.response);
+        notification.error({
+          message: 'Error!',
+          description: 'Something went wrong.',
+          duration: 5,
+        });
+      }
+    },
+    [
+      active_project.id,
+      requestQuery,
+      dispatch,
+      queryType,
+      setQuerySaved,
+      attributionMetrics,
+      getCurrentSorter,
+      savedQueryId,
+      updateLocalReducer,
+      activeAction,
+    ]
+  );
 
   return (
     <>
-      <Button
-        onClick={setVisible.bind(this, true)}
-        type='primary'
-        size={'large'}
-        icon={<SVG name={'save'} size={20} color={'white'} />}
-      >
-        {savedQueryId ? 'Edit' : 'Save'}
-      </Button>
+      <QueryActions
+        savedQueryId={savedQueryId}
+        handleSaveClick={handleSaveClick}
+        handleEditClick={handleEditClick}
+        handleDeleteReport={handleDeleteReport}
+        toggleAddToDashboardModal={toggleAddToDashModal}
+      />
 
-      <Modal
-        centered={true}
-        visible={visible}
-        width={900}
-        title={null}
-        onOk={handleSave}
-        onCancel={handleSaveCancel}
-        className={'fa-modal--regular p-4 fa-modal--slideInDown'}
-        okText={'Save'}
-        closable={false}
-        confirmLoading={apisCalled}
-        transitionName=''
-        maskTransitionName=''
-      >
-        <div className='p-4'>
-          <Text extraClass='m-0' type={'title'} level={3} weight={'bold'}>
-            {savedQueryId ? 'Edit Report' : 'Create New Report'}
-          </Text>
-          <div className='pt-6'>
-            <Text
-              type={'title'}
-              level={7}
-              extraClass={`m-0 ${styles.inputLabel}`}
-            >
-              Title
-            </Text>
-            <Input
-              onChange={handleTitleChange}
-              value={title}
-              className={'fa-input'}
-              size={'large'}
-            />
-          </div>
-          {chartOptions}
-          {/* <div className={`pt-2 ${styles.linkText}`}>Help others to find this query easily?</div> */}
-          <React.Fragment>
-            <div className={'pt-6 flex items-center'}>
-              <Switch
-                onChange={toggleAddToDashboard}
-                checked={addToDashboard}
-                className={styles.switchBtn}
-                checkedChildren='On'
-                unCheckedChildren='Off'
-                disabled={queryType === QUERY_TYPE_PROFILE}
-              />
-              {queryType != QUERY_TYPE_PROFILE ? (
-                <Text extraClass='m-0' type='title' level={6} weight='bold'>
-                  Add to Dashboard
-                </Text>
-              ) : (
-                <Text
-                  extraClass='m-0 italic'
-                  type='title'
-                  level={9}
-                  color='grey'
-                >
-                  Add to Dashboard Unavailable for Profiles
-                </Text>
-              )}
-            </div>
-            {queryType != QUERY_TYPE_PROFILE ? (
-              <Text
-                extraClass={`pt-1 ${styles.noteText}`}
-                mini
-                type={'paragraph'}
-              >
-                {dashboardHelpText}
-              </Text>
-            ) : null}
-            {dashboardList}
-          </React.Fragment>
-        </div>
-      </Modal>
+      <SaveQueryModal
+        visible={showSaveModal}
+        isLoading={apisCalled}
+        modalTitle={
+          activeAction === ACTION_TYPES.SAVE
+            ? 'Create New Report'
+            : 'Edit Report Details'
+        }
+        queryType={queryType}
+        requestQuery={requestQuery}
+        onSubmit={handleSave}
+        toggleModalVisibility={toggleModal}
+        activeAction={activeAction}
+        queryTitle={queryTitle}
+      />
+
+      <AddToDashboardModal
+        toggleModalVisibility={toggleAddToDashModal}
+        visible={showAddToDashModal}
+        isLoading={apisCalled}
+        onSubmit={handleAddToDashboard}
+        queryType={queryType}
+        requestQuery={requestQuery}
+      />
     </>
   );
 }
 
-export default connect(null, { fetchWeeklyIngishtsMetaData })(SaveQuery);
+export default SaveQuery;
