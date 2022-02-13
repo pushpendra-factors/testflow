@@ -813,4 +813,19 @@ CREATE ROWSTORE TABLE IF NOT EXISTS custom_metrics(
 -- DOWN
 -- DROP TABLE IF EXISTS custom_metrics;
 
+CREATE TABLE leadgen_settings (
+    project_id bigint NOT NULL,
+    source int NOT NULL,
+    source_property text NOT NULL,
+    spreadsheet_id text,
+    sheet_name text,
+    row_read bigint,
+    created_at timestamp(6),
+    updated_at timestamp(6),
+    SHARD KEY (project_id),
+    PRIMARY KEY (project_id, source)
+);
+-- DOWN
+-- DROP TABLE IF EXISTS leadgen_settings;
+
 -- DROP DATABASE factors;
