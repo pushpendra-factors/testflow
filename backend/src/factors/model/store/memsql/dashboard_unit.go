@@ -629,7 +629,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 		"cache_payload": cachePayload,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	// Catches any panic in query execution and logs as an error. Prevents jobs from crashing.
+	// Catches any panic in query execution and logs as an error. Prevent jobs from crashing.
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	dashboardUnit := cachePayload.DashboardUnit
@@ -652,7 +652,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 		QueryRange:  U.SecondsToHMSString(to - from),
 	}
 
-	logCtx := log.WithFields(logFields)
+	logCtx := log.WithFields(logFields).WithFields(log.Fields{"PreUnitReport": unitReport})
 	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, timezoneString, false) {
 		return http.StatusOK, "", unitReport
 	}
@@ -666,17 +666,55 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	if baseQuery.GetClass() == model.QueryClassFunnel || baseQuery.GetClass() == model.QueryClassInsights {
 		analyticsQuery := baseQuery.(*model.Query)
 		unitReport.Query = analyticsQuery
+
 		result, errCode, errMsg = store.Analyze(projectID, *analyticsQuery)
+
+		channel := make(chan Result)
+
+		go store.runFunnelAndInsightsUnit(projectID, *analyticsQuery, channel)
+
+		select {
+		case response := <-channel:
+			result = response.res
+			err = response.err
+			errCode = response.errCode
+			errMsg = response.errMsg
+			if err != nil {
+				logCtx.WithFields(log.Fields{"Query": *analyticsQuery, "ErrCode": "UnitRunTimeOut", "Error": response.err}).Info("Failed for the FunnelORInsights unit")
+				errCode = http.StatusInternalServerError
+			} else {
+				logCtx.WithFields(log.Fields{"Query": *analyticsQuery, "ErrCode": "UnitRunTimeOut"}).Info("Success for the FunnelORInsights unit")
+				errCode = http.StatusOK
+			}
+		case <-time.After(16 * 60 * time.Second):
+			logCtx.WithFields(log.Fields{"Query": *analyticsQuery, "ErrCode": "UnitRunTimeOut"}).Info("Timeout for the FunnelORInsights unit")
+		}
+
 	} else if baseQuery.GetClass() == model.QueryClassAttribution {
+
 		attributionQuery := baseQuery.(*model.AttributionQueryUnit)
 		unitReport.Query = attributionQuery
-		result, err = store.ExecuteAttributionQuery(projectID, attributionQuery.Query)
-		logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": err}).Info("Got attribution result")
-		if err != nil && !model.IsIntegrationNotFoundError(err) {
-			errCode = http.StatusInternalServerError
-		} else {
-			errCode = http.StatusOK
+
+		channel := make(chan Result)
+		go store.runAttributionUnit(projectID, attributionQuery.Query, channel)
+
+		select {
+		case response := <-channel:
+			result = response.res
+			err = response.err
+			errCode = response.errCode
+			errMsg = response.errMsg
+			if err != nil && !model.IsIntegrationNotFoundError(response.err) {
+				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut", "Error": response.err}).Info("Failed for the attribution unit")
+				errCode = http.StatusInternalServerError
+			} else {
+				logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut"}).Info("Success for the attribution unit")
+				errCode = http.StatusOK
+			}
+		case <-time.After(20 * 60 * time.Second):
+			logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut"}).Info("Timeout for the attribution unit")
 		}
+
 	} else if baseQuery.GetClass() == model.QueryClassChannel {
 		channelQuery := baseQuery.(*model.ChannelQueryUnit)
 		unitReport.Query = channelQuery
@@ -718,6 +756,27 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	unitReport.TimeTaken = timeTaken
 	unitReport.TimeTakenStr = timeTakenString
 	return http.StatusOK, "", unitReport
+}
+
+type Result struct {
+	res     *model.QueryResult
+	err     error
+	errCode int
+	errMsg  string
+}
+
+func (store *MemSQL) runFunnelAndInsightsUnit(projectID uint64, queryOriginal model.Query, c chan Result) {
+
+	r, eCode, eMsg := store.Analyze(projectID, queryOriginal)
+	result := Result{res: r, errCode: eCode, errMsg: eMsg}
+	c <- result
+}
+
+func (store *MemSQL) runAttributionUnit(projectID uint64, queryOriginal *model.AttributionQuery, c chan Result) {
+
+	r, err := store.ExecuteAttributionQuery(projectID, queryOriginal)
+	result := Result{res: r, err: err, errMsg: ""}
+	c <- result
 }
 
 func (store *MemSQL) cacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
