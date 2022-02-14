@@ -1587,10 +1587,8 @@ func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID uint64,
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(projectID uint64, ids []string, properties []*postgres.Jsonb,
-	withUpdateTimestamp []bool, updateTimestamps []int64, source string) bool {
-	logFields := log.Fields{"project_id": projectID, "user_ids": ids, "update_timestamps": updateTimestamps,
-		"with_update_timestamp": withUpdateTimestamp}
+func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserPropertiesByIDParams []model.OverwriteUserPropertiesByIDParams) bool {
+	logFields := log.Fields{"batched_overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
@@ -1603,11 +1601,18 @@ func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(projectID uint64, ids []
 	}
 
 	hasFailure := false
-	for i := range ids {
-		status := store.overwriteUserPropertiesByIDWithTransaction(projectID, ids[i], properties[i],
-			withUpdateTimestamp[i], updateTimestamps[i], source, dbTx)
+	for i := range batchedOverwriteUserPropertiesByIDParams {
+		projectID := batchedOverwriteUserPropertiesByIDParams[i].ProjectID
+		userID := batchedOverwriteUserPropertiesByIDParams[i].UserID
+		userProperties := batchedOverwriteUserPropertiesByIDParams[i].UserProperties
+		withUpdateTimestamp := batchedOverwriteUserPropertiesByIDParams[i].WithUpdateTimestamp
+		updateTimestamps := batchedOverwriteUserPropertiesByIDParams[i].UpdateTimestamp
+		source := batchedOverwriteUserPropertiesByIDParams[i].Source
+
+		status := store.overwriteUserPropertiesByIDWithTransaction(projectID, userID, userProperties,
+			withUpdateTimestamp, updateTimestamps, source, dbTx)
 		if status != http.StatusAccepted {
-			logCtx.WithFields(log.Fields{"user_id": ids[i], "user_properties": properties[i]}).
+			logCtx.WithFields(log.Fields{"overwrite_user_properties_by_id_params": batchedOverwriteUserPropertiesByIDParams[i]}).
 				Error("Failed to overwrite user properties in batch using OverwriteUserPropertiesByIDInBatch.")
 			hasFailure = true
 		}
@@ -2033,10 +2038,7 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 	logCtx := log.WithFields(logFields)
 
 	var hasFailure bool
-	updateUserIDs := make([]string, 0)
-	updateProperties := make([]*postgres.Jsonb, 0)
-	withUpdateTimestamps := make([]bool, 0)
-	updateTimestamps := make([]int64, 0)
+	overwriteUserPropertiesByIDParamsInBatch := make([]model.OverwriteUserPropertiesByIDParams, 0)
 
 	for userID := range sessionUpdateUserIDs {
 		logCtx = logCtx.WithField("user_id", userID)
@@ -2069,10 +2071,14 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 		}
 
 		if C.AllowSessionBatchTransactionByProjectID(projectID) {
-			updateUserIDs = append(updateUserIDs, userID)
-			updateProperties = append(updateProperties, userPropertiesJsonb)
-			updateTimestamps = append(updateTimestamps, 0)
-			withUpdateTimestamps = append(withUpdateTimestamps, false)
+			overwriteUserPropertiesByIDParamsInBatch = append(overwriteUserPropertiesByIDParamsInBatch,
+				model.OverwriteUserPropertiesByIDParams{
+					ProjectID:           projectID,
+					UserID:              userID,
+					UserProperties:      userPropertiesJsonb,
+					WithUpdateTimestamp: false,
+					UpdateTimestamp:     0,
+				})
 			continue
 		}
 
@@ -2085,10 +2091,12 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 	}
 
 	if C.AllowSessionBatchTransactionByProjectID(projectID) {
-		hasFailure = store.OverwriteUserPropertiesByIDInBatch(projectID, updateUserIDs, updateProperties,
-			withUpdateTimestamps, updateTimestamps, "")
-		if hasFailure {
-			logCtx.Error("Failed to overwrite user properties record in batch process.")
+		batcheGetOverwriteUserPropertiesByIDParams := model.GetOverwriteUserPropertiesByIDParamsInBatch(overwriteUserPropertiesByIDParamsInBatch, 20)
+		for i := range batcheGetOverwriteUserPropertiesByIDParams {
+			hasFailure = store.OverwriteUserPropertiesByIDInBatch(batcheGetOverwriteUserPropertiesByIDParams[i])
+			if hasFailure {
+				logCtx.Error("Failed to overwrite user properties record in batch process.")
+			}
 		}
 
 	}

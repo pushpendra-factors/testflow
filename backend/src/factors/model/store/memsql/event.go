@@ -607,22 +607,10 @@ func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, ev
 	return values, U.GetCategoryType(property, values), nil
 }
 
-func getBatchedParametersForUpdateEventProperties(eventIDs, userIDs []string, sessionProperties []*U.PropertiesMap,
-	updateTimestamp []int64, optionalEventUserProperties []*postgres.Jsonb, batchSize int) (
-	[][]string, [][]string, [][]*U.PropertiesMap, [][]int64, [][]*postgres.Jsonb) {
-	batchedEventIDs := util.GetStringListAsBatch(eventIDs, batchSize)
-	batchedUserIDs := util.GetStringListAsBatch(userIDs, batchSize)
-	batchedSessionProperties := util.GetPropertiesMapAsBatch(sessionProperties, batchSize)
-	batchedUpdateTimestamp := util.GetInt64AsBatch(updateTimestamp, batchSize)
-	batchedOptionalEventUserProperties := util.GetPostgresJsonbAsBatch(optionalEventUserProperties, batchSize)
+func (store *MemSQL) UpdateEventPropertiesInBatch(projectID uint64,
+	batchedUpdateEventPropertiesParams []model.UpdateEventPropertiesParams) bool {
 
-	return batchedEventIDs, batchedUserIDs, batchedSessionProperties, batchedUpdateTimestamp, batchedOptionalEventUserProperties
-}
-
-func (store *MemSQL) UpdateEventPropertiesInBatch(projectID uint64, ids, userIDs []string, properties []*U.PropertiesMap,
-	updateTimestamp []int64, optionalEventUserProperties []*postgres.Jsonb) bool {
-
-	logFields := log.Fields{"project_id": projectID, "event_ids": ids, "user_ids": userIDs}
+	logFields := log.Fields{"project_id": projectID, "batched_update_event_properties_params": batchedUpdateEventPropertiesParams}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
@@ -635,15 +623,18 @@ func (store *MemSQL) UpdateEventPropertiesInBatch(projectID uint64, ids, userIDs
 	}
 
 	hasFailure := false
-	for i := range properties {
-		userID := userIDs[i]
-		eventID := ids[i]
-		updateTimestamp := updateTimestamp[i]
+	for i := range batchedUpdateEventPropertiesParams {
+		projectID := batchedUpdateEventPropertiesParams[i].ProjectID
+		userID := batchedUpdateEventPropertiesParams[i].UserID
+		eventID := batchedUpdateEventPropertiesParams[i].EventID
+		updateTimestamp := batchedUpdateEventPropertiesParams[i].SessionEventTimestamp
+		properties := batchedUpdateEventPropertiesParams[i].SessionProperties
+		optionalEventUserProperties := batchedUpdateEventPropertiesParams[i].NewSessionEventUserProperties
 
-		status := store.updateEventPropertiesWithTransaction(projectID, eventID, userID, properties[i],
-			updateTimestamp, optionalEventUserProperties[i], dbTx)
+		status := store.updateEventPropertiesWithTransaction(projectID, eventID, userID, properties,
+			updateTimestamp, optionalEventUserProperties, dbTx)
 		if status != http.StatusAccepted {
-			logCtx.WithFields(log.Fields{"event_id": eventID, "user_id": userID, "user_properties": properties[i]}).
+			logCtx.WithFields(log.Fields{"update_event_properties_params": batchedUpdateEventPropertiesParams[i]}).
 				Error("Failed to overwrite event user properties in batch.")
 			hasFailure = true
 		}
@@ -1180,13 +1171,8 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 	// and update. Update current_event as session start and do the same till the end.
 	var currentSessionCandidateEvent model.Event
 	isFirstEvent := true
-	updateEventPropertiesEventIDs := make([]string, 0)
-	updateEventPropertiesUserIDs := make([]string, 0)
-	updateEventPropertiesSessionPropertiesMap := make([]*U.PropertiesMap, 0)
-	updateEventPropertiesSessionEventTimestamp := make([]int64, 0)
-	updateEventPropertiesNewSessionEventUserPropertiesJsonb := make([]*postgres.Jsonb, 0)
-	updateEventPropertiesEventsOfSession := make([][]*model.Event, 0)
 	updateEventSessionUserPropertiesRecordMap := make(map[string]model.SessionUserProperties, 0)
+	updateEventPropertiesParams := make([]model.UpdateEventPropertiesParams, 0)
 	for i := 0; i < len(events); {
 
 		if isFirstEvent {
@@ -1449,12 +1435,16 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 			}
 
 			if C.AllowSessionBatchTransactionByProjectID(projectId) {
-				updateEventPropertiesEventIDs = append(updateEventPropertiesEventIDs, sessionEvent.ID)
-				updateEventPropertiesUserIDs = append(updateEventPropertiesUserIDs, sessionEvent.UserId)
-				updateEventPropertiesSessionPropertiesMap = append(updateEventPropertiesSessionPropertiesMap, &sessionPropertiesMap)
-				updateEventPropertiesSessionEventTimestamp = append(updateEventPropertiesSessionEventTimestamp, sessionEvent.Timestamp+1)
-				updateEventPropertiesNewSessionEventUserPropertiesJsonb = append(updateEventPropertiesNewSessionEventUserPropertiesJsonb, newSessionEventUserPropertiesJsonb)
-				updateEventPropertiesEventsOfSession = append(updateEventPropertiesEventsOfSession, eventsOfSession)
+				updateEventPropertiesParams = append(updateEventPropertiesParams,
+					model.UpdateEventPropertiesParams{
+						ProjectID:                     projectId,
+						EventID:                       sessionEvent.ID,
+						UserID:                        sessionEvent.UserId,
+						SessionProperties:             &sessionPropertiesMap,
+						SessionEventTimestamp:         sessionEvent.Timestamp,
+						NewSessionEventUserProperties: newSessionEventUserPropertiesJsonb,
+						EventsOfSession:               eventsOfSession,
+					})
 			} else {
 				// Update session event properties.
 				errCode = store.UpdateEventProperties(projectId, sessionEvent.ID,
@@ -1495,32 +1485,23 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 	}
 
 	if C.AllowSessionBatchTransactionByProjectID(projectId) {
-		batchedEventIDs, batchedUserIDs, batchedSessionProperties,
-			batchedUpdateSessionEventTimestamp, batchedoptionalEventUserProperties := getBatchedParametersForUpdateEventProperties(updateEventPropertiesEventIDs,
-			updateEventPropertiesUserIDs, updateEventPropertiesSessionPropertiesMap, updateEventPropertiesSessionEventTimestamp,
-			updateEventPropertiesNewSessionEventUserPropertiesJsonb, 20)
 
-		eventsOfSessionIndex := 0
-		for i := range batchedEventIDs {
-			batchSize := len(batchedEventIDs[i])
-			failure := store.UpdateEventPropertiesInBatch(projectId, batchedEventIDs[i], batchedUserIDs[i], batchedSessionProperties[i],
-				batchedUpdateSessionEventTimestamp[i], batchedoptionalEventUserProperties[i])
+		batchedUpdatedEventPropertiesParams := model.GetUpdateEventPropertiesParamsAsBatch(updateEventPropertiesParams, 20)
+		for batchIndex := range batchedUpdatedEventPropertiesParams {
+			failure := store.UpdateEventPropertiesInBatch(projectId, batchedUpdatedEventPropertiesParams[batchIndex])
 			if failure {
 				logCtx.Error("Failed updating session event properties on add session in batch mode.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 					0, isLastEventToBeProcessed, errCode
 			}
 
-			for j := 0; j < batchSize; j++ {
-				eventsOfSession := updateEventPropertiesEventsOfSession[eventsOfSessionIndex]
-				// associate user_properties state using session of the event.
-				for i := range eventsOfSession {
-					userPropertiesRefID := eventsOfSession[i].ID
+			for i := range batchedUpdatedEventPropertiesParams[batchIndex] {
+				eventsOfSession := batchedUpdatedEventPropertiesParams[batchIndex][i].EventsOfSession
+				for _, event := range eventsOfSession {
+					userPropertiesRefID := event.ID
 					sessionUserPropertiesRecordMap[userPropertiesRefID] = updateEventSessionUserPropertiesRecordMap[userPropertiesRefID]
 				}
-				eventsOfSessionIndex++
 			}
-
 		}
 	}
 
