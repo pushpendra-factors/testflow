@@ -64,6 +64,7 @@ func main() {
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableOLTPQueriesMemSQLImprovements := flag.String("enable_OLTP_queries_memsql_improvements", "", "")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
+	useSessionBatchTransactionByProjectID := flag.String("use_session_batch_transaction_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -102,17 +103,18 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:                    *primaryDatastore,
-		RedisHost:                           *redisHost,
-		RedisPort:                           *redisPort,
-		RedisHostPersistent:                 *redisHostPersistent,
-		RedisPortPersistent:                 *redisPortPersistent,
-		SentryDSN:                           *sentryDSN,
-		CacheSortedSet:                      *cacheSortedSet,
-		AllowChannelGroupingForProjectIDs:   *allowChannelGroupingForProjectIDs,
-		DisableRedisWrites:                  disableRedisWrites,
-		EnableOLTPQueriesMemSQLImprovements: *enableOLTPQueriesMemSQLImprovements,
-		CaptureSourceInUsersTable:           *captureSourceInUsersTable,
+		PrimaryDatastore:                      *primaryDatastore,
+		RedisHost:                             *redisHost,
+		RedisPort:                             *redisPort,
+		RedisHostPersistent:                   *redisHostPersistent,
+		RedisPortPersistent:                   *redisPortPersistent,
+		SentryDSN:                             *sentryDSN,
+		CacheSortedSet:                        *cacheSortedSet,
+		AllowChannelGroupingForProjectIDs:     *allowChannelGroupingForProjectIDs,
+		DisableRedisWrites:                    disableRedisWrites,
+		EnableOLTPQueriesMemSQLImprovements:   *enableOLTPQueriesMemSQLImprovements,
+		CaptureSourceInUsersTable:             *captureSourceInUsersTable,
+		UseSessionBatchTransactionByProjectID: *useSessionBatchTransactionByProjectID,
 	}
 
 	C.InitConf(config)
