@@ -94,6 +94,15 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 
+	if projectID == 2251799820000000 {
+		userFECount := make(map[string][]float64)
+		for user, data := range *attributionData {
+			userFECount[user] = data.LinkedEventsCount
+		}
+		logCtx.WithFields(log.Fields{
+			"userFECount": userFECount,
+		}).Info("Done FireAttribution")
+	}
 	if C.GetAttributionDebug() == 1 {
 		uniqueKeys := len(*attributionData)
 		logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
@@ -350,13 +359,17 @@ func (pg *Postgres) runAttribution(projectID uint64,
 		logCtx.WithFields(log.Fields{
 			"count of usersToBeAttributed ":   len(usersToBeAttributed),
 			"count of linkedFunnelEventUsers": len(linkedFunnelEventUsers),
-			"usersToBeAttributed value:":      usersToBeAttributed,
 			"linkedFunnelEventUsers value ":   linkedFunnelEventUsers,
 		}).Info("values before applying attribution")
 	}
 
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
 
+	if projectID == 2251799820000000 {
+		logCtx.WithFields(log.Fields{
+			"count of usersToBeAttributed ": len(usersToBeAttributed),
+		}).Info("count of usersToBeAttributed after merge")
+	}
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
@@ -369,8 +382,6 @@ func (pg *Postgres) runAttribution(projectID uint64,
 			"count of  all usersToBeAttributed": len(usersToBeAttributed),
 			"count of userConversionHit":        len(userConversionHit),
 			"count of userLinkedFEHit":          len(userLinkedFEHit),
-			"all usersToBeAttributed value ":    usersToBeAttributed,
-			"userConversionHit value ":          userConversionHit,
 			"userLinkedFEHit value":             userLinkedFEHit,
 		}).Info("values after applying attribution")
 	}
