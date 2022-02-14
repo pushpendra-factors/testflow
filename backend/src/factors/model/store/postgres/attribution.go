@@ -349,7 +349,7 @@ func (pg *Postgres) runAttribution(projectID uint64,
 			EventName: goalEventName})
 	}
 
-	logCtx := log.WithFields(log.Fields{"LinkedEventDebug": "True", "ProjectId": projectID})
+	logCtx := log.WithFields(log.Fields{"LinkedEventDebug5": "True", "ProjectId": projectID})
 
 	err, linkedFunnelEventUsers := pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted)
 	if err != nil {
@@ -630,10 +630,15 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 			U.CloseReadQuery(rows, tx)
 		}
 
+		// Get coalesced Id for Funnel Event user_ids
+		userIDToCoalIDInfo, err := pg.GetCoalesceIDFromUserIDs(userIDList, projectID)
+		if err != nil {
+			return err, nil
+		}
 		// add the filtered users with eventId usersToBeAttributed
 		for _, userId := range userIDList {
 			usersToBeAttributed = append(usersToBeAttributed,
-				model.UserEventInfo{CoalUserID: userIDInfo[userId].CoalUserID, EventName: linkedEvent.Name,
+				model.UserEventInfo{CoalUserID: userIDToCoalIDInfo[userId].CoalUserID, EventName: linkedEvent.Name,
 					Timestamp: userIDHitGoalEventTimestamp[userId], EventType: model.EventTypeLinkedFunnelEvent})
 		}
 	}
