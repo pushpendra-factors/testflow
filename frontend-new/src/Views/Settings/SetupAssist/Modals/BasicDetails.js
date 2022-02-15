@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import {
-  Row, Col, Button, Input, Form, Progress, message, Select, Popconfirm, Upload
+  Row, Col, Button, Input, Form, Progress, message, Select, Popconfirm, Upload, Checkbox
 } from 'antd';
 import { ExclamationCircleFilled } from '@ant-design/icons';
 import { Text, SVG } from 'factorsComponents';
 import { createProjectWithTimeZone, udpateProjectDetails } from 'Reducers/global';
+import { projectAgentInvite, fetchProjectAgents } from 'Reducers/agentActions';
 import { TimeZoneOffsetValues } from 'Utils/constants'; 
 import Congrates from './Congrates';
 import 'animate.css';
@@ -24,11 +25,12 @@ const TimeZoneName =
   "AEST" :'AEST (Australia Eastern Standard Time)', 
 }
 
-function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, udpateProjectDetails }) {
+function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, udpateProjectDetails, projectAgentInvite, fetchProjectAgents }) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
+  const [checkbox, setcheckbox] = useState(true);
 
   const onFinish = values => {
        let projectData = {
@@ -41,16 +43,25 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
 
       createProjectWithTimeZone(projectData).then((res) => {
         const projectId = res.data.id;
+        if(checkbox) {
+          projectAgentInvite(projectId, {'email': 'solutions@factors.ai','role': 2}).then(() => {
+            message.success('Invitation sent successfully!');
+            setFormData(projectData);
+          }).catch((err) => {
+            message.error(err);
+            setFormData(projectData);
+          });
+        }
         if(imageUrl) {
           udpateProjectDetails(projectId, {'profile_picture':imageUrl}).then(() => {
             message.success('Profile Image Uploaded')
             setFormData(projectData);
           }).catch((err) => {
             message.error('error:',err)
+            setFormData(projectData);
           })
-        } else {
-          setFormData(projectData);
         }
+        setFormData(projectData);
         message.success('New Project Created!');
       }).catch((err) => {
         message.error('Oops! Something went wrong.');
@@ -144,6 +155,17 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                                 <Button type={'text'} className={'m-0'} style={{backgroundColor:'white'}}><SVG name={'infoCircle'} size={18} color="gray"/></Button>
                             </Popconfirm>
                         </Col>
+                        <Col span={24}>
+                            <Form.Item 
+                                label={null}
+                                name="invite_support"            
+                            >
+                                <div className='flex items-center'>
+                                    <Checkbox defaultChecked={checkbox} onChange={(e) => setcheckbox(e.target.checked)}></Checkbox>
+                                    <Text type={'title'} size={10} color={'grey'} extraClass={'m-0 ml-2 mt-2 mb-2'} >Invite <span className={'font-bold'}>solutions@factors.ai</span> into this project for ongoing support</Text>
+                                </div>
+                            </Form.Item>
+                        </Col>
                         {showProfile?
                         <Col span={24}>
                             <Row className={'animate__animated animate__fadeIn mt-4 border-t'}>
@@ -216,4 +238,4 @@ const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
   });
 
-export default connect(mapStateToProps, { createProjectWithTimeZone, udpateProjectDetails })(BasicDetails);
+export default connect(mapStateToProps, { createProjectWithTimeZone, udpateProjectDetails, projectAgentInvite, fetchProjectAgents })(BasicDetails);
