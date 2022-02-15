@@ -167,7 +167,6 @@ type Configuration struct {
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
 	CustomerEnabledProjectsWeeklyInsights  []uint64
-	MultipleTimezoneEnabledProjects        []uint64
 	DemoProjectIds                         []uint64
 	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -207,6 +206,7 @@ type Configuration struct {
 	HubspotAPIOnboardingHAPIKey                 string
 	AllowProfilesGroupSupport                   string
 	DebugEnabled                                bool
+	UseSessionBatchTransactionByProjectID       string
 	MergeAmpIDAndSegmentIDWithUserIDByProjectID string
 	FivetranGroupId                             string
 	FivetranLicenseKey                          string
@@ -1912,12 +1912,7 @@ func IsWeeklyInsightsWhitelisted(loggedInUUID string, projectId uint64) bool {
 }
 
 func IsMultipleProjectTimezoneEnabled(projectId uint64) bool {
-	for _, id := range configuration.MultipleTimezoneEnabledProjects {
-		if id == projectId {
-			return true
-		}
-	}
-	return false
+	return true
 }
 
 func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
@@ -2018,4 +2013,13 @@ func IsProfileGroupSupportEnabled(projectId uint64) bool {
 		return true
 	}
 	return false
+}
+
+func AllowSessionBatchTransactionByProjectID(projectID uint64) bool {
+	allProjects, allowedProjects, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseSessionBatchTransactionByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjects[projectID]
 }

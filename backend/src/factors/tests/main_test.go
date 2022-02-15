@@ -94,6 +94,7 @@ func TestMain(m *testing.M) {
 		AllowSupportForSourceColumnInUsers:          "*",
 		MergeAmpIDAndSegmentIDWithUserIDByProjectID: "*",
 		AllowProfilesGroupSupport:                   "*",
+		UseSessionBatchTransactionByProjectID:       "*",
 	}
 	C.InitConf(config)
 

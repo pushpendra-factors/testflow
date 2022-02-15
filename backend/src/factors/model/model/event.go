@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"time"
@@ -51,6 +52,16 @@ type EventWithProperties struct {
 type EventPropertiesWithCount struct {
 	Count      int
 	Properties U.PropertiesMap
+}
+
+type UpdateEventPropertiesParams struct {
+	ProjectID                     uint64
+	EventID                       string
+	UserID                        string
+	SessionProperties             *util.PropertiesMap
+	SessionEventTimestamp         int64
+	NewSessionEventUserProperties *postgres.Jsonb
+	EventsOfSession               []*Event
 }
 
 const cacheIndexUserLastEvent = "user_last_event"
@@ -214,4 +225,20 @@ func GetEventsMinMaxTimestampsAndEventnameIds(events []*Event) (int64, int64, []
 	}
 
 	return fromTimestamp, toTimestamp, eventIds, eventNameIds
+}
+
+func GetUpdateEventPropertiesParamsAsBatch(list []UpdateEventPropertiesParams, batchSize int) [][]UpdateEventPropertiesParams {
+	batchList := make([][]UpdateEventPropertiesParams, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
 }

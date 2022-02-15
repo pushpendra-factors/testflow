@@ -68,8 +68,6 @@ spec:
             - 08c28d53-4460-4254-865a-39a0126652c0
             - --app_name
             - beam_dashboard_caching_heavy
-            - --timezone_enabled_projects
-            - "446"
             envFrom:
             - configMapRef:
                 name: config-env

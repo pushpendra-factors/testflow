@@ -293,6 +293,10 @@ func recordSDKRequestProcessedMetrics(requestType string, execStartTime time.Tim
 	recordLatencyMetricByRequestType(requestType, execStartTime)
 }
 
+func isValidTokenString(token string) bool {
+	return token != "" && token != "undefined" && token != "null" && token != "Null"
+}
+
 func recordLatencyMetricByRequestType(requestType string, execStartTime time.Time) {
 	var metricName string
 	switch requestType {
@@ -1207,8 +1211,13 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 	}
 
 	if errCode == http.StatusNotFound {
-		log.WithField("token", token).Error(
-			"Failed to get project from sdk project token.")
+		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
+		if isValidTokenString(token) {
+			logCtx.Error("Failed to get project from sdk project token.")
+		} else {
+			log.WithField("token", token).Warn("Invalid token on sdk payload.")
+		}
+
 		return http.StatusUnauthorized,
 			&TrackResponse{Error: "Tracking failed. Invalid token."}
 	}
@@ -1265,8 +1274,13 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 	}
 
 	if errCode == http.StatusNotFound {
-		log.WithField("token", token).Error(
-			"Failed to get project from sdk project token.")
+		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
+		if isValidTokenString(token) {
+			logCtx.Error("Failed to get project from sdk project token.")
+		} else {
+			log.WithField("token", token).Warn("Invalid token on sdk payload.")
+		}
+
 		return http.StatusUnauthorized,
 			&IdentifyResponse{Error: "Identify failed. Invalid token."}
 	}
@@ -1375,8 +1389,13 @@ func AddUserPropertiesByToken(token string,
 	}
 
 	if errCode == http.StatusNotFound {
-		log.WithField("token", token).Error(
-			"Failed to get project from sdk project token.")
+		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
+		if isValidTokenString(token) {
+			logCtx.Error("Failed to get project from sdk project token.")
+		} else {
+			log.WithField("token", token).Warn("Invalid token on sdk payload.")
+		}
+
 		return http.StatusUnauthorized, &AddUserPropertiesResponse{
 			Error: "Add user properties failed. Invalid token."}
 	}
@@ -1425,8 +1444,13 @@ func UpdateEventPropertiesByToken(token string,
 	}
 
 	if errCode == http.StatusNotFound {
-		log.WithField("token", token).Error(
-			"Failed to get project from sdk project token.")
+		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
+		if isValidTokenString(token) {
+			logCtx.Error("Failed to get project from sdk project token.")
+		} else {
+			log.WithField("token", token).Warn("Invalid token on sdk payload.")
+		}
+
 		return http.StatusUnauthorized, &UpdateEventPropertiesResponse{
 			Error: "Update event properties failed. Invalid token."}
 	}

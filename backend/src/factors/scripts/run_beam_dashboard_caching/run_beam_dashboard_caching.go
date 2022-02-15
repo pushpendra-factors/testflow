@@ -66,8 +66,6 @@ var (
 	skipAttribution  = flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
 	runningForMemsql = flag.Int("running_for_memsql", 0, "Disable routines for memsql.")
 
-	multipleTimezoneEnabledProjects = flag.String("timezone_enabled_projects", "", "List of projectIds where multiple timezones are enabled")
-
 	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName           = flag.String("app_name", "", "Override default app_name.")
 	disableRedisWrites        = flag.Bool("disable_redis_writes", false, "To disable redis writes.")
@@ -269,7 +267,6 @@ func main() {
 		RedisHost:                           *redisHost,
 		RedisPort:                           *redisPort,
 		SentryDSN:                           *sentryDSN,
-		MultipleTimezoneEnabledProjects:     C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
 		DisableRedisWrites:                  disableRedisWrites,
 		EnableFilterOptimisation:            *enableFilterOptimisation,
 		FilterPropertiesStartTimestamp:      *filterPropertiesStartTimestamp,

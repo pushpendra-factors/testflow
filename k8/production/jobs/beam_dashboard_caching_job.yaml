@@ -68,8 +68,6 @@ spec:
             - '*'
             - --exclude_project_id
             - 398,576
-            - --timezone_enabled_projects
-            - "446"
             envFrom:
             - configMapRef:
                 name: config-env

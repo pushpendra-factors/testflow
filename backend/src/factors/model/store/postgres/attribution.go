@@ -340,19 +340,9 @@ func (pg *Postgres) runAttribution(projectID uint64,
 			EventName: goalEventName})
 	}
 
-	logCtx := log.WithFields(log.Fields{"LinkedEventDebug": "True", "ProjectId": projectID})
-
 	err, linkedFunnelEventUsers := pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted)
 	if err != nil {
 		return nil, err
-	}
-	if projectID == 2251799820000000 {
-		logCtx.WithFields(log.Fields{
-			"count of usersToBeAttributed ":   len(usersToBeAttributed),
-			"count of linkedFunnelEventUsers": len(linkedFunnelEventUsers),
-			"usersToBeAttributed value:":      usersToBeAttributed,
-			"linkedFunnelEventUsers value ":   linkedFunnelEventUsers,
-		}).Info("values before applying attribution")
 	}
 
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
@@ -363,16 +353,6 @@ func (pg *Postgres) runAttribution(projectID uint64,
 		query.LookbackDays, query.From, query.To, query.AttributionKey)
 	if err != nil {
 		return nil, err
-	}
-	if projectID == 2251799820000000 {
-		logCtx.WithFields(log.Fields{
-			"count of  all usersToBeAttributed": len(usersToBeAttributed),
-			"count of userConversionHit":        len(userConversionHit),
-			"count of userLinkedFEHit":          len(userLinkedFEHit),
-			"all usersToBeAttributed value ":    usersToBeAttributed,
-			"userConversionHit value ":          userConversionHit,
-			"userLinkedFEHit value":             userLinkedFEHit,
-		}).Info("values after applying attribution")
 	}
 
 	attributionData := make(map[string]*model.AttributionData)
@@ -543,9 +523,9 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 
 	var usersToBeAttributed []model.UserEventInfo
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
-	var usersHitConversion []string
-	for key := range userIDInfo {
-		usersHitConversion = append(usersHitConversion, key)
+	var coalUserIdsHitConversion []string
+	for _, v := range userIDInfo {
+		coalUserIdsHitConversion = append(coalUserIdsHitConversion, v.CoalUserID)
 	}
 
 	for _, linkedEvent := range linkedEvents {
@@ -557,16 +537,18 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 		}
 		var userIDList []string
 		userIDHitGoalEventTimestamp := make(map[string]int64)
-		userPropertiesIdsInBatches := U.GetStringListAsBatch(usersHitConversion, model.UserBatchSize)
-		for _, users := range userPropertiesIdsInBatches {
+		userPropertiesIdsInBatches := U.GetStringListAsBatch(coalUserIdsHitConversion, model.UserBatchSize)
+		for _, coalUserIds := range userPropertiesIdsInBatches {
 
 			// Add user batching.
-			usersPlaceHolder := U.GetValuePlaceHolder(len(users))
-			value := U.GetInterfaceList(users)
-			queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND " +
+			coalUserIdPlaceHolder := U.GetValuePlaceHolder(len(coalUserIds))
+			value := U.GetInterfaceList(coalUserIds)
+			queryEventHits := "SELECT user_id, timestamp FROM events" +
+				" JOIN users ON events.user_id = users.id AND users.project_id= ? " +
+				" WHERE events.project_id=? AND " +
 				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
-				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
-			qParams := []interface{}{projectID, queryFrom, queryTo}
+				" AND COALESCE(users.customer_user_id,users.id) = ANY (VALUES " + coalUserIdPlaceHolder + " ) "
+			qParams := []interface{}{projectID, projectID, queryFrom, queryTo}
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
 
@@ -617,10 +599,15 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 			U.CloseReadQuery(rows, tx)
 		}
 
+		// Get coalesced Id for Funnel Event user_ids
+		userIDToCoalIDInfo, err := pg.GetCoalesceIDFromUserIDs(userIDList, projectID)
+		if err != nil {
+			return err, nil
+		}
 		// add the filtered users with eventId usersToBeAttributed
 		for _, userId := range userIDList {
 			usersToBeAttributed = append(usersToBeAttributed,
-				model.UserEventInfo{CoalUserID: userIDInfo[userId].CoalUserID, EventName: linkedEvent.Name,
+				model.UserEventInfo{CoalUserID: userIDToCoalIDInfo[userId].CoalUserID, EventName: linkedEvent.Name,
 					Timestamp: userIDHitGoalEventTimestamp[userId], EventType: model.EventTypeLinkedFunnelEvent})
 		}
 	}

@@ -359,7 +359,7 @@ const (
 	AdwordsClickReportType = 4
 	SecsInADay             = int64(86400)
 	LookbackCapInDays      = 180
-	UserBatchSize          = 3000
+	UserBatchSize          = 5000
 	QueryRangeLimit        = 93
 	LookBackWindowLimit    = 93
 )

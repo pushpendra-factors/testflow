@@ -120,6 +120,32 @@ var UserSourceMap = map[string]int{
 
 const USERS = "users"
 
+type OverwriteUserPropertiesByIDParams struct {
+	ProjectID           uint64
+	UserID              string
+	UserProperties      *postgres.Jsonb
+	WithUpdateTimestamp bool
+	UpdateTimestamp     int64
+	Source              string
+}
+
+func GetOverwriteUserPropertiesByIDParamsInBatch(list []OverwriteUserPropertiesByIDParams,
+	batchSize int) [][]OverwriteUserPropertiesByIDParams {
+	batchList := make([][]OverwriteUserPropertiesByIDParams, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
+}
+
 func GetRequestSourcePointer(requestSource int) *int {
 	var requestSourcePointer = requestSource
 	return &requestSourcePointer
