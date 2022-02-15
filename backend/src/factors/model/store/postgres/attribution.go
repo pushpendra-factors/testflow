@@ -94,15 +94,6 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 
-	if projectID == 2251799820000000 {
-		userFECount := make(map[string][]float64)
-		for user, data := range *attributionData {
-			userFECount[user] = data.LinkedEventsCount
-		}
-		logCtx.WithFields(log.Fields{
-			"userFECount": userFECount,
-		}).Info("Done FireAttribution")
-	}
 	if C.GetAttributionDebug() == 1 {
 		uniqueKeys := len(*attributionData)
 		logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
@@ -349,41 +340,19 @@ func (pg *Postgres) runAttribution(projectID uint64,
 			EventName: goalEventName})
 	}
 
-	logCtx := log.WithFields(log.Fields{"LinkedEventDebug5": "True", "ProjectId": projectID})
-
 	err, linkedFunnelEventUsers := pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted)
 	if err != nil {
 		return nil, err
 	}
-	if projectID == 2251799820000000 {
-		logCtx.WithFields(log.Fields{
-			"count of usersToBeAttributed ":   len(usersToBeAttributed),
-			"count of linkedFunnelEventUsers": len(linkedFunnelEventUsers),
-			"linkedFunnelEventUsers value ":   linkedFunnelEventUsers,
-		}).Info("values before applying attribution")
-	}
 
 	model.MergeUsersToBeAttributed(&usersToBeAttributed, linkedFunnelEventUsers)
 
-	if projectID == 2251799820000000 {
-		logCtx.WithFields(log.Fields{
-			"count of usersToBeAttributed ": len(usersToBeAttributed),
-		}).Info("count of usersToBeAttributed after merge")
-	}
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
 		query.LookbackDays, query.From, query.To, query.AttributionKey)
 	if err != nil {
 		return nil, err
-	}
-	if projectID == 2251799820000000 {
-		logCtx.WithFields(log.Fields{
-			"count of  all usersToBeAttributed": len(usersToBeAttributed),
-			"count of userConversionHit":        len(userConversionHit),
-			"count of userLinkedFEHit":          len(userLinkedFEHit),
-			"userLinkedFEHit value":             userLinkedFEHit,
-		}).Info("values after applying attribution")
 	}
 
 	attributionData := make(map[string]*model.AttributionData)
