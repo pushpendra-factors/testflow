@@ -180,6 +180,7 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return H.DashboardQueryResponsePayload{
 			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
 	}
+	resultGroup.Query = requestPayload
 	return resultGroup, http.StatusOK, "", "", false
 }
 
@@ -393,5 +394,6 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 			"result": result,
 		}).Info("Not a dashboard result, final result")
 	}
+	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false
 }

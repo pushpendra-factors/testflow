@@ -1,5 +1,14 @@
-.inputLabel {
-  color: #8692a3;
+@import '../../styles/abstracts/variables';
+
+.input {
+  color: $fa-color--mono-5;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  border-radius: 6px;
+  background-color: #f5f6f8;
+  border: 1px solid #e7e9ed;
 }
 
 .linkText {
@@ -19,9 +28,9 @@
 }
 
 .radioGroup {
-  :global(.ant-radio-wrapper) {
-    margin-top: 0.75rem !important;
-  }
+  display: flex !important;
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
 }
 
 .multiSelectStyles,
@@ -70,5 +79,23 @@
     line-height: 20px;
     letter-spacing: -0.01em;
     color: #3e516c;
+  }
+}
+
+.more-actions-menu {
+  padding: 1.25rem;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+
+  a {
+    display: flex;
+    align-items: center;
+    column-gap: 0.5rem;
+    padding: 0.5rem;
+
+    &:hover {
+      background-color: rgba(183, 190, 200, 0.1);
+      border-radius: 5px;
+    }
   }
 }

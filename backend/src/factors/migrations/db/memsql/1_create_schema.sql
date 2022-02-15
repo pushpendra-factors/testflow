@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS agents (
     int_google_organic_refresh_token text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    is_onboarding_flow_seen boolean,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
     KEY (updated_at),
@@ -448,6 +449,7 @@ CREATE TABLE IF NOT EXISTS projects (
     hubspot_touch_points json,
     jobs_metadata json,
     channel_group_rules json,
+    profile_picture text,
     KEY (updated_at),
     PRIMARY KEY (id),
     KEY (token),
@@ -469,6 +471,8 @@ CREATE TABLE IF NOT EXISTS queries (
     created_by text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
+    id_text text,
+    converted boolean,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
@@ -808,5 +812,20 @@ CREATE ROWSTORE TABLE IF NOT EXISTS custom_metrics(
 )
 -- DOWN
 -- DROP TABLE IF EXISTS custom_metrics;
+
+CREATE TABLE leadgen_settings (
+    project_id bigint NOT NULL,
+    source int NOT NULL,
+    source_property text NOT NULL,
+    spreadsheet_id text,
+    sheet_name text,
+    row_read bigint,
+    created_at timestamp(6),
+    updated_at timestamp(6),
+    SHARD KEY (project_id),
+    PRIMARY KEY (project_id, source)
+);
+-- DOWN
+-- DROP TABLE IF EXISTS leadgen_settings;
 
 -- DROP DATABASE factors;

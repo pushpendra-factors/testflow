@@ -759,6 +759,12 @@ func SkipDemoProjectWriteAccess() gin.HandlerFunc {
 			blacklistedHandlerNames["DeleteFilterHandler"] = true
 			blacklistedHandlerNames["UpdateTemplateConfigHandler"] = true
 			blacklistedHandlerNames["GetProjectSettingHandler"] = true
+			blacklistedHandlerNames["IntDeleteHandler"] = true
+			blacklistedHandlerNames["UpdateContentGroupHandler"] = true
+			blacklistedHandlerNames["DeleteContentGroupHandler"] = true
+			blacklistedHandlerNames["CreateContentGroupHandler"] = true
+			blacklistedHandlerNames["AgentInviteBatch"] = true
+			blacklistedHandlerNames["CreateCustomMetric"] = true
 			handlerName := c.HandlerName()
 			handlerNameStrings := strings.Split(handlerName, "/")
 			handlerNameStrings = strings.Split(handlerNameStrings[len(handlerNameStrings)-1], ".")

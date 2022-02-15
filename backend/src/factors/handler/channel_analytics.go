@@ -166,6 +166,7 @@ func ChannelQueryHandler(c *gin.Context) {
 		return
 	}
 
+	queryResult.Query = queryPayload
 	c.JSON(http.StatusOK, queryResult)
 }
 

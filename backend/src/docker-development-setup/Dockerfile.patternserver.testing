@@ -13,5 +13,5 @@ RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/* && apk add 
 ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 COPY --from=builder /go/factors/cloud_storage/projects/1/models/1596524994039/chunks /go/projects/1/models/1596524994039/chunks
 COPY --from=builder /go/bin/pattern-app /go/bin/pattern-app
-CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/bin/pattern-app --etcd=etcd:2379 --db_host=postgres --ip=patternserver --bucket_name=/go --disk_dir=/go; break; fi; sleep 2; done"]
+CMD ["sh","-c", "/go/bin/pattern-app --primary_datastore=${PRI_DS} --memsql_host=${MEMSQL_HOST} --etcd=etcd:2379 --db_host=postgres --ip=patternserver --bucket_name=/go --disk_dir=/go"]
 EXPOSE 8100

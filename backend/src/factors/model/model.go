@@ -543,8 +543,22 @@ type Model interface {
 	UpdateContentGroup(id string, projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string)
 	CheckURLContentGroupValue(pageUrl string, projectID uint64) map[string]string
 
+	// fivetran mappings
+	DisableFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string) error
+	EnableFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string) error
+	GetFiveTranMapping(ProjectID uint64, Integration string) (string, error)
+	GetActiveFiveTranMapping(ProjectID uint64, Integration string) (model.FivetranMappings, error)
+	GetAllActiveFiveTranMapping(ProjectID uint64, Integration string) ([]string, error)
+	GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, error)
+	PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string) error
+	GetAllActiveFiveTranMappingByIntegration(Integration string) ([]model.FivetranMappings, error)
+
 	//leadgen
 	GetLeadgenSettingsForProject(projectID uint64) ([]model.LeadgenSettings, error)
 	GetLeadgenSettings() ([]model.LeadgenSettings, error)
 	UpdateRowRead(projectID uint64, source int, rowRead int64) (int, error)
+
+	// integration document
+	InsertIntegrationDocument(doc model.IntegrationDocument) error
+	UpsertIntegrationDocument(doc model.IntegrationDocument) error
 }

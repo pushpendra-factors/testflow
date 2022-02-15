@@ -1,3 +1,4 @@
+import { isNull } from "lodash";
 import {
   DASHBOARDS_LOADED,
   DASHBOARDS_LOADING,
@@ -47,7 +48,7 @@ export default function (state = defaultState, action) {
       return {
         ...defaultState,
         dashboards: { ...defaultState.dashboards, data: action.payload },
-        activeDashboard: action.payload[0],
+        activeDashboard: isNull(localStorage.getItem('active-dashboard-id'))? action.payload[0]:JSON.parse(localStorage.getItem('active-dashboard-id')),
       };
     case DASHBOARD_UNITS_LOADING:
       return {

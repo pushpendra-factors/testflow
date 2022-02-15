@@ -90,6 +90,7 @@ import {
 } from '../../utils/dataFormatter';
 import ProfileComposer from '../../components/ProfileComposer';
 import _ from 'lodash';
+import { IconAndTextSwitchQueryType } from './coreQuery.helpers';
 import factorsai from 'factorsai';
 
 function CoreQuery({
@@ -990,45 +991,30 @@ function CoreQuery({
     setQueryOptions(options);
   };
 
-  const IconAndTextSwitchQueryType = (queryType) => {
+  const handleRunQuery = useCallback(() => {
     switch (queryType) {
-      case QUERY_TYPE_EVENT:
-        return {
-          text: 'Analyse Events',
-          icon: 'events_cq',
-        };
-      case QUERY_TYPE_FUNNEL:
-        return {
-          text: 'Find event funnel for',
-          icon: 'funnels_cq',
-        };
-      case QUERY_TYPE_CAMPAIGN:
-        return {
-          text: 'Campaign Analytics',
-          icon: 'campaigns_cq',
-        };
-      case QUERY_TYPE_ATTRIBUTION:
-        return {
-          text: 'Attributions',
-          icon: 'attributions_cq',
-        };
-      case QUERY_TYPE_KPI:
-        return {
-          text: 'KPI',
-          icon: 'attributions_cq',
-        };
-      case QUERY_TYPE_PROFILE:
-        return {
-          text: 'Profile Analysis',
-          icon: 'profiles_cq',
-        };
-      default:
-        return {
-          text: 'Templates',
-          icon: 'templates_cq',
-        };
+      case QUERY_TYPE_EVENT: {
+        runQuery(querySaved);
+        break
+      }
+      case QUERY_TYPE_FUNNEL: {
+        runFunnelQuery(querySaved);
+        break
+      }
+      case QUERY_TYPE_KPI: {
+        runKPIQuery(querySaved);
+        break
+      }
+      case QUERY_TYPE_ATTRIBUTION: {
+        runAttributionQuery(querySaved);
+        break
+      }
+      case QUERY_TYPE_PROFILE: {
+        runProfileQuery(querySaved);
+        break
+      }
     }
-  };
+  }, [queryType, querySaved, runQuery, runFunnelQuery, runKPIQuery, runAttributionQuery, runProfileQuery])
 
   const title = () => {
     const IconAndText = IconAndTextSwitchQueryType(queryType);
@@ -1090,19 +1076,19 @@ function CoreQuery({
       return (
         <QueryComposer
           queries={queries}
-          runQuery={runQuery}
+          runQuery={handleRunQuery}
           eventChange={queryChange}
           queryType={queryType}
           queryOptions={queryOptions}
           setQueryOptions={setExtraOptions}
-          runFunnelQuery={runFunnelQuery}
+          runFunnelQuery={handleRunQuery}
           activeKey={activeKey}
         />
       );
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      return <AttrQueryComposer runAttributionQuery={runAttributionQuery} />;
+      return <AttrQueryComposer runAttributionQuery={handleRunQuery} />;
     }
 
     if (queryType === QUERY_TYPE_KPI) {
@@ -1115,7 +1101,7 @@ function CoreQuery({
           queryOptions={queryOptions}
           setQueryOptions={setExtraOptions}
           activeKey={activeKey}
-          handleRunQuery={runKPIQuery}
+          handleRunQuery={handleRunQuery}
           selectedMainCategory={selectedMainCategory}
           setSelectedMainCategory={setSelectedMainCategory}
           KPIConfigProps={KPIConfigProps}
@@ -1136,7 +1122,7 @@ function CoreQuery({
         <ProfileComposer
           queries={profileQueries}
           setQueries ={setProfileQueries}
-          runProfileQuery={runProfileQuery}
+          runProfileQuery={handleRunQuery}
           eventChange={profileQueryChange}
           queryType={queryType}
           queryOptions={queryOptions}
@@ -1237,19 +1223,19 @@ function CoreQuery({
   };
 
   const composerFunctions = {
-    runQuery,
+    runQuery: handleRunQuery,
     queryChange,
     profileQueryChange,
     setExtraOptions,
-    runFunnelQuery,
-    runAttributionQuery,
-    runProfileQuery,
+    runFunnelQuery: handleRunQuery,
+    runAttributionQuery: handleRunQuery,
+    runProfileQuery: handleRunQuery,
     activeKey,
     queries,
     profileQueries,
     setProfileQueries,
     showResult,
-    runKPIQuery,
+    runKPIQuery: handleRunQuery,
     setQueries,
     queryOptions,
     selectedMainCategory,
@@ -1275,8 +1261,8 @@ function CoreQuery({
         selGroup?.category == 'channels'
           ? item.object_type
           : item.entity
-          ? item.entity
-          : item.object_type;
+            ? item.entity
+            : item.object_type;
       return [ddName, item.name, item.data_type, ddtype];
     });
 
@@ -1322,22 +1308,22 @@ function CoreQuery({
         {!showResult && drawerVisible && checkIfnewComposer()
           ? renderCreateQFlow()
           : !showResult && (
-              <CoreQueryHome
-                setQueryType={setQueryType}
-                setDrawerVisible={closeResultPage}
-                setQueries={setQueries}
-                setProfileQueries={setProfileQueries}
-                setQueryOptions={setExtraOptions}
-                setClickedSavedReport={setClickedSavedReport}
-                location={location}
-                setActiveKey={setActiveKey}
-                setBreakdownType={setBreakdownType}
-                setNavigatedFromDashboard={setNavigatedFromDashboard}
-                updateChartTypes={updateChartTypes}
-                updateSavedQuerySettings={updateSavedQuerySettings}
-                setAttributionMetrics={setAttributionMetrics}
-              />
-            )}
+            <CoreQueryHome
+              setQueryType={setQueryType}
+              setDrawerVisible={closeResultPage}
+              setQueries={setQueries}
+              setProfileQueries={setProfileQueries}
+              setQueryOptions={setExtraOptions}
+              setClickedSavedReport={setClickedSavedReport}
+              location={location}
+              setActiveKey={setActiveKey}
+              setBreakdownType={setBreakdownType}
+              setNavigatedFromDashboard={setNavigatedFromDashboard}
+              updateChartTypes={updateChartTypes}
+              updateSavedQuerySettings={updateSavedQuerySettings}
+              setAttributionMetrics={setAttributionMetrics}
+            />
+          )}
 
         {showResult ? (
           <CoreQueryContext.Provider

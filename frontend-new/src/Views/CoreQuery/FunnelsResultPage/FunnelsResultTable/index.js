@@ -106,7 +106,6 @@ function FunnelsResultTable({
             arrayMapper.forEach((elem) => {
               delete rest[`${elem.mapper}`];
             });
-            console.log("getCSVData -> rest", rest)
             return { ...rest, Conversion: rest.Conversion + '%' };
           }),
         };
