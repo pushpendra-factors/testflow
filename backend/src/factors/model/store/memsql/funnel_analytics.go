@@ -21,7 +21,7 @@ const (
 func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
 		"project_id": projectId,
-		"query": query,
+		"query":      query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
@@ -49,15 +49,24 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog1")
+	}
 
 	if len(query.GroupByProperties) > 0 {
 		// $no_group comes as the last record for MemSQL query. Put back as first.
 		noGroupRow := result.Rows[len(result.Rows)-1]
 		result.Rows = append([][]interface{}{noGroupRow}, result.Rows[0:len(result.Rows)-1]...)
 	}
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog2")
+	}
 
 	// should be done before translation of group keys
 	translateNullToZeroOnFunnelResult(result)
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog3")
+	}
 
 	if len(query.EventsWithProperties) > 1 {
 		err = addStepTimeToMeta(result, logCtx)
@@ -66,11 +75,17 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 			return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 		}
 	}
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog4")
+	}
 
 	err = addStepConversionPercentageToFunnel(result)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed adding funnel step conversion percentage.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+	}
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog5")
 	}
 
 	err = translateGroupKeysIntoColumnNames(result, query.GroupByProperties)
@@ -78,17 +93,35 @@ func (store *MemSQL) RunFunnelQuery(projectId uint64, query model.Query) (*model
 		logCtx.WithError(err).Error("Failed translating group keys on result.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog6")
+	}
 
 	sanitizeNumericalBucketRanges(result, &query)
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog7")
+	}
 
 	if model.HasGroupByDateTypeProperties(query.GroupByProperties) {
 		model.SanitizeDateTypeRows(result, &query)
 	}
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog8")
+	}
 
 	addQueryToResultMeta(result, query)
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog9")
+	}
 
 	updatedMetaStepTimeInfoHeaders(result)
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog10")
+	}
 	model.SanitizeStringSumToNumeric(result)
+	if projectId == 659 {
+		logCtx.WithFields(log.Fields{"result": result, "err": err}).Info("SenseHQDebugLog11")
+	}
 	return result, http.StatusOK, "Successfully executed query"
 }
 
@@ -118,7 +151,7 @@ func updatedMetaStepTimeInfoHeaders(result *model.QueryResult) {
 // addStepTimeToMeta adds step time in result's meta metrics
 func addStepTimeToMeta(result *model.QueryResult, logCtx *log.Entry) error {
 	logFields := log.Fields{
-		"result": result,
+		"result":  result,
 		"log_ctx": logCtx,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -186,7 +219,7 @@ func addStepTimeToMeta(result *model.QueryResult, logCtx *log.Entry) error {
 func BuildFunnelQuery(projectId uint64, query model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
-		"query": query,
+		"query":      query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	addIndexToGroupByProperties(&query)
@@ -309,7 +342,7 @@ func addStepConversionPercentageToFunnel(result *model.QueryResult) error {
 func getConversionPercentageAsString(prevCount float64, curCount float64) string {
 	logFields := log.Fields{
 		"prev_count": prevCount,
-		"cur_count": curCount,
+		"cur_count":  curCount,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var conversion float64
@@ -428,7 +461,7 @@ WITH
 func isSessionAnalysisReq(start int64, end int64) bool {
 	logFields := log.Fields{
 		"start": start,
-		"end": end,
+		"end":   end,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if start != 0 && end != 0 && start < end {
@@ -439,15 +472,15 @@ func isSessionAnalysisReq(start int64, end int64) bool {
 
 func buildStepXToYJoin(stepName string, prevStepName string, previousCombinedUsersStepName string,
 	isSessionAnalysisReqBool bool, q model.Query, i int) string {
-		logFields := log.Fields{
-			"step_name": stepName,
-			"prev_step_name": prevStepName,
-			"previous_combined_user_step_name": previousCombinedUsersStepName,
-			"is_session_analysis_req_bool": isSessionAnalysisReqBool,
-			"q": q,
-			"i": i,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"step_name":                        stepName,
+		"prev_step_name":                   prevStepName,
+		"previous_combined_user_step_name": previousCombinedUsersStepName,
+		"is_session_analysis_req_bool":     isSessionAnalysisReqBool,
+		"q":                                q,
+		"i":                                i,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	comparisonSymbol := ">="
 	if q.EventsWithProperties[i].Name == q.EventsWithProperties[i-1].Name {
@@ -474,15 +507,15 @@ func buildStepXToYJoin(stepName string, prevStepName string, previousCombinedUse
 
 func buildStepXToY(stepXToYSelect string, prevStepName string, previousCombinedUsersStepName string,
 	stepXToYJoin string, stepName string, i int) string {
-		logFields := log.Fields{
-			"step_name": stepName,
-			"prev_step_name": prevStepName,
-			"previous_combined_user_step_name": previousCombinedUsersStepName,
-			"step_x_to_y_join": stepXToYJoin,
-			"step_x_to_y_select": stepXToYSelect,
-			"i": i,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"step_name":                        stepName,
+		"prev_step_name":                   prevStepName,
+		"previous_combined_user_step_name": previousCombinedUsersStepName,
+		"step_x_to_y_join":                 stepXToYJoin,
+		"step_x_to_y_select":               stepXToYSelect,
+		"i":                                i,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	stepXToY := fmt.Sprintf("SELECT %s FROM %s %s GROUP BY %s.coal_user_id", stepXToYSelect, previousCombinedUsersStepName, stepXToYJoin, stepName)
 	if i == 1 {
@@ -493,7 +526,7 @@ func buildStepXToY(stepXToYSelect string, prevStepName string, previousCombinedU
 func buildAddSelect(stepName string, i int) string {
 	logFields := log.Fields{
 		"step_name": stepName,
-		"i": i,
+		"i":         i,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	addSelect := fmt.Sprintf("COALESCE(users.customer_user_id,events.user_id) as coal_user_id, FIRST(events.user_id, FROM_UNIXTIME(events.timestamp)) as user_id,"+
@@ -592,7 +625,7 @@ SUM(step_1) AS step_1 FROM bucketed GROUP BY _group_key_0, _group_key_1_bucket O
 func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []interface{}, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
-		"q": q,
+		"q":          q,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(q.EventsWithProperties) == 0 {
@@ -814,14 +847,14 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 // builds group keys for event properties for given step (event_with_properties).
 func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
 	groupProps []model.QueryGroupByProperty, ewpIndex int, timezoneString string) (string, []interface{}, string, bool) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"event_with_properties": eventWithProperties,
-			"group_props": groupProps,
-			"ewp_index": ewpIndex,
-			"timezone_string": timezoneString,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":            projectID,
+		"event_with_properties": eventWithProperties,
+		"group_props":           groupProps,
+		"ewp_index":             ewpIndex,
+		"timezone_string":       timezoneString,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	groupPropsByStep := make([]model.QueryGroupByProperty, 0, 0)
 	groupByUserProperties := false

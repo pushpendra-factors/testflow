@@ -1,7 +1,6 @@
 package model
 
 import (
-	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -55,9 +54,6 @@ func ValidateCustomMetric(customMetric CustomMetric) (string, bool) {
 
 	if customMetric.Name == "" {
 		return "Invalid Name for custom metric", false
-	}
-	if strings.Contains(customMetric.Name, " ") {
-		return "Space in property name is not allowed for custom metric.", false
 	}
 	return "", true
 }
