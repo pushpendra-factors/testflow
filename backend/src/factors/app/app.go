@@ -129,6 +129,8 @@ func main() {
 	hubspotAPIOnboardingHAPIKey := flag.String("hubspot_API_onboarding_HAPI_key", "", "")
 	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 
+	fivetranGroupId := flag.String("fivetran_group_id", "", "")
+	fivetranLicenseKey := flag.String("fivetran_license_key", "", "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -215,6 +217,8 @@ func main() {
 		ResourcePoolForAnalytics:                *resourcePoolForAnalytics,
 		HubspotAPIOnboardingHAPIKey:             *hubspotAPIOnboardingHAPIKey,
 		AllowProfilesGroupSupport:               *allowProfilesGroupSupport,
+		FivetranGroupId:                         *fivetranGroupId,
+		FivetranLicenseKey:                      *fivetranLicenseKey,
 	}
 	C.InitConf(config)
 
