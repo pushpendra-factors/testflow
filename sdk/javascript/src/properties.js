@@ -165,12 +165,12 @@ function getPageLoadTime() {
  * Property - Example
  * referrer - https://google.com/search
  * */
-function getEventDefault() {
+function getEventDefault(referrer='') {
     let dp = {};
     dp[PREFIX+"page_title"] = document.title;
 
-    dp[PREFIX+"referrer"] = document.referrer;
-    let referrerURL = util.parseURLString(document.referrer);
+    dp[PREFIX+"referrer"] = referrer;
+    let referrerURL = util.parseURLString(referrer);
     dp[PREFIX+"referrer_domain"] = referrerURL.host;
     // url domain with path and without query params.
     dp[PREFIX+"referrer_url"] = referrerURL.host + referrerURL.path + util.getCleanHash(referrerURL.hash);
