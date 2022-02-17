@@ -159,7 +159,7 @@ const getProfileWithProperties = (queries) => {
       }
     });
     pwps.push({
-      // an: ev.alias,
+      an: ev.alias,
       ty: ev.label,
       pr: filterProps,
       tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
@@ -1500,6 +1500,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
       }
     });
     return {
+      alias: e.an,
       label: e.ty,
       filters: evfilters,
     };

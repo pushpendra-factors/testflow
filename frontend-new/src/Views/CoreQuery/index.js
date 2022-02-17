@@ -710,7 +710,6 @@ function CoreQuery({
           durationObj,
           groupAnalysis
         ); 
-        console.log('Index Query---->', query)
         //Factors RUN_QUERY tracking
         factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_PROFILE});
 
