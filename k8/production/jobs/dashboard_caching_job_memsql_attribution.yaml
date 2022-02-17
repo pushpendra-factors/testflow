@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: shared-persistent-pool
+    nodePool: preemptible-high-mem
   name: dashboard-caching-job-memsql-attribution
 spec:
   schedule: "0 1/6 * * *" # In UTC. Every 6 hours.
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: shared-persistent-pool
+            nodePool: preemptible-high-mem
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: shared-persistent-pool
+            cloud.google.com/gke-nodepool: preemptible-high-mem
           containers:
           - name: dashboard-caching-job-memsql
             image: us.gcr.io/factors-production/dashboard-caching-job:v001
