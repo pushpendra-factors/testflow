@@ -184,7 +184,7 @@ func TransformResultsToKPIResults(results []*QueryResult, hasGroupByTimestamp bo
 		tmpResult = &QueryResult{}
 
 		tmpResult.Headers = getTransformedHeaders(result.Headers, hasGroupByTimestamp, hasAnyGroupBy, displayCategory)
-		tmpResult.Rows = GetTransformedRows(result.Headers, result.Rows, hasGroupByTimestamp, hasAnyGroupBy, len(result.Headers), timezoneString)
+		tmpResult.Rows = GetTransformedRows(tmpResult.Headers, result.Rows, hasGroupByTimestamp, hasAnyGroupBy, len(result.Headers), timezoneString)
 		resultantResults = append(resultantResults, tmpResult)
 	}
 	return resultantResults

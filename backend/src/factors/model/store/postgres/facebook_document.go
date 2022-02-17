@@ -566,55 +566,43 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	responseSelectKeys := make([]string, 0, 0)
 	responseSelectMetrics := make([]string, 0, 0)
 
-	smartPropertyCampaignGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	smartPropertyAdGroupGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	facebookGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	// Group By
+	// Group By and select keys
 	for _, groupBy := range query.GroupBy {
 		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
-		if !isPresent {
+		isSmartProperty := !isPresent
+		if isSmartProperty {
 			if groupBy.Object == model.AdwordsCampaign {
-				smartPropertyCampaignGroupBys = append(smartPropertyCampaignGroupBys, groupBy)
+				value := fmt.Sprintf("campaign.properties->>'%s' as campaign_%s", groupBy.Property, groupBy.Property)
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
+
 				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("campaign_%s", groupBy.Property))
 			} else {
-				smartPropertyAdGroupGroupBys = append(smartPropertyAdGroupGroupBys, groupBy)
+				value := fmt.Sprintf("ad_group.properties->>'%s' as ad_group_%s", groupBy.Property, groupBy.Property)
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
+
 				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("ad_group_%s", groupBy.Property))
 			}
 		} else {
 			key := groupBy.Object + ":" + groupBy.Property
+			if groupBy.Object == CAFilterChannel {
+				value := fmt.Sprintf("'facebook' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+			} else {
+				value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
+			}
+
 			groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, model.FacebookInternalRepresentationToExternalRepresentation[key])
-			facebookGroupBys = append(facebookGroupBys, groupBy)
 		}
 	}
 	if isGroupByTimestamp {
 		groupByStatement = joinWithComma(append(groupByKeysWithoutTimestamp, model.AliasDateTime)...)
 	} else {
 		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
-	}
-
-	// SelectKeys
-
-	for _, groupBy := range facebookGroupBys {
-		key := groupBy.Object + ":" + groupBy.Property
-		if groupBy.Object == CAFilterChannel {
-			value := fmt.Sprintf("'facebook' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
-			selectKeys = append(selectKeys, value)
-			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
-		} else {
-			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], model.FacebookInternalRepresentationToExternalRepresentation[key])
-			selectKeys = append(selectKeys, value)
-			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
-		}
-	}
-	for _, groupBy := range smartPropertyCampaignGroupBys {
-		value := fmt.Sprintf("campaign.properties->>'%s' as campaign_%s", groupBy.Property, groupBy.Property)
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
-	}
-	for _, groupBy := range smartPropertyAdGroupGroupBys {
-		value := fmt.Sprintf("ad_group.properties->>'%s' as ad_group_%s", groupBy.Property, groupBy.Property)
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
 	}
 
 	finalSelectKeys = append(finalSelectKeys, selectKeys...)
@@ -634,8 +622,8 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
-	whereConditionForFilters := getFacebookFiltersWhereStatementWithSmartProperty(query.Filters, smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
-	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
+	whereConditionForFilters := getFacebookFiltersWhereStatementWithSmartProperty(query.Filters)
+	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(query.GroupBy)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForFacebookWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
 	finalParams := make([]interface{}, 0)
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
@@ -822,7 +810,7 @@ func buildWhereConditionForGBTForFacebook(groupByCombinations []map[string]inter
 	return whereConditionForGBT, params
 }
 
-func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1, smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {
+func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1) string {
 	resultStatement := ""
 	var filterValue string
 	campaignFilter := ""
