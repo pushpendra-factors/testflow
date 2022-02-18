@@ -206,8 +206,8 @@ type Configuration struct {
 	HubspotAPIOnboardingHAPIKey                 string
 	AllowProfilesGroupSupport                   string
 	DebugEnabled                                bool
-	UseSessionBatchTransactionByProjectID       string
 	MergeAmpIDAndSegmentIDWithUserIDByProjectID string
+	SessionBatchTransactionBatchSize            int
 }
 
 type Services struct {
@@ -2004,11 +2004,6 @@ func IsProfileGroupSupportEnabled(projectId uint64) bool {
 	return false
 }
 
-func AllowSessionBatchTransactionByProjectID(projectID uint64) bool {
-	allProjects, allowedProjects, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseSessionBatchTransactionByProjectID, "")
-	if allProjects {
-		return true
-	}
-
-	return allowedProjects[projectID]
+func GetSessionBatchTransactionBatchSize() int {
+	return GetConfig().SessionBatchTransactionBatchSize
 }

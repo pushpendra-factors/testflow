@@ -94,7 +94,7 @@ func TestMain(m *testing.M) {
 		AllowSupportForSourceColumnInUsers:          "*",
 		MergeAmpIDAndSegmentIDWithUserIDByProjectID: "*",
 		AllowProfilesGroupSupport:                   "*",
-		UseSessionBatchTransactionByProjectID:       "*",
+		SessionBatchTransactionBatchSize:            50,
 	}
 	C.InitConf(config)
 
@@ -109,6 +109,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Println(err)
 	}
+
 	C.InitFilemanager(path, *env, config)
 	C.InitQueueClient(config.RedisHost, config.RedisPort)
 	C.InitDuplicateQueueClient(config.RedisHost, config.RedisPort)
