@@ -1,4 +1,3 @@
-import { isNull } from "lodash";
 import {
   DASHBOARDS_LOADED,
   DASHBOARDS_LOADING,
@@ -15,8 +14,8 @@ import {
   DASHBOARD_UPDATED,
   SET_ACTIVE_PROJECT,
   DASHBOARD_LAST_REFRESHED,
-} from "../types";
-import { getRearrangedData } from "./utils";
+} from '../types';
+import { getRearrangedData } from './utils';
 
 const defaultState = {
   dashboards: {
@@ -48,7 +47,7 @@ export default function (state = defaultState, action) {
       return {
         ...defaultState,
         dashboards: { ...defaultState.dashboards, data: action.payload },
-        activeDashboard: isNull(localStorage.getItem('active-dashboard-id'))? action.payload[0]:JSON.parse(localStorage.getItem('active-dashboard-id')),
+        activeDashboard: action.payload[0],
       };
     case DASHBOARD_UNITS_LOADING:
       return {
