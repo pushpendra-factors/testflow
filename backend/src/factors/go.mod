@@ -19,7 +19,7 @@ require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/campoy/embedmd v0.0.0-20171205015432-c59ce00e0296 // indirect
 	github.com/certifi/gocertifi v0.0.0-20200211180108-c7c1fbc02894 // indirect
-	github.com/clearbit/clearbit-go v1.1.0 // indirect
+	github.com/clearbit/clearbit-go v1.1.0
 	github.com/client9/misspell v0.3.4 // indirect
 	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
