@@ -1302,6 +1302,12 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
         </>
       );
     } else {
+      const horizontalBarChart =
+        requestQuery.gGBy.length <= 3 ? (
+          <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
+            Display Bar Chart
+          </Radio>
+        ) : null;
       return (
         <>
           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
@@ -1314,6 +1320,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
             Display Stacked Column Chart
           </Radio>
           {commons}
+          {horizontalBarChart}
         </>
       );
     }

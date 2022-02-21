@@ -129,8 +129,8 @@ const AddToDashboardModal = ({
             This widget will appear on the following dashboards:
           </Text>
         </div>
-        {chartOptions}
         {dashboardList}
+        {chartOptions}
       </div>
     </AppModal>
   );

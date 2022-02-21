@@ -200,11 +200,10 @@ export const saveQuery = (projectId, title, query, type, settings) => {
 // };
 
 export const deleteQuery = ({ project_id, id }) => {
-  return async function(dispatch) {
+  return async function (dispatch) {
     try {
       dispatch({ type: QUERIES_LOADING });
-      const url = host + 'projects/' + project_id + '/queries/' + id;
-      await del(null, url);
+      await deleteReport({ project_id, queryId: id });
       dispatch({ type: QUERY_DELETED, payload: id });
     } catch (err) {
       console.log(err);
@@ -215,7 +214,7 @@ export const deleteQuery = ({ project_id, id }) => {
         duration: 5,
       });
     }
-  }
+  };
 };
 
 export const fetchQueries = (projectId) => {
@@ -329,4 +328,9 @@ export const fetchSmartPropertyRules = (projectId) => {
 export const updateQuery = (projectId, savedQueryId, reqBody) => {
   const url = host + 'projects/' + projectId + '/queries/' + savedQueryId;
   return put(null, url, reqBody);
+};
+
+export const deleteReport = ({ project_id, queryId }) => {
+  const url = host + 'projects/' + project_id + '/queries/' + queryId;
+  return del(null, url);
 };

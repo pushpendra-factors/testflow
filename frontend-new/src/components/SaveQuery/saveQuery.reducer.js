@@ -3,6 +3,7 @@ import {
   TOGGLE_MODAL_VISIBILITY,
   SET_ACTIVE_ACTION,
   TOGGLE_ADD_TO_DASHBOARD_MODAL,
+  TOGGLE_DELETE_MODAL,
 } from './saveQuery.constants';
 
 export default function (state, action) {
@@ -30,6 +31,12 @@ export default function (state, action) {
       return {
         ...state,
         showAddToDashModal: !state.showAddToDashModal,
+      };
+    }
+    case TOGGLE_DELETE_MODAL: {
+      return {
+        ...state,
+        showDeleteModal: !state.showDeleteModal,
       };
     }
     default:

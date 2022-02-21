@@ -192,7 +192,7 @@ function CoreQuery({
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
   const { globalFilters } = queryOptions;
-  const groupAnalysis = queryOptions.group_analysis
+  const groupAnalysis = queryOptions.group_analysis;
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -319,10 +319,10 @@ function CoreQuery({
           user_type,
           durationObj,
           globalFilters
-        ); 
-        
+        );
+
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_EVENT});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_EVENT });
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -417,9 +417,9 @@ function CoreQuery({
           durationObj,
           globalFilters
         );
-        
+
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_FUNNEL});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_FUNNEL });
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -483,10 +483,10 @@ function CoreQuery({
           linkedEvents,
           durationObj,
           tacticOfferType
-        ); 
+        );
 
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_ATTRIBUTION});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_ATTRIBUTION });
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -584,9 +584,9 @@ function CoreQuery({
           groupBy,
           queryOptions
         );
-        
+
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_KPI});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_KPI });
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -652,10 +652,10 @@ function CoreQuery({
           camp_filters,
           camp_groupBy,
           durationObj
-        );  
+        );
 
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_CAMPAIGN});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_CAMPAIGN });
 
         setCampaignState({
           channel: query.query_group[0].channel,
@@ -709,9 +709,9 @@ function CoreQuery({
           globalFilters,
           durationObj,
           groupAnalysis
-        ); 
+        );
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_PROFILE});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_PROFILE });
 
         configActionsOnRunningQuery(isQuerySaved);
         updateRequestQuery(query);
@@ -993,27 +993,34 @@ function CoreQuery({
   const handleRunQuery = useCallback(() => {
     switch (queryType) {
       case QUERY_TYPE_EVENT: {
-        runQuery(querySaved);
-        break
+        runQuery(false);
+        break;
       }
       case QUERY_TYPE_FUNNEL: {
-        runFunnelQuery(querySaved);
-        break
+        runFunnelQuery(false);
+        break;
       }
       case QUERY_TYPE_KPI: {
-        runKPIQuery(querySaved);
-        break
+        runKPIQuery(false);
+        break;
       }
       case QUERY_TYPE_ATTRIBUTION: {
-        runAttributionQuery(querySaved);
-        break
+        runAttributionQuery(false);
+        break;
       }
       case QUERY_TYPE_PROFILE: {
-        runProfileQuery(querySaved);
-        break
+        runProfileQuery(false);
+        break;
       }
     }
-  }, [queryType, querySaved, runQuery, runFunnelQuery, runKPIQuery, runAttributionQuery, runProfileQuery])
+  }, [
+    queryType,
+    runQuery,
+    runFunnelQuery,
+    runKPIQuery,
+    runAttributionQuery,
+    runProfileQuery,
+  ]);
 
   const title = () => {
     const IconAndText = IconAndTextSwitchQueryType(queryType);
@@ -1120,7 +1127,7 @@ function CoreQuery({
       return (
         <ProfileComposer
           queries={profileQueries}
-          setQueries ={setProfileQueries}
+          setQueries={setProfileQueries}
           runProfileQuery={handleRunQuery}
           eventChange={profileQueryChange}
           queryType={queryType}
@@ -1260,8 +1267,8 @@ function CoreQuery({
         selGroup?.category == 'channels'
           ? item.object_type
           : item.entity
-            ? item.entity
-            : item.object_type;
+          ? item.entity
+          : item.object_type;
       return [ddName, item.name, item.data_type, ddtype];
     });
 
@@ -1307,22 +1314,22 @@ function CoreQuery({
         {!showResult && drawerVisible && checkIfnewComposer()
           ? renderCreateQFlow()
           : !showResult && (
-            <CoreQueryHome
-              setQueryType={setQueryType}
-              setDrawerVisible={closeResultPage}
-              setQueries={setQueries}
-              setProfileQueries={setProfileQueries}
-              setQueryOptions={setExtraOptions}
-              setClickedSavedReport={setClickedSavedReport}
-              location={location}
-              setActiveKey={setActiveKey}
-              setBreakdownType={setBreakdownType}
-              setNavigatedFromDashboard={setNavigatedFromDashboard}
-              updateChartTypes={updateChartTypes}
-              updateSavedQuerySettings={updateSavedQuerySettings}
-              setAttributionMetrics={setAttributionMetrics}
-            />
-          )}
+              <CoreQueryHome
+                setQueryType={setQueryType}
+                setDrawerVisible={closeResultPage}
+                setQueries={setQueries}
+                setProfileQueries={setProfileQueries}
+                setQueryOptions={setExtraOptions}
+                setClickedSavedReport={setClickedSavedReport}
+                location={location}
+                setActiveKey={setActiveKey}
+                setBreakdownType={setBreakdownType}
+                setNavigatedFromDashboard={setNavigatedFromDashboard}
+                updateChartTypes={updateChartTypes}
+                updateSavedQuerySettings={updateSavedQuerySettings}
+                setAttributionMetrics={setAttributionMetrics}
+              />
+            )}
 
         {showResult ? (
           <CoreQueryContext.Provider
