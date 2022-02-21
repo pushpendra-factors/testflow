@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
@@ -23,6 +24,18 @@ type Status struct {
 	ErrCode   int    `json:"err_code"`
 	ErrMsg    string `json:"err_msg"`
 	Source    string `json:"source"`
+}
+type Key struct {
+	Type                   string `json:"type"`
+	ProjectID              string `json:"project_id"`
+	PrivateKeyID           string `json:"private_key_id"`
+	PrivateKey             string `json:"private_key"`
+	ClientEmail            string `json:"client_email"`
+	ClientID               string `json:"client_id"`
+	AuthURI                string `json:"auth_uri"`
+	TokenURI               string `json:"token_uri"`
+	AuthProvideX509CertURL string `json:"auth_provider_x509_cert_url"`
+	ClientX509CertURL      string `json:"client_x509_cert_url"`
 }
 
 func main() {
@@ -102,12 +115,20 @@ func main() {
 	}
 	db := C.GetServices().Db
 	defer db.Close()
-	jsonKeyArray := []byte(*jsonKey)
-	srv, err := sheets.NewService(ctx, option.WithCredentialsJSON(jsonKeyArray))
+	key := Key{}
+	err = json.Unmarshal([]byte(*jsonKey), &key)
+	if err != nil {
+		log.Fatalf("error unmarshaling key ", err)
+	}
+	keyByte, err := json.Marshal(key)
+	if err != nil {
+		log.Fatalf("error marshaling key ", err)
+	}
+
+	srv, err := sheets.NewService(ctx, option.WithCredentialsJSON(keyByte))
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
-
 	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIDStringList, "")
 
 	finalLeadgenSettings := make([]model.LeadgenSettings, 0)
@@ -156,60 +177,61 @@ func main() {
 					ErrMsg:    err.Error(),
 				}
 				syncStatusFailures = append(syncStatusFailures, syncStatusFailure)
-			}
-			trackStatus := ""
-			for _, record := range resp.Values {
-				eventProperties, userProperties, errTransform := model.TransformAndGenerateTrackPayload(record, leadgenSetting.ProjectID, model.SourceAliasMapping[leadgenSetting.Source])
-				if errTransform != nil {
-					log.WithFields(log.Fields{"record": record, "document": leadgenSetting}).Error(err)
-					trackStatus = "failed"
-					err = errTransform
-					break
-				} else {
-					payload := &SDK.TrackPayload{
-						ProjectId:       leadgenSetting.ProjectID,
-						EventProperties: eventProperties,
-						UserProperties:  userProperties,
-						RequestSource:   leadgenSetting.Source,
-						Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
-					}
-					status, _ := SDK.Track(leadgenSetting.ProjectID, payload, true, "", "")
-					if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-						log.WithField("Document", payload).WithError(err).Error(fmt.Errorf("failed to offline touchpoint from leadgen data"))
-						trackStatus = "failed"
-						err = fmt.Errorf("failed to offline touchpoint from leadgen data")
-					}
-				}
-				if trackStatus != "failed" {
-					rowRead = rowRead + 1
-				} else {
-					break
-				}
-			}
-			if trackStatus == "failed" {
-				syncStatusFailure := Status{
-					ProjectID: leadgenSetting.ProjectID,
-					ErrCode:   http.StatusInternalServerError,
-					ErrMsg:    err.Error(),
-					Source:    model.SourceAliasMapping[leadgenSetting.Source],
-				}
-				syncStatusFailures = append(syncStatusFailures, syncStatusFailure)
 			} else {
-				syncStatusSuccess := Status{
-					ProjectID: leadgenSetting.ProjectID,
-					ErrCode:   http.StatusOK,
-					ErrMsg:    "",
-					Source:    model.SourceAliasMapping[leadgenSetting.Source],
+				trackStatus := ""
+				for _, record := range resp.Values {
+					eventProperties, userProperties, errTransform := model.TransformAndGenerateTrackPayload(record, leadgenSetting.ProjectID, model.SourceAliasMapping[leadgenSetting.Source])
+					if errTransform != nil {
+						log.WithFields(log.Fields{"record": record, "document": leadgenSetting}).Error(err)
+						trackStatus = "failed"
+						err = errTransform
+						break
+					} else {
+						payload := &SDK.TrackPayload{
+							ProjectId:       leadgenSetting.ProjectID,
+							EventProperties: eventProperties,
+							UserProperties:  userProperties,
+							RequestSource:   leadgenSetting.Source,
+							Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+						}
+						status, _ := SDK.Track(leadgenSetting.ProjectID, payload, true, "", "")
+						if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+							log.WithField("Document", payload).WithError(err).Error(fmt.Errorf("failed to offline touchpoint from leadgen data"))
+							trackStatus = "failed"
+							err = fmt.Errorf("failed to offline touchpoint from leadgen data")
+						}
+					}
+					if trackStatus != "failed" {
+						rowRead = rowRead + 1
+					} else {
+						break
+					}
 				}
-				syncStatusSuccesses = append(syncStatusFailures, syncStatusSuccess)
-			}
-			errCode, err := store.GetStore().UpdateRowRead(leadgenSetting.ProjectID, leadgenSetting.Source, rowRead)
-			if errCode != http.StatusAccepted || err != nil {
-				log.WithField("document", leadgenSetting).Error("Failed to update row read")
-				for errCode != http.StatusAccepted || err != nil {
-					errCode, err = store.GetStore().UpdateRowRead(leadgenSetting.ProjectID, leadgenSetting.Source, rowRead)
-					if errCode != http.StatusAccepted || err != nil {
-						log.WithField("document", leadgenSetting).Error("Failed to update row read on loop")
+				if trackStatus == "failed" {
+					syncStatusFailure := Status{
+						ProjectID: leadgenSetting.ProjectID,
+						ErrCode:   http.StatusInternalServerError,
+						ErrMsg:    err.Error(),
+						Source:    model.SourceAliasMapping[leadgenSetting.Source],
+					}
+					syncStatusFailures = append(syncStatusFailures, syncStatusFailure)
+				} else {
+					syncStatusSuccess := Status{
+						ProjectID: leadgenSetting.ProjectID,
+						ErrCode:   http.StatusOK,
+						ErrMsg:    "",
+						Source:    model.SourceAliasMapping[leadgenSetting.Source],
+					}
+					syncStatusSuccesses = append(syncStatusFailures, syncStatusSuccess)
+				}
+				errCode, err := store.GetStore().UpdateRowRead(leadgenSetting.ProjectID, leadgenSetting.Source, rowRead)
+				if errCode != http.StatusAccepted || err != nil {
+					log.WithField("document", leadgenSetting).Error("Failed to update row read")
+					for errCode != http.StatusAccepted || err != nil {
+						errCode, err = store.GetStore().UpdateRowRead(leadgenSetting.ProjectID, leadgenSetting.Source, rowRead)
+						if errCode != http.StatusAccepted || err != nil {
+							log.WithField("document", leadgenSetting).Error("Failed to update row read on loop")
+						}
 					}
 				}
 			}

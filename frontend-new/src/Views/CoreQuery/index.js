@@ -90,6 +90,7 @@ import {
 } from '../../utils/dataFormatter';
 import ProfileComposer from '../../components/ProfileComposer';
 import _ from 'lodash';
+import { IconAndTextSwitchQueryType } from './coreQuery.helpers';
 import factorsai from 'factorsai';
 
 function CoreQuery({
@@ -191,7 +192,7 @@ function CoreQuery({
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
   const { globalFilters } = queryOptions;
-  const groupAnalysis = queryOptions.group_analysis
+  const groupAnalysis = queryOptions.group_analysis;
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -318,10 +319,10 @@ function CoreQuery({
           user_type,
           durationObj,
           globalFilters
-        ); 
-        
+        );
+
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_EVENT});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_EVENT });
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -416,9 +417,9 @@ function CoreQuery({
           durationObj,
           globalFilters
         );
-        
+
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_FUNNEL});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_FUNNEL });
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -482,10 +483,10 @@ function CoreQuery({
           linkedEvents,
           durationObj,
           tacticOfferType
-        ); 
+        );
 
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_ATTRIBUTION});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_ATTRIBUTION });
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -583,9 +584,9 @@ function CoreQuery({
           groupBy,
           queryOptions
         );
-        
+
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_KPI});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_KPI });
 
         if (!isCompareQuery) {
           configActionsOnRunningQuery(isQuerySaved);
@@ -651,10 +652,10 @@ function CoreQuery({
           camp_filters,
           camp_groupBy,
           durationObj
-        );  
+        );
 
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_CAMPAIGN});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_CAMPAIGN });
 
         setCampaignState({
           channel: query.query_group[0].channel,
@@ -708,10 +709,9 @@ function CoreQuery({
           globalFilters,
           durationObj,
           groupAnalysis
-        ); 
-        console.log('Index Query---->', query)
+        );
         //Factors RUN_QUERY tracking
-        factorsai.track('RUN-QUERY',{'query_type': QUERY_TYPE_PROFILE});
+        factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_PROFILE });
 
         configActionsOnRunningQuery(isQuerySaved);
         updateRequestQuery(query);
@@ -990,45 +990,37 @@ function CoreQuery({
     setQueryOptions(options);
   };
 
-  const IconAndTextSwitchQueryType = (queryType) => {
+  const handleRunQuery = useCallback(() => {
     switch (queryType) {
-      case QUERY_TYPE_EVENT:
-        return {
-          text: 'Analyse Events',
-          icon: 'events_cq',
-        };
-      case QUERY_TYPE_FUNNEL:
-        return {
-          text: 'Find event funnel for',
-          icon: 'funnels_cq',
-        };
-      case QUERY_TYPE_CAMPAIGN:
-        return {
-          text: 'Campaign Analytics',
-          icon: 'campaigns_cq',
-        };
-      case QUERY_TYPE_ATTRIBUTION:
-        return {
-          text: 'Attributions',
-          icon: 'attributions_cq',
-        };
-      case QUERY_TYPE_KPI:
-        return {
-          text: 'KPI',
-          icon: 'attributions_cq',
-        };
-      case QUERY_TYPE_PROFILE:
-        return {
-          text: 'Profile Analysis',
-          icon: 'profiles_cq',
-        };
-      default:
-        return {
-          text: 'Templates',
-          icon: 'templates_cq',
-        };
+      case QUERY_TYPE_EVENT: {
+        runQuery(false);
+        break;
+      }
+      case QUERY_TYPE_FUNNEL: {
+        runFunnelQuery(false);
+        break;
+      }
+      case QUERY_TYPE_KPI: {
+        runKPIQuery(false);
+        break;
+      }
+      case QUERY_TYPE_ATTRIBUTION: {
+        runAttributionQuery(false);
+        break;
+      }
+      case QUERY_TYPE_PROFILE: {
+        runProfileQuery(false);
+        break;
+      }
     }
-  };
+  }, [
+    queryType,
+    runQuery,
+    runFunnelQuery,
+    runKPIQuery,
+    runAttributionQuery,
+    runProfileQuery,
+  ]);
 
   const title = () => {
     const IconAndText = IconAndTextSwitchQueryType(queryType);
@@ -1090,19 +1082,19 @@ function CoreQuery({
       return (
         <QueryComposer
           queries={queries}
-          runQuery={runQuery}
+          runQuery={handleRunQuery}
           eventChange={queryChange}
           queryType={queryType}
           queryOptions={queryOptions}
           setQueryOptions={setExtraOptions}
-          runFunnelQuery={runFunnelQuery}
+          runFunnelQuery={handleRunQuery}
           activeKey={activeKey}
         />
       );
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      return <AttrQueryComposer runAttributionQuery={runAttributionQuery} />;
+      return <AttrQueryComposer runAttributionQuery={handleRunQuery} />;
     }
 
     if (queryType === QUERY_TYPE_KPI) {
@@ -1115,7 +1107,7 @@ function CoreQuery({
           queryOptions={queryOptions}
           setQueryOptions={setExtraOptions}
           activeKey={activeKey}
-          handleRunQuery={runKPIQuery}
+          handleRunQuery={handleRunQuery}
           selectedMainCategory={selectedMainCategory}
           setSelectedMainCategory={setSelectedMainCategory}
           KPIConfigProps={KPIConfigProps}
@@ -1135,8 +1127,8 @@ function CoreQuery({
       return (
         <ProfileComposer
           queries={profileQueries}
-          setQueries ={setProfileQueries}
-          runProfileQuery={runProfileQuery}
+          setQueries={setProfileQueries}
+          runProfileQuery={handleRunQuery}
           eventChange={profileQueryChange}
           queryType={queryType}
           queryOptions={queryOptions}
@@ -1237,19 +1229,19 @@ function CoreQuery({
   };
 
   const composerFunctions = {
-    runQuery,
+    runQuery: handleRunQuery,
     queryChange,
     profileQueryChange,
     setExtraOptions,
-    runFunnelQuery,
-    runAttributionQuery,
-    runProfileQuery,
+    runFunnelQuery: handleRunQuery,
+    runAttributionQuery: handleRunQuery,
+    runProfileQuery: handleRunQuery,
     activeKey,
     queries,
     profileQueries,
     setProfileQueries,
     showResult,
-    runKPIQuery,
+    runKPIQuery: handleRunQuery,
     setQueries,
     queryOptions,
     selectedMainCategory,

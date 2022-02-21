@@ -181,6 +181,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 			requestPayload.Query.From, requestPayload.Query.To, timezoneString)
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
 	}
+	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false
 }
 

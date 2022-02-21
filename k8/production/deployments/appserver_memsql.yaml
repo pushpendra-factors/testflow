@@ -156,6 +156,10 @@ spec:
           - --bucket_name
           - $(BUCKET_NAME)
           - --disable_dashboard_query_db_execution
+          - --fivetran_group_id
+          - $(FIVETRAN_GROUPID)
+          - --fivetran_license_key
+          - $(FIVETRAN_LICENCE_KEY)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -197,6 +201,8 @@ spec:
             name: secret-sentry
         - configMapRef:
             name: config-bucket
+        - secretRef:
+            name: secret-fivetran
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine

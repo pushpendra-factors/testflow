@@ -9,6 +9,7 @@ import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   ReverseProfileMapper,
+  revProfileGroupMapper,
 } from '../../../../utils/constants';
 import {
   getBreakdownDataMapperWithUniqueValues,
@@ -120,9 +121,7 @@ export const formatData = (data, breakdown, queries, currentEventIndex) => {
         label: Object.values(breakdownVals).join(),
         color,
         ...breakdownVals,
-        value: DISPLAY_PROP[elem[valIndex]]
-          ? DISPLAY_PROP[elem[valIndex]]
-          : elem[valIndex],
+        value: elem[valIndex],
       });
     });
     return result;
@@ -147,8 +146,8 @@ export const getTableColumns = (
       e.prop_category === 'user'
         ? userPropNames[e.property] || e.property
         : e.prop_category === 'event'
-          ? eventPropNames[e.property] || `${e.property}`
-          : e.property;
+        ? eventPropNames[e.property] || `${e.property}`
+        : e.property;
 
     return {
       title: getClickableTitleSorter(
@@ -165,7 +164,9 @@ export const getTableColumns = (
 
   const eventCol = {
     title: getClickableTitleSorter(
-      ReverseProfileMapper[queries[currentEventIndex]][groupAnalysis],
+      ReverseProfileMapper[queries[currentEventIndex]]
+        ? ReverseProfileMapper[queries[currentEventIndex]][groupAnalysis]
+        : queries[currentEventIndex],
       { key: 'value', type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
@@ -182,7 +183,14 @@ export const getTableColumns = (
   return [...breakdownColumns, eventCol];
 };
 
-export const getTableData = (data, searchText, currentSorter) => {
+export const getTableData = (
+  data,
+  searchText,
+  currentSorter,
+  queries,
+  currentEventIndex,
+  groupAnalysis
+) => {
   const filteredData = data.filter((elem) =>
     elem.label.toLowerCase().includes(searchText.toLowerCase())
   );

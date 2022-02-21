@@ -224,7 +224,7 @@ function CoreQuery({
   }, [updateChartTypes]);
 
   const confirmDelete = useCallback(() => {
-    deleteQuery(dispatch, activeRow);
+    dispatch(deleteQuery(activeRow));
     setActiveRow(null);
     showDeleteModal(false);
   }, [activeRow]);

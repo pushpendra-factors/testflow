@@ -199,21 +199,22 @@ export const saveQuery = (projectId, title, query, type, settings) => {
 //   }
 // };
 
-export const deleteQuery = async (dispatch, query) => {
-  try {
-    dispatch({ type: QUERIES_LOADING });
-    const url = host + 'projects/' + query.project_id + '/queries/' + query.id;
-    await del(null, url);
-    dispatch({ type: QUERY_DELETED, payload: query.id });
-  } catch (err) {
-    console.log(err);
-    dispatch({ type: QUERIES_LOADING_STOPPED });
-    notification.error({
-      message: 'Something went wrong!',
-      description: getErrorMessage(err),
-      duration: 5,
-    });
-  }
+export const deleteQuery = ({ project_id, id }) => {
+  return async function (dispatch) {
+    try {
+      dispatch({ type: QUERIES_LOADING });
+      await deleteReport({ project_id, queryId: id });
+      dispatch({ type: QUERY_DELETED, payload: id });
+    } catch (err) {
+      console.log(err);
+      dispatch({ type: QUERIES_LOADING_STOPPED });
+      notification.error({
+        message: 'Something went wrong!',
+        description: getErrorMessage(err),
+        duration: 5,
+      });
+    }
+  };
 };
 
 export const fetchQueries = (projectId) => {
@@ -327,4 +328,9 @@ export const fetchSmartPropertyRules = (projectId) => {
 export const updateQuery = (projectId, savedQueryId, reqBody) => {
   const url = host + 'projects/' + projectId + '/queries/' + savedQueryId;
   return put(null, url, reqBody);
+};
+
+export const deleteReport = ({ project_id, queryId }) => {
+  const url = host + 'projects/' + project_id + '/queries/' + queryId;
+  return del(null, url);
 };

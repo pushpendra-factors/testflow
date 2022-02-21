@@ -1,152 +1,170 @@
+.ant-btn {
+  font-family: $font-family;
+  // height: auto;
+  border-radius: 4px;
+  // padding: 4px 12px;
+
+  // border: 1px solid transparent;
+  border-color: transparent;
+
+  // background: $fa-color--white;
+  background: $fa-color--mono-1;
+  color: $fa-color--mono-5;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+  &.active {
+    border-color: $fa-color--brand-color;
+    &:hover,
+    &:active,
+    &:focus {
+      border-color: $fa-color--brand-color;
+    }
+  }
+  &.fa-button--truncate {
+    max-width: 350px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    span {
+      display: inline;
+    }
+    &.fa-button--truncate-sm {
+      max-width: 250px;
+    }
+    &.fa-button--truncate-xs {
+      max-width: 200px;
+    }
+    &.fa-button--truncate-lg {
+      max-width: 450px;
+    }
+  }
+  &.ant-btn-icon-only {
+    border-radius: 100% !important;
+  }
+
+  &.fa-button-ghost {
+    background: transparent !important;
+    border-color: transparent !important;
+    outline: transparent !important;
+    box-shadow: none !important;
+    padding: 2px 8px !important;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background: transparent !important;
+      border-color: transparent !important;
+      outline: transparent !important;
+      box-shadow: none !important;
+    }
+  }
+
+  font-weight: $font-weight--bold;
+  font-size: 14px;
+  line-height: 1.5;
+
+  svg {
+    display: inline;
+  }
+  svg ~ span {
+    margin-left: 6px;
+  }
+
+  //anticon buttons
+  span.anticon {
+    svg {
+      margin-right: 0px;
+    }
+  }
+}
 
 .ant-btn {
-    font-family: $font-family;
-    // height: auto;
-    border-radius: 4px;
-    // padding: 4px 12px; 
+  &.flex {
+    display: flex;
+  }
+  //Default Button
+  &:focus,
+  &:hover,
+  &:active {
+    border-color: $fa-color--mono-5;
+    color: $fa-color--mono-5;
+  }
 
-    // border: 1px solid transparent; 
+  //Primary Button
+  &.ant-btn-primary {
+    color: $fa-color--white;
+    background: $fa-color--brand-color;
+    border-color: $fa-color--brand-color;
+    &:focus,
+    &:hover,
+    &:active {
+      color: $fa-color--white;
+      // background: $fa-color--brand-7;
+      // border-color: $fa-color--brand-7;
+      border-color: lighten($fa-color--brand-color, 10%);
+      background: lighten($fa-color--brand-color, 10%);
+    }
+
+    &.ant-btn-dangerous {
+      color: $fa-color--white;
+      background: $fa-color--red-new;
+      border-color: $fa-color--red-new;
+    }
+  }
+
+  &.ant-btn-secondary {
+    color: $fa-color--mono-5;
+    background: $fa-color--white;
+    border-color: $fa-color--mono-2;
+  }
+
+  //Dashed Button
+  &.ant-btn-dashed {
+    border-style: dashed;
+  }
+
+  //Text Button
+  &.ant-btn-text {
     border-color: transparent;
+    background: $fa-color--white;
+    &:focus,
+    &:hover,
+    &:active {
+      background-color: $fa-color--mono-1;
+    }
+  }
 
-    // background: $fa-color--white; 
-    background: $fa-color--mono-1;  
-    color: $fa-color--mono-5; 
-    
-    &:disabled{
-        opacity: 0.5;
+  //Link Button == Secondary Button
+  &.ant-btn.ant-btn-link {
+    border-style: solid;
+    border-color: transparent;
+    color: $fa-color--brand-color;
+    background-color: $fa-color--mono-1;
+    &:focus,
+    &:hover,
+    &:active {
+      border-color: $fa-color--brand-color !important;
     }
-    &.active{
-        border-color: $fa-color--brand-color; 
-        &:hover,&:active,&:focus{
-            border-color: $fa-color--brand-color; 
-        }
-    }
-    &.fa-button--truncate{
-        max-width: 350px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        span{
-            display: inline;
-        }
-        &.fa-button--truncate-sm{
-            max-width: 250px; 
-        }
-        &.fa-button--truncate-xs{
-            max-width: 200px;
-        }
-        &.fa-button--truncate-lg {
-            max-width: 450px;
-        }
-    }
-    &.ant-btn-icon-only{
-        border-radius: 100% !important;
-    }
+  }
 
-    &.fa-button-ghost{
-        background:transparent !important; 
-        border-color:transparent !important;
-        outline: transparent !important;
-        box-shadow: none !important;
-        padding: 2px 8px !important;
-
-        &:hover, &:focus, &:active{
-            background:transparent !important; 
-            border-color:transparent !important;
-            outline: transparent !important;
-            box-shadow: none !important;  
-        }
-
-    }
-
-    font-weight: $font-weight--bold;
-    font-size: 14px;
-    line-height: 1.5;
-    
-    svg{
-        display: inline; 
-    }
-    svg ~ span{ 
-        margin-left: 6px;
-    }
-
-    //anticon buttons
-    span.anticon{ 
-        svg{
-            margin-right: 0px; 
-        }
-    }
-     
-    
-
+  //Icon Alignment correction
+  .anticon {
+    vertical-align: 0;
+  }
+  // &.ant-btn-icon-only{
+  //     height: auto;
+  //     width: auto;
+  // }
 }
 
-
-.ant-btn{
-    
-    //Default Button 
-    &:focus, &:hover, &:active{ 
-        border-color: $fa-color--mono-5; 
-        color: $fa-color--mono-5;  
-    }
-    
-    //Primary Button
-    &.ant-btn-primary {
-        color: $fa-color--white;
-        background: $fa-color--brand-color;
-        border-color: $fa-color--brand-color;  
-        &:focus, &:hover, &:active{
-            color: $fa-color--white;
-            // background: $fa-color--brand-7;
-            // border-color: $fa-color--brand-7; 
-            border-color: lighten($fa-color--brand-color,10%);
-            background: lighten($fa-color--brand-color,10%);
-        }
-    }
-
-    //Dashed Button
-    &.ant-btn-dashed{
-        border-style: dashed;
-    }
-
-    //Text Button
-    &.ant-btn-text{
-        border-color: transparent;
-        background: $fa-color--white;
-        &:focus, &:hover, &:active{ 
-            background-color: $fa-color--mono-1; 
-        }
-    }
-
-    //Link Button == Secondary Button
-    &.ant-btn.ant-btn-link{
-        border-style: solid;
-        border-color: transparent;
-        color: $fa-color--brand-color;
-        background-color: $fa-color--mono-1;
-        &:focus, &:hover, &:active{
-            border-color: $fa-color--brand-color !important; 
-        }
-    }
-
-
-    //Icon Alignment correction
-    .anticon{
-        vertical-align: 0;
-    }
-    // &.ant-btn-icon-only{
-    //     height: auto;
-    //     width: auto; 
-    // }
-
-}
-
-//commenting this because it breaks entire antd-large buttons. 
+//commenting this because it breaks entire antd-large buttons.
 // please use specific button-class if truncation is needed ++ Akhil
 // .ant-btn-lg {
 //     max-width: 300px;
 //     line-height: 1;
-    
+
 //     span {
 //         max-width: 250px;
 //         text-overflow: ellipsis;

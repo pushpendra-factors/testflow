@@ -208,6 +208,8 @@ type Configuration struct {
 	DebugEnabled                                bool
 	MergeAmpIDAndSegmentIDWithUserIDByProjectID string
 	SessionBatchTransactionBatchSize            int
+	FivetranGroupId                             string
+	FivetranLicenseKey                          string
 }
 
 type Services struct {
@@ -249,6 +251,7 @@ const (
 	HealthcheckMonitoringJobMemSQLPingID        = "de2b64d4-952e-47ca-ac70-1bf9d8e1587e"
 	HealthcheckSavedQueriesTimezoneChangePingID = "42f96466-c467-44cc-899d-7e55b8a1aa4e"
 	HealthcheckLeadgenInsertionJobPingID        = "830c0112-fc71-4257-b265-b3732f03115a"
+	HealthcheckBingAdsIntegrationPingID         = "33f862b1-453a-4352-b209-945b38ed1902"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -1695,6 +1698,14 @@ func GetSDKRequestQueueAllowedTokens() []string {
 
 func GetSegmentRequestQueueAllowedTokens() []string {
 	return configuration.SegmentRequestQueueProjectTokens
+}
+
+func GetFivetranGroupId() string {
+	return configuration.FivetranGroupId
+}
+
+func GetFivetranLicenseKey() string {
+	return configuration.FivetranLicenseKey
 }
 
 /*
