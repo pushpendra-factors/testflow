@@ -14,8 +14,8 @@ import {
   DASHBOARD_UPDATED,
   SET_ACTIVE_PROJECT,
   DASHBOARD_LAST_REFRESHED,
-} from "../types";
-import { getRearrangedData } from "./utils";
+} from '../types';
+import { getRearrangedData } from './utils';
 
 const defaultState = {
   dashboards: {

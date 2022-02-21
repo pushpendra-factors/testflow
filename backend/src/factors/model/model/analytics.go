@@ -601,11 +601,13 @@ type QueryResult struct {
 	Rows    [][]interface{} `json:"rows"`
 	// Todo(Dinesh): Use Generic query result
 	// for meta as interface{}.
-	Meta QueryResultMeta `json:"meta"`
+	Meta  QueryResultMeta `json:"meta"`
+	Query interface{}     `json:"query"`
 }
 
 type ResultGroup struct {
 	Results []QueryResult `json:"result_group"`
+	Query   interface{}   `json:"query"`
 }
 
 // QueryCacheResult Container to save query cache result along with timestamp.

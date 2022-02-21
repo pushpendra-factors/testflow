@@ -70,7 +70,9 @@ export const getTableData = (
       return {
         index,
         Users: `${toLetters(index)}. ${
-          ReverseProfileMapper[query][groupAnalysis]
+          ReverseProfileMapper[query]
+            ? ReverseProfileMapper[query][groupAnalysis]
+            : query
         }`,
         value: rg.rows[0][1],
       };
@@ -137,7 +139,9 @@ export const getDataInHorizontalBarChartFormat = (
         color: colors[index % 10],
       });
       return `${toLetters(queryIndex)}. ${
-        ReverseProfileMapper[queries[queryIndex]][groupAnalysis]
+        ReverseProfileMapper[queries[queryIndex]]
+          ? ReverseProfileMapper[queries[queryIndex]][groupAnalysis]
+          : queries[queryIndex]
       }`;
     });
 

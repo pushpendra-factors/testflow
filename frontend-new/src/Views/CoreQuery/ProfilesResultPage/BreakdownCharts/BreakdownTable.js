@@ -55,8 +55,24 @@ function BreakdownTable({
   ]);
 
   useEffect(() => {
-    setTableData(getTableData(aggregateData, searchText, sorter));
-  }, [aggregateData, breakdown, searchText, sorter]);
+    setTableData(
+      getTableData(
+        aggregateData,
+        searchText,
+        sorter,
+        queries,
+        currentEventIndex,
+        groupAnalysis
+      )
+    );
+  }, [
+    aggregateData,
+    searchText,
+    sorter,
+    queries,
+    currentEventIndex,
+    groupAnalysis,
+  ]);
 
   const getCSVData = () => {
     return {

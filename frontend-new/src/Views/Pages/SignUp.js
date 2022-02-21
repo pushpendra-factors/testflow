@@ -20,6 +20,41 @@ function SignUp({ signup }) {
     history.push(url);
   };
 
+  const startMailModo = (email) => {
+    let url1 = 'https://api.mailmodo.com/hooks/start/ed1fefd2-4c55-419e-a88b-d23b59f22461';
+    let url2 = 'https://api.mailmodo.com/hooks/start/ef8af6d0-e925-47e2-8c03-2b010c9a59f5';
+    let data = {
+            "email": email,
+            "data": {} 
+        }
+    let params = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            "mmapikey": "TJ5JF61-44NMRN5-GAEA2WH-8Z99P4H"
+        },
+        body: JSON.stringify(data)
+    }
+
+    fetch(url1, params)
+    .then((response) => response.json())
+    .then((response) => {
+      console.log(response);
+    })
+    .catch((err) => {
+      console.log('err',err);
+    });
+
+    fetch(url2, params)
+    .then((response) => response.json())
+    .then((response) => {
+      console.log(response);
+    })
+    .catch((err) => {
+      console.log('err',err);
+    });
+  }
+
   const SignUpFn = () => {
     setDataLoading(true);
     form.validateFields().then((values) => {
@@ -34,6 +69,7 @@ function SignUp({ signup }) {
         signup(filteredValues).then(() => {
             setDataLoading(false);
             setformData(filteredValues);
+            startMailModo(filteredValues.email);
         }).catch((err) => {
             setDataLoading(false);
             form.resetFields();
@@ -64,8 +100,8 @@ function SignUp({ signup }) {
                             <Col span={14}>
                                 <Row>
                                     <Col span={24}>
-                                        <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Marketing Decisioning made Radically Smarter</Text>
-                                        <Text type={'title'} color={'grey'} level={7} extraClass={'m-0'} >An end-to-end marketing analytics platform that integrates across data silos to deliver focused AI-fueled actionable insights.</Text>
+                                        <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Marketing decisioning made radically smarter</Text>
+                                        <Text type={'title'} color={'grey'} level={7} extraClass={'m-0'} >Measure and validate every marketing initiative. Understand the entire buyer journey. Then drive pipeline and revenue like never before, all inside Factors.</Text>
                                     </Col>
                                 </Row>
                                 <Row>

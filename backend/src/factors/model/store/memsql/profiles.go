@@ -16,7 +16,7 @@ import (
 func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery, projectID uint64) (model.ResultGroup, int) {
 	logFields := log.Fields{
 		"queries_original": queriesOriginal,
-		"project_id": projectID,
+		"project_id":       projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	queries := make([]model.ProfileQuery, 0)
@@ -46,14 +46,14 @@ func (store *MemSQL) RunProfilesGroupQuery(queriesOriginal []model.ProfileQuery,
 
 func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.ProfileQuery,
 	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup, queryIndex int) {
-		logFields := log.Fields{
-			"query": query,
-			"project_id": projectID,
-			"result_holder": resultHolder,
-			"wait_group": waitGroup,
-			"query_index": queryIndex,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"query":         query,
+		"project_id":    projectID,
+		"result_holder": resultHolder,
+		"wait_group":    waitGroup,
+		"query_index":   queryIndex,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	defer waitGroup.Done()
 	result, errCode, errMsg := store.ExecuteProfilesQuery(projectID, query)
@@ -68,7 +68,7 @@ func (store *MemSQL) runSingleProfilesQuery(projectID uint64, query model.Profil
 
 func (store *MemSQL) ExecuteProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
-		"query": query,
+		"query":      query,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -82,7 +82,7 @@ func (store *MemSQL) ExecuteProfilesQuery(projectID uint64, query model.ProfileQ
 
 func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.ProfileQuery) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
-		"query": query,
+		"query":      query,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -121,7 +121,7 @@ func (store *MemSQL) ExecuteAllUsersProfilesQuery(projectID uint64, query model.
 
 func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []interface{}, error) {
 	logFields := log.Fields{
-		"query": query,
+		"query":      query,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -215,9 +215,9 @@ func getSelectKeysForProfile(query model.ProfileQuery) string {
 
 func getNoneHandledGroupBySelectForProfiles(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
 	logFields := log.Fields{
-		"group_prop": groupProp,
-		"project_id": projectID,
-		"group_key": groupKey,
+		"group_prop":      groupProp,
+		"project_id":      projectID,
+		"group_key":       groupKey,
 		"timezone_string": timezoneString,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -240,7 +240,7 @@ func getNoneHandledGroupBySelectForProfiles(projectID uint64, groupProp model.Qu
 func SanitizeQueryResultProfiles(result *model.QueryResult, query *model.ProfileQuery) error {
 	logFields := log.Fields{
 		"result": result,
-		"query": query,
+		"query":  query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -263,7 +263,7 @@ func SanitizeQueryResultProfiles(result *model.QueryResult, query *model.Profile
 func sanitizeNumericalBucketRangesProfiles(result *model.QueryResult, query *model.ProfileQuery) {
 	logFields := log.Fields{
 		"result": result,
-		"query": query,
+		"query":  query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	headerIndexMap := make(map[string][]int)
@@ -289,8 +289,8 @@ func sanitizeNumericalBucketRangesProfiles(result *model.QueryResult, query *mod
 }
 func sanitizeNumericalBucketRangeProfiles(query *model.ProfileQuery, rows [][]interface{}, indexToSanitize int) {
 	logFields := log.Fields{
-		"rows": rows,
-		"query": query,
+		"rows":              rows,
+		"query":             query,
 		"index_to_sanitize": indexToSanitize,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

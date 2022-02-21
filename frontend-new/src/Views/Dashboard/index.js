@@ -29,6 +29,13 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
   const activeProject = useSelector((state) => state.global.active_project) 
   const dispatch = useDispatch();
   const history = useHistory();
+  const [loading, setloading] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setloading(true);
+    }, 400);
+  }, [activeProject])
 
   useEffect(() => {
       fetchProjectSettingsV1(activeProject.id).then((res) => {
@@ -141,7 +148,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
     return (
       <>
         {checkIntegration ?
-          <>
+          loading ? <>
             <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal} />
             <AddDashboard
               setEditDashboard={setEditDashboard}
@@ -149,9 +156,8 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
               addDashboardModal={addDashboardModal}
               setaddDashboardModal={setaddDashboardModal}
             />
-          </>
-          :
-          <EmptyDashboard />
+          </> : null
+          : loading ? <EmptyDashboard /> : null
         }
       </>
     );

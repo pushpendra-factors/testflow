@@ -124,7 +124,8 @@ module.exports = {
       svgIcons: path.resolve(__dirname, './src/components/svgIcons'),
       Reducers: path.resolve(__dirname, './src/reducers'),
       Utils: path.resolve(__dirname, './src/utils'),
-      Styles: path.resolve(__dirname, './src/styles')
+      Styles: path.resolve(__dirname, './src/styles'),
+      hooks: path.resolve(__dirname, './src/hooks'),
     }
   },
   plugins: [

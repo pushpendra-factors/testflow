@@ -20,6 +20,10 @@ func GetDateOnlyFromTimestampZ(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(DATETIME_FORMAT_YYYYMMDD)
 }
 
+func GetDateOnlyHyphenFormatFromTimestampZ(timestamp int64) string {
+	return time.Unix(timestamp, 0).UTC().Format(DATETIME_FORMAT_YYYYMMDD_HYPHEN)
+}
+
 // TimeNowZ Return current time in UTC. Should be used everywhere to avoid local timezone.
 func TimeNowZ() time.Time {
 	return time.Now().UTC()

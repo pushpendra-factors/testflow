@@ -239,7 +239,8 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, request.GetTimeZone())
 		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
 	}
-	return gin.H{"result": queryResult}, http.StatusOK, "", "", false
+
+	return gin.H{"result": queryResult, "query": request}, http.StatusOK, "", "", false
 }
 
 func getDashboardRelatedInformationFromRequest(request model.KPIQueryGroup, dashboardIdParam, unitIdParam, refreshParam, isQueryParam string) (uint64, uint64, int64, int64, bool, bool, bool, error) {

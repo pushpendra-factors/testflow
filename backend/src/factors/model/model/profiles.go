@@ -99,6 +99,7 @@ type ProfileQuery struct {
 	Timezone      string                 `json:"tz"`
 	GroupAnalysis string                 `json:"grpa"`
 	GroupId       int                    `json:"grpid"`
+	AliasName     string                 `json:"an"`
 
 	// For specific case of KPI - single eventType
 	AggregateFunction     string `json:"agFn"`

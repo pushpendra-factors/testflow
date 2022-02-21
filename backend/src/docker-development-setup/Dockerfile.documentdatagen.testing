@@ -15,4 +15,4 @@ COPY --from=builder /go/src/factors/backend/bin/documentdatagen /go/src/factors/
 COPY --from=builder /go/src/documentdatagen/demo_data/bin/adwords_documents.txt /go/bin/demo_data/adwords_documents.txt
 COPY --from=builder /go/src/documentdatagen/demo_data/bin/linkedin_documents.txt /go/bin/demo_data/linkedin_documents.txt
 COPY --from=builder /go/src/documentdatagen/demo_data/bin/facebook_documents.txt /go/bin/demo_data/facebook_documents.txt
-CMD ["sh","-c", "while true; do curl -f ${DB_HOST}:5432; if [ 52 -eq $? ]; then /go/src/factors/backend/bin/documentdatagen --env=docker --db_host=${DB_HOST}; break; fi; sleep 2; done"]
+CMD ["sh","-c", "/go/src/factors/backend/bin/documentdatagen --env=docker --db_host=${DB_HOST} --primary_datastore=${PRI_DS} --memsql_host=${MEMSQL_HOST}"]

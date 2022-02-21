@@ -1,15 +1,15 @@
-import React, { useCallback, useEffect, useState, useContext } from 'react';
-import styles from './index.module.scss';
-import { SVG, Text } from '../../../components/factorsComponents';
-import { Button } from 'antd';
+import React, { useCallback, useEffect, useState, useContext, memo } from 'react';
+import cx from 'classnames';
 import moment from 'moment';
-import { EVENT_BREADCRUMB } from '../../../utils/constants';
-import SaveQuery from '../../../components/SaveQuery';
-import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
-import { useHistory } from 'react-router-dom';
-import { Tabs } from 'antd';
-import { useSelector } from 'react-redux';
 import _ from 'lodash';
+import { Button, Tabs } from 'antd';
+import { useSelector } from 'react-redux';
+import { useHistory } from 'react-router-dom';
+import { SVG, Text } from 'factorsComponents';
+import { EVENT_BREADCRUMB } from 'Utils/constants';
+import SaveQuery from '../../../components/SaveQuery';
+import { addShadowToHeader } from './analysisResultsPage.helpers'
+import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 
 const { TabPane } = Tabs;
 
@@ -18,37 +18,28 @@ function AnalysisHeader({
   onBreadCrumbClick,
   requestQuery,
   queryTitle,
-  setQuerySaved,
-  breakdownType,
   changeTab,
   activeTab,
-  getCurrentSorter,
-  savedQueryId,
+  ...rest
 }) {
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const {
-    coreQueryState: { navigatedFromDashboard },
-  } = useContext(CoreQueryContext);
   const history = useHistory();
-
+  const { coreQueryState: { navigatedFromDashboard } } = useContext(CoreQueryContext);
   const { metadata } = useSelector((state) => state.insights);
+  const isInsightsEnabled =
+    (metadata?.QueryWiseResult != null &&
+      !metadata?.DashboardUnitWiseResult != null) ||
+    (!_.isEmpty(metadata?.QueryWiseResult) &&
+      !_.isEmpty(metadata?.DashboardUnitWiseResult));
 
-  const addShadowToHeader = useCallback(() => {
-    const scrollTop =
-      window.pageYOffset !== undefined
-        ? window.pageYOffset
-        : (
-            document.documentElement ||
-            document.body.parentNode ||
-            document.body
-          ).scrollTop;
-    if (scrollTop > 0) {
-      document.getElementById('app-header').style.filter =
-        'drop-shadow(0px 2px 0px rgba(200, 200, 200, 0.25))';
-    } else {
-      document.getElementById('app-header').style.filter = 'none';
-    }
+  const showReportTabs = requestQuery && isInsightsEnabled;
+
+  useEffect(() => {
+    document.addEventListener('scroll', addShadowToHeader);
+    return () => {
+      document.removeEventListener('scroll', addShadowToHeader);
+    };
   }, []);
+
 
   const handleCloseToAnalyse = () => {
     history.push({
@@ -68,112 +59,96 @@ function AnalysisHeader({
     }
   }, [history, navigatedFromDashboard, requestQuery]);
 
-  useEffect(() => {
-    document.addEventListener('scroll', addShadowToHeader);
-    return () => {
-      document.removeEventListener('scroll', addShadowToHeader);
-    };
-  }, [addShadowToHeader]);
+  const renderReportTitle = () => {
+    return (
+      <Text
+        type={'title'}
+        level={5}
+        weight={`bold`}
+        extraClass={'m-0 mt-1'}
+        lineHeight={'small'}
+      >
+        {queryTitle
+          ? `Reports /  ${queryTitle}`
+          : `Reports / ${
+          EVENT_BREADCRUMB[queryType]
+          } / Untitled Analysis${' '}
+            ${moment().format('DD/MM/YYYY')}`}
+      </Text>
+    )
+  }
 
-  // const isInsightsEnabled = metadata?.QueryWiseResult!=null || !metadata?.DashboardUnitWiseResult!=null ||  !_.isEmpty(metadata.QueryWiseResult) || !_.isEmpty(metadata?.DashboardUnitWiseResult)
-  const isInsightsEnabled =
-    (metadata?.QueryWiseResult != null &&
-      !metadata?.DashboardUnitWiseResult != null) ||
-    (!_.isEmpty(metadata?.QueryWiseResult) &&
-      !_.isEmpty(metadata?.DashboardUnitWiseResult));
-  // console.log('isInsightsEnabled',isInsightsEnabled);
+  const renderReportCloseIcon = () => {
+    return (
+      <Button
+        size={'large'}
+        type='text'
+        icon={<SVG size={20} name={'close'} />}
+        onClick={navigatedFromDashboard ? handleCloseDashboardQuery : handleCloseToAnalyse}
+      />
+    )
+  }
+
+  const renderLogo = () => {
+    return (
+      <Button
+        size={'large'}
+        type='text'
+        icon={<SVG size={32} name='Brand' />}
+      />
+    )
+  }
+
+  const renderSaveQueryComp = () => {
+    if (!requestQuery) return null;
+    return (
+      <SaveQuery
+        queryType={queryType}
+        requestQuery={requestQuery}
+        queryTitle={queryTitle}
+        {...rest}
+      />
+    )
+  }
+
+  const renderReportTabs = () => {
+    if (!showReportTabs) return null;
+    return (
+      <div className={'items-center flex justify-center w-full'}>
+        <Tabs
+          defaultActiveKey={activeTab}
+          onChange={changeTab}
+          className={'fa-tabs--dashboard'}
+        >
+          <TabPane tab='Reports' key='1' />
+          <TabPane tab='Insights' key='2' />
+        </Tabs>
+      </div>
+    )
+  }
+
   return (
     <div
       id='app-header'
-      className={`bg-white z-50 ${
-        requestQuery && 'fixed'
-      } flex-col pt-3 px-8 w-11/12 ${
-        requestQuery && isInsightsEnabled ? 'pb-0' : 'pb-3'
-      } ${styles.topHeader}`}
+      className={cx('bg-white z-50 flex-col pt-3 px-8 w-11/12 w-full', { 'fixed': requestQuery }, { 'pb-0': showReportTabs }, { 'pb-3': !showReportTabs })}
     >
       <div className={'items-center flex justify-between w-full'}>
-        <div
-          onClick={onBreadCrumbClick}
-          className='flex items-center cursor-pointer'
-        >
-          <Button
-            size={'large'}
-            type='text'
-            icon={<SVG size={32} name='Brand' />}
-            className={'mr-2'}
-          />
-          <div>
-            <Text
-              type={'title'}
-              level={5}
-              weight={`bold`}
-              extraClass={'m-0 mt-1'}
-              lineHeight={'small'}
-            >
-              {queryTitle
-                ? `Reports /  ${queryTitle}`
-                : `Reports / ${
-                    EVENT_BREADCRUMB[queryType]
-                  } / Untitled Analysis${' '}
-            ${moment().format('DD/MM/YYYY')}`}
-            </Text>
-          </div>
+        <div role="button" tabIndex={0} onClick={onBreadCrumbClick} className='flex items-center cursor-pointer'>
+          {renderLogo()}
+          {renderReportTitle()}
         </div>
-        <div className='flex items-center'>
-          {requestQuery && (
-            <SaveQuery
-              requestQuery={requestQuery}
-              visible={showSaveModal}
-              setVisible={setShowSaveModal}
-              queryType={queryType}
-              setQuerySaved={setQuerySaved}
-              breakdownType={breakdownType}
-              getCurrentSorter={getCurrentSorter}
-              savedQueryId={savedQueryId}
-            />
-          )}
 
-          {/* <Button
-          size={'large'}
-          type='text'
-          icon={<SVG size={20} name={'threedot'} />}
-          className={'ml-2'}
-        ></Button> */}
-
-          {navigatedFromDashboard ? (
-            <Button
-              size={'large'}
-              type='text'
-              icon={<SVG size={20} name={'close'} />}
-              className={'ml-2'}
-              onClick={handleCloseDashboardQuery}
-            ></Button>
-          ) : (
-            <Button
-              size={'large'}
-              type='text'
-              icon={<SVG size={20} name={'close'} />}
-              className={'ml-2'}
-              onClick={handleCloseToAnalyse}
-            ></Button>
-          )}
+        <div className='flex items-center gap-x-2'>
+          <div className="pr-6 border-r">
+            {renderSaveQueryComp()}
+          </div>
+          {renderReportCloseIcon()}
         </div>
       </div>
 
-      {requestQuery && isInsightsEnabled && (
-        <div className={'items-center flex justify-center w-full'}>
-          <Tabs
-            defaultActiveKey={activeTab}
-            onChange={changeTab}
-            className={'fa-tabs--dashboard'}
-          >
-            <TabPane tab='Reports' key='1' />
-            <TabPane tab='Insights' key='2' />
-          </Tabs>
-        </div>
-      )}
+      {renderReportTabs()}
     </div>
   );
 }
 
-export default AnalysisHeader;
+export default memo(AnalysisHeader);

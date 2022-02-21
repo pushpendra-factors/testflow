@@ -212,6 +212,12 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/insights", responseWrapper(V1.GetWeeklyInsightsHandler))
 	authRouteGroup.GET("/:project_id/weekly_insights_metadata", responseWrapper(V1.GetWeeklyInsightsMetadata))
 	authRouteGroup.POST("/:project_id/feedback", V1.PostFeedbackHandler)
+
+	// bingads integration
+	authRouteGroup.POST("/:project_id/v1/bingads", responseWrapper(V1.CreateBingAdsIntegration))
+	authRouteGroup.DELETE("/:project_id/v1/bingads/disable", responseWrapper(V1.DisableBingAdsIntegration))
+	authRouteGroup.GET("/:project_id/v1/bingads", responseWrapper(V1.GetBingAdsIntegration))
+	authRouteGroup.PUT("/:project_id/v1/bingads/enable", responseWrapper(V1.EnableBingAdsIntegration))
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
