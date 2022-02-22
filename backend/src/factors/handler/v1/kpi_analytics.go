@@ -64,10 +64,11 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		storeSelected.GetKPIConfigsForPageViews,
 		storeSelected.GetKPIConfigsForFormSubmissions,
 		storeSelected.GetKPIConfigsForHubspotContacts,
-		// storeSelected.GetKPIConfigsForHubspotCompanies,
+		storeSelected.GetKPIConfigsForHubspotCompanies,
+		storeSelected.GetKPIConfigsForHubspotDeals,
 		storeSelected.GetKPIConfigsForSalesforceUsers,
-		// storeSelected.GetKPIConfigsForSalesforceAccounts,
-		// storeSelected.GetKPIConfigsForSalesforceOpportunities,
+		storeSelected.GetKPIConfigsForSalesforceAccounts,
+		storeSelected.GetKPIConfigsForSalesforceOpportunities,
 		storeSelected.GetKPIConfigsForAdwords, storeSelected.GetKPIConfigsForGoogleOrganic,
 		storeSelected.GetKPIConfigsForFacebook, storeSelected.GetKPIConfigsForLinkedin,
 		storeSelected.GetKPIConfigsForAllChannels,
@@ -134,7 +135,6 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		}
 		resultantFilterValuesResponse = eventsFilterValues
 	} else {
-		request.ObjectType = model.GetObjectTypeForFilterValues(request.ObjectType, request.Metric)
 		userFilterValues, err := storeSelected.GetPropertyValuesByUserProperty(projectID, request.PropertyName, model.FilterValuesOrEventNamesLimit, C.GetLookbackWindowForEventUserCache())
 		if err != nil {
 			logCtx.Warn(err)

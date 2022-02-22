@@ -95,6 +95,7 @@ type Model interface {
 	GetKPIConfigsForFormSubmissions(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForHubspotContacts(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForHubspotCompanies(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForHubspotDeals(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForSalesforceUsers(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForSalesforceAccounts(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForSalesforceOpportunities(projectID uint64, reqID string) (map[string]interface{}, int)

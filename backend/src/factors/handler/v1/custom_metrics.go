@@ -5,6 +5,7 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -95,7 +96,7 @@ func GetCustomMetrics(c *gin.Context) (interface{}, int, string, string, bool) {
 }
 
 func getPropertiesFunctionBasedOnObjectType(objectType string) func(uint64, string) []map[string]string {
-	if objectType == model.HubspotContactsDisplayCategory {
+	if strings.Contains(objectType, "hubspot") {
 		return store.GetStore().GetPropertiesForHubspot
 	} else {
 		return store.GetStore().GetPropertiesForSalesforce
