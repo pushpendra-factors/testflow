@@ -1,0 +1,29 @@
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: shared-persistent-pool
+  name: k8-backup
+spec:
+  schedule: "*/30 * * * *" # every 30 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: shared-persistent-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: shared-persistent-pool
+          containers:
+          - name: k8-backup
+            image: us.gcr.io/factors-production/k8-backup:v1-4066
+            imagePullPolicy: IfNotPresent
+          serviceAccount: k8-backup
+          serviceAccountName: k8-backup
+          restartPolicy: OnFailure
