@@ -384,6 +384,7 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 		document.Timestamp = updatedTimestamp
 	}
 
+	if !C.DisableCRMUniquenessConstraintsCheckByProjectID(projectId) {
 	errCode = store.satisfiesHubspotDocumentUniquenessConstraints(document)
 	if errCode != http.StatusOK {
 		if errCode != http.StatusConflict {
@@ -406,16 +407,42 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 
 		document = newDocument
 	}
+	}
 
 	db := C.GetServices().Db
 	err = db.Create(document).Error
 	if err != nil {
-		if IsDuplicateRecordError(err) {
+		if !IsDuplicateRecordError(err) {
+			logCtx.WithError(err).Error("Failed to create hubspot document.")
+			return http.StatusInternalServerError
+		}
+
+		if !C.DisableCRMUniquenessConstraintsCheckByProjectID(projectId) {
 			return http.StatusConflict
 		}
 
-		logCtx.WithError(err).Error("Failed to create hubspot document.")
-		return http.StatusInternalServerError
+		if document.Type != model.HubspotDocumentTypeDeal {
+			return http.StatusConflict
+		}
+
+		newDocument, errCode := store.getUpdatedDealAssociationDocument(projectId, document)
+		if errCode != http.StatusOK {
+			if errCode != http.StatusConflict {
+				logCtx.WithField("errCode", errCode).Error("Failed to getUpdatedDealAssociationDocument.")
+				return http.StatusInternalServerError
+			}
+			return errCode
+		}
+
+		err = db.Create(&newDocument).Error
+		if err != nil {
+			if IsDuplicateRecordError(err) {
+				return http.StatusConflict
+			}
+
+			logCtx.WithError(err).Error("Failed to create hubspot deal association document.")
+			return http.StatusInternalServerError
+		}
 	}
 
 	if isNew { // create updated document for new user
