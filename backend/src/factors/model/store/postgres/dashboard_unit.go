@@ -13,6 +13,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	DashboardCacheInvalidationDuration14DaysInSecs = 14 * 24 * 60 * 60
+)
+
 // CreateDashboardUnitForMultipleDashboards creates multiple dashboard units each for given
 // list of dashboards
 func (pg *Postgres) CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64,
@@ -301,12 +305,40 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 	})
 
 	projectIDs := pg.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
+	var mapOfValidDashboardUnits map[uint64]map[uint64]bool
+	var err error
+	if C.GetSkipDashboardCachingAnalytics() == 1 {
+		mapOfValidDashboardUnits, err = model.GetDashboardCacheAnalyticsValidityMap()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to pull Dashboard Cached Units in last 14 days")
+			return
+		}
+		logCtx.WithFields(log.Fields{"total_units": len(mapOfValidDashboardUnits)}).Info("No of units accessed in last 14 days for all projects")
+	}
 	for _, projectID := range projectIDs {
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
 		logCtx.Info("Starting to cache units for the project")
 		startTime := U.TimeNowUnix()
 		dashboardUnitIDs := C.GetDashboardUnitIDs(dashboardUnitIDsList)
-		unitsCount := pg.CacheDashboardUnitsForProjectID(projectID, dashboardUnitIDs, numRoutines, reportCollector)
+		unitsCount := 0
+
+		if C.GetSkipDashboardCachingAnalytics() == 1 {
+			var validDashboardIDs []uint64
+			for _, dashboardUnitID := range dashboardUnitIDs {
+				if _, exists := mapOfValidDashboardUnits[projectID]; exists {
+					if value, exists := mapOfValidDashboardUnits[projectID][dashboardUnitID]; exists {
+						if value {
+							validDashboardIDs = append(validDashboardIDs, dashboardUnitID)
+						}
+					}
+				}
+			}
+			logCtx.WithFields(log.Fields{"project_id": projectID, "total_units": len(dashboardUnitIDs), "accessed_units": len(validDashboardIDs)}).Info("Total dashboard units & No of units accessed in last 14 days")
+			unitsCount = pg.CacheDashboardUnitsForProjectID(projectID, validDashboardIDs, numRoutines, reportCollector)
+		} else {
+			unitsCount = pg.CacheDashboardUnitsForProjectID(projectID, dashboardUnitIDs, numRoutines, reportCollector)
+
+		}
 
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)

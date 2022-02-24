@@ -97,6 +97,18 @@ func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, 
 	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
 
+func getDashboardCacheAnalyticsCacheKey(projectID, dashboardID, unitID uint64, from, to int64, timezoneString U.TimeZoneString, preset string) (*cacheRedis.Key, error) {
+	prefix := "dashboard:analytics"
+	var suffix string
+	if U.IsStartOfTodaysRangeIn(from, timezoneString) {
+		// Query for today's dashboard. Use to as 'now'.
+		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:now:preset:%v", dashboardID, unitID, from, preset)
+	} else {
+		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:%d:preset:%v", dashboardID, unitID, from, to, preset)
+	}
+	return cacheRedis.NewKey(projectID, prefix, suffix)
+}
+
 var DashboardUnitPresentations = [...]string{
 	HorizontalBar,
 	PresentationScatterPlot,

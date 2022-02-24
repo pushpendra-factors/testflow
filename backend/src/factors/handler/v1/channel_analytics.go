@@ -182,6 +182,11 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
 	}
 
+	// Tracking dashboard query request.
+	if isDashboardQueryRequest {
+		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
+	}
+
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqID, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)

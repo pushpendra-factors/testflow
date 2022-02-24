@@ -211,6 +211,7 @@ type Configuration struct {
 	FivetranGroupId                                 string
 	FivetranLicenseKey                              string
 	DisableCRMUniquenessConstraintsCheckByProjectID string
+	SkipDashboardCachingAnalytics                   int
 }
 
 type Services struct {
@@ -2027,4 +2028,8 @@ func DisableCRMUniquenessConstraintsCheckByProjectID(projectID uint64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+func GetSkipDashboardCachingAnalytics() int {
+	return configuration.SkipDashboardCachingAnalytics
 }
