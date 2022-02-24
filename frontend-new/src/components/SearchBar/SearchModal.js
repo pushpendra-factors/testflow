@@ -7,6 +7,7 @@ import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { getQueryType } from '../../utils/dataFormatter';
 import { QUERY_TYPE_WEB, QUERY_TYPE_TEXT } from '../../utils/constants';
+import { HighlightSearchText } from '../HighlightSearchText';
 
 function SearchModal({ visible, handleClose, handleQueryClick }) {
   const queriesState = useSelector((state) => state.queries);
@@ -47,7 +48,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
       maskTransitionName=''
       mask={false}
     >
-      <div data-tour = 'step-3' className='search-bar'>
+      <div data-tour='step-3' className='search-bar'>
         <div className='flex justify-center px-4'>
           <Input
             value={searchValue}
@@ -89,7 +90,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                     className={`flex justify-between items-center px-4 py-3 cursor-pointer ${styles.queryItem}`}
                     key={d.id}
                   >
-                    <div className='flex items-center'>
+                    <div className='flex items-center truncate'>
                       <div className='mr-2'>
                         <SVG name={svgName} size={20} />
                       </div>
@@ -98,7 +99,10 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                         level={7}
                         extraClass={`m-0 ${styles.hoverTextColor}`}
                       >
-                        {d.title}
+                        <HighlightSearchText
+                          text={d.title}
+                          highlight={searchValue}
+                        />
                       </Text>
                     </div>
                     <div className={styles.queryType}>
