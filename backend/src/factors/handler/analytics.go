@@ -134,6 +134,10 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 	requestPayload.SetTimeZone(timezoneString)
 
+	// Tracking dashboard query request.
+	if isDashboardQueryRequest {
+		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
+	}
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
@@ -307,6 +311,11 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		logCtxDEBUG.WithFields(log.Fields{"logNo": "OneMid",
 			"QueryAfter": requestPayload.Query,
 		}).Info("Query body 1")
+	}
+
+	// Tracking dashboard query request.
+	if isDashboardQueryRequest {
+		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
 	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.

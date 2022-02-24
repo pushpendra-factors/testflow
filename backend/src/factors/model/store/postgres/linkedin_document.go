@@ -681,55 +681,43 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 	responseSelectKeys := make([]string, 0, 0)
 	responseSelectMetrics := make([]string, 0, 0)
 
-	smartPropertyCampaignGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	smartPropertyAdGroupGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	linkedinGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	// Group By
+	// Group By and select keys
 	for _, groupBy := range query.GroupBy {
 		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
-		if !isPresent {
+		isSmartProperty := !isPresent
+		if isSmartProperty {
 			if groupBy.Object == "campaign_group" {
-				smartPropertyCampaignGroupBys = append(smartPropertyCampaignGroupBys, groupBy)
+				value := fmt.Sprintf("campaign.properties->>'%s' as campaign_%s", groupBy.Property, groupBy.Property)
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
+
 				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("campaign_%s", groupBy.Property))
 			} else {
-				smartPropertyAdGroupGroupBys = append(smartPropertyAdGroupGroupBys, groupBy)
+				value := fmt.Sprintf("ad_group.properties->>'%s' as ad_group_%s", groupBy.Property, groupBy.Property)
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
+
 				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("ad_group_%s", groupBy.Property))
 			}
 		} else {
 			key := groupBy.Object + ":" + groupBy.Property
+			if groupBy.Object == CAFilterChannel {
+				value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			} else {
+				value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
+				selectKeys = append(selectKeys, value)
+				responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			}
+
 			groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, model.LinkedinInternalGroupByRepresentation[key])
-			linkedinGroupBys = append(linkedinGroupBys, groupBy)
 		}
 	}
 	if isGroupByTimestamp {
 		groupByStatement = joinWithComma(append(groupByKeysWithoutTimestamp, model.AliasDateTime)...)
 	} else {
 		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
-	}
-
-	// SelectKeys
-
-	for _, groupBy := range linkedinGroupBys {
-		key := groupBy.Object + ":" + groupBy.Property
-		if groupBy.Object == CAFilterChannel {
-			value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
-			selectKeys = append(selectKeys, value)
-			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
-		} else {
-			value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
-			selectKeys = append(selectKeys, value)
-			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
-		}
-	}
-	for _, groupBy := range smartPropertyCampaignGroupBys {
-		value := fmt.Sprintf("campaign.properties->>'%s' as campaign_%s", groupBy.Property, groupBy.Property)
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
-	}
-	for _, groupBy := range smartPropertyAdGroupGroupBys {
-		value := fmt.Sprintf("ad_group.properties->>'%s' as ad_group_%s", groupBy.Property, groupBy.Property)
-		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
 	}
 
 	finalSelectKeys = append(finalSelectKeys, selectKeys...)
@@ -749,8 +737,8 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
-	whereConditionForFilters := getLinkedinFiltersWhereStatementWithSmartProperty(query.Filters, smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
-	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
+	whereConditionForFilters := getLinkedinFiltersWhereStatementWithSmartProperty(query.Filters)
+	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyLinkedinGroupBys(query.GroupBy)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForLinkedinWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
 
 	fromStatement := getLinkedinFromStatementWithJoins(query.Filters, query.GroupBy)
@@ -940,7 +928,7 @@ func getLinkedinFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	}
 	return resultStatement
 }
-func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1, smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {
+func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1) string {
 	resultStatement := ""
 	var filterValue string
 	campaignFilter := ""
@@ -985,6 +973,34 @@ func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFi
 	if adGroupFilter != "" {
 		resultStatement += (" AND " + adGroupFilter)
 	}
+	if resultStatement == "" {
+		return resultStatement
+	}
+	return resultStatement + ")"
+}
+
+func getNotNullFilterStatementForSmartPropertyLinkedinGroupBys(groupBys []model.ChannelGroupBy) string {
+	resultStatement := ""
+	for _, groupBy := range groupBys {
+		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		isSmartProperty := !isPresent
+		if isSmartProperty {
+			if groupBy.Object == model.LinkedinCampaignGroup {
+				if resultStatement == "" {
+					resultStatement += fmt.Sprintf("( campaign.properties->>'%s' IS NOT NULL ", groupBy.Property)
+				} else {
+					resultStatement += fmt.Sprintf("AND campaign.properties->>'%s' IS NOT NULL ", groupBy.Property)
+				}
+			} else {
+				if resultStatement == "" {
+					resultStatement += fmt.Sprintf("( ad_group.properties->>'%s' IS NOT NULL ", groupBy.Property)
+				} else {
+					resultStatement += fmt.Sprintf("AND ad_group.properties->>'%s' IS NOT NULL ", groupBy.Property)
+				}
+			}
+		}
+	}
+
 	if resultStatement == "" {
 		return resultStatement
 	}

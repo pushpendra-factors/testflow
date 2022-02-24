@@ -399,18 +399,46 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 		"dashboard_unit_ids_list": dashboardUnitIDsList,
 		"report_collector":        reportCollector,
 	}
+	logCtx := log.WithFields(logFields)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(logFields)
-
 	projectIDs := store.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
+	var mapOfValidDashboardUnits map[uint64]map[uint64]bool
+	var err error
+	if C.GetSkipDashboardCachingAnalytics() == 1 {
+		mapOfValidDashboardUnits, err = model.GetDashboardCacheAnalyticsValidityMap()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to pull Dashboard Cached Units in last 14 days")
+			return
+		}
+		logCtx.Info("No of units accessed in last 14 days %d", len(mapOfValidDashboardUnits))
+	}
 	for _, projectID := range projectIDs {
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
 		logCtx.Info("Starting to cache units for the project")
 		startTime := U.TimeNowUnix()
 		dashboardUnitIDs := C.GetDashboardUnitIDs(dashboardUnitIDsList)
-		unitsCount := store.CacheDashboardUnitsForProjectID(projectID, dashboardUnitIDs, numRoutines, reportCollector)
+		unitsCount := 0
 
+		if C.GetSkipDashboardCachingAnalytics() == 1 {
+
+			var validDashboardIDs []uint64
+			for _, dashboardUnitID := range dashboardUnitIDs {
+				if _, exists := mapOfValidDashboardUnits[projectID]; exists {
+					if value, exists := mapOfValidDashboardUnits[projectID][dashboardUnitID]; exists {
+						if value {
+							validDashboardIDs = append(validDashboardIDs, dashboardUnitID)
+						}
+					}
+				}
+			}
+			logCtx.WithFields(log.Fields{"project_id": projectID, "total_units": len(dashboardUnitIDs), "accessed_units": len(validDashboardIDs)}).Info("Total dashboard units & No of units accessed in last 14 days")
+			unitsCount = store.CacheDashboardUnitsForProjectID(projectID, validDashboardIDs, numRoutines, reportCollector)
+
+		} else {
+
+			unitsCount = store.CacheDashboardUnitsForProjectID(projectID, dashboardUnitIDs, numRoutines, reportCollector)
+		}
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
 		logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).

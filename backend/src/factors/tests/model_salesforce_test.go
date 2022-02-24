@@ -3113,10 +3113,10 @@ func TestSalesforceGroups(t *testing.T) {
 				}
 			} else {
 				if documents[0].ID == accountID1 {
-					assert.Equal(t, "account1", groupUser.Group1ID)
+					assert.Equal(t, accountID1, groupUser.Group1ID)
 					account1GroupUserId = groupUser.ID
 				} else {
-					assert.Equal(t, "account2", groupUser.Group1ID)
+					assert.Equal(t, accountID2, groupUser.Group1ID)
 					account2GroupUserId = groupUser.ID
 				}
 			}
@@ -3141,9 +3141,9 @@ func TestSalesforceGroups(t *testing.T) {
 			assert.Equal(t, false, *nonGroupUser.IsGroupUser)
 			if documents[0].ID == contactID1 || documents[0].ID == leadID1 ||
 				documents[0].ID == opportunityID1 || documents[0].ID == opportunityID3 {
-				assert.Equal(t, "account1", nonGroupUser.Group1ID)
+				assert.Equal(t, accountID1, nonGroupUser.Group1ID)
 			} else {
-				assert.Equal(t, "account2", nonGroupUser.Group1ID)
+				assert.Equal(t, accountID2, nonGroupUser.Group1ID)
 			}
 			assert.NotEqual(t, "", nonGroupUser.Group1UserID)
 		}
@@ -3300,10 +3300,10 @@ func TestSalesforceGroups(t *testing.T) {
 				}
 			} else {
 				if documents[0].ID == accountID1 {
-					assert.Equal(t, "account1", groupUser.Group1ID)
+					assert.Equal(t, accountID1, groupUser.Group1ID)
 					assert.Equal(t, account1GroupUserId, groupUser.ID)
 				} else {
-					assert.Equal(t, "account2", groupUser.Group1ID)
+					assert.Equal(t, accountID2, groupUser.Group1ID)
 					assert.Equal(t, account2GroupUserId, groupUser.ID)
 				}
 			}
@@ -3313,14 +3313,14 @@ func TestSalesforceGroups(t *testing.T) {
 			nonGroupUser, status := store.GetStore().GetUser(project.ID, latestDocument.UserID)
 			assert.Equal(t, http.StatusFound, status)
 			if latestDocument.ID == leadID1 || latestDocument.ID == contactID1 {
-				assert.Equal(t, "account1", nonGroupUser.Group1ID)
+				assert.Equal(t, accountID1, nonGroupUser.Group1ID)
 				assert.Equal(t, account1GroupUserId, nonGroupUser.Group1UserID)
 
 				if latestDocument.ID == leadID1 {
 					assert.Equal(t, opportunity1GroupUserId, nonGroupUser.Group2UserID)
 				}
 			} else {
-				assert.Equal(t, "account2", nonGroupUser.Group1ID)
+				assert.Equal(t, accountID2, nonGroupUser.Group1ID)
 				assert.Equal(t, account2GroupUserId, nonGroupUser.Group1UserID)
 
 				if latestDocument.ID == leadID2 || latestDocument.ID == leadID2_3 {

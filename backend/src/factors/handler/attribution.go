@@ -124,6 +124,12 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		logCtx.Error("Query failed. LookbackDays exceeded the limit.")
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. LookbackDays exceeded the limit.", true
 	}
+
+	// Tracking dashboard query request.
+	if isDashboardQueryRequest {
+		model.SetDashboardCacheAnalytics(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
+	}
+
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 
