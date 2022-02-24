@@ -1,8 +1,7 @@
 import React, { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
-import { Button, Tooltip, Popover, Dropdown, Menu } from 'antd';
-import useToggle from '../../hooks/useToggle';
+import { Button, Tooltip, Dropdown, Menu } from 'antd';
 import { BUTTON_TYPES } from '../../utils/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import SavedQueryPopoverContent from './savedQueryPopoverContent';
