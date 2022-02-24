@@ -15,7 +15,7 @@ class BaseInfoExtract(BaseExtract):
     NAME = ""
     FIELDS = []
     type_alias = ""  # Facebook terminology
-    UNFORMATTED_URL = "https://graph.facebook.com/v11.0/{}/{}s?fields={}&&access_token={}&&limit=1000"
+    UNFORMATTED_URL = "https://graph.facebook.com/v13.0/{}/{}s?fields={}&&access_token={}&&limit=1000"
     BACKFILL_SUPPORTED = True
     records = None
 

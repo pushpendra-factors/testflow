@@ -54,6 +54,7 @@ func main() {
 	// better to have 0 or 1 values instead of false/true
 	onlyAttribution := flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
 	skipAttribution := flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
+	skipDashboardCachingAnalytics := flag.Int("skip_dashboard_caching_analytics", 0, "Skip the dashboard caching analytics for 14 days limit.")
 
 	runningForMemsql := flag.Int("running_for_memsql", 0, "Disable routines for memsql.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -131,6 +132,7 @@ func main() {
 		SkipUserJoinInEventQueryByProjectID: *skipUserJoinInEventQueryByProjectID,
 		DebugEnabled:                        *debugEnabled,
 		ResourcePoolForAnalytics:            *resourcePoolForAnalytics,
+		SkipDashboardCachingAnalytics:		 *skipDashboardCachingAnalytics,
 	}
 
 	C.InitConf(config)
@@ -192,7 +194,6 @@ func main() {
 	failed, passed, notComputed := model.GetTotalFailedComputedNotComputed(allUnitReports)
 
 	logCtx.Info("Completed dashboard caching")
-	logCtx.WithFields(log.Fields{"slowUnits": slowUnits, "failedUnits": failedUnits, "slowProjects": slowProjects}).Info("Final Caching Job Report")
 	notifyMessage = fmt.Sprintf("Caching successful for %s - %s projects. Time taken: %+v. Time taken for web analytics: %+v",
 		*projectIDFlag, *excludeProjectIDFlag, timeTakenString, timeTakenStringWeb)
 	logCtx.Info(notifyMessage)
@@ -207,6 +208,22 @@ func main() {
 		"Top5SlowProjects":     slowProjects,
 	}
 	C.PingHealthcheckForSuccess(healthcheckPingID, status)
+
+	slowUnits = model.GetNSlowestUnits(allUnitReports, 20)
+	failedUnits = model.GetFailedUnitsByProject(allUnitReports)
+	slowProjects = model.GetNSlowestProjects(allUnitReports, 10)
+
+	logCtx.WithFields(log.Fields{
+		"Summary":                       notifyMessage,
+		"TimeTakenForNormalUnits":       timeTakenString,
+		"TimeTakenForWebAnalyticsUnits": timeTakenStringWeb,
+		"TotalFailed":                   failed,
+		"TotalPassed":                   passed,
+		"TotalNotComputed":              notComputed,
+		"Top3SlowUnits":                 slowUnits,
+		"FailedUnitsByProject":          failedUnits,
+		"Top5SlowProjects":              slowProjects}).Info("Final Caching Job Report")
+
 }
 
 func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, dashboardUnitIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup) {

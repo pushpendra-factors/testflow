@@ -79,22 +79,23 @@ func TestMain(m *testing.M) {
 		// Test is not 100% backward compatible. Only some of the unit tests
 		// have flag based cases for both backward and forward compatibility.
 		// So kept on-table user_properties as primary.
-		AllowedCampaignEnrichmentByProjectID:        *allowedCampaignEnrichmentByProjectID,
-		UseOpportunityAssociationByProjectID:        "*",
-		AllowedHubspotGroupsByProjectIDs:            "*",
-		UseSourcePropertyOverwriteByProjectIDs:      "*",
-		AllowedSalesforceGroupsByProjectIDs:         "*",
-		AllowSupportForUserPropertiesInIdentifyCall: "*",
-		SkipEventNameStepByProjectID:                "*",
-		SkipUserJoinInEventQueryByProjectID:         "*",
-		EnableEventLevelEventProperties:             "",
-		LookbackWindowForEventUserCache:             *lookbackWindowForEventUserCache,
-		EnableOLTPQueriesMemSQLImprovements:         "*",
-		CaptureSourceInUsersTable:                   "*",
-		AllowSupportForSourceColumnInUsers:          "*",
-		MergeAmpIDAndSegmentIDWithUserIDByProjectID: "*",
-		AllowProfilesGroupSupport:                   "*",
-		UseSessionBatchTransactionByProjectID:       "*",
+		AllowedCampaignEnrichmentByProjectID:            *allowedCampaignEnrichmentByProjectID,
+		UseOpportunityAssociationByProjectID:            "*",
+		AllowedHubspotGroupsByProjectIDs:                "*",
+		UseSourcePropertyOverwriteByProjectIDs:          "*",
+		AllowedSalesforceGroupsByProjectIDs:             "*",
+		AllowSupportForUserPropertiesInIdentifyCall:     "*",
+		SkipEventNameStepByProjectID:                    "*",
+		SkipUserJoinInEventQueryByProjectID:             "*",
+		EnableEventLevelEventProperties:                 "",
+		LookbackWindowForEventUserCache:                 *lookbackWindowForEventUserCache,
+		EnableOLTPQueriesMemSQLImprovements:             "*",
+		CaptureSourceInUsersTable:                       "*",
+		AllowSupportForSourceColumnInUsers:              "*",
+		MergeAmpIDAndSegmentIDWithUserIDByProjectID:     "*",
+		AllowProfilesGroupSupport:                       "*",
+		SessionBatchTransactionBatchSize:                50,
+		DisableCRMUniquenessConstraintsCheckByProjectID: "*",
 	}
 	C.InitConf(config)
 
@@ -109,6 +110,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Println(err)
 	}
+
 	C.InitFilemanager(path, *env, config)
 	C.InitQueueClient(config.RedisHost, config.RedisPort)
 	C.InitDuplicateQueueClient(config.RedisHost, config.RedisPort)

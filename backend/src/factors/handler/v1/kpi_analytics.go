@@ -278,6 +278,11 @@ func getResultFromCacheOrDashboard(c *gin.Context, reqID string, projectID uint6
 	dashboardId uint64, unitId uint64, commonQueryFrom int64, commonQueryTo int64, hardRefresh bool,
 	timezoneString U.TimeZoneString, isDashboardQueryRequest bool, logCtx *log.Entry) (interface{}, int, string, string, bool) {
 
+	// Tracking dashboard query request.
+	if isDashboardQueryRequest {
+		model.SetDashboardCacheAnalytics(projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)
+	}
+
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, request.GetTimeZone(), hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqID, projectID, dashboardId, unitId, commonQueryFrom, commonQueryTo, timezoneString)

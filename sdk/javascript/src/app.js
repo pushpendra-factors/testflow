@@ -7,6 +7,7 @@ const util = require("./utils/util");
 var APIClient = require("./api-client");
 const constant = require("./constant");
 const Properties = require("./properties");
+const Cache = require("./cache");
 
 const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
 
@@ -41,48 +42,25 @@ function getAutoTrackURL() {
     return window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
 }
 
-// Todo: Use a prototype for window cache object.
-function factorsWindow() { 
-    if (!window._FactorsCache) window._FactorsCache={}; 
-    return window._FactorsCache; 
-}
-
-function addCurrentPageAutoTrackEventIdToStore(eventId, eventNamePageURL) {
+function addCurrentPageAutoTrackEventIdToStore(eventId, eventNamePageURL, originalPageURL) {
     if (!eventId || eventId == "") return;
-    factorsWindow().currentPageURLEventName = eventNamePageURL;
-    factorsWindow().currentPageTrackEventId = eventId;
-}
 
-function getCurrentPageAutoTrackEventIdFromStore() {
-    if (!factorsWindow().currentPageTrackEventId) return;
-    return factorsWindow().currentPageTrackEventId;    
-}
-
-function getCurrentPageAutoTrackEventPageURLFromStore() {
-    if (!factorsWindow().currentPageTrackEventId) return;
-    return factorsWindow().currentPageURLEventName; 
+    Cache.setFactorsCache(Cache.currentPageOriginalURL, originalPageURL);
+    Cache.setFactorsCache(Cache.currentPageURLEventName, eventNamePageURL);
+    Cache.setFactorsCache(Cache.currentPageTrackEventId, eventId);
 }
 
 function setLastActivityTime() {
-    factorsWindow().lastActivityTime = util.getCurrentUnixTimestampInMs();
+    Cache.setFactorsCache(Cache.lastActivityTime, util.getCurrentUnixTimestampInMs());
 }
 
 function getLastActivityTime() {
-    var lastActivityTime = factorsWindow().lastActivityTime;
-    if (!lastActivityTime) lastActivityTime = 0;
-    return lastActivityTime
+    var lastActivityTime = Cache.getFactorsCache(Cache.lastActivityTime);
+    return lastActivityTime ? lastActivityTime : 0;
 }
 
 function setPrevActivityTime(t) {
-    factorsWindow().prevActivityTime = t ? t : 0;
-}
-
-function setLastPollerId(id) {
-    factorsWindow().lastPollerId = id;
-}
-
-function getLastPollerId() {
-    return factorsWindow().lastPollerId;
+    Cache.setFactorsCache(Cache.prevActivityTime, t ? t : 0)
 }
 
 function isObject(obj) {
@@ -120,14 +98,14 @@ function setLastTimeoutIdByPeriod(timeoutIn=0, id=0) {
     if (timeoutIn == 0 || id == 0) return;
 
     var key = FACTORS_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
-    factorsWindow()[key] = id;
+    Cache.getFactorsCacheObject()[key] = id;
 }
 
 function getLastTimeoutIdByPeriod(timeoutIn=0) {
     if (timeoutIn == 0) return;
 
     var key = FACTORS_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
-    return factorsWindow()[key];
+    return Cache.getFactorsCacheObject()[key];
 }
 
 function clearTimeoutByPeriod(timeoutInPeriod) {
@@ -140,9 +118,8 @@ function clearTimeoutByPeriod(timeoutInPeriod) {
 
 
 function getPrevActivityTime() {
-    var prevActivityTime = factorsWindow().prevActivityTime;
-    if (!prevActivityTime) prevActivityTime = 0;
-    return prevActivityTime
+    var prevActivityTime = Cache.getFactorsCache(Cache.prevActivityTime);
+    return prevActivityTime ? prevActivityTime : 0;
 }
 
 function getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastSpentTimeInMs) {
@@ -202,7 +179,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     }
 
     if (opts.track_page_on_spa === true) {
-        factorsWindow().trackPageOnSPA = true
+        Cache.setFactorsCache(Cache.trackPageOnSPA, true); 
     }
     
     // Gets settings using temp client with given token, if succeeds, 
@@ -245,11 +222,21 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
     eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
     if (!isAllowedEventName(eventName)) 
         return Promise.reject(new Error("FactorsError: Invalid event name."));
+
+    // The original page URL is added to cache for tracking referrer etc.,
+    var originalPageURL = window.location.href;
         
     // Other property validations done on backend.
     eventProperties = Properties.getTypeValidated(eventProperties);
+
+    var referrer = document.referrer;
+    // Use page event name on cache as referrer for SPA auto tracking.
+    var currentPageOriginalURL = Cache.getFactorsCache(Cache.currentPageOriginalURL)
+    if (Cache.getFactorsCache(Cache.trackPageOnSPA) && currentPageOriginalURL) 
+        referrer = currentPageOriginalURL;
+
     // Merge default properties.
-    eventProperties = Object.assign(eventProperties, Properties.getEventDefault())
+    eventProperties = Object.assign(eventProperties, Properties.getEventDefault(referrer))
 
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
@@ -272,7 +259,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
                     return response;
                 }
 
-                if (auto) addCurrentPageAutoTrackEventIdToStore(response.body.event_id, eventName);
+                if (auto) addCurrentPageAutoTrackEventIdToStore(response.body.event_id, eventName, originalPageURL);
                 if (afterCallback) afterCallback(response.body.event_id);
             }            
 
@@ -330,7 +317,7 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs,
     // update if any properties given.
     if (Object.keys(properties).length > 0) {
         logger.debug("Updating page properties : " + JSON.stringify(properties), false);
-        var eventId = getCurrentPageAutoTrackEventIdFromStore();
+        var eventId = Cache.getFactorsCache(Cache.currentPageTrackEventId);
         var payload = { event_id: eventId, properties: properties };
         this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload));
     } else {
@@ -344,9 +331,9 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs,
 }
 
 function isPageAutoTracked() {
-    var pageEventId = getCurrentPageAutoTrackEventIdFromStore();
+    var pageEventId = Cache.getFactorsCache(Cache.currentPageTrackEventId); 
     if (pageEventId && pageEventId != undefined) {
-        return getAutoTrackURL() == getCurrentPageAutoTrackEventPageURLFromStore();
+        return getAutoTrackURL() == Cache.getFactorsCache(Cache.currentPageURLEventName);
     }
 
     return false
@@ -356,7 +343,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
     if (!enabled) return false; // not enabled.
 
     if (!force && isPageAutoTracked()) {
-        logger.debug('Page tracked already as per store : '+JSON.stringify(factorsWindow()))
+        logger.debug('Page tracked already as per store : '+JSON.stringify(Cache.getFactorsCacheObject()))
         return false;
     }
     
@@ -388,7 +375,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
     setLastTimeoutIdByPeriod(tenSecondsInMs, timoutId10thSecond);
 
     // clear the previous poller, if exist.
-    var lastPollerId = getLastPollerId();
+    var lastPollerId = Cache.getFactorsCache(Cache.lastPollerId);
     clearInterval(lastPollerId);
     if (lastPollerId) logger.debug("Cleared previous page poller: "+lastPollerId, false);
 
@@ -398,7 +385,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
             startOfPageSpentTime, lastPageProperties);
     }, 20000);
     
-    setLastPollerId(pollerId);
+    Cache.setFactorsCache(Cache.lastPollerId, pollerId);
 
     // update page properties before leaving the page.
     window.addEventListener("beforeunload", function() {
@@ -415,7 +402,7 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
     
     // AutoTrack SPA using history.
     // checks support for history and onpopstate listener.
-    if ( !factorsWindow().trackPageOnSPA && window.history && window.onpopstate !== undefined) {
+    if ( !Cache.getFactorsCache(Cache.trackPageOnSPA) && window.history && window.onpopstate !== undefined) {
         var prevLocation = window.location.href;
         window.addEventListener('popstate', function() {
             logger.debug("Triggered window.onpopstate goto: "+window.location.href+", prev: "+prevLocation);
@@ -431,9 +418,9 @@ App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
         })
     }
 
-    if (factorsWindow().trackPageOnSPA) {
+    if (Cache.getFactorsCache(Cache.trackPageOnSPA)) {
         setInterval(function(){
-            if (factorsWindow().currentPageURLEventName != getAutoTrackURL()) {
+            if (Cache.getFactorsCache(Cache.currentPageURLEventName) != getAutoTrackURL()) {
                 _this.track(
                     getAutoTrackURL(), 
                     Properties.getFromQueryParams(window.location), 

@@ -6,6 +6,7 @@ import (
 	"factors/util"
 	U "factors/util"
 	"fmt"
+	"github.com/clearbit/clearbit-go/clearbit"
 	"testing"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -150,4 +151,19 @@ func TestConvertPostgresJSONBToMap(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, targetMap["name"], name)
 	assert.Equal(t, targetMap["email"], email)
+}
+
+func TestClearbit(t *testing.T) {
+	client := clearbit.NewClient(clearbit.WithAPIKey("key"))
+
+	results, resp, err := client.Reveal.Find(clearbit.RevealFindParams{
+		IP: "104.193.168.24",
+	})
+
+	if err == nil {
+		fmt.Println(results, resp)
+		fmt.Println(results, resp)
+	} else {
+		fmt.Println(err)
+	}
 }

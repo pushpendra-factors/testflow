@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 )
@@ -147,6 +148,23 @@ func GetQueryRangePresetCurrentWeekIn(timeZoneString TimeZoneString) (int64, int
 	timeNow := time.Now().In(location)
 	rangeEndTime := GetBeginningOfDayTimestampIn(timeNow.Unix(), timeZoneString) - 1
 	return rangeStartTime, rangeEndTime, errCode
+}
+
+func GetPresetNameByFromAndTo(from, to int64, timezoneString TimeZoneString) string {
+
+	epsilonSeconds := float64(60)
+	for rangeString, rangeFunction := range QueryDateRangePresets {
+		f, t, errCode := rangeFunction(timezoneString)
+		if errCode != nil {
+			return DateRangePresetToday
+		}
+		// If difference between from-to of query and from-to of the preset are is < 60, that is the preset!
+		if math.Abs(float64(to-from)-float64(t-f)) < epsilonSeconds {
+			return rangeString
+		}
+	}
+	// In case no presets matched
+	return DateRangePresetToday
 }
 
 func GetDynamicPreviousRanges(granularity string, number int64, timeZoneString TimeZoneString) (int64, int64, error) {

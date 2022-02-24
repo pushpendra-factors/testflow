@@ -159,7 +159,7 @@ const getProfileWithProperties = (queries) => {
       }
     });
     pwps.push({
-      // an: ev.alias,
+      an: ev.alias,
       ty: ev.label,
       pr: filterProps,
       tz: localStorage.getItem('project_timeZone') || 'Asia/Kolkata',
@@ -1302,6 +1302,12 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
         </>
       );
     } else {
+      const horizontalBarChart =
+        requestQuery.gGBy.length <= 3 ? (
+          <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
+            Display Bar Chart
+          </Radio>
+        ) : null;
       return (
         <>
           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
@@ -1314,6 +1320,7 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
             Display Stacked Column Chart
           </Radio>
           {commons}
+          {horizontalBarChart}
         </>
       );
     }
@@ -1500,6 +1507,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
       }
     });
     return {
+      alias: e.an,
       label: e.ty,
       filters: evfilters,
     };

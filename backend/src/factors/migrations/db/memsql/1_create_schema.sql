@@ -342,11 +342,12 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
-    SHARD KEY (project_id, type, action),
+    SHARD KEY (project_id, type, id),
     KEY (project_id, type, action, id, timestamp) USING CLUSTERED COLUMNSTORE,
     KEY (user_id) USING HASH,
     KEY (type) USING HASH,
-    KEY (synced) USING HASH
+    KEY (synced) USING HASH,
+    UNIQUE KEY project_id_id_type_action_timestamp_unique_idx(project_id, id, type,action,timestamp) USING HASH
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
@@ -497,11 +498,12 @@ CREATE TABLE IF NOT EXISTS salesforce_documents (
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
-    SHARD KEY (project_id, type, action),
+    SHARD KEY (project_id, type, id),
     KEY (project_id, type, action, id, timestamp) USING CLUSTERED COLUMNSTORE,
     KEY (user_id) USING HASH,
     KEY (type) USING HASH,
-    KEY (synced) USING HASH
+    KEY (synced) USING HASH,
+    UNIQUE KEY project_id_id_type_timestamp_unique_idx(project_id, id, type,timestamp) USING HASH
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
@@ -827,5 +829,35 @@ CREATE TABLE leadgen_settings (
 );
 -- DOWN
 -- DROP TABLE IF EXISTS leadgen_settings;
+
+CREATE ROWSTORE TABLE IF NOT EXISTS fivetran_mappings(
+    project_id bigint NOT NULL,
+    id text NOT NULL,
+    integration text NOT NULL,
+    connector_id text NOT NULL,
+    schema_id text NOT NULL,
+    status boolean,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
+    SHARD KEY (project_id),
+    PRIMARY KEY (project_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS integration_documents (
+    document_id text,
+    project_id bigint,
+    customer_account_id text,
+    document_type int,
+    timestamp bigint,
+    source text,
+    value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id, document_id),
+    KEY (updated_at) USING HASH,
+    KEY (project_id, customer_account_id, document_id, document_type, source, timestamp)  USING CLUSTERED COLUMNSTORE
+);
+
 
 -- DROP DATABASE factors;

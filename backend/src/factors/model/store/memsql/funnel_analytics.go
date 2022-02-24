@@ -868,6 +868,11 @@ func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEven
 		}
 
 	}
-	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep, timezoneString)
+	groupSelect, groupSelectParams, groupKeys := "", make([]interface{}, 0), ""
+	if ewpIndex == 1 {
+		groupSelect, groupSelectParams, groupKeys = buildGroupKeysWithFirst(projectID, groupPropsByStep, timezoneString)
+	} else {
+		groupSelect, groupSelectParams, groupKeys = buildGroupKeys(projectID, groupPropsByStep, timezoneString)
+	}
 	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }

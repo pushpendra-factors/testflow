@@ -1,3 +1,4 @@
+export const TOGGLE_DELETE_MODAL = 'TOGGLE_DELETE_MODAL';
 export const TOGGLE_APIS_CALLED = 'TOGGLE_APIS_CALLED';
 export const TOGGLE_MODAL_VISIBILITY = 'TOGGLE_MODAL_VISIBILITY';
 export const SET_ACTIVE_ACTION = 'SET_ACTIVE_ACTION';
@@ -14,4 +15,5 @@ export const SAVE_QUERY_INITIAL_STATE = {
   showSaveModal: false,
   showAddToDashModal: false,
   activeAction: null,
+  showDeleteModal: false,
 };

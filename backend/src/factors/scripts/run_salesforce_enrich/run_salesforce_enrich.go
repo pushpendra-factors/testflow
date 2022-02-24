@@ -108,6 +108,7 @@ func main() {
 	enableSalesforceGroupsByProjectIDs := flag.String("salesforce_groups_by_project_ids", "", "Enable salesforce groups by projects.")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
+	disableCRMUniquenessConstraintsCheckByProjectID := flag.String("disable_crm_unique_constraint_check_by_project_id", "", "")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -165,6 +166,7 @@ func main() {
 		AllowedSalesforceGroupsByProjectIDs:    *enableSalesforceGroupsByProjectIDs,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
+		DisableCRMUniquenessConstraintsCheckByProjectID: *disableCRMUniquenessConstraintsCheckByProjectID,
 	}
 
 	C.InitConf(config)

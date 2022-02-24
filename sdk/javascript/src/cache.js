@@ -1,0 +1,33 @@
+"use strict";
+
+const cacheWindowKey = "_FactorsCache";
+
+function getFactorsCache(key) { 
+    if (!window[cacheWindowKey]) window[cacheWindowKey]={}; 
+    return window[cacheWindowKey][key];
+}
+
+function setFactorsCache(key, value) {
+    if (!window[cacheWindowKey]) window[cacheWindowKey]={};
+    window[cacheWindowKey][key] = value;
+}
+
+function getFactorsCacheObject() {
+    if (!window[cacheWindowKey]) window[cacheWindowKey]={};
+    return window[cacheWindowKey];
+}
+
+module.exports = {
+    getFactorsCache: getFactorsCache,
+    setFactorsCache: setFactorsCache,
+    getFactorsCacheObject: getFactorsCacheObject,
+
+    // List of factors cache keys.
+    currentPageURLEventName: "currentPageURLEventName",
+    currentPageTrackEventId: "currentPageTrackEventId",
+    currentPageOriginalURL: "currentPageOriginalURL",
+    lastPollerId: "lastPollerId",
+    trackPageOnSPA: "trackPageOnSPA",
+    prevActivityTime: "prevActivityTime",
+    lastActivityTime: "lastActivityTime",
+}

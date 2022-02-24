@@ -1036,8 +1036,8 @@ func (store *MemSQL) associateSessionToEventsInBatch(projectId uint64, userID st
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	batchEvents := model.GetEventListAsBatch(events, batchSize)
-	if C.AllowSessionBatchTransactionByProjectID(projectId) {
+	if C.GetSessionBatchTransactionBatchSize() > 0 {
+		batchEvents := model.GetEventListAsBatch(events, C.GetSessionBatchTransactionBatchSize())
 		anyFailure := store.AssociateSessionByEventIdsBatchV2(projectId, userID, batchEvents, sessionId, sessionEventNameId)
 		if anyFailure {
 			log.WithFields(logFields).WithFields(log.Fields{"user_id": userID,
@@ -1049,6 +1049,7 @@ func (store *MemSQL) associateSessionToEventsInBatch(projectId uint64, userID st
 		return http.StatusAccepted
 	}
 
+	batchEvents := model.GetEventListAsBatch(events, batchSize)
 	for i := range batchEvents {
 
 		errCode := store.AssociateSessionByEventIds(projectId, userID, batchEvents[i], sessionId, sessionEventNameId)
@@ -1434,7 +1435,7 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 				newSessionEventUserPropertiesJsonb = nil
 			}
 
-			if C.AllowSessionBatchTransactionByProjectID(projectId) {
+			if C.GetSessionBatchTransactionBatchSize() > 0 {
 				updateEventPropertiesParams = append(updateEventPropertiesParams,
 					model.UpdateEventPropertiesParams{
 						ProjectID:                     projectId,
@@ -1472,7 +1473,7 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 					EventUserProperties: eventsOfSession[i].UserProperties,
 				}
 
-				if C.AllowSessionBatchTransactionByProjectID(projectId) {
+				if C.GetSessionBatchTransactionBatchSize() > 0 {
 					updateEventSessionUserPropertiesRecordMap[userPropertiesRefID] = sessionUserProperties
 					continue
 				}
@@ -1484,9 +1485,10 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 		i++
 	}
 
-	if C.AllowSessionBatchTransactionByProjectID(projectId) {
+	if C.GetSessionBatchTransactionBatchSize() > 0 {
 
-		batchedUpdatedEventPropertiesParams := model.GetUpdateEventPropertiesParamsAsBatch(updateEventPropertiesParams, 20)
+		batchedUpdatedEventPropertiesParams := model.GetUpdateEventPropertiesParamsAsBatch(updateEventPropertiesParams,
+			C.GetSessionBatchTransactionBatchSize())
 		for batchIndex := range batchedUpdatedEventPropertiesParams {
 			failure := store.UpdateEventPropertiesInBatch(projectId, batchedUpdatedEventPropertiesParams[batchIndex])
 			if failure {

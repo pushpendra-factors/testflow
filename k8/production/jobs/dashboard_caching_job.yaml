@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: shared-persistent-pool
+    nodePool: preemptible-high-mem
   name: dashboard-caching-job
 spec:
   schedule: "0 1/6 * * *" # In UTC. Every 6 hours.
@@ -15,54 +15,82 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: shared-persistent-pool
+            nodePool: preemptible-high-mem
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: shared-persistent-pool
+            cloud.google.com/gke-nodepool: preemptible-high-mem
           containers:
-          - name: dashboard-caching-job
-            image: us.gcr.io/factors-production/dashboard-caching-job:v1.01-8663283-800
-            imagePullPolicy: IfNotPresent
-            args:
-            - --env
-            - $(ENV)
-            - --db_host
-            - $(DB_HOST)
-            - --db_port
-            - $(DB_PORT)
-            - --db_name
-            - $(POSTGRES_DB)
-            - --db_user
-            - $(POSTGRES_USER)
-            - --db_pass
-            - $(POSTGRES_PASSWORD)
-            - --redis_host
-            - $(PERSISTENT_REDIS_HOST)
-            - --redis_port
-            - $(PERSISTENT_REDIS_PORT)
-            - --sentry_dsn
-            - $(SENTRY_DSN)
-            - --gcp_project_id
-            - $(GCP_PROJECT_ID)
-            - --gcp_project_location
-            - $(GCP_PROJECT_LOCATION)
-            - --project_id
-            - "2"
-            - --num_routines
-            - "4"
-            - --num_routines_for_web_analytics
-            - "1"
-            - --dashboard_unit_id
-            - "*"
-            envFrom:
-            - configMapRef:
-                name: config-env
-            - configMapRef:
-                name: config-persistent-redis
-            - configMapRef:
-                name: config-postgres
-            - secretRef:
-                name: secret-postgres
-            - secretRef:
-                name: secret-sentry
+            - name: dashboard-caching-job
+              image: us.gcr.io/factors-production/dashboard-caching-job:v1.01-8663283-800
+              imagePullPolicy: IfNotPresent
+              args:
+                - --env
+                - $(ENV)
+                - --memsql_host
+                - $(MEMSQL_HOST)
+                - --memsql_port
+                - $(MEMSQL_PORT)
+                - --memsql_name
+                - $(MEMSQL_DB)
+                - --memsql_user
+                - $(MEMSQL_HEAVY_USER)
+                - --memsql_pass
+                - $(MEMSQL_PASSWORD)
+                - --memsql_cert
+                - $(MEMSQL_CERTIFICATE)
+                - --primary_datastore
+                - memsql
+                - --memsql_max_open_connections
+                - "20"
+                - --memsql_max_idle_connections
+                - "0"
+                - --resource_pool_for_analytics
+                - $(MEMSQL_RPOOL_HEAVY)
+                - --redis_host
+                - $(PERSISTENT_REDIS_HOST)
+                - --redis_port
+                - $(PERSISTENT_REDIS_PORT)
+                - --sentry_dsn
+                - $(SENTRY_DSN)
+                - --gcp_project_id
+                - $(GCP_PROJECT_ID)
+                - --gcp_project_location
+                - $(GCP_PROJECT_LOCATION)
+                - --project_id
+                - '*'
+                - --exclude_project_id
+                - 1,2,3
+                - --num_routines
+                - "20"
+                - --num_routines_for_web_analytics
+                - "15"
+                - --running_for_memsql
+                - "0"
+                - --only_attribution
+                - "0"
+                - --skip_attribution
+                - "0"
+                - --healthcheck_ping_id
+                - 9a632a74-030c-494a-aa1d-01a489921f3e
+                - --app_name
+                - dashboard-caching-job-memsql
+                - --skip_event_name_step_by_project_id
+                - '*'
+                - --skip_user_join_in_event_query_by_project_id
+                - '*'
+                - --dashboard_unit_id
+                - '*'
+                - --debug_enabled
+                - "false"
+              envFrom:
+                - configMapRef:
+                    name: config-env
+                - configMapRef:
+                    name: config-persistent-redis
+                - configMapRef:
+                    name: config-postgres
+                - secretRef:
+                    name: secret-postgres
+                - secretRef:
+                    name: secret-sentry
           restartPolicy: OnFailure

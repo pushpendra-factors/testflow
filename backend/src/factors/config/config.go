@@ -174,42 +174,44 @@ type Configuration struct {
 	// Flags to disable DB and Redis writes when enabled.
 	// Added as pointer to prevent accidental writes from
 	// other services while testing.
-	DisableDBWrites                             *bool
-	EnableDemoReadAccess                        *bool
-	DisableRedisWrites                          *bool
-	DisableQueryCache                           *bool
-	AllowedCampaignEnrichmentByProjectID        string
-	UseOpportunityAssociationByProjectID        string
-	AllowChannelGroupingForProjectIDs           string
-	CloudManager                                filestore.FileManager
-	SegmentExcludedCustomerIDByProject          map[uint64]string // map[project_id]customer_user_id
-	AttributionDebug                            int
-	DisableDashboardQueryDBExecution            bool
-	AllowedHubspotGroupsByProjectIDs            string
-	EnableFilterOptimisation                    bool
-	FilterPropertiesStartTimestamp              int64
-	OnlyAttributionDashboardCaching             int
-	SkipAttributionDashboardCaching             int
-	IsRunningForMemsql                          int
-	UseSourcePropertyOverwriteByProjectIDs      string
-	AllowedSalesforceGroupsByProjectIDs         string
-	DevBox                                      bool
-	AllowSupportForUserPropertiesInIdentifyCall string
-	SkipEventNameStepByProjectID                string
-	SkipUserJoinInEventQueryByProjectID         string
-	EnableEventLevelEventProperties             string
-	EnableOLTPQueriesMemSQLImprovements         string
-	CaptureSourceInUsersTable                   string
-	AllowSupportForSourceColumnInUsers          string
-	ResourcePoolForAnalytics                    string
-	RestrictReusingUsersByCustomerUserId        string
-	HubspotAPIOnboardingHAPIKey                 string
-	AllowProfilesGroupSupport                   string
-	DebugEnabled                                bool
-	UseSessionBatchTransactionByProjectID       string
-	MergeAmpIDAndSegmentIDWithUserIDByProjectID string
-	FivetranGroupId                             string
-	FivetranLicenseKey                          string
+	DisableDBWrites                                 *bool
+	EnableDemoReadAccess                            *bool
+	DisableRedisWrites                              *bool
+	DisableQueryCache                               *bool
+	AllowedCampaignEnrichmentByProjectID            string
+	UseOpportunityAssociationByProjectID            string
+	AllowChannelGroupingForProjectIDs               string
+	CloudManager                                    filestore.FileManager
+	SegmentExcludedCustomerIDByProject              map[uint64]string // map[project_id]customer_user_id
+	AttributionDebug                                int
+	DisableDashboardQueryDBExecution                bool
+	AllowedHubspotGroupsByProjectIDs                string
+	EnableFilterOptimisation                        bool
+	FilterPropertiesStartTimestamp                  int64
+	OnlyAttributionDashboardCaching                 int
+	SkipAttributionDashboardCaching                 int
+	IsRunningForMemsql                              int
+	UseSourcePropertyOverwriteByProjectIDs          string
+	AllowedSalesforceGroupsByProjectIDs             string
+	DevBox                                          bool
+	AllowSupportForUserPropertiesInIdentifyCall     string
+	SkipEventNameStepByProjectID                    string
+	SkipUserJoinInEventQueryByProjectID             string
+	EnableEventLevelEventProperties                 string
+	EnableOLTPQueriesMemSQLImprovements             string
+	CaptureSourceInUsersTable                       string
+	AllowSupportForSourceColumnInUsers              string
+	ResourcePoolForAnalytics                        string
+	RestrictReusingUsersByCustomerUserId            string
+	HubspotAPIOnboardingHAPIKey                     string
+	AllowProfilesGroupSupport                       string
+	DebugEnabled                                    bool
+	MergeAmpIDAndSegmentIDWithUserIDByProjectID     string
+	SessionBatchTransactionBatchSize                int
+	FivetranGroupId                                 string
+	FivetranLicenseKey                              string
+	DisableCRMUniquenessConstraintsCheckByProjectID string
+	SkipDashboardCachingAnalytics                   int
 }
 
 type Services struct {
@@ -2015,11 +2017,19 @@ func IsProfileGroupSupportEnabled(projectId uint64) bool {
 	return false
 }
 
-func AllowSessionBatchTransactionByProjectID(projectID uint64) bool {
-	allProjects, allowedProjects, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseSessionBatchTransactionByProjectID, "")
+func GetSessionBatchTransactionBatchSize() int {
+	return GetConfig().SessionBatchTransactionBatchSize
+}
+
+func DisableCRMUniquenessConstraintsCheckByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableCRMUniquenessConstraintsCheckByProjectID, "")
 	if allProjects {
 		return true
 	}
 
-	return allowedProjects[projectID]
+	return allowedProjectIDs[projectID]
+}
+
+func GetSkipDashboardCachingAnalytics() int {
+	return configuration.SkipDashboardCachingAnalytics
 }

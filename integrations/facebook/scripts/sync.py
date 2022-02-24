@@ -190,7 +190,7 @@ def get_and_insert_paginated_metadata(facebook_int_setting: dict, doc_type: str,
     metadata: list = []
     records_counter: int
     log.warning("Fetching %s metadata started for Project %s", doc_type, facebook_int_setting[PROJECT_ID])
-    url: str = 'https://graph.facebook.com/v11.0/{}/{}s?fields={}&&access_token={}&&limit=1000'.format(
+    url: str = 'https://graph.facebook.com/v13.0/{}/{}s?fields={}&&access_token={}&&limit=1000'.format(
         facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type_map[doc_type], fields, facebook_int_setting[ACCESS_TOKEN])
     resp: requests.Response = requests.get(url)
     request_counter += 1
@@ -358,7 +358,7 @@ def fetch_and_insert_insights(project_id: str, ad_account_id: str, access_token:
     breakdowns: List[str] = ['publisher_platform']
     log.warning("Fetching %s started for Project %s", doc_type, project_id)
     for time_range in time_ranges:
-        url: str = 'https://graph.facebook.com/v11.0/{}/insights?breakdowns={}&&time_range={}&&fields={}&&access_token={}&&level={}&&limit=1000'.format(
+        url: str = 'https://graph.facebook.com/v13.0/{}/insights?breakdowns={}&&time_range={}&&fields={}&&access_token={}&&level={}&&limit=1000'.format(
             ad_account_id, breakdowns, time_range, fields_insight, access_token, level_breakdown[doc_type])
         breakdown_response: Response = requests.get(url)
         request_counter += 1

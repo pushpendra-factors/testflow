@@ -1,43 +1,18 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
 import { Button, Tooltip, Dropdown, Menu } from 'antd';
 import { BUTTON_TYPES } from '../../utils/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
-import SavedQueryPopoverContent from './savedQueryPopoverContent';
 import styles from './index.module.scss';
-import DeleteQueryModal from '../DeleteQueryModal';
-import { useDispatch, useSelector } from 'react-redux';
-import { Wait } from '../../utils/dataFormatter';
 
 const QueryActions = ({
   savedQueryId,
   handleSaveClick,
   handleEditClick,
-  handleDeleteReport,
+  handleDeleteClick,
   toggleAddToDashboardModal,
 }) => {
-  const dispatch = useDispatch();
-  const { active_project } = useSelector((state) => state.global);
-  const [showSavedQueryPopover, toggleSavedQueryPopover] = useToggle(false);
-  const [showDeleteModal, toggleDeleteModal] = useToggle(false);
-
-  const handleDelete = useCallback(async () => {
-    toggleDeleteModal();
-    // for modal animation
-    await Wait(500);
-    handleDeleteReport();
-  }, [dispatch, active_project, savedQueryId]);
-
-  const handlePopoverOkClick = useCallback(() => {
-    toggleSavedQueryPopover();
-    handleSaveClick();
-  }, [handleSaveClick]);
-
-  const handleDeleteClick = useCallback(() => {
-    toggleDeleteModal();
-  }, []);
-
   const getActionsMenu = () => {
     return (
       <Menu className={styles['more-actions-menu']}>
@@ -71,7 +46,7 @@ const QueryActions = ({
       </ControlledComponent>
 
       <ControlledComponent controller={!!savedQueryId}>
-        <Popover
+        {/* <Popover
           placement='bottom'
           visible={showSavedQueryPopover}
           content={
@@ -89,7 +64,7 @@ const QueryActions = ({
           >
             {'Save'}
           </Button>
-        </Popover>
+        </Popover> */}
         <Tooltip placement='bottom' title='Save as New'>
           <Button
             onClick={handleSaveClick}
@@ -113,12 +88,6 @@ const QueryActions = ({
             icon={<SVG name={'threedot'} />}
           ></Button>
         </Dropdown>
-
-        <DeleteQueryModal
-          visible={showDeleteModal}
-          onDelete={handleDelete}
-          toggleModal={toggleDeleteModal}
-        />
       </ControlledComponent>
     </div>
   );

@@ -61,7 +61,7 @@ function ProjectDropdown({
         type: ACTIVE_DASHBOARD_CHANGE,
         payload: active_dashboard,
       });
-      localStorage.setItem('active-dashboard-id',JSON.stringify(active_dashboard));
+      // localStorage.setItem('active-dashboard-id',JSON.stringify(active_dashboard));
     },
     [dashboards, dispatch, activeDashboard?.id]
   );

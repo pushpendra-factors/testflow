@@ -3071,7 +3071,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		contactUser, status := store.GetStore().GetUser(project.ID, contactDocuments[i].UserId)
 		assert.Equal(t, http.StatusFound, status)
 		// verify group_1_id is company unique id and group_1_user_id is company user_id
-		assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_id", "testcompany"))
+		assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_id", companyDocuments[0].ID))
 		assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_user_id", companyDocuments[0].GroupUserId))
 	}
 	company1GroupUserID := companyDocuments[0].GroupUserId
@@ -3120,7 +3120,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	for i := range contactDocuments {
 		contactUser, status := store.GetStore().GetUser(project.ID, contactDocuments[i].UserId)
 		assert.Equal(t, http.StatusFound, status)
-		assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_id", "testcompany"))
+		assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_id", companyDocuments[0].ID))
 		assert.Equal(t, true, assertUserGroupValueByColumnName(contactUser, "group_1_user_id", companyDocuments[0].GroupUserId))
 	}
 
@@ -3215,7 +3215,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 		[]int{model.HubspotDocumentActionCreated})
 	user, status := store.GetStore().GetUser(project.ID, companyDocuments[0].GroupUserId)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, "testcompany2.com", user.Group1ID)
+	assert.Equal(t, companyDocuments[0].ID, user.Group1ID)
 	assert.Equal(t, model.UserSourceHubspot, *user.Source)
 	userProperties, err := util.DecodePostgresJsonb(&user.Properties)
 	assert.Equal(t, "lead", (*userProperties)["$hubspot_company_lifecyclestage"])

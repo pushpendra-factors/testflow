@@ -501,13 +501,13 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 		Entrances: []TransformQueryi{
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
-				Filters: []QueryProperty{{Entity: UserEntity, Type: U.PropertyTypeCategorical, Property: U.SP_INITIAL_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}},
+				Filters: []QueryProperty{{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.SP_INITIAL_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}},
 			},
 		},
 		Exits: []TransformQueryi{
 			{
 				Metrics: KpiToEventMetricRepr{Aggregation: "count", Entity: EventEntity, Property: "1", GroupByType: U.PropertyTypeCategorical, Operator: ""},
-				Filters: []QueryProperty{{Entity: UserEntity, Type: U.PropertyTypeCategorical, Property: U.SP_LATEST_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}},
+				Filters: []QueryProperty{{Entity: EventEntity, Type: U.PropertyTypeCategorical, Property: U.UP_LATEST_PAGE_URL, LogicalOp: "AND", Operator: EqualsOpStr, Value: "true"}},
 			},
 		},
 		PageViews: []TransformQueryi{
