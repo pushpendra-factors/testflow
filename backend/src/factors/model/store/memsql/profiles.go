@@ -160,13 +160,8 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	allowProfilesGroupSupport := C.IsProfileGroupSupportEnabled(projectID)
 
 	var stepSqlStmnt string
-	if query.DateField != "" {
-		stepSqlStmnt = fmt.Sprintf(
-			"SELECT %s FROM users %s WHERE users.project_id = ? %s AND JSON_EXTRACT_STRING(properties, '%s')>=? AND JSON_EXTRACT_STRING(properties, '%s')<=?", selectStmnt, filterJoinStmnt, filterStmnt, query.DateField, query.DateField)
-	} else {
-		stepSqlStmnt = fmt.Sprintf(
-			"SELECT %s FROM users %s WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterJoinStmnt, filterStmnt)
-	}
+	stepSqlStmnt = fmt.Sprintf(
+		"SELECT %s FROM users %s WHERE users.project_id = ? %s AND join_timestamp>=? AND join_timestamp<=?", selectStmnt, filterJoinStmnt, filterStmnt)
 	params = append(params, groupBySelectParams...)
 	params = append(params, projectID)
 	params = append(params, filterParams...)
