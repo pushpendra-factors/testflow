@@ -1,6 +1,5 @@
 import React, {
   useState,
-  useCallback,
   useEffect,
   useMemo,
   useContext,
@@ -16,12 +15,7 @@ import {
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
-  CHART_TYPE_HORIZONTAL_BAR_CHART,
   presentationObj,
-  CHART_TYPE_SPARKLINES,
-  CHART_TYPE_STACKED_BAR,
-  CHART_TYPE_LINECHART,
-  CHART_TYPE_TABLE,
   ReverseProfileMapper,
 } from '../../../utils/constants';
 import { Spin } from 'antd';
@@ -37,6 +31,7 @@ import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 import { Text, SVG } from '../../../components/factorsComponents';
 import KPIAnalysis from '../KPIAnalysis';
 import ProfilesResultPage from '../ProfilesResultPage';
+import { getChartType } from './analysisResultsPage.helpers';
 
 function ReportContent({
   resultState,
@@ -57,8 +52,8 @@ function ReportContent({
   runAttrCmprQuery,
   campaignsArrayMapper,
   handleGranularityChange,
-  updateChartTypes,
   renderedCompRef,
+  handleChartTypeChange,
 }) {
   let content = null,
     queryDetail = null,
@@ -71,54 +66,13 @@ function ReportContent({
   } = useContext(CoreQueryContext);
 
   const chartType = useMemo(() => {
-    if (queryType === QUERY_TYPE_FUNNEL) {
-      const key = breakdown.length ? 'breakdown' : 'no_breakdown';
-      return chartTypes[queryType][key] === CHART_TYPE_TABLE
-        ? CHART_TYPE_BARCHART
-        : chartTypes[queryType][key];
-    }
-
-    if (
-      queryType === QUERY_TYPE_EVENT ||
-      queryType === QUERY_TYPE_PROFILE ||
-      queryType === QUERY_TYPE_KPI
-    ) {
-      const key = breakdown.length ? 'breakdown' : 'no_breakdown';
-      if (
-        breakdown.length &&
-        breakdown.length > 3 &&
-        chartTypes[queryType][key] === CHART_TYPE_HORIZONTAL_BAR_CHART
-      ) {
-        return CHART_TYPE_BARCHART;
-      }
-      return chartTypes[queryType][key] === CHART_TYPE_TABLE
-        ? breakdown.length
-          ? CHART_TYPE_BARCHART
-          : CHART_TYPE_SPARKLINES
-        : chartTypes[queryType][key];
-    }
-
-    if (queryType === QUERY_TYPE_CAMPAIGN) {
-      const key = campaignState.group_by.length ? 'breakdown' : 'no_breakdown';
-      if (campaignState.group_by.length >= 1) {
-        return chartTypes[queryType][key] === CHART_TYPE_TABLE
-          ? CHART_TYPE_BARCHART
-          : chartTypes[queryType][key];
-      }
-      return chartTypes[queryType][key] === CHART_TYPE_TABLE
-        ? CHART_TYPE_SPARKLINES
-        : chartTypes[queryType][key];
-    }
-
-    if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      const key =
-        attributionsState.models.length === 1
-          ? 'single_touch_point'
-          : 'dual_touch_point';
-      return chartTypes[queryType][key] === CHART_TYPE_TABLE
-        ? CHART_TYPE_BARCHART
-        : chartTypes[queryType][key];
-    }
+    return getChartType({
+      breakdown,
+      chartTypes,
+      queryType,
+      campaignGroupBy: campaignState.group_by,
+      attributionModels: attributionsState.models,
+    });
   }, [
     breakdown,
     campaignState.group_by,
@@ -129,54 +83,6 @@ function ReportContent({
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
   const [chartTypeMenuItems, setChartTypeMenuItems] = useState([]);
-
-  const handleChartTypeChange = useCallback(
-    ({ key }) => {
-      let changedKey;
-      if (
-        queryType === QUERY_TYPE_EVENT ||
-        queryType === QUERY_TYPE_FUNNEL ||
-        queryType === QUERY_TYPE_PROFILE ||
-        queryType === QUERY_TYPE_KPI
-      ) {
-        changedKey = breakdown.length ? 'breakdown' : 'no_breakdown';
-      }
-      if (queryType === QUERY_TYPE_CAMPAIGN) {
-        changedKey = campaignState.group_by.length
-          ? 'breakdown'
-          : 'no_breakdown';
-      }
-      if (queryType === QUERY_TYPE_ATTRIBUTION) {
-        changedKey =
-          attributionsState.models.length > 1
-            ? 'dual_touch_point'
-            : 'single_touch_point';
-      }
-      updateChartTypes({
-        ...chartTypes,
-        [queryType]: {
-          ...chartTypes[queryType],
-          [changedKey]: key,
-        },
-      });
-    },
-    [
-      queryType,
-      updateChartTypes,
-      breakdown,
-      campaignState.group_by,
-      chartTypes,
-      attributionsState.models,
-    ]
-  );
-
-  useEffect(() => {
-    if (navigatedFromDashboard?.query?.settings?.chart) {
-      handleChartTypeChange({
-        key: presentationObj[navigatedFromDashboard.query.settings.chart],
-      });
-    }
-  }, [navigatedFromDashboard]);
 
   useEffect(() => {
     let items = [];

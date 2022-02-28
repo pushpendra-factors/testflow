@@ -1237,237 +1237,237 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
   return result;
 };
 
-export const getSaveChartOptions = (queryType, requestQuery) => {
-  if (queryType === QUERY_TYPE_FUNNEL) {
-    if (requestQuery.gbp.length) {
-      return (
-        <>
-          <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-            Display Funnel Chart
-          </Radio>
-          <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
-            Display Scatter Plot
-          </Radio>
-          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-            Display Table
-          </Radio>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-            Display Funnel Chart
-          </Radio>
-          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-            Display Table
-          </Radio>
-        </>
-      );
-    }
-  }
-  if (queryType === QUERY_TYPE_ATTRIBUTION) {
-    return (
-      <>
-        <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-          Display Columns Chart
-        </Radio>
-        <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
-          Display Scatter Plot Chart
-        </Radio>
-        <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-          Display Table
-        </Radio>
-      </>
-    );
-  }
-  if (queryType === QUERY_TYPE_KPI) {
-    const commons = (
-      <>
-        <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
-          Display Line Chart
-        </Radio>
-        <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-          Display Table
-        </Radio>
-      </>
-    );
-    if (!requestQuery.gGBy.length) {
-      return (
-        <>
-          <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
-            Display Spark Line Chart
-          </Radio>
-          {commons}
-        </>
-      );
-    } else {
-      const horizontalBarChart =
-        requestQuery.gGBy.length <= 3 ? (
-          <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
-            Display Bar Chart
-          </Radio>
-        ) : null;
-      return (
-        <>
-          <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-            Display Columns Chart
-          </Radio>
-          <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
-            Display Stacked Area Chart
-          </Radio>
-          <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
-            Display Stacked Column Chart
-          </Radio>
-          {commons}
-          {horizontalBarChart}
-        </>
-      );
-    }
-  }
-  if (queryType === QUERY_TYPE_CAMPAIGN) {
-    const commons = (
-      <>
-        <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
-          Display Line Chart
-        </Radio>
-        <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-          Display Table
-        </Radio>
-      </>
-    );
-    if (!requestQuery.query_group[0].group_by.length) {
-      return (
-        <>
-          <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
-            Display Spark Line Chart
-          </Radio>
-          {commons}
-        </>
-      );
-    } else {
-      return (
-        <>
-          <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-            Display Columns Chart
-          </Radio>
-          <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
-            Display Stacked Area Chart
-          </Radio>
-          <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
-            Display Stacked Column Chart
-          </Radio>
-          {commons}
-        </>
-      );
-    }
-  }
+// export const getSaveChartOptions = (queryType, requestQuery) => {
+//   if (queryType === QUERY_TYPE_FUNNEL) {
+//     if (requestQuery.gbp.length) {
+//       return (
+//         <>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+//             Display Funnel Chart
+//           </Radio>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
+//             Display Scatter Plot
+//           </Radio>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+//             Display Table
+//           </Radio>
+//         </>
+//       );
+//     } else {
+//       return (
+//         <>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+//             Display Funnel Chart
+//           </Radio>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+//             Display Table
+//           </Radio>
+//         </>
+//       );
+//     }
+//   }
+//   if (queryType === QUERY_TYPE_ATTRIBUTION) {
+//     return (
+//       <>
+//         <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+//           Display Columns Chart
+//         </Radio>
+//         <Radio value={apiChartAnnotations[CHART_TYPE_SCATTER_PLOT]}>
+//           Display Scatter Plot Chart
+//         </Radio>
+//         <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+//           Display Table
+//         </Radio>
+//       </>
+//     );
+//   }
+//   if (queryType === QUERY_TYPE_KPI) {
+//     const commons = (
+//       <>
+//         <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
+//           Display Line Chart
+//         </Radio>
+//         <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+//           Display Table
+//         </Radio>
+//       </>
+//     );
+//     if (!requestQuery.gGBy.length) {
+//       return (
+//         <>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
+//             Display Spark Line Chart
+//           </Radio>
+//           {commons}
+//         </>
+//       );
+//     } else {
+//       const horizontalBarChart =
+//         requestQuery.gGBy.length <= 3 ? (
+//           <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
+//             Display Bar Chart
+//           </Radio>
+//         ) : null;
+//       return (
+//         <>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+//             Display Columns Chart
+//           </Radio>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
+//             Display Stacked Area Chart
+//           </Radio>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
+//             Display Stacked Column Chart
+//           </Radio>
+//           {commons}
+//           {horizontalBarChart}
+//         </>
+//       );
+//     }
+//   }
+//   if (queryType === QUERY_TYPE_CAMPAIGN) {
+//     const commons = (
+//       <>
+//         <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
+//           Display Line Chart
+//         </Radio>
+//         <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+//           Display Table
+//         </Radio>
+//       </>
+//     );
+//     if (!requestQuery.query_group[0].group_by.length) {
+//       return (
+//         <>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
+//             Display Spark Line Chart
+//           </Radio>
+//           {commons}
+//         </>
+//       );
+//     } else {
+//       return (
+//         <>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+//             Display Columns Chart
+//           </Radio>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
+//             Display Stacked Area Chart
+//           </Radio>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
+//             Display Stacked Column Chart
+//           </Radio>
+//           {commons}
+//         </>
+//       );
+//     }
+//   }
 
-  if (queryType === QUERY_TYPE_PROFILE) {
-    let horizontalBarChart = (
-      <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
-        Display Bar Chart
-      </Radio>
-    );
-    const commons = (
-      <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>Display Table</Radio>
-    );
-    if (requestQuery.gbp.length) {
-      const columnsChart = (
-        <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-          Display Columns Chart
-        </Radio>
-      );
-      if (requestQuery.gbp.length > 3) {
-        horizontalBarChart = null;
-      }
-      return (
-        <>
-          {columnsChart}
-          {horizontalBarChart}
-          {commons}
-        </>
-      );
-    }
-    return (
-      <>
-        {horizontalBarChart}
-        {commons}
-      </>
-    );
-  }
+//   if (queryType === QUERY_TYPE_PROFILE) {
+//     let horizontalBarChart = (
+//       <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
+//         Display Bar Chart
+//       </Radio>
+//     );
+//     const commons = (
+//       <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>Display Table</Radio>
+//     );
+//     if (requestQuery.gbp.length) {
+//       const columnsChart = (
+//         <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+//           Display Columns Chart
+//         </Radio>
+//       );
+//       if (requestQuery.gbp.length > 3) {
+//         horizontalBarChart = null;
+//       }
+//       return (
+//         <>
+//           {columnsChart}
+//           {horizontalBarChart}
+//           {commons}
+//         </>
+//       );
+//     }
+//     return (
+//       <>
+//         {horizontalBarChart}
+//         {commons}
+//       </>
+//     );
+//   }
 
-  if (queryType === QUERY_TYPE_EVENT) {
-    if (requestQuery[0].ec === constantObj[EACH_USER_TYPE]) {
-      const commons = (
-        <>
-          <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
-            Display Line Chart
-          </Radio>
-          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-            Display Table
-          </Radio>
-        </>
-      );
-      if (!requestQuery[0].gbp.length) {
-        return (
-          <>
-            <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
-              Display Spark Line Chart
-            </Radio>
-            {commons}
-          </>
-        );
-      } else {
-        const horizontalBarChart =
-          requestQuery[0].gbp.length <= 3 &&
-          requestQuery[0].ewp.length === 1 ? (
-            <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
-              Display Bar Chart
-            </Radio>
-          ) : null;
-        return (
-          <>
-            <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
-              Display Columns Chart
-            </Radio>
-            <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
-              Display Stacked Area Chart
-            </Radio>
-            <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
-              Display Stacked Column Chart
-            </Radio>
-            {commons}
-            {horizontalBarChart}
-          </>
-        );
-      }
-    } else {
-      const commons = (
-        <>
-          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
-            Display Table
-          </Radio>
-        </>
-      );
-      if (!requestQuery[0].gbp.length) {
-        return (
-          <>
-            <Radio value='pc'>Display Count</Radio>
-            {commons}
-          </>
-        );
-      } else {
-        return (
-          <>
-            <Radio value='pb'>Display Columns Chart</Radio>
-            {commons}
-          </>
-        );
-      }
-    }
-  }
-};
+//   if (queryType === QUERY_TYPE_EVENT) {
+//     if (requestQuery[0].ec === constantObj[EACH_USER_TYPE]) {
+//       const commons = (
+//         <>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
+//             Display Line Chart
+//           </Radio>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+//             Display Table
+//           </Radio>
+//         </>
+//       );
+//       if (!requestQuery[0].gbp.length) {
+//         return (
+//           <>
+//             <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
+//               Display Spark Line Chart
+//             </Radio>
+//             {commons}
+//           </>
+//         );
+//       } else {
+//         const horizontalBarChart =
+//           requestQuery[0].gbp.length <= 3 &&
+//           requestQuery[0].ewp.length === 1 ? (
+//             <Radio value={apiChartAnnotations[CHART_TYPE_HORIZONTAL_BAR_CHART]}>
+//               Display Bar Chart
+//             </Radio>
+//           ) : null;
+//         return (
+//           <>
+//             <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+//               Display Columns Chart
+//             </Radio>
+//             <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
+//               Display Stacked Area Chart
+//             </Radio>
+//             <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
+//               Display Stacked Column Chart
+//             </Radio>
+//             {commons}
+//             {horizontalBarChart}
+//           </>
+//         );
+//       }
+//     } else {
+//       const commons = (
+//         <>
+//           <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+//             Display Table
+//           </Radio>
+//         </>
+//       );
+//       if (!requestQuery[0].gbp.length) {
+//         return (
+//           <>
+//             <Radio value='pc'>Display Count</Radio>
+//             {commons}
+//           </>
+//         );
+//       } else {
+//         return (
+//           <>
+//             <Radio value='pb'>Display Columns Chart</Radio>
+//             {commons}
+//           </>
+//         );
+//       }
+//     }
+//   }
+// };
 
 export const isComparisonEnabled = (queryType, events, groupBy, models) => {
   if (queryType === QUERY_TYPE_FUNNEL) {
