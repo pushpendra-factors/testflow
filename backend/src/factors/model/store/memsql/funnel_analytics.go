@@ -653,7 +653,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 				addSelect = addSelect + ", events.id as session_id"
 			}
 		}
-		egSelect, egParams, egGroupKeys, _ := buildGroupKeyForStep(
+		egSelect, egParams, egGroupKeys, _ := buildGroupKeyForStepForFunnel(
 			projectId, &q.EventsWithProperties[i], q.GroupByProperties, i+1, q.Timezone)
 		if egSelect != "" {
 			addSelect = joinWithComma(addSelect, egSelect)
@@ -844,8 +844,9 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	return qStmnt, qParams, nil
 }
 
-// builds group keys for event properties for given step (event_with_properties).
-func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
+// buildGroupKeyForStep moved to memsql/event_analytics.go
+
+func buildGroupKeyForStepForFunnel(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
 	groupProps []model.QueryGroupByProperty, ewpIndex int, timezoneString string) (string, []interface{}, string, bool) {
 	logFields := log.Fields{
 		"project_id":            projectID,
