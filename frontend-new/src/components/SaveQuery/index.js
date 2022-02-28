@@ -29,6 +29,8 @@ import { QUERY_DELETED } from '../../reducers/types';
 import DeleteQueryModal from '../DeleteQueryModal';
 import { getErrorMessage } from '../../utils/dataFormatter';
 import { deleteReport } from '../../reducers/coreQuery/services';
+import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
+import { apiChartAnnotations } from '../../utils/constants';
 
 function SaveQuery({
   requestQuery,
@@ -37,6 +39,9 @@ function SaveQuery({
   getCurrentSorter,
   savedQueryId,
   queryTitle,
+  breakdown,
+  attributionsState,
+  campaignState,
 }) {
   const dispatch = useDispatch();
 
@@ -45,7 +50,10 @@ function SaveQuery({
   );
   const { active_project } = useSelector((state) => state.global);
 
-  const { attributionMetrics } = useContext(CoreQueryContext);
+  const {
+    attributionMetrics,
+    coreQueryState: { chartTypes },
+  } = useContext(CoreQueryContext);
 
   const [saveQueryState, localDispatch] = useReducer(
     SaveQueryReducer,
@@ -130,7 +138,7 @@ function SaveQuery({
 
         const querySettings = {
           ...queryGettingUpdated.settings,
-          chart: dashboardPresentation,
+          dashboardPresentation,
         };
 
         const updateReqBody = {
@@ -198,6 +206,16 @@ function SaveQuery({
 
         const querySettings = {
           ...getCurrentSorter(),
+          chart:
+            apiChartAnnotations[
+              getChartType({
+                queryType,
+                chartTypes,
+                breakdown,
+                attributionModels: attributionsState.models,
+                campaignGroupBy: campaignState.group_by,
+              })
+            ],
         };
 
         if (queryType === QUERY_TYPE_ATTRIBUTION) {
@@ -280,6 +298,10 @@ function SaveQuery({
       savedQueryId,
       updateLocalReducer,
       activeAction,
+      chartTypes,
+      breakdown,
+      attributionsState,
+      campaignState,
     ]
   );
 
@@ -314,8 +336,6 @@ function SaveQuery({
         visible={showAddToDashModal}
         isLoading={apisCalled}
         onSubmit={handleAddToDashboard}
-        queryType={queryType}
-        requestQuery={requestQuery}
       />
 
       <DeleteQueryModal

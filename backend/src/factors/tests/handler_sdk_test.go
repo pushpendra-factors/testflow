@@ -2812,3 +2812,9 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	assert.Empty(t, (*metaObj)[cuid])
 	assert.Empty(t, (*metaObj)[cuid2])
 }
+
+func TestIsValidTokenString(t *testing.T) {
+	assert.True(t, SDK.IsValidTokenString("we0jyjxcs0ix4ggnkptymjh48ur8y7q7"))
+	assert.False(t, SDK.IsValidTokenString("we0jyjxcs0ix4ggnkptymjh48ur8y7q7;"))
+	assert.False(t, SDK.IsValidTokenString("we0jyjxc-s0ix4ggnkptymjh48ur8y7q7"))
+}

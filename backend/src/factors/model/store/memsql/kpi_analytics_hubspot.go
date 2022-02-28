@@ -27,6 +27,15 @@ func (store *MemSQL) GetKPIConfigsForHubspotCompanies(projectID uint64, reqID st
 	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotCompaniesDisplayCategory)
 }
 
+func (store *MemSQL) GetKPIConfigsForHubspotDeals(projectID uint64, reqID string) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	return store.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotDealsDisplayCategory)
+}
+
 // Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.
 func (store *MemSQL) GetKPIConfigsForHubspot(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int) {
 	logFields := log.Fields{

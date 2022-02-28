@@ -9,6 +9,7 @@ import (
 	"factors/util"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -293,8 +294,11 @@ func recordSDKRequestProcessedMetrics(requestType string, execStartTime time.Tim
 	recordLatencyMetricByRequestType(requestType, execStartTime)
 }
 
-func isValidTokenString(token string) bool {
-	return token != "" && token != "undefined" && token != "null" && token != "Null"
+func IsValidTokenString(token string) bool {
+	validString := token != "" && token != "undefined" && token != "null" && token != "Null"
+	// Check esde
+	validExpression := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString(token)
+	return validString && validExpression
 }
 
 func recordLatencyMetricByRequestType(requestType string, execStartTime time.Time) {
@@ -1212,7 +1216,7 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
-		if isValidTokenString(token) {
+		if IsValidTokenString(token) {
 			logCtx.Error("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
@@ -1275,7 +1279,7 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
-		if isValidTokenString(token) {
+		if IsValidTokenString(token) {
 			logCtx.Error("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
@@ -1390,7 +1394,7 @@ func AddUserPropertiesByToken(token string,
 
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
-		if isValidTokenString(token) {
+		if IsValidTokenString(token) {
 			logCtx.Error("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")
@@ -1445,7 +1449,7 @@ func UpdateEventPropertiesByToken(token string,
 
 	if errCode == http.StatusNotFound {
 		logCtx := log.WithField("token", token).WithField("request_payload", reqPayload)
-		if isValidTokenString(token) {
+		if IsValidTokenString(token) {
 			logCtx.Error("Failed to get project from sdk project token.")
 		} else {
 			log.WithField("token", token).Warn("Invalid token on sdk payload.")

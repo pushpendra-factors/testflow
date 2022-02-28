@@ -3,6 +3,7 @@ import styles from './index.module.scss';
 import { Input, Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { CaretDownOutlined, CaretUpOutlined } from '@ant-design/icons';
+import { HighlightSearchText } from '../../HighlightSearchText';
 
 function GroupSelect2({
   groupedProperties,
@@ -67,21 +68,6 @@ function GroupSelect2({
     setShowFull(showMoreState);
   };
 
-  const HighlightedText = ({ text = '', highlight = '' }) => {
-    if (!highlight.trim()) {
-      return <span>{text}</span>;
-    }
-    const regex = new RegExp(`(${_.escapeRegExp(highlight)})`, 'gi');
-    const parts = text.split(regex);
-    return (
-      <span>
-        {parts.map((part, i) =>
-          regex.test(part) ? <b key={i}>{part}</b> : <span key={i}>{part}</span>
-        )}
-      </span>
-    );
-  };
-
   const renderOptions = (options) => {
     const renderGroupedOptions = [];
     options?.forEach((group, grpIndex) => {
@@ -138,10 +124,10 @@ function GroupSelect2({
                           <Text
                             level={7}
                             type={'title'}
-                            extraClass={'m-0'}
+                            extraClass={'m-0 truncate'}
                             weight={'thin'}
                           >
-                            <HighlightedText
+                            <HighlightSearchText
                               text={val[0]}
                               highlight={searchTerm}
                             />

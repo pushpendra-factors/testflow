@@ -19,6 +19,8 @@ import {
   presentationObj,
   QUERY_TYPE_PROFILE,
   QUERY_TYPE_KPI,
+  apiChartAnnotations,
+  CHART_TYPE_TABLE,
 } from '../../utils/constants';
 import Attributions from './Attributions';
 import CampaignAnalytics from './CampaignAnalytics';
@@ -27,6 +29,10 @@ import { useSelector } from 'react-redux';
 import { SVG, Text } from '../../components/factorsComponents';
 import ProfileAnalysis from './ProfileAnalysis';
 import KPIAnalysis from './KPIAnalysis';
+import {
+  DEFAULT_DASHBOARD_PRESENTATION,
+  DASHBOARD_PRESENTATION_KEYS,
+} from '../../components/SaveQuery/saveQuery.constants';
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
@@ -183,10 +189,22 @@ function CardContent({ unit, resultState, durationObj }) {
   }
 
   if (resultState.data) {
+    const reportSelectedChart = _.get(
+      unit,
+      'query.settings.chart',
+      apiChartAnnotations[CHART_TYPE_TABLE]
+    );
+
+    const selectedDashboardPresentation = _.get(
+      unit,
+      'query.settings.dashboardPresentation',
+      DEFAULT_DASHBOARD_PRESENTATION
+    );
+
     const dashboardPresentation =
-      unit.query && unit.query.settings && unit.query.settings.chart
-        ? unit.query.settings.chart
-        : 'pt';
+      selectedDashboardPresentation === DASHBOARD_PRESENTATION_KEYS.CHART
+        ? reportSelectedChart
+        : apiChartAnnotations[CHART_TYPE_TABLE];
 
     if (queryType === QUERY_TYPE_FUNNEL) {
       content = (

@@ -4,6 +4,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -14,6 +15,15 @@ func (pg *Postgres) GetKPIConfigsForHubspotContacts(projectID uint64, reqID stri
 
 func (pg *Postgres) GetKPIConfigsForHubspotCompanies(projectID uint64, reqID string) (map[string]interface{}, int) {
 	return pg.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotCompaniesDisplayCategory)
+}
+
+func (pg *Postgres) GetKPIConfigsForHubspotDeals(projectID uint64, reqID string) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	return pg.GetKPIConfigsForHubspot(projectID, reqID, model.HubspotDealsDisplayCategory)
 }
 
 // Removed constants for hubspot and salesforce kpi metrics in PR - pull/3984.

@@ -139,12 +139,12 @@ function Activate(props) {
                                     <a type={'text'} size={'large'} onClick={() => routeChange('/login')}>Go back to login</a>
                                 </div>
                             </Col> */}
-                            <Col span={24}>
+                            {/* <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    {/* <Text type={'paragraph'} mini color={'grey'}>Don’t have an account? <a onClick={() => routeChange('/signup')}>Sign Up</a></Text> */}
+                                    <Text type={'paragraph'} mini color={'grey'}>Don’t have an account? <a onClick={() => routeChange('/signup')}>Sign Up</a></Text>
                                     <Text type={'paragraph'} mini color={'grey'}>Want to try out Factors.AI? <a href={'https://www.factors.ai/schedule-a-demo'} target="_blank">Request A Demo</a></Text>
                                 </div>
-                            </Col>
+                            </Col> */}
                         </Row>
                         </Form>
                     </div>

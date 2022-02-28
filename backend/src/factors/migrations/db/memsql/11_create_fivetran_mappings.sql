@@ -4,6 +4,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS fivetran_mappings(
     integration text NOT NULL,
     connector_id text NOT NULL,
     schema_id text NOT NULL,
+    accounts text NOT NULL,
     status boolean,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,

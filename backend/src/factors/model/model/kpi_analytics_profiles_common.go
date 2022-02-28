@@ -1,6 +1,8 @@
 package model
 
 import (
+	"encoding/json"
+	"factors/util"
 	U "factors/util"
 	"strconv"
 	"strings"
@@ -9,21 +11,29 @@ import (
 const TimestampHeader = "datetime"
 
 var mapOfKPIToProfileType = map[string]string{
-	HubspotContactsDisplayCategory: UserSourceHubspotString,
-	SalesforceUsersDisplayCategory: UserSourceSalesforceString,
+	HubspotContactsDisplayCategory:         UserSourceHubspotString,
+	HubspotCompaniesDisplayCategory:        UserSourceHubspotString,
+	HubspotDealsDisplayCategory:            UserSourceHubspotString,
+	SalesforceUsersDisplayCategory:         UserSourceSalesforceString,
+	SalesforceAccountsDisplayCategory:      UserSourceSalesforceString,
+	SalesforceOpportunitiesDisplayCategory: UserSourceSalesforceString,
 }
 
 var mapOfKPICategoryToProfileGroupAnalysis = map[string]string{
-	HubspotContactsDisplayCategory: USERS,
-	SalesforceUsersDisplayCategory: USERS,
+	HubspotContactsDisplayCategory:         USERS,
+	HubspotCompaniesDisplayCategory:        GROUP_NAME_HUBSPOT_COMPANY,
+	HubspotDealsDisplayCategory:            GROUP_NAME_HUBSPOT_DEAL,
+	SalesforceUsersDisplayCategory:         USERS,
+	SalesforceAccountsDisplayCategory:      GROUP_NAME_SALESFORCE_ACCOUNT,
+	SalesforceOpportunitiesDisplayCategory: GROUP_NAME_SALESFORCE_OPPORTUNITY,
 }
 
 // Setting and getting Time for profiles query is 0,0. Need to understand.
 func GetDirectDerivableProfileQueryFromKPI(kpiQuery KPIQuery) ProfileQueryGroup {
 	var profileQueryGroup ProfileQueryGroup
 	profileQueryGroup.Class = ProfileQueryClass
-	profileQueryGroup.From = kpiQuery.From
-	profileQueryGroup.To = kpiQuery.To
+	profileQueryGroup.From = EpochOf2000InGMT
+	profileQueryGroup.To = util.TimeNowUnix()
 	profileQueryGroup.Timezone = kpiQuery.Timezone
 	profileQueryGroup.GlobalFilters = transformFiltersKPIToProfiles(kpiQuery.Filters)
 	profileQueryGroup.GlobalGroupBys = transformGroupByKPIToProfiles(kpiQuery.GroupBy)
@@ -60,7 +70,6 @@ func transformGroupByKPIToProfiles(groupBys []KPIGroupBy) []QueryGroupByProperty
 	}
 	return resultantGroupBys
 }
-
 func GetProfileGroupByFromDateField(dateField string, groupByTimestamp string) QueryGroupByProperty {
 	var currentGroupByProperty QueryGroupByProperty
 	currentGroupByProperty = QueryGroupByProperty{}
@@ -71,7 +80,6 @@ func GetProfileGroupByFromDateField(dateField string, groupByTimestamp string) Q
 	return currentGroupByProperty
 }
 
-// TODO Add error.
 func AddCustomMetricsTransformationsToProfileQuery(profileQueryGroup ProfileQueryGroup, kpiMetric string, customMetric CustomMetric, transformation CustomMetricTransformation, kpiQuery KPIQuery) []ProfileQuery {
 	resultantProfileQueries := make([]ProfileQuery, 0)
 
@@ -103,7 +111,8 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	profileQuery.Type = profileCategory
 	profileQuery.GroupAnalysis = profileQueryGroup.GroupAnalysis
 
-	profileQuery.Filters = append(transformFiltersKPIToProfiles(transformation.Filters), profileQueryGroup.GlobalFilters...)
+	profileQuery.Filters = append(profileQueryGroup.GlobalFilters, getProfileDefaultFilterFromDateField(transformation.DateField, kpiQuery.From, kpiQuery.To))
+	profileQuery.Filters = append(profileQuery.Filters, transformFiltersKPIToProfiles(transformation.Filters)...)
 	if kpiQuery.GroupByTimestamp == "" {
 		profileQuery.GroupBys = profileQueryGroup.GlobalGroupBys
 	} else {
@@ -112,8 +121,20 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	for i, _ := range profileQuery.GroupBys {
 		profileQuery.GroupBys[i].Index = i
 	}
-	profileQuery.DateField = transformation.DateField
 	return profileQuery
+}
+
+func getProfileDefaultFilterFromDateField(dateField string, from, to int64) QueryProperty {
+	fromToValues := DateTimePropertyValue{From: from, To: to}
+	fromToValuesAsByte, _ := json.Marshal(fromToValues)
+	var currentFilter QueryProperty
+	currentFilter.Entity = UserEntity
+	currentFilter.LogicalOp = LOGICAL_OP_AND
+	currentFilter.Property = dateField
+	currentFilter.Operator = BetweenStr
+	currentFilter.Type = U.PropertyTypeDateTime
+	currentFilter.Value = string(fromToValuesAsByte)
+	return currentFilter
 }
 
 // Post Execution Transformations

@@ -382,13 +382,14 @@ func checkIfChannelReq(channelName string, filters []ChannelFilterV1) bool {
 	return isChannelReq
 }
 
-func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, int) {
-	isAdwordsReq, isFacebookReq, isLinkedinReq := false, false, false
+func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, bool, int) {
+	isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq := false, false, false, false
 	if len(filters) == 0 {
-		return true, true, true, http.StatusOK
+		return true, true, true, true, http.StatusOK
 	}
 	isAdwordsReq = checkIfChannelReq(ChannelGoogleAds, filters)
 	isFacebookReq = checkIfChannelReq(ChannelFacebook, filters)
 	isLinkedinReq = checkIfChannelReq(ChannelLinkedin, filters)
-	return isAdwordsReq, isFacebookReq, isLinkedinReq, http.StatusOK
+	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters)
+	return isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, http.StatusOK
 }

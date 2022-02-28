@@ -33,15 +33,19 @@ func CreateBingAdsIntegration(c *gin.Context) (interface{}, int, string, string,
 	if statusCode != http.StatusOK {
 		return nil, statusCode, "", errMsg, true
 	}
-	err = store.GetStore().PostFiveTranMapping(projectID, model.BingAdsIntegration, connectorId, schemaId)
-	if err != nil {
-		log.WithError(err).Error("Failed to add connector id to db")
-		return nil, http.StatusPartialContent, "", err.Error(), true
-	}
 	statusCode, errMsg, redirectUri := fivetran.FiveTranCreateConnectorCard(connectorId)
 	if statusCode != http.StatusOK {
 		return nil, statusCode, "", errMsg, true
 	}
+	statusCode, errMsg, _, accounts := fivetran.FiveTranGetConnector(connectorId)
+	if statusCode == http.StatusOK {
+		err = store.GetStore().PostFiveTranMapping(projectID, model.BingAdsIntegration, connectorId, schemaId, accounts)
+		if err != nil {
+			log.WithError(err).Error("Failed to add connector id to db")
+			return nil, http.StatusPartialContent, "", err.Error(), true
+		}
+	}
+
 	result := IntegrationRedirect{
 		RedirectUri: redirectUri,
 	}
@@ -60,15 +64,19 @@ func EnableBingAdsIntegration(c *gin.Context) (interface{}, int, string, string,
 	}
 	statusCode, msg := fivetran.FiveTranPatchConnector(connectorId)
 	if statusCode == http.StatusOK {
-		err := store.GetStore().EnableFiveTranMapping(projectID, model.BingAdsIntegration, connectorId)
-		if err != nil {
-			log.WithError(err).Error("Failed to enable connector from db")
-			return nil, http.StatusPartialContent, "", err.Error(), true
+		statusCode, _, _, accounts := fivetran.FiveTranGetConnector(connectorId)
+		if statusCode == http.StatusOK {
+			err := store.GetStore().EnableFiveTranMapping(projectID, model.BingAdsIntegration, connectorId, accounts)
+			if err != nil {
+				log.WithError(err).Error("Failed to enable connector from db")
+				return nil, http.StatusPartialContent, "", err.Error(), true
+			}
+			status := Status{
+				Status: true,
+			}
+			return status, http.StatusOK, "", "", false
 		}
-		status := Status{
-			Status: true,
-		}
-		return status, http.StatusOK, "", "", false
+		return nil, statusCode, "", msg, true
 	} else {
 		return nil, statusCode, "", msg, true
 	}

@@ -465,3 +465,11 @@ upload-analytics-bundle: upload-dashboard-caching
 upload-analytics-bundle: upload-monthly-dashboard-caching
 upload-analytics-bundle: upload-monthly-beam-dashboard-caching
 upload-analytics-bundle: upload-monthly-beam-dashboard-caching-now
+
+
+pack-k8-backup:
+	docker build -t us.gcr.io/factors-$(ENV)/k8-backup:$(TAG) -f Dockerfile.k8_backup .
+
+upload-k8-backup: export IMAGE_NAME=k8-backup
+upload-k8-backup: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/k8-backup:$(TAG)

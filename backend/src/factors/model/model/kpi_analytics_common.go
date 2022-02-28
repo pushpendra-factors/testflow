@@ -331,6 +331,9 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		"frequency":                     {"display_name": "frequency"},
 		"reach":                         {"display_name": "reach"},
 	},
+	BingAdsDisplayCategory: {
+		Conversions: {"display_name": "Conversions"},
+	},
 }
 
 // Each Property could belong to event or user entity based on type of event we consider. Eg - session has os property in event. Mostly used in EventsCategory.

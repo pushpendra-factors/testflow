@@ -1,0 +1,12 @@
+FROM google/cloud-sdk:290.0.1-alpine
+
+WORKDIR /go/src/factors
+
+COPY k8_backup.sh k8_backup.sh
+
+RUN apk update && apk add --no-cache go curl && \
+curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.18.0/bin/linux/amd64/kubectl && \
+chmod +x ./kubectl && \
+mv ./kubectl /usr/local/bin/kubectl
+
+ENTRYPOINT ["/go/src/factors/k8_backup.sh"]
