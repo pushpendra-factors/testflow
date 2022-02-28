@@ -54,6 +54,7 @@ function ReportsLayout({
   campaignState,
   composerFunctions,
   updateChartTypes,
+  queryOptions,
   ...rest
 }) {
   const dispatch = useDispatch();
