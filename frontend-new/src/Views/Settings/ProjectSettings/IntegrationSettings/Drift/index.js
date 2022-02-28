@@ -16,6 +16,7 @@ const DriftIntegration = ({
     currentProjectSettings, 
     setIsActive,
     kbLink = false,
+    currentAgent
 }) =>{  
     const [loading, setLoading] = useState(false); 
 
@@ -24,6 +25,28 @@ const DriftIntegration = ({
         setIsActive(true);
       }
     }, [currentProjectSettings]);
+
+    const sendSlackNotification = () => {
+        let webhookURL = 'https://hooks.slack.com/services/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';
+        let data = {
+            "text": `User ${currentAgent.email} from Project "${activeProject.name}" Activated Integration: Drift`,
+            "username" : "Signup User Actions",
+            "icon_emoji" : ":golf:"
+        }
+        let params = {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }
+
+        fetch(webhookURL, params)
+        .then((response) => response.json())
+        .then((response) => {
+            console.log(response);
+        })
+        .catch((err) => {
+            console.log('err',err);
+        });
+   }
 
 const enableDrift = () => { 
     setLoading(true); 
@@ -39,6 +62,7 @@ const enableDrift = () => {
             message.success('Drift integration enabled!'); 
         }, 500);
         setIsActive(true);
+        sendSlackNotification();
     }).catch((err) => { 
         setLoading(false);
         console.log('change password failed-->', err);
@@ -83,7 +107,8 @@ return (
 
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
-    currentProjectSettings: state.global.currentProjectSettings
+    currentProjectSettings: state.global.currentProjectSettings,
+    currentAgent: state.agent.agent_details,
   });
   
 export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings })(DriftIntegration)

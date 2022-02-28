@@ -120,6 +120,28 @@ const GoogleIntegration = ({
     } else setIsStatus('');
   }, [activeProject, agent_details, currentProjectSettings]);
 
+  const sendSlackNotification = () => {
+    let webhookURL = 'https://hooks.slack.com/services/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';
+    let data = {
+        "text": `User ${agent_details.email} from Project "${activeProject.name}" Activated Integration: Google Adword`,
+        "username" : "Signup User Actions",
+        "icon_emoji" : ":golf:"
+    }
+    let params = {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }
+
+    fetch(webhookURL, params)
+    .then((response) => response.json())
+    .then((response) => {
+        console.log(response);
+    })
+    .catch((err) => {
+        console.log('err',err);
+    });
+  }
+
   const enableAdwords = () => {
     setLoading(true);
     enableAdwordsIntegration(activeProject.id)
@@ -130,7 +152,8 @@ const GoogleIntegration = ({
         }
         if (r.status == 200) {
           renderSettingInfo();
-          fetchProjectSettings(activeProject.id)
+          fetchProjectSettings(activeProject.id);
+          sendSlackNotification();
         }
         if (r.status >= 400) {
           setShowManageBtn(true);

@@ -17,7 +17,8 @@ const SalesForceIntegration = ({
     setIsActive,
     enableSalesforceIntegration,
     fetchSalesforceRedirectURL,
-    kbLink = false
+    kbLink = false,
+    currentAgent
 }) =>{  
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -41,6 +42,28 @@ useEffect(()=>{
     })
   }
 
+  const sendSlackNotification = () => {
+    let webhookURL = 'https://hooks.slack.com/services/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';
+    let data = {
+        "text": `User ${currentAgent.email} from Project "${activeProject.name}" Activated Integration: Salesforce`,
+        "username" : "Signup User Actions",
+        "icon_emoji" : ":golf:"
+    }
+    let params = {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }
+
+    fetch(webhookURL, params)
+    .then((response) => response.json())
+    .then((response) => {
+        console.log(response);
+    })
+    .catch((err) => {
+        console.log('err',err);
+    });
+  }
+
   const  onClickEnableSalesforce = () => {
 
     //Factors INTEGRATION tracking
@@ -48,6 +71,7 @@ useEffect(()=>{
 
     enableSalesforceIntegration(activeProject.id.toString())
       .then((r) => {
+        sendSlackNotification();
         if (r.status == 304) {
           handleRedirectToURL();
         }
@@ -98,7 +122,8 @@ return (
 
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
-    currentProjectSettings: state.global.currentProjectSettings
+    currentProjectSettings: state.global.currentProjectSettings,
+    currentAgent: state.agent.agent_details,
   });
   
 export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings, enableSalesforceIntegration, fetchSalesforceRedirectURL })(SalesForceIntegration)
