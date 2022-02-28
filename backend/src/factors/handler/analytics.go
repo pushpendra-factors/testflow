@@ -282,35 +282,11 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	}
 	requestPayload.Query.SetTimeZone(timezoneString)
 
-	logCtxDEBUG := log.WithFields(log.Fields{
-		"reqId":       reqId,
-		"projectId":   projectId,
-		"methodDebug": "QueryHandler",
-	})
-	if projectId == 399 {
-		logCtxDEBUG.WithFields(log.Fields{"logNo": "One",
-			"isDashboardQueryRequest": isDashboardQueryRequest,
-			"dashboardIdParam":        dashboardIdParam,
-			"unitIdParam":             unitIdParam,
-			"hardRefresh":             hardRefresh,
-		}).Info("Query Meta 1")
-	}
-
-	if projectId == 399 {
-		logCtxDEBUG.WithFields(log.Fields{"logNo": "OneMid",
-			"QueryBefore": requestPayload.Query,
-		}).Info("Query body 1")
-	}
 	for index := range requestPayload.Query.GroupByProperties {
 		if requestPayload.Query.GroupByProperties[index].Type == U.PropertyTypeDateTime &&
 			requestPayload.Query.GroupByProperties[index].Granularity == "" {
 			requestPayload.Query.GroupByProperties[index].Granularity = U.DateTimeBreakdownDailyGranularity
 		}
-	}
-	if projectId == 399 {
-		logCtxDEBUG.WithFields(log.Fields{"logNo": "OneMid",
-			"QueryAfter": requestPayload.Query,
-		}).Info("Query body 1")
 	}
 
 	// Tracking dashboard query request.
@@ -322,13 +298,6 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
 			reqId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
-		if projectId == 399 {
-			logCtxDEBUG.WithFields(log.Fields{"logNo": "Two",
-				"shouldReturn": shouldReturn,
-				"resCode":      resCode,
-				"resMsg":       resMsg,
-			}).Info("Getting result from GetResponseIfCachedDashboardQuery 2")
-		}
 		if shouldReturn {
 			if resCode == http.StatusOK {
 				return resMsg, resCode, "", "", false
@@ -343,14 +312,6 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	var cacheResult model.QueryResult
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest, reqId)
-
-	if projectId == 399 {
-		logCtxDEBUG.WithFields(log.Fields{"logNo": "Three",
-			"shouldReturn": shouldReturn,
-			"resCode":      resCode,
-			"resMsg":       resMsg,
-		}).Info("Response from GetResponseIfCachedQuery 3")
-	}
 
 	if shouldReturn {
 		if resCode == http.StatusOK {
@@ -370,13 +331,6 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	H.SleepIfHeaderSet(c)
 
 	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query)
-	if projectId == 399 {
-		logCtxDEBUG.WithFields(log.Fields{"logNo": "Four",
-			"errCode": errCode,
-			"result":  result,
-			"errMsg":  errMsg,
-		}).Info("Response from store.GetStore().Analyze 4")
-	}
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectId, &requestPayload.Query)
 		logCtx.Error("Failed to process query from DB - " + errMsg)
@@ -385,23 +339,8 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	model.SetQueryCacheResult(projectId, &requestPayload.Query, result)
 
 	if isDashboardQueryRequest {
-		if projectId == 399 {
-			logCtxDEBUG.WithFields(log.Fields{"logNo": "LastButOne",
-				"result": result,
-			}).Info("Before Response from isDashboardQueryRequest")
-		}
 		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To, timezoneString)
-		if projectId == 399 {
-			logCtxDEBUG.WithFields(log.Fields{"logNo": "LastButOne",
-				"result": result,
-			}).Info("After Response from isDashboardQueryRequest")
-		}
 		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(), TimeZone: string(timezoneString)}, http.StatusOK, "", "", false
-	}
-	if projectId == 399 {
-		logCtxDEBUG.WithFields(log.Fields{"logNo": "Last",
-			"result": result,
-		}).Info("Not a dashboard result, final result")
 	}
 	result.Query = requestPayload.Query
 	return result, http.StatusOK, "", "", false

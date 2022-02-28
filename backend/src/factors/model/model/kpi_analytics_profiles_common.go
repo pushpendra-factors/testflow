@@ -1,6 +1,8 @@
 package model
 
 import (
+	"encoding/json"
+	"factors/util"
 	U "factors/util"
 	"strconv"
 	"strings"
@@ -30,8 +32,8 @@ var mapOfKPICategoryToProfileGroupAnalysis = map[string]string{
 func GetDirectDerivableProfileQueryFromKPI(kpiQuery KPIQuery) ProfileQueryGroup {
 	var profileQueryGroup ProfileQueryGroup
 	profileQueryGroup.Class = ProfileQueryClass
-	profileQueryGroup.From = kpiQuery.From
-	profileQueryGroup.To = kpiQuery.To
+	profileQueryGroup.From = EpochOf2000InGMT
+	profileQueryGroup.To = util.TimeNowUnix()
 	profileQueryGroup.Timezone = kpiQuery.Timezone
 	profileQueryGroup.GlobalFilters = transformFiltersKPIToProfiles(kpiQuery.Filters)
 	profileQueryGroup.GlobalGroupBys = transformGroupByKPIToProfiles(kpiQuery.GroupBy)
@@ -68,7 +70,6 @@ func transformGroupByKPIToProfiles(groupBys []KPIGroupBy) []QueryGroupByProperty
 	}
 	return resultantGroupBys
 }
-
 func GetProfileGroupByFromDateField(dateField string, groupByTimestamp string) QueryGroupByProperty {
 	var currentGroupByProperty QueryGroupByProperty
 	currentGroupByProperty = QueryGroupByProperty{}
@@ -110,7 +111,8 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	profileQuery.Type = profileCategory
 	profileQuery.GroupAnalysis = profileQueryGroup.GroupAnalysis
 
-	profileQuery.Filters = append(transformFiltersKPIToProfiles(transformation.Filters), profileQueryGroup.GlobalFilters...)
+	profileQuery.Filters = append(profileQueryGroup.GlobalFilters, getProfileDefaultFilterFromDateField(transformation.DateField, kpiQuery.From, kpiQuery.To))
+	profileQuery.Filters = append(profileQuery.Filters, transformFiltersKPIToProfiles(transformation.Filters)...)
 	if kpiQuery.GroupByTimestamp == "" {
 		profileQuery.GroupBys = profileQueryGroup.GlobalGroupBys
 	} else {
@@ -119,8 +121,20 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 	for i, _ := range profileQuery.GroupBys {
 		profileQuery.GroupBys[i].Index = i
 	}
-	profileQuery.DateField = transformation.DateField
 	return profileQuery
+}
+
+func getProfileDefaultFilterFromDateField(dateField string, from, to int64) QueryProperty {
+	fromToValues := DateTimePropertyValue{From: from, To: to}
+	fromToValuesAsByte, _ := json.Marshal(fromToValues)
+	var currentFilter QueryProperty
+	currentFilter.Entity = UserEntity
+	currentFilter.LogicalOp = LOGICAL_OP_AND
+	currentFilter.Property = dateField
+	currentFilter.Operator = BetweenStr
+	currentFilter.Type = U.PropertyTypeDateTime
+	currentFilter.Value = string(fromToValuesAsByte)
+	return currentFilter
 }
 
 // Post Execution Transformations
