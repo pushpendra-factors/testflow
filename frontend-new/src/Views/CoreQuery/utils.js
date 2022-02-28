@@ -1,5 +1,11 @@
 import React from 'react';
+import _ from 'lodash';
+import { Radio } from 'antd';
+
+import { EMPTY_ARRAY } from 'Utils/global';
+import { formatFilterDate } from 'Utils/dataFormatter';
 import MomentTz from 'Components/MomentTz';
+
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
@@ -30,9 +36,10 @@ import {
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   QUERY_TYPE_PROFILE,
 } from '../../utils/constants';
-import { Radio } from 'antd';
-import { formatFilterDate } from '../../utils/dataFormatter';
-import _ from 'lodash';
+import { FILTER_TYPES, INITIAL_STATE } from './constants';
+import { isDateInMilliSeconds } from '../../utils/dataFormatter';
+
+export const initialState = INITIAL_STATE;
 
 export const labelsObj = {
   [TOTAL_EVENTS_CRITERIA]: 'Event Count',
@@ -40,17 +47,6 @@ export const labelsObj = {
   [ACTIVE_USERS_CRITERIA]: 'User Count',
   [FREQUENCY_CRITERIA]: 'Count',
 };
-
-export const initialState = {
-  loading: false,
-  error: false,
-  data: null,
-  apiCallStatus: { required: true, message: null },
-};
-
-export const initialResultState = [1, 2, 3, 4].map(() => {
-  return initialState;
-});
 
 const operatorMap = {
   '=': 'equals',
@@ -1570,6 +1566,17 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
   return result;
 };
 
+const convertDateTimeObjectValuesToMilliSeconds = (obj) => {
+  const parsedObj = JSON.parse(obj);
+  parsedObj.fr = isDateInMilliSeconds(parsedObj.fr)
+    ? parsedObj.fr
+    : parsedObj.fr * 1000;
+  parsedObj.to = isDateInMilliSeconds(parsedObj.to)
+    ? parsedObj.to
+    : parsedObj.to * 1000;
+  return JSON.stringify(parsedObj);
+};
+
 export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
   const queryType = requestQuery.cl;
   const queries = [];
@@ -1581,18 +1588,22 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
       : null;
 
     let eventFilters = [];
-    q?.fil?.forEach((pr) => {
+    _.get(q, 'fil', EMPTY_ARRAY).forEach((pr) => {
       if (pr.lOp === 'AND') {
-        let val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-        let DNa = _.startCase(pr.prNa);
-        let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
+        const val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
+        const DNa = _.startCase(pr.prNa);
+        const isCamp =
+          requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
         eventFilters.push({
           operator:
             pr.prDaTy === 'datetime'
               ? reverseDateOperatorMap[pr.co]
               : reverseOperatorMap[pr.co],
           props: [DNa, pr.prDaTy, isCamp],
-          values: val,
+          values:
+            pr.prDaTy === FILTER_TYPES.DATETIME
+              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              : val,
           extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
         });
       } else if (pr.prDaTy === 'categorical') {
@@ -1612,21 +1623,28 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
   const globalFilters = [];
 
   const filters = [];
+
   requestQuery.gFil.forEach((pr) => {
     if (pr.lOp === 'AND') {
-      let val = pr.prDaTy === 'categorical' ? [pr.va] : pr.va;
-      let DNa = _.startCase(pr.prNa);
-      let isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
+      const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
+
+      const DNa = _.startCase(pr.prNa);
+
+      const isCamp = requestQuery?.qG[0]?.ca === 'channels' ? pr.objTy : pr.en;
+
       filters.push({
         operator:
           pr.prDaTy === 'datetime'
             ? reverseDateOperatorMap[pr.co]
             : reverseOperatorMap[pr.co],
         props: [DNa, pr.prDaTy, isCamp],
-        values: val,
+        values:
+          pr.prDaTy === FILTER_TYPES.DATETIME
+            ? convertDateTimeObjectValuesToMilliSeconds(val)
+            : val,
         extra: [DNa, pr.prNa, pr.prDaTy, isCamp],
       });
-    } else if (pr.prDaTy === 'categorical') {
+    } else if (pr.prDaTy === FILTER_TYPES.CATEGORICAL) {
       filters[filters.length - 1].values.push(pr.va);
     }
   });
