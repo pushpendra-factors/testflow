@@ -297,7 +297,7 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, f
 		return filterValues, http.StatusFound
 	}
 	if filterObject == CAFilterChannel && filterProperty == "name" {
-		return []interface{}{"google ads", "facebook", "linkedin", model.BingAdsIntegration}, http.StatusFound
+		return []interface{}{model.GoogleAds, model.FacebookAds, model.LinkedinAds, model.BingAdsIntegration}, http.StatusFound
 	}
 	adwordsSQL, adwordsParams, adwordsErr := store.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	facebookSQL, facebookParams, facebookErr := store.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)

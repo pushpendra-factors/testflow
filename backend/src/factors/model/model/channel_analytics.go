@@ -13,6 +13,9 @@ const (
 	AdgroupPrefix  = "ad_group_"
 	KeywordPrefix  = "keyword_"
 	Channel        = "channel"
+	GoogleAds      = "Google Ads"
+	FacebookAds    = "Facebook Ads"
+	LinkedinAds    = "LinkedIn Ads"
 )
 
 type ChannelConfigResult struct {
@@ -387,9 +390,9 @@ func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, bool, int
 	if len(filters) == 0 {
 		return true, true, true, true, http.StatusOK
 	}
-	isAdwordsReq = checkIfChannelReq(ChannelGoogleAds, filters)
-	isFacebookReq = checkIfChannelReq(ChannelFacebook, filters)
-	isLinkedinReq = checkIfChannelReq(ChannelLinkedin, filters)
+	isAdwordsReq = checkIfChannelReq(GoogleAds, filters)
+	isFacebookReq = checkIfChannelReq(FacebookAds, filters)
+	isLinkedinReq = checkIfChannelReq(LinkedinAds, filters)
 	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters)
 	return isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, http.StatusOK
 }

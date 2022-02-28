@@ -248,7 +248,7 @@ func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, fi
 		return filterValues, http.StatusFound
 	}
 	if filterObject == CAFilterChannel && filterProperty == "name" {
-		return []interface{}{"google ads", "facebook", "linkedin", model.BingAdsIntegration}, http.StatusFound
+		return []interface{}{model.GoogleAds, model.FacebookAds, model.LinkedinAds, model.BingAdsIntegration}, http.StatusFound
 	}
 	adwordsSQL, adwordsParams, adwordsErr := pg.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	facebookSQL, facebookParams, facebookErr := pg.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)

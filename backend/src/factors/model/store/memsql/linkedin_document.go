@@ -937,7 +937,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 		} else {
 			key := groupBy.Object + ":" + groupBy.Property
 			if groupBy.Object == CAFilterChannel {
-				value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
+				value := fmt.Sprintf("'LinkedIn Ads' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 			} else {
@@ -1051,7 +1051,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
 		if groupBy.Object == CAFilterChannel {
-			value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			value := fmt.Sprintf("'LinkedIn Ads' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 		} else {
