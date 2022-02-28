@@ -9,6 +9,8 @@ import (
 )
 
 const ProfileQueryClass = "profiles"
+const UsersjoinTimeStampField = "join_timestamp"
+const EpochOf2000InGMT = 946688461
 
 // From and to refer to JoinTime
 type ProfileQueryGroup struct {
@@ -105,7 +107,6 @@ type ProfileQuery struct {
 	AggregateFunction     string `json:"agFn"`
 	AggregateProperty     string `json:"agPr"`
 	AggregatePropertyType string `json:"agPrTy"`
-	DateField             string `json:"daFie"` // Currently used for replacement of jointimestamp in filters.
 }
 
 func (q *ProfileQuery) SetTimeZone(timezoneString U.TimeZoneString) {
