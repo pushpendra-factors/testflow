@@ -289,6 +289,7 @@ function ReportsLayout({
                   campaignState={campaignState}
                   savedQueryId={savedQueryId}
                   handleChartTypeChange={handleChartTypeChange}
+                  queryOptions={queryOptions}
                   {...rest}
                 />
               )}
