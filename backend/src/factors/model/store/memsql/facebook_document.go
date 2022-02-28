@@ -810,7 +810,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 		} else {
 			key := groupBy.Object + ":" + groupBy.Property
 			if groupBy.Object == CAFilterChannel {
-				value := fmt.Sprintf("'facebook' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
+				value := fmt.Sprintf("'Facebook Ads' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
 			} else {
@@ -925,7 +925,7 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
 		if groupBy.Object == CAFilterChannel {
-			value := fmt.Sprintf("'facebook' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
+			value := fmt.Sprintf("'Facebook Ads' as %s", model.FacebookInternalRepresentationToExternalRepresentation[key])
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.FacebookInternalRepresentationToExternalRepresentation[key])
 		} else {

@@ -67,7 +67,7 @@ function isObject(obj) {
   return Object.prototype.toString.call(obj) === '[object Object]';
 }
 
-function waitForGlobalKey(key, callback, timer = 0, subkey = null, waitTime = 10000) {
+function  waitForGlobalKey(key, callback, timer = 0, subkey = null, waitTime = 10000, totalTimerCount = 10) {
   if (window[key]) {
     if (subkey) {
       if (Array.isArray(window[key])) {
@@ -84,10 +84,10 @@ function waitForGlobalKey(key, callback, timer = 0, subkey = null, waitTime = 10
       return;
     }
   }
-  if (timer <= 10) {
+  if (timer <= totalTimerCount) {
     logger.debug('Checking for key: times ' + timer, false);
     setTimeout(function () {
-      waitForGlobalKey(key, callback, timer + 1, subkey, waitTime);
+      waitForGlobalKey(key, callback, timer + 1, subkey, waitTime, totalTimerCount);
     }, waitTime);
   }
 }
@@ -613,7 +613,8 @@ App.prototype.autoClearbitRevealCapture = function (appInstance, enabled) {
     handleRevealData.bind(null, appInstance),
     0,
     'reveal',
-    5000
+    2000,
+    20
   );
   return true;
 };

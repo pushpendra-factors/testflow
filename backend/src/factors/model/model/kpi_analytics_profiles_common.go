@@ -11,13 +11,21 @@ import (
 const TimestampHeader = "datetime"
 
 var mapOfKPIToProfileType = map[string]string{
-	HubspotContactsDisplayCategory: UserSourceHubspotString,
-	SalesforceUsersDisplayCategory: UserSourceSalesforceString,
+	HubspotContactsDisplayCategory:         UserSourceHubspotString,
+	HubspotCompaniesDisplayCategory:        UserSourceHubspotString,
+	HubspotDealsDisplayCategory:            UserSourceHubspotString,
+	SalesforceUsersDisplayCategory:         UserSourceSalesforceString,
+	SalesforceAccountsDisplayCategory:      UserSourceSalesforceString,
+	SalesforceOpportunitiesDisplayCategory: UserSourceSalesforceString,
 }
 
 var mapOfKPICategoryToProfileGroupAnalysis = map[string]string{
-	HubspotContactsDisplayCategory: USERS,
-	SalesforceUsersDisplayCategory: USERS,
+	HubspotContactsDisplayCategory:         USERS,
+	HubspotCompaniesDisplayCategory:        GROUP_NAME_HUBSPOT_COMPANY,
+	HubspotDealsDisplayCategory:            GROUP_NAME_HUBSPOT_DEAL,
+	SalesforceUsersDisplayCategory:         USERS,
+	SalesforceAccountsDisplayCategory:      GROUP_NAME_SALESFORCE_ACCOUNT,
+	SalesforceOpportunitiesDisplayCategory: GROUP_NAME_SALESFORCE_OPPORTUNITY,
 }
 
 // Setting and getting Time for profiles query is 0,0. Need to understand.
@@ -62,8 +70,16 @@ func transformGroupByKPIToProfiles(groupBys []KPIGroupBy) []QueryGroupByProperty
 	}
 	return resultantGroupBys
 }
+func GetProfileGroupByFromDateField(dateField string, groupByTimestamp string) QueryGroupByProperty {
+	var currentGroupByProperty QueryGroupByProperty
+	currentGroupByProperty = QueryGroupByProperty{}
+	currentGroupByProperty.Entity = PropertyEntityEvent
+	currentGroupByProperty.Property = dateField
+	currentGroupByProperty.Type = AliasDateTime
+	currentGroupByProperty.Granularity = groupByTimestamp
+	return currentGroupByProperty
+}
 
-// TODO Add error.
 func AddCustomMetricsTransformationsToProfileQuery(profileQueryGroup ProfileQueryGroup, kpiMetric string, customMetric CustomMetric, transformation CustomMetricTransformation, kpiQuery KPIQuery) []ProfileQuery {
 	resultantProfileQueries := make([]ProfileQuery, 0)
 
@@ -106,16 +122,6 @@ func GetProfileQueriesOnCustomMetric(profileQueryGroup ProfileQueryGroup, transf
 		profileQuery.GroupBys[i].Index = i
 	}
 	return profileQuery
-}
-
-func GetProfileGroupByFromDateField(dateField string, groupByTimestamp string) QueryGroupByProperty {
-	var currentGroupByProperty QueryGroupByProperty
-	currentGroupByProperty = QueryGroupByProperty{}
-	currentGroupByProperty.Entity = PropertyEntityEvent
-	currentGroupByProperty.Property = dateField
-	currentGroupByProperty.Type = AliasDateTime
-	currentGroupByProperty.Granularity = groupByTimestamp
-	return currentGroupByProperty
 }
 
 func getProfileDefaultFilterFromDateField(dateField string, from, to int64) QueryProperty {

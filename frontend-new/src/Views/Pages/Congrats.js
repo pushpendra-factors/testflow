@@ -54,7 +54,7 @@ function Congrats({ signup, data }) {
                             
                             <Col span={24}>
                                 <div className={'flex justify-center items-center mb-5'} >
-                                    <Text type={'title'} level={6} extraClass={'m-0'} color={'grey'} weight={'bold'}>We've sent a confirmation email to</Text>
+                                    <Text type={'title'} level={6} extraClass={'m-0'} align={'center'} color={'grey'} weight={'bold'}>We’ve sent a confirmation link to your email. Check for a link from <span className={'text-black'}>support@factors.ai</span> to activate your account and get started</Text>
                                 </div>
                             </Col>
                             <Col span={24}>

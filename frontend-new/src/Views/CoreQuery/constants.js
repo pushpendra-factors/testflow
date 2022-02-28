@@ -1,5 +1,11 @@
 import { ATTRIBUTION_METRICS, DefaultChartTypes } from '../../utils/constants';
-import { initialState } from './utils';
+
+export const INITIAL_STATE = {
+  loading: false,
+  error: false,
+  data: null,
+  apiCallStatus: { required: true, message: null },
+};
 
 export const SET_ATTRIBUTION_METRICS = 'SET_ATTRIBUTION_METRICS';
 export const SET_NAVIGATED_FROM_DASHBOARD = 'SET_NAVIGATED_FROM_DASHBOARD';
@@ -14,7 +20,7 @@ export const UPDATE_CHART_TYPES = 'UPDATE_CHART_TYPES';
 export const SET_SAVED_QUERY_SETTINGS = 'SET_SAVED_QUERY_SETTINGS';
 
 export const CORE_QUERY_INITIAL_STATE = {
-  comparison_data: { ...initialState },
+  comparison_data: { ...INITIAL_STATE },
   comparison_supported: false,
   comparison_enabled: false,
   navigatedFromDashboard: false,
@@ -22,4 +28,9 @@ export const CORE_QUERY_INITIAL_STATE = {
   attributionMetrics: [...ATTRIBUTION_METRICS],
   chartTypes: DefaultChartTypes,
   savedQuerySettings: {},
+};
+
+export const FILTER_TYPES = {
+  CATEGORICAL: 'categorical',
+  DATETIME: 'datetime',
 };

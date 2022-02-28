@@ -17,7 +17,8 @@ const LinkedInIntegration = ({
     setIsActive,
     addLinkedinAccessToken,
     kbLink = false,
-    deleteIntegration
+    deleteIntegration,
+    currentAgent
 }) => {
     const [loading, setLoading] = useState(false);
     const [FbResponse, SetFbResponse] = useState(null);
@@ -126,6 +127,28 @@ const LinkedInIntegration = ({
         } 
     }
 
+    const sendSlackNotification = () => {
+        let webhookURL = 'https://hooks.slack.com/services/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';
+        let data = {
+            "text": `User ${currentAgent.email} from Project "${activeProject.name}" Activated Integration: LinkedIn`,
+            "username" : "Signup User Actions",
+            "icon_emoji" : ":golf:"
+        }
+        let params = {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }
+    
+        fetch(webhookURL, params)
+        .then((response) => response.json())
+        .then((response) => {
+            console.log(response);
+        })
+        .catch((err) => {
+            console.log('err',err);
+        });
+      }
+
     const handleSubmit = e => {
         e.preventDefault(); 
 
@@ -146,6 +169,7 @@ const LinkedInIntegration = ({
                 setShowForm(false);
                 setIsActive(true);
                 message.success('LinkedIn integration enabled!');
+                sendSlackNotification();
             }).catch((e) => {
                 console.log(e);
                 message.error(e);
@@ -287,7 +311,8 @@ const LinkedInIntegration = ({
 
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
-    currentProjectSettings: state.global.currentProjectSettings
+    currentProjectSettings: state.global.currentProjectSettings,
+    currentAgent: state.agent.agent_details,
 });
 
 export default connect(mapStateToProps, { addLinkedinAccessToken, fetchProjectSettings, udpateProjectSettings, deleteIntegration })(LinkedInIntegration)

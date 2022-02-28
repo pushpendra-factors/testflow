@@ -212,6 +212,7 @@ type Configuration struct {
 	FivetranLicenseKey                              string
 	DisableCRMUniquenessConstraintsCheckByProjectID string
 	SkipDashboardCachingAnalytics                   int
+	EnableBingAdsAttribution                        bool
 }
 
 type Services struct {

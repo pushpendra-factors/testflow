@@ -945,7 +945,17 @@ func (store *MemSQL) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings
 	}
 	return mapOfProjectToCustomerIds, nil
 }
-
+func (store *MemSQL) IsBingIntegrationAvailable(projectID uint64) bool{
+	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch connector id from db")
+		return false
+	}
+	if ftMapping.ConnectorID == "" {
+		return false
+	}
+	return true
+}
 func (store *MemSQL) DeleteChannelIntegration(projectID uint64, channelName string) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,

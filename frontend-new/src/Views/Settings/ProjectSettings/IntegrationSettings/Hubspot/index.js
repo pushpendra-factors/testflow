@@ -16,7 +16,8 @@ const HubspotIntegration = ({
     activeProject,
     currentProjectSettings, 
     setIsActive,
-    kbLink = false
+    kbLink = false,
+    currentAgent
 }) =>{ 
     const [form] = Form.useForm();
     const [errorInfo, seterrorInfo] = useState(null);
@@ -28,6 +29,28 @@ const HubspotIntegration = ({
         setIsActive(true);
       }
     }, [currentProjectSettings]);
+
+    const sendSlackNotification = () => {
+      let webhookURL = 'https://hooks.slack.com/services/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';
+      let data = {
+          "text": `User ${currentAgent.email} from Project "${activeProject.name}" Activated Integration: Hubspot`,
+          "username" : "Signup User Actions",
+          "icon_emoji" : ":golf:"
+      }
+      let params = {
+          method: 'POST',
+          body: JSON.stringify(data)
+      }
+  
+      fetch(webhookURL, params)
+      .then((response) => response.json())
+      .then((response) => {
+          console.log(response);
+      })
+      .catch((err) => {
+          console.log('err',err);
+      });
+    }
 
 const onFinish = values => { 
     setLoading(true);
@@ -45,6 +68,7 @@ const onFinish = values => {
             message.success('Hubspot integration successful'); 
         }, 500);
         setIsActive(true);
+        sendSlackNotification();
     }).catch((err) => {
         setShowForm(false);
         setLoading(false);
@@ -168,7 +192,8 @@ return (
 
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
-    currentProjectSettings: state.global.currentProjectSettings
+    currentProjectSettings: state.global.currentProjectSettings,
+    currentAgent: state.agent.agent_details,
   });
   
 export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings })(HubspotIntegration)

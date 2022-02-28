@@ -768,7 +768,17 @@ func (pg *Postgres) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings(
 	}
 	return mapOfProjectToCustomerIds, nil
 }
-
+func (pg *Postgres) IsBingIntegrationAvailable(projectID uint64) bool{
+	ftMapping, err := pg.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch connector id from db")
+		return false
+	}
+	if ftMapping.ConnectorID == "" {
+		return false
+	}
+	return true
+}
 func (pg *Postgres) DeleteChannelIntegration(projectID uint64, channelName string) (int, error) {
 	if projectID == 0 {
 		return http.StatusBadRequest, errors.New("invalid projectID")

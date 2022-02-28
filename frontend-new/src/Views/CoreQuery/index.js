@@ -8,19 +8,23 @@ import React, {
 import MomentTz from 'Components/MomentTz';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector, useDispatch } from 'react-redux';
+import { ErrorBoundary } from 'react-error-boundary';
+import { Drawer, Button, Modal } from 'antd';
+import _ from 'lodash';
+import factorsai from 'factorsai';
+
+import { EMPTY_ARRAY } from 'Utils/global';
+import KPIComposer from 'Components/KPIComposer';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CampQueryComposer from '../../components/CampQueryComposer';
-import KPIComposer from 'Components/KPIComposer';
 import CoreQueryHome from '../CoreQueryHome';
-import { Drawer, Button, Modal } from 'antd';
 import {
   Text,
   SVG,
   FaErrorComp,
   FaErrorLog,
 } from '../../components/factorsComponents';
-import { ErrorBoundary } from 'react-error-boundary';
 import {
   deleteGroupByForEvent,
   getCampaignConfigData,
@@ -62,6 +66,10 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   ATTRIBUTION_METRICS,
   QUERY_TYPE_PROFILE,
+  apiChartAnnotations,
+  presentationObj,
+  DefaultChartTypes,
+  CHART_TYPE_TABLE,
 } from '../../utils/constants';
 import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
@@ -89,9 +97,8 @@ import {
   shouldDataFetch,
 } from '../../utils/dataFormatter';
 import ProfileComposer from '../../components/ProfileComposer';
-import _ from 'lodash';
 import { IconAndTextSwitchQueryType } from './coreQuery.helpers';
-import factorsai from 'factorsai';
+import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
 
 function CoreQuery({
   activeProject,
@@ -100,6 +107,10 @@ function CoreQuery({
   getCampaignConfigData,
   KPI_config,
 }) {
+  const savedQueries = useSelector((state) =>
+    _.get(state, 'queries.data', EMPTY_ARRAY)
+  );
+
   const [coreQueryState, localDispatch] = useReducer(
     CoreQueryReducer,
     CORE_QUERY_INITIAL_STATE
@@ -251,6 +262,35 @@ function CoreQuery({
       if (!isQuerySaved) {
         setNavigatedFromDashboard(false);
         updateSavedQuerySettings({});
+      } else {
+        if (queryType !== QUERY_TYPE_CAMPAIGN) {
+          //update the chart type to the saved chart type
+          const selectedReport = savedQueries.find(
+            (elem) => elem.id === isQuerySaved.id
+          );
+
+          const savedChartType = _.get(
+            selectedReport,
+            'settings.chart',
+            apiChartAnnotations[CHART_TYPE_TABLE]
+          );
+
+          // even though new queries wont have saved chart type as table but old queries can have saved chart type as table!
+          if (savedChartType !== apiChartAnnotations[CHART_TYPE_TABLE]) {
+            const changedKey = getChartChangedKey({
+              queryType,
+              breakdown: [...groupBy.event, ...groupBy.global],
+              attributionModels: models,
+            });
+            updateChartTypes({
+              ...DefaultChartTypes,
+              [queryType]: {
+                ...DefaultChartTypes[queryType],
+                [changedKey]: presentationObj[savedChartType],
+              },
+            });
+          }
+        }
       }
       localDispatch({
         type: SET_COMPARISON_SUPPORTED,
@@ -280,9 +320,11 @@ function CoreQuery({
       profileQueries,
       queryType,
       models,
+      savedQueries,
       updateAppliedBreakdown,
       setNavigatedFromDashboard,
       updateSavedQuerySettings,
+      updateChartTypes,
     ]
   );
 

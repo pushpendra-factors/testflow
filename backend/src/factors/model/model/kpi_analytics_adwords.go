@@ -19,6 +19,7 @@ func GetKPIConfigsForAdwords() map[string]interface{} {
 var MapOfCategoryToChannel = map[string]string{
 	AllChannelsDisplayCategory:   "all_ads",
 	AdwordsDisplayCategory:       "google_ads",
+	BingAdsDisplayCategory:       "bing_ads",
 	GoogleAdsDisplayCategory:     "google_ads",
 	FacebookDisplayCategory:      "facebook_ads",
 	LinkedinDisplayCategory:      "linkedin_ads",

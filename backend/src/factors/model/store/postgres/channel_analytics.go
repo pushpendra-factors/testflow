@@ -37,6 +37,7 @@ const (
 	CAFilterKeyword                        = "keyword"
 	CAFilterQuery                          = "query"
 	CAFilterAdset                          = "adset"
+	CAChannelBingAds                       = "bing_ads"
 	CAChannelGoogleAds                     = "google_ads"
 	CAChannelFacebookAds                   = "facebook_ads"
 	CAChannelLinkedinAds                   = "linkedin_ads"
@@ -70,6 +71,7 @@ var CAChannels = []string{
 	CAChannelFacebookAds,
 	CAChannelLinkedinAds,
 	CAAllChannelAds,
+	CAChannelBingAds,
 }
 
 var channelMetricsToOperation = map[string]string{
@@ -125,6 +127,8 @@ func (pg *Postgres) GetChannelConfig(projectID uint64, channel string, reqID str
 		result = pg.buildLinkedinChannelConfig(projectID)
 	case CAChannelSearchConsole:
 		result = pg.buildGoogleOrganicChannelConfig()
+	case CAChannelBingAds:
+		result = pg.buildBingAdsChannelConfig(projectID)
 	}
 	return result, http.StatusOK
 }
@@ -244,12 +248,12 @@ func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, fi
 		return filterValues, http.StatusFound
 	}
 	if filterObject == CAFilterChannel && filterProperty == "name" {
-		return []interface{}{"google ads", "facebook", "linkedin"}, http.StatusFound
+		return []interface{}{model.GoogleAds, model.FacebookAds, model.LinkedinAds, model.BingAdsIntegration}, http.StatusFound
 	}
 	adwordsSQL, adwordsParams, adwordsErr := pg.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	facebookSQL, facebookParams, facebookErr := pg.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	linkedinSQL, linkedinParams, linkedinErr := pg.GetLinkedinSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
-
+	bingAdsinSQL, bingAdsParams, bingAdsErr := pg.GetBingadsFilterValuesSQLAndParams(projectID, filterObject, filterProperty, reqID)
 	if adwordsErr != http.StatusFound && adwordsErr != http.StatusNotFound {
 		return []interface{}{}, adwordsErr
 	}
@@ -259,10 +263,14 @@ func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, fi
 	if linkedinErr != http.StatusFound && linkedinErr != http.StatusNotFound {
 		return []interface{}{}, linkedinErr
 	}
+	if bingAdsErr != http.StatusFound && bingAdsErr != http.StatusNotFound {
+		return []interface{}{}, bingAdsErr
+	}
 
-	finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
+	finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsinSQL)
 	finalParams := append(adwordsParams, facebookParams...)
 	finalParams = append(finalParams, linkedinParams...)
+	finalParams = append(finalParams, bingAdsParams...)
 
 	finalQuery := fmt.Sprintf(CAUnionFilterQuery, joinWithWordInBetween("UNION", finalSQLs...))
 	_, resultRows, err := pg.ExecuteSQL(finalQuery, finalParams, logCtx)
@@ -329,6 +337,8 @@ func (pg *Postgres) ExecuteChannelQueryV1(projectID uint64, query *model.Channel
 	switch query.Channel {
 	case CAAllChannelAds:
 		columns, resultMetrics, err = pg.executeAllChannelsQueryV1(projectID, query, reqID)
+	case CAChannelBingAds:
+		columns, resultMetrics, err = pg.ExecuteBingAdsChannelQueryV1(projectID, query, reqID)
 	case CAChannelFacebookAds:
 		columns, resultMetrics, err = pg.ExecuteFacebookChannelQueryV1(projectID, query, reqID)
 	case CAChannelGoogleAds:
@@ -358,9 +368,15 @@ func (pg *Postgres) ExecuteChannelQueryV1(projectID uint64, query *model.Channel
 // removed source as we want aggregated results for all channels
 func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.ChannelQueryV1,
 	reqID string) ([]string, [][]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"query":      query,
+		"req_id":     reqID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
-	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	logCtx := log.WithFields(logFields)
 	var finalQuery string
 	var finalParams []interface{}
 	var selectMetrics, columns []string
@@ -378,7 +394,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 	}
 
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
-		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, bingAdsSQL, bingAdsParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
 		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -387,9 +403,10 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), err
 		}
-		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
+		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsSQL)
 		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
+		finalParams = append(finalParams, bingAdsParams...)
 
 		for _, metric := range commonMetrics {
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
@@ -399,7 +416,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 			getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
 		columns = append(commonKeys, commonMetrics...)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
-		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, bingAdsSQL, bingAdsParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
 		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -408,9 +425,10 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), err
 		}
-		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
+		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsSQL)
 		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
+		finalParams = append(finalParams, bingAdsParams...)
 
 		selectMetrics = append(selectMetrics, model.AliasDateTime)
 		for _, metric := range commonMetrics {
@@ -421,7 +439,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 			model.AliasDateTime, getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
 		columns = append(commonKeys, commonMetrics...)
 	} else {
-		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
+		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, bingAdsSQL, bingAdsParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
 		if err == http.StatusNotFound {
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -430,9 +448,10 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 			headers := model.GetHeadersFromQuery(*query)
 			return headers, make([][]interface{}, 0, 0), err
 		}
-		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
+		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsSQL)
 		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
+		finalParams = append(finalParams, bingAdsParams...)
 		selectMetrics = append(selectMetrics, commonKeys...)
 		for _, metric := range commonMetrics {
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
@@ -442,32 +461,39 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 		finalQuery = fmt.Sprintf(CAUnionQuery3, joinWithComma(selectMetrics...), joinWithWordInBetween("UNION", finalSQLs...), joinWithComma(commonKeys...), getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
 		columns = append(commonKeys, commonMetrics...)
 	}
-
 	_, resultMetrics, err := pg.ExecuteSQL(finalQuery, finalParams, logCtx)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed in channel analytics with following error.")
-		return columns, make([][]interface{}, 0, 0), http.StatusInternalServerError
+		headers := model.GetHeadersFromQuery(*query)
+		return headers, make([][]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	return columns, resultMetrics, http.StatusOK
 }
 
-func (pg *Postgres) getIndividualChannelsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, int) {
+func (pg *Postgres) getIndividualChannelsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, string, []interface{}, int) {
+	logFields := log.Fields{
+		"project_id":   projectID,
+		"query":        query,
+		"req_id":       reqID,
+		"fetch_source": fetchSource,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	isGroupBytimestamp := query.GetGroupByTimestamp() != ""
 	genericFilters, channelBreakdownFilters := model.GetDecoupledFiltersForChannelBreakdownFilters(query.Filters)
 	query.Filters = genericFilters
-	isAdwordsReq, isFacebookReq, isLinkedinReq, errCode := model.GetRequiredChannels(channelBreakdownFilters)
+	isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, errCode := model.GetRequiredChannels(channelBreakdownFilters)
 	if errCode != http.StatusOK {
-		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, errCode
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, errCode
 	}
 
-	finAdwordsSQL, finAdwordsParams, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams := "", make([]interface{}, 0), "", make([]interface{}, 0), "", make([]interface{}, 0)
+	finAdwordsSQL, finAdwordsParams, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, finBingAdsSQL, finBingAdsParams := "", make([]interface{}, 0), "", make([]interface{}, 0), "", make([]interface{}, 0), "", make([]interface{}, 0)
 
 	finalKeys := make([]string, 0, 0)
 	finalMetrics := make([]string, 0, 0)
 	if isAdwordsReq {
 		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := pg.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
 		if adwordsErr != http.StatusOK && adwordsErr != http.StatusNotFound {
-			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, adwordsErr
+			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, adwordsErr
 		}
 		if len(adwordsSQL) > 0 {
 			finalKeys = adwordsSelectKeys
@@ -479,7 +505,7 @@ func (pg *Postgres) getIndividualChannelsSQLAndParametersV1(projectID uint64, qu
 	if isFacebookReq {
 		facebookSQL, facebookParams, facebookSelectKeys, facebookMetrics, facebookErr := pg.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
 		if facebookErr != http.StatusOK && facebookErr != http.StatusNotFound {
-			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, facebookErr
+			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, facebookErr
 		}
 		if len(facebookSQL) > 0 {
 			finalKeys = facebookSelectKeys
@@ -491,7 +517,7 @@ func (pg *Postgres) getIndividualChannelsSQLAndParametersV1(projectID uint64, qu
 	if isLinkedinReq {
 		linkedinSQL, linkedinParams, linkedinSelectKeys, linkedinMetrics, linkedinErr := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
 		if linkedinErr != http.StatusOK && linkedinErr != http.StatusNotFound {
-			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, linkedinErr
+			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, linkedinErr
 		}
 		if len(linkedinSQL) > 0 {
 			finalKeys = linkedinSelectKeys
@@ -500,10 +526,23 @@ func (pg *Postgres) getIndividualChannelsSQLAndParametersV1(projectID uint64, qu
 		}
 		finLinkedinSQL, finLinkedinParams = linkedinSQL, linkedinParams
 	}
-	if !isAdwordsReq && !isFacebookReq && !isLinkedinReq {
-		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, http.StatusNotFound
+	if isBingAdsReq {
+		bingAdsSQL, bingAdsParams, bingAdsSelectKeys, bingAdsMetrics, bingAdsErr := pg.GetSQLQueryAndParametersForBingAdsQueryV1(projectID, query, reqID, fetchSource, " LIMIT 10000", isGroupBytimestamp, nil)
+		if bingAdsErr != http.StatusOK && bingAdsErr != http.StatusNotFound {
+			return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, bingAdsErr
+		}
+		if len(bingAdsSQL) > 0 {
+			finalKeys = bingAdsSelectKeys
+			finalMetrics = bingAdsMetrics
+			bingAdsSQL = fmt.Sprintf("( %s )", bingAdsSQL[:len(bingAdsSQL)-2])
+		}
+		finBingAdsSQL, finBingAdsParams = bingAdsSQL, bingAdsParams
+
 	}
-	return finAdwordsSQL, finAdwordsParams, finalKeys, finalMetrics, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, http.StatusOK
+	if !isAdwordsReq && !isFacebookReq && !isLinkedinReq {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, http.StatusNotFound
+	}
+	return finAdwordsSQL, finAdwordsParams, finalKeys, finalMetrics, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, finBingAdsSQL, finBingAdsParams, http.StatusOK
 }
 
 // GetChannelFilterValues - @Kark TODO v0

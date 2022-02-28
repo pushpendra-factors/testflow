@@ -1227,7 +1227,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 		} else {
 			if groupBy.Object == CAFilterChannel {
 				externalValue := groupBy.Object + "_" + groupBy.Property
-				expression := fmt.Sprintf("'google_ads' as %s", externalValue)
+				expression := fmt.Sprintf("'Google Ads' as %s", externalValue)
 				dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 				dimensions.values = append(dimensions.values, externalValue)
 			} else {
@@ -1363,7 +1363,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	for _, groupBy := range query.GroupBy {
 		if groupBy.Object == CAFilterChannel {
 			externalValue := groupBy.Object + "_" + groupBy.Property
-			expression := fmt.Sprintf("'google_ads' as %s", externalValue)
+			expression := fmt.Sprintf("'Google Ads' as %s", externalValue)
 			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 			dimensions.values = append(dimensions.values, externalValue)
 		} else {

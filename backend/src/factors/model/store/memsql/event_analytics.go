@@ -2326,3 +2326,31 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 	aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
 	*qStmnt = appendStatement(*qStmnt, aggregateSelect)
 }
+
+// builds group keys for event properties for given step (event_with_properties).
+func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
+	groupProps []model.QueryGroupByProperty, ewpIndex int, timezoneString string) (string, []interface{}, string, bool) {
+	logFields := log.Fields{
+		"project_id":            projectID,
+		"event_with_properties": eventWithProperties,
+		"group_props":           groupProps,
+		"ewp_index":             ewpIndex,
+		"timezone_string":       timezoneString,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	groupPropsByStep := make([]model.QueryGroupByProperty, 0, 0)
+	groupByUserProperties := false
+	for i := range groupProps {
+		if groupProps[i].EventNameIndex == ewpIndex &&
+			groupProps[i].EventName == eventWithProperties.Name {
+			groupPropsByStep = append(groupPropsByStep, groupProps[i])
+			if groupProps[i].Entity == model.PropertyEntityUser {
+				groupByUserProperties = true
+			}
+		}
+
+	}
+	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep, timezoneString)
+	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
+}

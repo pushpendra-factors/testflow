@@ -130,6 +130,8 @@ func main() {
 
 	fivetranGroupId := flag.String("fivetran_group_id", "", "")
 	fivetranLicenseKey := flag.String("fivetran_license_key", "", "")
+
+	enableBingAdsAttribution := flag.Bool("enable_bing_ads_attribution", false, "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -217,6 +219,7 @@ func main() {
 		AllowProfilesGroupSupport:               *allowProfilesGroupSupport,
 		FivetranGroupId:                         *fivetranGroupId,
 		FivetranLicenseKey:                      *fivetranLicenseKey,
+		EnableBingAdsAttribution:                *enableBingAdsAttribution,
 	}
 	C.InitConf(config)
 
