@@ -308,7 +308,9 @@ function ReportContent({
           metrics={queries.map(
             (_, index) =>
               `${
-                ReverseProfileMapper[queries[index]][groupAnalysis]
+                ReverseProfileMapper[queries[index]]
+                  ? ReverseProfileMapper[queries[index]][groupAnalysis]
+                  : queries[index]
               } (${toLetters(index)})`
           )}
           currValue={currMetricsValue}

@@ -6,6 +6,7 @@ import { connect } from 'react-redux';
 import ProfileFilterWrapper from '../ProfileFilterWrapper';
 import FaSelect from 'Components/FaSelect';
 import { ProfileMapper, ReverseProfileMapper } from '../../../utils/constants';
+import AliasModal from '../../QueryComposer/AliasModal';
 
 function ProfileBlock({
   index,
@@ -33,8 +34,24 @@ function ProfileBlock({
     $hubspot_company: [['All Companies']],
   };
 
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const showModal = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+  };
+  const handleOk = (alias) => {
+    const newEvent = Object.assign({}, event);
+    newEvent.alias = alias;
+    setIsModalVisible(false);
+    eventChange(newEvent, index - 1, 'filters_updated');
+  };
+
   const onChange = (value) => {
-    const newEvent = { label: '', filters: [] };
+    const newEvent = { alias: '', label: '', filters: [] };
     newEvent.label = ProfileMapper[value] ? ProfileMapper[value] : value;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
@@ -113,8 +130,12 @@ function ProfileBlock({
     );
   };
 
-  const setAdditionalactions = () => {
-    addFilter();
+  const setAdditionalactions = (opt) => {
+    if (opt[1] === 'filter') {
+      addFilter();
+    } else {
+      showModal();
+    }
     setMoreOptions(false);
   };
 
@@ -132,13 +153,23 @@ function ProfileBlock({
 
           {moreOptions ? (
             <FaSelect
-              options={[['Filter By', 'filter']]}
+              options={[
+                ['Filter By', 'filter'],
+                [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit'],
+              ]}
               optionClick={(val) => setAdditionalactions(val)}
               onClickOutside={() => setMoreOptions(false)}
             ></FaSelect>
           ) : (
             false
           )}
+          <AliasModal
+            visible={isModalVisible}
+            event={ReverseProfileMapper[event.label][groupAnalysis]}
+            onOk={handleOk}
+            onCancel={handleCancel}
+            alias={event.alias}
+          ></AliasModal>
         </div>
         <Button type='text' onClick={deleteItem} className={`fa-btn--custom`}>
           <SVG name='trash'></SVG>
@@ -229,6 +260,20 @@ function ProfileBlock({
               {alphabetIndex[index - 1]}
             </Text>{' '}
           </div>
+          {event?.alias?.length ? (
+            <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
+              {event?.alias}
+              <Tooltip title={'Edit Alias'}>
+                <Button
+                  className={`${styles.custombtn} mx-1`}
+                  type='text'
+                  onClick={showModal}
+                >
+                  <SVG size={20} name='edit' color={'grey'} />
+                </Button>
+              </Tooltip>
+            </Text>
+          ) : null}
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-1'}`}>
           <div className='max-w-7xl'>

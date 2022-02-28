@@ -13,7 +13,6 @@ const DeleteQueryModal = ({ visible, onDelete, toggleModal, isLoading }) => {
       footer={null}
       onCancel={toggleModal}
       width={500}
-      isLoading={isLoading}
     >
       <div className='flex gap-x-2'>
         <div className='mt-2'>
@@ -56,6 +55,7 @@ const DeleteQueryModal = ({ visible, onDelete, toggleModal, isLoading }) => {
               onClick={onDelete}
               type={BUTTON_TYPES.PRIMARY}
               danger
+              loading={isLoading}
               icon={<SVG name={'delete'} size={20} color={'#fff'} />}
             >
               {'Delete'}

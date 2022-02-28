@@ -2070,7 +2070,7 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 			continue
 		}
 
-		if C.AllowSessionBatchTransactionByProjectID(projectID) {
+		if C.GetSessionBatchTransactionBatchSize() > 0 {
 			overwriteUserPropertiesByIDParamsInBatch = append(overwriteUserPropertiesByIDParamsInBatch,
 				model.OverwriteUserPropertiesByIDParams{
 					ProjectID:           projectID,
@@ -2090,8 +2090,9 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 		}
 	}
 
-	if C.AllowSessionBatchTransactionByProjectID(projectID) {
-		batcheGetOverwriteUserPropertiesByIDParams := model.GetOverwriteUserPropertiesByIDParamsInBatch(overwriteUserPropertiesByIDParamsInBatch, 20)
+	if C.GetSessionBatchTransactionBatchSize() > 0 {
+		batcheGetOverwriteUserPropertiesByIDParams := model.GetOverwriteUserPropertiesByIDParamsInBatch(overwriteUserPropertiesByIDParamsInBatch,
+			C.GetSessionBatchTransactionBatchSize())
 		for i := range batcheGetOverwriteUserPropertiesByIDParams {
 			hasFailure = store.OverwriteUserPropertiesByIDInBatch(batcheGetOverwriteUserPropertiesByIDParams[i])
 			if hasFailure {

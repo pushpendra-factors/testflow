@@ -104,7 +104,8 @@ function CardContent({ unit, resultState, durationObj }) {
     if (
       queryType === QUERY_TYPE_EVENT ||
       queryType === QUERY_TYPE_FUNNEL ||
-      queryType === QUERY_TYPE_KPI
+      queryType === QUERY_TYPE_KPI ||
+      queryType === QUERY_TYPE_PROFILE
     ) {
       const am = [];
       equivalentQuery.events.forEach((q, index) => {

@@ -152,6 +152,12 @@ func ProfilesQueryHandler(c *gin.Context) (interface{}, int, string, string, boo
 			}
 		}
 	}
+
+	// Tracking dashboard query request.
+	if isDashboardQueryRequest {
+		model.SetDashboardCacheAnalytics(projectID, dashboardId, unitId, profileQueryGroup.From, profileQueryGroup.To, timezoneString)
+	}
+
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(0, 0, timezoneString, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
 			reqID, projectID, dashboardId, unitId, 0, 0, timezoneString)

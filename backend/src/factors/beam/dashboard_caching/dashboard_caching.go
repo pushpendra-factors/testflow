@@ -156,6 +156,21 @@ func ReportOverallJobSummary(commonKey uint64, values func(*CacheResponse) bool)
 	} else {
 		C.PingHealthcheckForSuccess(beam.PipelineOptions.Get("HealthchecksPingID"), status)
 	}
+
+	slowUnits = model.GetNSlowestUnits(allUnitReports, 20)
+	failedUnits = model.GetFailedUnitsByProject(allUnitReports)
+	slowProjects = model.GetNSlowestProjects(allUnitReports, 10)
+	log.WithFields(log.Fields{
+		"Summary":                       message,
+		"TimeTakenForNormalUnits":       unitsTimeTakenString,
+		"TimeTakenForWebAnalyticsUnits": webTimeTakenString,
+		"TotalFailed":                   failed,
+		"TotalPassed":                   passed,
+		"TotalNotComputed":              notComputed,
+		"Top3SlowUnits":                 slowUnits,
+		"FailedUnitsByProject":          failedUnits,
+		"Top5SlowProjects":              slowProjects}).Info("Final Caching Job Report")
+
 	return message
 }
 

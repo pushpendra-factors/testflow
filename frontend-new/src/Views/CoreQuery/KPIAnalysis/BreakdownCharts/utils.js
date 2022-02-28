@@ -20,7 +20,6 @@ import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
 export const getDefaultSortProp = (kpis) => {
-  console.log("getDefaultSortProp -> kpis", kpis)
   if (Array.isArray(kpis) && kpis.length) {
     return [
       {

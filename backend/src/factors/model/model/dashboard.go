@@ -3,16 +3,18 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
 	"net/http"
 	"time"
 
-	cacheRedis "factors/cache/redis"
-
 	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
+
+	"strconv"
+	"strings"
 )
 
 type Dashboard struct {
@@ -43,10 +45,13 @@ type DashboardCacheResult struct {
 	From        int64       `json:"from"`
 	To          int64       `json:"tom"`
 	Timezone    string      `json:"timezone"`
+	Preset      string      `json:"preset"`
 	RefreshedAt int64       `json:"refreshed_at"`
 }
 
-const DashboardCachingDurationInSeconds = 32 * 24 * 60 * 60 // 32 days.
+const DashboardCachingDurationInSeconds = 32 * 24 * 60 * 60              // 32 days.
+const DashboardCacheInvalidationDuration14DaysInSecs = 14 * 24 * 60 * 60 // 14 days.
+const MaxNumberOfDashboardUnitCacheAccessedIn14Days = 50000
 
 const (
 	DashboardTypePrivate        = "pr"
@@ -78,7 +83,7 @@ func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId, dashboardId, 
 	}
 
 	result, status, err := cacheRedis.GetIfExistsPersistent(cacheKey)
-	if status == false {
+	if !status {
 		if err == nil {
 			return cacheResult, http.StatusNotFound, nil
 		}
@@ -130,6 +135,89 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
+		return
+	}
+}
+
+// GetDashboardCacheAnalyticsValidityMap returns a map of all ProjectID-dashboardunitID pairs that have been accessed in the last 14 days
+func GetDashboardCacheAnalyticsValidityMap() (map[uint64]map[uint64]bool, error) {
+	logCtx := log.WithFields(log.Fields{"method": "GetDashboardCacheAnalyticsValidityMap"})
+
+	cacheKeys, err := cacheRedis.ScanPersistent("dashboard:analytics:*", MaxNumberOfDashboardUnitCacheAccessedIn14Days, MaxNumberOfDashboardUnitCacheAccessedIn14Days)
+
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache key")
+		return nil, err
+	}
+
+	mapOfValidDashboardUnits := map[uint64]map[uint64]bool{}
+
+	for _, cacheKey := range cacheKeys {
+		var cacheResult *DashboardCacheResult
+		result, status, err := cacheRedis.GetIfExistsPersistent(cacheKey)
+		if !status && err != nil {
+			logCtx.WithError(err).Error("Failed to get result from cache for key %v", cacheKey)
+			continue
+		}
+		err = json.Unmarshal([]byte(result), &cacheResult)
+		if err != nil {
+			logCtx.WithError(err).Errorf("Error decoding redis result %v for key %v", result, cacheKey)
+			continue
+		}
+		projectId := cacheKey.ProjectID
+		if _, exists := mapOfValidDashboardUnits[projectId]; !exists {
+			mapOfValidDashboardUnits[projectId] = map[uint64]bool{}
+		}
+		keyValues := strings.Split(cacheKey.Suffix, ":")
+		dashboardUnitId, _ := strconv.ParseUint(keyValues[3], 10, 64)
+		timeDifference := U.TimeNowIn(U.TimeZoneStringIST).Unix() - cacheResult.RefreshedAt
+
+		if timeDifference < DashboardCacheInvalidationDuration14DaysInSecs && timeDifference >= 0 {
+			mapOfValidDashboardUnits[projectId][dashboardUnitId] = true
+		}
+	}
+
+	return mapOfValidDashboardUnits, err
+}
+
+// SetDashboardCacheAnalytics Sets the result in cache after generating a cacheKey to store against
+func SetDashboardCacheAnalytics(projectId uint64, dashboardId uint64, unitId uint64, from, to int64, timezoneString U.TimeZoneString) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId,
+		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
+		"from": from, "to": to,
+	})
+
+	if projectId == 0 || dashboardId == 0 || unitId == 0 {
+		logCtx.Error("Invalid scope ids.")
+		return
+	}
+	preset := U.GetPresetNameByFromAndTo(from, to, timezoneString)
+
+	cacheKey, err := getDashboardCacheAnalyticsCacheKey(projectId, dashboardId, unitId, from, to, timezoneString, preset)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache key")
+		return
+	}
+
+	dashboardCacheResult := DashboardCacheResult{
+		Result:      nil,
+		From:        from,
+		To:          to,
+		Timezone:    string(timezoneString),
+		Preset:      preset,
+		RefreshedAt: U.TimeNowIn(timezoneString).Unix(), // This represents the time when dashboard unit ID was requested
+	}
+
+	enDashboardCacheResult, err := json.Marshal(dashboardCacheResult)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult.")
+		return
+	}
+
+	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), DashboardCacheInvalidationDuration14DaysInSecs)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache for dashboard query")
 		return
 	}
 }

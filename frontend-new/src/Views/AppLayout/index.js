@@ -73,8 +73,10 @@ function AppLayout({
     if (projects.length && _.isEmpty(active_project)) {
       let activeItem = projects?.filter(
         (item) => item.id == localStorage.getItem('activeProject')
-      );
-      let projectDetails = _.isEmpty(activeItem) ? projects[0] : activeItem[0];
+      ); 
+      //handling Saas factors demo
+      let default_project = projects[0]?.id == 519 ? (projects[1] ? projects[1] : projects[0]) : projects[0];
+      let projectDetails = _.isEmpty(activeItem) ? default_project : activeItem[0];
       setActiveProject(projectDetails);
     }
   }, [projects]);

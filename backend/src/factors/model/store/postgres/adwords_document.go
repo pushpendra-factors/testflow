@@ -1206,63 +1206,48 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	finalOrderByStatement := ""
 	resultantSQLStatement := ""
 
-	smartPropertyCampaignGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	smartPropertyAdGroupGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	adwordsGroupBys := make([]model.ChannelGroupBy, 0, 0)
-
-	for _, groupBy := range query.GroupBy {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
-		if !isPresent {
-			if groupBy.Object == "campaign" {
-				smartPropertyCampaignGroupBys = append(smartPropertyCampaignGroupBys, groupBy)
-			} else {
-				smartPropertyAdGroupGroupBys = append(smartPropertyAdGroupGroupBys, groupBy)
-			}
-		} else {
-			adwordsGroupBys = append(adwordsGroupBys, groupBy)
-		}
-	}
-
-	if projectID == 595 {
-		log.WithField("query", *query).WithField("adwordsGroupBys", adwordsGroupBys).WithField("smartPropertyAdGroupGroupBys", smartPropertyAdGroupGroupBys).
-			WithField("smartPropertyCampaignGroupBys", smartPropertyCampaignGroupBys).Error("Testing for query failure1")
-	}
 
 	// Group By
 	dimensions := fields{}
 
-	for _, groupBy := range adwordsGroupBys {
-		if groupBy.Object == CAFilterChannel {
-			externalValue := groupBy.Object + "_" + groupBy.Property
-			expression := fmt.Sprintf("'google_ads' as %s", externalValue)
-			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-			dimensions.values = append(dimensions.values, externalValue)
-		} else {
-			key := groupBy.Object + ":" + groupBy.Property
-			internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
-			externalValue := groupBy.Object + "_" + groupBy.Property
-			var expression string
-			if groupBy.Property == "id" {
-				expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
-			} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
-				expression = fmt.Sprintf("((value->>'%s')::float)/1000000 as %s", internalValue, externalValue)
+	for _, groupBy := range query.GroupBy {
+		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		isSmartProperty := !isPresent
+		if isSmartProperty {
+			if groupBy.Object == model.AdwordsCampaign {
+				expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("campaign.properties->>'%s'", groupBy.Property), model.CampaignPrefix+groupBy.Property)
+				dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+				dimensions.values = append(dimensions.values, model.CampaignPrefix+groupBy.Property)
 			} else {
-				expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
+				expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("ad_group.properties->>'%s'", groupBy.Property), model.AdgroupPrefix+groupBy.Property)
+				dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+				dimensions.values = append(dimensions.values, model.AdgroupPrefix+groupBy.Property)
 			}
-			dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-			dimensions.values = append(dimensions.values, externalValue)
+		} else {
+			if groupBy.Object == CAFilterChannel {
+				externalValue := groupBy.Object + "_" + groupBy.Property
+				expression := fmt.Sprintf("'google_ads' as %s", externalValue)
+				dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+				dimensions.values = append(dimensions.values, externalValue)
+			} else {
+				key := groupBy.Object + ":" + groupBy.Property
+				internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
+				externalValue := groupBy.Object + "_" + groupBy.Property
+				var expression string
+				if groupBy.Property == "id" {
+					expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
+				} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
+					expression = fmt.Sprintf("((value->>'%s')::float)/1000000 as %s", internalValue, externalValue)
+				} else {
+					expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
+				}
+				dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+				dimensions.values = append(dimensions.values, externalValue)
+			}
 		}
 	}
-	for _, groupBy := range smartPropertyCampaignGroupBys {
-		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("campaign.properties->>'%s'", groupBy.Property), model.CampaignPrefix+groupBy.Property)
-		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, model.CampaignPrefix+groupBy.Property)
-	}
-	for _, groupBy := range smartPropertyAdGroupGroupBys {
-		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("ad_group.properties->>'%s'", groupBy.Property), model.AdgroupPrefix+groupBy.Property)
-		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
-		dimensions.values = append(dimensions.values, model.AdgroupPrefix+groupBy.Property)
-	}
+
 	if isGroupByTimestamp {
 		internalValue := getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone)
 		externalValue := model.AliasDateTime
@@ -1309,7 +1294,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 
 	// Filters
 	filterPropertiesStatementBasedOnRequestFilters, filterParams := getFilterPropertiesForAdwordsReportsAndSmartProperty(query.Filters)
-	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
+	filterStatementForSmartPropertyGroupBy := getNotNullFilterStatementForSmartPropertyGroupBys(adwordsGroupBys)
 	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatementBasedOnRequestFilters, filterStatementForSmartPropertyGroupBy)
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
@@ -1625,22 +1610,28 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperty(filters []model.Channe
 
 	return resultStatement + ")", params
 }
-func getNotNullFilterStatementForSmartPropertyGroupBys(smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {
+func getNotNullFilterStatementForSmartPropertyGroupBys(groupBys []model.ChannelGroupBy) string {
 	resultStatement := ""
-	for _, smartPropertyGroupBy := range smartPropertyCampaignGroupBys {
-		if resultStatement == "" {
-			resultStatement += fmt.Sprintf("( campaign.properties->>'%s' IS NOT NULL ", smartPropertyGroupBy.Property)
-		} else {
-			resultStatement += fmt.Sprintf("AND campaign.properties->>'%s' IS NOT NULL ", smartPropertyGroupBy.Property)
+	for _, groupBy := range groupBys {
+		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		isSmartProperty := !isPresent
+		if isSmartProperty {
+			if groupBy.Object == model.AdwordsCampaign {
+				if resultStatement == "" {
+					resultStatement += fmt.Sprintf("( campaign.properties->>'%s' IS NOT NULL ", groupBy.Property)
+				} else {
+					resultStatement += fmt.Sprintf("AND campaign.properties->>'%s' IS NOT NULL ", groupBy.Property)
+				}
+			} else {
+				if resultStatement == "" {
+					resultStatement += fmt.Sprintf("( ad_group.properties->>'%s' IS NOT NULL ", groupBy.Property)
+				} else {
+					resultStatement += fmt.Sprintf("AND ad_group.properties->>'%s' IS NOT NULL ", groupBy.Property)
+				}
+			}
 		}
 	}
-	for _, smartPropertyGroupBy := range smartPropertyAdGroupGroupBys {
-		if resultStatement == "" {
-			resultStatement += fmt.Sprintf("( ad_group.properties->>'%s' IS NOT NULL ", smartPropertyGroupBy.Property)
-		} else {
-			resultStatement += fmt.Sprintf("AND ad_group.properties->>'%s' IS NOT NULL ", smartPropertyGroupBy.Property)
-		}
-	}
+
 	if resultStatement == "" {
 		return resultStatement
 	}

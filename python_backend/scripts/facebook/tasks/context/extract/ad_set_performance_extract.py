@@ -15,7 +15,7 @@ class AdSetPerformanceReportExtract(BaseExtractContext):
     METRICS_2 = ["video_p50_watched_actions", "video_p25_watched_actions", "video_30_sec_watched_actions",
                "video_p100_watched_actions", "video_p75_watched_actions"]
     LEVEL_BREAKDOWN = "adset"
-    UNFORMATTED_URL = 'https://graph.facebook.com/v11.0/{}/insights?' \
+    UNFORMATTED_URL = 'https://graph.facebook.com/v13.0/{}/insights?' \
                     'time_range={}&&fields={}&&access_token={}&&level={' \
                     '}&&filtering=[{{\'field\':\'impressions\',\'operator\':\'GREATER_THAN\',\'value\':0}}]&&limit=1000'
 

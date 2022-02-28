@@ -253,7 +253,7 @@ func (store *MemSQL) GetSyncedHubspotDocumentByFilter(projectID uint64,
 
 func (store *MemSQL) getUpdatedDealAssociationDocument(projectID uint64, incomingDocument *model.HubspotDocument) (*model.HubspotDocument, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":        projectID,
 		"incoming_document": incomingDocument,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -302,7 +302,7 @@ func (store *MemSQL) getUpdatedDealAssociationDocument(projectID uint64, incomin
 }
 
 func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.HubspotDocument) int {
-	
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectId})
 
 	logCtx := log.WithField("project_id", document.ProjectId)
@@ -384,14 +384,45 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 		document.Timestamp = updatedTimestamp
 	}
 
-	errCode = store.satisfiesHubspotDocumentUniquenessConstraints(document)
-	if errCode != http.StatusOK {
-		if errCode != http.StatusConflict {
-			return errCode
+	if !C.DisableCRMUniquenessConstraintsCheckByProjectID(projectId) {
+		errCode = store.satisfiesHubspotDocumentUniquenessConstraints(document)
+		if errCode != http.StatusOK {
+			if errCode != http.StatusConflict {
+				return errCode
+			}
+
+			if document.Type != model.HubspotDocumentTypeDeal {
+				return errCode
+			}
+
+			newDocument, errCode := store.getUpdatedDealAssociationDocument(projectId, document)
+			if errCode != http.StatusOK {
+				if errCode != http.StatusConflict {
+					logCtx.WithField("errCode", errCode).Error("Failed to getUpdatedDealAssociationDocument.")
+					return http.StatusInternalServerError
+				}
+
+				return errCode
+			}
+
+			document = newDocument
+		}
+	}
+
+	db := C.GetServices().Db
+	err = db.Create(document).Error
+	if err != nil {
+		if !IsDuplicateRecordError(err) {
+			logCtx.WithError(err).Error("Failed to create hubspot document.")
+			return http.StatusInternalServerError
+		}
+
+		if !C.DisableCRMUniquenessConstraintsCheckByProjectID(projectId) {
+			return http.StatusConflict
 		}
 
 		if document.Type != model.HubspotDocumentTypeDeal {
-			return errCode
+			return http.StatusConflict
 		}
 
 		newDocument, errCode := store.getUpdatedDealAssociationDocument(projectId, document)
@@ -400,22 +431,18 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 				logCtx.WithField("errCode", errCode).Error("Failed to getUpdatedDealAssociationDocument.")
 				return http.StatusInternalServerError
 			}
-
 			return errCode
 		}
 
-		document = newDocument
-	}
+		err = db.Create(&newDocument).Error
+		if err != nil {
+			if IsDuplicateRecordError(err) {
+				return http.StatusConflict
+			}
 
-	db := C.GetServices().Db
-	err = db.Create(document).Error
-	if err != nil {
-		if IsDuplicateRecordError(err) {
-			return http.StatusConflict
+			logCtx.WithError(err).Error("Failed to create hubspot deal association document.")
+			return http.StatusInternalServerError
 		}
-
-		logCtx.WithError(err).Error("Failed to create hubspot document.")
-		return http.StatusInternalServerError
 	}
 
 	if isNew { // create updated document for new user
@@ -817,12 +844,12 @@ func (store *MemSQL) GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, 
 
 func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.HubspotDocument,
 	propertyName string, limit int) []interface{} {
-		logFields := log.Fields{
-			"hubspot_documents": hubspotDocuments,
-			"property_name": propertyName,
-			"limit": limit,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"hubspot_documents": hubspotDocuments,
+		"property_name":     propertyName,
+		"limit":             limit,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if len(hubspotDocuments) < 1 || propertyName == "" {
 		return nil
@@ -993,7 +1020,7 @@ func (store *MemSQL) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64,
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID,
-	"object_type": objectType, "property_name": propertyName})
+		"object_type": objectType, "property_name": propertyName})
 
 	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
 	if err != nil {
@@ -1042,8 +1069,8 @@ func (store *MemSQL) UpdateHubspotDocumentAsSynced(projectId uint64, id string, 
 func (store *MemSQL) GetLastSyncedHubspotUpdateDocumentByID(projectID uint64, docID string, docType int) (*model.HubspotDocument, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"doc_id": docID,
-		"doc_type": docType,
+		"doc_id":     docID,
+		"doc_type":   docType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_id": docID, "doc_type": docType})
@@ -1120,17 +1147,17 @@ func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID uint64, docID st
 
 func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
 	enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"group_name": groupName,
-			"group_id": groupID,
-			"group_user_id": groupUserID,
-			"en_properties": enProperties,
-			"created_timestamp": createdTimestamp,
-			"updated_timestamp": updatedTimestamp,
-			"source": source,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":        projectID,
+		"group_name":        groupName,
+		"group_id":          groupID,
+		"group_user_id":     groupUserID,
+		"en_properties":     enProperties,
+		"created_timestamp": createdTimestamp,
+		"updated_timestamp": updatedTimestamp,
+		"source":            source,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
 	if projectID < 1 || enProperties == nil || createdTimestamp == 0 || updatedTimestamp == 0 {

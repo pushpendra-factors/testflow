@@ -100,8 +100,8 @@ function SignUp({ signup }) {
                             <Col span={14}>
                                 <Row>
                                     <Col span={24}>
-                                        <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Marketing Decisioning made Radically Smarter</Text>
-                                        <Text type={'title'} color={'grey'} level={7} extraClass={'m-0'} >An end-to-end marketing analytics platform that integrates across data silos to deliver focused AI-fueled actionable insights.</Text>
+                                        <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Marketing decisioning made radically smarter</Text>
+                                        <Text type={'title'} color={'grey'} level={7} extraClass={'m-0'} >Measure and validate every marketing initiative. Understand the entire buyer journey. Then drive pipeline and revenue like never before, all inside Factors.</Text>
                                     </Col>
                                 </Row>
                                 <Row>
