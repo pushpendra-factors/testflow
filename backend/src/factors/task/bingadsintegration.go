@@ -20,7 +20,7 @@ func BingAdsIntegration(projectId uint64, configs map[string]interface{}) (map[s
 	}
 
 	resultStatus := make(map[string]interface{})
-	executionDate := configs["startTimestamp"].(int64)
+	executionDate := configs["startTimestamp"].(int64) - 86400
 	executionDateString := U.GetDateOnlyHyphenFormatFromTimestampZ(executionDate)
 	executionDateStringYYYYMMDD, _ := strconv.ParseInt(U.GetDateOnlyFromTimestampZ(executionDate), 10, 64)
 	ctx := context.Background()
@@ -42,10 +42,10 @@ func BingAdsIntegration(projectId uint64, configs map[string]interface{}) (map[s
 
 	totalSuccess := 0
 	totalFailures := 0
-	for docType, _ := range model.BingAdsDocumentToTable {
+	for docType, baseQuery := range model.BingAdsDocumentToQuery {
 		success := 0
 		failures := 0
-		query := model.GetBingAdsDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, docType, executionDateString)
+		query := model.GetBingAdsDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, baseQuery, executionDateString, docType)
 		var queryResult [][]string
 		err = BQ.ExecuteQuery(&ctx, client, query, &queryResult)
 		if err != nil {

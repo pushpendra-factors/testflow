@@ -204,6 +204,7 @@ const (
 	ChannelFacebook   = "facebook"
 	ChannelLinkedin   = "linkedin"
 	ChannelGoogleAds  = "google ads"
+	ChannelBingAds    = "bingads"
 	SessionChannelOTP = "OfflineTouchPoint"
 
 	FieldChannelName      = "channel_name"

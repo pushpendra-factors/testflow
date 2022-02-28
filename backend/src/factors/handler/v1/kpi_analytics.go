@@ -71,7 +71,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		storeSelected.GetKPIConfigsForSalesforceOpportunities,
 		storeSelected.GetKPIConfigsForAdwords, storeSelected.GetKPIConfigsForGoogleOrganic,
 		storeSelected.GetKPIConfigsForFacebook, storeSelected.GetKPIConfigsForLinkedin,
-		storeSelected.GetKPIConfigsForAllChannels,
+		storeSelected.GetKPIConfigsForAllChannels,storeSelected.GetKPIConfigsForBingAds,
 	}
 	resultantResultConfigs := make([]map[string]interface{}, 0)
 	for _, configFunction := range configFunctions {

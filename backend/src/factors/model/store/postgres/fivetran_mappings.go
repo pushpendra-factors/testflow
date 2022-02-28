@@ -25,7 +25,7 @@ func (pg *Postgres) DisableFiveTranMapping(ProjectID uint64, Integration string,
 	return nil
 }
 
-func (pg *Postgres) EnableFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string) error {
+func (pg *Postgres) EnableFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, Accounts string) error {
 	// check if not any for a project-id/source is status = true
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
@@ -38,7 +38,8 @@ func (pg *Postgres) EnableFiveTranMapping(ProjectID uint64, Integration string, 
 		return errors.New("Already active integration exists")
 	}
 	updatedFields := map[string]interface{}{
-		"status": true,
+		"status":   true,
+		"accounts": Accounts,
 	}
 	dbErr := db.Model(&model.FivetranMappings{}).Where("project_id = ? AND integration = ? AND connector_id = ?", ProjectID, Integration, ConnectorId).Update(updatedFields).Error
 	if dbErr != nil {
@@ -114,7 +115,7 @@ func (pg *Postgres) GetAllActiveFiveTranMapping(ProjectID uint64, Integration st
 	}
 }
 
-func (pg *Postgres) PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string) error {
+func (pg *Postgres) PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string, Accounts string) error {
 	// Check if there is an active mapping already
 	db := C.GetServices().Db
 	allActiveMapping, err := pg.GetAllActiveFiveTranMapping(ProjectID, Integration)
@@ -135,6 +136,7 @@ func (pg *Postgres) PostFiveTranMapping(ProjectID uint64, Integration string, Co
 		Integration: Integration,
 		ConnectorID: ConnectorId,
 		SchemaID:    SchemaId,
+		Accounts:    Accounts,
 		CreatedAt:   &transTime,
 		UpdatedAt:   &transTime,
 	}

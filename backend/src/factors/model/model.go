@@ -100,6 +100,7 @@ type Model interface {
 	GetKPIConfigsForSalesforceAccounts(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForSalesforceOpportunities(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForAdwords(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForBingAds(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForGoogleOrganic(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForFacebook(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForLinkedin(projectID uint64, reqID string) (map[string]interface{}, int)
@@ -242,6 +243,9 @@ type Model interface {
 	GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool,
 		limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string, int)
 
+	//bingads document
+	GetBingadsFilterValuesSQLAndParams(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
+
 	// funnel_analytics
 	RunFunnelQuery(projectID uint64, query model.Query) (*model.QueryResult, int, string)
 
@@ -316,6 +320,7 @@ type Model interface {
 	IsPSettingsIntShopifyEnabled(projectId uint64) bool
 	GetProjectDetailsByShopifyDomain(shopifyDomain string) (uint64, string, bool, int)
 	EnableBigqueryArchivalForProject(projectID uint64) int
+	IsBingIntegrationAvailable(projectID uint64) bool
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int
@@ -546,12 +551,12 @@ type Model interface {
 
 	// fivetran mappings
 	DisableFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string) error
-	EnableFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string) error
+	EnableFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, Accounts string) error
 	GetFiveTranMapping(ProjectID uint64, Integration string) (string, error)
 	GetActiveFiveTranMapping(ProjectID uint64, Integration string) (model.FivetranMappings, error)
 	GetAllActiveFiveTranMapping(ProjectID uint64, Integration string) ([]string, error)
 	GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, error)
-	PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string) error
+	PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string, Accounts string) error
 	GetAllActiveFiveTranMappingByIntegration(Integration string) ([]model.FivetranMappings, error)
 
 	//leadgen
