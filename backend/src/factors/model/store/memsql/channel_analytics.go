@@ -457,12 +457,19 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 	var selectMetrics, columns []string
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 
+	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch connector id from db")
+		headers := model.GetHeadersFromQuery(*query)
+		return headers, make([][]interface{}, 0, 0), http.StatusOK
+	}
+	customerAccountID := ftMapping.Accounts
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		headers := model.GetHeadersFromQuery(*query)
 		return headers, make([][]interface{}, 0, 0), http.StatusNotFound
 	} else if (projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "") &&
-		(projectSetting.IntFacebookAdAccount == "") && (projectSetting.IntLinkedinAdAccount == "") {
+		(projectSetting.IntFacebookAdAccount == "") && (projectSetting.IntLinkedinAdAccount == "") && customerAccountID == "" {
 		log.Warn("Integration not present for channels.")
 		headers := model.GetHeadersFromQuery(*query)
 		return headers, make([][]interface{}, 0, 0), http.StatusOK
@@ -614,7 +621,7 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, q
 		finBingAdsSQL, finBingAdsParams = bingAdsSQL, bingAdsParams
 
 	}
-	if !isAdwordsReq && !isFacebookReq && !isLinkedinReq {
+	if !isAdwordsReq && !isFacebookReq && !isLinkedinReq && !isBingAdsReq {
 		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, http.StatusNotFound
 	}
 	return finAdwordsSQL, finAdwordsParams, finalKeys, finalMetrics, finFacebookSQL, finFacebookParams, finLinkedinSQL, finLinkedinParams, finBingAdsSQL, finBingAdsParams, http.StatusOK
