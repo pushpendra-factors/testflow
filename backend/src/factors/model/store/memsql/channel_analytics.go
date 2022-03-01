@@ -458,12 +458,10 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 
 	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
-	if err != nil {
-		log.WithError(err).Error("Failed to fetch connector id from db")
-		headers := model.GetHeadersFromQuery(*query)
-		return headers, make([][]interface{}, 0, 0), http.StatusOK
+	customerAccountID := ""
+	if err == nil {
+		customerAccountID = ftMapping.Accounts
 	}
-	customerAccountID := ftMapping.Accounts
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		headers := model.GetHeadersFromQuery(*query)

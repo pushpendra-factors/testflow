@@ -325,8 +325,12 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 	return data, err
 }
 func (store *MemSQL) getBingAdsAccountId(projectID uint64) (string, error) {
-	ftMapping, _ := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
-	return ftMapping.Accounts, nil
+	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
+	if err == nil {
+		return ftMapping.Accounts, nil
+	} else {
+		return "", nil
+	}
 }
 
 // PullAdwordsMarketingData Pulls Adds channel data for Adwords.

@@ -211,7 +211,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID uint64,
 	logCtx := log.WithFields(logFields)
 	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForBingads(
 		projectID, *query, reqID)
-	if err != nil && err.Error() == integrationNotAvailable {
+	if err != nil && err.Error() == "record not found" {
 		logCtx.WithError(err).Info(model.BingSpecificError)
 		return "", nil, make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}

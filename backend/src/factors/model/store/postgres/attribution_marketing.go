@@ -6,10 +6,11 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQuery, projectSetting model.ProjectSetting) (*model.MarketingReports, error) {
@@ -310,8 +311,12 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 }
 
 func (pg *Postgres) getBingAdsAccountId(projectID uint64) (string, error) {
-	ftMapping, _ := pg.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
-	return ftMapping.Accounts, nil
+	ftMapping, err := pg.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
+	if err == nil {
+		return ftMapping.Accounts, nil
+	} else {
+		return "", nil
+	}
 }
 
 // PullAdwordsMarketingData Pulls Adds channel data for Adwords.
