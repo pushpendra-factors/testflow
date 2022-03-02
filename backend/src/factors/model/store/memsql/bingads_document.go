@@ -31,7 +31,7 @@ var objectAndPropertyToValueInBingAdsReportsMapping = map[string]string{
 	"ad_groups.id":                "JSON_EXTRACT_STRING(value, 'ad_group_id')",
 	"ad_groups.status":            "JSON_EXTRACT_STRING(value, 'ad_group_status')",
 	"ad_groups.name":              "JSON_EXTRACT_STRING(value, 'ad_group_name')",
-	"ad_groups.bid_strategy_type": "JSON_EXTRACT_STRING(value, 'ad_group_big_strategy_type')",
+	"ad_groups.bid_strategy_type": "JSON_EXTRACT_STRING(value, 'ad_group_bid_strategy_type')",
 	"keyword.id":                  "JSON_EXTRACT_STRING(value, 'keyword_id')",
 	"keyword.name":                "JSON_EXTRACT_STRING(value, 'keyword_name')",
 	"keyword.status":              "JSON_EXTRACT_STRING(value, 'keyword_status')",
