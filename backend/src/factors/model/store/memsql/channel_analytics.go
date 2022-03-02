@@ -296,13 +296,17 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, f
 		}
 		return filterValues, http.StatusFound
 	}
+	isBingAdsAvailable := store.IsBingIntegrationAvailable(projectID)
 	if filterObject == CAFilterChannel && filterProperty == "name" {
-		return []interface{}{model.GoogleAds, model.FacebookAds, model.LinkedinAds, model.BingAdsIntegration}, http.StatusFound
+		integrations := []interface{}{model.GoogleAds, model.FacebookAds, model.LinkedinAds}
+		if isBingAdsAvailable {
+			integrations = append(integrations, model.BingAdsIntegration)
+		}
+		return integrations, http.StatusFound
 	}
 	adwordsSQL, adwordsParams, adwordsErr := store.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	facebookSQL, facebookParams, facebookErr := store.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	linkedinSQL, linkedinParams, linkedinErr := store.GetLinkedinSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
-	bingAdsinSQL, bingAdsParams, bingAdsErr := store.GetBingadsFilterValuesSQLAndParams(projectID, filterObject, filterProperty, reqID)
 	if adwordsErr != http.StatusFound && adwordsErr != http.StatusNotFound {
 		return []interface{}{}, adwordsErr
 	}
@@ -312,15 +316,19 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, f
 	if linkedinErr != http.StatusFound && linkedinErr != http.StatusNotFound {
 		return []interface{}{}, linkedinErr
 	}
-	if bingAdsErr != http.StatusFound && bingAdsErr != http.StatusNotFound {
-		return []interface{}{}, bingAdsErr
-	}
 
-	finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsinSQL)
+	finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
 	finalParams := append(adwordsParams, facebookParams...)
 	finalParams = append(finalParams, linkedinParams...)
-	finalParams = append(finalParams, bingAdsParams...)
+	if isBingAdsAvailable {
+		bingAdsinSQL, bingAdsParams, bingAdsErr := store.GetBingadsFilterValuesSQLAndParams(projectID, filterObject, filterProperty, reqID)
 
+		if bingAdsErr != http.StatusFound && bingAdsErr != http.StatusNotFound {
+			return []interface{}{}, bingAdsErr
+		}
+		finalSQLs = U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL, bingAdsinSQL)
+		finalParams = append(finalParams, bingAdsParams...)
+	}
 	finalQuery := fmt.Sprintf(CAUnionFilterQuery, joinWithWordInBetween("UNION", finalSQLs...))
 	_, resultRows, _ := store.ExecuteSQL(finalQuery, finalParams, logCtx)
 
@@ -562,6 +570,12 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, q
 	genericFilters, channelBreakdownFilters := model.GetDecoupledFiltersForChannelBreakdownFilters(query.Filters)
 	query.Filters = genericFilters
 	isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, errCode := model.GetRequiredChannels(channelBreakdownFilters)
+	projectSetting, _ := store.GetProjectSetting(projectID)
+	bingAdsInt := store.IsBingIntegrationAvailable(projectID)
+	isAdwordsReq = isAdwordsReq && (projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "")
+	isFacebookReq = isFacebookReq && (projectSetting.IntFacebookAdAccount != "")
+	isLinkedinReq = (isLinkedinReq && projectSetting.IntLinkedinAdAccount != "")
+	isBingAdsReq = isBingAdsReq && (bingAdsInt == true)
 	if errCode != http.StatusOK {
 		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, "", []interface{}{}, errCode
 	}
