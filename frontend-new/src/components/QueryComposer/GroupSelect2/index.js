@@ -59,6 +59,7 @@ function GroupSelect2({
   const getGroupLabel = (grp) => {
     if (grp === 'event') return 'Event Properties';
     if (grp === 'user') return 'User Properties';
+    if (!grp) return 'Properties'
     return grp;
   };
 
@@ -118,7 +119,7 @@ function GroupSelect2({
                           key={i}
                           title={val[0]}
                           className={`fa-select-group-select--options`}
-                          onClick={() => optionClick(group.label, val)}
+                          onClick={() => optionClick(group.label? group.label : group.icon, val)}
                         >
                           {searchTerm.length > 0}
                           <Text
