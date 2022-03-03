@@ -16,4 +16,13 @@
     .start {
         justify-content: flex-start !important;
     }
+
+    .button {
+        width: auto !important;
+    }
+
+    .btnCenter {
+        display: flex;
+        justify-content: center;
+    }
 }
