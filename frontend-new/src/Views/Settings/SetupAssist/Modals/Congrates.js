@@ -5,7 +5,8 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
-import InviteMembers from './InviteMembers'
+import InviteMembers from './InviteMembers';
+import styles from './index.module.scss';
 
 
 function Congrates({handleCancel}) {
@@ -25,7 +26,7 @@ function Congrates({handleCancel}) {
     <>
     {!showInvite &&
       <div className={'fa-container'}>
-            <Row justify={'center'}>
+            <Row justify={'center'} className={`${styles.start}`}>
                 <Col span={7} >
                     <div className={'flex flex-col justify-center mt-16'}>
                         <Row className={'mb-1'}>
@@ -54,7 +55,9 @@ function Congrates({handleCancel}) {
                     </div>
                 </Col>
             </Row>
+            <div className={`${styles.hideSVG}`}>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
+            </div>
       </div>
     } {
         showInvite && <InviteMembers handleCancel = {handleCancel} />

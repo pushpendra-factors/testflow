@@ -76,7 +76,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
   return (
     <>
       <div className={'fa-container'}>
-            <Row justify={'center'}>
+            <Row justify={'center'} className={`${styles.start}`}>
                 <Col span={7} >
                     <div className={'flex flex-col justify-center mt-16'}>
                         <Row className={'m-0'}>
@@ -198,7 +198,9 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                     </div>
                 </Col>
             </Row>
+            <div className={`${styles.hideSVG}`}>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
+            </div>
       </div>
     </>
 

@@ -1,15 +1,5 @@
-.hide {
-    display: none;
-  }
-  
-.show {
-    &:hover .hide {
-        display: inline-block;
-    } 
-}
-
 @media only screen and (max-width: 768px) { 
-    .hideSVG {
+    .hide {
         display: none;
     }
 
@@ -17,3 +7,5 @@
         justify-content: flex-start !important;
     }
 }
+
+
