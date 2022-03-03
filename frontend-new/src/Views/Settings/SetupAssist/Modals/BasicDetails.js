@@ -12,6 +12,7 @@ import Congrates from './Congrates';
 import 'animate.css';
 import factorsai from 'factorsai';
 const { Option } = Select;
+import styles from './index.module.scss';
 
 const getKeyByValue = (obj, value) =>  Object.keys(obj).find(key => obj[key]?.city === value);
 
@@ -108,7 +109,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
     <>
     {!formData &&
       <div className={'fa-container'}>
-            <Row justify={'center'}>
+            <Row justify={'center'} className={`${styles.start}`}>
                 <Col span={7} >
                     <div className={'flex flex-col justify-center mt-16'}>
                         <Row className={'mb-4'}>
@@ -225,7 +226,9 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                     </div>
                 </Col>
             </Row>
+            <div className={`${styles.hideSVG}`}>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
+            </div>
       </div>
     }
     {formData && <Congrates handleCancel = {handleCancel} />}

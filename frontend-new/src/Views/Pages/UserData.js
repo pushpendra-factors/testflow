@@ -7,6 +7,7 @@ import { Text, SVG } from 'factorsComponents';
 import { signup } from 'Reducers/agentActions';
 import Congrats from './Congrats';
 import { createHubspotContact, getHubspotContact } from '../../reducers/global';
+import styles from './index.module.scss';
 
 function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
     const [form] = Form.useForm();
@@ -111,7 +112,7 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
     <>
     {!formData &&
       <div className={'fa-container'}>
-            <Row justify={'center'}>
+            <Row justify={'center'} className={`${styles.start}`}>
                 <Col span={12} >
                     <div className={'flex flex-col justify-center items-center login-container'}>
                         <Row>
@@ -243,7 +244,9 @@ function UserData({ signup, data, createHubspotContact , getHubspotContact}) {
                     </div>
                 </Col>
             </Row>
+            <div className={`${styles.hide}`}>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
+            </div>
       </div>
         }
         {formData &&
