@@ -49,6 +49,21 @@ func (store *MemSQL) EnableFiveTranMapping(ProjectID uint64, Integration string,
 	return nil
 }
 
+func (store *MemSQL) UpdateFiveTranMappingAccount(ProjectID uint64, Integration string, ConnectorId string, Accounts string) error {
+	// check if not any for a project-id/source is status = true
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+	db := C.GetServices().Db
+	updatedFields := map[string]interface{}{
+		"accounts": Accounts,
+	}
+	dbErr := db.Model(&model.FivetranMappings{}).Where("project_id = ? AND integration = ? AND connector_id = ?", ProjectID, Integration, ConnectorId).Update(updatedFields).Error
+	if dbErr != nil {
+		logCtx.WithError(dbErr).Error("updating fivetran mappings failed")
+		return dbErr
+	}
+	return nil
+}
+
 func (store *MemSQL) GetFiveTranMapping(ProjectID uint64, Integration string) (string, error) {
 	db := C.GetServices().Db
 	var records []model.FivetranMappings
