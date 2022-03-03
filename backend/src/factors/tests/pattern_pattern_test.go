@@ -1133,7 +1133,7 @@ func TestGenCombinationPatternsEndingWithGoal(t *testing.T) {
 		goalPatterns = append(goalPatterns, tmpGoal)
 
 	}
-	filterdPatterns, _, _ := P.GenCombinationPatternsEndingWithGoal(allPatterns, goalPatterns, nil)
+	filterdPatterns, _, _ := P.GenCombinationPatternsEndingWithGoal(0, allPatterns, goalPatterns, nil)
 	for _, f := range filterdPatterns {
 		if f.EventNames[0] == f.EventNames[1] {
 			err = true

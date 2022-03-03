@@ -1,0 +1,21 @@
+package memsql
+
+import (
+	"factors/model/model"
+	"net/http"
+	"strconv"
+	log "github.com/sirupsen/logrus"
+)
+
+func (store *MemSQL) GetKPIConfigsForBingAds(projectID uint64, reqID string) (map[string]interface{}, int) {
+	projectIDInString := []string{strconv.FormatUint(projectID, 10)}
+	isBingAdsIntegrationDone := store.IsBingIntegrationAvailable(projectID)
+	if !isBingAdsIntegrationDone{
+		log.WithField("projectId", projectIDInString).Warn("Bingads integration not available.")
+		return nil, http.StatusOK
+	}
+	config := model.GetKPIConfigsForBingAds()
+	BingadsObjectsAndProperties := store.buildObjectAndPropertiesForBingAds(projectID, model.ObjectsForBingads)
+	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(BingadsObjectsAndProperties)
+	return config, http.StatusOK
+}

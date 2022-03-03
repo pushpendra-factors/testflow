@@ -765,7 +765,7 @@ export const formatFilterDate = (selectedDates) => {
   return JSON.stringify(convertedVal);
 };
 
-function isDateInMilliSeconds(date) {
+export function isDateInMilliSeconds(date) {
   return date.toString().length === 13;
 }
 

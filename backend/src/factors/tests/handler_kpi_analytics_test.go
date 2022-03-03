@@ -496,6 +496,78 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 	})
 }
 
+func TestKPIProfilesForGroups(t *testing.T) {
+	a := gin.Default()
+	H.InitAppRoutes(a)
+	project, _, _, err := SetupProjectUserEventNameReturnDAO()
+
+	agent, _ := SetupAgentReturnDAO(getRandomEmail(), "+1343545")
+
+	_, _ = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent.UUID})
+
+	assert.Nil(t, err)
+
+	t.Run("TestKPIProfilesForGroups", func(t *testing.T) {
+		initialTimestamp := time.Now().AddDate(0, 0, -10).Unix()
+		var finalTimestamp int64
+		var sourceHubspotUsers1 []model.User
+
+		group, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+		assert.Equal(t, http.StatusCreated, status)
+		assert.NotNil(t, group)
+
+		properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+			`{"country": "us", "age": 20, "$hubspot_amount": 200, "$hubspot_datefield1": %d, "paid": true}`, initialTimestamp+10)))}
+		// create 10 group users, source = hubspot and group_name = $hubspot_company
+		for i := 0; i < 10; i++ {
+			createdUserID, errCode := store.GetStore().CreateGroupUser(&model.User{ProjectId: project.ID,
+				Source: model.GetRequestSourcePointer(model.UserSourceHubspot), Properties: properties}, group.Name, fmt.Sprintf("%d", group.ID))
+			assert.Equal(t, http.StatusCreated, errCode)
+			user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+			assert.Equal(t, http.StatusFound, errCode)
+			assert.True(t, len(user.ID) > 30)
+			sourceHubspotUsers1 = append(sourceHubspotUsers1, *user)
+		}
+		finalTimestamp = time.Now().Unix()
+
+		// update user properties to add $group_id property = group.ID of created user
+		for i := 0; i < len(sourceHubspotUsers1); i++ {
+			newProperties := &postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(
+				`{"$group_id": "%d"}`, group.ID)))}
+			_, status := store.GetStore().UpdateUserPropertiesV2(project.ID, sourceHubspotUsers1[i].ID, newProperties, time.Now().Unix(), "", "")
+			assert.Equal(t, http.StatusAccepted, status)
+		}
+
+		name2 := U.RandomString(8)
+		description2 := U.RandomString(8)
+		transformations2 := &postgres.Jsonb{json.RawMessage(`{"agFn": "unique", "agPr": "", "agPrTy": "categorical", "fil": [], "daFie": "$hubspot_datefield1"}`)}
+		w := sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "hubspot_companies")
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		query1 := model.KPIQuery{
+			Category:         "profile",
+			DisplayCategory:  "hubspot_companies",
+			PageUrl:          "",
+			Metrics:          []string{name2},
+			GroupBy:          []M.KPIGroupBy{},
+			From:             initialTimestamp,
+			To:               finalTimestamp,
+			GroupByTimestamp: "",
+		}
+
+		kpiQueryGroup1 := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{},
+		}
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1)
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, float64(10), result[0].Rows[0][0])
+	})
+}
+
 func TestKpiAnalyticsHandler(t *testing.T) {
 	a := gin.Default()
 	H.InitAppRoutes(a)

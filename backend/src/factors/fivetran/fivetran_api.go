@@ -157,7 +157,8 @@ func FiveTranCreateConnectorCard(ConnectorId string) (int, string, string) {
 	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s/connect-card-token", ConnectorId), Authorization, nil, "POST")
 	log.Info(response)
 	if statusCode == http.StatusOK {
-		redirectUri := fmt.Sprintf("https://fivetran.com/connect-card/setup?redirect_uri=%s&auth=%s", "http://localhost", response["token"].(string))
+		fe_host := C.GetProtocol() + C.GetAPPDomain()
+		redirectUri := fmt.Sprintf("https://fivetran.com/connect-card/setup?redirect_uri=%s&auth=%s", fe_host, response["token"].(string))
 		return statusCode, "", redirectUri // statuscode, errstring, redirect_uri
 	} else {
 		return statusCode, errResponse.Code, ""
@@ -204,8 +205,14 @@ func FiveTranGetConnector(ConnectorId string) (int, string, bool, string) {
 	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s", ConnectorId), Authorization, nil, "GET")
 	log.Info(response)
 	if statusCode == http.StatusOK {
-		accounts := response["data"].(map[string]interface{})["config"].(map[string]interface{})["accounts"].([]interface{})
 		paused := response["data"].(map[string]interface{})["paused"].(bool)
+		var accounts []interface{}
+		if paused == false {
+			accountsObject, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["accounts"]
+			if exists {
+				accounts = accountsObject.([]interface{})
+			}
+		}
 		accountArray := ""
 		for _, account := range accounts {
 			if accountArray == "" {

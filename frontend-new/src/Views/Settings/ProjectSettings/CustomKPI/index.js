@@ -338,6 +338,10 @@ const CustomKPI = ({
                                     <Select className={'fa-select w-full'} size={'large'}
                                         onChange={(value) => onKPICategoryChange(value)}
                                         placeholder="KPI Category"
+                                        showSearch
+                                        filterOption={(input, option) =>
+                                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                          }
                                     >
                                         {
                                             customKPIConfig?.result?.objTyAndProp?.map((item) => {
@@ -359,10 +363,14 @@ const CustomKPI = ({
                                 >
                                     <Select className={'fa-select w-full'} size={'large'}
                                         placeholder="Function"
-                                      onChange={(value, details) => {
-                                          console.log('setKPIFn',value, details)
-                                            setKPIFn(value)
-                                        }}
+                                        onChange={(value, details) => {
+                                            console.log('setKPIFn',value, details)
+                                                setKPIFn(value)
+                                            }}
+                                        showSearch
+                                        filterOption={(input, option) =>
+                                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                          }
                                     >
                                         {
                                             customKPIConfig?.result?.agFn?.map((item) => {
@@ -387,12 +395,18 @@ const CustomKPI = ({
                                                 setKPIPropertyDetails(details)
                                             }}
                                             placeholder="Select Property"
+                                            showSearch
+                                            filterOption={(input, option) =>
+                                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                              }
                                         >
                                             {
                                                 customKPIConfig?.result?.objTyAndProp?.map((category) => {
                                                     if (category.objTy == selKPICategory) {
                                                         return category?.properties?.map((item) => {
-                                                            return <Option key={item.name} value={item.display_name} name={item.name} data_type={item.data_type} entity={item.entity} >{_.startCase(item.display_name)}</Option>
+                                                            if(item.data_type == 'numerical'){
+                                                                return <Option key={item.name} value={item.display_name} name={item.name} data_type={item.data_type} entity={item.entity} >{_.startCase(item.display_name)}</Option> 
+                                                            }
                                                         })
                                                     }
                                                 })}
@@ -440,6 +454,10 @@ const CustomKPI = ({
                                     >
                                         <Select className={'fa-select w-full'} size={'large'} disabled={!selKPICategory}
                                             placeholder="Date field"
+                                            showSearch
+                                            filterOption={(input, option) =>
+                                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                              }
                                         >
                                             {
                                                 customKPIConfig?.result?.objTyAndProp?.map((category) => {

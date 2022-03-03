@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
 import { Select, Radio } from 'antd';
@@ -9,15 +9,17 @@ import {
   DASHBOARD_TYPES,
 } from 'Utils/constants';
 import { EMPTY_STRING, EMPTY_OBJECT, EMPTY_ARRAY } from 'Utils/global';
-import { getSaveChartOptions } from '../../Views/CoreQuery/utils';
 import styles from './index.module.scss';
 import AppModal from '../AppModal';
+import {
+  DEFAULT_DASHBOARD_PRESENTATION,
+  DASHBOARD_PRESENTATION_KEYS,
+  DASHBOARD_PRESENTATION_LABELS,
+} from './saveQuery.constants';
 
 const AddToDashboardModal = ({
   visible,
   isLoading,
-  queryType,
-  requestQuery,
   onSubmit,
   toggleModalVisibility,
 }) => {
@@ -25,12 +27,12 @@ const AddToDashboardModal = ({
 
   const [selectedDashboards, setSelectedDashboards] = useState([]);
   const [dashboardPresentation, setDashboardPresentation] = useState(
-    apiChartAnnotations[CHART_TYPE_TABLE]
+    DEFAULT_DASHBOARD_PRESENTATION
   );
 
   const resetModalState = useCallback(() => {
     setSelectedDashboards(EMPTY_ARRAY);
-    setDashboardPresentation(apiChartAnnotations[CHART_TYPE_TABLE]);
+    setDashboardPresentation(DEFAULT_DASHBOARD_PRESENTATION);
     toggleModalVisibility();
   }, [toggleModalVisibility]);
 
@@ -74,13 +76,19 @@ const AddToDashboardModal = ({
     return !selectedDashboards.length;
   };
 
-  const chartOptions = (
+  const dashboardPresentationOptions = (
     <Radio.Group
       value={dashboardPresentation}
       onChange={handlePresentationChange}
       className={styles.radioGroup}
     >
-      {getSaveChartOptions(queryType, requestQuery)}
+      {_.map(DASHBOARD_PRESENTATION_KEYS, (pKey) => {
+        return (
+          <Radio key={pKey} value={pKey}>
+            {DASHBOARD_PRESENTATION_LABELS[pKey]}
+          </Radio>
+        );
+      })}
     </Radio.Group>
   );
 
@@ -130,13 +138,13 @@ const AddToDashboardModal = ({
           </Text>
         </div>
         {dashboardList}
-        {chartOptions}
+        {dashboardPresentationOptions}
       </div>
     </AppModal>
   );
 };
 
-export default AddToDashboardModal;
+export default memo(AddToDashboardModal);
 
 AddToDashboardModal.propTypes = {
   visible: PropTypes.bool,

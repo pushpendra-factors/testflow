@@ -186,6 +186,15 @@ const (
 	AdwordsKeywordName      = "criteria"
 	AdwordsKeywordMatchType = "keyword_match_type"
 
+	BingadsCampaignID   = "campaign_id"
+	BingadsCampaignName = "campaign_name"
+
+	BingadsAdgroupID   = "ad_group_id"
+	BingadsAdgroupName = "ad_group_name"
+
+	BingadsKeywordID   = "keyword_id"
+	BingadsKeywordName = "keyword_name"
+
 	FacebookCampaignID   = "campaign_id"
 	FacebookCampaignName = "campaign_name"
 
@@ -201,9 +210,11 @@ const (
 	KeyDelimiter = ":-:"
 
 	ChannelAdwords    = "adwords"
+	ChannelBingads    = "bingads"
 	ChannelFacebook   = "facebook"
 	ChannelLinkedin   = "linkedin"
 	ChannelGoogleAds  = "google ads"
+	ChannelBingAds    = "bingads"
 	SessionChannelOTP = "OfflineTouchPoint"
 
 	FieldChannelName      = "channel_name"
@@ -248,6 +259,15 @@ type MarketingReports struct {
 	AdwordsKeywordIDData  map[string]MarketingData
 	AdwordsKeywordKeyData map[string]MarketingData
 
+	BingAdsCampaignIDData  map[string]MarketingData
+	BingAdsCampaignKeyData map[string]MarketingData
+
+	BingAdsAdgroupIDData  map[string]MarketingData
+	BingAdsAdgroupKeyData map[string]MarketingData
+
+	BingAdsKeywordIDData  map[string]MarketingData
+	BingAdsKeywordKeyData map[string]MarketingData
+
 	FacebookCampaignIDData  map[string]MarketingData
 	FacebookCampaignKeyData map[string]MarketingData
 
@@ -264,6 +284,11 @@ type MarketingReports struct {
 	AdwordsCampaignDimensions map[string]MarketingData
 	// id = campaignID + KeyDelimiter + campaignName + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
 	AdwordsAdgroupDimensions map[string]MarketingData
+
+	// id = campaignID + KeyDelimiter + campaignName
+	BingadsCampaignDimensions map[string]MarketingData
+	// id = campaignID + KeyDelimiter + campaignName + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
+	BingadsAdgroupDimensions map[string]MarketingData
 
 	// id = campaignID + KeyDelimiter + campaignName
 	FacebookCampaignDimensions map[string]MarketingData
@@ -475,6 +500,14 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 			return v.CampaignName, sessionUTMMarketingValue
 		}
 
+		report = reports.BingAdsCampaignIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
+			sessionUTMMarketingValue.Name = v.CampaignName
+			sessionUTMMarketingValue.Channel = ChannelBingads
+			return v.CampaignName, sessionUTMMarketingValue
+		}
+
 		report = reports.FacebookCampaignIDData
 		if v, ok := report[ID]; ok {
 			sessionUTMMarketingValue.CampaignName = v.CampaignName
@@ -498,6 +531,16 @@ func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue Mark
 			sessionUTMMarketingValue.AdgroupName = v.AdgroupName
 			sessionUTMMarketingValue.Name = v.AdgroupName
 			sessionUTMMarketingValue.Channel = ChannelAdwords
+			sessionUTMMarketingValue.CampaignID = v.CampaignID
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
+			return v.AdgroupName, sessionUTMMarketingValue
+		}
+
+		report = reports.BingAdsAdgroupIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.AdgroupName = v.AdgroupName
+			sessionUTMMarketingValue.Name = v.AdgroupName
+			sessionUTMMarketingValue.Channel = ChannelBingads
 			sessionUTMMarketingValue.CampaignID = v.CampaignID
 			sessionUTMMarketingValue.CampaignName = v.CampaignName
 			return v.AdgroupName, sessionUTMMarketingValue
@@ -1389,7 +1432,14 @@ func DoesAdwordsReportExist(attributionKey string) bool {
 	}
 	return false
 }
-
+func DoesBingAdsReportExist(attributionKey string) bool {
+	// only campaign, adgroup, keyword reports available
+	if attributionKey == AttributionKeyCampaign || attributionKey == AttributionKeyAdgroup ||
+		attributionKey == AttributionKeyKeyword {
+		return true
+	}
+	return false
+}
 func DoesFBReportExist(attributionKey string) bool {
 	// only campaign, adgroup reports available
 	if attributionKey == AttributionKeyCampaign || attributionKey == AttributionKeyAdgroup {

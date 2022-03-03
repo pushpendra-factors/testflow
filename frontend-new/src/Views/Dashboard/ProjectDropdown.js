@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Spin } from 'antd';
-import { useSelector, useDispatch } from 'react-redux';
+import { Button, Col, Row, Spin } from 'antd';
+import { useSelector, useDispatch, connect } from 'react-redux';
 import {
   fetchActiveDashboardUnits,
   DeleteUnitFromDashboard,
@@ -24,6 +24,8 @@ import GroupSelect2 from '../../components/QueryComposer/GroupSelect2';
 import { deleteDashboard } from '../../reducers/dashboard/services';
 import { DASHBOARD_DELETED } from '../../reducers/types';
 import factorsai from 'factorsai';
+import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
+import NewProject from '../Settings/SetupAssist/Modals/NewProject';
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -33,6 +35,8 @@ function ProjectDropdown({
   refreshClicked,
   setRefreshClicked,
   isPinned = false,
+  fetchDemoProject,
+  getHubspotContact
 }) {
   const [moreOptions, setMoreOptions] = useState(false);
   const [widgetModal, setwidgetModal] = useState(false);
@@ -43,13 +47,40 @@ function ProjectDropdown({
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
+  const currentAgent = useSelector((state) => state.agent.agent_details);
+  const { projects } = useSelector((state) => state.global);
   const [selectVisible, setSelectVisible] = useState(false);
   const [showDashboardName, setDashboardName] = useState('');
   const [showDashboardDesc, setDashboardDesc] = useState('');
   const [deleteDashboardModal, showdeleteDashboardModal] = useState(false);
   const [dashboardDeleteApi, setDashboardDeleteApi] = useState(false);
+  const [demoProjectId, setdemoProjectId] = useState(null);
+  const [ownerID, setownerID] = useState();
+  const [showProjectModal, setShowProjectModal] = useState(false);
 
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    fetchDemoProject().then((res) => {
+        setdemoProjectId(res.data[0]);
+    }).catch((err) => {
+      console.log(err.data.error)
+    })
+  }, [active_project, demoProjectId]);
+
+  useEffect(() => {
+    let email = currentAgent.email;
+    getHubspotContact(email).then((res) => {
+        setownerID(res.data.hubspot_owner_id)
+    }).catch((err) => {
+        console.log(err.data.error)
+    });
+}, []);
+
+let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
+                :ownerID === '116047122'? 'https://calendly.com/priyanka-267/30min'
+                :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': 'https://calendly.com/factors-ai/30min';
+
 
   const changeActiveDashboard = useCallback(
     (val) => {
@@ -326,6 +357,32 @@ function ProjectDropdown({
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
             />
+            {active_project.id === demoProjectId ? 
+            <div className={'rounded-lg h-20 bg-white mb-3 mt-8'} style={{width:'97%'}}>
+              <Row gutter={[24, 24]} justify={'space-between'} className={'m-0'}>
+                <Col span={projects.length == 1 ? 12: 18}>
+                  <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-8'}>
+                      Welcome! You just entered a Factors demo project
+                  </Text>
+                  {projects.length == 1 ?
+                    <Text type={'title'} level={7} extraClass={'m-0 ml-8'}>
+                        These reports have been built with a sample dataset. Use this to start exploring!
+                    </Text>
+                  :
+                    <Text type={'title'} level={7} extraClass={'m-0 ml-8'}>
+                        To jump back into your Factors project, click on your account card on the bottom left of the screen.
+                    </Text>
+                  }
+                </Col>
+                <Col className={'mr-12 mt-3'}>
+                  <a href={meetLink} target='_blank' ><Button type={'default'} style={{background:'white', border: '1px solid gray'}} className={'m-0 mr-2'} >Talk to an expert</Button></a>
+                  {projects.length == 1 ?
+                  <Button type={'primary'} className={'m-0'} onClick={() => setShowProjectModal(true)}>Set up my own Factors project</Button>
+                  : null}
+                </Col>
+              </Row>
+            </div>
+            : null}
             <SortableCards
               durationObj={durationObj}
               setwidgetModal={handleToggleWidgetModal}
@@ -362,6 +419,8 @@ function ProjectDropdown({
             cancelText='Cancel'
             confirmLoading={dashboardDeleteApi}
           />
+          {/* create project modal */}
+          <NewProject visible={showProjectModal} handleCancel={() => setShowProjectModal(false)} />
         </ErrorBoundary>
       </>
     );
@@ -370,4 +429,4 @@ function ProjectDropdown({
   return null;
 }
 
-export default ProjectDropdown;
+export default connect(null,{ fetchDemoProject, getHubspotContact })(ProjectDropdown);

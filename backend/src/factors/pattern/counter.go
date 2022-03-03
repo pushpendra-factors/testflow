@@ -241,10 +241,12 @@ func GetPattEndWithGoal(projectId uint64, combinationPatterns, goalPatterns []*P
 		goalsMap[v.EventNames[0]] = true
 	}
 
-	events, _ := store.GetStore().GetSmartEventFilterEventNames(projectId, true)
 	crmEvents := make(map[string]bool)
-	for _, event := range events {
-		crmEvents[event.Name] = true
+	if projectId != 0 {
+		events, _ := store.GetStore().GetSmartEventFilterEventNames(projectId, true)
+		for _, event := range events {
+			crmEvents[event.Name] = true
+		}
 	}
 
 	for _, v := range combinationPatterns {

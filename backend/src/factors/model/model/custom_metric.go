@@ -21,9 +21,9 @@ const (
 	UniqueAggregationFunction = "unique"
 )
 
-// var CustomMetricAggregateFunctions = []string{Count, SumAggregateFunction, UniqueAggregationFunction}
-var CustomMetricAggregateFunctions = []string{UniqueAggregationFunction}
-var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, SalesforceUsersDisplayCategory}
+var CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregationFunction}
+var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
+	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory}
 var ProfileQueryType = 1
 
 type CustomMetric struct {

@@ -17,3 +17,15 @@ export const SAVE_QUERY_INITIAL_STATE = {
   activeAction: null,
   showDeleteModal: false,
 };
+
+export const DASHBOARD_PRESENTATION_KEYS = {
+  CHART: 'chart',
+  TABLE: 'table',
+};
+
+export const DEFAULT_DASHBOARD_PRESENTATION = DASHBOARD_PRESENTATION_KEYS.CHART;
+
+export const DASHBOARD_PRESENTATION_LABELS = {
+  [DASHBOARD_PRESENTATION_KEYS.CHART]: 'Display Visualisation',
+  [DASHBOARD_PRESENTATION_KEYS.TABLE]: 'Display Table',
+};

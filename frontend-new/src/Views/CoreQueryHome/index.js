@@ -219,6 +219,7 @@ function CoreQuery({
     };
   };
 
+  // when user navigates back to analysis home page, all the chart types should get reset
   useEffect(() => {
     updateChartTypes(DefaultChartTypes);
   }, [updateChartTypes]);

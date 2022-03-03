@@ -20,6 +20,12 @@ function SignUp({ signup }) {
     history.push(url);
   };
 
+  const getEmail = () => {
+    const url = new URL(window.location.href);
+    const email = url.searchParams.get('email');
+    return email;
+  }
+
   const startMailModo = (email) => {
     let url1 = 'https://api.mailmodo.com/hooks/start/ed1fefd2-4c55-419e-a88b-d23b59f22461';
     let url2 = 'https://api.mailmodo.com/hooks/start/ef8af6d0-e925-47e2-8c03-2b010c9a59f5';
@@ -61,10 +67,11 @@ function SignUp({ signup }) {
         setDataLoading(true);
 
         //Factors SIGNUP tracking
-        factorsai.track('SIGNUP',{'first_name':values?.first_name,'last_name':values?.last_name,'email':values?.email});
-
+        factorsai.track('SIGNUP',{'first_name':values?.first_name,'email':values?.email});
+        
+        let data = {...values, 'last_name': ''};
         const filteredValues = Object.fromEntries(
-        Object.entries(values).filter(([key, value]) => key !== 'terms_and_conditions') );
+        Object.entries(data).filter(([key, value]) => key !== 'terms_and_conditions') );
         
         signup(filteredValues).then(() => {
             setDataLoading(false);
@@ -153,8 +160,8 @@ function SignUp({ signup }) {
                                 </Col>
                             </Row>
 
-                            <Row gutter={[24, 0]}>
-                                <Col span={12}>
+                            <Row>
+                                <Col span={24}>
                                         <div className={'flex flex-col mt-5'} >
                                         {/* <Text type={'title'} level={7} extraClass={'m-0'}>First Name</Text> */}
                                             <Form.Item label={null}
@@ -168,9 +175,9 @@ function SignUp({ signup }) {
                                             </Form.Item>
                                         </div>
                                 </Col>
-                                <Col span={12}>
+                                {/* <Col span={12}>
                                         <div className={'flex flex-col mt-5'} >
-                                        {/* <Text type={'title'} level={7} extraClass={'m-0'}>Last Name</Text> */}
+                                        <Text type={'title'} level={7} extraClass={'m-0'}>Last Name</Text>
                                             <Form.Item label={null}
                                                 name="last_name"
                                                 rules={[{ required: true, message: 'Please enter last name' }]}
@@ -181,7 +188,7 @@ function SignUp({ signup }) {
                                                  />
                                             </Form.Item>
                                         </div>
-                                </Col>
+                                </Col> */}
                             </Row>
 
                             <Row>
@@ -189,6 +196,7 @@ function SignUp({ signup }) {
                                         <div className={'flex flex-col mt-5 w-full'} >
                                             {/* <Text type={'title'} level={7} extraClass={'m-0'}>Work Email</Text> */}
                                             <Form.Item label={null}
+                                                initialValue={getEmail()? getEmail() : ""}
                                                 name="email"
                                                 rules={[{ required: true, type: 'email', message: 'Please enter work email' }]}
                                                 >
