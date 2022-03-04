@@ -45,7 +45,8 @@ func main() {
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	disableCRMUniquenessConstraintsCheckByProjectID := flag.String("disable_crm_unique_constraint_check_by_project_id", "", "")
-
+	hubspotBatchInsertBatchSize := flag.Int("hubspot_batch_insert_batch_size", 0, "")
+	useHubspotBatchInsertByProjectID := flag.String("use_hubspot_batch_insert_by_project_id", "", "")
 	flag.Parse()
 
 	defaultAppName := "data_server"
@@ -86,6 +87,8 @@ func main() {
 		RedisPortPersistent: *redisPortPersistent,
 		SentryDSN:           *sentryDSN,
 		DisableCRMUniquenessConstraintsCheckByProjectID: *disableCRMUniquenessConstraintsCheckByProjectID,
+		HubspotBatchInsertBatchSize:                     *hubspotBatchInsertBatchSize,
+		UseHubspotBatchInsertByProjectID:                *useHubspotBatchInsertByProjectID,
 	}
 	C.InitConf(config)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)

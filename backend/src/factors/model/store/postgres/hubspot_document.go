@@ -1046,3 +1046,8 @@ func (pg *Postgres) CreateOrUpdateGroupPropertiesBySource(projectID uint64, grou
 
 	return userID, nil
 }
+
+// For postgres use the existing function without batch creation
+func (pg *Postgres) CreateHubspotDocumentInBatch(projectID uint64, docType int, documents []*model.HubspotDocument, batchSize int) int {
+	return http.StatusBadRequest
+}

@@ -213,6 +213,8 @@ type Configuration struct {
 	DisableCRMUniquenessConstraintsCheckByProjectID string
 	SkipDashboardCachingAnalytics                   int
 	EnableBingAdsAttribution                        bool
+	HubspotBatchInsertBatchSize                     int
+	UseHubspotBatchInsertByProjectID                string
 }
 
 type Services struct {
@@ -2031,6 +2033,19 @@ func DisableCRMUniquenessConstraintsCheckByProjectID(projectID uint64) bool {
 	return allowedProjectIDs[projectID]
 }
 
+func GetHubspotBatchInsertBatchSize() int {
+	return GetConfig().HubspotBatchInsertBatchSize
+}
+
 func GetSkipDashboardCachingAnalytics() int {
 	return configuration.SkipDashboardCachingAnalytics
+}
+
+func UseHubspotBatchInsertByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotBatchInsertByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

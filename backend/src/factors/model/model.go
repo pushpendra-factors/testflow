@@ -264,6 +264,7 @@ type Model interface {
 	GetHubspotDocumentByTypeAndActions(projectId uint64, ids []string, docType int, actions []int) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDocumentByFilter(projectId uint64, id string, docType, action int) (*model.HubspotDocument, int)
 	CreateHubspotDocument(projectID uint64, document *model.HubspotDocument) int
+	CreateHubspotDocumentInBatch(projectID uint64, docType int, documents []*model.HubspotDocument, batchSize int) int
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
 	GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int)
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int

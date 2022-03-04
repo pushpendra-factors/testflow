@@ -19,8 +19,13 @@ parser.add_option("--app_name", dest="app_name",
     help="App name", default="")
 parser.add_option("--healthcheck_ping_id", dest="healthcheck_ping_id",
     help="Healthcheck ping id", default="")
+parser.add_option("--batch_insert_by_project_ids", dest="batch_insert_by_project_ids",
+    help="Enable batch insert for projects", default="")
+parser.add_option("--batch_insert_doc_types", dest="batch_insert_doc_types",
+    help="Enable batch insert for document types", default="")
 parser.add_option("--enable_deleted_contacts", dest="enable_deleted_contacts", help="Enable deleted contacts flag", default=False, action="store_true")
 parser.add_option("--enable_deleted_projectIDs", dest="enable_deleted_projectIDs", help="Enable deleted projectIDs", default="")
+parser.add_option("--project_ids", dest="project_ids", help="Allowed project_ids", default="")
 
 
 APP_NAME = "hubspot_sync"
@@ -76,10 +81,43 @@ def record_metric(metric_type, metric_name, metric_value=0):
     if not response.ok:
         log.error("Failed to record metric %s. Error: %s", metric_name, response.text)
 
-def create_document(project_id, doc_type, doc, fetch_deleted_contact=False):
-    uri = "/data_service/hubspot/documents/add"
+def create_document_in_batch(project_id, doc_type, documents, fetch_deleted_contact=False):
+    uri = "/data_service/hubspot/documents/add_batch"
     url = options.data_service_host + uri
 
+    batched_document_payload = []
+    for doc in documents:
+        payload = get_document_payload(project_id,doc_type,doc,fetch_deleted_contact)
+        batched_document_payload.append(payload)
+    
+    payload = {
+        "project_id":project_id,
+        "doc_type":doc_type,
+        "documents":batched_document_payload
+    }
+    
+    start_time = time.time()
+    retries = 0
+    while True:
+        try:
+            response = requests.post(url, json=payload)
+            if response.ok or response.status_code == requests.codes['conflict']:
+                log.warning("Successfully inserted batched %s of size %d.",doc_type, len(batched_document_payload))
+            else:
+                log.error("Failed to add response %s to hubspot warehouse with uri %s: %d.", 
+                    doc_type, uri, response.status_code)
+            return response
+        except requests.exceptions.RequestException as e:
+            if retries > RETRY_LIMIT:
+                raise Exception("Retry exhausted on connection error on inserting batch of document "+str(e)+ " , retries "+ str(retries))
+            log.warning("Connection error occured on inserting batch of document %s retry %d, retrying in %d seconds", str(e),retries, 2)
+            retries += 1
+            time.sleep(2)
+        finally:
+            end_time = time.time()
+            log.warning("Create_document_in_batch took %ds", end_time-start_time )
+
+def get_document_payload(project_id, doc_type,doc, fetch_deleted_contact):
     payload = {
         "project_id": project_id,
         "type_alias": doc_type,
@@ -88,12 +126,14 @@ def create_document(project_id, doc_type, doc, fetch_deleted_contact=False):
 
     # Adding property value action=3 when fetching deleted contact record.
     if fetch_deleted_contact:
-        payload = {
-            "project_id": project_id,
-            "type_alias": doc_type,
-            "value": doc,
-            "action": 3
-        }
+        payload["action"]=3
+    return payload
+
+def create_document(project_id, doc_type, doc, fetch_deleted_contact=False):
+    uri = "/data_service/hubspot/documents/add"
+    url = options.data_service_host + uri
+
+    payload = get_document_payload(project_id,doc_type,doc,fetch_deleted_contact)
 
     start_time = time.time()
     retries = 0
@@ -121,6 +161,9 @@ def create_all_documents(project_id, doc_type, docs, fetch_deleted_contact=False
         log.warning("Dry run. Skipped document upsert.")
         return
 
+    if allow_batch_insert_by_project_id(project_id) and allow_batch_insert_doc_type(doc_type):
+        return create_document_in_batch(project_id, doc_type, docs, fetch_deleted_contact)
+    
     for doc in docs:
         create_document(project_id, doc_type, doc, fetch_deleted_contact)
 
@@ -696,19 +739,48 @@ def update_sync_status(request_payload, first_sync=False):
             log.warning("Failed to send first time sync update. retrying in 2s "+str(e))
             retries += 1
             time.sleep(2)
-    return res.json()
+
+def get_allowed_list_with_all_element_support(list_string):
+    if list_string =="*":
+        return True, {}
+    elements = [s.strip() for s in list_string.split(",")]
+    elements_map = {}
+    for element in elements:
+        elements_map[element] = True
+    return False,elements_map
+
+def allow_sync_by_project_id(project_id):
+    all_projects, allowed_projects = get_allowed_list_with_all_element_support(options.project_ids)
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
+
+def allow_delete_api_by_project_id(project_id):
+    if not options.enable_deleted_contacts:
+        return False
+    all_projects, allowed_projects = get_allowed_list_with_all_element_support(options.enable_deleted_projectIDs)
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
+
+def allow_batch_insert_doc_type(doc_type):
+    all_doc_type, allowed_doc_type = get_allowed_list_with_all_element_support(options.batch_insert_doc_types)
+    if all_doc_type:
+        return True
+    return str(doc_type) in allowed_doc_type
+
+def allow_batch_insert_by_project_id(project_id):
+    all_projects, allowed_projects = get_allowed_list_with_all_element_support(options.batch_insert_by_project_ids)
+    if all_projects:
+        return True
+    return str(project_id) in allowed_projects
 
 
 def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False):
     next_sync_info = []
-    
-    project_map = {}
-    if options.enable_deleted_contacts:
-        projects_list = [s.strip() for s in options.enable_deleted_projectIDs.split(",")]
-        for project in projects_list:
-            project_map[project] = True
-
     for project_id in project_settings:
+        if not allow_sync_by_project_id(project_id):
+            continue
         settings = project_settings[project_id]
         if first_time_sync == True and settings.get("is_first_time_synced")!=False :
             continue
@@ -726,7 +798,7 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
             log.error("Last sync info missing for project %d", project_id)
             continue
 
-        if options.enable_deleted_contacts and project_id in project_map.keys():
+        if allow_delete_api_by_project_id(project_id):
              sync_info["deleted_contacts"] = 0
 
         for doc_type in sync_info:
