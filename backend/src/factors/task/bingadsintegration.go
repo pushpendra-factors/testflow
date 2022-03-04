@@ -5,6 +5,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	BQ "factors/services/bigquery"
+	"fmt"
 	"strconv"
 
 	U "factors/util"
@@ -94,6 +95,18 @@ func BingAdsIntegration(projectId uint64, configs map[string]interface{}) (map[s
 		totalFailures = totalFailures + failures
 		totalSuccess = totalSuccess + success
 	}
+	var accounts [][]string
+	accountsQuery := model.GetAllAccountsQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID)
+	err = BQ.ExecuteQuery(&ctx, client, accountsQuery, &accounts)
+	accountString := ""
+	for _, account := range accounts {
+		if accountString == "" {
+			accountString = account[0]
+		} else {
+			accountString = fmt.Sprintf(",%v", account)
+		}
+	}
+	store.GetStore().UpdateFiveTranMappingAccount(mapping.ProjectID, mapping.Integration, mapping.ConnectorID, accountString)
 	if totalFailures > 0 || status == false {
 		return resultStatus, false
 	}

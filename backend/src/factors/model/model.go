@@ -558,6 +558,7 @@ type Model interface {
 	GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, error)
 	PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string, Accounts string) error
 	GetAllActiveFiveTranMappingByIntegration(Integration string) ([]model.FivetranMappings, error)
+	UpdateFiveTranMappingAccount(ProjectID uint64, Integration string, ConnectorId string, Accounts string) error
 
 	//leadgen
 	GetLeadgenSettingsForProject(projectID uint64) ([]model.LeadgenSettings, error)
