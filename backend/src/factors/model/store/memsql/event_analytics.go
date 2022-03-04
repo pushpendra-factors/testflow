@@ -147,9 +147,6 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-	if projectId == 398 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err, "query": query}).Info("YourstoryDebug1")
-	}
 
 	groupPropsLen := len(query.GroupByProperties)
 
@@ -158,17 +155,11 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		logCtx.WithError(err).Error("Failed processing query results for limiting.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-	if projectId == 398 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err, "query": query}).Info("YourstoryDebug2")
-	}
 
 	err = SanitizeQueryResult(result, &query, isTimezoneEnabled)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to sanitize query results.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
-	}
-	if projectId == 398 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err, "query": query}).Info("YourstoryDebug3")
 	}
 
 	// Replace the event_name with alias, if the event condition is each_given_event
@@ -182,13 +173,7 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		query.GroupByTimestamp != nil && query.GroupByTimestamp.(string) != "" {
 
 		result, err = transformResultsForEachEventQuery(result, query)
-		if projectId == 398 {
-			logCtx.WithFields(log.Fields{"result": result, "err": err, "query": query}).Info("YourstoryDebug4")
-		}
 		addEventMetricsMetaToQueryResult(result)
-		if projectId == 398 {
-			logCtx.WithFields(log.Fields{"result": result, "err": err, "query": query}).Info("YourstoryDebug5")
-		}
 
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to transform query results.")
@@ -206,9 +191,6 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 	} else if query.EventsCondition == model.EventCondEachGivenEvent {
 		// add event name header and fill rows
 		addEventNameIndexInResult(result)
-		if projectId == 398 {
-			logCtx.WithFields(log.Fields{"result": result, "err": err, "query": query}).Info("YourstoryDebug6")
-		}
 
 	} else {
 		// removing index from event name for old queries.
@@ -226,13 +208,7 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 			}
 		}
 	}
-	if projectId == 398 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err, "query": query}).Info("YourstoryDebug7")
-	}
 	addQueryToResultMeta(result, query)
-	if projectId == 398 {
-		logCtx.WithFields(log.Fields{"result": result, "err": err, "query": query}).Info("YourstoryDebug8")
-	}
 
 	return result, http.StatusOK, "Successfully executed query"
 }
@@ -2310,8 +2286,8 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 		aggregateGroupBys = joinWithComma(model.AliasEventName, aggregateGroupBys)
 	}
 	if query.AggregateProperty != "" && query.AggregateProperty != "1" {
-		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(%s) as %s FROM %s",
-			query.AggregateFunction, model.AliasAggr, model.AliasAggr, aggregateFromStepName)
+		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("%s(CASE WHEN %s IS NULL THEN 0 ELSE %s END) as %s FROM %s",
+			query.AggregateFunction, model.AliasAggr, model.AliasAggr, model.AliasAggr, aggregateFromStepName)
 	} else {
 		aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(event_id) AS %s FROM %s",
 			model.AliasAggr, aggregateFromStepName)
