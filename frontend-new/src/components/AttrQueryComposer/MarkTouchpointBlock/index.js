@@ -83,12 +83,23 @@ const MarkTouchpointBlock = ({
     setSelectVisible(false);
   };
 
+  const selectTouchPointOpts = () => {
+    let tchPointOpts = [];
+    if(!touchPointRef || touchPointRef === 'Tactic'){
+      tchPointOpts = touchPointOptions[0].values.map(option=>new Array(option[0],option[0]));
+    } else {
+      tchPointOpts = touchPointOptions[0].values.filter(opt => !['AdGroup', 'Keyword'].includes(opt[0])).map(option=>new Array(option[0],option[0]));
+    }
+    
+    return tchPointOpts;
+  }
+
   const selectEvents = () => {
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
           <FaSelect
-            options={touchPointOptions[0].values.map(option=>new Array(option[0],option[0]))}
+            options={selectTouchPointOpts()}
             optionClick={(val) => onEventSelect(val[0])}
             onClickOutside={() => setSelectVisible(false)}
             extraClass={touchPoint ? styles.touchPointSelector : ''}
@@ -241,6 +252,7 @@ const MarkTouchpointBlock = ({
 
   const setTouchpointRef = (val) => {
     setTacticOfferType(val.target.value);
+    setTouchpoint('');
   }
 
   return (
