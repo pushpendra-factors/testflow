@@ -385,7 +385,7 @@ func getHubspotDocumentsForInsertion(documents []*model.HubspotDocument, existDo
 	processDocuments := make([]*model.HubspotDocument, 0)
 	batchDocumentIDs := make(map[string]bool, 0)
 	for i := range documents {
-		if exist := batchDocumentIDs[documents[0].ID]; exist {
+		if exist := batchDocumentIDs[documents[i].ID]; exist {
 			log.WithFields(log.Fields{"project_id": documents[i].ProjectId,
 				"document_id": documents[i].ID, "documents": documents}).
 				Error("Duplicate hubspot document in same batch.")

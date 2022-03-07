@@ -104,6 +104,8 @@ def create_document_in_batch(project_id, doc_type, documents, fetch_deleted_cont
             if response.ok or response.status_code == requests.codes['conflict']:
                 log.warning("Successfully inserted batched %s of size %d.",doc_type, len(batched_document_payload))
             else:
+                if response.status_code == requests.codes["server_error"]:
+                    raise requests.exceptions.RequestException("Internal server error")
                 log.error("Failed to add response %s to hubspot warehouse with uri %s: %d.", 
                     doc_type, uri, response.status_code)
             return response
@@ -143,6 +145,8 @@ def create_document(project_id, doc_type, doc, fetch_deleted_contact=False):
             if response.ok or response.status_code == requests.codes['conflict']:
                 log.warning("Successfully inserted %s.",doc_type)
             else:
+                if response.status_code == requests.codes["server_error"]:
+                    raise requests.exceptions.RequestException("Internal server error")
                 log.error("Failed to add response %s to hubspot warehouse with uri %s: %d.", 
                     doc_type, uri, response.status_code)
             return response
