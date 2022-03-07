@@ -25,22 +25,31 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 		kpiQueryGroup.Queries[index].GroupBy = kpiQueryGroup.GlobalGroupBy
 	}
 	for _, query := range kpiQueryGroup.Queries {
-		if query.GroupByTimestamp != "" {
+		if query.Category == model.ProfileCategory {
+			if query.GroupByTimestamp != "" {
+				kpiFunction := store.kpiQueryFunctionDeciderBasedOnCategory(query.Category, query)
+				result, statusCode := kpiFunction(projectID, reqID, query)
+				if statusCode != http.StatusOK {
+					finalStatusCode = statusCode
+				}
+				queryResults = append(queryResults, result...)
+
+				query.GroupByTimestamp = ""
+				hashCode, err := query.GetQueryCacheHashString()
+				if err != nil {
+					log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi.")
+				}
+				hashMapOfQueryToResult[hashCode] = result
+			} else {
+				result := make([]model.QueryResult, 0)
+				queryResults = append(queryResults, result...)
+			}
+		} else {
 			kpiFunction := store.kpiQueryFunctionDeciderBasedOnCategory(query.Category, query)
 			result, statusCode := kpiFunction(projectID, reqID, query)
 			if statusCode != http.StatusOK {
 				finalStatusCode = statusCode
 			}
-			queryResults = append(queryResults, result...)
-
-			query.GroupByTimestamp = ""
-			hashCode, err := query.GetQueryCacheHashString()
-			if err != nil {
-				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi.")
-			}
-			hashMapOfQueryToResult[hashCode] = result
-		} else {
-			result := make([]model.QueryResult, 0)
 			queryResults = append(queryResults, result...)
 		}
 	}
@@ -50,7 +59,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 	}
 
 	for index, query := range kpiQueryGroup.Queries {
-		if query.GroupByTimestamp == "" {
+		if query.Category == model.ProfileCategory && query.GroupByTimestamp == "" {
 			hashCode, err := query.GetQueryCacheHashString()
 			if err != nil {
 				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi 2.")

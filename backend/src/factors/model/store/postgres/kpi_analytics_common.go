@@ -24,23 +24,32 @@ func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQuer
 		kpiQueryGroup.Queries[index].GroupBy = kpiQueryGroup.GlobalGroupBy
 	}
 	for _, query := range kpiQueryGroup.Queries {
-		if query.GroupByTimestamp != "" {
+		if query.Category == model.ProfileCategory {
+			if query.GroupByTimestamp != "" {
+				kpiFunction := pg.kpiQueryFunctionDeciderBasedOnCategory(query.Category)
+				result, statusCode := kpiFunction(projectID, reqID, query)
+				if statusCode != http.StatusOK {
+					finalStatusCode = statusCode
+				}
+				queryResults = append(queryResults, result...)
+
+				query.GroupByTimestamp = ""
+				hashCode, err := query.GetQueryCacheHashString()
+				if err != nil {
+					log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi.")
+				}
+				hashMapOfQueryToResult[hashCode] = result
+			} else {
+				result := model.QueryResult{}
+				queryResults = append(queryResults, result)
+			}
+		} else {
 			kpiFunction := pg.kpiQueryFunctionDeciderBasedOnCategory(query.Category)
 			result, statusCode := kpiFunction(projectID, reqID, query)
 			if statusCode != http.StatusOK {
 				finalStatusCode = statusCode
 			}
 			queryResults = append(queryResults, result...)
-
-			query.GroupByTimestamp = ""
-			hashCode, err := query.GetQueryCacheHashString()
-			if err != nil {
-				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi.")
-			}
-			hashMapOfQueryToResult[hashCode] = result
-		} else {
-			result := model.QueryResult{}
-			queryResults = append(queryResults, result)
 		}
 	}
 	if finalStatusCode != http.StatusOK {
@@ -49,7 +58,7 @@ func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQuer
 	}
 
 	for index, query := range kpiQueryGroup.Queries {
-		if query.GroupByTimestamp == "" {
+		if query.Category == model.ProfileCategory && query.GroupByTimestamp == "" {
 			hashCode, err := query.GetQueryCacheHashString()
 			if err != nil {
 				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi 2.")
