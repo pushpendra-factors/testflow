@@ -145,8 +145,25 @@ spec:
           - --disable_dashboard_query_db_execution
           - --timezone_enabled_projects
           - "446"
+          -  --queue_redis_host
+          - $(QUEUE_REDIS_HOST)
+          - --queue_redis_port
+          - $(QUEUE_REDIS_PORT)
+          - --dup_queue_redis_host
+          - $(DUP_QUEUE_REDIS_HOST)
+          - --dup_queue_redis_port
+          - $(DUP_QUEUE_REDIS_PORT)
+          - --sdk_queue_threshold
+          - "50000"
+          - --integration_queue_threshold
+          - "20000"
+          - --slow_queries_threshold
+          - "75"
+          - --delayed_task_threshold
+          - "2000"
           - --disable_db_writes
           - --enable_mql_api
+          - --enable_sdk_and_integration_request_queue_duplication
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -168,6 +185,10 @@ spec:
             name: config-persistent-redis
         - configMapRef:
             name: config-add-session-job
+        - configMapRef:
+            name: config-bucket
+        - configMapRef:
+            name: config-queue-redis
         - secretRef:
             name: secret-postgres
         - secretRef:
@@ -182,8 +203,6 @@ spec:
             name: secret-login-token
         - secretRef:
             name: secret-sentry
-        - configMapRef:
-            name: config-bucket
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine

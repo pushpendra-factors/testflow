@@ -38,7 +38,9 @@ func InitAppRoutes(r *gin.Engine) {
 	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
+
 	r.Use(mid.SkipAPIWritesIfDisabled())
+	r.GET(routePrefix+"/health", mid.MonitoringAPIMiddleware(), Monitoring)
 	r.POST(routePrefix+"/accounts/signup", SignUp)
 	r.POST(routePrefix+"/agents/signin", Signin)
 	r.GET(routePrefix+"/agents/signout", Signout)
