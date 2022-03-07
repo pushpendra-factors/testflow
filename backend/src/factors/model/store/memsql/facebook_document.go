@@ -1474,7 +1474,6 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID uint64, days
 	for rows.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
-		log.WithField("cur1", currentRecord).Warn("kark3")
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
 

@@ -67,7 +67,7 @@ func TestKpiAnalytics(t *testing.T) {
 	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
-	t.Run("abc", func(t *testing.T) {
+	t.Run("Query with no groupby and no filter.", func(t *testing.T) {
 
 		query := model.KPIQuery{
 
@@ -77,51 +77,26 @@ func TestKpiAnalytics(t *testing.T) {
 			//Metrics:         []string{"page_views", "unique_users"},
 			Metrics: []string{"page_views"},
 			Filters: []model.KPIFilter{
-				{
-					PropertyName:     "user_id",
-					PropertyDataType: "categorical",
-					Entity:           "user",
-					Condition:        "equals",
-					Value:            "1",
-					LogicalOp:        "AND",
-				},
+				// {
+				// 	PropertyName:     "user_id",
+				// 	PropertyDataType: "categorical",
+				// 	Entity:           "user",
+				// 	Condition:        "equals",
+				// 	Value:            "1",
+				// 	LogicalOp:        "AND",
+				// },
 			},
-			From: startTimestamp,
-			To:   startTimestamp + 40,
-		}
-
-		kpiQueryGroup := model.KPIQueryGroup{
-			Class:         "kpi",
-			Queries:       []model.KPIQuery{query},
-			GlobalFilters: []model.KPIFilter{},
-			GlobalGroupBy: []model.KPIGroupBy{},
-		}
-
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
-		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{"page_views"})
-		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][0], int(0))
-	})
-
-	t.Run("abc1", func(t *testing.T) {
-
-		query := model.KPIQuery{
-
-			Category:        "events",
-			DisplayCategory: "page_views",
-			PageUrl:         "s0",
-			//Metrics:         []string{"page_views", "unique_users"},
-			Metrics:          []string{"page_views"},
-			Filters:          nil,
 			From:             startTimestamp,
 			To:               startTimestamp + 40,
 			GroupByTimestamp: "date",
 		}
+		query1 := model.KPIQuery{}
+		U.DeepCopy(&query, &query1)
+		query1.GroupByTimestamp = ""
 
 		kpiQueryGroup := model.KPIQueryGroup{
 			Class:         "kpi",
-			Queries:       []model.KPIQuery{query},
+			Queries:       []model.KPIQuery{query, query1},
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
@@ -130,10 +105,12 @@ func TestKpiAnalytics(t *testing.T) {
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", "page_views"})
 		assert.Equal(t, len(result[0].Rows), 1)
+		assert.Equal(t, result[1].Headers, []string{"page_views"})
+		assert.Equal(t, len(result[1].Rows), 1)
 		assert.Equal(t, result[0].Rows[0][1], float64(1))
 	})
 
-	t.Run("abc2", func(t *testing.T) {
+	t.Run("Query with multiple sub queries", func(t *testing.T) {
 
 		query1 := model.KPIQuery{
 
@@ -142,38 +119,18 @@ func TestKpiAnalytics(t *testing.T) {
 			PageUrl:         "s0",
 			Metrics:         []string{"page_views"},
 			// Metrics:  []string{"page_views"},
-			Filters:  nil,
-			From:     startTimestamp,
-			To:       startTimestamp + 40,
-			Timezone: "Asia/Kolkata",
-			//GroupByTimestamp: "date",
-		}
-		query2 := model.KPIQuery{
-			Category:        "events",
-			DisplayCategory: "page_views",
-			PageUrl:         "s0",
-			Metrics:         []string{"page_views"},
-			// Metrics:          []string{"page_views"},
 			Filters:          nil,
 			From:             startTimestamp,
 			To:               startTimestamp + 40,
 			Timezone:         "Asia/Kolkata",
 			GroupByTimestamp: "date",
 		}
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
 
 		query3 := model.KPIQuery{
 
-			Category:        "events",
-			DisplayCategory: "page_views",
-			PageUrl:         "s0",
-			Metrics:         []string{"unique_users"},
-			Filters:         nil,
-			From:            startTimestamp,
-			To:              startTimestamp + 40,
-			Timezone:        "Asia/Kolkata",
-			//GroupByTimestamp: "date",
-		}
-		query4 := model.KPIQuery{
 			Category:         "events",
 			DisplayCategory:  "page_views",
 			PageUrl:          "s0",
@@ -184,6 +141,10 @@ func TestKpiAnalytics(t *testing.T) {
 			Timezone:         "Asia/Kolkata",
 			GroupByTimestamp: "date",
 		}
+		query4 := model.KPIQuery{}
+		U.DeepCopy(&query3, &query4)
+		query4.GroupByTimestamp = ""
+
 		kpiQueryGroup := model.KPIQueryGroup{
 			Class:         "kpi",
 			Queries:       []model.KPIQuery{query1, query2, query3, query4},
@@ -209,21 +170,25 @@ func TestKpiAnalytics(t *testing.T) {
 		assert.Equal(t, result[0].Rows[0][3], float64(1))
 	})
 
-	t.Run("abc3", func(t *testing.T) {
+	t.Run("Query with session", func(t *testing.T) {
 
-		query := model.KPIQuery{
-
-			Category:        "events",
-			DisplayCategory: "website_session",
-			Metrics:         []string{"average_initial_page_load_time"},
-			Filters:         nil,
-			From:            timestamp,
-			To:              timestamp + (40 * 24 * 60 * 60),
+		query1 := model.KPIQuery{
+			Category:         "events",
+			DisplayCategory:  "website_session",
+			Metrics:          []string{"average_initial_page_load_time"},
+			Filters:          nil,
+			From:             timestamp - 60*2,
+			To:               timestamp,
+			GroupByTimestamp: "date",
 		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
 
 		kpiQueryGroup := model.KPIQueryGroup{
 			Class:         "kpi",
-			Queries:       []model.KPIQuery{query},
+			Queries:       []model.KPIQuery{query1, query2},
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{
 				{
@@ -239,36 +204,44 @@ func TestKpiAnalytics(t *testing.T) {
 
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{"user_id", "average_initial_page_load_time"})
+		assert.Equal(t, result[0].Headers, []string{"datetime", "user_id", "average_initial_page_load_time"})
 		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][0], "$none")
-		assert.Equal(t, result[0].Rows[0][1], float64(0))
+		assert.Equal(t, result[0].Rows[0][1], "$none")
+		assert.Equal(t, result[0].Rows[0][2], float64(100))
+
+		assert.Equal(t, result[1].Headers, []string{"user_id", "average_initial_page_load_time"})
+		assert.Equal(t, len(result[1].Rows), 1)
+		assert.Equal(t, result[1].Rows[0][0], "$none")
+		assert.Equal(t, result[1].Rows[0][1], float64(100))
 	})
 
-	t.Run("abc4", func(t *testing.T) {
+	t.Run("Query with channel", func(t *testing.T) {
 
-		query := model.KPIQuery{
-
-			Category:        "channels",
-			DisplayCategory: "adwords_metrics",
-			Metrics:         []string{"impressions"},
-			Filters:         nil,
-			From:            startTimestamp,
-			To:              startTimestamp + 40,
+		query1 := model.KPIQuery{
+			Category:         "channels",
+			DisplayCategory:  "adwords_metrics",
+			Metrics:          []string{"impressions"},
+			Filters:          nil,
+			From:             startTimestamp,
+			To:               startTimestamp + 40,
+			GroupByTimestamp: "date",
 		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
 
 		kpiQueryGroup := model.KPIQueryGroup{
 			Class:         "kpi",
-			Queries:       []model.KPIQuery{query},
+			Queries:       []model.KPIQuery{query1, query2},
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
 
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{"impressions"})
-		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][0], int(0))
+		assert.Equal(t, result[0].Headers, []string{"datetime", "impressions"})
+		assert.Equal(t, len(result[0].Rows), 0)
 	})
 }
 
@@ -315,33 +288,8 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 	w = sendCreateCustomMetric(a, project.ID, agent, transformations2, name2, description2, "hubspot_contacts")
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	t.Run("test hubspot contacts with no filters and no group by - no gbt ", func(t *testing.T) {
+	t.Run("test hubspot contacts with no filters and no group by", func(t *testing.T) {
 		query1 := model.KPIQuery{
-			Category:        "profile",
-			DisplayCategory: "hubspot_contacts",
-			PageUrl:         "",
-			Metrics:         []string{name1},
-			GroupBy:         []M.KPIGroupBy{},
-			From:            1640975425 - 200,
-			To:              1640975425 + 200,
-		}
-
-		kpiQueryGroup := model.KPIQueryGroup{
-			Class:         "kpi",
-			Queries:       []model.KPIQuery{query1},
-			GlobalFilters: []model.KPIFilter{},
-			GlobalGroupBy: []model.KPIGroupBy{},
-		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
-		log.WithField("result", result).Warn("kark1")
-		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{name1})
-		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][0], float64(500))
-	})
-
-	t.Run("test hubspot contacts with no filters and no group by - with gbt", func(t *testing.T) {
-		query2 := model.KPIQuery{
 			Category:         "profile",
 			DisplayCategory:  "hubspot_contacts",
 			PageUrl:          "",
@@ -352,24 +300,30 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GroupByTimestamp: "date",
 		}
 
-		kpiQueryGroup2 := model.KPIQueryGroup{
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup := model.KPIQueryGroup{
 			Class:         "kpi",
-			Queries:       []model.KPIQuery{query2},
+			Queries:       []model.KPIQuery{query1, query2},
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
+		log.WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, statusCode)
 		assert.Equal(t, result[0].Headers, []string{"datetime", name1})
 		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][0], "2021-12-31T00:00:00+00:00")
 		assert.Equal(t, result[0].Rows[0][1], float64(500))
 
-		log.WithField("result", result).Warn("kark1")
+		assert.Equal(t, result[1].Headers, []string{name1})
+		assert.Equal(t, len(result[1].Rows), 1)
+		assert.Equal(t, result[1].Rows[0][0], float64(500))
 	})
 
-	t.Run("test hubspot contacts with filters only - no gbt", func(t *testing.T) {
-		query2 := model.KPIQuery{
+	t.Run("test hubspot contacts with filters only", func(t *testing.T) {
+		query1 := model.KPIQuery{
 			Category:         "profile",
 			DisplayCategory:  "hubspot_contacts",
 			PageUrl:          "",
@@ -377,7 +331,7 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GroupBy:          []M.KPIGroupBy{},
 			From:             1640975425 - 200,
 			To:               1640975425 + 200,
-			GroupByTimestamp: "",
+			GroupByTimestamp: "date",
 		}
 
 		filter := model.KPIFilter{
@@ -389,76 +343,31 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			Value:            "india",
 			LogicalOp:        "AND",
 		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
 		kpiQueryGroup2 := model.KPIQueryGroup{
 			Class:         "kpi",
-			Queries:       []model.KPIQuery{query2},
+			Queries:       []model.KPIQuery{query1, query2},
 			GlobalFilters: []model.KPIFilter{filter},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{name1})
+		assert.Equal(t, result[0].Headers, []string{"datetime", name1})
 		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][0], float64(300))
+		assert.Equal(t, result[0].Rows[0][1], float64(300))
+
+		assert.Equal(t, result[1].Headers, []string{name1})
+		assert.Equal(t, len(result[1].Rows), 1)
+		assert.Equal(t, result[1].Rows[0][0], float64(300))
 
 		log.WithField("result", result).Warn("kark1")
 	})
 
-	t.Run("test hubspot contacts with filters only - no gbt", func(t *testing.T) {
-		query2 := model.KPIQuery{
-			Category:         "profile",
-			DisplayCategory:  "hubspot_contacts",
-			PageUrl:          "",
-			Metrics:          []string{name2},
-			GroupBy:          []M.KPIGroupBy{},
-			From:             1640975425 - 200,
-			To:               1640975425 + 200,
-			GroupByTimestamp: "",
-		}
-
-		kpiQueryGroup2 := model.KPIQueryGroup{
-			Class:         "kpi",
-			Queries:       []model.KPIQuery{query2},
-			GlobalFilters: []model.KPIFilter{},
-			GlobalGroupBy: []model.KPIGroupBy{},
-		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
-		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{name2})
-		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][0], float64(300))
-
-		log.WithField("result", result).Warn("kark1")
-	})
-
-	t.Run("test hubspot contacts with filters present in custom metric  - no gbt", func(t *testing.T) {
-		query2 := model.KPIQuery{
-			Category:         "profile",
-			DisplayCategory:  "hubspot_contacts",
-			PageUrl:          "",
-			Metrics:          []string{name2},
-			GroupBy:          []M.KPIGroupBy{},
-			From:             1640975425 - 200,
-			To:               1640975425 + 200,
-			GroupByTimestamp: "",
-		}
-
-		kpiQueryGroup2 := model.KPIQueryGroup{
-			Class:         "kpi",
-			Queries:       []model.KPIQuery{query2},
-			GlobalFilters: []model.KPIFilter{},
-			GlobalGroupBy: []model.KPIGroupBy{},
-		}
-		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
-		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{name2})
-		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][0], float64(300))
-
-		log.WithField("result", result).Warn("kark1")
-	})
-
-	t.Run("test hubspot contacts with filter and group by - no gbt", func(t *testing.T) {
+	t.Run("test hubspot contacts with filters present in custom metric", func(t *testing.T) {
 		query1 := model.KPIQuery{
 			Category:         "profile",
 			DisplayCategory:  "hubspot_contacts",
@@ -467,8 +376,47 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 			GroupBy:          []M.KPIGroupBy{},
 			From:             1640975425 - 200,
 			To:               1640975425 + 200,
-			GroupByTimestamp: "",
+			GroupByTimestamp: "date",
 		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
+
+		kpiQueryGroup2 := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1, query2},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{},
+		}
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, result[0].Headers, []string{"datetime", name2})
+		assert.Equal(t, len(result[0].Rows), 1)
+		assert.Equal(t, result[0].Rows[0][1], float64(300))
+
+		assert.Equal(t, result[1].Headers, []string{name2})
+		assert.Equal(t, len(result[1].Rows), 1)
+		assert.Equal(t, result[1].Rows[0][0], float64(300))
+
+		log.WithField("result", result).Warn("kark1")
+	})
+
+	t.Run("test hubspot contacts with filter and group by", func(t *testing.T) {
+		query1 := model.KPIQuery{
+			Category:         "profile",
+			DisplayCategory:  "hubspot_contacts",
+			PageUrl:          "",
+			Metrics:          []string{name2},
+			GroupBy:          []M.KPIGroupBy{},
+			From:             1640975425 - 200,
+			To:               1640975425 + 200,
+			GroupByTimestamp: "date",
+		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
 
 		groupBy := model.KPIGroupBy{
 			ObjectType:       "",
@@ -481,16 +429,21 @@ func TestKpiAnalyticsForProfile(t *testing.T) {
 
 		kpiQueryGroup2 := model.KPIQueryGroup{
 			Class:         "kpi",
-			Queries:       []model.KPIQuery{query1},
+			Queries:       []model.KPIQuery{query1, query2},
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{groupBy},
 		}
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup2)
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{groupBy.PropertyName, name2})
+		assert.Equal(t, result[0].Headers, []string{"datetime", groupBy.PropertyName, name2})
 		assert.Equal(t, len(result[0].Rows), 1)
-		assert.Equal(t, result[0].Rows[0][0], "india")
-		assert.Equal(t, result[0].Rows[0][1], float64(300))
+		assert.Equal(t, result[0].Rows[0][1], "india")
+		assert.Equal(t, result[0].Rows[0][2], float64(300))
+
+		assert.Equal(t, result[1].Headers, []string{groupBy.PropertyName, name2})
+		assert.Equal(t, len(result[1].Rows), 1)
+		assert.Equal(t, result[1].Rows[0][0], "india")
+		assert.Equal(t, result[1].Rows[0][1], float64(300))
 
 		log.WithField("result", result).Warn("kark1")
 	})
@@ -553,18 +506,25 @@ func TestKPIProfilesForGroups(t *testing.T) {
 			GroupBy:          []M.KPIGroupBy{},
 			From:             initialTimestamp,
 			To:               finalTimestamp,
-			GroupByTimestamp: "",
+			GroupByTimestamp: "date",
 		}
+
+		query2 := model.KPIQuery{}
+		U.DeepCopy(&query1, &query2)
+		query2.GroupByTimestamp = ""
 
 		kpiQueryGroup1 := model.KPIQueryGroup{
 			Class:         "kpi",
-			Queries:       []model.KPIQuery{query1},
+			Queries:       []model.KPIQuery{query1, query2},
 			GlobalFilters: []model.KPIFilter{},
 			GlobalGroupBy: []model.KPIGroupBy{},
 		}
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup1)
+		log.WithField("result", result).Warn("kark1")
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, float64(10), result[0].Rows[0][0])
+
+		assert.Equal(t, float64(10), result[0].Rows[0][1])
+		assert.Equal(t, float64(10), result[1].Rows[0][0])
 	})
 }
 

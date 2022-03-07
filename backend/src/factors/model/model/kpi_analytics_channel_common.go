@@ -84,3 +84,20 @@ func GetChannelFromKPIQuery(displayCategory string) (string, error) {
 	}
 	return currentChannel, nil
 }
+
+func GetTransformedHeadersForChannels(headers []string, hasAnyGroupByTimestamp bool, hasAnyGroupBy bool) []string {
+	if headers[0] == AliasError {
+		return headers
+	}
+	currentHeaders := headers
+	size := len(currentHeaders)
+	currentHeaders[size-1] = AliasAggr
+	if hasAnyGroupBy && hasAnyGroupByTimestamp {
+		resultantHeaders := make([]string, 0)
+		resultantHeaders = append(resultantHeaders, currentHeaders[size-2])
+		resultantHeaders = append(resultantHeaders, currentHeaders[:size-2]...)
+		resultantHeaders = append(resultantHeaders, currentHeaders[size-1])
+		currentHeaders = resultantHeaders
+	}
+	return currentHeaders
+}

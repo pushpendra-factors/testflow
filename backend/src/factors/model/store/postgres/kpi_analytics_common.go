@@ -9,29 +9,58 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// statusCode need to be clear on http.StatusOk or http.StatusAccepted or something else.
-// TODO handle errors and kpiFunction statusCode.
+// Below function relies on fact that each query has only one metric.
 func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int) {
 	var queryResults []model.QueryResult
 	finalStatusCode := http.StatusOK
 	isTimezoneEnabled := false
 	kpiTimezoneString := string(kpiQueryGroup.GetTimeZone())
+	hashMapOfQueryToResult := make(map[string][]model.QueryResult)
 	if C.IsMultipleProjectTimezoneEnabled(projectID) {
 		isTimezoneEnabled = true
 	}
+	for index, query := range kpiQueryGroup.Queries {
+		kpiQueryGroup.Queries[index].Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
+		kpiQueryGroup.Queries[index].GroupBy = kpiQueryGroup.GlobalGroupBy
+	}
 	for _, query := range kpiQueryGroup.Queries {
-		query.Filters = append(query.Filters, kpiQueryGroup.GlobalFilters...)
-		query.GroupBy = kpiQueryGroup.GlobalGroupBy
-		kpiFunction := pg.kpiQueryFunctionDeciderBasedOnCategory(query.Category)
-		result, statusCode := kpiFunction(projectID, reqID, query)
-		if statusCode != http.StatusOK {
-			finalStatusCode = statusCode
+		if query.GroupByTimestamp != "" {
+			kpiFunction := pg.kpiQueryFunctionDeciderBasedOnCategory(query.Category)
+			result, statusCode := kpiFunction(projectID, reqID, query)
+			if statusCode != http.StatusOK {
+				finalStatusCode = statusCode
+			}
+			queryResults = append(queryResults, result...)
+
+			query.GroupByTimestamp = ""
+			hashCode, err := query.GetQueryCacheHashString()
+			if err != nil {
+				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi.")
+			}
+			hashMapOfQueryToResult[hashCode] = result
+		} else {
+			result := model.QueryResult{}
+			queryResults = append(queryResults, result)
 		}
-		queryResults = append(queryResults, result...)
 	}
 	if finalStatusCode != http.StatusOK {
 		log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("queryResults", queryResults).Error("Failed in executing following KPI Query with status Not Ok.")
 		return []model.QueryResult{model.QueryResult{}, model.QueryResult{}}, finalStatusCode
+	}
+
+	for index, query := range kpiQueryGroup.Queries {
+		if query.GroupByTimestamp == "" {
+			hashCode, err := query.GetQueryCacheHashString()
+			if err != nil {
+				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi 2.")
+			}
+			if resultsWithGbt, exists := hashMapOfQueryToResult[hashCode]; exists {
+				queryResults[index] = model.GetNonGBTResultsFromGBTResults(resultsWithGbt, query)[0]
+			} else {
+				log.WithField("kpiQueryGroup", kpiQueryGroup).WithField("queryResults", queryResults).Error("Query group doesnt contain all the gbt and non gbt pair of query.")
+				return []model.QueryResult{model.QueryResult{}, model.QueryResult{}}, http.StatusBadRequest
+			}
+		}
 	}
 
 	gbtRelatedQueryResults, nonGbtRelatedQueryResults, gbtRelatedQueries, nonGbtRelatedQueries := model.SplitQueryResultsIntoGBTAndNonGBT(queryResults, kpiQueryGroup, finalStatusCode)
@@ -47,7 +76,6 @@ func (pg *Postgres) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQuer
 	return finalQueryResult, finalStatusCode
 }
 
-// TO think if profiles category can be brought straight here.
 func (pg *Postgres) kpiQueryFunctionDeciderBasedOnCategory(category string) func(uint64, string, model.KPIQuery) ([]model.QueryResult, int) {
 	var result func(uint64, string, model.KPIQuery) ([]model.QueryResult, int)
 	if category == model.ChannelCategory {

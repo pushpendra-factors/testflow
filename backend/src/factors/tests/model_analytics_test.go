@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	H "factors/handler"
@@ -2699,7 +2698,6 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 				timestmapYesterdayIndex = index
 			}
 		}
-		log.WithField("noneIndex", noneIndex).WithField("startTimestampString", startTimestampString).WithField("startTimestampStringYesterday", startTimestampStringYesterday).WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "$none", result.Rows[noneIndex][0])
 		assert.Equal(t, startTimestampString, result.Rows[timestmapIndex][0])
