@@ -67,7 +67,25 @@ func (pg *Postgres) CreateGroup(projectID uint64, groupName string, allowedGroup
 
 	return &group, http.StatusCreated
 }
+func (pg *Postgres) GetGroups(projectId uint64) ([]model.Group, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectId})
 
+	if projectId < 1 {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	var groups []model.Group
+	db := C.GetServices().Db
+	err := db.Where("project_id = ?", projectId).Find(&groups).Error
+	if err != nil {
+		log.WithField("project_id", projectId).WithError(err).Error("Failed to get groups.")
+		return groups, http.StatusInternalServerError
+	}
+
+	return groups, http.StatusFound
+
+}
 func (pg *Postgres) GetGroup(projectID uint64, groupName string) (*model.Group, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName})
 	if projectID < 1 || groupName == "" {

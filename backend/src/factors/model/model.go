@@ -533,6 +533,7 @@ type Model interface {
 	GetGroup(projectID uint64, groupName string) (*model.Group, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
+	GetGroups(projectID uint64) ([]model.Group, int)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID uint64, channelName string) (int, error)

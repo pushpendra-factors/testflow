@@ -89,6 +89,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
 		DashboardUnitsWebAnalyticsQueryHandler)
 
+	authRouteGroup.GET("/:project_id/groups", GetGroupsHandler)
 	authRouteGroup.GET("/:project_id/queries", GetQueriesHandler)
 	authRouteGroup.POST("/:project_id/queries", CreateQueryHandler)
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
