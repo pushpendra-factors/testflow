@@ -288,11 +288,11 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                                 name="email"
                                                 rules={[
                                                     { 
-                                                        required: true, type: 'email', message: 'Please enter an email' 
+                                                        required: true, message: 'Please enter your business email address.' 
                                                     },
                                                     ({ getFieldValue }) => ({
                                                         validator(rule, value) { 
-                                                          if (!value || value.match(/^(?!.+@(gmail|google|yahoo|outlook|hotmail|msn|rediffmail|live|outlook|me|hey)\..+)(.+@.+\..+)$/)) {
+                                                          if (!value || value.match(/^([\w-\.]+@(?!gmail)(?!yahoo)(?!hotmail)(?!hey)(?!aol)(?!abc)(?!xyz)(?!pqr)(?!rediffmail)(?!live)(?!outlook)(?!me)(?!msn)(?!ymail)([\w-]+\.)+[\w-]{2,})?$/)) {
                                                             return Promise.resolve();
                                                           }
                                                           return Promise.reject(new Error('Please enter your business email address.'));

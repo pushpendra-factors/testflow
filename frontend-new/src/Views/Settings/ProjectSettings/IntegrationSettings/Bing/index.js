@@ -71,14 +71,16 @@ const BingIntegration = ({
       .then((r) => {
         setLoading(false);
         if (r.status == 200) {
+          let hostname = window.location.hostname
+          let protocol = window.location.protocol
+          let port = window.location.port
+          let redirectURL = protocol + "//" + hostname + ":" + port + "?bingadsint=" + activeProject.id
+          if (port === undefined || port === '') {
+            redirectURL = protocol + "//" + hostname + "?bingadsint=" + activeProject.id
+          }
           let url = new URL(r.data.redirect_uri);
-          url.searchParams.set('redirect_uri', window.location.href)
+          url.searchParams.set('redirect_uri', redirectURL)
           window.location = url.href;
-        }
-        if (r.status == 200) {
-          enableBingAdsIntegration(activeProject.id);
-          isBingAdsEnabled();
-          bingAds.status ? message.success('Bing Ads Integration Enabled!'): null;
         }
         if (r.status >= 400) {
           message.error('Error fetching Bing Ads accounts');

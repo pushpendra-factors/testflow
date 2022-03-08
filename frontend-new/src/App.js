@@ -13,6 +13,7 @@ import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary'; 
 import factorsai from 'factorsai';
+import { enableBingAdsIntegration } from 'Reducers/global';
 
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
@@ -24,7 +25,7 @@ const Templates = lazyWithRetry(() => import("./Views/CoreQuery/Templates/Result
 const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
 const FactorsInsights = lazyWithRetry(() => import("./Views/Factors/FactorsInsights"));
 
-function App({ isAgentLoggedIn, agent_details, active_project }) {
+function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsIntegration }) {
 
   useEffect(() => {
 
@@ -43,6 +44,17 @@ function App({ isAgentLoggedIn, agent_details, active_project }) {
       window.location.replace("/settings/#integrations");
     }
 
+    if (window.location.href.indexOf("?bingadsint=") > -1) {
+      var searchParams = new URLSearchParams(window.location.search);
+      if (searchParams) {
+        let projectID = searchParams.get("bingadsint");
+        enableBingAdsIntegration(projectID).then(() => {
+          window.location.replace("/settings/#integrations");
+        }).catch((err) => {
+          console.log('bing ads enable error', err)
+        })
+      }
+    }
 
     if (Sentry) {
       Sentry.setUser({
@@ -199,4 +211,4 @@ const mapStateToProps = (state) => ({
   active_project: state.global.active_project, 
 });
 
-export default connect(mapStateToProps,null)(App);
+export default connect(mapStateToProps, { enableBingAdsIntegration })(App);
