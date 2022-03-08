@@ -20,6 +20,7 @@ var BingadsDocumentTypeAlias = map[string]int{
 	"account":                 7,
 }
 
+var AllAccountQuery = "SELECT DISTINCT id FROM `%s.%s.account_history`"
 var BingAdsDocumentToQuery = map[string]string{
 	"campaigns": "SELECT id, account_id, budget, status, name, type FROM `%s.%s.campaign_history` WHERE %v",
 	"ad_groups": "select DISTINCT ad.id, ad.campaign_id, ad.name, ad.status, ad.bid_option, ad.bid_strategy_type, ch.account_id " +
@@ -262,4 +263,8 @@ var BingAdsObjectToPerfomanceReportRepresentation = map[string]string{
 	"campaigns": CampaignPerformanceReport,
 	"ad_groups": AdGroupPerformanceReport,
 	"keyword":   KeywordPerformanceReport,
+}
+
+func GetAllAccountsQuery(bigQueryProjectId string, schemaId string) string {
+	return fmt.Sprintf(AllAccountQuery, bigQueryProjectId, schemaId)
 }

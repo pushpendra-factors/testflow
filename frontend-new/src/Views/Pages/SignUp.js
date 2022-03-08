@@ -102,7 +102,7 @@ function SignUp({ signup }) {
 
             <div className={'flex items-center w-full h-full '}>
                 {/* //left side content starts here */}
-                <Col span={12} style={{background: '#E6F7FF'}} className={'w-full h-full'}>
+                <Col xs={{ span: 0}} sm={{ span: 12}} style={{background: '#E6F7FF'}} className={'w-full h-full'}>
                     <Row align="center" className={'my-40'}>
                             <Col span={14}>
                                 <Row>
@@ -129,7 +129,7 @@ function SignUp({ signup }) {
 
                 {/* //right side content starts here */}
 
-                <Col span={12} >
+                <Col xs={{ span: 24}} sm={{ span: 12}} >
                     <Row align="center">
                         <Col span={14}>
                         

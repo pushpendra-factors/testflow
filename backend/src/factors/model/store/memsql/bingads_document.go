@@ -18,7 +18,7 @@ const (
 	bingadsAdGroup                 = "ad_groups"
 	bingadsKeyword                 = "keyword"
 	fromIntegrationDocuments       = " FROM integration_documents "
-	staticWhereStatementForBingAds = "WHERE project_id = ? AND source= ? AND document_type = ? AND timestamp between ? AND ? "
+	staticWhereStatementForBingAds = "WHERE project_id = ? AND source= ? AND document_type = ? AND customer_account_id IN (?) AND timestamp between ? AND ? "
 	bingadsFilterQueryStr          = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM integration_documents WHERE project_id = ? AND customer_account_id IN (?) AND document_type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
 )
 
@@ -31,7 +31,7 @@ var objectAndPropertyToValueInBingAdsReportsMapping = map[string]string{
 	"ad_groups.id":                "JSON_EXTRACT_STRING(value, 'ad_group_id')",
 	"ad_groups.status":            "JSON_EXTRACT_STRING(value, 'ad_group_status')",
 	"ad_groups.name":              "JSON_EXTRACT_STRING(value, 'ad_group_name')",
-	"ad_groups.bid_strategy_type": "JSON_EXTRACT_STRING(value, 'ad_group_big_strategy_type')",
+	"ad_groups.bid_strategy_type": "JSON_EXTRACT_STRING(value, 'ad_group_bid_strategy_type')",
 	"keyword.id":                  "JSON_EXTRACT_STRING(value, 'keyword_id')",
 	"keyword.name":                "JSON_EXTRACT_STRING(value, 'keyword_name')",
 	"keyword.status":              "JSON_EXTRACT_STRING(value, 'keyword_status')",
@@ -40,8 +40,8 @@ var objectAndPropertyToValueInBingAdsReportsMapping = map[string]string{
 var BingAdsMetricsToAggregatesInReportsMapping = map[string]string{
 	"impressions": "SUM(JSON_EXTRACT_STRING(value, 'impressions'))",
 	"clicks":      "SUM(JSON_EXTRACT_STRING(value, 'clicks'))",
-	"spend":       "SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency'))",
-	"conversions": "SUM(JSON_EXTRACT_STRING(value, 'conversionValueInLocalCurrency'))",
+	"spend":       "SUM(JSON_EXTRACT_STRING(value, 'spend'))",
+	"conversions": "SUM(JSON_EXTRACT_STRING(value, 'conversions'))",
 }
 
 func (store *MemSQL) GetBingadsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
@@ -59,10 +59,11 @@ func (store *MemSQL) GetBingadsFilterValues(projectID uint64, requestFilterObjec
 		log.WithError(err).Error("Failed to fetch connector id from db")
 		return nil, http.StatusInternalServerError
 	}
+	customerAccountIDs := strings.Split(ftMapping.Accounts, ",")
 	requestFilterProperty = strings.TrimPrefix(requestFilterProperty, fmt.Sprintf("%v_", requestFilterObject))
 	docType := model.BingadsDocumentTypeAlias[model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject]]
 	filterProperty := model.BingAdsInternalRepresentationToExternalRepresentation[fmt.Sprintf("%v.%v", model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject], requestFilterProperty)]
-	params := []interface{}{filterProperty, projectID, ftMapping.Accounts, docType, filterProperty}
+	params := []interface{}{filterProperty, projectID, customerAccountIDs, docType, filterProperty}
 	_, resultRows, err := store.ExecuteSQL(bingadsFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", bingadsFilterQueryStr).WithField("params", params).Error(model.BingSpecificError)
@@ -80,16 +81,17 @@ func (store *MemSQL) GetBingadsFilterValuesSQLAndParams(projectID uint64, reques
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
-	logCtx = log.WithField("project_id", projectID).WithField("req_id", reqID)
+	logCtx.WithField("project_id", projectID).WithField("req_id", reqID)
 	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to fetch connector id from db")
 		return "", nil, http.StatusNotFound
 	}
+	customerAccountIDs := strings.Split(ftMapping.Accounts, ",")
 	requestFilterProperty = strings.TrimPrefix(requestFilterProperty, fmt.Sprintf("%v_", requestFilterObject))
 	docType := model.BingadsDocumentTypeAlias[model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject]]
 	filterProperty := model.BingAdsInternalRepresentationToExternalRepresentation[fmt.Sprintf("%v.%v", model.BingAdsObjectInternalRepresentationToExternalRepresentation[requestFilterObject], requestFilterProperty)]
-	params := []interface{}{filterProperty, projectID, ftMapping.Accounts, docType, filterProperty}
+	params := []interface{}{filterProperty, projectID, customerAccountIDs, docType, filterProperty}
 	return bingadsFilterQueryStr, params, http.StatusFound
 }
 
@@ -211,7 +213,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForBingAdsQueryV1(projectID uint64,
 	logCtx := log.WithFields(logFields)
 	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForBingads(
 		projectID, *query, reqID)
-	if err != nil && err.Error() == integrationNotAvailable {
+	if err != nil && err.Error() == "record not found" {
 		logCtx.WithError(err).Info(model.BingSpecificError)
 		return "", nil, make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
@@ -345,7 +347,7 @@ func buildBingAdsQueryV1(query *model.ChannelQueryV1, projectID uint64, customer
 	lowestHierarchyLevel := getLowestHierarchyLevelForBingAds(query)
 	lowestHierarchyReportLevel := model.BingAdsObjectToPerfomanceReportRepresentation[lowestHierarchyLevel] // suffix tbd
 	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromBingAdsReports(query, projectID, query.From, query.To, model.BingadsDocumentTypeAlias[lowestHierarchyReportLevel],
-		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT)
+		fetchSource, limitString, isGroupByTimestamp, groupByCombinationsForGBT, customerAccountID)
 	return sql, params, selectKeys, selectMetrics, nil
 }
 func getLowestHierarchyLevelForBingAds(query *model.ChannelQueryV1) string {
@@ -384,7 +386,7 @@ func getLowestHierarchyLevelForBingAds(query *model.ChannelQueryV1) string {
 	return bingadsCampaign
 }
 func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, docType int,
-	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}) (string, []interface{}, []string, []string) {
+	fetchSource bool, limitString string, isGroupByTimestamp bool, groupByCombinationsForGBT []map[string]interface{}, customerAccountID string) (string, []interface{}, []string, []string) {
 	logFields := log.Fields{
 		"project_id":                    projectID,
 		"query":                         query,
@@ -448,8 +450,9 @@ func getSQLAndParamsFromBingAdsReports(query *model.ChannelQueryV1, projectID ui
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getBingAdsFiltersWhereStatement(query.Filters)
+	customerAccountIDs := strings.Split(customerAccountID, ",")
 	finalParams := make([]interface{}, 0)
-	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, docType, from, to}
+	staticWhereParams := []interface{}{projectID, model.BingAdsIntegration, docType, customerAccountIDs, from, to}
 	finalParams = append(finalParams, staticWhereParams...)
 	if len(groupByCombinationsForGBT) != 0 {
 		whereConditionForGBT, whereParams := buildWhereConditionForGBTForBingAds(groupByCombinationsForGBT)

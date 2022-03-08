@@ -1570,61 +1570,68 @@ func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 		rules := touchPointRules["sf_touch_point_rules"]
 		var campaignMemberDocuments []model.SalesforceDocument
 		var status int
+		fistRespondedRuleApplicable := true
+		// Checking if the EP_SFCampaignMemberResponded has already been set as true for same customer id
 		if document.Action == model.SalesforceDocumentUpdated {
-			campaignMemberDocuments, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID, []string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, false)
+
+			campaignMemberDocuments, status = store.GetStore().GetSyncedSalesforceDocumentByType(project.ID,
+				[]string{util.GetPropertyValueAsString(document.ID)}, model.SalesforceDocumentTypeCampaignMember, false)
 			if status != http.StatusFound {
 				campaignMemberDocuments = nil
+			}
+			// Ignore responded event for "Created event" based rule.
+			if campaignMemberDocuments != nil || len(campaignMemberDocuments) != 0 {
+
+				logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).
+					WithField("Document[size-1]", campaignMemberDocuments[len(campaignMemberDocuments)-1]).
+					Info("Found existing campaign member document")
+
+				// len(campaignMemberDocuments) > 0 && timestamp sorted desc
+				enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[len(campaignMemberDocuments)-1])
+
+				if err == nil {
+					// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
+					if val, exists := (*enCampaignMemberProperties)[model.EP_SFCampaignMemberResponded]; exists {
+						if val.(bool) == true {
+							logCtx.Info("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
+							fistRespondedRuleApplicable = false
+						}
+					}
+				} else {
+					logCtx.WithError(err).Error("Failed to get properties for salesforce campaign member, continuing")
+				}
+
 			}
 		}
 		for _, rule := range rules {
 
 			// check if rule is applicable
-			if !canCreateSFTouchPoint(rule.TouchPointTimeRef, document.Action) || !filterCheck(rule, trackPayload, logCtx) {
+			if !filterCheck(rule, trackPayload, logCtx) {
 				continue
 			}
 
-			switch document.Action {
-
-			case model.SalesforceDocumentCreated:
-
+			// Run for create document rule
+			if rule.TouchPointTimeRef == model.SFCampaignMemberCreated && document.Action == model.SalesforceDocumentCreated {
 				_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
 				if err != nil {
-					logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
-					continue
+					logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document. trying for responded rule")
 				}
-			case model.SalesforceDocumentUpdated:
+			}
 
-				if campaignMemberDocuments == nil || len(campaignMemberDocuments) == 0 {
-					logCtx.Warn("failed to get campaign member salesforce document for campaign member.")
-					continue
-				}
-				logCtx.WithField("Total_Documents", len(campaignMemberDocuments)).
-					WithField("Document[size-1]", campaignMemberDocuments[len(campaignMemberDocuments)-1]).Info("Found existing campaign member document")
+			// Run for only first responded rules & documents where first responded is not set.
+			if rule.TouchPointTimeRef == model.SFCampaignMemberResponded && fistRespondedRuleApplicable {
 
-				// len(campaignMemberDocuments) > 0 && timestamp sorted desc
-				enCampaignMemberProperties, _, err := GetSalesforceDocumentProperties(project.ID, &campaignMemberDocuments[len(campaignMemberDocuments)-1])
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to get properties for salesforce campaign member.")
-					continue
-				}
-				// ignore to create a new touch point if last updated doc has EP_SFCampaignMemberResponded=true
-				if val, exists := (*enCampaignMemberProperties)[model.EP_SFCampaignMemberResponded]; exists {
-					if val.(bool) == true {
-						logCtx.Warn("found EP_SFCampaignMemberResponded=true for the document, skipping creating OTP.")
-						continue
-					}
-				}
 				logCtx.Info("Found existing salesforce campaign member document")
 				if val, exists := trackPayload.EventProperties[model.EP_SFCampaignMemberResponded]; exists {
 					if val.(bool) == true {
 						_, err = CreateTouchPointEvent(project, trackPayload, document, rule)
 						if err != nil {
 							logCtx.WithError(err).Error("failed to create touch point for salesforce campaign member document.")
-							continue
 						}
 					}
 				}
 			}
+
 		}
 	}
 	return nil
@@ -1646,18 +1653,10 @@ func CreateTouchPointEvent(project *model.Project, trackPayload *SDK.TrackPayloa
 	}
 
 	var timestamp int64
-	if document.Action == model.SalesforceDocumentCreated {
-		timestamp, err = model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentCreated)
-		if err != nil {
-			logCtx.Error("failed to timestamp for SF for offline touch point.")
-			return trackResponse, err
-		}
-	} else if document.Action == model.SalesforceDocumentUpdated {
-		timestamp, err = model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
-		if err != nil {
-			logCtx.Error("failed to timestamp for SF for offline touch point.")
-			return trackResponse, err
-		}
+	timestamp, err = model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
+	if err != nil {
+		logCtx.WithError(err).Error("failed to timestamp for SF for offline touch point.")
+		return trackResponse, err
 	}
 	payload.Timestamp = timestamp
 

@@ -204,7 +204,8 @@ func getSelectKeysForProfile(query model.ProfileQuery) string {
 	if query.AggregateProperty == "1" || query.AggregateProperty == "" || query.AggregateFunction == model.UniqueAggregationFunction { // Generally count is only used againt them.
 		return model.DefaultSelectForAllUsers
 	} else {
-		return fmt.Sprintf("%s(JSON_EXTRACT_STRING(%s.properties, '%s')) as %s", query.AggregateFunction, model.USERS, query.AggregateProperty, model.AliasAggr)
+		return fmt.Sprintf("%s(CASE WHEN JSON_EXTRACT_STRING(%s.properties, '%s') IS NULL THEN 0 ELSE JSON_EXTRACT_STRING(%s.properties, '%s') END ) as %s", query.AggregateFunction,
+			model.USERS, query.AggregateProperty, model.USERS, query.AggregateProperty, model.AliasAggr)
 	}
 }
 

@@ -17,6 +17,7 @@ import ProjectDropdown from './ProjectDropdown';
 import { connect } from 'react-redux';
 import { fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration } from 'Reducers/global';
 import { useHistory } from 'react-router-dom';
+import { Spin } from 'antd';
 
 function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
@@ -30,13 +31,6 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   const { bingAds } = useSelector((state) => state.global)
   const dispatch = useDispatch();
   const history = useHistory();
-  const [loading, setloading] = useState(false);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setloading(true);
-    }, 400);
-  }, [activeProject])
 
   useEffect(() => {
       fetchProjectSettingsV1(activeProject.id).then((res) => {
@@ -102,6 +96,14 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
     };
   }, [dispatch]);
 
+  if (dashboards.loading) {
+    return (
+      <div className='flex justify-center items-center w-full h-64'>
+        <Spin size='large' />
+      </div>
+    );
+  }
+
   if (dashboards.data.length) {
     return (
       <>
@@ -150,7 +152,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
     return (
       <>
         {checkIntegration ?
-          loading ? <>
+          <>
             <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal} />
             <AddDashboard
               setEditDashboard={setEditDashboard}
@@ -158,10 +160,10 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
               addDashboardModal={addDashboardModal}
               setaddDashboardModal={setaddDashboardModal}
             />
-          </> : null
-          : loading ? <EmptyDashboard /> : null
+          </>
+          : <EmptyDashboard />
         }
-      </>
+      </> 
     );
   }
 }

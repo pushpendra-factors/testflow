@@ -358,6 +358,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/hubspot/documents/add",
 		IH.DataServiceHubspotAddDocumentHandler)
 
+	dataServiceRouteGroup.POST("/hubspot/documents/add_batch",
+		IH.DataServiceHubspotAddBatchDocumentHandler)
+
 	dataServiceRouteGroup.GET("/hubspot/documents/sync_info",
 		IH.DataServiceHubspotGetSyncInfoHandler)
 

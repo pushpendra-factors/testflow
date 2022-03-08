@@ -5,7 +5,8 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
-import InviteMembers from './InviteMembers'
+import InviteMembers from './InviteMembers';
+import styles from './index.module.scss';
 
 
 function Congrates({handleCancel}) {
@@ -25,7 +26,7 @@ function Congrates({handleCancel}) {
     <>
     {!showInvite &&
       <div className={'fa-container'}>
-            <Row justify={'center'}>
+            <Row justify={'center'} className={`${styles.start}`}>
                 <Col span={7} >
                     <div className={'flex flex-col justify-center mt-16'}>
                         <Row className={'mb-1'}>
@@ -41,20 +42,22 @@ function Congrates({handleCancel}) {
                                 {/* <Text type={'paragraph'} mini  extraClass={'m-0'} color={'grey'} weight={'bold'} style={{ textAlign:'center'}}></Text> */}
                             </Col>
                         </Row>
-                        <Row className={'mt-6'}>
+                        <Row className={`mt-6 ${styles.btnCenter}`}>
                             <Col>
-                                <Button size={'large'} type={'primary'} style={{width:'27vw', height:'36px'}} className={'m-0'} onClick={handleContinue}>Continue to project</Button>
+                                <Button size={'large'} type={'primary'} style={{width:'27vw', height:'36px'}} className={`m-0 ${styles.button}`} onClick={handleContinue}>Continue to project</Button>
                             </Col>
                         </Row>
-                        <Row className={'mt-4'}>
+                        <Row className={`mt-4 ${styles.btnCenter}`}>
                             <Col>
-                                <Button size={'large'} type={'link'} style={{width:'27vw', height:'36px', backgroundColor:'white'}} className={'m-0'} onClick={handleInvite}>Invite my teammates</Button>
+                                <Button size={'large'} type={'link'} style={{width:'27vw', height:'36px', backgroundColor:'white'}} className={`m-0 ${styles.button}`} onClick={handleInvite}>Invite my teammates</Button>
                             </Col>
                         </Row>
                     </div>
                 </Col>
             </Row>
+            <div className={`${styles.hideSVG}`}>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
+            </div>
       </div>
     } {
         showInvite && <InviteMembers handleCancel = {handleCancel} />

@@ -625,3 +625,19 @@ func GetCurrentGroupIdAndColumnName(user *User) (string, string) {
 	}
 	return user.Group4ID, "group_4_id"
 }
+
+func GetHubspotDocumentsListAsBatch(list []*HubspotDocument, batchSize int) [][]*HubspotDocument {
+	batchList := make([][]*HubspotDocument, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
+}
