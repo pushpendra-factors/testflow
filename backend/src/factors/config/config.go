@@ -212,6 +212,11 @@ type Configuration struct {
 	FivetranLicenseKey                              string
 	DisableCRMUniquenessConstraintsCheckByProjectID string
 	SkipDashboardCachingAnalytics                   int
+	AllowEventsFunnelsGroupSupport                  string
+	MonitoringAPIToken                              string
+	DelayedTaskThreshold                            int
+	SdkQueueThreshold                               int
+	IntegrationQueueThreshold                       int
 	EnableBingAdsAttribution                        bool
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
@@ -1247,6 +1252,25 @@ func InitAppServer(config *Configuration) error {
 	return nil
 }
 
+func InitMonitoringAPIServices(config *Configuration) {
+	if config.MonitoringAPIToken == "" {
+		log.Error("Monitoring API Token is not provided. Keeping services disabled.")
+		return
+	}
+
+	err := InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
+	if err != nil {
+		log.WithError(err).Error("Failed to initalize queue client.")
+	}
+
+	if IsQueueDuplicationEnabled() {
+		err := InitDuplicateQueueClient(config.DuplicateQueueRedisHost, config.DuplicateQueueRedisPort)
+		if err != nil {
+			log.WithError(err).Error("Failed to initialize duplicate queue client.")
+		}
+	}
+}
+
 func InitTestServer(config *Configuration) error {
 	if !IsConfigInitialized() {
 		log.Fatal("Config not initialised on Init.")
@@ -2014,6 +2038,14 @@ func AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectID uint64) bool {
 
 func IsProfileGroupSupportEnabled(projectId uint64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowProfilesGroupSupport, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
+}
+
+func IsEventsFunnelsGroupSupportEnabled(projectId uint64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowEventsFunnelsGroupSupport, "")
 	if allProjects || projectIDsMap[projectId] {
 		return true
 	}

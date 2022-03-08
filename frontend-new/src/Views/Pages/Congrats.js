@@ -49,7 +49,7 @@ function Congrats({ signup, data }) {
 
                             <Col span={24}>
                                 <div className={'flex justify-center items-center mb-5'} >
-                                    <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Congratulations</Text>
+                                    <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>You’re only one step away!</Text>
                                 </div>
                             </Col>
                             

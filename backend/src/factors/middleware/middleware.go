@@ -503,35 +503,76 @@ func SetLoggedInAgent() gin.HandlerFunc {
 	}
 }
 
+func MonitoringAPIMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Allow whitelisted agents.
+		statusCode, errMessage1, agent := DefineSetLoggedInAgentInternalOnly(c)
+		if statusCode == http.StatusOK {
+			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+			c.Next()
+			return
+		}
+
+		// Allow pre-defined token/secret. Used for internal usage from services.
+		statusCode, errMessage2 := TokenMiddleware(c)
+		if statusCode == http.StatusOK {
+			c.Next()
+			return
+		}
+
+		c.AbortWithStatusJSON(statusCode, gin.H{"err1": errMessage1, "err2": errMessage2})
+		return
+	}
+}
+
+// TokenMiddleware - This method is for token based authorization
+func TokenMiddleware(c *gin.Context) (int, string) {
+	token := c.Request.Header.Get("Authorization")
+	token = strings.TrimSpace(token)
+
+	statusCode := http.StatusOK
+	var errorMessage string
+	if token != C.GetConfig().MonitoringAPIToken {
+		statusCode = http.StatusUnauthorized
+		errorMessage = "invalid monitoring API token"
+	}
+
+	return statusCode, errorMessage
+}
+
+// DefineSetLoggedInAgentInternalOnly - This method is for definition of SetLoggedInAgentInternalOnly middleware
+func DefineSetLoggedInAgentInternalOnly(c *gin.Context) (int, string, *model.Agent) {
+	// Cookie login.
+	cookieStr, err := c.Cookie(C.GetFactorsCookieName())
+	statusCode := http.StatusOK
+	var msg string
+	if err != nil || cookieStr == "" {
+		statusCode = http.StatusUnauthorized
+		msg = "session cookie not found"
+		return statusCode, msg, nil
+	}
+
+	agent, errMsg, errCode := validateAuthData(cookieStr)
+	if errCode != http.StatusOK {
+		statusCode = errCode
+		msg = errMsg
+	} else if agent == nil {
+		statusCode = http.StatusBadRequest
+		msg = "unable to authenticate"
+	} else if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agent.UUID) {
+		statusCode = http.StatusUnauthorized
+		msg = "operation allowed for only admins"
+	}
+
+	return statusCode, msg, agent
+}
+
 func SetLoggedInAgentInternalOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Cookie login.
-		cookieStr, err := c.Cookie(C.GetFactorsCookieName())
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "session cookie not found"})
-			return
-		}
-
-		if cookieStr == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "missing session cookie data"})
-			return
-		}
-
-		agent, errMsg, errCode := validateAuthData(cookieStr)
-		if errCode != http.StatusOK {
-			c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
-			return
-		}
-
-		if agent == nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "unable to authenticate"})
-			return
-		}
-
-		if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agent.UUID) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "operation allowed for only admins"})
+		statusCode, msg, agent := DefineSetLoggedInAgentInternalOnly(c)
+		if statusCode != http.StatusOK || agent == nil {
+			c.AbortWithStatusJSON(statusCode, gin.H{"error": msg})
 			return
 		}
 

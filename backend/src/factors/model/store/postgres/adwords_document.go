@@ -2048,7 +2048,6 @@ func (pg *Postgres) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days i
 		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
-	log.WithField("channelDocumentsAdGroup", channelDocumentsAdGroup).WithField("channelDocumentsCampaign", channelDocumentsCampaign).Warn("kark3")
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
 

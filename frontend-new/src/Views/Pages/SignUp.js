@@ -6,14 +6,16 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 import { signup } from 'Reducers/agentActions';
-import UserData from './UserData';
 import factorsai from 'factorsai';
+import Congrats from './Congrats';
+import { createHubspotContact, getHubspotContact } from '../../reducers/global';
 
-function SignUp({ signup }) {
+function SignUp({ signup, createHubspotContact, getHubspotContact }) {
   const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
   const [formData, setformData] = useState(null);
+  const [ownerID, setownerID] = useState();
 
   const history = useHistory();
   const routeChange = (url) => {
@@ -61,6 +63,90 @@ function SignUp({ signup }) {
     });
   }
 
+  const getOwner = () => {
+    const ownersData = [
+        {
+            "value" : "116046946",
+        },
+        {
+            "value" : "116047122",
+        },
+        {
+            "value" : "116053799",
+        }
+    ]
+    const index = Math.floor(Math.random()*3);
+    const data = ownersData[index];
+    return data;
+  }
+
+  const hubspotCall = (data) => {
+        const owner = getOwner();
+
+        getHubspotContact(data.email).then((res) => {
+            setownerID(res.data.hubspot_owner_id)
+        }).catch((err) => {
+            console.log(err.data.error)
+        });
+
+
+        const jsonData = {
+            "properties": [
+                {
+                    "property": "email",
+                    "value": data.email
+                },
+                {
+                    "property": "firstname",
+                    "value": data.first_name
+                },
+                {
+                    "property": "lastname",
+                    "value": data.last_name
+                },
+                {
+                    "property": "hubspot_owner_id",
+                    "value": ownerID ? ownerID: owner.value
+                },
+                {
+                    "property": "signup_method",
+                    "value": "Self-Serve Onboarding"
+                }                     
+            ]
+        }
+        
+        createHubspotContact(data.email, jsonData)
+        .then((response) => {
+            console.log(response);
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+  };
+
+  const sendSlackNotification = (user) => {
+    let webhookURL = 'https://hooks.slack.com/services/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';
+    let data = {
+        "text": `User ${user.first_name} with email ${user.email} just signed up`,
+        "username" : "Signup User Actions",
+        "icon_emoji" : ":golf:"
+    }
+    let params = {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }
+
+    fetch(webhookURL, params)
+    .then((response) => response.json())
+    .then((response) => {
+        console.log(response);
+    })
+    .catch((err) => {
+        console.log('err',err);
+    });
+}
+
+
   const SignUpFn = () => {
     setDataLoading(true);
     form.validateFields().then((values) => {
@@ -77,6 +163,8 @@ function SignUp({ signup }) {
             setDataLoading(false);
             setformData(filteredValues);
             startMailModo(filteredValues.email);
+            hubspotCall(filteredValues);
+            sendSlackNotification(filteredValues);
         }).catch((err) => {
             setDataLoading(false);
             form.resetFields();
@@ -198,10 +286,22 @@ function SignUp({ signup }) {
                                             <Form.Item label={null}
                                                 initialValue={getEmail()? getEmail() : ""}
                                                 name="email"
-                                                rules={[{ required: true, type: 'email', message: 'Please enter work email' }]}
+                                                rules={[
+                                                    { 
+                                                        required: true, type: 'email', message: 'Please enter an email' 
+                                                    },
+                                                    ({ getFieldValue }) => ({
+                                                        validator(rule, value) { 
+                                                          if (!value || value.match(/^(?!.+@(gmail|google|yahoo|outlook|hotmail|msn|rediffmail|live|outlook|me|hey)\..+)(.+@.+\..+)$/)) {
+                                                            return Promise.resolve();
+                                                          }
+                                                          return Promise.reject(new Error('Please enter your business email address.'));
+                                                        }
+                                                    })
+                                                ]}
                                                 >
                                                 <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                placeholder="Email"
+                                                placeholder="Work Email"
                                                  />
                                             </Form.Item>
                                         </div>
@@ -277,11 +377,11 @@ function SignUp({ signup }) {
       </div>
         }
         {formData &&
-            <UserData data = {formData} />
+            <Congrats data = {formData} />
         }
     </>
 
   );
 }
 
-export default connect(null, { signup })(SignUp);
+export default connect(null, { signup, createHubspotContact, getHubspotContact })(SignUp);

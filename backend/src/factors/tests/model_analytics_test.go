@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	H "factors/handler"
@@ -269,6 +268,109 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 		assert.Equal(t, float64(1), result.Rows[0][1], "step1")
 		assert.Equal(t, "100.0", result.Rows[0][2], "conversion_step_0_step_1")
 		assert.Equal(t, float64(1), result.Rows[0][3], "step2")
+	})
+}
+
+func TestAnalyticsFunnelGroupUserQuery(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	t.Run("NoOfUsersCompletedTheFunnelFirstTimeOfStart", func(t *testing.T) {
+		project, err := SetupProjectReturnDAO()
+		assert.Nil(t, err)
+
+		// create random eventNames
+		eventNames := make([]string, 0)
+		for i := 0; i < 2; i++ {
+			eventNames = append(eventNames, U.RandomLowerAphaNumString(8))
+		}
+		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
+
+		// create normal users
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotEmpty(t, createdUserID)
+		createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotEmpty(t, createdUserID1)
+
+		// create group with groupName = "$hubspot_company"
+		groupName := model.GROUP_NAME_HUBSPOT_COMPANY
+		timestamp := time.Now().AddDate(0, 0, 0).Unix() * 1000
+		_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+		assert.Equal(t, http.StatusCreated, status)
+
+		// create group user with random groupID
+		groupID := U.RandomLowerAphaNumString(5)
+		groupUserID, status := store.GetStore().CreateGroupUser(&model.User{
+			ProjectId: project.ID, JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceHubspot),
+		}, groupName, groupID)
+		assert.Equal(t, http.StatusCreated, status)
+
+		// register a group event using groupUserID
+		groupEventName := U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+			groupEventName, groupUserID, eventTimestamp)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+
+		// register user event using normal createdUsers
+		occurrenceByIndex := []int{0, 1}
+		createdUsers := []string{createdUserID, createdUserID1}
+		for index, eventIndex := range occurrenceByIndex {
+			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+				eventNames[eventIndex], createdUsers[eventIndex], eventTimestamp+int64(index+1))
+			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+			assert.Equal(t, http.StatusOK, w.Code)
+			response := DecodeJSONResponseToMap(w.Body)
+			assert.NotNil(t, response["event_id"])
+		}
+
+		// associate normal users to group
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID, groupName, groupID, groupUserID)
+		assert.Equal(t, http.StatusAccepted, status)
+		_, status = store.GetStore().UpdateUserGroup(project.ID, createdUserID1, groupName, groupID, groupUserID)
+		assert.Equal(t, http.StatusAccepted, status)
+
+		// fire funnel query
+		query := model.Query{
+			From: eventTimestamp,
+			To:   eventTimestamp + int64(3),
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name:       groupEventName,
+					Properties: []model.QueryProperty{},
+				},
+				model.QueryEventWithProperties{
+					Name:       eventNames[0],
+					Properties: []model.QueryProperty{},
+				},
+				model.QueryEventWithProperties{
+					Name:       eventNames[1],
+					Properties: []model.QueryProperty{},
+				},
+			},
+			Class: model.QueryClassFunnel,
+
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+
+		// steps headers and rows avalilable.
+		assert.Equal(t, model.StepPrefix+"0", result.Headers[0])
+		assert.Equal(t, model.StepPrefix+"1", result.Headers[1])
+		assert.Equal(t, model.StepPrefix+"2", result.Headers[3])
+		assert.Equal(t, float64(2), result.Rows[0][0].(float64))
+		assert.Equal(t, float64(1), result.Rows[0][1].(float64))
+		assert.Equal(t, float64(0), result.Rows[0][3].(float64))
 	})
 }
 
@@ -2699,7 +2801,6 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 				timestmapYesterdayIndex = index
 			}
 		}
-		log.WithField("noneIndex", noneIndex).WithField("startTimestampString", startTimestampString).WithField("startTimestampStringYesterday", startTimestampStringYesterday).WithField("result", result).Warn("kark2")
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "$none", result.Rows[noneIndex][0])
 		assert.Equal(t, startTimestampString, result.Rows[timestmapIndex][0])

@@ -40,6 +40,12 @@ for d in $(kubectl get cronjobs -o name); do
     write_to_file $d $workload
 done
 
+strPosition=10
+for d in $(kubectl get configmaps -o name); do
+    workload=${d:strPosition:50}
+    write_to_file $d $workload
+done
+
 cd ..
 
 # upload the folder to google cloud storage.
