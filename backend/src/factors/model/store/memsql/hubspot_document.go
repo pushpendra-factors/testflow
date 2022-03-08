@@ -128,33 +128,69 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 
 func isExistHubspotDocumentByIDAndType(projectId uint64, id string, docType int) int {
 	argFields := log.Fields{"project_id": projectId, "id": id, "type": docType}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
-
 	logCtx := log.WithFields(argFields)
 
-	var document model.HubspotDocument
 	if projectId == 0 || id == "" || docType == 0 {
 		logCtx.Error("Failed to get hubspot document by id and type. Invalid project_id or id or type.")
 		return http.StatusBadRequest
 	}
 
-	db := C.GetServices().Db
-	err := db.Where("project_id = ? AND id = ? AND type = ? AND action = ? ", projectId, id,
-		docType, model.HubspotDocumentActionCreated).Select("id").Limit(1).Find(&document).Error
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return http.StatusNotFound
-		}
-
-		logCtx.WithError(err).Error("Failed to get hubspot documents.")
-		return http.StatusInternalServerError
+	documentIds, status := isExistHubspotDocumentByIDAndTypeInBatch(projectId, []string{id}, docType)
+	if status != http.StatusFound {
+		return status
 	}
 
-	if document.ID == "" {
+	if !documentIds[id] {
 		return http.StatusNotFound
 	}
 
 	return http.StatusFound
+}
+
+func isExistHubspotDocumentByIDAndTypeInBatch(projectId uint64, ids []string, docType int) (map[string]bool, int) {
+	argFields := log.Fields{"project_id": projectId, "ids": ids, "type": docType}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
+
+	logCtx := log.WithFields(argFields)
+
+	if projectId == 0 || len(ids) <= 0 || docType == 0 {
+		logCtx.Error("Failed to get hubspot document by id and type. Invalid project_id or id or type.")
+		return nil, http.StatusBadRequest
+	}
+
+	whereStmnt := "project_id = ? AND type = ? AND action = ?"
+	whereParams := []interface{}{projectId, docType, model.HubspotDocumentActionCreated}
+	db := C.GetServices().Db
+	if len(ids) > 1 {
+		whereStmnt = whereStmnt + " AND " + "id IN(?) "
+		whereParams = append(whereParams, ids)
+	} else {
+		whereStmnt = whereStmnt + " AND " + "id = ?"
+		whereParams = append(whereParams, ids[0])
+		db.Limit(1)
+	}
+
+	var documents []model.HubspotDocument
+	err := db.Where(whereStmnt, whereParams...).Select("id").Find(&documents).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get hubspot documents.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) <= 0 {
+		return nil, http.StatusNotFound
+	}
+
+	documentIds := make(map[string]bool, 0)
+	for i := range documents {
+		documentIds[documents[i].ID] = true
+	}
+
+	return documentIds, http.StatusFound
 }
 
 func (store *MemSQL) GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, docID string) ([]model.HubspotDocument, int) {
@@ -301,6 +337,209 @@ func (store *MemSQL) getUpdatedDealAssociationDocument(projectID uint64, incomin
 	return incomingDocument, http.StatusOK
 }
 
+func (store *MemSQL) createBatchedHubspotDocuments(projectID uint64, documents []*model.HubspotDocument) int {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectID})
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "documents": len(documents)})
+	if len(documents) <= 0 {
+		logCtx.Error("Empty batch for hubspot batch insert.")
+		return http.StatusBadRequest
+	}
+	log.Info("Using hubspot batch insert.")
+
+	batchedArguments := make([]interface{}, 0)
+	insertColumns := "INSERT INTO hubspot_documents(project_id,id, type, action, timestamp, value, created_at, updated_at)"
+	placeHolders := ""
+	for i := range documents {
+		documents[i].ProjectId = projectID
+		if placeHolders != "" {
+			placeHolders = placeHolders + ","
+		}
+		placeHolders = placeHolders + "( ? )"
+		createdTime := gorm.NowFunc()
+		arguments := []interface{}{
+			documents[i].ProjectId,
+			documents[i].ID,
+			documents[i].Type,
+			documents[i].Action,
+			documents[i].Timestamp,
+			documents[i].Value,
+			createdTime,
+			createdTime,
+		}
+		batchedArguments = append(batchedArguments, arguments)
+	}
+	insertStmnt := insertColumns + " VALUES " + placeHolders + " ON DUPLICATE KEY UPDATE synced=synced;"
+
+	db := C.GetServices().Db
+	err := db.Exec(insertStmnt, batchedArguments...).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to batch insert hubspot documents.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusCreated
+}
+
+func getHubspotDocumentsForInsertion(documents []*model.HubspotDocument, existDocumentIDs map[string]bool) ([]*model.HubspotDocument, error) {
+	processDocuments := make([]*model.HubspotDocument, 0)
+	batchDocumentIDs := make(map[string]bool, 0)
+	for i := range documents {
+		if exist := batchDocumentIDs[documents[i].ID]; exist {
+			log.WithFields(log.Fields{"project_id": documents[i].ProjectId,
+				"document_id": documents[i].ID, "documents": documents}).
+				Error("Duplicate hubspot document in same batch.")
+		}
+		batchDocumentIDs[documents[i].ID] = true
+
+		isNew := !existDocumentIDs[documents[i].ID]
+		createdTimestamp, updatedTimestamp, err := getHubspotCreatedAndUpdatedTimestamp(documents[i])
+		if err != nil {
+			return nil, err
+		}
+		if isNew {
+			// Skip adding the record if deleted record is to added for
+			// non-existing document.
+			if documents[i].Action == model.HubspotDocumentActionDeleted {
+				continue
+			}
+			createdDocument := documents[i]
+			createdDocument.Action = model.HubspotDocumentActionCreated // created
+			createdDocument.Timestamp = createdTimestamp
+			processDocuments = append(processDocuments, createdDocument)
+
+			// for create action also create updated with same timestamp
+			updatedDocument := *documents[i]
+			updatedDocument.Action = model.HubspotDocumentActionUpdated
+			updatedDocument.Timestamp = createdTimestamp
+			processDocuments = append(processDocuments, &updatedDocument)
+
+			if updatedTimestamp > createdTimestamp { // create action updated if last modified time is greater than created
+				recentUpdatedDocument := *documents[i]
+				recentUpdatedDocument.Action = model.HubspotDocumentActionUpdated
+				recentUpdatedDocument.Timestamp = updatedTimestamp
+				processDocuments = append(processDocuments, &recentUpdatedDocument)
+			}
+
+		} else {
+			if documents[i].Action != model.HubspotDocumentActionDeleted {
+				documents[i].Action = model.HubspotDocumentActionUpdated // updated
+			}
+			// Any update on the entity would create a new hubspot document.
+			// i.e, deal will be synced after updating a created deal with a
+			// contact or a company.
+			documents[i].Timestamp = updatedTimestamp
+			processDocuments = append(processDocuments, documents[i])
+		}
+	}
+
+	return processDocuments, nil
+}
+
+func allowedHubspotDocTypeForBatchInsert(docType int) bool {
+	return docType == model.HubspotDocumentTypeContact || docType == model.HubspotDocumentTypeCompany
+}
+
+func (store *MemSQL) CreateHubspotDocumentInBatch(projectID uint64, docType int, documents []*model.HubspotDocument, batchSize int) int {
+	logFields := log.Fields{"project_id": projectID, "doc_type": docType, "batch_size": batchSize}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || docType == 0 || batchSize <= 0 {
+		logCtx.Error("Invalid parameters on create hubspot document in batch.")
+		return http.StatusBadRequest
+	}
+
+	if len(documents) <= 0 {
+		logCtx.Error("Missing documents.")
+		return http.StatusBadRequest
+	}
+
+	if !allowedHubspotDocTypeForBatchInsert(docType) {
+		logCtx.Error("Invalid document type.")
+		return http.StatusBadRequest
+	}
+
+	for i := range documents {
+		documents[i].ProjectId = projectID
+
+		documents[i].Type = docType
+
+		if U.IsEmptyPostgresJsonb(documents[i].Value) {
+			logCtx.Error("Empty document value on create batch hubspot document. Skipped adding this record.")
+		}
+
+		documentId, err := getHubspotDocumentId(documents[i])
+		if err != nil {
+			logCtx.WithFields(log.Fields{"document": documents[i]}).WithError(err).Error(
+				"Failed to get id for hubspot document on create.")
+			return http.StatusInternalServerError
+		}
+		documents[i].ID = documentId
+	}
+
+	documentIDs := make([]string, 0)
+	for i := range documents {
+		documentIDs = append(documentIDs, documents[i].ID)
+	}
+
+	existDocumentIDs, errCode := isExistHubspotDocumentByIDAndTypeInBatch(projectID,
+		documentIDs, docType)
+	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+		return errCode
+	}
+
+	batchedDocuments := model.GetHubspotDocumentsListAsBatch(documents, batchSize)
+	for i := range batchedDocuments {
+		processDocuments, err := getHubspotDocumentsForInsertion(batchedDocuments[i], existDocumentIDs)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"documents": processDocuments}).WithError(err).
+				Error("Failed to get documents for processing in batch.")
+			return http.StatusInternalServerError
+		}
+
+		if len(processDocuments) == 0 {
+			logCtx.WithFields(log.Fields{"documents": batchedDocuments[i]}).Error("No document for processing in batch.")
+			continue
+		}
+
+		status := store.createBatchedHubspotDocuments(projectID, processDocuments)
+		if status != http.StatusCreated {
+			logCtx.WithFields(log.Fields{"documents": processDocuments, "err_code": status}).
+				WithError(err).Error("Failed to insert batched hubspot documents.")
+			return status
+		}
+	}
+
+	return http.StatusCreated
+}
+
+func getHubspotCreatedAndUpdatedTimestamp(document *model.HubspotDocument) (int64, int64, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": document.ProjectId, "document_id": document.ID, "doc_type": document.Type})
+	createdTimestamp, err := model.GetHubspotDocumentCreatedTimestamp(document)
+	if err != nil {
+		if err != model.ErrorHubspotUsingFallbackKey {
+			logCtx.WithField("action", document.Action).WithError(err).Error(
+				"Failed to get created timestamp from hubspot document on create.")
+			return 0, 0, err
+		}
+
+		logCtx.WithField("action", document.Action).WithError(err).Error("Missing document key.")
+	}
+
+	updatedTimestamp, err := model.GetHubspotDocumentUpdatedTimestamp(document)
+	if err != nil {
+		if err != model.ErrorHubspotUsingFallbackKey {
+			logCtx.WithField("action", document.Action).WithError(err).Error(
+				"Failed to get updated timestamp from hubspot document on create.")
+			return 0, 0, err
+		}
+
+		logCtx.WithField("action", document.Action).WithError(err).Error("Missing document key.")
+	}
+
+	return createdTimestamp, updatedTimestamp, nil
+}
 func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.HubspotDocument) int {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectId})
@@ -342,26 +581,10 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 	}
 	isNew := errCode == http.StatusNotFound
 
-	createdTimestamp, err := model.GetHubspotDocumentCreatedTimestamp(document)
+	createdTimestamp, updatedTimestamp, err := getHubspotCreatedAndUpdatedTimestamp(document)
 	if err != nil {
-		if err != model.ErrorHubspotUsingFallbackKey {
-			logCtx.WithField("action", document.Action).WithError(err).Error(
-				"Failed to get created timestamp from hubspot document on create.")
-			return http.StatusInternalServerError
-		}
-
-		logCtx.WithField("action", document.Action).WithError(err).Error("Missing document key.")
-	}
-
-	updatedTimestamp, err := model.GetHubspotDocumentUpdatedTimestamp(document)
-	if err != nil {
-		if err != model.ErrorHubspotUsingFallbackKey {
-			logCtx.WithField("action", document.Action).WithError(err).Error(
-				"Failed to get updated timestamp from hubspot document on create.")
-			return http.StatusInternalServerError
-		}
-
-		logCtx.WithField("action", document.Action).WithError(err).Error("Missing document key.")
+		logCtx.WithError(err).Error("Failed to get hubspot document created and updated timestamp.")
+		return http.StatusInternalServerError
 	}
 
 	var updatedDocument model.HubspotDocument // use for duplicating new document to updated document.

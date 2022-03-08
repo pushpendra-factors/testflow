@@ -4103,3 +4103,127 @@ func TestHubspotGroupUserFix(t *testing.T) {
 	groupID = GetGroupID(user)
 	assert.Equal(t, groupID, createDocument[0].ID)
 }
+
+func TestHubspotBatchCreate(t *testing.T) {
+
+	// Initialize the project and the user.
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+
+	contactCreatedDate := time.Now().AddDate(0, 0, -5)
+	contactUpdatedDate := contactCreatedDate.AddDate(0, 0, 1)
+	processDocuments := make([]*model.HubspotDocument, 0)
+	for i := 0; i < 10; i++ {
+		contact := IntHubspot.Contact{
+			Vid: int64(i),
+			Properties: map[string]IntHubspot.Property{
+				"createdate":       {Value: fmt.Sprintf("%d", contactCreatedDate.Unix()*1000)},
+				"lastmodifieddate": {Value: fmt.Sprintf("%d", contactUpdatedDate.Unix()*1000)},
+				"lifecyclestage":   {Value: "lead"},
+			},
+		}
+
+		enJSON, err := json.Marshal(contact)
+		assert.Nil(t, err)
+		contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Value:     &contactPJson,
+		}
+		processDocuments = append(processDocuments, &hubspotDocument)
+	}
+
+	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, processDocuments, 5)
+	assert.Equal(t, http.StatusCreated, status)
+
+	documents, status := store.GetStore().GetHubspotDocumentsByTypeForSync(project.ID, model.HubspotDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 30)
+
+	// performing another insert with 3 update and 2 duplicate
+	processDocuments = []*model.HubspotDocument{processDocuments[0], processDocuments[1]}
+	for i := 2; i < 5; i++ {
+		contact := IntHubspot.Contact{
+			Vid: int64(i),
+			Properties: map[string]IntHubspot.Property{
+				"createdate":       {Value: fmt.Sprintf("%d", contactCreatedDate.Unix()*1000+10)},
+				"lastmodifieddate": {Value: fmt.Sprintf("%d", contactUpdatedDate.Unix()*1000+10)},
+				"lifecyclestage":   {Value: "lead"},
+			},
+		}
+
+		enJSON, err := json.Marshal(contact)
+		assert.Nil(t, err)
+		contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Value:     &contactPJson,
+		}
+		processDocuments = append(processDocuments, &hubspotDocument)
+	}
+
+	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, processDocuments, 5)
+	assert.Equal(t, http.StatusCreated, status)
+
+	documents, status = store.GetStore().GetHubspotDocumentsByTypeForSync(project.ID, model.HubspotDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 33)
+
+	/*
+		Delete contact with previous record and with no previous record
+	*/
+	processDocuments = make([]*model.HubspotDocument, 0)
+
+	contact := map[string]interface{}{
+		"id": int64(1),
+		"properties": map[string]interface{}{
+			"createdate":       contactCreatedDate.Format(model.HubspotDateTimeLayout),
+			"lastmodifieddate": contactUpdatedDate.Add(20 * time.Second).Format(model.HubspotDateTimeLayout),
+			"lifecyclestage":   "junk",
+		},
+		"archived": true,
+	}
+
+	enJSON, err := json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson1 := postgres.Jsonb{json.RawMessage(enJSON)}
+	deleteDocument1 := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson1,
+		Action:    model.HubspotDocumentActionDeleted,
+	}
+	processDocuments = append(processDocuments, &deleteDocument1)
+
+	// not existing record
+	contact = map[string]interface{}{
+		"id": int64(14),
+		"properties": map[string]interface{}{
+			"createdate":       contactCreatedDate.Format(model.HubspotDateTimeLayout),
+			"lastmodifieddate": contactUpdatedDate.Add(20 * time.Second).Format(model.HubspotDateTimeLayout),
+			"lifecyclestage":   "junk",
+		},
+		"archived": true,
+	}
+
+	enJSON, err = json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson2 := postgres.Jsonb{json.RawMessage(enJSON)}
+	deleteDocument2 := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson2,
+		Action:    model.HubspotDocumentActionDeleted,
+	}
+	processDocuments = append(processDocuments, &deleteDocument2)
+	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, processDocuments, 2)
+	assert.Equal(t, http.StatusCreated, status)
+
+	documents, status = store.GetStore().GetHubspotDocumentsByTypeForSync(project.ID, model.HubspotDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 34)
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionDeleted})
+	assert.Equal(t, http.StatusFound, status)
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"14"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionDeleted})
+	assert.Equal(t, http.StatusNotFound, status)
+}

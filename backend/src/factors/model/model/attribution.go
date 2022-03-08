@@ -1204,9 +1204,6 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 		if spend > 0 {
 			spendCPC, _ = U.FloatRoundOffWithPrecision(spendCPC+spend, U.DefaultPrecision)
 			conversionsCPC, _ = U.FloatRoundOffWithPrecision(conversionsCPC+row[keyIndex+12].(float64), U.DefaultPrecision)
-		} else {
-			spendCPC = float64(0)
-			conversionsCPC = float64(0)
 		}
 
 		// Remaining linked funnel events & CPCs

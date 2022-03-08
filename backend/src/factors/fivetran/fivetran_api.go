@@ -208,9 +208,15 @@ func FiveTranGetConnector(ConnectorId string) (int, string, bool, string) {
 		paused := response["data"].(map[string]interface{})["paused"].(bool)
 		var accounts []interface{}
 		if paused == false {
-			accountsObject, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["accounts"]
-			if exists {
-				accounts = accountsObject.([]interface{})
+			syncMode, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["sync_mode"]
+			if exists && syncMode == "AllAccounts" {
+				accounts = make([]interface{}, 0)
+				accounts = append(accounts, syncMode)
+			} else {
+				accountsObject, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["accounts"]
+				if exists {
+					accounts = accountsObject.([]interface{})
+				}
 			}
 		}
 		accountArray := ""
