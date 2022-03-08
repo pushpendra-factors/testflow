@@ -212,6 +212,7 @@ type Configuration struct {
 	FivetranLicenseKey                              string
 	DisableCRMUniquenessConstraintsCheckByProjectID string
 	SkipDashboardCachingAnalytics                   int
+	AllowEventsFunnelsGroupSupport                  string
 	MonitoringAPIToken                              string
 	DelayedTaskThreshold                            int
 	SdkQueueThreshold                               int
@@ -2037,6 +2038,14 @@ func AllowMergeAmpIDAndSegmentIDWithUserIDByProjectID(projectID uint64) bool {
 
 func IsProfileGroupSupportEnabled(projectId uint64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowProfilesGroupSupport, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
+}
+
+func IsEventsFunnelsGroupSupportEnabled(projectId uint64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowEventsFunnelsGroupSupport, "")
 	if allProjects || projectIDsMap[projectId] {
 		return true
 	}

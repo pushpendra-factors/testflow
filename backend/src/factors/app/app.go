@@ -142,6 +142,7 @@ func main() {
 
 	fivetranGroupId := flag.String("fivetran_group_id", "", "")
 	fivetranLicenseKey := flag.String("fivetran_license_key", "", "")
+	allowEventsFunnelsGroupSupport := flag.String("allow_events_funnels_group_support", "", "")
 
 	enableBingAdsAttribution := flag.Bool("enable_bing_ads_attribution", false, "")
 	flag.Parse()
@@ -229,6 +230,9 @@ func main() {
 		ResourcePoolForAnalytics:                *resourcePoolForAnalytics,
 		HubspotAPIOnboardingHAPIKey:             *hubspotAPIOnboardingHAPIKey,
 		AllowProfilesGroupSupport:               *allowProfilesGroupSupport,
+		FivetranGroupId:                         *fivetranGroupId,
+		FivetranLicenseKey:                      *fivetranLicenseKey,
+		AllowEventsFunnelsGroupSupport:          *allowEventsFunnelsGroupSupport,
 		QueueRedisHost:                          *queueRedisHost,
 		QueueRedisPort:                          *queueRedisPort,
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
@@ -237,8 +241,6 @@ func main() {
 		DelayedTaskThreshold:                           *delayedTaskThreshold,
 		SdkQueueThreshold:                              *sdkQueueThreshold,
 		IntegrationQueueThreshold:                      *integrationQueueThreshold,
-		FivetranGroupId:                                *fivetranGroupId,
-		FivetranLicenseKey:                             *fivetranLicenseKey,
 		EnableBingAdsAttribution:                       *enableBingAdsAttribution,
 		MonitoringAPIToken:                             *monitoringAPIToken,
 	}

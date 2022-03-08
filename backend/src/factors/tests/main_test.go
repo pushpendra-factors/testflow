@@ -96,6 +96,7 @@ func TestMain(m *testing.M) {
 		AllowProfilesGroupSupport:                       "*",
 		SessionBatchTransactionBatchSize:                50,
 		DisableCRMUniquenessConstraintsCheckByProjectID: "*",
+		AllowEventsFunnelsGroupSupport:                  "*",
 		UseHubspotBatchInsertByProjectID:                "*",
 	}
 	C.InitConf(config)
