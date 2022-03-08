@@ -76,7 +76,7 @@ func EnableBingAdsIntegration(c *gin.Context) (interface{}, int, string, string,
 			}
 			return status, http.StatusOK, "", "", false
 		}
-		return nil, statusCode, "", msg, true
+		return nil, http.StatusNotModified, "", msg, true
 	} else {
 		return nil, statusCode, "", msg, true
 	}
