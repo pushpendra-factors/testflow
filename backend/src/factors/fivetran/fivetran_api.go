@@ -204,27 +204,32 @@ func FiveTranGetConnector(ConnectorId string) (int, string, bool, string) {
 	}
 	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s", ConnectorId), Authorization, nil, "GET")
 	log.Info(response)
+
 	if statusCode == http.StatusOK {
-		paused := response["data"].(map[string]interface{})["paused"].(bool)
-		var accounts []interface{}
-		if paused == false {
-			syncMode, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["sync_mode"]
-			if exists && syncMode == "AllAccounts" {
-				accounts = make([]interface{}, 0)
-				accounts = append(accounts, syncMode)
-			} else {
-				accountsObject, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["accounts"]
-				if exists {
-					accounts = accountsObject.([]interface{})
-				}
-			}
-		}
+		setupcomplete := response["data"].(map[string]interface{})["status"].(map[string]interface{})["setup_state"].(string)
+		paused := true
 		accountArray := ""
-		for _, account := range accounts {
-			if accountArray == "" {
-				accountArray = fmt.Sprintf("%v", account)
-			} else {
-				accountArray = fmt.Sprintf(",%v", account)
+		if setupcomplete == "connected" {
+			paused = response["data"].(map[string]interface{})["paused"].(bool)
+			var accounts []interface{}
+			if paused == false {
+				syncMode, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["sync_mode"]
+				if exists && syncMode == "AllAccounts" {
+					accounts = make([]interface{}, 0)
+					accounts = append(accounts, syncMode)
+				} else {
+					accountsObject, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["accounts"]
+					if exists {
+						accounts = accountsObject.([]interface{})
+					}
+				}
+				for _, account := range accounts {
+					if accountArray == "" {
+						accountArray = fmt.Sprintf("%v", account)
+					} else {
+						accountArray = fmt.Sprintf(",%v", account)
+					}
+				}
 			}
 		}
 		return statusCode, "", !paused, accountArray // return accounts in comma seperated list - statuscode, errstring, status of connector, accounts
