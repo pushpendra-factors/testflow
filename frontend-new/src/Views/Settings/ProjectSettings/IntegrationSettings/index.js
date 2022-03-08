@@ -266,7 +266,8 @@ function IntegrationSettings({
     'solutions@factors.ai',
     'praveen@factors.ai',
     'ashwin@factors.ai',
-    'junaid@factors.ai'
+    'junaid@factors.ai',
+    'janani@factors.ai'
   ];
 
   return (
