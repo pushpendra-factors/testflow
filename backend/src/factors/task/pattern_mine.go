@@ -1167,7 +1167,7 @@ func WriteMetaDataHandler(metaData []ChunkMetaData) {
 	log.Info("metaData written succesfully")
 }
 func WriteMetaData(metaData []ChunkMetaData, metaDataDir string) error {
-	path := metaDataDir + "/metadata.txt"
+	path := metaDataDir + "metadata.txt"
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		mineLog.WithError(err).Error("Failed to open metadata file.")
@@ -1224,6 +1224,7 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 func uploadMetaDataToCloud(metaDataDir, cloudMetaDataDir string, cloudManager *filestore.FileManager) error {
 	files, err := ioutil.ReadDir(metaDataDir)
 	if err != nil {
+		log.WithError(err).Error("failed to read metadata directory")
 		return err
 	}
 	for _, cf := range files {
