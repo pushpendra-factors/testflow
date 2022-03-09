@@ -405,14 +405,16 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 	projectIDs := store.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
 	var mapOfValidDashboardUnits map[uint64]map[uint64]bool
 	var err error
-	if C.GetSkipDashboardCachingAnalytics() == 1 {
-		mapOfValidDashboardUnits, err = model.GetDashboardCacheAnalyticsValidityMap()
+	validUnitCount := int64(0)
+	if C.GetUsageBasedDashboardCaching() == 1 {
+		mapOfValidDashboardUnits, validUnitCount, err = model.GetDashboardCacheAnalyticsValidityMap()
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to pull Dashboard Cached Units in last 14 days")
 			return
 		}
-		logCtx.Info("No of units accessed in last 14 days %d", len(mapOfValidDashboardUnits))
+		logCtx.WithFields(log.Fields{"total_valid_units": validUnitCount}).Info("Total of units accessed in last 14 days - cache")
 	}
+
 	for _, projectID := range projectIDs {
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
 		logCtx.Info("Starting to cache units for the project")
@@ -420,11 +422,11 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 		dashboardUnitIDs := C.GetDashboardUnitIDs(dashboardUnitIDsList)
 		unitsCount := 0
 
-		if C.GetSkipDashboardCachingAnalytics() == 1 {
+		if C.GetUsageBasedDashboardCaching() == 1 {
 
 			var validDashboardIDs []uint64
-			for _, dashboardUnitID := range dashboardUnitIDs {
-				if _, exists := mapOfValidDashboardUnits[projectID]; exists {
+			if _, exists := mapOfValidDashboardUnits[projectID]; exists {
+				for _, dashboardUnitID := range dashboardUnitIDs {
 					if value, exists := mapOfValidDashboardUnits[projectID][dashboardUnitID]; exists {
 						if value {
 							validDashboardIDs = append(validDashboardIDs, dashboardUnitID)
@@ -432,7 +434,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 					}
 				}
 			}
-			logCtx.WithFields(log.Fields{"project_id": projectID, "total_units": len(dashboardUnitIDs), "accessed_units": len(validDashboardIDs)}).Info("Total dashboard units & No of units accessed in last 14 days")
+			log.WithFields(log.Fields{"project_id": projectID, "total_units": len(dashboardUnitIDs), "accessed_units": len(validDashboardIDs)}).Info("Project Report - last 14 days")
 			unitsCount = store.CacheDashboardUnitsForProjectID(projectID, validDashboardIDs, numRoutines, reportCollector)
 
 		} else {
@@ -441,7 +443,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 		}
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
-		logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
+		log.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
 			Infof("Project Report: Time taken for caching %d dashboard units", unitsCount)
 	}
 }
@@ -691,6 +693,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	var err error
 	var errCode int
 	var errMsg string
+	queryTimedOut := false
 	if baseQuery.GetClass() == model.QueryClassFunnel || baseQuery.GetClass() == model.QueryClassInsights {
 		analyticsQuery := baseQuery.(*model.Query)
 		unitReport.Query = analyticsQuery
@@ -715,6 +718,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 				errCode = http.StatusOK
 			}
 		case <-time.After(16 * 60 * time.Second):
+			queryTimedOut = true
 			logCtx.WithFields(log.Fields{"Query": *analyticsQuery, "ErrCode": "UnitRunTimeOut"}).Info("Timeout for the FunnelORInsights unit")
 		}
 
@@ -740,6 +744,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 				errCode = http.StatusOK
 			}
 		case <-time.After(20 * 60 * time.Second):
+			queryTimedOut = true
 			logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": "UnitRunTimeOut"}).Info("Timeout for the attribution unit")
 		}
 
@@ -766,8 +771,13 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 		result, errCode = store.RunProfilesGroupQuery(groupQuery.Queries, projectID)
 	}
 	if errCode != http.StatusOK {
-		logCtx.WithField("QueryClass", baseQuery.GetClass()).WithField("Query", unitReport.Query).Info("failed to run the query for dashboard caching")
-		unitReport.Status = model.CachingUnitStatusFailed
+		if queryTimedOut {
+			logCtx.WithField("QueryClass", baseQuery.GetClass()).WithField("Query", unitReport.Query).Info("query timed out - dashboard caching")
+			unitReport.Status = model.CachingUnitStatusTimeout
+		} else {
+			unitReport.Status = model.CachingUnitStatusFailed
+			logCtx.WithField("QueryClass", baseQuery.GetClass()).WithField("Query", unitReport.Query).Info("failed to run the query for dashboard caching")
+		}
 		unitReport.TimeTaken = U.TimeNowUnix() - startTime
 		unitReport.TimeTakenStr = U.SecondsToHMSString(unitReport.TimeTaken)
 		return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg), unitReport

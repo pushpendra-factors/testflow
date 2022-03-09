@@ -54,7 +54,7 @@ func main() {
 	// better to have 0 or 1 values instead of false/true
 	onlyAttribution := flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
 	skipAttribution := flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
-	skipDashboardCachingAnalytics := flag.Int("skip_dashboard_caching_analytics", 0, "Skip the dashboard caching analytics for 14 days limit.")
+	enableUsageBasedDashboardCaching := flag.Int("enable_usage_based_caching", 0, "Usage based dashboard caching analytics for 14 days limit.")
 
 	runningForMemsql := flag.Int("running_for_memsql", 0, "Disable routines for memsql.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -88,7 +88,7 @@ func main() {
 	} else if *numRoutinesFlag == 0 {
 		panic(fmt.Errorf("Num routines must at least be 1"))
 	} else if *dashboardUnitIDFlag == "" {
-		panic(fmt.Errorf("Invalid dashboard unit id %s", *dashboardUnitIDFlag))
+		panic(fmt.Errorf("invalid dashboard unit id %s", *dashboardUnitIDFlag))
 	}
 
 	logCtx.Info("Starting to initialize database.")
@@ -132,7 +132,7 @@ func main() {
 		SkipUserJoinInEventQueryByProjectID: *skipUserJoinInEventQueryByProjectID,
 		DebugEnabled:                        *debugEnabled,
 		ResourcePoolForAnalytics:            *resourcePoolForAnalytics,
-		SkipDashboardCachingAnalytics:		 *skipDashboardCachingAnalytics,
+		UsageBasedDashboardCaching:          *enableUsageBasedDashboardCaching,
 	}
 
 	C.InitConf(config)
@@ -190,6 +190,7 @@ func main() {
 
 	slowUnits := model.GetNSlowestUnits(allUnitReports, 3)
 	failedUnits := model.GetFailedUnitsByProject(allUnitReports)
+	timedOutUnits := model.GetTimedOutUnitsByProject(allUnitReports)
 	slowProjects := model.GetNSlowestProjects(allUnitReports, 5)
 	failed, passed, notComputed := model.GetTotalFailedComputedNotComputed(allUnitReports)
 
@@ -199,18 +200,18 @@ func main() {
 	logCtx.Info(notifyMessage)
 
 	status := map[string]interface{}{
-		"Summary":              notifyMessage,
-		"TotalFailed":          failed,
-		"TotalPassed":          passed,
-		"TotalNotComputed":     notComputed,
-		"Top3SlowUnits":        slowUnits,
-		"FailedUnitsByProject": failedUnits,
-		"Top5SlowProjects":     slowProjects,
+		"Summary":                notifyMessage,
+		"TotalFailed":            failed,
+		"TotalPassed":            passed,
+		"TotalNotComputed":       notComputed,
+		"Top3SlowUnits":          slowUnits,
+		"FailedUnitsByProject":   failedUnits,
+		"TimedOutUnitsByProject": timedOutUnits,
+		"Top5SlowProjects":       slowProjects,
 	}
 	C.PingHealthcheckForSuccess(healthcheckPingID, status)
 
 	slowUnits = model.GetNSlowestUnits(allUnitReports, 20)
-	failedUnits = model.GetFailedUnitsByProject(allUnitReports)
 	slowProjects = model.GetNSlowestProjects(allUnitReports, 10)
 
 	logCtx.WithFields(log.Fields{
@@ -220,9 +221,10 @@ func main() {
 		"TotalFailed":                   failed,
 		"TotalPassed":                   passed,
 		"TotalNotComputed":              notComputed,
-		"Top3SlowUnits":                 slowUnits,
+		"Top20SlowUnits":                slowUnits,
 		"FailedUnitsByProject":          failedUnits,
-		"Top5SlowProjects":              slowProjects}).Info("Final Caching Job Report")
+		"TimedOutUnitsByProject":        timedOutUnits,
+		"Top10SlowProjects":             slowProjects}).Info("Final Caching Job Report")
 
 }
 
