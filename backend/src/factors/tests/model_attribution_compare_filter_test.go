@@ -23,10 +23,6 @@ func TestAttributionModelCompare(t *testing.T) {
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
-	// Should not return error for no adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.Nil(t, err)
-
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
@@ -88,7 +84,7 @@ func TestAttributionModelCompare(t *testing.T) {
 			QueryType:                     model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -108,7 +104,7 @@ func TestAttributionModelCompare(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -138,7 +134,7 @@ func TestAttributionModelCompare(t *testing.T) {
 			QueryType:                     model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -167,7 +163,7 @@ func TestAttributionModelCompare(t *testing.T) {
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -258,10 +254,6 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
-	// Should not return error for no adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.Nil(t, err)
-
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
@@ -326,7 +318,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -350,7 +342,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -373,7 +365,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -396,7 +388,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -429,7 +421,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -457,7 +449,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -507,7 +499,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -556,7 +548,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))

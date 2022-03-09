@@ -101,10 +101,6 @@ func TestAttributionModel(t *testing.T) {
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
-	// Should not return error for non adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.Nil(t, err)
-
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
@@ -162,7 +158,7 @@ func TestAttributionModel(t *testing.T) {
 			LookbackDays:           10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -177,7 +173,7 @@ func TestAttributionModel(t *testing.T) {
 			LookbackDays:           10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -201,7 +197,7 @@ func TestAttributionModel(t *testing.T) {
 			LookbackDays:           10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -224,7 +220,7 @@ func TestAttributionModel(t *testing.T) {
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -242,10 +238,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
-
-	// Should not return error for no adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.Nil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
@@ -303,7 +295,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -319,7 +311,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -343,7 +335,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -367,7 +359,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -383,10 +375,6 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 	H.InitAppRoutes(r)
 
 	project, err := SetupProjectReturnDAO()
-	assert.Nil(t, err)
-
-	// Should not return error for no adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
 	assert.Nil(t, err)
 
 	addMarketingData(t, project)
@@ -424,7 +412,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, "adwords", result.Rows[1][0])
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
@@ -444,7 +432,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, "google", result.Rows[1][0])
 
@@ -461,7 +449,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, "Paid Search", result.Rows[1][0])
 	})
@@ -477,7 +465,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		// Conversion.
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
@@ -497,7 +485,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		// Added keys.
 		assert.Equal(t, "adwords", result.Rows[1][0])

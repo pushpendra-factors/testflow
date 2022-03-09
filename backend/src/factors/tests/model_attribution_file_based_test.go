@@ -50,9 +50,6 @@ func TestAttributionModelFile(t *testing.T) {
 	assert.Nil(t, err)
 
 	customerAccountId := U.RandomLowerAphaNumString(5)
-	// Should not return error for no adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.Nil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
@@ -105,7 +102,7 @@ func TestAttributionModelFile(t *testing.T) {
 	//Update user1 and user2 properties with latest campaign
 	t.Run("AttributionQueryFileBased", func(t *testing.T) {
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, &query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &query)
 		assert.Nil(t, err)
 		for _, row := range resultRows {
 			assert.Equal(t, row.Conversion, getConversionUserCount(query.AttributionKey, result, row.AttributionKey))
