@@ -12,9 +12,9 @@ import OtherIntegrations from './OtherIntegrations';
 import { useHistory } from 'react-router-dom';
 import Lottie from 'react-lottie';
 import setupAssistData from '../../../assets/lottie/Final Jan 3 Setupassist.json'
-import { fetchProjectSettingsV1, getHubspotContact } from 'Reducers/global';
+import { fetchProjectSettingsV1, getHubspotContact, fetchBingAdsIntegration } from 'Reducers/global';
 
-const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSettingsV1, getHubspotContact}) => {
+const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSettingsV1, getHubspotContact, bingAds, fetchBingAdsIntegration}) => {
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
     const [ownerID, setownerID] = useState();
@@ -48,6 +48,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
         fetchProjectSettingsV1(activeProject.id).then((res) => {
             setsdkCheck(res.data.int_completed);
         });
+        fetchBingAdsIntegration(activeProject.id);
     }, [activeProject, sdkCheck]);
 
     integration = integration?.project_settings || integration;
@@ -60,7 +61,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
     integration?.int_salesforce_enabled_agent_uuid ||
     integration?.int_drift ||
     integration?.int_google_organic_enabled_agent_uuid ||
-    integration?.int_clear_bit || sdkCheck;
+    integration?.int_clear_bit || sdkCheck || bingAds?.accounts;
 
     return (
         <>
@@ -142,7 +143,8 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
     currentAgent: state.agent.agent_details,
-    integration: state.global.currentProjectSettings
+    integration: state.global.currentProjectSettings,
+    bingAds: state.global.bingAds,
 });
 
-export default connect(mapStateToProps, { fetchProjectSettingsV1, getHubspotContact })(SetupAssist);
+export default connect(mapStateToProps, { fetchProjectSettingsV1, getHubspotContact, fetchBingAdsIntegration })(SetupAssist);

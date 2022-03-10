@@ -1365,7 +1365,6 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 	for rows.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
-		log.WithField("cur2", currentRecord).Warn("kark3-2")
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
 
@@ -1383,7 +1382,6 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 	for rows.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
-		log.WithField("cur2", currentRecord).Warn("kark3-1")
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
 	return channelDocumentsCampaign, channelDocumentsAdGroup

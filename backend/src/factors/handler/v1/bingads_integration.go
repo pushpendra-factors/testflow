@@ -64,19 +64,19 @@ func EnableBingAdsIntegration(c *gin.Context) (interface{}, int, string, string,
 	}
 	statusCode, msg := fivetran.FiveTranPatchConnector(connectorId)
 	if statusCode == http.StatusOK {
-		statusCode, _, _, accounts := fivetran.FiveTranGetConnector(connectorId)
-		if statusCode == http.StatusOK {
+		statusCode, _, status, accounts := fivetran.FiveTranGetConnector(connectorId)
+		if statusCode == http.StatusOK && status == true && accounts != "" {
 			err := store.GetStore().EnableFiveTranMapping(projectID, model.BingAdsIntegration, connectorId, accounts)
 			if err != nil {
 				log.WithError(err).Error("Failed to enable connector from db")
 				return nil, http.StatusPartialContent, "", err.Error(), true
 			}
 			status := Status{
-				Status: true,
+				Status: status,
 			}
 			return status, http.StatusOK, "", "", false
 		}
-		return nil, statusCode, "", msg, true
+		return nil, http.StatusNotModified, "", msg, true
 	} else {
 		return nil, statusCode, "", msg, true
 	}

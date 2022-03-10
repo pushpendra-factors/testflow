@@ -110,9 +110,9 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
             userProperties.forEach((prop) => {if(prop[1]?.startsWith('$hubspot_contact')){tchUserProps.push(prop)}})
         } else if(tchType === '3') {
             eventProperties[eventToCall]? 
-                eventProperties[eventToCall].forEach((prop) => {if(prop[1]?.startsWith('$salesforce_campaignmember')){eventProps.push(prop)}}) : null;
+                eventProperties[eventToCall].forEach((prop) => {if(prop[1]?.startsWith('$salesforce_campaign')){eventProps.push(prop)}}) : null;
             userProperties.forEach((prop) => {
-                if(prop[1]?.startsWith('$salesforce_campaignmember')){tchUserProps.push(prop)}
+                if(prop[1]?.startsWith('$salesforce_campaign')){tchUserProps.push(prop)}
             });
         }
         

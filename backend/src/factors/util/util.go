@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -1124,6 +1125,36 @@ func GetkeyFromRow(row []interface{}) string {
 	}
 
 	return key
+}
+
+func RemoveElementFromArray(inputArray []string, value string) []string {
+	finalArray := make([]string, 0)
+	for _, ele := range inputArray {
+		if value != ele {
+			finalArray = append(finalArray, ele)
+		}
+	}
+	return finalArray
+}
+
+func SafeAddition(val1 interface{}, val2 interface{}) (interface{}, error) {
+	if reflect.TypeOf(val1) != reflect.TypeOf(val1) {
+		return float64(0), errors.New("Wrong types passed.")
+	}
+	switch val1.(type) {
+	case float64:
+		return val1.(float64) + val2.(float64), nil
+	case float32:
+		return val1.(float32) + val2.(float32), nil
+	case int:
+		return val1.(int) + val2.(int), nil
+	case int32:
+		return val1.(int32) + val2.(int32), nil
+	case int64:
+		return val1.(int64) + val2.(int64), nil
+	}
+	log.WithField("val1", val1).WithField("val2", val2).Error("Default value is taken for val1, val2.")
+	return float64(0), errors.New("Default value is taken for val1, val2.")
 }
 
 // Sorted the rows on basis of initial values to the final.
