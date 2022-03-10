@@ -257,19 +257,6 @@ function IntegrationSettings({
     });
   }, [activeProject]);
 
-  const whiteListedAccounts_BING = [
-    'jitesh@factors.ai',
-    'kartheek@factors.ai',
-    'baliga@factors.ai',
-    'praveenr@factors.ai',
-    'sonali@factors.ai',
-    'solutions@factors.ai',
-    'praveen@factors.ai',
-    'ashwin@factors.ai',
-    'junaid@factors.ai',
-    'janani@factors.ai'
-  ];
-
   return (
     <>
       <ErrorBoundary
@@ -298,12 +285,6 @@ function IntegrationSettings({
                 <Skeleton active paragraph={{ rows: 4 }} />
               ) : (
                 IntegrationProviderData.map((item, index) => {
-                  // Flag for bing ads
-                  if (
-                    item.name === 'Bing Ads' && !whiteListedAccounts_BING.includes(currentAgent.email)
-                  ) {
-                    return null;
-                  } else {
                   return (
                     <IntegrationCard
                       item={item}
@@ -312,7 +293,6 @@ function IntegrationSettings({
                       currentProjectSettings={currentProjectSettings}
                     />
                   );
-                  }
                 })
               )}
             </Col>
