@@ -253,6 +253,7 @@ func main() {
 		return
 	}
 
+	C.InitMonitoringAPIServices(config)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitFilemanager(*bucketName, *env, config)
 	if !C.IsDevelopment() {

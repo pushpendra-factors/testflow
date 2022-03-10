@@ -10,6 +10,7 @@ import (
 	"factors/model/store"
 	mqlStore "factors/model/store/memsql"
 	"factors/sdk"
+	U "factors/util"
 	"fmt"
 	"io/ioutil"
 
@@ -42,7 +43,6 @@ func Monitoring(c *gin.Context) {
 	}
 
 	tableSizes := store.GetStore().CollectTableSizes()
-
 	monitoringPayload := map[string]interface{}{
 		"factors_slow_queries_count":                     len(factorsSlowQueries),
 		"sqlAdmin_slow_queries_count":                    len(sqlAdminSlowQueries),
@@ -64,8 +64,8 @@ func Monitoring(c *gin.Context) {
 		"sdk_assets_url_status":                          message,
 
 		// Using z_ to push the fields to end of the response. Limited to 100 queries.
-		"z_factors_slow_queries":   factorsSlowQueries[:100],
-		"z_sql_admin_slow_queries": sqlAdminSlowQueries[:100],
+		"z_factors_slow_queries":   factorsSlowQueries[:U.MinInt(100, len(factorsSlowQueries))],
+		"z_sql_admin_slow_queries": sqlAdminSlowQueries[:U.MinInt(100, len(sqlAdminSlowQueries))],
 	}
 	if C.UseMemSQLDatabaseStore() {
 		monitoringPayload["memsqlNodeUsageStats"] = nodeUsageStatsWithErrors
