@@ -43,57 +43,65 @@ func BingAdsIntegration(projectId uint64, configs map[string]interface{}) (map[s
 
 	totalSuccess := 0
 	totalFailures := 0
+	PAGE_SIZE := 1000
 	for docType, baseQuery := range model.BingAdsDocumentToQuery {
-		success := 0
-		failures := 0
-		query := model.GetBingAdsDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, baseQuery, executionDateString, docType)
-		var queryResult [][]string
-		err = BQ.ExecuteQuery(&ctx, client, query, &queryResult)
-		if err != nil {
-			resultStatus["failure-"+docType] = "Error while executing query" + err.Error()
-			status = false
-			log.WithError(err).Error("Error while executing query")
-		}
-		for _, line := range queryResult {
-			values := model.GetBingAdsDocumentValues(docType, line)
-			valuesBlob, err := U.EncodeToPostgresJsonb(&values)
+		offset := 0
+		for {
+			success := 0
+			failures := 0
+			query := model.GetBingAdsDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, baseQuery, executionDateString, docType, PAGE_SIZE, offset)
+			var queryResult [][]string
+			err = BQ.ExecuteQuery(&ctx, client, query, &queryResult)
 			if err != nil {
-				log.WithError(err).Error("Error while encoding to jsonb")
-				failures++
+				resultStatus["failure-"+docType] = "Error while executing query" + err.Error()
+				status = false
+				log.WithError(err).Error("Error while executing query")
+			}
+			for _, line := range queryResult {
+				values := model.GetBingAdsDocumentValues(docType, line)
+				valuesBlob, err := U.EncodeToPostgresJsonb(&values)
+				if err != nil {
+					log.WithError(err).Error("Error while encoding to jsonb")
+					failures++
+					break
+				}
+				intDocument := model.IntegrationDocument{
+					DocumentId:        model.GetBingAdsDocumentDocumentId(model.BingadsDocumentTypeAlias[docType], line),
+					ProjectID:         projectId,
+					CustomerAccountID: model.GetBingAdsDocumentAccountId(model.BingadsDocumentTypeAlias[docType], line),
+					Source:            model.BingAdsIntegration,
+					DocumentType:      model.GetBingAdsDocumentDocumentType(docType),
+					Timestamp:         executionDateStringYYYYMMDD,
+					Value:             valuesBlob,
+				}
+				if docType == "campaigns" || docType == "ad_groups" || docType == "keyword" || docType == "account" {
+					err := store.GetStore().UpsertIntegrationDocument(intDocument)
+					if err != nil {
+						log.WithError(err).Error("Error upserting integration document")
+						failures++
+					} else {
+						success++
+					}
+				} else {
+					err := store.GetStore().InsertIntegrationDocument(intDocument)
+					if err != nil {
+						log.WithError(err).Error("Error inserting integration document")
+						failures++
+					} else {
+						success++
+					}
+				}
+			}
+
+			resultStatus["failure-"+docType] = failures
+			resultStatus["success-"+docType] = success
+			totalFailures = totalFailures + failures
+			totalSuccess = totalSuccess + success
+			if len(queryResult) < PAGE_SIZE {
 				break
 			}
-			intDocument := model.IntegrationDocument{
-				DocumentId:        model.GetBingAdsDocumentDocumentId(model.BingadsDocumentTypeAlias[docType], line),
-				ProjectID:         projectId,
-				CustomerAccountID: model.GetBingAdsDocumentAccountId(model.BingadsDocumentTypeAlias[docType], line),
-				Source:            model.BingAdsIntegration,
-				DocumentType:      model.GetBingAdsDocumentDocumentType(docType),
-				Timestamp:         executionDateStringYYYYMMDD,
-				Value:             valuesBlob,
-			}
-			if docType == "campaigns" || docType == "ad_groups" || docType == "keyword" || docType == "account" {
-				err := store.GetStore().UpsertIntegrationDocument(intDocument)
-				if err != nil {
-					log.WithError(err).Error("Error upserting integration document")
-					failures++
-				} else {
-					success++
-				}
-			} else {
-				err := store.GetStore().InsertIntegrationDocument(intDocument)
-				if err != nil {
-					log.WithError(err).Error("Error inserting integration document")
-					failures++
-				} else {
-					success++
-				}
-			}
+			offset = offset + PAGE_SIZE
 		}
-
-		resultStatus["failure-"+docType] = failures
-		resultStatus["success-"+docType] = success
-		totalFailures = totalFailures + failures
-		totalSuccess = totalSuccess + success
 	}
 	var accounts [][]string
 	accountsQuery := model.GetAllAccountsQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID)
