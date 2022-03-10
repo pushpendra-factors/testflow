@@ -66,7 +66,7 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
-		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "")
+		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
@@ -112,11 +112,11 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
+		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
+		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestAttributionModelCompare(t *testing.T) {
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event2", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
@@ -202,7 +202,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
-	_, errCode = createSession(project.ID, createdUserID1, timestamp+4*U.SECONDS_IN_A_DAY, "", "", "", "", "")
+	_, errCode = createSession(project.ID, createdUserID1, timestamp+4*U.SECONDS_IN_A_DAY, "", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	userEventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "event1"})
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -234,7 +234,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 		UserId: createdUserID1, Timestamp: timestamp + 5*U.SECONDS_IN_A_DAY})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = createSession(project.ID, createdUserID1, timestamp+8*U.SECONDS_IN_A_DAY, "campaign1", "", "", "", "")
+	_, errCode = createSession(project.ID, createdUserID1, timestamp+8*U.SECONDS_IN_A_DAY, "campaign1", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	query.From = timestamp + 5*U.SECONDS_IN_A_DAY
 
@@ -297,7 +297,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
-		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "")
+		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
@@ -396,11 +396,11 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
+		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
+		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
@@ -460,7 +460,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event2", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {

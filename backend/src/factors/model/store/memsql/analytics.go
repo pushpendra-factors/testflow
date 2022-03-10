@@ -78,6 +78,20 @@ func getPropertyEntityField(projectID uint64, groupProp model.QueryGroupByProper
 	return ""
 }
 
+// returns statement and parameters to pull content group values from event table
+func getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap map[string]string) (rStmnt string, rParams []interface{}, err error) {
+
+	caseSelectStmt := "CASE WHEN JSON_EXTRACT_STRING(sessions.properties, ?) IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
+	for name, dummyName := range contentGroupNamesToDummyNamesMap {
+		rStmnt = rStmnt + caseSelectStmt + " AS " + dummyName + " ,"
+		qParams := []interface{}{name, model.PropertyValueNone, name, model.PropertyValueNone, name}
+		rParams = append(rParams, qParams...)
+	}
+
+	return rStmnt, rParams, nil
+}
+
 func as(asName, asQuery string) string {
 	logFields := log.Fields{
 		"as_name":  asName,
