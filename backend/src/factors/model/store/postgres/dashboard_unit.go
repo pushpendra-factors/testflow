@@ -307,13 +307,14 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 	projectIDs := pg.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
 	var mapOfValidDashboardUnits map[uint64]map[uint64]bool
 	var err error
-	if C.GetSkipDashboardCachingAnalytics() == 1 {
-		mapOfValidDashboardUnits, err = model.GetDashboardCacheAnalyticsValidityMap()
+	validUnitCount := int64(0)
+	if C.GetUsageBasedDashboardCaching() == 1 {
+		mapOfValidDashboardUnits, validUnitCount, err = model.GetDashboardCacheAnalyticsValidityMap()
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to pull Dashboard Cached Units in last 14 days")
 			return
 		}
-		logCtx.WithFields(log.Fields{"total_units": len(mapOfValidDashboardUnits)}).Info("No of units accessed in last 14 days for all projects")
+		logCtx.WithFields(log.Fields{"total_valid_units": validUnitCount}).Info("Total of units accessed in last 14 days - cache")
 	}
 	for _, projectID := range projectIDs {
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
@@ -322,10 +323,10 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 		dashboardUnitIDs := C.GetDashboardUnitIDs(dashboardUnitIDsList)
 		unitsCount := 0
 
-		if C.GetSkipDashboardCachingAnalytics() == 1 {
+		if C.GetUsageBasedDashboardCaching() == 1 {
 			var validDashboardIDs []uint64
-			for _, dashboardUnitID := range dashboardUnitIDs {
-				if _, exists := mapOfValidDashboardUnits[projectID]; exists {
+			if _, exists := mapOfValidDashboardUnits[projectID]; exists {
+				for _, dashboardUnitID := range dashboardUnitIDs {
 					if value, exists := mapOfValidDashboardUnits[projectID][dashboardUnitID]; exists {
 						if value {
 							validDashboardIDs = append(validDashboardIDs, dashboardUnitID)
@@ -333,7 +334,7 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 					}
 				}
 			}
-			logCtx.WithFields(log.Fields{"project_id": projectID, "total_units": len(dashboardUnitIDs), "accessed_units": len(validDashboardIDs)}).Info("Total dashboard units & No of units accessed in last 14 days")
+			log.WithFields(log.Fields{"project_id": projectID, "total_units": len(dashboardUnitIDs), "accessed_units": len(validDashboardIDs)}).Info("Project Report - last 14 days")
 			unitsCount = pg.CacheDashboardUnitsForProjectID(projectID, validDashboardIDs, numRoutines, reportCollector)
 		} else {
 			unitsCount = pg.CacheDashboardUnitsForProjectID(projectID, dashboardUnitIDs, numRoutines, reportCollector)
@@ -342,7 +343,7 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
-		logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
+		log.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
 			Infof("Project Report: Time taken for caching %d dashboard units", unitsCount)
 	}
 }

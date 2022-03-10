@@ -53,9 +53,10 @@ var (
 	}
 
 	salesforceDataTypeNumerical = map[string]bool{
-		"double": true,
-		"int":    true,
-		"long":   true,
+		"double":   true,
+		"int":      true,
+		"long":     true,
+		"currency": true,
 	}
 )
 

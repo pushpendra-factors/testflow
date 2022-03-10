@@ -1213,9 +1213,6 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) {
 				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
 				conversionFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(conversionFunnelConversionCPC[j]+grandTotalRow[i].(float64), U.DefaultPrecision)
-			} else {
-				spendFunnelConversionCPC[j] = float64(0)
-				conversionFunnelConversionCPC[j] = float64(0)
 			}
 
 			if grandTotalRow[keyIndex+12].(float64) > 0 {
