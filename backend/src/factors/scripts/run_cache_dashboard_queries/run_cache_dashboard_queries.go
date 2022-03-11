@@ -43,7 +43,7 @@ func main() {
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	onlyWebAnalytics := flag.Int("only_web_analytics", 0, "Cache only web analytics dashboards.")
-	skipWebAnalytics := flag.Int("only_web_analytics", 0, "Skip Caching for web analytics dashboards.")
+	skipWebAnalytics := flag.Int("skip_web_analytics", 0, "Skip Caching for web analytics dashboards.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
