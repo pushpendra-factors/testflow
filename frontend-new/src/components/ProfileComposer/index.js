@@ -15,10 +15,9 @@ import {
 import GLobalFilter from './GlobalFilter';
 import MomentTz from 'Components/MomentTz';
 import FaSelect from '../FaSelect';
-import {
-  ProfileGroupMapper,
-  revProfileGroupMapper,
-} from '../../utils/constants';
+import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
+import { useDispatch } from 'react-redux';
+import { PropTextFormat } from '../../utils/dataFormatter';
 
 function ProfileComposer({
   queries,
@@ -37,14 +36,19 @@ function ProfileComposer({
   const [isDDVisible, setDDVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDatePickerStr, setShowDatePickerStr] = useState('Select Date');
+  const dispatch = useDispatch();
+  const groupState = useSelector((state) => state.groups);
 
-  const groupOptions = [
-    ['Users'],
-    ['Salesforce Opportunity'],
-    ['Salesforce Accounts'],
-    ['Hubspot Deals'],
-    ['Hubspot Companies'],
-  ];
+  const groupOpts = groupState?.data;
+
+  const enabledGroups = () => {
+    let groups = [['Users', 'users']];
+    groupOpts?.forEach((elem) => {
+      const formatName = PropTextFormat(elem.name);
+      groups.push([formatName, elem.name]);
+    });
+    return groups;
+  };
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -55,16 +59,34 @@ function ProfileComposer({
 
   const setGroupAnalysis = (group) => {
     const opts = Object.assign({}, queryOptions);
-    opts.group_analysis = ProfileGroupMapper[group]
-      ? ProfileGroupMapper[group]
-      : group;
+    opts.group_analysis = group;
+    opts.globalFilters = [];
+    dispatch({
+      type: INITIALIZE_GROUPBY,
+      payload: {
+        global: [],
+        event: [],
+      },
+    });
     setQueryOptions(opts);
+  };
+
+  const resetLabel = (group) => {
+    const query = Object.assign({}, queries);
+    query.label = group.toLowerCase().includes('salesforce')
+      ? 'salesforce'
+      : group.toLowerCase().includes('hubspot')
+      ? 'hubspot'
+      : 'web';
+    query.alias = '';
+    query.filters = [];
+    setQueries([query]);
   };
 
   const onChange = (value) => {
     setGroupAnalysis(value);
+    resetLabel(value);
     setDDVisible(false);
-    setQueries([]);
   };
 
   const triggerDropDown = () => {
@@ -77,9 +99,9 @@ function ProfileComposer({
         {isDDVisible ? (
           <FaSelect
             extraClass={`${styles.groupsection_dropdown_menu}`}
-            options={groupOptions}
+            options={enabledGroups()}
             onClickOutside={() => setDDVisible(false)}
-            optionClick={(val) => onChange(val[0])}
+            optionClick={(val) => onChange(val[1])}
           ></FaSelect>
         ) : null}
       </div>
@@ -111,9 +133,7 @@ function ProfileComposer({
                   weight={'bold'}
                   extraClass={`m-0 mr-1`}
                 >
-                  {queryOptions?.group_analysis
-                    ? revProfileGroupMapper[queryOptions.group_analysis]
-                    : 'Select Group'}
+                  {PropTextFormat(queryOptions.group_analysis)}
                 </Text>
                 <SVG name='caretDown' />
               </div>
@@ -140,6 +160,8 @@ function ProfileComposer({
             queries={queries}
             eventChange={eventChange}
             groupAnalysis={queryOptions.group_analysis}
+            queryOptions={queryOptions}
+            setQueryOptions={setQueryOptions}
           ></ProfileBlock>
         </div>
       );
@@ -155,6 +177,8 @@ function ProfileComposer({
             eventChange={eventChange}
             groupBy={queryOptions.groupBy}
             groupAnalysis={queryOptions.group_analysis}
+            queryOptions={queryOptions}
+            setQueryOptions={setQueryOptions}
           ></ProfileBlock>
         </div>
       );
@@ -290,7 +314,9 @@ function ProfileComposer({
                       }}
                     >
                       <SVG name={'calendar'} size={16} extraClass={'mr-1'} />
-                      {showDatePickerStr}
+                      {MomentTz(queryOptions?.date_range?.from).format(
+                        'MMM DD, YYYY'
+                      )}
                     </Button>
                   ) : (
                     <Button>
