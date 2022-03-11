@@ -264,6 +264,7 @@ type Model interface {
 	GetHubspotDocumentByTypeAndActions(projectId uint64, ids []string, docType int, actions []int) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDocumentByFilter(projectId uint64, id string, docType, action int) (*model.HubspotDocument, int)
 	CreateHubspotDocument(projectID uint64, document *model.HubspotDocument) int
+	CreateHubspotDocumentInBatch(projectID uint64, docType int, documents []*model.HubspotDocument, batchSize int) int
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
 	GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int)
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
@@ -533,6 +534,7 @@ type Model interface {
 	GetGroup(projectID uint64, groupName string) (*model.Group, int)
 	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
+	GetGroups(projectID uint64) ([]model.Group, int)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID uint64, channelName string) (int, error)
@@ -558,6 +560,7 @@ type Model interface {
 	GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, error)
 	PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string, Accounts string) error
 	GetAllActiveFiveTranMappingByIntegration(Integration string) ([]model.FivetranMappings, error)
+	UpdateFiveTranMappingAccount(ProjectID uint64, Integration string, ConnectorId string, Accounts string) error
 
 	//leadgen
 	GetLeadgenSettingsForProject(projectID uint64) ([]model.LeadgenSettings, error)

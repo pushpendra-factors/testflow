@@ -87,7 +87,6 @@ func (pg *Postgres) executeForResults(projectID uint64, queries []model.Query, k
 			finalResult.Headers = results[0].Headers
 			return finalResult
 		}
-		// log.WithField("results", results).WithField("queries", queries).Warn("kark7")
 		results = model.TransformResultsToKPIResults(results, hasGroupByTimestamp, hasAnyGroupBy, displayCategory, kpiQuery.Timezone)
 		finalResult = *results[0]
 	} else {

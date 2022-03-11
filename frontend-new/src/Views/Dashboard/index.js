@@ -15,10 +15,11 @@ import EmptyDashboard from './EmptyDashboard';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration'
 import ProjectDropdown from './ProjectDropdown';
 import { connect } from 'react-redux';
-import { fetchProjectSettingsV1, fetchDemoProject } from 'Reducers/global';
+import { fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration } from 'Reducers/global';
 import { useHistory } from 'react-router-dom';
+import { Spin } from 'antd';
 
-function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
+function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
@@ -26,16 +27,10 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
   const [sdkCheck, setsdkCheck] = useState();
   const { dashboards } = useSelector((state) => state.dashboard);
   let integration = useSelector((state) => state.global.currentProjectSettings);
-  const activeProject = useSelector((state) => state.global.active_project) 
+  const activeProject = useSelector((state) => state.global.active_project);
+  const { bingAds } = useSelector((state) => state.global)
   const dispatch = useDispatch();
   const history = useHistory();
-  const [loading, setloading] = useState(false);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setloading(true);
-    }, 400);
-  }, [activeProject])
 
   useEffect(() => {
       fetchProjectSettingsV1(activeProject.id).then((res) => {
@@ -43,7 +38,8 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
       }).catch((err) => {
         console.log(err.data.error)
         history.push('/');
-    })
+      });
+      fetchBingAdsIntegration(activeProject.id);
   }, [activeProject, sdkCheck]);
 
   integration = integration?.project_settings || integration;
@@ -56,7 +52,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
   integration?.int_salesforce_enabled_agent_uuid ||
   integration?.int_drift ||
   integration?.int_google_organic_enabled_agent_uuid ||
-  integration?.int_clear_bit || sdkCheck;
+  integration?.int_clear_bit || sdkCheck || bingAds?.accounts;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -99,6 +95,14 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
       dispatch({ type: DASHBOARD_UNMOUNTED });
     };
   }, [dispatch]);
+
+  if (dashboards.loading) {
+    return (
+      <div className='flex justify-center items-center w-full h-64'>
+        <Spin size='large' />
+      </div>
+    );
+  }
 
   if (dashboards.data.length) {
     return (
@@ -148,7 +152,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
     return (
       <>
         {checkIntegration ?
-          loading ? <>
+          <>
             <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal} />
             <AddDashboard
               setEditDashboard={setEditDashboard}
@@ -156,12 +160,12 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject }) {
               addDashboardModal={addDashboardModal}
               setaddDashboardModal={setaddDashboardModal}
             />
-          </> : null
-          : loading ? <EmptyDashboard /> : null
+          </>
+          : <EmptyDashboard />
         }
-      </>
+      </> 
     );
   }
 }
 
-export default connect(null,{ fetchProjectSettingsV1, fetchDemoProject })(Dashboard);
+export default connect(null,{ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration })(Dashboard);

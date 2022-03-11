@@ -7,6 +7,7 @@ import { useHistory } from 'react-router-dom';
 import queryString from 'query-string';
 import { activate } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
+import styles from './index.module.scss';
 
 function Activate(props) {
   const [form] = Form.useForm();
@@ -50,7 +51,7 @@ function Activate(props) {
   return (
     <>
       <div className={'fa-container'}>
-            <Row justify={'center'}>
+            <Row justify={'center'} className={`${styles.start}`}>
                 <Col span={12} >
                     <div className={'flex flex-col justify-center items-center login-container'}>
                     <Form
@@ -150,7 +151,9 @@ function Activate(props) {
                     </div>
                 </Col>
             </Row>
+            <div className={`${styles.hide}`}>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
+            </div>
       </div>
 
     </>

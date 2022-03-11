@@ -128,6 +128,18 @@ spec:
           - $(GCP_PROJECT_LOCATION)
           - --attribution_debug
           - 0
+          -  --queue_redis_host
+          - $(QUEUE_REDIS_HOST)
+          - --queue_redis_port
+          - $(QUEUE_REDIS_PORT)
+          - --sdk_queue_threshold
+          - "50000"
+          - --integration_queue_threshold
+          - "20000"
+          - --slow_queries_threshold
+          - "75"
+          - --delayed_task_threshold
+          - "2000"
           - --whitelisted_projects_ids_event_user_cache
           - "2,37"
         env:
@@ -151,6 +163,8 @@ spec:
             name: config-persistent-redis
         - configMapRef:
             name: config-add-session-job
+        - configMapRef:
+            name: config-queue-redis
         - secretRef:
             name: secret-postgres
         - secretRef:

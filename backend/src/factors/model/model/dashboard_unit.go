@@ -48,6 +48,7 @@ const (
 	CachingUnitNormal            = 0
 	CachingUnitWebAnalytics      = 1
 	CachingUnitStatusFailed      = -1
+	CachingUnitStatusTimeout     = -2
 	CachingUnitStatusNotComputed = 0
 	CachingUnitStatusPassed      = 1
 )
@@ -217,6 +218,35 @@ func GetFailedUnitsByProject(cacheReports []CachingUnitReport) map[uint64][]Fail
 		}
 	}
 	return projectFailedUnits
+}
+
+func GetTimedOutUnitsByProject(cacheReports []CachingUnitReport) map[uint64][]FailedDashboardUnitReport {
+
+	var units []CachingUnitReport
+	U.DeepCopy(&cacheReports, &units)
+
+	sort.Slice(units, func(i, j int) bool {
+		return units[i].TimeTaken > units[j].TimeTaken
+	})
+
+	projectTimedOutUnits := make(map[uint64][]FailedDashboardUnitReport)
+	for _, unit := range cacheReports {
+		if unit.Status == CachingUnitStatusTimeout {
+			timedOutUnit := FailedDashboardUnitReport{
+				DashboardID: unit.DashboardID,
+				UnitID:      unit.UnitID,
+				QueryClass:  unit.QueryClass,
+				QueryRange:  unit.QueryRange,
+			}
+			if value, exists := projectTimedOutUnits[unit.ProjectId]; exists {
+				projectTimedOutUnits[unit.ProjectId] = append(value, timedOutUnit)
+			} else {
+				failedUnits := []FailedDashboardUnitReport{timedOutUnit}
+				projectTimedOutUnits[unit.ProjectId] = failedUnits
+			}
+		}
+	}
+	return projectTimedOutUnits
 }
 
 func GetNSlowestProjects(cacheReports []CachingUnitReport, n int) []CachingProjectReport {

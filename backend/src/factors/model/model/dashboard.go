@@ -140,18 +140,18 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 }
 
 // GetDashboardCacheAnalyticsValidityMap returns a map of all ProjectID-dashboardunitID pairs that have been accessed in the last 14 days
-func GetDashboardCacheAnalyticsValidityMap() (map[uint64]map[uint64]bool, error) {
+func GetDashboardCacheAnalyticsValidityMap() (map[uint64]map[uint64]bool, int64, error) {
 	logCtx := log.WithFields(log.Fields{"method": "GetDashboardCacheAnalyticsValidityMap"})
 
 	cacheKeys, err := cacheRedis.ScanPersistent("dashboard:analytics:*", MaxNumberOfDashboardUnitCacheAccessedIn14Days, MaxNumberOfDashboardUnitCacheAccessedIn14Days)
 
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key")
-		return nil, err
+		return nil, 0, err
 	}
 
 	mapOfValidDashboardUnits := map[uint64]map[uint64]bool{}
-
+	totalValidUnits := int64(0)
 	for _, cacheKey := range cacheKeys {
 		var cacheResult *DashboardCacheResult
 		result, status, err := cacheRedis.GetIfExistsPersistent(cacheKey)
@@ -174,10 +174,11 @@ func GetDashboardCacheAnalyticsValidityMap() (map[uint64]map[uint64]bool, error)
 
 		if timeDifference < DashboardCacheInvalidationDuration14DaysInSecs && timeDifference >= 0 {
 			mapOfValidDashboardUnits[projectId][dashboardUnitId] = true
+			totalValidUnits = totalValidUnits + 1
 		}
 	}
-
-	return mapOfValidDashboardUnits, err
+	logCtx.WithFields(log.Fields{"total_valid_units": totalValidUnits}).Info("Total valid unit count")
+	return mapOfValidDashboardUnits, totalValidUnits, err
 }
 
 // SetDashboardCacheAnalytics Sets the result in cache after generating a cacheKey to store against

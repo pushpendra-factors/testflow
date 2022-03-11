@@ -1810,6 +1810,14 @@ const ControlsSVG = () => {
   )
 }
 
+const BingSVG = ({ size = 16, extraClass, color }) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 36 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M13.1229 17.5433L17.4862 28.5799L24.6729 31.9166L10.2995 40.3866V4.1966L0.0328674 0.603271V46.2899L10.2995 51.9366L35.9662 37.0499V25.4999L13.1229 17.5433Z" fill="#3B867A"/>
+    </svg>
+  )
+}
+
 const AddtodashSVG = () => {
   return (
     <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1986,6 +1994,7 @@ export {
   TimeconversionSVG,
   CountconversionSVG,
   ControlsSVG,
+  BingSVG,
   PluscopySVG,
   AddtodashSVG,
   InfocircleSVG,

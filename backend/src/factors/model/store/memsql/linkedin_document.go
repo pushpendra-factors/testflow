@@ -937,7 +937,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 		} else {
 			key := groupBy.Object + ":" + groupBy.Property
 			if groupBy.Object == CAFilterChannel {
-				value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
+				value := fmt.Sprintf("'LinkedIn Ads' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
 				selectKeys = append(selectKeys, value)
 				responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 			} else {
@@ -1051,7 +1051,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
 		if groupBy.Object == CAFilterChannel {
-			value := fmt.Sprintf("'linkedin' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
+			value := fmt.Sprintf("'LinkedIn Ads' as %s", model.LinkedinInternalRepresentationToExternalRepresentation[key])
 			selectKeys = append(selectKeys, value)
 			responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 		} else {
@@ -1365,7 +1365,6 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 	for rows.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
-		log.WithField("cur2", currentRecord).Warn("kark3-2")
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
 
@@ -1383,7 +1382,6 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 	for rows.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
 		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
-		log.WithField("cur2", currentRecord).Warn("kark3-1")
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
 	return channelDocumentsCampaign, channelDocumentsAdGroup

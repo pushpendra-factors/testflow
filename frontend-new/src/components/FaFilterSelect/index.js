@@ -70,7 +70,7 @@ const FAFilterSelect = ({
   }, [valuesState]);
 
   useEffect(() => {
-    if (filter && !valuesState) {
+    if ((filter && !valuesState) || (filter && (filter?.values !== valuesState))) {
       const prop = filter.props;
       setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
       setOperatorState(filter.operator);

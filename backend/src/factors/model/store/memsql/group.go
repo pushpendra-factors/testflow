@@ -13,8 +13,8 @@ import (
 
 func (store *MemSQL) CreateGroup(projectID uint64, groupName string, allowedGroupNames map[string]bool) (*model.Group, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"group_name": groupName,
+		"project_id":          projectID,
+		"group_name":          groupName,
 		"allowed_group_names": allowedGroupNames,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -77,6 +77,29 @@ func (store *MemSQL) CreateGroup(projectID uint64, groupName string, allowedGrou
 	return &group, http.StatusCreated
 }
 
+func (store *MemSQL) GetGroups(projectId uint64) ([]model.Group, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectId < 1 {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	var groups []model.Group
+	db := C.GetServices().Db
+	err := db.Where("project_id = ?", projectId).Find(&groups).Error
+	if err != nil {
+		log.WithField("project_id", projectId).WithError(err).Error("Failed to get groups.")
+		return groups, http.StatusInternalServerError
+	}
+
+	return groups, http.StatusFound
+
+}
 func (store *MemSQL) GetGroup(projectID uint64, groupName string) (*model.Group, int) {
 	logFields := log.Fields{
 		"project_id": projectID,

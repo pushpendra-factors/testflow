@@ -10,6 +10,7 @@ import 'animate.css';
 import GoogleAdWords from "../ProjectSettings/IntegrationSettings/GoogleAdWords";
 import FacebookIntegration from "../ProjectSettings/IntegrationSettings/Facebook";
 import LinkedInIntegration from "../ProjectSettings/IntegrationSettings/LinkedIn";
+import BingIntegration from '../ProjectSettings/IntegrationSettings/Bing';
 
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -32,6 +33,13 @@ const IntegrationProviderData = [
     icon: 'Linkedin_ads',
     kbLink:'https://help.factors.ai/en/articles/5099508-linkedin',
   },
+  {
+    name: 'Bing Ads',
+    desc:
+      'Sync Bing ads reports with Factors for performance reporting',
+    icon: 'Bing',
+    kbLink: false,
+  },
 ];
 
 
@@ -53,6 +61,10 @@ const IntegrationCard = ({ item, index }) => {
       case 'LinkedIn':
         return (
           <LinkedInIntegration kbLink={item.kbLink} setIsActive={setIsActive} />
+        );
+      case 'Bing Ads':
+        return (
+          <BingIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
         );
       default:
         return (
@@ -152,7 +164,7 @@ const IntegrationCard = ({ item, index }) => {
     </div>
   );
 };
-function IntegrationSettings({ currentProjectSettings, activeProject, fetchProjectSettings }) {
+function IntegrationSettings({ currentProjectSettings, activeProject, fetchProjectSettings, currentAgent }) {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -193,7 +205,8 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  currentProjectSettings: state.global.currentProjectSettings
+  currentProjectSettings: state.global.currentProjectSettings,
+  currentAgent: state.agent.agent_details,
 });
 
 

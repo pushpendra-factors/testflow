@@ -8,6 +8,7 @@ import { useHistory } from 'react-router-dom';
 import { login } from '../../reducers/agentActions';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import factorsai from 'factorsai';
+import styles from './index.module.scss';
 
 function Login(props) {
   const [form] = Form.useForm();
@@ -52,7 +53,7 @@ function Login(props) {
   return (
     <>
       <div className={'fa-container'}>
-            <Row justify={'center'}>
+            <Row justify={'center'} className={`${styles.start}`}>
                 <Col span={12} >
                     <div className={'flex flex-col justify-center items-center login-container'}>
                         <Row>
@@ -135,7 +136,9 @@ function Login(props) {
                     </div>
                 </Col>
             </Row>
+            <div className={`${styles.hide}`}>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
+            </div>
       </div>
 
     </>

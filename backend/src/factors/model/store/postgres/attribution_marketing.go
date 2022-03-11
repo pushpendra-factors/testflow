@@ -2,10 +2,12 @@ package postgres
 
 import (
 	"database/sql"
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -26,6 +28,8 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 	} else {
 		adwordsCustomerID = *projectSetting.IntAdwordsCustomerAccountId
 	}
+	enableBingAdsAttribution := C.GetConfig().EnableBingAdsAttribution
+
 	var adwordsGCLIDData map[string]model.MarketingData
 	var reportType int
 	var adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData map[string]model.MarketingData
@@ -200,6 +204,87 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 		}
 	}
 
+	// Bingads
+	var bingadsCampaignIDData, bingadsAdgroupIDData, bingadsKeywordIDData map[string]model.MarketingData
+	var bingadsCampaignAllRows, bingadsAdgroupAllRows, bingadsKeywordAllRows []model.MarketingData
+	if enableBingAdsAttribution {
+		isBingAdsIntegrationDone := pg.IsBingIntegrationAvailable(projectID)
+		if isBingAdsIntegrationDone && model.DoesBingAdsReportExist(q.AttributionKey) {
+			bingAdsAccountID, _ := pg.getBingAdsAccountId(projectID)
+
+			reportType = model.BingadsDocumentTypeAlias[model.CampaignPerformanceReport] // 4
+			bingadsCampaignIDData, bingadsCampaignAllRows, err = pg.PullBingAdsMarketingData(projectID, effectiveFrom,
+				effectiveTo, bingAdsAccountID, model.BingadsCampaignID, model.BingadsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
+			if err != nil {
+				return data, err
+			}
+			for id, v := range bingadsCampaignIDData {
+				v.CampaignName = U.IfThenElse(U.IsNonEmptyKey(v.CampaignName), v.CampaignName, v.Name).(string)
+				bingadsCampaignIDData[id] = v
+			}
+			for i, _ := range bingadsCampaignAllRows {
+				bingadsCampaignAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(bingadsCampaignAllRows[i].CampaignName), bingadsCampaignAllRows[i].CampaignName, bingadsCampaignAllRows[i].Name).(string)
+			}
+
+			reportType = model.BingadsDocumentTypeAlias[model.AdGroupPerformanceReport] // 5
+			bingadsAdgroupIDData, bingadsAdgroupAllRows, err = pg.PullBingAdsMarketingData(projectID, effectiveFrom,
+				effectiveTo, bingAdsAccountID, model.BingadsAdgroupID, model.BingadsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
+			if err != nil {
+				return data, err
+			}
+			for id, value := range bingadsAdgroupIDData {
+				value.AdgroupName = U.IfThenElse(U.IsNonEmptyKey(value.AdgroupName), value.AdgroupName, value.Name).(string)
+				campID := value.CampaignID
+				if U.IsNonEmptyKey(campID) {
+					value.CampaignName = U.IfThenElse(U.IsNonEmptyKey(value.CampaignName), value.CampaignName, bingadsCampaignIDData[campID].Name).(string)
+					bingadsAdgroupIDData[id] = value
+				}
+			}
+			for i, _ := range bingadsAdgroupAllRows {
+				bingadsAdgroupAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(bingadsAdgroupAllRows[i].AdgroupName), bingadsAdgroupAllRows[i].AdgroupName, bingadsAdgroupAllRows[i].Name).(string)
+				campID := bingadsAdgroupAllRows[i].CampaignID
+				if U.IsNonEmptyKey(campID) {
+					bingadsAdgroupAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(bingadsAdgroupAllRows[i].CampaignName), bingadsAdgroupAllRows[i].CampaignName, bingadsCampaignIDData[campID].Name).(string)
+				}
+			}
+
+			reportType = model.BingadsDocumentTypeAlias[model.KeywordPerformanceReport] // 6
+			bingadsKeywordIDData, bingadsKeywordAllRows, err = pg.PullBingAdsMarketingData(projectID, effectiveFrom,
+				effectiveTo, bingAdsAccountID, model.BingadsKeywordID, model.BingadsKeywordName, model.PropertyValueNone, reportType, model.ReportKeyword, q.Timezone)
+			if err != nil {
+				return data, err
+			}
+			for id, value := range bingadsKeywordIDData {
+				value.KeywordName = U.IfThenElse(U.IsNonEmptyKey(value.KeywordName), value.KeywordName, value.Name).(string)
+				campID := value.CampaignID
+				if U.IsNonEmptyKey(campID) {
+					value.CampaignName = U.IfThenElse(U.IsNonEmptyKey(value.CampaignName), value.CampaignName, bingadsCampaignIDData[campID].Name).(string)
+					bingadsKeywordIDData[id] = value
+				}
+			}
+
+			for i, _ := range bingadsKeywordAllRows {
+				bingadsKeywordAllRows[i].KeywordName = U.IfThenElse(U.IsNonEmptyKey(bingadsKeywordAllRows[i].KeywordName), bingadsKeywordAllRows[i].KeywordName, bingadsKeywordAllRows[i].Name).(string)
+				campID := bingadsKeywordAllRows[i].CampaignID
+				if U.IsNonEmptyKey(campID) {
+					bingadsKeywordAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(bingadsKeywordAllRows[i].CampaignName), bingadsKeywordAllRows[i].CampaignName, bingadsCampaignIDData[campID].Name).(string)
+				}
+			}
+			for id, value := range bingadsKeywordIDData {
+				adgroupID := value.AdgroupID
+				if U.IsNonEmptyKey(adgroupID) {
+					value.AdgroupName = U.IfThenElse(U.IsNonEmptyKey(value.AdgroupName), value.AdgroupName, bingadsAdgroupIDData[adgroupID].Name).(string)
+					bingadsKeywordIDData[id] = value
+				}
+			}
+			for i, _ := range bingadsKeywordAllRows {
+				adgroupID := bingadsKeywordAllRows[i].AdgroupID
+				if U.IsNonEmptyKey(adgroupID) {
+					bingadsKeywordAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(bingadsKeywordAllRows[i].AdgroupName), bingadsKeywordAllRows[i].AdgroupName, bingadsAdgroupIDData[adgroupID].Name).(string)
+				}
+			}
+		}
+	}
 	data.AdwordsGCLIDData = adwordsGCLIDData
 	data.AdwordsCampaignIDData = adwordsCampaignIDData
 	data.AdwordsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, adwordsCampaignAllRows)
@@ -209,6 +294,15 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 
 	data.AdwordsKeywordIDData = adwordsKeywordIDData
 	data.AdwordsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, adwordsKeywordAllRows)
+
+	data.BingAdsCampaignIDData = bingadsCampaignIDData
+	data.BingAdsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, bingadsCampaignAllRows)
+
+	data.BingAdsAdgroupIDData = bingadsAdgroupIDData
+	data.BingAdsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, bingadsAdgroupAllRows)
+
+	data.BingAdsKeywordIDData = bingadsKeywordIDData
+	data.BingAdsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, bingadsKeywordAllRows)
 
 	data.FacebookCampaignIDData = facebookCampaignIDData
 	data.FacebookCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, facebookCampaignAllRows)
@@ -223,6 +317,15 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupAllRows)
 
 	return data, err
+}
+
+func (pg *Postgres) getBingAdsAccountId(projectID uint64) (string, error) {
+	ftMapping, err := pg.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
+	if err == nil {
+		return ftMapping.Accounts, nil
+	} else {
+		return "", nil
+	}
 }
 
 // PullAdwordsMarketingData Pulls Adds channel data for Adwords.
@@ -302,13 +405,49 @@ func (pg *Postgres) PullLinkedinMarketingData(projectID uint64, from, to int64, 
 	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelLinkedin)
 	return marketingDataIDMap, allRows, nil
 }
+func (pg *Postgres) PullBingAdsMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
+	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+	logFields := log.Fields{
+		"project_id":   projectID,
+		"from":         from,
+		"to":           to,
+		"account_id":   customerAccountID,
+		"key_id":       keyID,
+		"key_name":     keyName,
+		"extra_value1": extraValue1,
+		"report_name":  reportName,
+		"time_zone":    timeZone,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	logCtx := log.WithFields(logFields)
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+	performanceQuery := "SELECT value->>'campaign_id')  as campaignID, value->>'ad_group_id') as adgroupID, value->>'keyword_id') as keywordID, " +
+		"'$none' as adId, value->>? AS key_id, value->>? AS key_name, value->>? AS extra_value1, " +
+		"SUM(value->>'impressions') AS impressions, SUM(value->>'clicks') AS clicks, " +
+		"SUM(value->>'spend') AS total_spend FROM integration_documents " +
+		"where project_id = ? AND source = ? AND customer_ad_account_id IN (?) AND document_type = ? AND timestamp between ? AND ? " +
+		"group by campaignID, adgroupID, keywordID, key_id, key_name, extra_value1"
+
+	params := []interface{}{keyID, keyName, extraValue1, projectID, model.BingAdsIntegration, customerAccountIDs, reportType,
+		U.GetDateAsStringIn(from, U.TimeZoneString(timeZone)), U.GetDateAsStringIn(to, U.TimeZoneString(timeZone))}
+	rows, tx, err := pg.ExecQueryWithContext(performanceQuery, params)
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return nil, nil, err
+	}
+	defer U.CloseReadQuery(rows, tx)
+
+	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.BingAdsIntegration)
+	return marketingDataIDMap, allRows, nil
+}
 func (pg *Postgres) PullCustomDimensionData(projectID uint64, attributionKey string, marketingReport *model.MarketingReports) error {
 
 	// Custom Dimensions are support only for Campaign and Adgroup currently
 	if attributionKey != model.AttributionKeyCampaign && attributionKey != model.AttributionKeyAdgroup {
 		return nil
 	}
+	enableBingAdsAttribution := C.GetConfig().EnableBingAdsAttribution
 
 	var err error
 	switch attributionKey {
@@ -326,6 +465,12 @@ func (pg *Postgres) PullCustomDimensionData(projectID uint64, attributionKey str
 		if err != nil {
 			return err
 		}
+		if enableBingAdsAttribution {
+			marketingReport.BingadsCampaignDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelBingads, 1, attributionKey)
+			if err != nil {
+				return err
+			}
+		}
 	case model.FieldAdgroupName:
 		marketingReport.AdwordsAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelAdwords, 2, attributionKey)
 		if err != nil {
@@ -338,6 +483,12 @@ func (pg *Postgres) PullCustomDimensionData(projectID uint64, attributionKey str
 		marketingReport.LinkedinAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelLinkedin, 2, attributionKey)
 		if err != nil {
 			return err
+		}
+		if enableBingAdsAttribution {
+			marketingReport.BingadsAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelBingads, 2, attributionKey)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

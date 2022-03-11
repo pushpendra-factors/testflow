@@ -20,31 +20,35 @@ var BingadsDocumentTypeAlias = map[string]int{
 	"account":                 7,
 }
 
+var AllAccountQuery = "SELECT DISTINCT id FROM `%s.%s.account_history`"
 var BingAdsDocumentToQuery = map[string]string{
-	"campaigns": "SELECT id, account_id, budget, status, name, type FROM `%s.%s.campaign_history` WHERE %v",
+	"campaigns": "SELECT id, account_id, budget, status, name, type FROM `%s.%s.campaign_history` WHERE %v ORDER BY id LIMIT %v OFFSET %v",
 	"ad_groups": "select DISTINCT ad.id, ad.campaign_id, ad.name, ad.status, ad.bid_option, ad.bid_strategy_type, ch.account_id " +
 		"From `%s.%s.ad_group_history` AS ad inner join `%s.%s.campaign_history` AS ch " +
-		"on ad.campaign_id = ch.id WHERE %v",
+		"on ad.campaign_id = ch.id WHERE %v ORDER BY id LIMIT %v OFFSET %v",
 	"keyword": "select DISTINCT kh.id,kh.bid,kh.ad_group_id,kh.name,kh.status,kh.match_type,ad.campaign_id,ch.account_id " +
 		"From `%s.%s.keyword_history` AS kh inner join `%s.%s.ad_group_history` AS ad on kh.ad_group_id = ad.id " +
-		"inner join `%s.%s.campaign_history` AS ch on ad.campaign_id = ch.id WHERE %v",
+		"inner join `%s.%s.campaign_history` AS ch on ad.campaign_id = ch.id WHERE %v ORDER BY id LIMIT %v OFFSET %v",
 	CampaignPerformanceReport: "SELECT SUM(cpd.impressions), SUM(cpd.spend), SUM(cpd.clicks), SUM(cpd.conversions), MAX(cpd.account_id), cpd.campaign_id, MAX(cpd.currency_code), " +
 		"MAX(ch.name) AS campaign_name, MAX(ch.status) AS campaign_status, MAX(ch.type) AS campaign_type FROM " +
 		"`%s.%s.campaign_performance_daily_report`  AS cpd " +
 		" left outer join " +
-		"`%s.%s.campaign_history` AS ch " +
-		"ON cpd.campaign_id = ch.id WHERE %v GROUP BY cpd.campaign_id",
+		" (SELECT * FROM (SELECT id, name, status, type, ROW_NUMBER() OVER (PARTITION BY  id ORDER BY modified_time DESC) AS row_num " +
+		" FROM `%s.%s.campaign_history`)camp WHERE camp.row_num = 1)ch " +
+		" ON cpd.campaign_id = ch.id WHERE %v GROUP BY cpd.campaign_id ORDER BY cpd.campaign_id LIMIT %v OFFSET %v",
 	AdGroupPerformanceReport: "SELECT SUM(agp.impressions), SUM(agp.spend), SUM(agp.clicks), SUM(agp.conversions), MAX(agp.account_id) , MAX(agp.campaign_id), MAX(agp.currency_code), agp.ad_group_id, " +
 		" MAX(ad.name) AS ad_group_name, MAX(ad.status) AS ad_group_status, MAX(ad.bid_strategy_type) AS ad_group_bid_strategy_type, " +
 		" MAX(ch.name) AS campaign_name, MAX(ch.status) AS campaign_status, MAX(ch.type) AS campaign_type " +
 		" FROM  " +
 		" `%s.%s.ad_group_performance_daily_report`  AS agp " +
 		" left outer join  " +
-		" `%s.%s.ad_group_history` AS ad " +
+		" (SELECT * FROM (SELECT id, name, status, bid_strategy_type, ROW_NUMBER() OVER (PARTITION BY  id ORDER BY modified_time DESC) AS row_num " +
+		" FROM `%s.%s.ad_group_history`)camp WHERE camp.row_num = 1)ad " +
 		" ON agp.ad_group_id = ad.id " +
 		" left outer join  " +
-		" `%s.%s.campaign_history` AS ch " +
-		" ON agp.campaign_id = ch.id WHERE %v GROUP BY agp.ad_group_id",
+		" (SELECT * FROM (SELECT id, name, status, type, ROW_NUMBER() OVER (PARTITION BY  id ORDER BY modified_time DESC) AS row_num " +
+		" FROM `%s.%s.campaign_history`)camp WHERE camp.row_num = 1)ch " +
+		" ON agp.campaign_id = ch.id WHERE %v GROUP BY agp.ad_group_id ORDER BY agp.ad_group_id LIMIT %v OFFSET %v",
 	KeywordPerformanceReport: "SELECT SUM(kwp.impressions), SUM(kwp.spend), SUM(kwp.clicks), SUM(kwp.conversions), MAX(kwp.account_id),MAX(kwp.campaign_id),MAX(kwp.currency_code),MAX(kwp.ad_group_id),kwp.keyword_id, " +
 		" MAX(kw.name) AS keyword_name, MAX(kw.status) AS keyword_status, MAX(kw.match_type) AS keyword_match_type, " +
 		" MAX(ad.name) AS ad_group_name ,MAX(ad.status) AS ad_group_status, MAX(ad.bid_strategy_type) AS ad_group_bid_strategy_type, " +
@@ -52,15 +56,18 @@ var BingAdsDocumentToQuery = map[string]string{
 		" FROM  " +
 		" `%s.%s.keyword_performance_daily_report`  AS kwp " +
 		" left outer join  " +
-		" `%s.%s.keyword_history` AS kw " +
+		" (SELECT * FROM (SELECT id, name, status, match_type, ROW_NUMBER() OVER (PARTITION BY  id ORDER BY modified_time DESC) AS row_num " +
+		" FROM `%s.%s.keyword_history`)camp WHERE camp.row_num = 1)kw " +
 		" ON kwp.keyword_id = kw.id " +
 		" left outer join  " +
-		" `%s.%s.ad_group_history` AS ad " +
+		" (SELECT * FROM (SELECT id, name, status, bid_strategy_type, ROW_NUMBER() OVER (PARTITION BY  id ORDER BY modified_time DESC) AS row_num " +
+		" FROM `%s.%s.ad_group_history`)camp WHERE camp.row_num = 1)ad " +
 		" ON kwp.ad_group_id = ad.id " +
 		" left outer join  " +
-		" `%s.%s.campaign_history` AS ch " +
-		" ON kwp.campaign_id = ch.id WHERE %v GROUP BY kwp.keyword_id",
-	"account": "SELECT id, name, currency_code, time_zone FROM `%s.%s.account_history` WHERE %v",
+		" (SELECT * FROM (SELECT id, name, status, type, ROW_NUMBER() OVER (PARTITION BY  id ORDER BY modified_time DESC) AS row_num " +
+		" FROM `%s.%s.campaign_history`)camp WHERE camp.row_num = 1)ch " +
+		" ON kwp.campaign_id = ch.id WHERE %v GROUP BY kwp.keyword_id ORDER BY kwp.keyword_id LIMIT %v OFFSET %v",
+	"account": "SELECT id, name, currency_code, time_zone FROM `%s.%s.account_history` WHERE %v ORDER BY id LIMIT %v OFFSET %v",
 }
 
 var BingAdsDataObjectFilters = map[string]string{
@@ -146,22 +153,22 @@ func GetBingAdsDocumentDocumentType(documentTypeString string) int {
 	return 0
 }
 
-func GetBingAdsDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string) string {
+func GetBingAdsDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, offset int) string {
 
 	if docType == "campaigns" {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, false, "", executionDate))
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, false, "", executionDate), limit, offset)
 	} else if docType == "ad_groups" {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "ad", executionDate))
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "ad", executionDate), limit, offset)
 	} else if docType == "keyword" {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "kh", executionDate))
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "kh", executionDate), limit, offset)
 	} else if docType == CampaignPerformanceReport {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "cpd", executionDate))
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "cpd", executionDate), limit, offset)
 	} else if docType == AdGroupPerformanceReport {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "agp", executionDate))
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "agp", executionDate), limit, offset)
 	} else if docType == KeywordPerformanceReport {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "kwp", executionDate))
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, true, "kwp", executionDate), limit, offset)
 	} else if docType == "account" {
-		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, false, "", executionDate))
+		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, GetBingAdsDocumentFilterCondition(docType, false, "", executionDate), limit, offset)
 	}
 	return ""
 }
@@ -262,4 +269,8 @@ var BingAdsObjectToPerfomanceReportRepresentation = map[string]string{
 	"campaigns": CampaignPerformanceReport,
 	"ad_groups": AdGroupPerformanceReport,
 	"keyword":   KeywordPerformanceReport,
+}
+
+func GetAllAccountsQuery(bigQueryProjectId string, schemaId string) string {
+	return fmt.Sprintf(AllAccountQuery, bigQueryProjectId, schemaId)
 }

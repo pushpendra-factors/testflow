@@ -13,6 +13,12 @@ const (
 	AdgroupPrefix  = "ad_group_"
 	KeywordPrefix  = "keyword_"
 	Channel        = "channel"
+	GoogleAds      = "Google Ads"
+	FacebookAds    = "Facebook Ads"
+	LinkedinAds    = "LinkedIn Ads"
+	OldGoogleAds   = "google_ads"
+	OldFacebookAds = "facebook_ads"
+	OldLinkedinAds = "linkedin_ads"
 )
 
 type ChannelConfigResult struct {
@@ -355,9 +361,9 @@ func GetDecoupledFiltersForChannelBreakdownFilters(filters []ChannelFilterV1) ([
 func evaluateFilter(channelName string, filter ChannelFilterV1) bool {
 	isChannelRequired := false
 	if filter.Condition == EqualsOpStr || filter.Condition == ContainsOpStr {
-		isChannelRequired = strings.Contains(channelName, strings.ToLower(filter.Value))
+		isChannelRequired = strings.Contains(strings.ToLower(channelName), strings.ToLower(filter.Value))
 	} else if filter.Condition == NotEqualOpStr || filter.Condition == NotContainsOpStr {
-		isChannelRequired = !(strings.Contains(channelName, strings.ToLower(filter.Value)))
+		isChannelRequired = !(strings.Contains(strings.ToLower(channelName), strings.ToLower(filter.Value)))
 	} else {
 		return false
 	}
@@ -387,9 +393,9 @@ func GetRequiredChannels(filters []ChannelFilterV1) (bool, bool, bool, bool, int
 	if len(filters) == 0 {
 		return true, true, true, true, http.StatusOK
 	}
-	isAdwordsReq = checkIfChannelReq(ChannelGoogleAds, filters)
-	isFacebookReq = checkIfChannelReq(ChannelFacebook, filters)
-	isLinkedinReq = checkIfChannelReq(ChannelLinkedin, filters)
+	isAdwordsReq = checkIfChannelReq(GoogleAds, filters) || checkIfChannelReq(OldGoogleAds, filters)
+	isFacebookReq = checkIfChannelReq(FacebookAds, filters) || checkIfChannelReq(OldFacebookAds, filters)
+	isLinkedinReq = checkIfChannelReq(LinkedinAds, filters) || checkIfChannelReq(OldLinkedinAds, filters)
 	isBingAdsReq = checkIfChannelReq(ChannelBingAds, filters)
 	return isAdwordsReq, isFacebookReq, isLinkedinReq, isBingAdsReq, http.StatusOK
 }

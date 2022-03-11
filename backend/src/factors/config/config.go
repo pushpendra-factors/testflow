@@ -212,6 +212,15 @@ type Configuration struct {
 	FivetranLicenseKey                              string
 	DisableCRMUniquenessConstraintsCheckByProjectID string
 	SkipDashboardCachingAnalytics                   int
+	AllowEventsFunnelsGroupSupport                  string
+	MonitoringAPIToken                              string
+	DelayedTaskThreshold                            int
+	SdkQueueThreshold                               int
+	IntegrationQueueThreshold                       int
+	UsageBasedDashboardCaching                      int
+	EnableBingAdsAttribution                        bool
+	HubspotBatchInsertBatchSize                     int
+	UseHubspotBatchInsertByProjectID                string
 }
 
 type Services struct {
@@ -1244,6 +1253,25 @@ func InitAppServer(config *Configuration) error {
 	return nil
 }
 
+func InitMonitoringAPIServices(config *Configuration) {
+	if config.MonitoringAPIToken == "" {
+		log.Error("Monitoring API Token is not provided. Keeping services disabled.")
+		return
+	}
+
+	err := InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
+	if err != nil {
+		log.WithError(err).Error("Failed to initalize queue client.")
+	}
+
+	if IsQueueDuplicationEnabled() {
+		err := InitDuplicateQueueClient(config.DuplicateQueueRedisHost, config.DuplicateQueueRedisPort)
+		if err != nil {
+			log.WithError(err).Error("Failed to initialize duplicate queue client.")
+		}
+	}
+}
+
 func InitTestServer(config *Configuration) error {
 	if !IsConfigInitialized() {
 		log.Fatal("Config not initialised on Init.")
@@ -2017,6 +2045,14 @@ func IsProfileGroupSupportEnabled(projectId uint64) bool {
 	return false
 }
 
+func IsEventsFunnelsGroupSupportEnabled(projectId uint64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowEventsFunnelsGroupSupport, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
+}
+
 func GetSessionBatchTransactionBatchSize() int {
 	return GetConfig().SessionBatchTransactionBatchSize
 }
@@ -2030,6 +2066,19 @@ func DisableCRMUniquenessConstraintsCheckByProjectID(projectID uint64) bool {
 	return allowedProjectIDs[projectID]
 }
 
-func GetSkipDashboardCachingAnalytics() int {
-	return configuration.SkipDashboardCachingAnalytics
+func GetHubspotBatchInsertBatchSize() int {
+	return GetConfig().HubspotBatchInsertBatchSize
+}
+
+func GetUsageBasedDashboardCaching() int {
+	return configuration.UsageBasedDashboardCaching
+}
+
+func UseHubspotBatchInsertByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseHubspotBatchInsertByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

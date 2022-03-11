@@ -69,7 +69,7 @@ services:
                 -  ETCD=etcd:2379
                 -  PS=patternserver
                 -  PRI_DS=$PRIMARY_DATASTORE
-            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --env=development --memsql_host=memsql --primary_datastore=${PRIMARY_DATASTORE}"]
+            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host_ps=redis --dup_queue_redis_host=redis --queue_redis_host=redis --etcd=etcd:2379 --api_domain=$API_DOMAIN --env=development --memsql_host=memsql --primary_datastore=${PRIMARY_DATASTORE}"]
             image: testing/api:1.0
             restart: always
             ports:

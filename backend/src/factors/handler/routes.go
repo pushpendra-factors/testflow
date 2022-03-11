@@ -38,7 +38,9 @@ func InitAppRoutes(r *gin.Engine) {
 	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
+
 	r.Use(mid.SkipAPIWritesIfDisabled())
+	r.GET(routePrefix+"/health", mid.MonitoringAPIMiddleware(), Monitoring)
 	r.POST(routePrefix+"/accounts/signup", SignUp)
 	r.POST(routePrefix+"/agents/signin", Signin)
 	r.GET(routePrefix+"/agents/signout", Signout)
@@ -87,6 +89,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
 		DashboardUnitsWebAnalyticsQueryHandler)
 
+	authRouteGroup.GET("/:project_id/groups", GetGroupsHandler)
 	authRouteGroup.GET("/:project_id/queries", GetQueriesHandler)
 	authRouteGroup.POST("/:project_id/queries", CreateQueryHandler)
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
@@ -354,6 +357,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.POST("/hubspot/documents/add",
 		IH.DataServiceHubspotAddDocumentHandler)
+
+	dataServiceRouteGroup.POST("/hubspot/documents/add_batch",
+		IH.DataServiceHubspotAddBatchDocumentHandler)
 
 	dataServiceRouteGroup.GET("/hubspot/documents/sync_info",
 		IH.DataServiceHubspotGetSyncInfoHandler)

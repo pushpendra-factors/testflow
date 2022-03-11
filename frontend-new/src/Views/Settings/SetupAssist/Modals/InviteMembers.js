@@ -76,7 +76,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
   return (
     <>
       <div className={'fa-container'}>
-            <Row justify={'center'}>
+            <Row justify={'center'} className={`${styles.start}`}>
                 <Col span={7} >
                     <div className={'flex flex-col justify-center mt-16'}>
                         <Row className={'m-0'}>
@@ -177,7 +177,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                         <Col span={24}>
                             <div className={'mt-8 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type="primary" style={{width:'28vw', height:'36px'}} className={'ml-2'} htmlType="submit">
+                                    <Button size={'large'} type="primary" style={{width:'28vw', height:'36px'}} className={`ml-2 ${styles.button}`} htmlType="submit">
                                     Invite and Continue
                                     </Button>
                                 </Form.Item>
@@ -186,7 +186,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                         <Col span={24}>
                             <div className={'mt-4 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                <Button size={'large'} type={'link'} style={{width:'27vw', height:'36px', backgroundColor:'white'}} className={'m-0'} onClick={onSkip}>Skip and continue</Button>
+                                <Button size={'large'} type={'link'} style={{width:'27vw', height:'36px', backgroundColor:'white'}} className={`m-0 ${styles.button}`} onClick={onSkip}>Skip and continue</Button>
                                 </Form.Item>
                             </div>
                         </Col>
@@ -198,7 +198,9 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                     </div>
                 </Col>
             </Row>
+            <div className={`${styles.hideSVG}`}>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
+            </div>
       </div>
     </>
 

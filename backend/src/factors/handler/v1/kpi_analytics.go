@@ -31,7 +31,7 @@ func (req *KPIFilterValuesRequest) isValid() bool {
 	if req == nil {
 		return false
 	}
-	if req.Category == "" || !U.ContainsStringInArray([]string{model.ChannelCategory, model.EventCategory}, req.Category) ||
+	if req.Category == "" || !U.ContainsStringInArray([]string{model.ChannelCategory, model.EventCategory, model.ProfileCategory}, req.Category) ||
 		req.Entity == "" || !U.ContainsStringInArray([]string{model.EventEntity, model.UserEntity}, req.Entity) ||
 		req.ObjectType == "" || req.PropertyName == "" {
 		return false
@@ -71,7 +71,7 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 		storeSelected.GetKPIConfigsForSalesforceOpportunities,
 		storeSelected.GetKPIConfigsForAdwords, storeSelected.GetKPIConfigsForGoogleOrganic,
 		storeSelected.GetKPIConfigsForFacebook, storeSelected.GetKPIConfigsForLinkedin,
-		storeSelected.GetKPIConfigsForAllChannels,storeSelected.GetKPIConfigsForBingAds,
+		storeSelected.GetKPIConfigsForAllChannels, storeSelected.GetKPIConfigsForBingAds,
 	}
 	resultantResultConfigs := make([]map[string]interface{}, 0)
 	for _, configFunction := range configFunctions {

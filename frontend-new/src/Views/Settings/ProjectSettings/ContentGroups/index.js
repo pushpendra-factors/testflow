@@ -140,7 +140,7 @@ const columns = [
         <Row className={'mt-4'}>
             <Col span={24}>  
             <div className={'mt-6'}>
-                <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0'}>A content group refers to a collection of logically related URLs that makes up your overall website’s content. For example a collection of blog articles written with a specific intend on your blog. By defining a content group to identify all such pages on the site, you can analyse common traits across many such pages at one go. You can define upto 3 content groups. Learn <a href='#'>more</a></Text>
+                <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0'}>A content group refers to a collection of logically related URLs that makes up your overall website’s content. For example a collection of blog articles written with a specific intend on your blog. By defining a content group to identify all such pages on the site, you can analyse common traits across many such pages at one go. <span className={'font-bold'}>You can define upto 3 content groups</span>. Learn <a href='#'>more</a></Text>
                 <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0 mt-4'}>Currently, content groups can be used to drill down the factors default event <span style={{background:'#F5F6F8',color:'#0E2647',padding:'2px',marginLeft:'4px'}}>Website Session</span></Text>
                 
                 <Table className="fa-table--basic mt-8" 

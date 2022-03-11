@@ -56,6 +56,18 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	// Flags for Monitoring API
+	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
+	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
+	duplicateQueueRedisHost := flag.String("dup_queue_redis_host", "localhost", "")
+	duplicateQueueRedisPort := flag.Int("dup_queue_redis_port", 6379, "")
+	sdkQueueThreshold := flag.Int("sdk_queue_threshold", 10000, "Threshold to report sdk queue size")
+	integrationQueueThreshold := flag.Int("integration_queue_threshold", 1000, "Threshold to report integration queue size")
+	delayedTaskThreshold := flag.Int("delayed_task_threshold", 1000, "Threshold to report delayed task size")
+	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
+		false, "Enables SDK and Integration request queue duplication monitoring.")
+	monitoringAPIToken := flag.String("monitoring_api_token", "", "enter  monitoring api token")
+
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
@@ -130,6 +142,9 @@ func main() {
 
 	fivetranGroupId := flag.String("fivetran_group_id", "", "")
 	fivetranLicenseKey := flag.String("fivetran_license_key", "", "")
+	allowEventsFunnelsGroupSupport := flag.String("allow_events_funnels_group_support", "", "")
+
+	enableBingAdsAttribution := flag.Bool("enable_bing_ads_attribution", false, "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -217,6 +232,17 @@ func main() {
 		AllowProfilesGroupSupport:               *allowProfilesGroupSupport,
 		FivetranGroupId:                         *fivetranGroupId,
 		FivetranLicenseKey:                      *fivetranLicenseKey,
+		AllowEventsFunnelsGroupSupport:          *allowEventsFunnelsGroupSupport,
+		QueueRedisHost:                          *queueRedisHost,
+		QueueRedisPort:                          *queueRedisPort,
+		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
+		DuplicateQueueRedisHost:                        *duplicateQueueRedisHost,
+		DuplicateQueueRedisPort:                        *duplicateQueueRedisPort,
+		DelayedTaskThreshold:                           *delayedTaskThreshold,
+		SdkQueueThreshold:                              *sdkQueueThreshold,
+		IntegrationQueueThreshold:                      *integrationQueueThreshold,
+		EnableBingAdsAttribution:                       *enableBingAdsAttribution,
+		MonitoringAPIToken:                             *monitoringAPIToken,
 	}
 	C.InitConf(config)
 
@@ -226,6 +252,8 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return
 	}
+
+	C.InitMonitoringAPIServices(config)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitFilemanager(*bucketName, *env, config)
 	if !C.IsDevelopment() {

@@ -54,6 +54,7 @@ function ReportsLayout({
   campaignState,
   composerFunctions,
   updateChartTypes,
+  queryOptions,
   ...rest
 }) {
   const dispatch = useDispatch();
@@ -288,6 +289,7 @@ function ReportsLayout({
                   campaignState={campaignState}
                   savedQueryId={savedQueryId}
                   handleChartTypeChange={handleChartTypeChange}
+                  queryOptions={queryOptions}
                   {...rest}
                 />
               )}

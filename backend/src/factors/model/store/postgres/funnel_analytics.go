@@ -23,7 +23,21 @@ func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.
 		return nil, http.StatusBadRequest, model.ErrMsgMaxFunnelStepsExceeded
 	}
 
-	stmnt, params, err := BuildFunnelQuery(projectId, query)
+	groupIds := make([]int, 0)
+	for i := range query.EventsWithProperties {
+		if C.IsEventsFunnelsGroupSupportEnabled(projectId) && U.IsGroupEventName(query.EventsWithProperties[i].Name) {
+			groupName := U.GetGroupNameFromGroupEventName(query.EventsWithProperties[i].Name)
+			group, status := pg.GetGroup(projectId, groupName)
+			if status != http.StatusFound {
+				return nil, http.StatusBadRequest, "group with the given groupName not found in the project"
+			}
+			groupIds = append(groupIds, group.ID)
+		} else {
+			groupIds = append(groupIds, 0)
+		}
+	}
+
+	stmnt, params, err := BuildFunnelQuery(projectId, query, groupIds)
 	if err != nil {
 		log.WithError(err).Error(model.ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
@@ -159,14 +173,14 @@ func addStepTimeToMeta(result *model.QueryResult, logCtx *log.Entry) error {
 	return nil
 }
 
-func BuildFunnelQuery(projectId uint64, query model.Query) (string, []interface{}, error) {
+func BuildFunnelQuery(projectId uint64, query model.Query, groupIds []int) (string, []interface{}, error) {
 	addIndexToGroupByProperties(&query)
 
 	if query.EventsCondition == model.QueryTypeEventsOccurrence {
 		return "", nil, errors.New("funnel on events occurrence is not supported")
 	}
 
-	return buildUniqueUsersFunnelQuery(projectId, query)
+	return buildUniqueUsersFunnelQuery(projectId, query, groupIds)
 }
 
 func translateNullToZeroOnFunnelResult(result *model.QueryResult) {
@@ -433,6 +447,15 @@ func buildAddSelect(stepName string, i int) string {
 	return addSelect
 }
 
+func buildAddSelectForGroup(stepName string, i int) string {
+	addSelect := fmt.Sprintf("DISTINCT ON(COALESCE(users.customer_user_id,users.id)) COALESCE(users.customer_user_id,users.id) as coal_user_id, events.user_id, events.timestamp, 1 as %s", stepName)
+
+	if i > 0 {
+		addSelect = fmt.Sprintf("COALESCE(users.customer_user_id,users.id) as coal_user_id, events.user_id, events.timestamp, 1 as %s", stepName)
+	}
+	return addSelect
+}
+
 func removePresentPropertiesGroupBys(groupBys []model.QueryGroupByProperty) []model.QueryGroupByProperty {
 	filteredProps := make([]model.QueryGroupByProperty, 0)
 	for _, prop := range groupBys {
@@ -509,7 +532,7 @@ funnel UNION ALL SELECT * FROM ( SELECT _group_key_0, COALESCE(NULLIF(concat(rou
 ' - ', round(max(_group_key_1::numeric), 1)), 'NaN - NaN'), '$none') AS _group_key_1, SUM(step_0) AS step_0,
 SUM(step_1) AS step_1 FROM bucketed GROUP BY _group_key_0, _group_key_1_bucket ORDER BY _group_key_1_bucket LIMIT 100 ) AS group_funnel
 */
-func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []interface{}, error) {
+func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query, groupIds []int) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
 		return "", nil, errors.New("invalid no.of events for funnel query")
 	}
@@ -527,7 +550,12 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 
 		isSessionAnalysisReqBool := isSessionAnalysisReq(q.SessionStartEvent, q.SessionEndEvent)
 		// Unique users from events filter.
-		addSelect := buildAddSelect(stepName, i)
+		var addSelect string
+		if groupIds[i] != 0 {
+			addSelect = buildAddSelectForGroup(stepName, i)
+		} else {
+			addSelect = buildAddSelect(stepName, i)
+		}
 		if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent)-1 && i < int(q.SessionEndEvent) {
 			if q.EventsWithProperties[i].Name != "$session" {
 				addSelect = addSelect + ", events.session_id as session_id"
@@ -541,7 +569,12 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 			addSelect = joinWithComma(addSelect, egSelect)
 		}
 		addParams = egParams
-		addJoinStatement := "JOIN users ON events.user_id=users.id AND users.project_id = ? "
+		var addJoinStatement string
+		if groupIds[i] != 0 {
+			addJoinStatement = fmt.Sprintf("JOIN users AS groups ON events.user_id=groups.id JOIN users ON users.group_%d_user_id = groups.id AND users.project_id = ? ", groupIds[i])
+		} else {
+			addJoinStatement = "JOIN users ON events.user_id=users.id AND users.project_id = ? "
+		}
 		addParams = append(addParams, projectId)
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
 			"", stepName, addSelect, addParams, addJoinStatement, "", "coal_user_id, events.timestamp ASC", q.GlobalUserProperties)

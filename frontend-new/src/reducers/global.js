@@ -20,6 +20,7 @@ const defaultState = {
   projectsError: null,
   currentProjectSettings: {},
   contentGroup: [],
+  bingAds: {},
 };
 
 export default function (state = defaultState, action) {
@@ -159,6 +160,15 @@ export default function (state = defaultState, action) {
     }
     case 'FETCH_CONTENT_GROUP': {
       return { ...state, contentGroup: action.payload };
+    }
+    case 'FETCH_BINGADS_FULFILLED': {
+      return { ...state, bingAds: action.payload };
+    }
+    case 'FETCH_BINGADS_REJECTED': {
+      return { ...state, bingAds: action.payload };
+    }
+    case 'DISABLE_BINGADS_FULFILLED': {
+      return {...state, bingAds: {}}
     }
     default:
       return state;
@@ -593,6 +603,89 @@ export function fetchSearchConsoleCustomerAccounts(payload) {
     });
   };
 }
+
+
+export function createBingAdsIntegration(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'projects/'+ projectId +'/v1/bingads')
+      .then((r) => {
+        if (r.ok) {
+          dispatch({ type: 'CREATE_BINGADS_FULFILLED', payload: r.data });
+          resolve(r);
+        } else {
+          dispatch({ type: 'CREATE_BINGADS_REJECTED' });
+          reject(r);
+        }
+      })
+      .catch((err) => {
+        dispatch({ type: 'CREATE_BINGADS_REJECTED', payload: err });
+        reject(err);
+      });
+    });
+  };
+}
+
+export function enableBingAdsIntegration(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + 'projects/'+ projectId +'/v1/bingads/enable')
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'ENABLE_BINGADS_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'ENABLE_BINGADS_REJECTED' });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'ENABLE_BINGADS_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function disableBingAdsIntegration(projectId) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/'+ projectId +'/v1/bingads/disable',{})
+      .then((res) => {
+          if(res.ok) {
+            dispatch({ type: 'DISABLE_BINGADS_FULFILLED', payload: res.data});
+            resolve(res);
+          } else {
+            reject(res);
+          }
+        }).catch((err) => {
+            reject(err);
+        });
+    });
+  };
+}
+
+export function fetchBingAdsIntegration(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/'+ projectId +'/v1/bingads', {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_BINGADS_FULFILLED', payload: r.data});
+            resolve(r);
+          } else {
+            dispatch({ type: 'FETCH_BINGADS_REJECTED', payload: {}});
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_BINGADS_REJECTED', payload: {}});
+          reject(err);
+        });
+    });
+  };
+}
+
 
 export function deleteIntegration(projectId, name) {
   return (dispatch) => {

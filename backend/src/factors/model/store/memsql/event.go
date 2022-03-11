@@ -621,6 +621,7 @@ func (store *MemSQL) UpdateEventPropertiesInBatch(projectID uint64,
 		logCtx.WithError(dbTx.Error).Error("Failed to begin transaction in batch user properties update.")
 		return true
 	}
+	logCtx.Info("Using batch transaction in UpdateEventPropertiesInBatch.")
 
 	hasFailure := false
 	for i := range batchedUpdateEventPropertiesParams {
@@ -951,9 +952,10 @@ func (store *MemSQL) AssociateSessionByEventIdsBatchV2(projectID uint64, userID 
 	db := C.GetServices().Db
 	dbTx := db.Begin()
 	if dbTx.Error != nil {
-		logCtx.WithError(dbTx.Error).Error("Failed to begin transaction in AssociateSessionByEventIdsInBatch.")
+		logCtx.WithError(dbTx.Error).Error("Failed to begin transaction in AssociateSessionByEventIdsInBatchV2.")
 		return true
 	}
+	logCtx.Info("Using batch transaction in AssociateSessionByEventIdsInBatchV2.")
 
 	hasFailure := false
 	for i := range batchedEvents {

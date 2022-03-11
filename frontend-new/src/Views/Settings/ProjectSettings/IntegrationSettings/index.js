@@ -24,6 +24,7 @@ import GoogleSearchConsole from './GoogleSearchConsole';
 
 import { ErrorBoundary } from 'react-error-boundary';
 import RevealIntegration from './Reveal';
+import BingIntegration from './Bing';
 
 const IntegrationProviderData = [
   {
@@ -81,6 +82,13 @@ const IntegrationProviderData = [
     kbLink: 'https://help.factors.ai/en/articles/5576963-google-search-console',
   },
   {
+    name: 'Bing Ads',
+    desc:
+      'Sync Bing ads reports with Factors for performance reporting',
+    icon: 'Bing',
+    kbLink: false,
+  },
+  {
     name: 'Clearbit Reveal',
     desc: 'Take action as soon as a target account hits your site',
     icon: 'ClearbitLogo',
@@ -128,6 +136,10 @@ const IntegrationCard = ({ item, index }) => {
       case 'Google Search Console':
         return (
           <GoogleSearchConsole kbLink={item.kbLink} setIsStatus={setIsStatus} />
+        );
+      case 'Bing Ads':
+        return (
+          <BingIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
         );
       case 'Clearbit Reveal':
         return (
@@ -235,6 +247,7 @@ function IntegrationSettings({
   currentProjectSettings,
   activeProject,
   fetchProjectSettings,
+  currentAgent
 }) {
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -293,6 +306,7 @@ function IntegrationSettings({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   currentProjectSettings: state.global.currentProjectSettings,
+  currentAgent: state.agent.agent_details,
 });
 
 export default connect(mapStateToProps, { fetchProjectSettings })(

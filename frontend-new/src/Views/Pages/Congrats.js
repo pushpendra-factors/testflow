@@ -5,6 +5,7 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { signup } from 'Reducers/agentActions';
+import styles from './index.module.scss';
 
 function Congrats({ signup, data }) {
 
@@ -26,8 +27,8 @@ function Congrats({ signup, data }) {
   return (
     <>
       <div className={'fa-container'}>
-            <Row justify={'center'}>
-                <Col span={12} >
+            <Row justify={'center'} className={`${styles.start}`}>
+                <Col span={12}>
                     <div className={'flex flex-col justify-center items-center login-container'}>
                         <Row>
                             <Col span={24} >
@@ -48,7 +49,7 @@ function Congrats({ signup, data }) {
 
                             <Col span={24}>
                                 <div className={'flex justify-center items-center mb-5'} >
-                                    <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Congratulations</Text>
+                                    <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>You’re only one step away!</Text>
                                 </div>
                             </Col>
                             
@@ -76,7 +77,9 @@ function Congrats({ signup, data }) {
                     </div>
                 </Col>
             </Row>
+            <div className={`${styles.hide}`}>
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
+            </div>
       </div>
 
     </>

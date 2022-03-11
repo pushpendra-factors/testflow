@@ -1599,6 +1599,7 @@ func (store *MemSQL) OverwriteUserPropertiesByIDInBatch(batchedOverwriteUserProp
 		logCtx.WithError(dbTx.Error).Error("Failed to begin transaction in OverwriteUserPropertiesByIDInBatch.")
 		return true
 	}
+	logCtx.Info("Using batch transaction in OverwriteUserPropertiesByIDInBatch.")
 
 	hasFailure := false
 	for i := range batchedOverwriteUserPropertiesByIDParams {

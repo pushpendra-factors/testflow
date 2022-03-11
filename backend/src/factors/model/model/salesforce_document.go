@@ -53,9 +53,10 @@ var (
 	}
 
 	salesforceDataTypeNumerical = map[string]bool{
-		"double": true,
-		"int":    true,
-		"long":   true,
+		"double":   true,
+		"int":      true,
+		"long":     true,
+		"currency": true,
 	}
 )
 
@@ -106,12 +107,12 @@ const (
 	SalesforceDocumentTypeNameGroupAccount           = "group_account"
 	SalesforceDocumentTypeNameOpportunityContactRole = "opportunityContactRole"
 
-	SFCampaignMemberResponded    = "campaign_member_first_responded_date"
-	SFCampaignMemberCreated      = "campaign_member_created_date"
-	EP_SFCampaignMemberResponded = "$salesforce_campaignmember_hasresponded"
-
-	SalesforceDocumentCreated SalesforceAction = 1
-	SalesforceDocumentUpdated SalesforceAction = 2
+	SFCampaignMemberResponded                              = "campaign_member_first_responded_date"
+	SFCampaignMemberCreated                                = "campaign_member_created_date"
+	EP_SFCampaignMemberResponded                           = "$salesforce_campaignmember_hasresponded"
+	EP_SFCampaignMemberFirstRespondedDate                  = "$salesforce_campaignmember_firstrespondeddate"
+	SalesforceDocumentCreated             SalesforceAction = 1
+	SalesforceDocumentUpdated             SalesforceAction = 2
 
 	// Standard template for salesforce date time
 	SalesforceDocumentDateTimeLayout = "2006-01-02T15:04:05.000-0700"

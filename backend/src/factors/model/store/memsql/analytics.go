@@ -42,7 +42,7 @@ func with(stmnt string) string {
 
 func getOp(OpStr string, typeStr string) string {
 	logFields := log.Fields{
-		"op_str": OpStr,
+		"op_str":   OpStr,
 		"type_str": typeStr,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -78,9 +78,23 @@ func getPropertyEntityField(projectID uint64, groupProp model.QueryGroupByProper
 	return ""
 }
 
+// returns statement and parameters to pull content group values from event table
+func getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap map[string]string) (rStmnt string, rParams []interface{}, err error) {
+
+	caseSelectStmt := "CASE WHEN JSON_EXTRACT_STRING(sessions.properties, ?) IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
+	for name, dummyName := range contentGroupNamesToDummyNamesMap {
+		rStmnt = rStmnt + caseSelectStmt + " AS " + dummyName + " ,"
+		qParams := []interface{}{name, model.PropertyValueNone, name, model.PropertyValueNone, name}
+		rParams = append(rParams, qParams...)
+	}
+
+	return rStmnt, rParams, nil
+}
+
 func as(asName, asQuery string) string {
 	logFields := log.Fields{
-		"as_name": asName,
+		"as_name":  asName,
 		"as_query": asQuery,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -106,12 +120,12 @@ func isValidLogicalOp(op string) bool {
 
 func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty,
 	fromTimestamp int64) (rStmnt string, rParams []interface{}, err error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"properties": properties,
-			"from_timestamp": fromTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":     projectID,
+		"properties":     properties,
+		"from_timestamp": fromTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	pLen := len(properties)
 	if pLen == 0 {
@@ -238,9 +252,9 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 // notinCurr = <t1
 func GetDateFilter(qP model.QueryProperty, propertyEntity string, property string) (string, []interface{}, error) {
 	logFields := log.Fields{
-		"q_p": qP,
+		"q_p":             qP,
 		"property_entity": propertyEntity,
-		"property": property,
+		"property":        property,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var stmt string
@@ -271,12 +285,12 @@ func GetDateFilter(qP model.QueryProperty, propertyEntity string, property strin
 
 func getEventsFilterJoinStatement(projectID uint64,
 	eventLevelProperties []model.QueryProperty, fromTimestamp int64) string {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"event_level_properties": eventLevelProperties,
-			"from_timestamp": fromTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":             projectID,
+		"event_level_properties": eventLevelProperties,
+		"from_timestamp":         fromTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if len(eventLevelProperties) == 0 {
 		return ""
@@ -293,11 +307,11 @@ func getEventsFilterJoinStatement(projectID uint64,
 
 func getUsersFilterJoinStatement(projectID uint64,
 	globalUserProperties []model.QueryProperty) string {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"global_user_properties": globalUserProperties,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":             projectID,
+		"global_user_properties": globalUserProperties,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if len(globalUserProperties) == 0 {
 		return ""
@@ -315,12 +329,12 @@ func getUsersFilterJoinStatement(projectID uint64,
 // returns SQL query condition to address conditions only on events.properties
 func getFilterSQLStmtForEventProperties(projectID uint64, properties []model.QueryProperty,
 	fromTimestamp int64) (rStmnt string, rParams []interface{}, joinStmnt string, err error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"properties": properties,
-			"from_time_stamp": fromTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"properties":      properties,
+		"from_time_stamp": fromTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
@@ -341,12 +355,12 @@ func getFilterSQLStmtForEventProperties(projectID uint64, properties []model.Que
 func getFilterSQLStmtForLatestUserProperties(projectID uint64,
 	properties []model.QueryProperty, fromTimestamp int64) (
 	rStmnt string, rParams []interface{}, err error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"properties": properties,
-			"from_time_stamp": fromTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"properties":      properties,
+		"from_time_stamp": fromTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
@@ -367,12 +381,12 @@ func getFilterSQLStmtForLatestUserProperties(projectID uint64,
 func getFilterSQLStmtForUserProperties(projectID uint64,
 	properties []model.QueryProperty, fromTimestamp int64) (
 	rStmnt string, rParams []interface{}, joinStmnt string, err error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"properties": properties,
-			"from_time_stamp": fromTimestamp,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"properties":      properties,
+		"from_time_stamp": fromTimestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
@@ -408,12 +422,12 @@ func stepNameByIndex(i int) string {
 
 func GetPropertyEntityFieldForFilter(entityName string, fromTimestamp int64) string {
 	logFields := log.Fields{
-		"entity_name": entityName,
+		"entity_name":     entityName,
 		"from_time_stamp": fromTimestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	switch entityName {
-		
+
 	case model.PropertyEntityUser:
 		if !C.UseEventsFilterPropertiesOptimisedLogic(fromTimestamp) {
 			return model.GetPropertyEntityFieldForFilter(entityName)
@@ -449,9 +463,9 @@ WHERE events.project_id='1' AND timestamp>='1602527400' AND timestamp<='16025768
 */
 func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"group_prop":groupProp,
-		"group_key": groupKey,
+		"project_id":      projectID,
+		"group_prop":      groupProp,
+		"group_key":       groupKey,
 		"timezone_string": timezoneString,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -471,6 +485,30 @@ func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByP
 	}
 	return groupSelect, groupSelectParams
 }
+func getNoneHandledGroupBySelectWithFirst(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string, timezoneString string) (string, []interface{}) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"group_prop":      groupProp,
+		"group_key":       groupKey,
+		"timezone_string": timezoneString,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	entityField := getPropertyEntityField(projectID, groupProp)
+	var groupSelect string
+	groupSelectParams := make([]interface{}, 0)
+	if groupProp.Type != U.PropertyTypeDateTime {
+		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) = '' THEN '%s' ELSE JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) END AS %s",
+			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, groupKey)
+		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
+	} else {
+		propertyName := "JSON_EXTRACT_STRING(" + entityField + ", ?)"
+		timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, propertyName, timezoneString)
+		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) = '' THEN '%s' WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) = '0' THEN '%s' ELSE %s END AS %s",
+			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, timestampStr, groupKey)
+		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
+	}
+	return groupSelect, groupSelectParams
+}
 
 // groupBySelect: user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2
 // groupByKeys: gk_1, gk_2
@@ -479,12 +517,12 @@ func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByP
 // group by gk_1, gk_2
 func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty, timezoneString string) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"group_props":groupProps,
-			"timezone_string": timezoneString,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"group_props":     groupProps,
+		"timezone_string": timezoneString,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	groupSelectParams = make([]interface{}, 0)
 
@@ -503,10 +541,36 @@ func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty, t
 
 	return groupSelect, groupSelectParams, groupKeys
 }
+func buildGroupKeysWithFirst(projectID uint64, groupProps []model.QueryGroupByProperty, timezoneString string) (groupSelect string,
+	groupSelectParams []interface{}, groupKeys string) {
+	logFields := log.Fields{
+		"project_id":      projectID,
+		"group_props":     groupProps,
+		"timezone_string": timezoneString,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	groupSelectParams = make([]interface{}, 0)
+
+	for i, v := range groupProps {
+		// Order of group is preserved as received.
+		gKey := groupKeyByIndex(v.Index)
+		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelectWithFirst(projectID, v, gKey, timezoneString)
+		groupSelect = groupSelect + noneHandledSelect
+		groupKeys = groupKeys + gKey
+		if i < len(groupProps)-1 {
+			groupSelect = groupSelect + ", "
+			groupKeys = groupKeys + ", "
+		}
+		groupSelectParams = append(groupSelectParams, noneHandledSelectParams...)
+	}
+
+	return groupSelect, groupSelectParams, groupKeys
+}
 
 func isGroupByTypeWithBuckets(groupProps []model.QueryGroupByProperty) bool {
 	logFields := log.Fields{
-		"group_props":groupProps,
+		"group_props": groupProps,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, groupByProp := range groupProps {
@@ -522,16 +586,16 @@ func isGroupByTypeWithBuckets(groupProps []model.QueryGroupByProperty) bool {
 
 func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, groupProps []model.QueryGroupByProperty, refStepName, eventNameSelect string,
 	isGroupByTimestamp bool, additionalSelectKeys string) (bucketedStepName, aggregateSelectKeys string, aggregateGroupBys, aggregateOrderBys []string) {
-		logFields := log.Fields{
-			"q_stmnt": qStmnt,
-			"q_params": qParams,
-			"group_props":groupProps,
-			"ref_step_name": refStepName,
-			"event_name_select": eventNameSelect,
-			"is_group_by_timestamp": isGroupByTimestamp,
-			"additional_select_keys": additionalSelectKeys,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"q_stmnt":                qStmnt,
+		"q_params":               qParams,
+		"group_props":            groupProps,
+		"ref_step_name":          refStepName,
+		"event_name_select":      eventNameSelect,
+		"is_group_by_timestamp":  isGroupByTimestamp,
+		"additional_select_keys": additionalSelectKeys,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	bucketedStepName = "bucketed"
 	bucketedSelect := "SELECT "
 	if eventNameSelect != "" {
@@ -610,11 +674,11 @@ func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, group
 // i.e step_0.__group_key_0, step_1.group_key_1
 func buildEventGroupKeysWithStep(groupProps []model.QueryGroupByProperty,
 	ewps []model.QueryEventWithProperties) (groupKeys string) {
-		logFields := log.Fields{
-			"group_props":groupProps,
-			"ewps": ewps, 
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"group_props": groupProps,
+		"ewps":        ewps,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	eventLevelGroupBys, _ := separateEventLevelGroupBys(groupProps)
 
 	for _, gp := range eventLevelGroupBys {
@@ -642,23 +706,23 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 	stepName string, addSelecStmnt string, addSelectParams []interface{},
 	addJoinStmnt string, groupBy string, orderBy string, globalUserFilter []model.QueryProperty) error {
 
-		logFields := log.Fields{
-			"project_id": projectId,
-			"q_stmnt": qStmnt,
-			"q_params": qParams,
-			"que":qep,
-			"from": from,
-			"to": to,
-			"from_str": fromStr,
-			"step_name": stepName,
-			"add_selec_stmnt": addSelecStmnt,
-			"add_select_params": addSelectParams,
-			"add_joint_stmnt": addJoinStmnt,
-			"group_by": groupBy,
-			"order_by": orderBy,
-			"global_user_filter": globalUserFilter,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":         projectId,
+		"q_stmnt":            qStmnt,
+		"q_params":           qParams,
+		"que":                qep,
+		"from":               from,
+		"to":                 to,
+		"from_str":           fromStr,
+		"step_name":          stepName,
+		"add_selec_stmnt":    addSelecStmnt,
+		"add_select_params":  addSelectParams,
+		"add_joint_stmnt":    addJoinStmnt,
+		"group_by":           groupBy,
+		"order_by":           orderBy,
+		"global_user_filter": globalUserFilter,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if (from == 0 && fromStr == "") || to == 0 {
 		return errors.New("invalid timerange on events filter")
@@ -773,7 +837,7 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 
 func hasWhereEntity(ewp model.QueryEventWithProperties, entity string) bool {
 	logFields := log.Fields{
-		"ewp": ewp,
+		"ewp":    ewp,
 		"entity": entity,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -797,7 +861,7 @@ func joinWithComma(x ...string) string {
 func joinWithWordInBetween(word string, x ...string) string {
 	logFields := log.Fields{
 		"word": word,
-		"x": x,
+		"x":    x,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var y string
@@ -817,7 +881,7 @@ func joinWithWordInBetween(word string, x ...string) string {
 func appendSuffix(suffix string, x ...string) []string {
 	logFields := log.Fields{
 		"suffix": suffix,
-		"x": x,
+		"x":      x,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var y []string
@@ -830,7 +894,7 @@ func appendSuffix(suffix string, x ...string) []string {
 
 func hasGroupEntity(props []model.QueryGroupByProperty, entity string) bool {
 	logFields := log.Fields{
-		"props": props,
+		"props":  props,
 		"entity": entity,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -845,17 +909,17 @@ func hasGroupEntity(props []model.QueryGroupByProperty, entity string) bool {
 
 func addJoinLatestUserPropsQuery(projectID uint64, groupProps []model.QueryGroupByProperty,
 	refStepName string, stepName string, qStmnt *string, qParams *[]interface{}, addSelect string, timeZone string) string {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"step_name": stepName,
-			"q_stmnt": qStmnt,
-			"q_params": qParams,
-			"group_props":groupProps,
-			"ref_step_name": refStepName,
-			"add_select": addSelect,
-			"time_zone": timeZone,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"step_name":     stepName,
+		"q_stmnt":       qStmnt,
+		"q_params":      qParams,
+		"group_props":   groupProps,
+		"ref_step_name": refStepName,
+		"add_select":    addSelect,
+		"time_zone":     timeZone,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	groupSelect, gSelectParams, gKeys := buildGroupKeys(projectID, groupProps, timeZone)
 
@@ -875,7 +939,7 @@ func addJoinLatestUserPropsQuery(projectID uint64, groupProps []model.QueryGroup
 
 func filterGroupPropsByType(gp []model.QueryGroupByProperty, entity string) []model.QueryGroupByProperty {
 	logFields := log.Fields{
-		"gp": gp,
+		"gp":     gp,
 		"entity": entity,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -915,10 +979,10 @@ func appendOrderByAggr(qStmnt string) string {
 
 func appendOrderByAggrAndGroupKeys(projectID uint64, qStmnt string, groupBys []model.QueryGroupByProperty, timeZone string) string {
 	logFields := log.Fields{
-		"q_stmnt": qStmnt,
+		"q_stmnt":    qStmnt,
 		"project_id": projectID,
-		"group_bys":groupBys,
-		"time_zone": timeZone,
+		"group_bys":  groupBys,
+		"time_zone":  timeZone,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	_, _, groupKeys := buildGroupKeys(projectID, groupBys, timeZone)
@@ -931,7 +995,7 @@ func appendOrderByAggrAndGroupKeys(projectID uint64, qStmnt string, groupBys []m
 
 func appendSelectTimestampColIfRequired(stmnt string, isRequired bool) string {
 	logFields := log.Fields{
-		"stmnt": stmnt,
+		"stmnt":       stmnt,
 		"is_required": isRequired,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -945,7 +1009,7 @@ func appendSelectTimestampColIfRequired(stmnt string, isRequired bool) string {
 func getSelectTimestampByType(timestampType, timezone string) string {
 	logFields := log.Fields{
 		"timestamp_type": timestampType,
-		"timezone": timezone,
+		"timezone":       timezone,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var selectTz string
@@ -977,8 +1041,8 @@ func getSelectTimestampByType(timestampType, timezone string) string {
 func getSelectTimestampByTypeAndPropertyName(timestampType, propertyName, timezone string) string {
 	logFields := log.Fields{
 		"timestamp_type": timestampType,
-		"timezone": timezone,
-		"property_name": propertyName,
+		"timezone":       timezone,
+		"property_name":  propertyName,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var selectTz string
@@ -1010,8 +1074,8 @@ func getSelectTimestampByTypeAndPropertyName(timestampType, propertyName, timezo
 
 func appendSelectTimestampIfRequired(stmnt string, groupByTimestamp string, timezone string) string {
 	logFields := log.Fields{
-		"stmnt": stmnt,
-		"timezone": timezone,
+		"stmnt":               stmnt,
+		"timezone":            timezone,
 		"group_by_time_stamp": groupByTimestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1025,9 +1089,9 @@ func appendSelectTimestampIfRequired(stmnt string, groupByTimestamp string, time
 
 func appendGroupByTimestampIfRequired(qStmnt string, isRequired bool, groupKeys ...string) string {
 	logFields := log.Fields{
-		"q_stmnt": qStmnt,
+		"q_stmnt":     qStmnt,
 		"is_required": isRequired,
-		"group_keys": groupKeys,
+		"group_keys":  groupKeys,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// Added groups with timestamp.
@@ -1043,7 +1107,7 @@ func appendGroupByTimestampIfRequired(qStmnt string, isRequired bool, groupKeys 
 func appendGroupBy(qStmnt string, gKeys ...string) string {
 	logFields := log.Fields{
 		"q_stmnt": qStmnt,
-		"g_keys": gKeys,
+		"g_keys":  gKeys,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(gKeys) == 0 || (len(gKeys) == 1 && gKeys[0] == "") {
@@ -1055,8 +1119,8 @@ func appendGroupBy(qStmnt string, gKeys ...string) string {
 
 func appendLimitByCondition(qStmnt string, groupProps []model.QueryGroupByProperty, groupByTimestamp bool) string {
 	logFields := log.Fields{
-		"q_stmnt": qStmnt,
-		"group_props": groupProps,
+		"q_stmnt":            qStmnt,
+		"group_props":        groupProps,
 		"group_by_timestamp": groupByTimestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1070,10 +1134,10 @@ func appendLimitByCondition(qStmnt string, groupProps []model.QueryGroupByProper
 
 func separateEventLevelGroupBys(allGroupBys []model.QueryGroupByProperty) (
 	eventLevelGroupBys, otherGroupBys []model.QueryGroupByProperty) {
-		logFields := log.Fields{
-			"all_groups_bys": allGroupBys,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"all_groups_bys": allGroupBys,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	for _, groupby := range allGroupBys {
 		if isEventLevelGroupBy(groupby) {
 			eventLevelGroupBys = append(eventLevelGroupBys, groupby)
@@ -1098,11 +1162,11 @@ func isEventLevelGroupBy(groupBy model.QueryGroupByProperty) bool {
 // headers with real column names.
 func translateGroupKeysIntoColumnNames(result *model.QueryResult,
 	groupProps []model.QueryGroupByProperty) error {
-		logFields := log.Fields{
-			"result": result,
-			"group_props": groupProps,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"result":      result,
+		"group_props": groupProps,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	rcols := make([]string, 0)
 
@@ -1267,9 +1331,9 @@ func IsValidQuery(query *model.Query) (bool, string) {
 
 func getQueryCacheRedisKeySuffix(hashString string, from, to int64, timezoneString U.TimeZoneString) string {
 	logFields := log.Fields{
-		"hash_string": hashString,
-		"from": from,
-		"to": to,
+		"hash_string":     hashString,
+		"from":            from,
+		"to":              to,
 		"timezone_string": timezoneString,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1287,13 +1351,12 @@ func getQueryCacheRedisKeySuffix(hashString string, from, to int64, timezoneStri
 // resultContainer to be passed by reference.
 func GetQueryResultFromCache(projectID uint64, query model.BaseQuery, resultContainer interface{}) (model.QueryCacheResult, int) {
 	logFields := log.Fields{
-		"projected_id": projectID,
-		"query": query,
+		"projected_id":     projectID,
+		"query":            query,
 		"resukt_container": resultContainer,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
-
 
 	var queryResult model.QueryCacheResult
 	cacheKey, err := query.GetQueryCacheRedisKey(projectID)
@@ -1380,8 +1443,8 @@ func GetTimstampAndAggregateIndexOnQueryResult(cols []string) (int, int, error) 
 // TODO (Anil) update this for v1/ each users count query
 func sanitizeNumericalBucketRange(query *model.Query, rows [][]interface{}, indexToSanitize int) {
 	logFields := log.Fields{
-		"query": query,
-		"rows": rows, 
+		"query":             query,
+		"rows":              rows,
 		"index_to_sanitize": indexToSanitize,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1407,8 +1470,8 @@ func sanitizeNumericalBucketRange(query *model.Query, rows [][]interface{}, inde
 // sanitizeNumericalBucketRanges Removes any .0 added to bucket ranges wherever possible.
 func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query) {
 	logFields := log.Fields{
-		"result": result, 
-		"query": query,
+		"result": result,
+		"query":  query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	headerIndexMap := make(map[string][]int)
@@ -1469,7 +1532,7 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 
 func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
 	logFields := log.Fields{
-		"stmnt": stmnt,
+		"stmnt":  stmnt,
 		"params": params,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1491,7 +1554,7 @@ func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.Query
 func addQueryToResultMeta(result *model.QueryResult, query model.Query) {
 	logFields := log.Fields{
 		"result": result,
-		"query": query,
+		"query":  query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	result.Meta.Query = query
@@ -1507,7 +1570,7 @@ func isValidFunnelQuery(query *model.Query) bool {
 
 func (store *MemSQL) Analyze(projectId uint64, queryOriginal model.Query) (*model.QueryResult, int, string) {
 	logFields := log.Fields{
-		"project_id": projectId,
+		"project_id":     projectId,
 		"query_original": queryOriginal,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
