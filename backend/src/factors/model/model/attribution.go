@@ -250,6 +250,7 @@ var KeyDimensionToHeaderMap = map[string]string{
 	FieldKeyword:          "Keyword",
 	FieldSource:           "Source",
 	FieldChannelGroup:     "ChannelGroup",
+	FieldLandingPageUrl:   "LandingPage",
 }
 var AttributionFixedHeadersLandingPage = []string{"Sessions", "Users", "Average Session Time", "PageViews"}
 
@@ -479,7 +480,8 @@ func AddDefaultMarketingEventTypeTacticOffer(query *AttributionQuery) {
 func AddDefaultKeyDimensionsToAttributionQuery(query *AttributionQuery) {
 
 	if (query.AttributionKeyDimension == nil || len(query.AttributionKeyDimension) == 0) &&
-		(query.AttributionKeyCustomDimension == nil || len(query.AttributionKeyCustomDimension) == 0) {
+		(query.AttributionKeyCustomDimension == nil || len(query.AttributionKeyCustomDimension) == 0) &&
+		(query.AttributionContentGroups == nil || len(query.AttributionContentGroups) == 0) {
 
 		switch query.AttributionKey {
 		case AttributionKeyCampaign:
@@ -1077,11 +1079,19 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 }
 
 func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData) *QueryResult {
-	result := &QueryResult{}
+
 	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents)
+	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query)
+
 	result.Rows = dataRows
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers))
+
+	// Update result based on Key Dimensions
+	err := GetUpdatedRowsByDimensions(result, query)
+	if err != nil {
+		return nil
+	}
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey)
 
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndex(result.Headers)
@@ -1116,7 +1126,6 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
-
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query)
 	result.Rows = dataRows
@@ -1127,7 +1136,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		return nil
 	}
 
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers))
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey)
 
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
@@ -1196,93 +1205,129 @@ func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery) er
 }
 
 //MergeTwoDataRows adds values of two data rows
-func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int) []interface{} {
+func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attributionKey string) []interface{} {
 
-	row1[keyIndex+1] = row1[keyIndex+1].(int64) + row2[keyIndex+1].(int64)     // Impressions.
-	row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64)     // Clicks.
-	row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
+	if attributionKey == AttributionKeyLandingPage {
 
-	if float64(row1[keyIndex+8].(int64)+row2[keyIndex+8].(int64)) > 0 {
-		row1[keyIndex+10], _ = U.FloatRoundOffWithPrecision((float64(row1[keyIndex+8].(int64))*row1[keyIndex+10].(float64)+float64(row2[keyIndex+8].(int64))*row2[keyIndex+10].(float64))/float64(row1[keyIndex+8].(int64)+row2[keyIndex+8].(int64)), U.DefaultPrecision) //AvgSessionTime.
-	} else {
-		row1[keyIndex+10] = float64(0)
-	}
-
-	row1[keyIndex+8] = row1[keyIndex+8].(int64) + row2[keyIndex+8].(int64)        // Sessions.
-	row1[keyIndex+9] = row1[keyIndex+9].(int64) + row2[keyIndex+9].(int64)        // Users.
-	row1[keyIndex+11] = row1[keyIndex+11].(int64) + row2[keyIndex+11].(int64)     // PageViews.
-	row1[keyIndex+12] = row1[keyIndex+12].(float64) + row2[keyIndex+12].(float64) // Conversion.
-	row1[keyIndex+15] = row1[keyIndex+15].(float64) + row2[keyIndex+15].(float64) // Compare Conversion.
-
-	impressions := (row1[keyIndex+1]).(int64)
-	clicks := (row1[keyIndex+2]).(int64)
-	spend := row1[keyIndex+3].(float64)
-	if float64(impressions) > 0 {
-		row1[keyIndex+4], _ = U.FloatRoundOffWithPrecision(100*float64(clicks)/float64(impressions), U.DefaultPrecision) // CTR.
-		row1[keyIndex+6], _ = U.FloatRoundOffWithPrecision(1000*float64(spend)/float64(impressions), U.DefaultPrecision) // CPM.
-	} else {
-		row1[keyIndex+4] = float64(0) // CTR.
-		row1[keyIndex+6] = float64(0) // CPM.
-	}
-	if float64(clicks) > 0 {
-		row1[keyIndex+5], _ = U.FloatRoundOffWithPrecision(float64(spend)/float64(clicks), U.DefaultPrecision)                           // AvgCPC.
-		row1[keyIndex+7], _ = U.FloatRoundOffWithPrecision(100*float64(row1[keyIndex+12].(float64))/float64(clicks), U.DefaultPrecision) // ClickConversionRate.
-	} else {
-		row1[keyIndex+5] = float64(0) // AvgCPC.
-		row1[keyIndex+7] = float64(0) // ClickConversionRate.
-	}
-
-	// Normal conversion [12, 13, 14] = [Conversion, CPC, Rate]
-	if row1[keyIndex+12].(float64) > 0 {
-		row1[keyIndex+13], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+12].(float64), U.DefaultPrecision) // Conversion - CPC.
-	} else {
-		row1[keyIndex+12] = float64(0)
-		row1[keyIndex+13] = float64(0) // Conversion - CPC.
-	}
-
-	if row1[keyIndex+9].(int64) > 0 {
-		row1[keyIndex+14], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+12].(float64)/float64(row1[keyIndex+9].(int64))*100, U.DefaultPrecision)
-	} else {
-		row1[keyIndex+9] = int64(0)
-		row1[keyIndex+14] = float64(0)
-	}
-
-	// Compare conversion [15, 16, 17] = [Conversion, CPC, Rate]
-	if row1[keyIndex+15].(float64) > 0 {
-		row1[keyIndex+16], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+15].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
-	} else {
-		row1[keyIndex+15] = float64(0)
-		row1[keyIndex+16] = float64(0) // Compare Conversion - CPC.
-	}
-
-	if row1[keyIndex+9].(int64) > 0 {
-		row1[keyIndex+17], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+15].(float64)/float64(row1[keyIndex+9].(int64))*100, U.DefaultPrecision)
-	} else {
-		row1[keyIndex+9] = int64(0)
-		row1[keyIndex+17] = float64(0)
-	}
-
-	// Remaining linked funnel events & CPCs
-	for i := keyIndex + 18; i < len(row1); i += 3 {
-		row1[i] = row1[i].(float64) + row2[i].(float64)
-		if row1[i].(float64) > 0 && i < len(row1) {
-			row1[i+1], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
+		if float64(row1[keyIndex+1].(int64)+row2[keyIndex+1].(int64)) > 0 {
+			row1[keyIndex+3], _ = U.FloatRoundOffWithPrecision((float64(row1[keyIndex+1].(int64))*row1[keyIndex+3].(float64)+float64(row2[keyIndex+1].(int64))*row2[keyIndex+3].(float64))/float64(row1[keyIndex+1].(int64)+row2[keyIndex+1].(int64)), U.DefaultPrecision) //AvgSessionTime.
 		} else {
-			row1[i+1] = float64(0) // Funnel - Conversion - CPC.
+			row1[keyIndex+10] = float64(0)
+		}
+		row1[keyIndex+1] = row1[keyIndex+1].(int64) + row2[keyIndex+1].(int64) // Sessions
+		row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64) // Users
+		row1[keyIndex+4] = row1[keyIndex+4].(int64) + row2[keyIndex+4].(int64) // PageViews
+
+		row1[keyIndex+5] = row1[keyIndex+5].(float64) + row2[keyIndex+5].(float64) // Conversion.
+
+		//conversion rate
+		if row1[keyIndex+2].(int64) > 0 {
+			row1[keyIndex+6], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+5].(float64)/float64(row1[keyIndex+2].(int64))*100, U.DefaultPrecision)
+		} else {
+			row1[keyIndex+2] = int64(0)
+			row1[keyIndex+6] = float64(0)
 		}
 
+		// Remaining linked funnel events & CPCs
+		for i := keyIndex + 7; i < len(row1); i += 2 {
+			row1[i] = row1[i].(float64) + row2[i].(float64)
+			// Funnel - User Conversion Rate (%)
+			if row1[keyIndex+5].(float64) > 0 {
+				row1[i+1], _ = U.FloatRoundOffWithPrecision(row1[i].(float64)/row1[keyIndex+5].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate   conversion/user count
+			} else {
+				row1[i+1] = float64(0)
+			}
+		}
+
+		return row1
+	} else {
+
+		row1[keyIndex+1] = row1[keyIndex+1].(int64) + row2[keyIndex+1].(int64)     // Impressions.
+		row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64)     // Clicks.
+		row1[keyIndex+3] = row1[keyIndex+3].(float64) + row2[keyIndex+3].(float64) // Spend.
+
+		if float64(row1[keyIndex+8].(int64)+row2[keyIndex+8].(int64)) > 0 {
+			row1[keyIndex+10], _ = U.FloatRoundOffWithPrecision((float64(row1[keyIndex+8].(int64))*row1[keyIndex+10].(float64)+float64(row2[keyIndex+8].(int64))*row2[keyIndex+10].(float64))/float64(row1[keyIndex+8].(int64)+row2[keyIndex+8].(int64)), U.DefaultPrecision) //AvgSessionTime.
+		} else {
+			row1[keyIndex+10] = float64(0)
+		}
+
+		row1[keyIndex+8] = row1[keyIndex+8].(int64) + row2[keyIndex+8].(int64)        // Sessions.
+		row1[keyIndex+9] = row1[keyIndex+9].(int64) + row2[keyIndex+9].(int64)        // Users.
+		row1[keyIndex+11] = row1[keyIndex+11].(int64) + row2[keyIndex+11].(int64)     // PageViews.
+		row1[keyIndex+12] = row1[keyIndex+12].(float64) + row2[keyIndex+12].(float64) // Conversion.
+		row1[keyIndex+15] = row1[keyIndex+15].(float64) + row2[keyIndex+15].(float64) // Compare Conversion.
+
+		impressions := (row1[keyIndex+1]).(int64)
+		clicks := (row1[keyIndex+2]).(int64)
+		spend := row1[keyIndex+3].(float64)
+		if float64(impressions) > 0 {
+			row1[keyIndex+4], _ = U.FloatRoundOffWithPrecision(100*float64(clicks)/float64(impressions), U.DefaultPrecision) // CTR.
+			row1[keyIndex+6], _ = U.FloatRoundOffWithPrecision(1000*float64(spend)/float64(impressions), U.DefaultPrecision) // CPM.
+		} else {
+			row1[keyIndex+4] = float64(0) // CTR.
+			row1[keyIndex+6] = float64(0) // CPM.
+		}
+		if float64(clicks) > 0 {
+			row1[keyIndex+5], _ = U.FloatRoundOffWithPrecision(float64(spend)/float64(clicks), U.DefaultPrecision)                           // AvgCPC.
+			row1[keyIndex+7], _ = U.FloatRoundOffWithPrecision(100*float64(row1[keyIndex+12].(float64))/float64(clicks), U.DefaultPrecision) // ClickConversionRate.
+		} else {
+			row1[keyIndex+5] = float64(0) // AvgCPC.
+			row1[keyIndex+7] = float64(0) // ClickConversionRate.
+		}
+
+		// Normal conversion [12, 13, 14] = [Conversion, CPC, Rate]
 		if row1[keyIndex+12].(float64) > 0 {
-			row1[i+2], _ = U.FloatRoundOffWithPrecision(row1[i].(float64)/row1[keyIndex+12].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate   conversion/user count
+			row1[keyIndex+13], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+12].(float64), U.DefaultPrecision) // Conversion - CPC.
 		} else {
-			row1[i+2] = float64(0) // Funnel - User Conversion Rate (%)
+			row1[keyIndex+12] = float64(0)
+			row1[keyIndex+13] = float64(0) // Conversion - CPC.
 		}
-	}
 
-	return row1
+		if row1[keyIndex+9].(int64) > 0 {
+			row1[keyIndex+14], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+12].(float64)/float64(row1[keyIndex+9].(int64))*100, U.DefaultPrecision)
+		} else {
+			row1[keyIndex+9] = int64(0)
+			row1[keyIndex+14] = float64(0)
+		}
+
+		// Compare conversion [15, 16, 17] = [Conversion, CPC, Rate]
+		if row1[keyIndex+15].(float64) > 0 {
+			row1[keyIndex+16], _ = U.FloatRoundOffWithPrecision(spend/row1[keyIndex+15].(float64), U.DefaultPrecision) // Compare Conversion - CPC.
+		} else {
+			row1[keyIndex+15] = float64(0)
+			row1[keyIndex+16] = float64(0) // Compare Conversion - CPC.
+		}
+
+		if row1[keyIndex+9].(int64) > 0 {
+			row1[keyIndex+17], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+15].(float64)/float64(row1[keyIndex+9].(int64))*100, U.DefaultPrecision)
+		} else {
+			row1[keyIndex+9] = int64(0)
+			row1[keyIndex+17] = float64(0)
+		}
+
+		// Remaining linked funnel events & CPCs
+		for i := keyIndex + 18; i < len(row1); i += 3 {
+			row1[i] = row1[i].(float64) + row2[i].(float64)
+			if row1[i].(float64) > 0 && i < len(row1) {
+				row1[i+1], _ = U.FloatRoundOffWithPrecision(spend/row1[i].(float64), U.DefaultPrecision) // Funnel - Conversion - CPC. spend/conversion
+			} else {
+				row1[i+1] = float64(0) // Funnel - Conversion - CPC.
+			}
+
+			if row1[keyIndex+12].(float64) > 0 {
+				row1[i+2], _ = U.FloatRoundOffWithPrecision(row1[i].(float64)/row1[keyIndex+12].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate   conversion/user count
+			} else {
+				row1[i+2] = float64(0) // Funnel - User Conversion Rate (%)
+			}
+		}
+
+		return row1
+	}
 }
 
 // MergeDataRowsHavingSameKey merges rows having same key by adding each column value
-func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interface{} {
+func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionKey string) [][]interface{} {
 
 	logCtx := log.WithFields(log.Fields{"Method": "MergeDataRowsHavingSameKey"})
 	rowKeyMap := make(map[string][]interface{})
@@ -1304,7 +1349,7 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 			key = key + val
 		}
 		if _, exists := rowKeyMap[key]; exists {
-			rowKeyMap[key] = MergeTwoDataRows(rowKeyMap[key], row, keyIndex)
+			rowKeyMap[key] = MergeTwoDataRows(rowKeyMap[key], row, keyIndex, attributionKey)
 		} else {
 			rowKeyMap[key] = row
 		}
