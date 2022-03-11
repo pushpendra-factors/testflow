@@ -42,7 +42,8 @@ func main() {
 	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
-	onlyWebAnalytics := flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
+	onlyWebAnalytics := flag.Int("only_web_analytics", 0, "Cache only web analytics dashboards.")
+	skipWebAnalytics := flag.Int("only_web_analytics", 0, "Skip Caching for web analytics dashboards.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -160,7 +161,7 @@ func main() {
 	var waitGroup sync.WaitGroup
 	var reportCollector sync.Map
 
-	if !*onlyWebAnalytics {
+	if *onlyWebAnalytics == 0 {
 		if C.GetIsRunningForMemsql() == 0 {
 			waitGroup.Add(1)
 			go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
@@ -168,11 +169,13 @@ func main() {
 			cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
 		}
 	}
-	if C.GetIsRunningForMemsql() == 0 {
-		waitGroup.Add(1)
-		go cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
-	} else {
-		cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
+	if *skipWebAnalytics == 0 {
+		if C.GetIsRunningForMemsql() == 0 {
+			waitGroup.Add(1)
+			go cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
+		} else {
+			cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
+		}
 	}
 
 	if C.GetIsRunningForMemsql() == 0 {

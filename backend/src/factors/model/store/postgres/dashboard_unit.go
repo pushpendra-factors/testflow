@@ -373,8 +373,8 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 			logCtx.WithFields(log.Fields{
 				"finalDashboardUnits":          len(filterDashboardUnits),
 				"finalDashboardUnitQueryClass": len(filterDashboardUnitQueryClass),
-			}).Error("not running caching for project ")
-			return
+			}).Info("not running caching for project ")
+			continue
 		}
 
 		if C.GetUsageBasedDashboardCaching() == 1 {
