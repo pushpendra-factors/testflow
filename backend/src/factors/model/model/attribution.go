@@ -1212,7 +1212,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		if float64(row1[keyIndex+1].(int64)+row2[keyIndex+1].(int64)) > 0 {
 			row1[keyIndex+3], _ = U.FloatRoundOffWithPrecision((float64(row1[keyIndex+1].(int64))*row1[keyIndex+3].(float64)+float64(row2[keyIndex+1].(int64))*row2[keyIndex+3].(float64))/float64(row1[keyIndex+1].(int64)+row2[keyIndex+1].(int64)), U.DefaultPrecision) //AvgSessionTime.
 		} else {
-			row1[keyIndex+10] = float64(0)
+			row1[keyIndex+3] = float64(0)
 		}
 		row1[keyIndex+1] = row1[keyIndex+1].(int64) + row2[keyIndex+1].(int64) // Sessions
 		row1[keyIndex+2] = row1[keyIndex+2].(int64) + row2[keyIndex+2].(int64) // Users
