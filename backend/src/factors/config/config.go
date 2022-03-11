@@ -218,6 +218,7 @@ type Configuration struct {
 	SdkQueueThreshold                               int
 	IntegrationQueueThreshold                       int
 	UsageBasedDashboardCaching                      int
+	OnlyKPICaching                                  int
 	EnableBingAdsAttribution                        bool
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
@@ -2072,6 +2073,10 @@ func GetHubspotBatchInsertBatchSize() int {
 
 func GetUsageBasedDashboardCaching() int {
 	return configuration.UsageBasedDashboardCaching
+}
+
+func GetOnlyKPICachingCaching() int {
+	return configuration.OnlyKPICaching
 }
 
 func UseHubspotBatchInsertByProjectID(projectID uint64) bool {
