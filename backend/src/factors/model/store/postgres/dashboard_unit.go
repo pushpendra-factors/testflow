@@ -300,7 +300,7 @@ func (pg *Postgres) UpdateDashboardUnit(projectId uint64, agentUUID string,
 }
 
 // CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
-func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs, dashboardUnitIDsList string, numRoutines int, reportCollector *sync.Map) {
+func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map) {
 	logFields := log.Fields{
 		"string_projects_ids": stringProjectsIDs,
 		"exclude_project_ids": excludeProjectIDs,
