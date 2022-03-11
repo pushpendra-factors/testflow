@@ -214,7 +214,7 @@ type KPIGroupBy struct {
 	PropertyDataType string `json:"prDaTy"`
 	GroupByType      string `json:"gbty"`
 	Entity           string `json:"en"`
-	Granularity      string `json:"gr"`
+	Granularity      string `json:"grn"`
 }
 
 var MapOfMetricsToData = map[string]map[string]map[string]string{
