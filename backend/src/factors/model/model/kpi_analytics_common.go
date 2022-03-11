@@ -405,7 +405,7 @@ func GetNonGBTResultsFromGBTResults(queryResults []QueryResult, query KPIQuery) 
 			key := getKeyWithoutDateTime(currentRow)
 
 			if val, ok := resultAsMap[key]; ok {
-				totalValue, err := U.SafeAddition(val, currentRow[len(currentRow)-1])
+				totalValue, err := U.SafeAddition(val[len(currentRow)-1], currentRow[len(currentRow)-1])
 				if err != nil {
 					resultAsMap = make(map[string][]interface{})
 					break

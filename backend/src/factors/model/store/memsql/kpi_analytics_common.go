@@ -41,7 +41,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 				}
 				hashMapOfQueryToResult[hashCode] = result
 			} else {
-				result := make([]model.QueryResult, 0)
+				result := make([]model.QueryResult, 1)
 				queryResults = append(queryResults, result...)
 			}
 		} else {
@@ -63,6 +63,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQue
 			hashCode, err := query.GetQueryCacheHashString()
 			if err != nil {
 				log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).Error("Failed while generating hashString for kpi 2.")
+				return []model.QueryResult{model.QueryResult{}, model.QueryResult{}}, http.StatusBadRequest
 			}
 			if resultsWithGbt, exists := hashMapOfQueryToResult[hashCode]; exists {
 				queryResults[index] = model.GetNonGBTResultsFromGBTResults(resultsWithGbt, query)[0]

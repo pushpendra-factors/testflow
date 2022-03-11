@@ -164,6 +164,9 @@ export default function (state = defaultState, action) {
     case 'FETCH_BINGADS_FULFILLED': {
       return { ...state, bingAds: action.payload };
     }
+    case 'FETCH_BINGADS_REJECTED': {
+      return { ...state, bingAds: action.payload };
+    }
     case 'DISABLE_BINGADS_FULFILLED': {
       return {...state, bingAds: {}}
     }
@@ -671,10 +674,12 @@ export function fetchBingAdsIntegration(projectId) {
             dispatch({ type: 'FETCH_BINGADS_FULFILLED', payload: r.data});
             resolve(r);
           } else {
+            dispatch({ type: 'FETCH_BINGADS_REJECTED', payload: {}});
             reject(r);
           }
         })
         .catch((err) => {
+          dispatch({ type: 'FETCH_BINGADS_REJECTED', payload: {}});
           reject(err);
         });
     });
