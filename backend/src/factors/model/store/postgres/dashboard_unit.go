@@ -361,6 +361,11 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 			if queryClass != model.QueryClassKPI && C.GetOnlyKPICachingCaching() == 1 {
 				continue
 			}
+			// skip kpi query for skip enabled run
+			if queryClass == model.QueryClassKPI && C.GetSkipKPICachingCaching() == 1 {
+				continue
+			}
+
 			filterDashboardUnits = append(filterDashboardUnits, dashboardUnit)
 			filterDashboardUnitQueryClass = append(filterDashboardUnitQueryClass, queryClass)
 		}

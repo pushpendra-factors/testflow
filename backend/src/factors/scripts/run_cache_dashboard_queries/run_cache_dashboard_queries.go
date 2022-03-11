@@ -55,6 +55,7 @@ func main() {
 	skipAttribution := flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
 	enableUsageBasedDashboardCaching := flag.Int("enable_usage_based_caching", 0, "Usage based dashboard caching analytics for 14 days limit.")
 	onlyKPICaching := flag.Int("only_kpi_caching", 0, "Cache only KPI Queries on dashboards.")
+	skipKPICaching := flag.Int("skip_kpi_caching", 0, "Skip caching KPI Queries on dashboards.")
 
 	runningForMemsql := flag.Int("running_for_memsql", 0, "Disable routines for memsql.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -132,6 +133,7 @@ func main() {
 		ResourcePoolForAnalytics:            *resourcePoolForAnalytics,
 		UsageBasedDashboardCaching:          *enableUsageBasedDashboardCaching,
 		OnlyKPICaching:                      *onlyKPICaching,
+		SkipKPICaching:                      *skipKPICaching,
 	}
 
 	C.InitConf(config)
