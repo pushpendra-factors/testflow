@@ -173,18 +173,6 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
     }); 
   },[activeProject]);
 
-  const whiteListedAccounts_BING = [
-    'jitesh@factors.ai',
-    'kartheek@factors.ai',
-    'baliga@factors.ai',
-    'praveenr@factors.ai',
-    'sonali@factors.ai',
-    'solutions@factors.ai',
-    'praveen@factors.ai',
-    'ashwin@factors.ai',
-    'junaid@factors.ai'
-  ];
-
   return (
     <>
     <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
@@ -201,16 +189,9 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
           <Col span={24}>
             {dataLoading ? <Skeleton active paragraph={{ rows: 4 }} />
               : IntegrationProviderData.map((item, index) => {
-                // Flag for bing ads
-                if (
-                  item.name === 'Bing Ads' && !whiteListedAccounts_BING.includes(currentAgent.email)
-                ) {
-                  return null;
-                } else {
                 return (
                   <IntegrationCard item={item} index={index} key={index} currentProjectSettings={currentProjectSettings} />
                 );
-                }
               })
             }
           </Col>

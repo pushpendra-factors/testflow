@@ -82,6 +82,9 @@ def record_metric(metric_type, metric_name, metric_value=0):
         log.error("Failed to record metric %s. Error: %s", metric_name, response.text)
 
 def create_document_in_batch(project_id, doc_type, documents, fetch_deleted_contact=False):
+    if len(documents) == 0:
+        return
+
     uri = "/data_service/hubspot/documents/add_batch"
     url = options.data_service_host + uri
 
@@ -579,19 +582,22 @@ def fill_contacts_for_companies(project_id, api_key, docs):
     return docs, company_contacts_api_calls
 
 def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
+    limit_key = ""
     if sync_all:
         urls = [ "https://api.hubapi.com/companies/v2/companies/paged?" ]
         log.warning("Downloading all companies for project_id : "+ str(project_id) + ".")
+        limit_key = "limit"
     else:
         urls = [ "https://api.hubapi.com/companies/v2/companies/recent/modified?" ] # both created and modified. 
         log.warning("Downloading recently created or modified companies for project_id : "+ str(project_id) + ".")
+        limit_key = "count"
 
     companies_api_calls = 0
     companies_contacts_api_calls = 0
     max_timestamp = 0
     for url in urls:
         count = 0
-        parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
+        parameter_dict = {'hapikey': api_key, limit_key: PAGE_SIZE}
 
         properties = []
         if sync_all:

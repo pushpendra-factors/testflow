@@ -217,6 +217,7 @@ type Configuration struct {
 	DelayedTaskThreshold                            int
 	SdkQueueThreshold                               int
 	IntegrationQueueThreshold                       int
+	UsageBasedDashboardCaching                      int
 	EnableBingAdsAttribution                        bool
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
@@ -2069,8 +2070,8 @@ func GetHubspotBatchInsertBatchSize() int {
 	return GetConfig().HubspotBatchInsertBatchSize
 }
 
-func GetSkipDashboardCachingAnalytics() int {
-	return configuration.SkipDashboardCachingAnalytics
+func GetUsageBasedDashboardCaching() int {
+	return configuration.UsageBasedDashboardCaching
 }
 
 func UseHubspotBatchInsertByProjectID(projectID uint64) bool {

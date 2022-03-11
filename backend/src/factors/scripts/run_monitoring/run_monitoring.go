@@ -228,65 +228,65 @@ func GetHealth(apiToken string, apiUrl string) (map[string]interface{}, string, 
 }
 
 func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueThreshold int,
-	apiPayload map[string]interface{}) (int, int, int, bool, int, int, int, bool) {
-	var delayedTaskCount int
-	var duplicateDelayedTaskCount int
-	var sdkQueueLength int
-	var duplicateSdkQueueLength int
-	var integrationQueueLength int
-	var duplicateIntegrationQueueLength int
+	apiPayload map[string]interface{}) (float64, float64, float64, bool, float64, float64, float64, bool) {
+	var delayedTaskCount float64
+	var duplicateDelayedTaskCount float64
+	var sdkQueueLength float64
+	var duplicateSdkQueueLength float64
+	var integrationQueueLength float64
+	var duplicateIntegrationQueueLength float64
 
 	if apiPayload["delayed_task_count"] != nil {
-		delayedTaskCount = apiPayload["delayed_task_count"].(int)
+		delayedTaskCount = apiPayload["delayed_task_count"].(float64)
 	}
 	if apiPayload["dup_delayed_task_count"] != nil {
-		duplicateDelayedTaskCount = apiPayload["dup_delayed_task_count"].(int)
+		duplicateDelayedTaskCount = apiPayload["dup_delayed_task_count"].(float64)
 	}
 	if apiPayload["sdk_queue_length"] != nil {
-		sdkQueueLength = apiPayload["sdk_queue_length"].(int)
+		sdkQueueLength = apiPayload["sdk_queue_length"].(float64)
 	}
 	if apiPayload["dup_sdk_queue_length"] != nil {
-		duplicateSdkQueueLength = apiPayload["dup_sdk_queue_length"].(int)
+		duplicateSdkQueueLength = apiPayload["dup_sdk_queue_length"].(float64)
 	}
 	if apiPayload["integration_queue_length"] != nil {
-		integrationQueueLength = apiPayload["integration_queue_length"].(int)
+		integrationQueueLength = apiPayload["integration_queue_length"].(float64)
 	}
 	if apiPayload["dup_integration_queue_length"] != nil {
-		duplicateIntegrationQueueLength = apiPayload["dup_integration_queue_length"].(int)
+		duplicateIntegrationQueueLength = apiPayload["dup_integration_queue_length"].(float64)
 	}
 
-	if delayedTaskCount > delayedTaskThreshold {
+	if delayedTaskCount > float64(delayedTaskThreshold) {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-			fmt.Sprintf("Delayed task count %d exceeds threshold of %d", delayedTaskCount, delayedTaskThreshold))
+			fmt.Sprintf("Delayed task count %f exceeds threshold of %d", delayedTaskCount, delayedTaskThreshold))
 	}
 	if C.IsQueueDuplicationEnabled() {
-		if duplicateDelayedTaskCount > delayedTaskThreshold {
+		if duplicateDelayedTaskCount > float64(delayedTaskThreshold) {
 			C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-				fmt.Sprintf("Duplicate queue delayed task count %d exceeds threshold of %d", duplicateDelayedTaskCount, delayedTaskThreshold))
+				fmt.Sprintf("Duplicate queue delayed task count %f exceeds threshold of %d", duplicateDelayedTaskCount, delayedTaskThreshold))
 		}
 	}
 
-	if sdkQueueLength > sdkQueueThreshold {
+	if sdkQueueLength > float64(sdkQueueThreshold) {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-			fmt.Sprintf("SDK queue length %d exceeds threshold of %d", sdkQueueLength, sdkQueueThreshold))
+			fmt.Sprintf("SDK queue length %f exceeds threshold of %d", sdkQueueLength, sdkQueueThreshold))
 	}
 
 	if C.IsQueueDuplicationEnabled() {
-		if duplicateSdkQueueLength > sdkQueueThreshold {
+		if duplicateSdkQueueLength > float64(sdkQueueThreshold) {
 			C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-				fmt.Sprintf("SDK duplicate queue length %d exceeds threshold of %d", duplicateSdkQueueLength, sdkQueueThreshold))
+				fmt.Sprintf("SDK duplicate queue length %f exceeds threshold of %d", duplicateSdkQueueLength, sdkQueueThreshold))
 		}
 	}
 
-	if integrationQueueLength > integrationQueueThreshold {
+	if integrationQueueLength > float64(integrationQueueThreshold) {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-			fmt.Sprintf("Integration queue length %d exceeds threshold of %d", integrationQueueLength, integrationQueueThreshold))
+			fmt.Sprintf("Integration queue length %f exceeds threshold of %d", integrationQueueLength, integrationQueueThreshold))
 	}
 
 	if C.IsQueueDuplicationEnabled() {
-		if duplicateIntegrationQueueLength > integrationQueueThreshold {
+		if duplicateIntegrationQueueLength > float64(integrationQueueThreshold) {
 			C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-				fmt.Sprintf("Integration duplicate queue length %d exceeds threshold of %d", duplicateIntegrationQueueLength, integrationQueueThreshold))
+				fmt.Sprintf("Integration duplicate queue length %f exceeds threshold of %d", duplicateIntegrationQueueLength, integrationQueueThreshold))
 		}
 	}
 

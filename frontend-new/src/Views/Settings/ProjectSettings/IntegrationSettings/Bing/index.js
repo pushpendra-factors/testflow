@@ -65,20 +65,45 @@ const BingIntegration = ({
     }
   }, [activeProject, agent_details, bingAds?.status]);
 
+  const sendSlackNotification = () => {
+    let webhookURL = 'https://hooks.slack.com/services/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';
+    let data = {
+        "text": `User ${agent_details.email} from Project "${activeProject.name}" Activated Integration: Bing Ads`,
+        "username" : "Signup User Actions",
+        "icon_emoji" : ":golf:"
+    }
+    let params = {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }
+
+    fetch(webhookURL, params)
+    .then((response) => response.json())
+    .then((response) => {
+        console.log(response);
+    })
+    .catch((err) => {
+        console.log('err',err);
+    });
+}
+
   const enableBingAds = () => {
     setLoading(true);
     createBingAdsIntegration(activeProject.id)
       .then((r) => {
         setLoading(false);
         if (r.status == 200) {
+          let hostname = window.location.hostname
+          let protocol = window.location.protocol
+          let port = window.location.port
+          let redirectURL = protocol + "//" + hostname + ":" + port + "?bingadsint=" + activeProject.id
+          if (port === undefined || port === '') {
+            redirectURL = protocol + "//" + hostname + "?bingadsint=" + activeProject.id
+          }
           let url = new URL(r.data.redirect_uri);
-          url.searchParams.set('redirect_uri', window.location.href)
+          url.searchParams.set('redirect_uri', redirectURL)
           window.location = url.href;
-        }
-        if (r.status == 200) {
-          enableBingAdsIntegration(activeProject.id);
-          isBingAdsEnabled();
-          bingAds.status ? message.success('Bing Ads Integration Enabled!'): null;
+          sendSlackNotification();
         }
         if (r.status >= 400) {
           message.error('Error fetching Bing Ads accounts');
