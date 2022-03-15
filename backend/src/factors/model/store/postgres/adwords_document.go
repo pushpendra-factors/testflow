@@ -1926,10 +1926,10 @@ func (pg *Postgres) getAdwordsMetrics(projectID uint64, customerAccountID string
 	}
 
 	resultHeaders, resultRows, err := U.DBReadRows(rows, tx)
-
 	if err != nil {
 		return nil, err
 	}
+
 	if len(resultRows) == 0 {
 		log.Warn("Aggregate query returned zero rows.")
 		return nil, errors.New("no rows returned")
@@ -2021,33 +2021,38 @@ func (pg *Postgres) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days i
 	query := adwordsAdGroupMetdataFetchQueryStr
 	params := []interface{}{model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs,
 		model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs}
-	rows, _, err := pg.ExecQueryWithContext(query, params)
+	rows1, tx1, err := pg.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for adwords", days)
 		log.WithField("error string", err).Error(errString)
+		U.CloseReadQuery(rows1, tx1)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
-	defer rows.Close()
-	for rows.Next() {
+
+	for rows1.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
-		rows.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
+		rows1.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
+	U.CloseReadQuery(rows1, tx1)
 
 	query = adwordsCampaignMetadataFetchQueryStr
 	params = []interface{}{model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs}
-	rows, _, err = pg.ExecQueryWithContext(query, params)
+	rows2, tx2, err := pg.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for adwords", days)
 		log.WithField("error string", err).Error(errString)
+		U.CloseReadQuery(rows2, tx2)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
-	defer rows.Close()
-	for rows.Next() {
+
+	for rows2.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
-		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
+		rows2.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
+	U.CloseReadQuery(rows2, tx2)
+
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
 

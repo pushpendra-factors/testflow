@@ -1154,36 +1154,39 @@ func (pg *Postgres) GetLatestMetaForFacebookForGivenDays(projectID uint64, days 
 		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs,
 		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs}
 
-	rows, _, err := pg.ExecQueryWithContext(query, params)
+	rows1, tx1, err := pg.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
 		log.WithField("error string", err).Error(errString)
+		U.CloseReadQuery(rows1, tx1)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	defer rows.Close()
-	for rows.Next() {
+	for rows1.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
-		rows.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
+		rows1.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
+	U.CloseReadQuery(rows1, tx1)
 
 	query = facebookCampaignMetadataFetchQueryStr
 	params = []interface{}{
 		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to,
 		customerAccountIDs, facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs}
-	rows, _, err = pg.ExecQueryWithContext(query, params)
+	rows2, tx2, err := pg.ExecQueryWithContext(query, params)
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for facebook", days)
 		log.WithField("error string", err).Error(errString)
+		U.CloseReadQuery(rows2, tx2)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
-	defer rows.Close()
-	for rows.Next() {
+
+	for rows2.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
-		rows.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
+		rows2.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName)
 		channelDocumentsCampaign = append(channelDocumentsCampaign, currentRecord)
 	}
+	U.CloseReadQuery(rows2, tx2)
 
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
