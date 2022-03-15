@@ -8,6 +8,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,15 @@ func TestCreateDashboard(t *testing.T) {
 		assert.NotNil(t, dashboard)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Equal(t, rName, dashboard.Name)
+	})
+
+	t.Run("CreateDashboardWithSettings", func(t *testing.T) {
+		rName := U.RandomString(5)
+		dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID,
+			&model.Dashboard{Name: rName, Type: model.DashboardTypeProjectVisible,
+				Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 100}`)}})
+		assert.NotNil(t, dashboard)
+		assert.Equal(t, http.StatusCreated, errCode)
 	})
 
 	t.Run("CreateDashboard:Invalid", func(t *testing.T) {
@@ -194,6 +204,23 @@ func TestUpdateDashboard(t *testing.T) {
 		}
 		errCode = store.GetStore().UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &model.UpdatableDashboard{UnitsPosition: &validPositions})
 		assert.Equal(t, http.StatusAccepted, errCode)
+	})
+
+	t.Run("UpdateDashboard:Settings", func(t *testing.T) {
+		rName1 := U.RandomString(5)
+		dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID, &model.Dashboard{Name: rName1, Type: model.DashboardTypePrivate, Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 50}`)}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboard)
+
+		settings := postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 100,"chart": "Line"}`)}
+		errCode = store.GetStore().UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &model.UpdatableDashboard{Settings: &settings})
+		assert.Equal(t, http.StatusAccepted, errCode)
+		gDashboard, errCode := store.GetStore().GetDashboard(project.ID, agent.UUID, dashboard.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+
+		querySettings, _ := U.DecodePostgresJsonb(&settings)
+		updatedSettings, _ := U.DecodePostgresJsonb(&gDashboard.Settings)
+		assert.True(t, reflect.DeepEqual(updatedSettings, querySettings))
 	})
 }
 

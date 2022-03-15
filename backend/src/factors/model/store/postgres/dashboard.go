@@ -5,6 +5,7 @@ import (
 	"errors"
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 	"sort"
 
@@ -285,6 +286,10 @@ func (pg *Postgres) UpdateDashboard(projectId uint64, agentUUID string, id uint6
 
 	if dashboard.Description != "" {
 		updateFields["description"] = dashboard.Description
+	}
+
+	if dashboard.Settings != nil && !U.IsEmptyPostgresJsonb(dashboard.Settings) {
+		updateFields["settings"] = dashboard.Settings
 	}
 
 	if dashboard.Type != "" {
