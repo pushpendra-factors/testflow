@@ -205,7 +205,7 @@ export const getClickableTitleSorter = (
       <Text weight='bold' color='grey-2' type='title' extraClass='mb-0'>
         {title}
       </Text>
-    )
+    );
   }
 
   const icon = (
@@ -219,32 +219,38 @@ export const getClickableTitleSorter = (
     </>
   );
 
-  const justifyAlignment = alignment === 'left' ? 'justify-start' : 'justify-end'
-  const verticalAlignmentClass = verticalAlignment === 'start' ? 'items-start' : verticalAlignment === 'end' ? 'items-end' : 'items-center';
+  const justifyAlignment =
+    alignment === 'left' ? 'justify-start' : 'justify-end';
+  const verticalAlignmentClass =
+    verticalAlignment === 'start'
+      ? 'items-start'
+      : verticalAlignment === 'end'
+      ? 'items-end'
+      : 'items-center';
 
   return (
     <div
-      role="button"
+      role='button'
       tabIndex={0}
       onClick={() => handleSorting(sorterProp)}
       className={`flex ${verticalAlignmentClass} ${justifyAlignment} cursor-pointer h-full px-4 ${containerClassName}`}
     >
-      <div className="flex gap-x-1 items-center">
+      <div className='flex gap-x-1 items-center'>
         {alignment === 'left' ? (
           <>
             {titleText}
             {icon}
           </>
         ) : (
-            <>
-              {icon}
-              {titleText}
-            </>
-          )}
+          <>
+            {icon}
+            {titleText}
+          </>
+        )}
       </div>
     </div>
   );
-}
+};
 
 export const generateColors = (requiredCumberOfColors) => {
   const adder = Math.floor(visualizationColors.length / requiredCumberOfColors);
@@ -477,8 +483,8 @@ export const getQueryType = (query) => {
   const cl = query.cl
     ? query.cl
     : Array.isArray(query.query_group) && query.query_group.length
-      ? query.query_group[0].cl
-      : QUERY_TYPE_EVENT;
+    ? query.query_group[0].cl
+    : QUERY_TYPE_EVENT;
   return cl;
 };
 
@@ -780,8 +786,8 @@ export const getBreakdownDisplayTitle = (
     prop_category === 'user'
       ? userPropNames[property] || property
       : prop_category === 'event'
-        ? eventPropNames[property] || property
-        : property;
+      ? eventPropNames[property] || property
+      : property;
 
   if (breakdown.eventIndex) {
     displayTitle = displayTitle + ' (event)';
@@ -800,4 +806,27 @@ export const Wait = (duration) => {
 export const toLetters = (num) => {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
   return charArr[num];
+};
+
+export const PropTextFormat = (prop) => {
+  const formatText = prop.replace('$', '').split('_');
+  formatText.forEach((word, i) => {
+    formatText[i] = formatText[i][0].toUpperCase() + formatText[i].substr(1);
+  });
+  return formatText.join(' ');
+};
+
+export const HighlightSearchText = ({ text = '', highlight = '' }) => {
+  if (!highlight.trim()) {
+    return <span>{text}</span>;
+  }
+  const regex = new RegExp(`(${_.escapeRegExp(highlight)})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <span className={'truncate'}>
+      {parts.map((part, i) =>
+        regex.test(part) ? <b key={i}>{part}</b> : <span key={i}>{part}</span>
+      )}
+    </span>
+  );
 };

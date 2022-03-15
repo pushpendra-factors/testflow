@@ -26,6 +26,7 @@ type Dashboard struct {
 	Name          string          `gorm:"not null" json:"name"`
 	Description   string          `json:"description"`
 	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
+	Settings      postgres.Jsonb  `json:"settings"`
 	Class         string          `json:"class"`
 	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
 	IsDeleted     bool            `gorm:"not null;default:false" json:"is_deleted"`
@@ -38,6 +39,7 @@ type UpdatableDashboard struct {
 	Type          string                     `json:"type"`
 	Description   string                     `json:"description"`
 	UnitsPosition *map[string]map[uint64]int `json:"units_position"`
+	Settings      *postgres.Jsonb            `json:"settings"`
 }
 
 type DashboardCacheResult struct {

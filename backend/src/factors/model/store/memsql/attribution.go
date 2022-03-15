@@ -7,7 +7,6 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
@@ -64,12 +63,22 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		return nil, err
 	}
 
+	var contentGroupNamesList []string
+	if query.AttributionKey == model.AttributionKeyLandingPage {
+		contentGroups, errCode := store.GetAllContentGroups(projectID)
+		if errCode != http.StatusFound {
+			return nil, errors.New("failed to get content groups")
+		}
+		for _, contentGroup := range contentGroups {
+			contentGroupNamesList = append(contentGroupNamesList, contentGroup.ContentGroupName)
+		}
+	}
 	sessions := make(map[string]map[string]model.UserSessionData)
 
-	// Pull Sessions for the cases: "Tactic"  and "TacticOffer"
-	if query.TacticOfferType != model.MarketingEventTypeOffer {
+	// Pull Sessions for the cases: "Tactic" and "TacticOffer". If Landing Page level report, pull for offer as well.
+	if query.TacticOfferType != model.MarketingEventTypeOffer || query.AttributionKey == model.AttributionKeyLandingPage {
 		// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
-		_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
+		_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports, contentGroupNamesList)
 		logCtx.Info("Done getAllTheSessions 1 error not checked")
 		if err != nil {
 			logCtx.Info("Done getAllTheSessions 3 return from  checked")
@@ -107,59 +116,13 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 	}
 
-	// Add the Added keys
-	model.AddTheAddedKeysAndMetrics(attributionData, query, sessions)
-
-	// Add the performance information
-	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports)
-
-	// Filter out the key values from query (apply filter after performance enrichment)
-	model.ApplyFilter(attributionData, query)
-
-	// Add additional metrics values
-	model.ComputeAdditionalMetrics(attributionData)
-
-	// Add custom dimensions
-	model.AddCustomDimensions(attributionData, query, marketingReports)
-
-	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
-	// Attribution data to rows
-	dataRows := model.GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
-
 	result := &model.QueryResult{}
-	model.AddHeadersByAttributionKey(result, query)
-	result.Rows = dataRows
+	if query.AttributionKey == model.AttributionKeyLandingPage {
 
-	// Update result based on Key Dimensions
-	err = model.GetUpdatedRowsByDimensions(result, query)
-	if err != nil {
-		return nil, err
+		result = model.ProcessQueryLandingPageUrl(query, attributionData)
+	} else {
+		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare)
 	}
-
-	result.Rows = model.MergeDataRowsHavingSameKey(result.Rows, model.GetLastKeyValueIndex(result.Headers))
-
-	// Additional filtering based on AttributionKey.
-	result.Rows = model.FilterRows(result.Rows, query.AttributionKey, model.GetLastKeyValueIndex(result.Headers))
-
-	// sort the rows by conversionEvent
-	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
-
-	conversionIndex := model.GetConversionIndex(result.Headers)
-	sort.Slice(result.Rows, func(i, j int) bool {
-		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
-			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
-			return true
-		}
-		v1, ok1 := result.Rows[i][conversionIndex].(float64)
-		v2, ok2 := result.Rows[j][conversionIndex].(float64)
-		if !ok1 || !ok2 {
-			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
-			return true
-		}
-		return v1 > v2
-	})
-
-	result.Rows = model.AddGrandTotalRow(result.Headers, result.Rows, model.GetLastKeyValueIndex(result.Headers))
 	result.Meta.Currency = ""
 	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
 		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
@@ -446,7 +409,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
-func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId string, query *model.AttributionQuery, reports *model.MarketingReports) (map[string]map[string]model.UserSessionData, []string, error) {
+func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId string, query *model.AttributionQuery, reports *model.MarketingReports, contentGroupNamesList []string) (map[string]map[string]model.UserSessionData, []string, error) {
 	logFields := log.Fields{
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
@@ -468,7 +431,7 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	if err != nil {
 		return nil, nil, err
 	}
-
+	contentGroupNamesToDummyNamesMap := model.GetContentGroupNamesToDummyNamesMap(contentGroupNamesList)
 	caseSelectStmt := "CASE WHEN JSON_EXTRACT_STRING(sessions.properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
 
@@ -485,8 +448,8 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 		caseSelectStmt + " AS channel, " +
 		caseSelectStmt + " AS attribution_id, " +
 		caseSelectStmt + " AS gcl_id, " +
-		" sessions.timestamp FROM events AS sessions " +
-		" WHERE sessions.project_id=? AND sessions.event_name_id=? AND sessions.timestamp BETWEEN ? AND ?"
+		caseSelectStmt + " AS landingPageUrl, "
+
 	var qParams []interface{}
 
 	qParams = append(qParams,
@@ -502,7 +465,21 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 		U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
-		projectId, sessionEventNameId, effectiveFrom, effectiveTo)
+		U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL)
+
+	wStmt, wParams, err := getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap)
+	if err != nil {
+		return nil, nil, err
+	}
+	queryUserSessionTimeRange = queryUserSessionTimeRange + wStmt
+	qParams = append(qParams, wParams...)
+
+	queryUserSessionTimeRange = queryUserSessionTimeRange +
+		" sessions.timestamp FROM events AS sessions " +
+		" WHERE sessions.project_id=? AND sessions.event_name_id=? AND sessions.timestamp BETWEEN ? AND ?"
+
+	wParams = []interface{}{projectId, sessionEventNameId, effectiveFrom, effectiveTo}
+	qParams = append(qParams, wParams...)
 	rows, tx, err := store.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -510,7 +487,8 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	}
 	defer U.CloseReadQuery(rows, tx)
 	logCtx.Info("Attribution before ProcessEventRows")
-	return model.ProcessEventRows(rows, query, logCtx, reports)
+	return model.ProcessEventRows(rows, query, logCtx, reports, contentGroupNamesList)
+
 }
 
 // getOfflineEventData returns  offline touch point event id

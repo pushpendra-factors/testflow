@@ -18,7 +18,7 @@ import {
 const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userProperties, rule, onCancel, onSave }) => {
     const [dropDownValues, setDropDownValues] = useState({});
     const [filterDD, setFilterDD] = useState(false);
-    const [timestampRef, setTimestampRefState] = useState('LAST_MODIFIED_TIME_REF');
+    const [timestampRef, setTimestampRefState] = tchType === '2'? useState('LAST_MODIFIED_TIME_REF') : useState('campaign_member_created_date');
     //touch_point_time_ref
     const [touchPointPropRef, setTouchPointPropRef] = useState('');
     const [timestampPropertyRef, setTimestampPropRef] = useState(false);
@@ -31,6 +31,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     const [searchSour, setSearchSour] = useState({
         'source': '', 
         'campaign': '',
+        'channel': ''
     });
 
     //property map
@@ -40,15 +41,15 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
             "va": ""
         },
         "$channel": {
-            "ty": "Constant",
+            "ty": "Property",
             "va": ""
         },
         "$source": {
-            "ty": "Constant",
+            "ty": "Property",
             "va": ""
         },
         "$type": {
-            "ty": "Constant",
+            "ty": "Property",
             "va": ""
         }
     });
@@ -213,8 +214,8 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
 
     const renderFilterBlock = () => {
         return (<Row className={`mt-4`}>
-            <Col span={9} className={`justify-items-end`}>
-                <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Add A Touchpoint Rule</Text>
+            <Col span={4} className={`justify-items-start`}>
+                <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Add a Touchpoint Rule<sup>*</sup></Text>
             </Col>
 
             <Col span={14}>
@@ -258,6 +259,13 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         return isReady;
     }
 
+    const validateRuleInfo = () => {
+        if(newFilterStates.length < 1 || !touchPointPropRef) {
+            return false;
+        }
+        return true;
+    }
+
     const renderTimestampRenderOption = () => {
         let radioGroupElement = null;
         if(tchType === '2') {
@@ -279,7 +287,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     const renderTimestampSelector = () => {
         return (<div className={`mt-8`}>
             <Row className={`mt-2`}>
-                <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Touchpoint Timestamp</Text>
+                <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Touchpoint Timestamp<sup>*</sup></Text>
             </Row>
             <Row className={`mt-4`}>
                 {renderTimestampRenderOption()}
@@ -308,26 +316,37 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     }
 
     const setPropSource = (val) => {
-        const propMap = Object.assign({}, propertyMap);
-        if(tchType === '2') {
-            propertyMap['$source']['va'] = val?.target?.value;
-        } else if(tchType === '3') {
-            propertyMap['$source']['va'] = val;
-            setSearchSour({'source': '', 'campaign': ''});
+        let propMap = Object.assign({}, propertyMap);
+        propertyMap['$source']['va'] = val;
+        if(val === searchSour['source']) {
+            propMap = setSearchValue('source',propMap);
+        }
+        setSearchSour({'source': '', 'campaign': '', 'channel': ''});
+        setPropertyMap(propMap);
+    }
+
+    const setSearchValue = (type,propMap) => {
+        propertyMap['$' + type]['va'] = searchSour[type];
+        propMap['$' + type]['ty'] = 'Constant';
+        return propMap;
+    }
+
+    const setPropCampaign = (val) => {
+        setSearchSour({'source': '', 'campaign': '', 'channel': ''});
+        let propMap = Object.assign({}, propertyMap);
+        propertyMap['$campaign']['va'] = val;
+        if(val === searchSour['campaign']) {
+            propMap = setSearchValue('campaign',propMap);
         }
         setPropertyMap(propMap);
     }
 
-    const setPropCampaign = (val) => {
-        setSearchSour({'source': '', 'campaign': ''});
-        const propMap = Object.assign({}, propertyMap);
-        propertyMap['$campaign']['va'] = val;
-        setPropertyMap(propMap);
-    }
-
     const setPropChannel = (val) => {
-        const propMap = Object.assign({}, propertyMap);
-        propertyMap['$channel']['va'] = val?.target?.value;
+        let propMap = Object.assign({}, propertyMap);
+        propertyMap['$channel']['va'] = val;
+        if(val === searchSour['channel']) {
+            propMap = setSearchValue('channel',propMap);
+        }
         setPropertyMap(propMap);
     }
 
@@ -384,7 +403,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     const renderPropertyMap = () => {
         return (<div className={`border-top--thin pt-5 mt-8 `}>
             <Row>
-                <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Map the properties</Text>
+                <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Map the properties<sup>*</sup></Text>
             </Row>
             <Row className={`mt-10`}>
                 <Col span={7}>
@@ -410,9 +429,6 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
 
                 <Col>
                     {
-                    tchType === '2'?
-                        <Input value={propertyMap['$source']['va']} onChange={setPropSource}></Input>
-                        :
                         <Select 
                         showSearch
                         onSearch={(val) => setSearch('source', val)}
@@ -454,7 +470,17 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
                 </Col>
 
                 <Col>
-                    <Input value={propertyMap['$channel']['va']} onChange={setPropChannel}></Input>
+                    <Select 
+                        showSearch
+                        onSearch={(val) => setSearch('channel', val)}
+                        className={'fa-select w-full'} style={{minWidth: '200px'}}
+                        size={'large'} value={propertyMap['$channel']['va']} onSelect={setPropChannel} defaultValue={``}>
+                            {searchSour['channel'] ?  null:
+                                    <Option value={``}>Select Channel Property </Option>
+                                }
+                            
+                            {renderEventPropertyCampOptions('channel')}
+                        </Select>
                 </Col>
             </Row>
 
@@ -477,10 +503,16 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     const renderFooterActions = () => {
         return (
             <div>
-                <Row  className={`mt-24 relative justify-end`}>
-                    <Col span={10}>
+                <Row className={`mt-20 relative justify-start`}>
+                    <Text level={7} type={'title'} extraClass={'m-0 italic'} weight={'thin'}><sup>*</sup> All these fields are mandatory</Text>
+                </Row>
+                <Row className={`mt-4 relative justify-start`}>
+                    {(!validateRuleInfo() || !validateInputs()) && <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'} color='red'><sup>*</sup> Please fill mandatory fields</Text>}
+                </Row>
+                <Row  className={`border-top--thin mt-4 relative justify-start`}>
+                    <Col className={`mt-6`} span={10}>
                         <Button size={'large'} onClick={() => onCancel()}>Cancel</Button>
-                        <Button disabled={!validateInputs()} size={'large'} type="primary" className={'ml-2'}
+                        <Button disabled={!validateRuleInfo() || !validateInputs()} size={'large'} type="primary" className={'ml-2'}
                             htmlType="submit" onClick={onSaveToucPoint}
                         >Save</Button>
                     </Col>

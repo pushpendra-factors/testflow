@@ -242,7 +242,7 @@ let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factor
             <FaSelect
               extraClass={styles.additionalops}
               options={[
-                ['Edit Details', 'edit'],
+                ['Edit Dashboard', 'edit'],
                 // ['Pin Dashboard', 'pin'],
                 ['Delete Dashboard', 'trash'],
               ]}

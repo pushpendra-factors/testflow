@@ -7,6 +7,8 @@ import ProfileFilterWrapper from '../ProfileFilterWrapper';
 import FaSelect from 'Components/FaSelect';
 import { ProfileMapper, ReverseProfileMapper } from '../../../utils/constants';
 import AliasModal from '../../QueryComposer/AliasModal';
+import { INITIALIZE_GROUPBY } from '../../../reducers/coreQuery/actions';
+import { useDispatch } from 'react-redux';
 
 function ProfileBlock({
   index,
@@ -16,6 +18,8 @@ function ProfileBlock({
   activeProject,
   userProperties,
   groupAnalysis,
+  queryOptions,
+  setQueryOptions,
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -23,6 +27,7 @@ function ProfileBlock({
   const [filterProps, setFilterProperties] = useState({
     user: [],
   });
+  const dispatch = useDispatch();
 
   const alphabetIndex = 'ABCDEF';
 
@@ -50,11 +55,26 @@ function ProfileBlock({
     eventChange(newEvent, index - 1, 'filters_updated');
   };
 
+  /* need confirmation */
+  const resetQueryOptions = () => {
+    const opts = Object.assign({}, queryOptions);
+    opts.globalFilters = [];
+    dispatch({
+      type: INITIALIZE_GROUPBY,
+      payload: {
+        global: [],
+        event: [],
+      },
+    });
+    setQueryOptions(opts);
+  };
+
   const onChange = (value) => {
     const newEvent = { alias: '', label: '', filters: [] };
     newEvent.label = ProfileMapper[value] ? ProfileMapper[value] : value;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
+    // resetQueryOptions();
   };
 
   useEffect(() => {

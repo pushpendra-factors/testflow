@@ -9,7 +9,6 @@ import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   ReverseProfileMapper,
-  revProfileGroupMapper,
 } from '../../../../utils/constants';
 import {
   getBreakdownDataMapperWithUniqueValues,

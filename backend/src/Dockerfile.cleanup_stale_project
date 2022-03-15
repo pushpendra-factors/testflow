@@ -1,0 +1,11 @@
+FROM golang:1.14-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/run_cleanup_stale_project $GOPATH/src/factors/scripts/run_cleanup_stale_project/run_cleanup_stale_project.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+COPY --from=builder /go/bin/run_cleanup_stale_project /go/bin/run_cleanup_stale_project
+ENTRYPOINT ["/go/bin/run_cleanup_stale_project"]

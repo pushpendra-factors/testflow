@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -20,7 +21,7 @@ import (
 
 // Creating mock session with campaign.
 func createSession(projectId uint64, userId string, timestamp int64, campaignName string, adgroupName string,
-	keyword string, gclid string, source string) (*model.Event, int) {
+	keyword string, gclid string, source string, landingPage string) (*model.Event, int) {
 	randomEventName := RandomURL()
 
 	properties := U.PropertiesMap{}
@@ -39,6 +40,9 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 	}
 	if source != "" {
 		properties["$qp_utm_source"] = source
+	}
+	if landingPage != "" {
+		properties["$page_url"] = landingPage
 	}
 
 	trackPayload := SDK.TrackPayload{
@@ -70,9 +74,9 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 }
 
 func createEventWithSession(projectId uint64, conversionEventName string, userId string, timestamp int64,
-	sessionCampaignName string, adgroupName string, keyword string, gclid string, source string) int {
+	sessionCampaignName string, adgroupName string, keyword string, gclid string, source string, landingPage string) int {
 
-	userSession, errCode := createSession(projectId, userId, timestamp, sessionCampaignName, adgroupName, keyword, gclid, source)
+	userSession, errCode := createSession(projectId, userId, timestamp, sessionCampaignName, adgroupName, keyword, gclid, source, landingPage)
 	if errCode != http.StatusCreated {
 		return errCode
 	}
@@ -101,10 +105,6 @@ func TestAttributionModel(t *testing.T) {
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
-	// Should not return error for non adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.Nil(t, err)
-
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
@@ -148,7 +148,7 @@ func TestAttributionModel(t *testing.T) {
 
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
-		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "")
+		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	//Update user1 and user2 properties with latest campaign
@@ -162,7 +162,7 @@ func TestAttributionModel(t *testing.T) {
 			LookbackDays:           10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -177,18 +177,18 @@ func TestAttributionModel(t *testing.T) {
 			LookbackDays:           10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
+		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
+		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryLastTouchCampaignNoLookbackDays", func(t *testing.T) {
@@ -201,7 +201,7 @@ func TestAttributionModel(t *testing.T) {
 			LookbackDays:           10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -210,7 +210,7 @@ func TestAttributionModel(t *testing.T) {
 
 	// linked event for user1
 	errCode = createEventWithSession(project.ID, "event2", createdUserID1,
-		timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "")
+		timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignWithLookbackDays", func(t *testing.T) {
@@ -224,7 +224,7 @@ func TestAttributionModel(t *testing.T) {
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -232,6 +232,193 @@ func TestAttributionModel(t *testing.T) {
 		// no hit for campaigns 1234567 or none
 		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
 	})
+}
+
+func TestAttributionLandingPage(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	customerAccountId := U.RandomLowerAphaNumString(5)
+
+	//Adding content groups in project
+
+	request := model.ContentGroup{}
+	request.ContentGroupName = fmt.Sprintf("%v", "cg_123")
+	request.ContentGroupDescription = "description"
+	value := model.ContentGroupValue{}
+	value.Operator = "startsWith"
+	value.LogicalOp = "OR"
+	value.Value = "123"
+	filters := make([]model.ContentGroupValue, 0)
+	filters = append(filters, value)
+	contentGroupValueArray := make([]model.ContentGroupRule, 0)
+	contentGroupValue := model.ContentGroupRule{
+		ContentGroupValue: "value_123",
+		Rule:              filters,
+	}
+	contentGroupValueArray = append(contentGroupValueArray, contentGroupValue)
+	contentGroupValueJson, err := json.Marshal(contentGroupValueArray)
+	request.Rule = &postgres.Jsonb{contentGroupValueJson}
+	w := sendCreateContentGroupRequest(r, request, agent, project.ID)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountId,
+	})
+
+	assert.Equal(t, http.StatusAccepted, errCode)
+	valueAdwords := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
+	document := &model.AdwordsDocument{
+		ProjectID:         project.ID,
+		CustomerAccountID: customerAccountId,
+		TypeAlias:         "campaign_performance_report",
+		Timestamp:         20200510,
+		Value:             &postgres.Jsonb{RawMessage: valueAdwords},
+	}
+
+	status := store.GetStore().CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+
+	/*
+		timestamp(t)
+		t				user1 ->first session + event initial_campaign -> 123456
+		t+3day			user2 ->first session + event initial_campaign -> 54321
+		t+3day			user3 ->first session initial_campaign -> 54321
+		t+5day			user1 ->session + event latest_campaign -> 1234567
+		t+5day			user2 ->session + event latest_campaign -> 123456
+	*/
+	timestamp := int64(1589068800)
+
+	// Creating 3 users
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID1)
+	assert.Equal(t, http.StatusCreated, errCode)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID2)
+	assert.Equal(t, http.StatusCreated, errCode)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID3)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Events with +1 Days
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
+		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "lp_111111")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	//Update user1 and user2 properties with latest campaign
+	t.Run("AttributionQueryFirstTouchWithinTimestampRangeNoLookBack", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                   timestamp,
+			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
+			AttributionKey:         model.AttributionKeyLandingPage,
+			AttributionMethodology: model.AttributionMethodFirstTouch,
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
+	})
+
+	t.Run("AttributionQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                   timestamp + 3*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
+			AttributionKey:         model.AttributionKeyLandingPage,
+			AttributionMethodology: model.AttributionMethodFirstTouch,
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
+	})
+
+	// Event with +3 Days
+	errCode = createEventWithSession(project.ID, "event1",
+		createdUserID2, timestamp+3*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "lp_222222")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Event with +5 Days
+	errCode = createEventWithSession(project.ID, "event1",
+		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "", "lp_333333")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("AttributionQueryLastTouchLandingPageNoLookbackDays", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                   timestamp,
+			To:                     timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:         model.AttributionKeyLandingPage,
+			AttributionMethodology: model.AttributionMethodLastTouch,
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           10,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
+		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_333333"))
+	})
+
+	// linked event for user1
+	errCode = createEventWithSession(project.ID, "event2", createdUserID1,
+		timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "", "lp_1234567")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("TestFirstTouchLandingPageWithLookbackDays", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                   timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 10*U.SECONDS_IN_A_DAY,
+			AttributionKey:         model.AttributionKeyLandingPage,
+			AttributionMethodology: model.AttributionMethodFirstTouch,
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           20,
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
+		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_333333"))
+		// no hit for landing page  lp_1234567 or none
+		assert.Equal(t, float64(0), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_1234567"))
+	})
+
+	createdUserID4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID3)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Events with +12 Days
+	errCode = createEventWithSession(project.ID, "event2", createdUserID4,
+		timestamp+12*U.SECONDS_IN_A_DAY, "c111111", "", "", "", "", "123_lp_111111")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("AttributionQueryLandingPageContentGroup", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                     timestamp + 15,
+			To:                       timestamp + 20*U.SECONDS_IN_A_DAY,
+			AttributionKey:           model.AttributionKeyLandingPage,
+			AttributionMethodology:   model.AttributionMethodFirstTouch,
+			ConversionEvent:          model.QueryEventWithProperties{Name: "event2"},
+			LookbackDays:             10,
+			AttributionContentGroups: []string{"cg_123"},
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		//testing content group level report. Content group "cg_123" has value "value_123" if landing page url starts with "123"(As per rule defined for cg_123)
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "value_123"))
+	})
+
 }
 
 func TestAttributionEngagementModel(t *testing.T) {
@@ -242,10 +429,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
-
-	// Should not return error for no adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.Nil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
@@ -289,7 +472,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
-		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "")
+		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestAttributionEngagementQueryFirstTouchWithinTimestampRangeNoLookBack", func(t *testing.T) {
@@ -303,7 +486,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -319,17 +502,17 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
 
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
+		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
+		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestAttributionEngagementQueryLastTouchCampaignNoLookbackDays", func(t *testing.T) {
@@ -343,7 +526,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -352,7 +535,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 
 	// linked event for user1
 	errCode = createEventWithSession(project.ID, "event2", createdUserID1,
-		timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "")
+		timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestEngagementFirstTouchCampaignWithLookbackDays", func(t *testing.T) {
@@ -367,7 +550,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -383,10 +566,6 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 	H.InitAppRoutes(r)
 
 	project, err := SetupProjectReturnDAO()
-	assert.Nil(t, err)
-
-	// Should not return error for no adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
 	assert.Nil(t, err)
 
 	addMarketingData(t, project)
@@ -410,7 +589,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
 		timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
-		"Adgroup_Adwords_200", "Keyword_Adwords_300", "Cj0KCQjwmpb0BRCBARIsAG7y4zbZArcUWztiqP5bs", "google")
+		"Adgroup_Adwords_200", "Keyword_Adwords_300", "Cj0KCQjwmpb0BRCBARIsAG7y4zbZArcUWztiqP5bs", "google", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionWithMarketingPropertyCampaign", func(t *testing.T) {
@@ -424,7 +603,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, "adwords", result.Rows[1][0])
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
@@ -444,7 +623,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, "google", result.Rows[1][0])
 
@@ -461,7 +640,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, "Paid Search", result.Rows[1][0])
 	})
@@ -477,7 +656,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		// Conversion.
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
@@ -497,7 +676,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 			LookbackDays:            10,
 		}
 
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		// Added keys.
 		assert.Equal(t, "adwords", result.Rows[1][0])
@@ -513,12 +692,12 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 	errCode = createEventWithSession(project.ID, "event1",
 		createdUserID2, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
-		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google")
+		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
 		createdUserID3, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
-		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google")
+		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryLinearCampaignMultiUserSession", func(t *testing.T) {
@@ -749,6 +928,19 @@ func getConversionUserCount(attributionKey string, result *model.QueryResult, ke
 	return int64(-1)
 }
 
+func getConversionUserCountLandingPage(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
+
+	addedKeysSize := model.GetLastKeyValueIndexLandingPage(result.Headers)
+	conversionIndex := model.GetConversionIndex(result.Headers)
+
+	for _, row := range result.Rows {
+		rowKey := getRowKey(addedKeysSize, row)
+		if rowKey == key {
+			return row[conversionIndex]
+		}
+	}
+	return int64(-1)
+}
 func getRowKey(addedKeysSize int, row []interface{}) string {
 	rowKey := ""
 	for i := 0; i <= addedKeysSize; i++ {
@@ -835,7 +1027,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, createdUserID1)
 
-	_, errCode = createSession(project.ID, createdUserID1, timestamp+4*U.SECONDS_IN_A_DAY, "", "", "", "", "")
+	_, errCode = createSession(project.ID, createdUserID1, timestamp+4*U.SECONDS_IN_A_DAY, "", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	userEventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "event1"})
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -864,7 +1056,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 		UserId: createdUserID1, Timestamp: timestamp + 5*U.SECONDS_IN_A_DAY})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = createSession(project.ID, createdUserID1, timestamp+8*U.SECONDS_IN_A_DAY, "", "", "", "", "")
+	_, errCode = createSession(project.ID, createdUserID1, timestamp+8*U.SECONDS_IN_A_DAY, "", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	query.From = timestamp + 5*U.SECONDS_IN_A_DAY
 
@@ -893,10 +1085,10 @@ func TestAttributionTacticOffer(t *testing.T) {
 
 	timestamp := int64(1589068800)
 
-	errCode = createEventWithSession(project.ID, "event1", createdUserID1, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1, timestamp, "", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	errCode = createEventWithSession(project.ID, "event1", createdUserID2, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID2, timestamp, "", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
@@ -944,13 +1136,13 @@ func TestAttributionTacticOffer(t *testing.T) {
 		t+3day -> first time $initial_campaign set with event for user1 and user2
 		t+6day -> session event for user1 and user2
 	*/
-	status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+	status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, status)
-	status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+	status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, status)
-	status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+	status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, status)
-	status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+	status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, status)
 
 	t.Run("TestAttributionTacticOffer", func(t *testing.T) {
@@ -1028,10 +1220,10 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 
 	timestamp := int64(1589068800)
 
-	errCode = createEventWithSession(project.ID, "event1", createdUserID1, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1, timestamp, "", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	errCode = createEventWithSession(project.ID, "event1", createdUserID2, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID2, timestamp, "", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
@@ -1081,13 +1273,13 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 			t+3day -> first time $initial_campaign set with event for user1 and user2
 			t+6day -> session event for user1 and user2
 		*/
-		status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
 
 		query := &model.AttributionQuery{
@@ -1126,10 +1318,10 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 
 	timestamp := int64(1589068800)
 
-	errCode = createEventWithSession(project.ID, "event1", createdUserID1, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1, timestamp, "", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	errCode = createEventWithSession(project.ID, "event1", createdUserID2, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID2, timestamp, "", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
@@ -1175,9 +1367,9 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
 		// 3 days is out of query window, but should be considered as it falls under Engagement window
-		status := createEventWithSession(project.ID, "eventNewX", createdUserID1, timestamp+5*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status := createEventWithSession(project.ID, "eventNewX", createdUserID1, timestamp+5*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "eventNewX", createdUserID2, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "eventNewX", createdUserID2, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
 
 		query := &model.AttributionQuery{
@@ -1856,7 +2048,7 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := model.MergeDataRowsHavingSameKey(tt.args.rows, 0)
+			got := model.MergeDataRowsHavingSameKey(tt.args.rows, 0, model.AttributionKeyCampaign)
 			for rowNo, _ := range got {
 				for colNo, _ := range got[rowNo] {
 					if got[rowNo][colNo] != tt.want[rowNo][colNo] {

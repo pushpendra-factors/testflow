@@ -27,6 +27,28 @@ const FactorsInsights = lazyWithRetry(() => import("./Views/Factors/FactorsInsig
 
 function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsIntegration }) {
 
+  const sendSlackNotification = (email, projectname) => {
+    let webhookURL = 'https://hooks.slack.com/services/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';
+    let data = {
+        "text": `User ${email} from Project "${projectname}" Activated Integration: Bing Ads`,
+        "username" : "Signup User Actions",
+        "icon_emoji" : ":golf:"
+    }
+    let params = {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }
+
+    fetch(webhookURL, params)
+    .then((response) => response.json())
+    .then((response) => {
+        console.log(response);
+    })
+    .catch((err) => {
+        console.log('err',err);
+    });
+  }
+
   useEffect(() => {
 
     if (window.location.origin.startsWith("https://tufte-prod.factors.ai")) {
@@ -48,7 +70,10 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
       var searchParams = new URLSearchParams(window.location.search);
       if (searchParams) {
         let projectID = searchParams.get("bingadsint");
+        let email = searchParams.get('email');
+        let projectname = searchParams.get('projectname');
         enableBingAdsIntegration(projectID).then(() => {
+          sendSlackNotification(email, projectname);
           window.location.replace("/settings/#integrations");
         }).catch((err) => {
           console.log('bing ads enable error', err)
