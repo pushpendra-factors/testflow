@@ -474,19 +474,3 @@ export const ReverseProfileMapper = {
 
 export const DISPLAY_PROP = { $none: '(Not Set)' };
 export const REV_DISPLAY_PROP = { '(Not Set)': '$none' };
-
-export const ProfileGroupMapper = {
-  Users: 'users',
-  'Hubspot Companies': '$hubspot_company',
-  'Hubspot Deals': '$hubspot_deal',
-  'Salesforce Accounts': '$salesforce_account',
-  'Salesforce Opportunity': '$salesforce_opportunity',
-};
-
-export const revProfileGroupMapper = {
-  users: 'Users',
-  $hubspot_company: 'Hubspot Companies',
-  $hubspot_deal: 'Hubspot Deals',
-  $salesforce_account: 'Salesforce Accounts',
-  $salesforce_opportunity: 'Salesforce Opportunity',
-};

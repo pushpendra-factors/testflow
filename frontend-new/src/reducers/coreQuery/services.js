@@ -6,6 +6,9 @@ import {
   QUERY_DELETED,
   QUERIES_LOADING_STOPPED,
   INITIALIZE_TOUCHPOINT_DIMENSIONS,
+  GROUPS_LOADING,
+  GROUPS_LOADED,
+  GROUPS_LOADING_FAILED,
 } from '../types';
 import { notification } from 'antd';
 import { getErrorMessage } from '../../utils/dataFormatter';
@@ -230,6 +233,21 @@ export const fetchQueries = (projectId) => {
     }
   };
 };
+
+export const fetchGroups = (projectId) => {
+  return async (dispatch) => {
+    try {
+      dispatch({ type: GROUPS_LOADING });
+      const url = host + 'projects/' + projectId + '/groups';
+      const res = await get(null, url);
+      dispatch({ type: GROUPS_LOADED, payload: res.data });
+    } catch (err) {
+      console.log(err);
+      dispatch({ type: GROUPS_LOADING_FAILED });
+    }
+  };
+};
+
 
 export const getAttributionsData = (
   projectId,

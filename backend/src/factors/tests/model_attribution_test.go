@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -232,27 +233,49 @@ func TestAttributionModel(t *testing.T) {
 		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
 	})
 }
+
 func TestAttributionLandingPage(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitAppRoutes(r)
-
-	project, err := SetupProjectReturnDAO()
+	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
+
+	//Adding content groups in project
+
+	request := model.ContentGroup{}
+	request.ContentGroupName = fmt.Sprintf("%v", "cg_123")
+	request.ContentGroupDescription = "description"
+	value := model.ContentGroupValue{}
+	value.Operator = "startsWith"
+	value.LogicalOp = "OR"
+	value.Value = "123"
+	filters := make([]model.ContentGroupValue, 0)
+	filters = append(filters, value)
+	contentGroupValueArray := make([]model.ContentGroupRule, 0)
+	contentGroupValue := model.ContentGroupRule{
+		ContentGroupValue: "value_123",
+		Rule:              filters,
+	}
+	contentGroupValueArray = append(contentGroupValueArray, contentGroupValue)
+	contentGroupValueJson, err := json.Marshal(contentGroupValueArray)
+	request.Rule = &postgres.Jsonb{contentGroupValueJson}
+	w := sendCreateContentGroupRequest(r, request, agent, project.ID)
+	assert.Equal(t, http.StatusCreated, w.Code)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
 
 	assert.Equal(t, http.StatusAccepted, errCode)
-	value := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
+	valueAdwords := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
 	document := &model.AdwordsDocument{
 		ProjectID:         project.ID,
 		CustomerAccountID: customerAccountId,
 		TypeAlias:         "campaign_performance_report",
 		Timestamp:         20200510,
-		Value:             &postgres.Jsonb{RawMessage: value},
+		Value:             &postgres.Jsonb{RawMessage: valueAdwords},
 	}
 
 	status := store.GetStore().CreateAdwordsDocument(document)
@@ -360,15 +383,42 @@ func TestAttributionLandingPage(t *testing.T) {
 			LookbackDays:           20,
 		}
 
-		//Should only have user2 with no 0 linked event count
 		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_111111"))
 		assert.Equal(t, int64(-1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_222222"))
 		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_333333"))
-		// no hit for campaigns 1234567 or none
+		// no hit for landing page  lp_1234567 or none
 		assert.Equal(t, float64(0), getConversionUserCountLandingPage(query.AttributionKey, result, "lp_1234567"))
 	})
+
+	createdUserID4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.NotNil(t, createdUserID3)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Events with +12 Days
+	errCode = createEventWithSession(project.ID, "event2", createdUserID4,
+		timestamp+12*U.SECONDS_IN_A_DAY, "c111111", "", "", "", "", "123_lp_111111")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("AttributionQueryLandingPageContentGroup", func(t *testing.T) {
+		query := &model.AttributionQuery{
+			From:                     timestamp + 15,
+			To:                       timestamp + 20*U.SECONDS_IN_A_DAY,
+			AttributionKey:           model.AttributionKeyLandingPage,
+			AttributionMethodology:   model.AttributionMethodFirstTouch,
+			ConversionEvent:          model.QueryEventWithProperties{Name: "event2"},
+			LookbackDays:             10,
+			AttributionContentGroups: []string{"cg_123"},
+		}
+
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		//testing content group level report. Content group "cg_123" has value "value_123" if landing page url starts with "123"(As per rule defined for cg_123)
+		assert.Equal(t, float64(1), getConversionUserCountLandingPage(query.AttributionKey, result, "value_123"))
+	})
+
 }
 
 func TestAttributionEngagementModel(t *testing.T) {
@@ -1998,7 +2048,7 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := model.MergeDataRowsHavingSameKey(tt.args.rows, 0)
+			got := model.MergeDataRowsHavingSameKey(tt.args.rows, 0, model.AttributionKeyCampaign)
 			for rowNo, _ := range got {
 				for colNo, _ := range got[rowNo] {
 					if got[rowNo][colNo] != tt.want[rowNo][colNo] {

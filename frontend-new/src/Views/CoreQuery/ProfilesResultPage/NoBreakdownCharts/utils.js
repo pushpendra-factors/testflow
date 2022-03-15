@@ -4,13 +4,13 @@ import {
   SortResults,
   getClickableTitleSorter,
   toLetters,
+  PropTextFormat,
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import HorizontalBarChartCell from '../../EventsAnalytics/SingleEventMultipleBreakdown/HorizontalBarChartCell';
 import {
   ReverseProfileMapper,
-  revProfileGroupMapper,
 } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
@@ -32,7 +32,7 @@ export const getTableColumns = (
 ) => {
   const userCol = {
     title: getClickableTitleSorter(
-      revProfileGroupMapper[groupAnalysis],
+      PropTextFormat(groupAnalysis),
       { key: 'Users', type: 'categorical', subtype: null },
       currentSorter,
       handleSorting
@@ -90,7 +90,7 @@ export const getTableData = (
 export const getHorizontalBarChartColumns = (groupAnalysis) => {
   const row = {
     title: (
-      <NonClickableTableHeader title={revProfileGroupMapper[groupAnalysis]} />
+      <NonClickableTableHeader title={PropTextFormat(groupAnalysis)} />
     ),
     dataIndex: `users`,
     className: tableStyles.horizontalBarTableHeader,
