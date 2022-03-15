@@ -450,7 +450,6 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	logFields := log.Fields{
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
-		"reports":               reports,
 		"query":                 query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

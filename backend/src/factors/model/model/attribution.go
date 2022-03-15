@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	C "factors/config"
 	U "factors/util"
 	"fmt"
 	"strings"
@@ -1837,6 +1838,7 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.En
 
 func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry, reports *MarketingReports) (map[string]map[string]UserSessionData, []string, error) {
 
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
@@ -1848,6 +1850,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 		AdgroupID      string
 	}
 	var missingIDs []MissingCollection
+	count := 0
 	for rows.Next() {
 
 		var userIDNull sql.NullString
@@ -1970,6 +1973,10 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 				MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
 				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
+		}
+		count++
+		if count%49999 == 0 {
+			log.WithFields(log.Fields{"Method": "ProcessEventRows", "Count": count}).Info("Processing event rows")
 		}
 	}
 	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).Info("no document was found in any of the reports for ID. Logging and continuing %+v", missingIDs[:U.MinInt(100, len(missingIDs))])
