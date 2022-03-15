@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   labels:
     nodePool: preemptible-high-mem
-  name: dashboard-caching-job-memsql
+  name: dashboard-caching-job-memsql-kpi
 spec:
   schedule: "0 1/6 * * *" # In UTC. Every 6 hours.
   concurrencyPolicy: Forbid
@@ -20,8 +20,8 @@ spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: preemptible-high-mem
           containers:
-            - name: dashboard-caching-job-memsql
-              image: us.gcr.io/factors-production/dashboard-caching-job:0d0937f82-mem
+            - name: dashboard-caching-job-memsql-kpi
+              image: us.gcr.io/factors-production/dashboard-caching-job:v001
               imagePullPolicy: IfNotPresent
               args:
                 - --env
@@ -63,13 +63,15 @@ spec:
                 - --num_routines
                 - "2"
                 - --num_routines_for_web_analytics
-                - "1"
+                - "2"
                 - --running_for_memsql
+                - "0"
+                - --only_kpi_caching
                 - "1"
                 - --healthcheck_ping_id
-                - 9a632a74-030c-494a-aa1d-01a489921f3e
+                - e20e6096-cc19-45b1-8d5e-ef3a6bcaebb6
                 - --app_name
-                - dashboard-caching-job-memsql
+                - dashboard-caching-job-memsql-kpi
                 - --skip_event_name_step_by_project_id
                 - '*'
                 - --skip_user_join_in_event_query_by_project_id

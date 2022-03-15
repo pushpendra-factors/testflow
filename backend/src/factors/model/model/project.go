@@ -108,22 +108,22 @@ func DefaultMarketingPropertiesMap() InteractionSettings {
 	interactionSettings.UTMMappings = make(map[string][]string)
 	interactionSettings.UTMMappings[U.EP_CAMPAIGN] = []string{U.QUERY_PARAM_UTM_PREFIX + "campaign", U.QUERY_PARAM_UTM_PREFIX + "campaign_name"}
 	interactionSettings.UTMMappings[U.EP_CAMPAIGN_ID] = []string{U.QUERY_PARAM_UTM_PREFIX + "campaignid", U.QUERY_PARAM_UTM_PREFIX + "campaign_id",
-		U.QUERY_PARAM_UTM_PREFIX + "hsa_cam", "hsa_cam"}
+		U.QUERY_PARAM_UTM_PREFIX + "hsa_cam", "$qp_hsa_cam"}
 
 	interactionSettings.UTMMappings[U.EP_ADGROUP] = []string{U.QUERY_PARAM_UTM_PREFIX + "adgroup", U.QUERY_PARAM_UTM_PREFIX + "ad_group"}
 	interactionSettings.UTMMappings[U.EP_ADGROUP_ID] = []string{U.QUERY_PARAM_UTM_PREFIX + "adgroupid", U.QUERY_PARAM_UTM_PREFIX + "adgroup_id",
-		U.QUERY_PARAM_UTM_PREFIX + "ad_group_id", U.QUERY_PARAM_UTM_PREFIX + "hsa_grp", "hsa_grp"}
+		U.QUERY_PARAM_UTM_PREFIX + "ad_group_id", U.QUERY_PARAM_UTM_PREFIX + "hsa_grp", "$qp_hsa_grp"}
 
 	interactionSettings.UTMMappings[U.EP_AD] = []string{U.QUERY_PARAM_UTM_PREFIX + "ad"}
 	interactionSettings.UTMMappings[U.EP_AD_ID] = []string{U.QUERY_PARAM_UTM_PREFIX + "ad_id", U.QUERY_PARAM_UTM_PREFIX + "adid",
-		U.QUERY_PARAM_UTM_PREFIX + "hsa_ad", "hsa_ad"}
+		U.QUERY_PARAM_UTM_PREFIX + "hsa_ad", "$qp_hsa_ad"}
 
 	interactionSettings.UTMMappings[U.EP_CREATIVE] = []string{U.QUERY_PARAM_UTM_PREFIX + "creative", U.QUERY_PARAM_UTM_PREFIX + "creative_id",
 		U.QUERY_PARAM_UTM_PREFIX + "creativeid"}
 
 	interactionSettings.UTMMappings[U.EP_SOURCE] = []string{U.QUERY_PARAM_UTM_PREFIX + "source"}
 	interactionSettings.UTMMappings[U.EP_MEDIUM] = []string{U.QUERY_PARAM_UTM_PREFIX + "medium"}
-	interactionSettings.UTMMappings[U.EP_KEYWORD] = []string{U.QUERY_PARAM_UTM_PREFIX + "keyword", U.QUERY_PARAM_UTM_PREFIX + "key_word", "hsa_kw"}
+	interactionSettings.UTMMappings[U.EP_KEYWORD] = []string{U.QUERY_PARAM_UTM_PREFIX + "keyword", U.QUERY_PARAM_UTM_PREFIX + "key_word", "$qp_hsa_kw"}
 	interactionSettings.UTMMappings[U.EP_CONTENT] = []string{U.QUERY_PARAM_UTM_PREFIX + "content", U.QUERY_PARAM_UTM_PREFIX + "utm_content"}
 	interactionSettings.UTMMappings[U.EP_GCLID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "gclid", U.QUERY_PARAM_PROPERTY_PREFIX + "utm_gclid",
 		U.QUERY_PARAM_PROPERTY_PREFIX + "wbraid", U.QUERY_PARAM_PROPERTY_PREFIX + "gbraid"}
