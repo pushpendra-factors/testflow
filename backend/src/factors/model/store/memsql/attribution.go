@@ -34,6 +34,9 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
 	model.AddDefaultMarketingEventTypeTacticOffer(query)
 
+	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType != model.MarketingEventTypeOffer {
+		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
+	}
 	logCtx := log.WithFields(logFields)
 	// for existing queries and backward support
 	if query.QueryType == "" {

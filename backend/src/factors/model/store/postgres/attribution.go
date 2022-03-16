@@ -28,6 +28,10 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
 	model.AddDefaultMarketingEventTypeTacticOffer(query)
 
+	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType != model.MarketingEventTypeOffer {
+		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
+	}
+
 	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// for existing queries and backward support
 	if query.QueryType == "" {
