@@ -13,7 +13,6 @@ import (
 	"os"
 	"path"
 	"reflect"
-	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -59,10 +58,18 @@ type EvSameTs struct {
 	EventTimestamp int64
 }
 
-const CURRENT_MODEL_VERSION = 2.0
-const topK_patterns = 50
+const CURRENT_MODEL_VERSION = 3.0
+const topk_patterns = 20000
 
 var CRM_EVENT_PREFIXES = []string{"$sf_", "$hubspot_"}
+
+func getHmineQuota() []int {
+	num_one := int((topk_patterns * 15.0) / 20)
+	num_two := int((topk_patterns * 5.0) / 20)
+	num_three := int((topk_patterns * 2.0) / 20)
+
+	return []int{1, num_one, num_two, num_three}
+}
 
 func NewUserAndEventsInfo() *UserAndEventsInfo {
 	eMap := make(map[string]*PropertiesInfo)
@@ -601,11 +608,11 @@ func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEven
 	return &allProps, nil
 }
 
-func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner, pattern *Pattern, countsVersion int) error {
+func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner, pattern *Pattern, countsVersion int, hmineSupport float32) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 	numEventsProcessed := 0
 	var countUsers uint
-	if pattern.PatternVersion == 2 {
+	if pattern.PatternVersion >= 2 {
 		// set all histogram to null
 		pattern.userTree = fp.InitTree()
 		pattern.PerOccurrenceEventNumericProperties = nil
@@ -618,6 +625,18 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 		pattern.PerUserEventCategoricalProperties = nil
 		pattern.PerOccurrenceUserCategoricalProperties = nil
 
+	}
+	if pattern.PatternVersion >= 2 {
+		basePathUserProps := path.Join("/", "tmp", "fptree", "userProps")
+		err := os.MkdirAll(basePathUserProps, os.ModePerm)
+		if err != nil {
+			log.Fatal("unable to create temp user directory")
+		}
+		basePathUserPropsRes := path.Join("/", "tmp", "fptree", "userPropsRes")
+		err = os.MkdirAll(basePathUserPropsRes, os.ModePerm)
+		if err != nil {
+			log.Fatal("unable to create temp user results directory")
+		}
 	}
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -652,28 +671,46 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 					return err
 				}
 			}
-			if countsVersion == 2 {
-				userCatProperties := FilterCategoricalProperties(projectID, eventDetails.EventName, 0, userProperties, true)
-				if len(userCatProperties) > 0 {
-					err := pattern.userTree.OrderAndInsertTrans(userCatProperties)
-					if err != nil {
-						log.Infof("err inserting user properties into tree:%v", err)
-					}
+			if countsVersion == 3 {
+
+				userCatProperties_ := FilterCategoricalProperties(projectID, eventDetails.EventName, 0, userProperties, true)
+				basePathUserProps := path.Join("/", "tmp", "fptree", "userProps")
+
+				ptName := pattern.PropertiesBasePath
+				treePathUser := path.Join(basePathUserProps, ptName)
+				err := fp.WriteSinglePropertyToFile(treePathUser, userCatProperties_)
+				if err != nil {
+					log.Errorf("err inserting user properties into file:%v", err)
 				}
+
 			}
+
 		}
 		seenUsers[userId] = true
 	}
 
-	if countsVersion == 2 {
-		cpUser, err := fp.MineTree(pattern.userTree, topK_patterns)
+	if countsVersion == 3 {
+		log.Debugf("counting all Properties info")
+		basePathUserProps := path.Join("/", "tmp", "fptree", "userProps")
+		basePathUserPropsRes := path.Join("/", "tmp", "fptree", "userPropsRes")
+
+		ptName := pattern.PropertiesBasePath
+		treePathUser := path.Join(basePathUserProps, ptName)
+		treePathUserRes := path.Join(basePathUserPropsRes, ptName)
+		log.Infof("couting user properties info:%s", treePathUser)
+		topk_hmine := getHmineQuota()
+		trans_size, result_size, result_user, err := fp.CountAndWriteResultsToFile(treePathUser, treePathUserRes, hmineSupport, -1, topk_hmine)
 		if err != nil {
-			return err
+			log.Fatalf("unable to compute hmine user patterns to :%v", err)
 		}
-		pattern.UserPropertiesPatterns = cpUser
-		pattern.userTree = fp.InitTree()
+		log.Infof("num of properties from hmine usert info :%d", len(result_user.Fpts))
+		userRes := fp.ConvertHmineFptreeContainer(result_user)
+		log.Infof("computed user properties info num_trns:%d num_res:%d user_properties:%d", trans_size, result_size, len(userRes))
+		pattern.UserPropertiesPatterns = userRes
+		pattern.PatternVersion = 2
 
 	}
+
 	if countsVersion == 1 {
 		count := uint(pattern.PerUserUserCategoricalProperties.Count())
 		pattern.TotalUserCount = count
@@ -691,13 +728,15 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 }
 
 func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern,
-	shouldCountOccurence bool, countVersion int) error {
+	shouldCountOccurence bool, cAlgoProps CountAlgoProperties) error {
 	var seenUsers map[string]bool = make(map[string]bool)
-	var mem runtime.MemStats
 
 	var prEventTimeStamp int64
 	var prvUserId string
 	var numEventsProcessed int64
+	var countVersion int = cAlgoProps.Counting_version
+	var hmineSupport float32 = cAlgoProps.Hmine_support
+
 	eventToPatternsMap := make(map[string][]*Pattern)
 	// Initialize.
 	for _, p := range patterns {
@@ -729,7 +768,7 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 			// break if userId is same, else break and process container
 
 			err := CountPatternsWithTS(projectID, eventDetailsList, &numEventsProcessed, seenUsers, patterns,
-				eventToPatternsMap, shouldCountOccurence, countVersion)
+				eventToPatternsMap, shouldCountOccurence, cAlgoProps)
 			if err != nil {
 				log.Errorf("Error processing line:%d, %v", lineNum, err)
 				return err
@@ -745,11 +784,15 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 
 		}
 
+		if lineNum%10000 == 0 {
+			log.Infof("Read lines :%d", lineNum)
+		}
+
 	}
 	if len(eventDetailsList) > 0 {
 		// process the last event
 		err := CountPatternsWithTS(projectID, eventDetailsList, &numEventsProcessed, seenUsers, patterns,
-			eventToPatternsMap, shouldCountOccurence, countVersion)
+			eventToPatternsMap, shouldCountOccurence, cAlgoProps)
 		if err != nil {
 			log.Errorf("Error processing line:%d", lineNum)
 			return err
@@ -770,92 +813,155 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 		log.Fatal("unable to create temp event directory")
 	}
 
-	if countVersion == 2 {
+	if countVersion == 3 {
+		// calling hmine algo
+		// TODO : refactor storing in file , make it into shorter function calls
+
+		var baseFolder string
+		var basePathUserPropsRes string
+		var basePathUserProps string
+		var basePathEventPropsRes string
+		var basePathEventProps string
+		var readFromFile bool = false
+		if cAlgoProps.Hmine_persist == 1 {
+			readFromFile = true
+		}
+
+		for _, p := range patterns {
+			if p.PropertiesBaseFolder != "" {
+				baseFolder = p.PropertiesBaseFolder
+				break
+			}
+		}
+		log.Infof("base folder is :%s", baseFolder)
+		if len(baseFolder) == 0 {
+			basePathUserProps = path.Join("/", "tmp", "fptree", "userProps")
+			basePathEventProps = path.Join("/", "tmp", "fptree", "eventProps")
+			basePathUserPropsRes = path.Join("/", "tmp", "fptree", "userPropsRes")
+			basePathEventPropsRes = path.Join("/", "tmp", "fptree", "eventPropsRes")
+		} else {
+			basePathUserProps = path.Join(baseFolder, "fptree", "userProps")
+			basePathEventProps = path.Join(baseFolder, "fptree", "eventProps")
+			basePathUserPropsRes = path.Join(baseFolder, "fptree", "userPropsRes")
+			basePathEventPropsRes = path.Join(baseFolder, "fptree", "eventPropsRes")
+
+		}
+		log.Debugf("createing results dir:%s", basePathUserPropsRes)
+		err = os.MkdirAll(basePathUserPropsRes, os.ModePerm)
+		if err != nil {
+			log.Fatal("unable to create temp user directory")
+		}
+		log.Debugf("createing results dir:%s", basePathEventPropsRes)
+
+		err = os.MkdirAll(basePathEventPropsRes, os.ModePerm)
+		if err != nil {
+			log.Fatal("unable to create temp event directory")
+		}
+
+		//set this to true if all results of counting to be stored in file
+		for idxPt, pt := range patterns {
+
+			if readFromFile == true {
+				treePathEvent := path.Join(basePathEventProps, pt.PropertiesBasePath)
+				pt.EpFName = treePathEvent
+
+				treePathUser := path.Join(basePathUserProps, pt.PropertiesBasePath)
+				pt.UpFname = treePathUser
+
+				treePathEventRes := path.Join(basePathEventPropsRes, pt.PropertiesBasePath)
+				topk_hmine := getHmineQuota()
+				trans_size, result_size_event, _, err := fp.CountAndWriteResultsToFile(treePathEvent, treePathEventRes, hmineSupport, 1, topk_hmine)
+				if err != nil {
+					log.Fatal("unable to write hmmine event results file:%s", treePathEventRes)
+				}
+				log.Infof("%d computed hpatterns event :%d from %d transaction", idxPt, result_size_event, trans_size)
+
+				if trans_size != int(pt.numPropsEvent) {
+					log.Fatalf("number of transactions are not matching event :%d ,%d,%s", trans_size, pt.numPropsEvent, treePathEvent)
+				}
+				treePathUserRes := path.Join(basePathUserPropsRes, pt.PropertiesBasePath)
+				trans_size, result_size_user, _, err := fp.CountAndWriteResultsToFile(treePathUser, treePathUserRes, hmineSupport, 1, topk_hmine)
+				if err != nil {
+					log.Fatalf("unable to write hmine user results to file:%v", err, treePathUserRes)
+				}
+				log.Infof("%d computed hpatterns user :%d from %d transaction", idxPt, result_size_user, trans_size)
+
+				if trans_size != int(pt.numPropsUser) {
+					log.Fatalf("number of transactions are not matching user :%d ,%d,%s", trans_size, pt.numPropsUser, treePathUser)
+				}
+
+				pt.EventProps = make([][]string, 0)
+				pt.UserProps = make([][]string, 0)
+				pt.PatternVersion = 3
+
+				if idxPt%100 == 0 {
+					log.Infof("%d - pattern mined using hmine", idxPt)
+				}
+			} else {
+
+				treePathEvent := path.Join(basePathEventProps, pt.PropertiesBasePath)
+				pt.EpFName = treePathEvent
+				topk_hmine := getHmineQuota()
+
+				treePathUser := path.Join(basePathUserProps, pt.PropertiesBasePath)
+				pt.UpFname = treePathUser
+
+				treePathEventRes := path.Join(basePathEventPropsRes, pt.PropertiesBasePath)
+
+				trans_size, result_size_event, _, err := fp.CountAndWriteResultsFromPattern(pt.EventProps, treePathEventRes, hmineSupport, 1, topk_hmine)
+				if err != nil {
+					log.Fatal("unable to write hmmine event results file:%s", treePathEventRes)
+				}
+				log.Infof("%d computed hpatterns event :%d from %d transaction", idxPt, result_size_event, trans_size)
+
+				if trans_size != int(pt.numPropsEvent) {
+					log.Fatalf("number of transactions are not matching event in pattern :%d ,%d,%s", trans_size, pt.numPropsEvent, treePathEvent)
+				}
+				treePathUserRes := path.Join(basePathUserPropsRes, pt.PropertiesBasePath)
+				trans_size, result_size_user, _, err := fp.CountAndWriteResultsFromPattern(pt.UserProps, treePathUserRes, hmineSupport, 1, topk_hmine)
+				if err != nil {
+					log.Fatalf("unable to write hmine user results to file:%v", err, treePathUserRes)
+				}
+				log.Infof("%d computed hpatterns user :%d from %d transaction", idxPt, result_size_user, trans_size)
+
+				if trans_size != int(pt.numPropsUser) {
+					log.Fatalf("number of transactions are not matching user in pattern :%d ,%d,%s", trans_size, pt.numPropsUser, treePathUser)
+				}
+
+				pt.EventProps = make([][]string, 0)
+				pt.UserProps = make([][]string, 0)
+				pt.PatternVersion = 3
+
+				if idxPt%100 == 0 {
+					log.Infof("%d - pattern mined using hmine", idxPt)
+				}
+
+			}
+
+		}
 
 		for _, pt := range patterns {
-			ptName := U.RandStringBytes(5) + ".json"
-			treePathUser := path.Join(basePathUser, ptName)
-			pt.userTreePath = treePathUser
-			log.Infof("Writing pattern user tree to path:%s , %v", treePathUser, pt.EventNames)
 
-			tr := pt.userTree
-			err := fp.SerializeTreeToFile(tr, treePathUser)
+			pathUserRes := path.Join(basePathUserPropsRes, pt.PropertiesBasePath)
+			pathEventRes := path.Join(basePathEventPropsRes, pt.PropertiesBasePath)
+
+			eventRes, err := fp.ReadAndConvertHminePatterns(pathEventRes)
 			if err != nil {
-				log.Errorf("unable to Write pattern user tree to path:%s", treePathUser)
-				return err
+				e := fmt.Errorf("unable to read hmine patters from event results file:%s", pathEventRes)
+				log.Error(e)
+				return e
 			}
+			pt.EventPropertiesPatterns = eventRes
 
-			treePathEvent := path.Join(basePathEvent, ptName)
-			pt.eventTreePath = treePathEvent
-			tr = pt.eventTree
-			err = fp.SerializeTreeToFile(tr, treePathEvent)
+			userRes, err := fp.ReadAndConvertHminePatterns(pathUserRes)
 			if err != nil {
-				log.Errorf("unable to Write pattern event tree to path:%s", treePathEvent)
-				return err
+				e := fmt.Errorf("unable to read hmine patters from user results file:%s", pathUserRes)
+				log.Error(e)
+				return e
 			}
-			pt.eventTree = fp.Tree{}
-			pt.userTree = fp.Tree{}
-
-			log.Infof("Done writing all trees to file")
+			pt.UserPropertiesPatterns = userRes
 		}
 
-		// calling garbage collector to free memory
-		U.PrintStats(mem)
-		time.Sleep(3 * time.Second)
-		runtime.GC()
-		U.PrintStats(mem)
-
-		num_patterns := 0
-		for _, p := range patterns {
-			num_patterns += 1
-			var err error
-			log.Infof("reading user tree from: %d,%s ,%v", num_patterns, p.userTreePath, p.EventNames)
-			p.userTree, err = fp.CreateTreeFromFile(p.userTreePath)
-			if err != nil {
-				log.Errorf("Unable to reconstruct user tree :%v", p.EventNames)
-			}
-			log.Infof("mining user tree from:%s ,%v", p.userTreePath, p.EventNames)
-
-			cpUser, err := fp.MineTree(p.userTree, topK_patterns)
-			if err != nil {
-				return err
-			}
-			p.UserPropertiesPatterns = cpUser
-
-			log.Infof("reading event tree from:%d, %s ,%v", num_patterns, p.eventTreePath, p.EventNames)
-			p.eventTree, err = fp.CreateTreeFromFile(p.eventTreePath)
-			if err != nil {
-				log.Errorf("Unable to reconstruct user tree :%v", p.EventNames)
-			}
-			log.Infof("mining event tree from:%s ,%v", p.eventTreePath, p.EventNames)
-			cpEvent, err := fp.MineTree(p.eventTree, topK_patterns)
-			if err != nil {
-				return err
-			}
-			p.EventPropertiesPatterns = cpEvent
-			if num_patterns%1000 == 0 {
-				log.Infof("num of patterns mined:%d", num_patterns)
-			}
-
-			p.eventTree = fp.Tree{}
-			p.userTree = fp.Tree{}
-
-			e := os.Remove(p.userTreePath)
-			if e != nil {
-				log.Fatal(e)
-			}
-			e = os.Remove(p.eventTreePath)
-			if e != nil {
-				log.Fatal(e)
-			}
-
-			if num_patterns%100 == 0 {
-				U.PrintStats(mem)
-				time.Sleep(1 * time.Second)
-				runtime.GC()
-				U.PrintStats(mem)
-			}
-		}
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -869,8 +975,7 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 		}
 	}
 
-	if countVersion == 2 {
-
+	if countVersion >= 2 {
 		for _, p := range patterns {
 			// set all histogram properties to null
 			p.PerOccurrenceEventNumericProperties = nil
@@ -883,7 +988,6 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 			p.PerUserEventCategoricalProperties = nil
 			p.PerOccurrenceUserCategoricalProperties = nil
 		}
-
 	}
 
 	log.Infof("Total number of events Processed: %d", numEventsProcessed)
@@ -893,11 +997,10 @@ func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern
 
 func CountPatternsWithTS(projectID uint64, eventsList []CounterEventFormat, numEventsProcessed *int64,
 	seenUsers map[string]bool, patterns []*Pattern, eventToPatternsMap map[string][]*Pattern,
-	shouldCountOccurence bool, countVersion int) error {
+	shouldCountOccurence bool, cAlgoProps CountAlgoProperties) error {
 
 	// process all events with same timeStamp and userId
 	var eventPatterns []*Pattern
-
 	eventPatterns = make([]*Pattern, 0)
 	eventNames := make([]string, 0)
 	eventsMap := make(map[string]CounterEventFormat)
@@ -939,7 +1042,7 @@ func CountPatternsWithTS(projectID uint64, eventsList []CounterEventFormat, numE
 	}
 
 	for _, p := range uniqueEventPatterns {
-		if err := p.CountForEvent(projectID, userId, userJoinTimestamp, shouldCountOccurence, ets, countVersion); err != nil {
+		if err := p.CountForEvent(projectID, userId, userJoinTimestamp, shouldCountOccurence, ets, cAlgoProps); err != nil {
 			log.Error("Error when counting event")
 		}
 

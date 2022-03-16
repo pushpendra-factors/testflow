@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	C "factors/config"
 	"factors/filestore"
 	P "factors/pattern"
@@ -15,6 +16,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -37,6 +39,7 @@ type CPatternsBeam struct {
 	ModEventsFilepath string     `json:"fpath"`
 	CountOccurence    bool       `json:"countOccurence"`
 	CountsVersion     int        `json:"cntvr"`
+	HmineSupport      float32    `json:"hmsp"`
 	BucketName        string     `json:"bucketName"`
 	ObjectName        string     `json:"objectName"`
 	ScopeName         string     `json:"ScopeName"`
@@ -63,57 +66,27 @@ func InitConfBeam(config *C.Configuration) {
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 }
 
-// func readPatternFromFile(partFilesDir string, cloudManager *filestore.FileManager, projectId, modelId uint64) ([]*P.Pattern, error) {
-// 	mineLog.Infof("Reading from part files Directory : %s", partFilesDir)
-// 	listFiles := (*cloudManager).ListFiles(partFilesDir)
-// 	patterns := make([]*P.Pattern, 0)
-// 	for _, partFileFullName := range listFiles {
-// 		partFNamelist := strings.Split(partFileFullName, "/")
-// 		partFileName := partFNamelist[len(partFNamelist)-1]
-// 		mineLog.Infof("Reading part file : %s", partFileName)
-// 		file, err := (*cloudManager).Get(partFilesDir, partFileName)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		scanner := bufio.NewScanner(file)
-// 		const maxCapacity = 10 * 1024 * 1024
-// 		buf := make([]byte, maxCapacity)
-// 		scanner.Buffer(buf, maxCapacity)
-// 		for scanner.Scan() {
-// 			line := scanner.Text()
-// 			var pattern P.Pattern
-// 			if err := json.Unmarshal([]byte(line), &pattern); err != nil {
-// 				log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
-// 				return nil, err
-// 			}
-// 			patterns = append(patterns, &pattern)
-// 		}
-
-// 		if err := file.Close(); err != nil {
-// 			log.WithFields(log.Fields{"err": err}).Fatal("Error closing file")
-// 		}
-
-// 	}
-// 	mineLog.Infof("Total number of patterns mined : %d", len(patterns))
-// 	return patterns, nil
-// }
-
 func countPatternsWorkerBeam(ctx context.Context, projectID uint64, filepath string,
-	patterns []*P.Pattern, countOccurence bool, countsVersion int) {
+	patterns []*P.Pattern, countOccurence bool, countsVersion int, hmineSupport float32) {
 
-	log.Infof("Reading file from :%s", filepath)
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = countsVersion
+	cAlgoProps.Hmine_support = hmineSupport
+	log.Infof("Reading file from :%s,%d,%f", filepath, countsVersion, hmineSupport)
 	file, err := os.Open(filepath)
 	if err != nil {
 		mineLog.WithField("filePath", filepath).Error("Failure on count pattern workers.")
 	}
+	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	buf := make([]byte, P.MAX_PATTERN_BYTES)
 	scanner.Buffer(buf, P.MAX_PATTERN_BYTES)
 	log.Infof("Number of pattens to CounPatterns :%d", len(patterns))
-	P.CountPatterns(projectID, scanner, patterns, countOccurence, countsVersion)
-	file.Close()
+	if countsVersion == 3 {
+		log.Infof("Number of pattens to CounPatterns using hmine :%d,%d,%d", len(patterns), countsVersion, hmineSupport)
+	}
+	P.CountPatterns(projectID, scanner, patterns, countOccurence, cAlgoProps)
 }
 
 func writeFileToGCP(projectId, modelId uint64, name string, fpath string,
@@ -164,8 +137,10 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 	filepathString string, patterns []*P.Pattern, numRoutines int,
 	userAndEventsInfo *P.UserAndEventsInfo, countOccurence bool,
 	efTmpPath string,
-	scopeName string, countsVersion int) (string, error) {
+	scopeName string, cAlgoProps P.CountAlgoProperties) (string, error) {
 
+	var countsVersion int = cAlgoProps.Counting_version
+	var hmineSupport float32 = cAlgoProps.Hmine_support
 	numPatterns := len(patterns)
 	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
 	batchSize := batch_size_beam //600 too long , will have issue in len three stage
@@ -194,7 +169,7 @@ func countPatternController(beamStruct *RunBeamConfig, projectId uint64, modelId
 		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 
 		t, err := json.Marshal(CPatternsBeam{
-			projectId, modelId, patternEnames[low:high], filepathString, countOccurence, countsVersion,
+			projectId, modelId, patternEnames[low:high], filepathString, countOccurence, countsVersion, hmineSupport,
 			bucketName, modelpath, scopeName, beamStruct.Env})
 		if err != nil {
 			return "", fmt.Errorf("unable to encode string : %v", err)
@@ -332,6 +307,9 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 	beamlog.Info(ctx, "Inside countPatternsThread")
 
 	var cp CPatternsBeam
+	var inBeam bool = true
+	var debugHmine bool = true
+
 	err := json.Unmarshal([]byte(cpString), &cp)
 	if err != nil {
 		return fmt.Errorf("unable to unmarshall string in processElement :%s", cpString)
@@ -348,9 +326,13 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 	scopeName := cp.ScopeName
 	envFlag := cp.Env
 	countsVersion := cp.CountsVersion
+	hmineSupport := cp.HmineSupport
 	log.Infof("Project Id : %d  ", projectID)
 	log.Infof("Model Id : %d  ", modelId)
 	log.Infof("BucketName: %s  ", bucketName)
+	if countsVersion == 3 {
+		log.Infof("counting algo : hmine")
+	}
 
 	// enable client for GCP
 	var cloudManager filestore.FileManager
@@ -390,6 +372,7 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 		if err != nil {
 			return nil
 		}
+
 		patterns = append(patterns, p)
 	}
 
@@ -439,7 +422,54 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 
 	eventsFilePath = eventsTmpFile.Name()
 	beamlog.Info(ctx, "calling  countPatternsWorkerBeam")
-	countPatternsWorkerBeam(ctx, projectID, eventsFilePath, patterns, countOccurence, countsVersion)
+	// create a temp folder for artifacts
+
+	if inBeam {
+		dname, err := ioutil.TempDir("", "fptree")
+		if err != nil {
+			return fmt.Errorf("unable to create tmp folder :%v", err)
+		}
+		for _, p := range patterns {
+			p.PropertiesBaseFolder = dname
+		}
+		log.Infof("creating a base folder for artifacts:%s", dname)
+
+		if countsVersion == 3 {
+
+			baseFolder := dname
+			basePathUserProps := path.Join(baseFolder, "fptree", "userProps")
+			basePathEventProps := path.Join(baseFolder, "fptree", "eventProps")
+			basePathUserPropsRes := path.Join(baseFolder, "fptree", "userPropsRes")
+			basePathEventPropsRes := path.Join(baseFolder, "fptree", "eventPropsRes")
+
+			err = os.MkdirAll(basePathUserPropsRes, os.ModePerm)
+			if err != nil {
+				log.Fatal("unable to create temp user directory")
+			}
+
+			err = os.MkdirAll(basePathEventPropsRes, os.ModePerm)
+			if err != nil {
+				log.Fatal("unable to create temp event directory")
+			}
+
+			err = os.MkdirAll(basePathUserProps, os.ModePerm)
+			if err != nil {
+				log.Fatal("unable to create temp user directory")
+			}
+
+			err = os.MkdirAll(basePathEventProps, os.ModePerm)
+			if err != nil {
+				log.Fatal("unable to create temp event directory")
+			}
+
+			log.Infof("created tmp properties User folder : %s", basePathUserProps)
+			log.Infof("created tmp properties Events folder : %s", basePathEventProps)
+			log.Infof("created tmp properties User Results folder : %s", basePathUserPropsRes)
+			log.Infof("created tmp properties Events Results folder : %s", basePathEventPropsRes)
+
+		}
+	}
+	countPatternsWorkerBeam(ctx, projectID, eventsFilePath, patterns, countOccurence, countsVersion, hmineSupport)
 	//-------write as part files---------
 	key := time.Now().Nanosecond()
 	patternTmpFileLocal, err := ioutil.TempFile("", "patterns_computed_")
@@ -450,13 +480,6 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 	tmpPatternsFile := filepath.Join("patterns_part", scopeName, "part_"+fmt.Sprint(key)+"_UI.txt")
 	lineNum := 0
 	for _, pat := range patterns {
-		tmparr := []string{"$hubspot_deal_state_changed",
-			"MQLs", "Lead Status - Connected", "Lead Status - Demo Completed"}
-		for _, v := range tmparr {
-			if strings.Compare(v, pat.EventNames[0]) == 0 {
-				log.Infof(" count pattern  %s is %d : %v", v, pat.PerUserCount, pat)
-			}
-		}
 		pattBytes, _ := json.Marshal(pat)
 		patternTmpFileLocal.WriteString(string(pattBytes) + "\n")
 		lineNum++
@@ -483,6 +506,59 @@ func (f *CpThreadDoFn) ProcessElement(ctx context.Context, cpString string) erro
 		return err
 	}
 	log.Infof("Delete patterns File :%s", patternTmpFileLocal.Name())
+
+	if debugHmine {
+		// upload all temp files generated if need to debug
+		for _, pt := range patterns {
+
+			up_local_path := filepath.Join(pt.PropertiesBaseFolder, "userProps", pt.PropertiesBasePath)
+			if _, err := os.Stat(up_local_path); err == nil {
+				if envFlag == "development" {
+					fi, err := create(filepath.Join(modelpath, up_local_path))
+					if err != nil {
+						return err
+					}
+					fi.Close()
+				}
+
+				up_cloud_path := filepath.Join("patterns_part", "user_properties", pt.PropertiesBasePath)
+				err := writeFileToGCP(projectID, modelId, up_cloud_path, up_local_path, &cloudManager, "")
+				if err != nil {
+					return fmt.Errorf("unable to upload tmp user properties file :%v", err)
+				}
+
+			} else if errors.Is(err, os.ErrNotExist) {
+				// path/to/whatever does *not* exist
+				log.Infof("userProperties file does not exist: %s", up_local_path)
+
+			}
+
+			ep_local_path := filepath.Join(pt.PropertiesBaseFolder, "eventProps", pt.PropertiesBasePath)
+
+			if _, err := os.Stat(ep_local_path); err == nil {
+				if envFlag == "development" {
+					fi, err := create(filepath.Join(modelpath, ep_local_path))
+					if err != nil {
+						return err
+					}
+					fi.Close()
+				}
+
+				ep_cloud_path := filepath.Join("patterns_part", "event_properties", pt.PropertiesBasePath)
+				err := writeFileToGCP(projectID, modelId, ep_cloud_path, ep_local_path, &cloudManager, "")
+				if err != nil {
+					return fmt.Errorf("unable to upload tmp user properties file :%v", err)
+				}
+
+			} else if errors.Is(err, os.ErrNotExist) {
+				// path/to/whatever does *not* exist
+				log.Infof("eventProperties file does not exist: %s", ep_local_path)
+
+			}
+
+		}
+
+	}
 
 	//--destroy events file---
 	err = deleteFile(eventsTmpFile.Name())
@@ -745,18 +821,6 @@ func compressPatternsList(patterns []*P.Pattern, maxBytesSize int64, trimMap map
 	}
 	return patterns, totalBytes, nil
 }
-
-// func cumulativeCompressPatterns(patterns []*P.Pattern, maxBytesSize int64, trimMap map[int]int64, trim_stage int) ([]*P.Pattern, int64, error) {
-// 	var totalBytes int64
-// 	for _, pattern := range patterns {
-// 		if _, pbytes, err := cumulativeCompressPattern(pattern, maxBytesSize, trimMap, trim_stage); err != nil {
-// 			return nil, 0, err
-// 		} else {
-// 			totalBytes += pbytes
-// 		}
-// 	}
-// 	return patterns, totalBytes, nil
-// }
 
 func cumulativeCompressPattern(pattern *P.Pattern, maxBytesSize int64, trimMap map[int]int64, trim_stage int) (*P.Pattern, int64, error) {
 	var pBytes int64

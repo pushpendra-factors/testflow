@@ -43,6 +43,8 @@ spec:
             - "2,51"
             - --count_version
             - "0"
+            - --hmine_support
+            - "0.001"
             - --create_metadata
             - true
             envFrom:

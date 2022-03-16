@@ -2,6 +2,7 @@ package task
 
 import (
 	"factors/filestore"
+	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	"factors/util"
@@ -42,6 +43,9 @@ func BuildSequential(projectId uint64, configs map[string]interface{}) (map[stri
 	endTimestamp := configs["endTimestamp"].(int64)
 	beamConfig := configs["beamConfig"].(*RunBeamConfig)
 	countsVersion := configs["countsVersion"].(int)
+	hmineSupport := configs["hmineSupport"].(float32)
+	hmine_persist := configs["hminePersist"].(int)
+
 	createMetadata := configs["create_metadata"].(bool)
 	status := make(map[string]interface{})
 	defer util.NotifyOnPanic(taskID, env)
@@ -63,9 +67,16 @@ func BuildSequential(projectId uint64, configs map[string]interface{}) (map[stri
 
 	// Patten mine
 	startAt := time.Now().UnixNano()
+
+	var count_algo_props P.CountAlgoProperties
+	count_algo_props.Counting_version = countsVersion
+	count_algo_props.Hmine_persist = hmine_persist
+	count_algo_props.Hmine_support = hmineSupport
+
 	numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
 		bucketName, noOfPatternWorkers, projectId, modelId, modelType,
-		startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit, beamConfig, countsVersion, createMetadata)
+		startTimestamp, endTimestamp, maxModelSize, countOccurence, numCampaignsLimit,
+		beamConfig, createMetadata, count_algo_props)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to mine patterns.")
 		status["error"] = "Failed to mine patterns."
