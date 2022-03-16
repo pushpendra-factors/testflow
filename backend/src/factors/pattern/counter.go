@@ -707,7 +707,7 @@ func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner,
 		userRes := fp.ConvertHmineFptreeContainer(result_user)
 		log.Infof("computed user properties info num_trns:%d num_res:%d user_properties:%d", trans_size, result_size, len(userRes))
 		pattern.UserPropertiesPatterns = userRes
-		pattern.PatternVersion = 2
+		pattern.PatternVersion = 3
 
 	}
 
