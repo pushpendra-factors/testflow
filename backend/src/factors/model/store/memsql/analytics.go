@@ -1488,7 +1488,7 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	db := C.GetServices().Db
 	tx, err := db.DB().Begin()
 	if err != nil {
-		log.WithError(err).Error("Failed to beging transaction.")
+		log.WithError(err).Error("Failed to begin DB transaction.")
 		return nil, nil, err
 	}
 
