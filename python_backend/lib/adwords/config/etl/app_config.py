@@ -22,11 +22,13 @@ class AppConfig(Config):
     to_timestamp = None
     metrics_controller = None
     job_storage = None
+    new_extract_project_id = None
 
     @classmethod
     def _init(cls, env, skip_today, 
               project_ids, exclude_project_ids, document_type, data_service_host,
-              timezone, type_of_run, dry, last_timestamp, to_timestamp):
+              timezone, type_of_run, dry, last_timestamp, to_timestamp,
+              new_extract_project_id):
         cls.env = env
         cls.skip_today = (skip_today == "True")
         cls.project_ids = project_ids
@@ -43,19 +45,27 @@ class AppConfig(Config):
         cls.metrics_controller = MetricsController
         JobStorage.init(cls.env, cls.dry)
         cls.job_storage = JobStorage
+        cls.new_extract_project_id = new_extract_project_id
 
     @classmethod
     def build(cls, argv):
         project_ids = set()
         exclude_project_ids = set()
+        new_extract_project_id = set()
         if argv.project_id is not None:
             project_ids = StringUtil.get_set_from_string_split_by_comma(argv.project_id)
         if argv.exclude_project_id is not None:
             exclude_project_ids = StringUtil.get_set_from_string_split_by_comma(argv.exclude_project_id)
-
+        if argv.new_extract_project_id is not None:
+            if argv.new_extract_project_id != '*':
+                new_extract_project_id = StringUtil.get_set_from_string_split_by_comma(argv.new_extract_project_id)
+            else:
+                new_extract_project_id = argv.new_extract_project_id
+                
         cls._init(argv.env, argv.skip_today,
                   project_ids, exclude_project_ids, argv.document_type, argv.data_service_host,
-                  argv.timezone, argv.type_of_run, argv.dry, argv.last_timestamp, argv.to_timestamp)
+                  argv.timezone, argv.type_of_run, argv.dry, argv.last_timestamp, argv.to_timestamp,
+                  new_extract_project_id)
 
     @classmethod
     def get_session_cookie_key(cls):
