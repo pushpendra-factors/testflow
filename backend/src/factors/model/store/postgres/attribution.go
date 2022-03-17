@@ -7,7 +7,6 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
-	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -28,6 +27,10 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	// supporting existing old/saved queries
 	model.AddDefaultKeyDimensionsToAttributionQuery(query)
 	model.AddDefaultMarketingEventTypeTacticOffer(query)
+
+	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType != model.MarketingEventTypeOffer {
+		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
+	}
 
 	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// for existing queries and backward support
@@ -58,12 +61,21 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 
+	var contentGroupNamesList []string
+	if query.AttributionKey == model.AttributionKeyLandingPage {
+		contentGroups, errCode := pg.GetAllContentGroups(projectID)
+		if errCode != http.StatusFound {
+			return nil, errors.New("failed to get content groups")
+		}
+		for _, contentGroup := range contentGroups {
+			contentGroupNamesList = append(contentGroupNamesList, contentGroup.ContentGroupName)
+		}
+	}
+	// Pull Sessions for the cases: "Tactic" and "TacticOffer". If Landing Page level report, pull for offer as well.
 	sessions := make(map[string]map[string]model.UserSessionData)
-
-	// Pull Sessions for the cases: "Tactic"  and "TacticOffer"
-	if query.TacticOfferType != model.MarketingEventTypeOffer {
+	if query.TacticOfferType != model.MarketingEventTypeOffer || query.AttributionKey == model.AttributionKeyLandingPage {
 		// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
-		_sessions, sessionUsers, err := pg.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
+		_sessions, sessionUsers, err := pg.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports, contentGroupNamesList)
 		logCtx.Info("Done getAllTheSessions error not checked")
 		if err != nil {
 			return nil, err
@@ -107,51 +119,14 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	// Filter out the key values from query (apply filter after performance enrichment)
 	model.ApplyFilter(attributionData, query)
-
-	// Add additional metrics values
-	model.ComputeAdditionalMetrics(attributionData)
-
-	// Add custom dimensions
-	model.AddCustomDimensions(attributionData, query, marketingReports)
-
-	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
-	// Attribution data to rows
-	dataRows := model.GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
-
 	result := &model.QueryResult{}
-	model.AddHeadersByAttributionKey(result, query)
-	result.Rows = dataRows
 
-	// Update result based on Key Dimensions
-	err = model.GetUpdatedRowsByDimensions(result, query)
-	if err != nil {
-		return nil, err
+	if query.AttributionKey == model.AttributionKeyLandingPage {
+
+		result = model.ProcessQueryLandingPageUrl(query, attributionData)
+	} else {
+		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare)
 	}
-
-	result.Rows = model.MergeDataRowsHavingSameKey(result.Rows, model.GetLastKeyValueIndex(result.Headers))
-
-	// Additional filtering based on AttributionKey.
-	result.Rows = model.FilterRows(result.Rows, query.AttributionKey, model.GetLastKeyValueIndex(result.Headers))
-
-	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
-
-	// sort the rows by conversionEvent
-	conversionIndex := model.GetConversionIndex(result.Headers)
-	sort.Slice(result.Rows, func(i, j int) bool {
-		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
-			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
-			return true
-		}
-		v1, ok1 := result.Rows[i][conversionIndex].(float64)
-		v2, ok2 := result.Rows[j][conversionIndex].(float64)
-		if !ok1 || !ok2 {
-			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
-			return true
-		}
-		return v1 > v2
-	})
-
-	result.Rows = model.AddGrandTotalRow(result.Headers, result.Rows, model.GetLastKeyValueIndex(result.Headers))
 	result.Meta.Currency = ""
 	if projectSetting.IntAdwordsCustomerAccountId != nil && *projectSetting.IntAdwordsCustomerAccountId != "" {
 		currency, _ := pg.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
@@ -395,7 +370,7 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 // getAllTheSessions Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
 func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId string, query *model.AttributionQuery,
-	reports *model.MarketingReports) (map[string]map[string]model.UserSessionData, []string, error) {
+	reports *model.MarketingReports, contentGroupNamesList []string) (map[string]map[string]model.UserSessionData, []string, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -410,7 +385,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 	if err != nil {
 		return nil, nil, err
 	}
-
+	contentGroupNamesToDummyNamesMap := model.GetContentGroupNamesToDummyNamesMap(contentGroupNamesList)
 	caseSelectStmt := "CASE WHEN sessions.properties->>? IS NULL THEN ? " +
 		" WHEN sessions.properties->>? = '' THEN ? ELSE sessions.properties->>? END"
 
@@ -427,8 +402,8 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 		caseSelectStmt + " AS channel, " +
 		caseSelectStmt + " AS attribution_id, " +
 		caseSelectStmt + " AS gcl_id, " +
-		" sessions.timestamp FROM events AS sessions " +
-		" WHERE sessions.project_id=? AND sessions.event_name_id=? AND sessions.timestamp BETWEEN ? AND ?"
+		caseSelectStmt + " AS landingPageUrl, "
+
 	var qParams []interface{}
 
 	qParams = append(qParams,
@@ -444,7 +419,22 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 		U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL, model.PropertyValueNone, U.EP_CHANNEL,
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
-		projectId, sessionEventNameId, effectiveFrom, effectiveTo)
+		U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL, model.PropertyValueNone, U.UP_INITIAL_PAGE_URL)
+
+	wStmt, wParams, err := getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap)
+	if err != nil {
+		return nil, nil, err
+	}
+	queryUserSessionTimeRange = queryUserSessionTimeRange + wStmt
+	qParams = append(qParams, wParams...)
+
+	queryUserSessionTimeRange = queryUserSessionTimeRange +
+		" sessions.timestamp FROM events AS sessions " +
+		" WHERE sessions.project_id=? AND sessions.event_name_id=? AND sessions.timestamp BETWEEN ? AND ?"
+
+	wParams = []interface{}{projectId, sessionEventNameId, effectiveFrom, effectiveTo}
+	qParams = append(qParams, wParams...)
+
 	rows, tx, err := pg.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -452,7 +442,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 	}
 	defer U.CloseReadQuery(rows, tx)
 
-	return model.ProcessEventRows(rows, query, logCtx, reports)
+	return model.ProcessEventRows(rows, query, logCtx, reports, contentGroupNamesList)
 }
 
 // getOfflineEventData returns  offline touch point event id

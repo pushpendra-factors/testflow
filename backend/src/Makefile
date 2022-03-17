@@ -404,13 +404,19 @@ upload-bingads-integration: export IMAGE_NAME=bing-ads-integration-job
 upload-bingads-integration: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/bing-ads-integration-job:$(TAG)
 
-
 pack-numerical-bucketing:
 	docker build -t us.gcr.io/factors-$(ENV)/numerical-bucketing-job:$(TAG) -f Dockerfile.numerical_bucketing_job .
 
 upload-numerical-bucketing: export IMAGE_NAME=numerical-bucketing-job
 upload-numerical-bucketing: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/numerical-bucketing-job:$(TAG)
+
+pack-cleanup-stale-project:
+	docker build -t us.gcr.io/factors-$(ENV)/cleanup-stale-project-job:$(TAG) -f Dockerfile.cleanup_stale_project .
+
+upload-cleanup-stale-project: export IMAGE_NAME=cleanup-stale-project-job
+upload-cleanup-stale-project: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/cleanup-stale-project-job:$(TAG)
 
 pack-replicate-properties:
 	docker build -t us.gcr.io/factors-$(ENV)/replicate-properties-job:$(TAG) -f Dockerfile.replicate_properties_job .

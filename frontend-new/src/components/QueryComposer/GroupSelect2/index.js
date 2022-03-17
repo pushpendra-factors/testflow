@@ -3,7 +3,7 @@ import styles from './index.module.scss';
 import { Input, Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { CaretDownOutlined, CaretUpOutlined } from '@ant-design/icons';
-import { HighlightSearchText } from '../../HighlightSearchText';
+import { HighlightSearchText } from '../../../utils/dataFormatter';
 
 function GroupSelect2({
   groupedProperties,

@@ -7,7 +7,7 @@ import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { getQueryType } from '../../utils/dataFormatter';
 import { QUERY_TYPE_WEB, QUERY_TYPE_TEXT } from '../../utils/constants';
-import { HighlightSearchText } from '../HighlightSearchText';
+import { HighlightSearchText } from '../../utils/dataFormatter';
 
 function SearchModal({ visible, handleClose, handleQueryClick }) {
   const queriesState = useSelector((state) => state.queries);

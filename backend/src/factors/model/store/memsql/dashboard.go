@@ -5,6 +5,7 @@ import (
 	"errors"
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 	"sort"
 	"time"
@@ -50,7 +51,7 @@ func isValidDashboard(dashboard *model.Dashboard) bool {
 
 func (store *MemSQL) CreateDashboard(projectId uint64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int) {
 	logFields := log.Fields{
-		"dashboard": dashboard,
+		"dashboard":  dashboard,
 		"project_id": projectId,
 		"agent_uuid": agentUUID,
 	}
@@ -100,7 +101,7 @@ func (store *MemSQL) CreateAgentPersonalDashboardForProject(projectId uint64, ag
 func (store *MemSQL) existsDashboardByID(projectID, dashboardID uint64) bool {
 	logFields := log.Fields{
 		"dashboard_id": dashboardID,
-		"project_id": projectID,
+		"project_id":   projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
@@ -145,7 +146,7 @@ func (store *MemSQL) GetDashboards(projectId uint64, agentUUID string) ([]model.
 
 func (store *MemSQL) GetDashboard(projectId uint64, agentUUID string, id uint64) (*model.Dashboard, int) {
 	logFields := log.Fields{
-		"id": id,
+		"id":         id,
 		"project_id": projectId,
 		"agent_uuid": agentUUID,
 	}
@@ -177,7 +178,7 @@ func (store *MemSQL) GetDashboard(projectId uint64, agentUUID string, id uint64)
 // HasAccessToDashboard validates access to dashboard.
 func (store *MemSQL) HasAccessToDashboard(projectId uint64, agentUUID string, id uint64) (bool, *model.Dashboard) {
 	logFields := log.Fields{
-		"id": id,
+		"id":         id,
 		"project_id": projectId,
 		"agent_uuid": agentUUID,
 	}
@@ -193,15 +194,15 @@ func (store *MemSQL) HasAccessToDashboard(projectId uint64, agentUUID string, id
 // Adds a position to the given unit on dashboard by unit_type.
 func (store *MemSQL) addUnitPositionOnDashboard(projectId uint64, agentUUID string,
 	id uint64, unitId uint64, unitType string, currentUnitsPos *postgres.Jsonb) int {
-		logFields := log.Fields{
-			"id": id,
-			"project_id": projectId,
-			"agent_uuid": agentUUID,
-			"unit_id": unitId,
-			"unit_type": unitType, 
-			"current_unit_pos": currentUnitsPos,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"id":               id,
+		"project_id":       projectId,
+		"agent_uuid":       agentUUID,
+		"unit_id":          unitId,
+		"unit_type":        unitType,
+		"current_unit_pos": currentUnitsPos,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if projectId == 0 || agentUUID == "" || id == 0 || unitId == 0 {
 		return http.StatusBadRequest
@@ -244,12 +245,12 @@ func (store *MemSQL) addUnitPositionOnDashboard(projectId uint64, agentUUID stri
 
 func removeAndRebalanceUnitsPositionByType(positions *map[string]map[uint64]int,
 	unitId uint64, unitType string) {
-		logFields := log.Fields{
-			"positions": positions,
-			"unit_id": unitId,
-			"unit_type": unitType, 
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"positions": positions,
+		"unit_id":   unitId,
+		"unit_type": unitType,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	removedPos := (*positions)[unitType][unitId]
 	delete((*positions)[unitType], unitId)
@@ -264,14 +265,14 @@ func removeAndRebalanceUnitsPositionByType(positions *map[string]map[uint64]int,
 
 func (store *MemSQL) removeUnitPositionOnDashboard(projectId uint64, agentUUID string,
 	id uint64, unitId uint64, currentUnitsPos *postgres.Jsonb) int {
-		logFields := log.Fields{
-			"id": id,
-			"project_id": projectId,
-			"agent_uuid": agentUUID,
-			"unit_id": unitId,
-			"current_unit_pos": currentUnitsPos,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"id":               id,
+		"project_id":       projectId,
+		"agent_uuid":       agentUUID,
+		"unit_id":          unitId,
+		"current_unit_pos": currentUnitsPos,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if projectId == 0 || agentUUID == "" || id == 0 ||
 		unitId == 0 || currentUnitsPos == nil {
@@ -345,10 +346,10 @@ func isValidUnitsPosition(positions *map[string]map[uint64]int) (bool, error) {
 
 func (store *MemSQL) UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *model.UpdatableDashboard) int {
 	logFields := log.Fields{
-		"id": id,
+		"id":         id,
 		"project_id": projectId,
 		"agent_uuid": agentUUID,
-		"dashboard": dashboard,
+		"dashboard":  dashboard,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectId == 0 || agentUUID == "" || id == 0 {
@@ -368,7 +369,6 @@ func (store *MemSQL) UpdateDashboard(projectId uint64, agentUUID string, id uint
 	updateFields := make(map[string]interface{}, 0)
 	if dashboard.UnitsPosition != nil {
 		logCtx := log.WithFields(logFields)
-
 
 		if valid, err := isValidUnitsPosition(dashboard.UnitsPosition); !valid {
 			logCtx.WithError(err).Error("Invalid units position.")
@@ -392,6 +392,9 @@ func (store *MemSQL) UpdateDashboard(projectId uint64, agentUUID string, id uint
 		updateFields["description"] = dashboard.Description
 	}
 
+	if dashboard.Settings != nil && !U.IsEmptyPostgresJsonb(dashboard.Settings) {
+		updateFields["settings"] = dashboard.Settings
+	}
 	if dashboard.Type != "" {
 		updateFields["type"] = dashboard.Type
 	}
@@ -415,8 +418,8 @@ func (store *MemSQL) UpdateDashboard(projectId uint64, agentUUID string, id uint
 // DeleteDashboard To delete a dashboard by id.
 func (store *MemSQL) DeleteDashboard(projectID uint64, agentUUID string, dashboardID uint64) int {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"agent_uuid": agentUUID,
+		"project_id":   projectID,
+		"agent_uuid":   agentUUID,
 		"dashboard_id": dashboardID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

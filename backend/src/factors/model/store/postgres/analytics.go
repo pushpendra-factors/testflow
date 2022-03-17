@@ -75,6 +75,20 @@ func isValidLogicalOp(op string) bool {
 	return op == "AND" || op == "OR"
 }
 
+// returns statement and parameters to pull content group values from event table
+func getSelectSQLStmtForContentGroup(contentGroupNamesToDummyNamesMap map[string]string) (rStmnt string, rParams []interface{}, err error) {
+
+	caseSelectStmt := "CASE WHEN sessions.properties->>? IS NULL THEN ? " +
+		" WHEN sessions.properties->>? = '' THEN ? ELSE sessions.properties->>? END"
+	for name, dummyName := range contentGroupNamesToDummyNamesMap {
+		rStmnt = rStmnt + caseSelectStmt + " AS " + dummyName + " ,"
+		qParams := []interface{}{name, model.PropertyValueNone, name, model.PropertyValueNone, name}
+		rParams = append(rParams, qParams...)
+	}
+
+	return rStmnt, rParams, nil
+}
+
 func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
 
 	pLen := len(properties)
