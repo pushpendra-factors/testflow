@@ -19,9 +19,16 @@ import (
 //	  ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
 //	4. Apply attribution methodology
 //	5. Add performance data by attributionId
-func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *model.AttributionQuery) (*model.QueryResult, error) {
+func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *model.AttributionQuery, debugQueryKey string) (*model.QueryResult, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id":        projectID,
+		"debug_query_key":   debugQueryKey,
+		"attribution_query": true,
+	})
+
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
 	// supporting existing old/saved queries
@@ -32,7 +39,6 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
 	}
 
-	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// for existing queries and backward support
 	if query.QueryType == "" {
 		query.QueryType = model.AttributionQueryTypeConversionBased
@@ -49,14 +55,14 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	logCtx.Info("Done FetchMarketingReports")
 
-	err = pg.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports)
+	err = pg.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports, *logCtx)
 	if err != nil {
 		return nil, err
 	}
 
 	logCtx.Info("Done PullCustomDimensionData")
 
-	sessionEventNameID, eventNameToIDList, err := pg.getEventInformation(projectID, query)
+	sessionEventNameID, eventNameToIDList, err := pg.getEventInformation(projectID, query, *logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +81,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	sessions := make(map[string]map[string]model.UserSessionData)
 	if query.TacticOfferType != model.MarketingEventTypeOffer || query.AttributionKey == model.AttributionKeyLandingPage {
 		// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
-		_sessions, sessionUsers, err := pg.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports, contentGroupNamesList)
+		_sessions, sessionUsers, err := pg.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports, contentGroupNamesList, *logCtx)
 		logCtx.Info("Done getAllTheSessions error not checked")
 		if err != nil {
 			return nil, err
@@ -83,7 +89,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 		logCtx.Info("Done getAllTheSessions")
 
-		usersInfo, err := pg.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
+		usersInfo, err := pg.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -92,14 +98,14 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	}
 
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
-	pg.AppendOTPSessions(projectID, query, &sessions, logCtx)
+	pg.AppendOTPSessions(projectID, query, &sessions, *logCtx)
 
 	if C.GetAttributionDebug() == 1 {
 		uniqUsers := len(sessions)
 		logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
 	}
 
-	attributionData, isCompare, err := pg.FireAttribution(projectID, query, eventNameToIDList, sessions)
+	attributionData, isCompare, err := pg.FireAttribution(projectID, query, eventNameToIDList, sessions, *logCtx)
 
 	logCtx.Info("Done FireAttribution")
 	if err != nil {
@@ -123,7 +129,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
-		result = model.ProcessQueryLandingPageUrl(query, attributionData)
+		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx)
 	} else {
 		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare)
 	}
@@ -137,17 +143,17 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 }
 
 func (pg *Postgres) AppendOTPSessions(projectID uint64, query *model.AttributionQuery,
-	sessions *map[string]map[string]model.UserSessionData, logCtx *log.Entry) {
+	sessions *map[string]map[string]model.UserSessionData, logCtx log.Entry) {
 
-	otpEvent, err := pg.getOfflineEventData(projectID)
+	otpEvent, err := pg.getOfflineEventData(projectID, logCtx)
 	if err != nil {
 		logCtx.Info("no OTP events/sessions found. Skipping computation")
 		return
 	}
 
-	_sessionsOTP, sessionOTPUsers, err := pg.fetchOTPSessions(projectID, otpEvent.ID, query)
+	_sessionsOTP, sessionOTPUsers, err := pg.fetchOTPSessions(projectID, otpEvent.ID, query, logCtx)
 
-	usersInfoOTP, err := pg.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID)
+	usersInfoOTP, err := pg.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID, logCtx)
 	if err != nil {
 		logCtx.Info("no users found for OTP events/sessions found. Skipping computation")
 		return
@@ -157,7 +163,7 @@ func (pg *Postgres) AppendOTPSessions(projectID uint64, query *model.Attribution
 }
 
 func (pg *Postgres) FireAttribution(projectID uint64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, bool, error) {
+	sessions map[string]map[string]model.UserSessionData, logCtx log.Entry) (*map[string]*model.AttributionData, bool, error) {
 
 	isCompare := false
 	var err error
@@ -174,20 +180,20 @@ func (pg *Postgres) FireAttribution(projectID uint64, query *model.AttributionQu
 		// Two AttributionMethodologies comparison
 		isCompare = true
 		attributionData, err = pg.RunAttributionForMethodologyComparison(projectID,
-			conversionFrom, conversionTo, query, eventNameToIDList, sessions)
+			conversionFrom, conversionTo, query, eventNameToIDList, sessions, logCtx)
 
 	} else if query.ConversionEventCompare.Name != "" {
 		// Two events comparison
 		isCompare = true
 		attributionData, err = pg.runAttribution(projectID,
-			conversionFrom, conversionTo, query.ConversionEvent, query, eventNameToIDList, sessions)
+			conversionFrom, conversionTo, query.ConversionEvent, query, eventNameToIDList, sessions, logCtx)
 
 		if err != nil {
 			return nil, isCompare, err
 		}
 		// Running for ConversionEventCompare.
 		attributionCompareData, err := pg.runAttribution(projectID,
-			conversionFrom, conversionTo, query.ConversionEventCompare, query, eventNameToIDList, sessions)
+			conversionFrom, conversionTo, query.ConversionEventCompare, query, eventNameToIDList, sessions, logCtx)
 
 		if err != nil {
 			return nil, isCompare, err
@@ -212,14 +218,14 @@ func (pg *Postgres) FireAttribution(projectID uint64, query *model.AttributionQu
 		// Single event attribution.
 		attributionData, err = pg.runAttribution(projectID,
 			conversionFrom, conversionTo, query.ConversionEvent,
-			query, eventNameToIDList, sessions)
+			query, eventNameToIDList, sessions, logCtx)
 	}
 	return attributionData, isCompare, err
 }
 
 func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	conversionFrom, conversionTo int64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, error) {
+	sessions map[string]map[string]model.UserSessionData, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
 
 	// Empty linkedEvents as they are not analyzed in compare events.
 	var linkedEvents []model.QueryEventWithProperties
@@ -231,7 +237,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	// Fetch users who hit conversion event.
 	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = pg.GetConvertedUsersWithFilter(projectID,
 		query.ConversionEvent.Name, query.ConversionEvent.Properties, conversionFrom, conversionTo,
-		eventNameToIDList)
+		eventNameToIDList, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +249,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 			EventName: query.ConversionEvent.Name, Timestamp: coalUserIdConversionTimestamp[key], EventType: model.EventTypeGoalEvent})
 	}
 
-	err, linkedFunnelEventUsers := pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, linkedEvents, eventNameToIDList, userIDToInfoConverted)
+	err, linkedFunnelEventUsers := pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, linkedEvents, eventNameToIDList, userIDToInfoConverted, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +272,6 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	if err != nil {
 		return nil, err
 	}
-
 	attributionDataCompare := model.AddUpConversionEventCount(userConversionCompareHit)
 
 	// Merge compare data into attributionData.
@@ -291,7 +296,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 func (pg *Postgres) runAttribution(projectID uint64,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, error) {
+	sessions map[string]map[string]model.UserSessionData, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
 
 	goalEventName := goalEvent.Name
 	goalEventProperties := goalEvent.Properties
@@ -303,7 +308,7 @@ func (pg *Postgres) runAttribution(projectID uint64,
 	var err error
 	// Fetch users who hit conversion event.
 	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = pg.GetConvertedUsersWithFilter(projectID,
-		goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList)
+		goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +320,7 @@ func (pg *Postgres) runAttribution(projectID uint64,
 			EventName: goalEventName})
 	}
 
-	err, linkedFunnelEventUsers := pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted)
+	err, linkedFunnelEventUsers := pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -337,10 +342,9 @@ func (pg *Postgres) runAttribution(projectID uint64,
 }
 
 // GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
-func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error) {
+func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64, logCtx log.Entry) (map[string]model.UserInfo, error) {
 
 	userIDsInBatches := U.GetStringListAsBatch(userIDs, model.UserBatchSize)
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	userIDToCoalUserIDMap := make(map[string]model.UserInfo)
 	for _, users := range userIDsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
@@ -370,9 +374,8 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 // getAllTheSessions Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
 func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId string, query *model.AttributionQuery,
-	reports *model.MarketingReports, contentGroupNamesList []string) (map[string]map[string]model.UserSessionData, []string, error) {
+	reports *model.MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
 	effectiveTo := query.To
 	// extend the campaign window for engagement based attribution
@@ -434,7 +437,6 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 
 	wParams = []interface{}{projectId, sessionEventNameId, effectiveFrom, effectiveTo}
 	qParams = append(qParams, wParams...)
-
 	rows, tx, err := pg.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -442,13 +444,12 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 	}
 	defer U.CloseReadQuery(rows, tx)
 
-	return model.ProcessEventRows(rows, query, logCtx, reports, contentGroupNamesList)
+	return model.ProcessEventRows(rows, query, reports, contentGroupNamesList, logCtx)
 }
 
 // getOfflineEventData returns  offline touch point event id
-func (pg *Postgres) getOfflineEventData(projectID uint64) (model.EventName, error) {
+func (pg *Postgres) getOfflineEventData(projectID uint64, logCtx log.Entry) (model.EventName, error) {
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	names := []string{U.EVENT_NAME_OFFLINE_TOUCH_POINT}
 
 	eventNames, errCode := pg.GetEventNamesByNames(projectID, names)
@@ -461,9 +462,8 @@ func (pg *Postgres) getOfflineEventData(projectID uint64) (model.EventName, erro
 
 // Return conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
 func (pg *Postgres) getEventInformation(projectId uint64,
-	query *model.AttributionQuery) (string, map[string][]interface{}, error) {
+	query *model.AttributionQuery, logCtx log.Entry) (string, map[string][]interface{}, error) {
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	names := model.BuildEventNamesPlaceholder(query)
 	conversionAndFunnelEventMap := make(map[string]bool)
 	for _, name := range names {
@@ -509,10 +509,9 @@ func (pg *Postgres) getEventInformation(projectId uint64,
 // GetLinkedFunnelEventUsersFilter Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
 func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
 	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
-	userIDInfo map[string]model.UserInfo) (error, []model.UserEventInfo) {
+	userIDInfo map[string]model.UserInfo, logCtx log.Entry) (error, []model.UserEventInfo) {
 
 	var usersToBeAttributed []model.UserEventInfo
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	var coalUserIdsHitConversion []string
 	for _, v := range userIDInfo {
 		coalUserIdsHitConversion = append(coalUserIdsHitConversion, v.CoalUserID)
@@ -588,9 +587,8 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 			}
 			U.CloseReadQuery(rows, tx)
 		}
-
 		// Get coalesced Id for Funnel Event user_ids
-		userIDToCoalIDInfo, err := pg.GetCoalesceIDFromUserIDs(userIDList, projectID)
+		userIDToCoalIDInfo, err := pg.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
 		if err != nil {
 			return err, nil
 		}
@@ -608,10 +606,8 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 // event for userProperties from events table
 func (pg *Postgres) GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
 	goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
-	eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
+	eventNameToIdList map[string][]interface{}, logCtx log.Entry) (map[string]model.UserInfo,
 	map[string][]model.UserIDPropID, map[string]int64, error) {
-
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 
 	conversionEventNameIDs := eventNameToIdList[goalEventName]
 	placeHolder := "?"
@@ -671,7 +667,7 @@ func (pg *Postgres) GetConvertedUsersWithFilter(projectID uint64, goalEventName 
 	}
 
 	// Get coalesced Id for converted user_ids (without filter)
-	userIDToCoalIDInfo, err := pg.GetCoalesceIDFromUserIDs(userIDList, projectID)
+	userIDToCoalIDInfo, err := pg.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
 	if err != nil {
 		return nil, nil, nil, err
 	}

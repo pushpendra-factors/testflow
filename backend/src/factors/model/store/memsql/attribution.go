@@ -20,11 +20,15 @@ import (
 //	  ii)	Using users from 3.i) find out users who hit linked funnel event applying filter
 //	4. Apply attribution methodology
 //	5. Add performance data by attributionId
-func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *model.AttributionQuery) (*model.QueryResult, error) {
+func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *model.AttributionQuery, debugQueryKey string) (*model.QueryResult, error) {
+
 	logFields := log.Fields{
-		"project_id":     projectID,
-		"query_original": queryOriginal,
+		"project_id":        projectID,
+		"debug_query_key":   debugQueryKey,
+		"attribution_query": true,
 	}
+	logCtx := log.WithFields(logFields)
+
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
@@ -37,7 +41,6 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	if query.AttributionKey == model.AttributionKeyLandingPage && query.TacticOfferType != model.MarketingEventTypeOffer {
 		return nil, errors.New("can not get landing page level report for Tactic/TacticOffer")
 	}
-	logCtx := log.WithFields(logFields)
 	// for existing queries and backward support
 	if query.QueryType == "" {
 		query.QueryType = model.AttributionQueryTypeConversionBased
@@ -51,17 +54,18 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	if err != nil {
 		return nil, err
 	}
+	if C.GetAttributionDebug() == 1 {
+		logCtx.WithFields(log.Fields{"campaign_data": marketingReports.AdwordsCampaignIDData}).Info("Done FetchMarketingReports")
+	}
 
-	logCtx.Info("Done FetchMarketingReports")
-
-	err = store.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports)
+	err = store.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports, *logCtx)
 	if err != nil {
 		return nil, err
 	}
 
 	logCtx.Info("Done PullCustomDimensionData")
 
-	sessionEventNameID, eventNameToIDList, err := store.getEventInformation(projectID, query)
+	sessionEventNameID, eventNameToIDList, err := store.getEventInformation(projectID, query, *logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +85,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	// Pull Sessions for the cases: "Tactic" and "TacticOffer". If Landing Page level report, pull for offer as well.
 	if query.TacticOfferType != model.MarketingEventTypeOffer || query.AttributionKey == model.AttributionKeyLandingPage {
 		// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
-		_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports, contentGroupNamesList)
+		_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports, contentGroupNamesList, *logCtx)
 		logCtx.Info("Done getAllTheSessions 1 error not checked")
 		if err != nil {
 			logCtx.Info("Done getAllTheSessions 3 return from  checked")
@@ -89,7 +93,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		}
 		logCtx.Info("Done getAllTheSessions")
 
-		usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
+		usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -100,14 +104,14 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	}
 
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
-	store.AppendOTPSessions(projectID, query, &sessions, logCtx)
+	store.AppendOTPSessions(projectID, query, &sessions, *logCtx)
 
 	if C.GetAttributionDebug() == 1 {
 		uniqUsers := len(sessions)
 		logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
 	}
 
-	attributionData, isCompare, err := store.FireAttribution(projectID, query, eventNameToIDList, sessions)
+	attributionData, isCompare, err := store.FireAttribution(projectID, query, eventNameToIDList, sessions, *logCtx)
 
 	logCtx.Info("Done FireAttribution")
 	if err != nil {
@@ -119,10 +123,19 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 	}
 
+	// Add the Added keys
+	model.AddTheAddedKeysAndMetrics(attributionData, query, sessions)
+
+	// Add the performance information
+	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports)
+
+	// Filter out the key values from query (apply filter after performance enrichment)
+	model.ApplyFilter(attributionData, query)
 	result := &model.QueryResult{}
+
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
-		result = model.ProcessQueryLandingPageUrl(query, attributionData)
+		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx)
 	} else {
 		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare)
 	}
@@ -137,24 +150,19 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 }
 
 func (store *MemSQL) AppendOTPSessions(projectID uint64, query *model.AttributionQuery,
-	sessions *map[string]map[string]model.UserSessionData, logCtx *log.Entry) {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"query":      query,
-		"sessions":   sessions,
-		"log_ctx":    logCtx,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	sessions *map[string]map[string]model.UserSessionData, logCtx log.Entry) {
 
-	otpEvent, err := store.getOfflineEventData(projectID)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
+
+	otpEvent, err := store.getOfflineEventData(projectID, logCtx)
 	if err != nil {
 		logCtx.Info("no OTP events/sessions found. Skipping computation")
 		return
 	}
 
-	_sessionsOTP, sessionOTPUsers, err := store.fetchOTPSessions(projectID, otpEvent.ID, query)
+	_sessionsOTP, sessionOTPUsers, err := store.fetchOTPSessions(projectID, otpEvent.ID, query, logCtx)
 
-	usersInfoOTP, err := store.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID)
+	usersInfoOTP, err := store.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID, logCtx)
 	if err != nil {
 		logCtx.Info("no users found for OTP events/sessions found. Skipping computation")
 		return
@@ -164,14 +172,9 @@ func (store *MemSQL) AppendOTPSessions(projectID uint64, query *model.Attributio
 }
 
 func (store *MemSQL) FireAttribution(projectID uint64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, bool, error) {
-	logFields := log.Fields{
-		"project_id":            projectID,
-		"query":                 query,
-		"event_name_to_id_list": eventNameToIDList,
-		"sessions":              sessions,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	sessions map[string]map[string]model.UserSessionData, logCtx log.Entry) (*map[string]*model.AttributionData, bool, error) {
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	isCompare := false
 	var err error
@@ -188,20 +191,20 @@ func (store *MemSQL) FireAttribution(projectID uint64, query *model.AttributionQ
 		// Two AttributionMethodologies comparison
 		isCompare = true
 		attributionData, err = store.RunAttributionForMethodologyComparison(projectID,
-			conversionFrom, conversionTo, query, eventNameToIDList, sessions)
+			conversionFrom, conversionTo, query, eventNameToIDList, sessions, logCtx)
 
 	} else if query.ConversionEventCompare.Name != "" {
 		// Two events comparison
 		isCompare = true
 		attributionData, err = store.runAttribution(projectID,
-			conversionFrom, conversionTo, query.ConversionEvent, query, eventNameToIDList, sessions)
+			conversionFrom, conversionTo, query.ConversionEvent, query, eventNameToIDList, sessions, logCtx)
 
 		if err != nil {
 			return nil, isCompare, err
 		}
 		// Running for ConversionEventCompare.
 		attributionCompareData, err := store.runAttribution(projectID,
-			conversionFrom, conversionTo, query.ConversionEventCompare, query, eventNameToIDList, sessions)
+			conversionFrom, conversionTo, query.ConversionEventCompare, query, eventNameToIDList, sessions, logCtx)
 
 		if err != nil {
 			return nil, isCompare, err
@@ -226,23 +229,16 @@ func (store *MemSQL) FireAttribution(projectID uint64, query *model.AttributionQ
 		// Single event attribution.
 		attributionData, err = store.runAttribution(projectID,
 			conversionFrom, conversionTo, query.ConversionEvent,
-			query, eventNameToIDList, sessions)
+			query, eventNameToIDList, sessions, logCtx)
 	}
 	return attributionData, isCompare, err
 }
 
 func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 	conversionFrom, conversionTo int64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, error) {
-	logFields := log.Fields{
-		"project_id":            projectID,
-		"conversion_from":       conversionFrom,
-		"conversion_to":         conversionTo,
-		"query":                 query,
-		"event_name_to_id_list": eventNameToIDList,
-		"sessions":              sessions,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	sessions map[string]map[string]model.UserSessionData, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	// Empty linkedEvents as they are not analyzed in compare events.
 	var linkedEvents []model.QueryEventWithProperties
@@ -254,7 +250,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 	// Fetch users who hit conversion event.
 	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = store.GetConvertedUsersWithFilter(projectID,
 		query.ConversionEvent.Name, query.ConversionEvent.Properties, conversionFrom, conversionTo,
-		eventNameToIDList)
+		eventNameToIDList, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +262,7 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 			EventName: query.ConversionEvent.Name})
 	}
 
-	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, linkedEvents, eventNameToIDList, userIDToInfoConverted)
+	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, linkedEvents, eventNameToIDList, userIDToInfoConverted, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -313,17 +309,8 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 func (store *MemSQL) runAttribution(projectID uint64,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, error) {
-	logFields := log.Fields{
-		"project_id":            projectID,
-		"conversion_from":       conversionFrom,
-		"conversion_to":         conversionTo,
-		"goal_event":            goalEvent,
-		"query":                 query,
-		"event_name_to_id_list": eventNameToIDList,
-		"sessions":              sessions,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	sessions map[string]map[string]model.UserSessionData, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	goalEventName := goalEvent.Name
 	goalEventProperties := goalEvent.Properties
@@ -335,7 +322,7 @@ func (store *MemSQL) runAttribution(projectID uint64,
 	var err error
 	// Fetch users who hit conversion event.
 	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = store.GetConvertedUsersWithFilter(projectID,
-		goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList)
+		goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +334,7 @@ func (store *MemSQL) runAttribution(projectID uint64,
 			EventName: goalEventName})
 	}
 
-	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted)
+	err, linkedFunnelEventUsers := store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents, eventNameToIDList, userIDToInfoConverted, logCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -369,15 +356,11 @@ func (store *MemSQL) runAttribution(projectID uint64,
 }
 
 // GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
-func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error) {
-	logFields := log.Fields{
-		"user_ids":   userIDs,
-		"project_id": projectID,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64, logCtx log.Entry) (map[string]model.UserInfo, error) {
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	userIDsInBatches := U.GetStringListAsBatch(userIDs, model.UserBatchSize)
-	logCtx := log.WithFields(logFields)
 	userIDToCoalUserIDMap := make(map[string]model.UserInfo)
 	logCtx.Info("GetCoalesceIDFromUserIDs 1")
 	for _, users := range userIDsInBatches {
@@ -404,23 +387,19 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 		}
 		U.CloseReadQuery(rows, tx)
 	}
-	logCtx.Info("GetCoalesceIDFromUserIDs 3")
-	logCtx.Info(len(userIDToCoalUserIDMap))
-
+	logCtx.WithFields(log.Fields{"user_count": len(userIDToCoalUserIDMap)}).Info("GetCoalesceIDFromUserIDs 3")
 	return userIDToCoalUserIDMap, nil
 }
 
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
-func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId string, query *model.AttributionQuery, reports *model.MarketingReports, contentGroupNamesList []string) (map[string]map[string]model.UserSessionData, []string, error) {
+func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId string, query *model.AttributionQuery, reports *model.MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
 	logFields := log.Fields{
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
-		"query":                 query,
 	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-
-	logCtx := log.WithFields(logFields)
+	logCtx = *logCtx.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
 	effectiveTo := query.To
 	// extend the campaign window for engagement based attribution
@@ -489,18 +468,16 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	}
 	defer U.CloseReadQuery(rows, tx)
 	logCtx.Info("Attribution before ProcessEventRows")
-	return model.ProcessEventRows(rows, query, logCtx, reports, contentGroupNamesList)
-
+	return model.ProcessEventRows(rows, query, reports, contentGroupNamesList, logCtx)
 }
 
 // getOfflineEventData returns  offline touch point event id
-func (store *MemSQL) getOfflineEventData(projectID uint64) (model.EventName, error) {
+func (store *MemSQL) getOfflineEventData(projectID uint64, logCtx log.Entry) (model.EventName, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	names := []string{U.EVENT_NAME_OFFLINE_TOUCH_POINT}
 
 	eventNames, errCode := store.GetEventNamesByNames(projectID, names)
@@ -513,14 +490,10 @@ func (store *MemSQL) getOfflineEventData(projectID uint64) (model.EventName, err
 
 // Return conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
 func (store *MemSQL) getEventInformation(projectId uint64,
-	query *model.AttributionQuery) (string, map[string][]interface{}, error) {
-	logFields := log.Fields{
-		"project_id": projectId,
-		"query":      query,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	query *model.AttributionQuery, logCtx log.Entry) (string, map[string][]interface{}, error) {
 
-	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
+
 	names := model.BuildEventNamesPlaceholder(query)
 	conversionAndFunnelEventMap := make(map[string]bool)
 	for _, name := range names {
@@ -566,19 +539,10 @@ func (store *MemSQL) getEventInformation(projectId uint64,
 // GetLinkedFunnelEventUsersFilter Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
 func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
 	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
-	userIDInfo map[string]model.UserInfo) (error, []model.UserEventInfo) {
-	logFields := log.Fields{
-		"project_id":       projectID,
-		"query_from":       queryFrom,
-		"query_to":         queryTo,
-		"linked_events":    linkedEvents,
-		"event_name_to_id": eventNameToId,
-		"user_id_info":     userIDInfo,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	userIDInfo map[string]model.UserInfo, logCtx log.Entry) (error, []model.UserEventInfo) {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	var usersToBeAttributed []model.UserEventInfo
-	logCtx := log.WithFields(logFields)
 	var coalUserIdsHitConversion []string
 	for _, v := range userIDInfo {
 		coalUserIdsHitConversion = append(coalUserIdsHitConversion, v.CoalUserID)
@@ -668,7 +632,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 			U.CloseReadQuery(rows, tx)
 		}
 		// Get coalesced Id for Funnel Event user_ids
-		userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID)
+		userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
 		if err != nil {
 			return err, nil
 		}
@@ -686,19 +650,10 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 // event for userProperties from events table
 func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
 	goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
-	eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
+	eventNameToIdList map[string][]interface{}, logCtx log.Entry) (map[string]model.UserInfo,
 	map[string][]model.UserIDPropID, map[string]int64, error) {
-	logFields := log.Fields{
-		"project_id":             projectID,
-		"conversion_from":        conversionFrom,
-		"conversion_to":          conversionTo,
-		"goal_event_name":        goalEventName,
-		"goal_events_properties": goalEventProperties,
-		"event_name_to_id_list":  eventNameToIdList,
-	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	conversionEventNameIDs := eventNameToIdList[goalEventName]
 	placeHolder := "?"
@@ -771,7 +726,7 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 	}
 
 	// Get coalesced Id for converted user_ids (without filter)
-	userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID)
+	userIDToCoalIDInfo, err := store.GetCoalesceIDFromUserIDs(userIDList, projectID, logCtx)
 	if err != nil {
 		return nil, nil, nil, err
 	}

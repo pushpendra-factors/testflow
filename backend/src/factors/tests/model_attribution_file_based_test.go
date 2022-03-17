@@ -48,7 +48,6 @@ func TestAttributionModelFile(t *testing.T) {
 
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
@@ -101,8 +100,8 @@ func TestAttributionModelFile(t *testing.T) {
 
 	//Update user1 and user2 properties with latest campaign
 	t.Run("AttributionQueryFileBased", func(t *testing.T) {
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &query, debugQueryKey)
 		assert.Nil(t, err)
 		for _, row := range resultRows {
 			assert.Equal(t, row.Conversion, getConversionUserCount(query.AttributionKey, result, row.AttributionKey))

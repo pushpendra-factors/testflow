@@ -441,7 +441,7 @@ func (pg *Postgres) PullBingAdsMarketingData(projectID uint64, from, to int64, c
 	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.BingAdsIntegration)
 	return marketingDataIDMap, allRows, nil
 }
-func (pg *Postgres) PullCustomDimensionData(projectID uint64, attributionKey string, marketingReport *model.MarketingReports) error {
+func (pg *Postgres) PullCustomDimensionData(projectID uint64, attributionKey string, marketingReport *model.MarketingReports, logCtx log.Entry) error {
 
 	// Custom Dimensions are support only for Campaign and Adgroup currently
 	if attributionKey != model.AttributionKeyCampaign && attributionKey != model.AttributionKeyAdgroup {
@@ -453,39 +453,39 @@ func (pg *Postgres) PullCustomDimensionData(projectID uint64, attributionKey str
 	switch attributionKey {
 	case model.AttributionKeyCampaign:
 
-		marketingReport.AdwordsCampaignDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelAdwords, 1, attributionKey)
+		marketingReport.AdwordsCampaignDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelAdwords, 1, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
-		marketingReport.FacebookCampaignDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelFacebook, 1, attributionKey)
+		marketingReport.FacebookCampaignDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelFacebook, 1, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
-		marketingReport.LinkedinCampaignDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelLinkedin, 1, attributionKey)
+		marketingReport.LinkedinCampaignDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelLinkedin, 1, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
 		if enableBingAdsAttribution {
-			marketingReport.BingadsCampaignDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelBingads, 1, attributionKey)
+			marketingReport.BingadsCampaignDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelBingads, 1, attributionKey, logCtx)
 			if err != nil {
 				return err
 			}
 		}
 	case model.FieldAdgroupName:
-		marketingReport.AdwordsAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelAdwords, 2, attributionKey)
+		marketingReport.AdwordsAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelAdwords, 2, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
-		marketingReport.FacebookAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelFacebook, 2, attributionKey)
+		marketingReport.FacebookAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelFacebook, 2, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
-		marketingReport.LinkedinAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelLinkedin, 2, attributionKey)
+		marketingReport.LinkedinAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelLinkedin, 2, attributionKey, logCtx)
 		if err != nil {
 			return err
 		}
 		if enableBingAdsAttribution {
-			marketingReport.BingadsAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelBingads, 2, attributionKey)
+			marketingReport.BingadsAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelBingads, 2, attributionKey, logCtx)
 			if err != nil {
 				return err
 			}
@@ -495,10 +495,10 @@ func (pg *Postgres) PullCustomDimensionData(projectID uint64, attributionKey str
 }
 
 // PullSmartProperties Pulls Smart Properties
-func (pg *Postgres) PullSmartProperties(projectID uint64, campaignIDPlaceHolder string, campaignNamePlaceHolder string, adgroupIDPlaceHolder string, adgroupNamePlaceHolder string, sourceChannelPlaceHolder string, objectType int, attributionKey string) (map[string]model.MarketingData, error) {
+func (pg *Postgres) PullSmartProperties(projectID uint64, campaignIDPlaceHolder string, campaignNamePlaceHolder string, adgroupIDPlaceHolder string, adgroupNamePlaceHolder string, sourceChannelPlaceHolder string, objectType int, attributionKey string, logCtx log.Entry) (map[string]model.MarketingData, error) {
 
 	// GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder})
+	logCtx = *logCtx.WithFields(log.Fields{"UnitType": objectType, "Source": sourceChannelPlaceHolder})
 	stmt := "SELECT object_property->>? AS campaignID,  object_property->>? AS campaignName, " +
 		"object_property->>? AS adgroupID,  object_property->>? AS adgroupName, " +
 		"properties FROM smart_properties " +
@@ -566,6 +566,6 @@ func (pg *Postgres) PullSmartProperties(projectID uint64, campaignIDPlaceHolder 
 		}
 
 	}
-	log.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder, "DataKeyDimensions": dataKeyDimensions}).Info("Pull Smart Properties")
+	logCtx.WithFields(log.Fields{"CustomDebug": "True", "ProjectId": projectID, "UnitType": objectType, "Source": sourceChannelPlaceHolder}).Info("Pull Smart Properties")
 	return dataKeyDimensions, nil
 }
