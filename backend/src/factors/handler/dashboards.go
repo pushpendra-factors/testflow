@@ -91,8 +91,18 @@ func CreateDashboardHandler(c *gin.Context) {
 		return
 	}
 
-	dashboard, errCode := store.GetStore().CreateDashboard(projectId, agentUUID,
-		&model.Dashboard{Name: requestPayload.Name, Description: requestPayload.Description, Type: requestPayload.Type, Settings: *requestPayload.Settings})
+	dashboardRequest := &model.Dashboard{
+		Name:        requestPayload.Name,
+		Description: requestPayload.Description,
+		Type:        requestPayload.Type,
+		Settings:    postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+	}
+	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
+		dashboardRequest.Settings = *requestPayload.Settings
+	}
+
+	dashboard, errCode := store.GetStore().CreateDashboard(projectId, agentUUID, dashboardRequest)
+
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to create dashboard."})
 		return
