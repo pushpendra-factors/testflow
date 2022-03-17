@@ -10,6 +10,7 @@ import (
 	U "factors/util"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -184,7 +185,7 @@ func (store *MemSQL) GetAgentInfo(uuid string) (*model.AgentInfo, int) {
 
 func (store *MemSQL) UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string) int {
 	logFields := log.Fields{
-		"uuid": uuid,
+		"uuid":          uuid,
 		"refresh_token": refreshToken,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -198,7 +199,7 @@ func (store *MemSQL) UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string
 }
 func (store *MemSQL) UpdateAgentIntGoogleOrganicRefreshToken(uuid, refreshToken string) int {
 	logFields := log.Fields{
-		"uuid": uuid,
+		"uuid":          uuid,
 		"refresh_token": refreshToken,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -213,9 +214,9 @@ func (store *MemSQL) UpdateAgentIntGoogleOrganicRefreshToken(uuid, refreshToken 
 
 func (store *MemSQL) UpdateAgentIntSalesforce(uuid, refreshToken string, instanceUrl string) int {
 	logFields := log.Fields{
-		"uuid": uuid,
+		"uuid":          uuid,
 		"refresh_token": refreshToken,
-		"instance_url": instanceUrl,
+		"instance_url":  instanceUrl,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if uuid == "" || refreshToken == "" || instanceUrl == "" {
@@ -229,7 +230,7 @@ func (store *MemSQL) UpdateAgentIntSalesforce(uuid, refreshToken string, instanc
 
 func (store *MemSQL) UpdateAgentSalesforceInstanceURL(uuid, instanceUrl string) int {
 	logFields := log.Fields{
-		"uuid": uuid,
+		"uuid":         uuid,
 		"instance_url": instanceUrl,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -244,9 +245,9 @@ func (store *MemSQL) UpdateAgentSalesforceInstanceURL(uuid, instanceUrl string) 
 
 func (store *MemSQL) UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
 	logFields := log.Fields{
-		"uuid": uuid,
+		"uuid":                uuid,
 		"plain_text_password": plainTextPassword,
-		"pass_updated_at": passUpdatedAt,
+		"pass_updated_at":     passUpdatedAt,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -267,7 +268,7 @@ func (store *MemSQL) UpdateAgentPassword(uuid, plainTextPassword string, passUpd
 func (store *MemSQL) UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int {
 	logFields := log.Fields{
 		"agent_uuid": agentUUID,
-		"ts": ts,
+		"ts":         ts,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agentUUID == "" {
@@ -280,15 +281,15 @@ func (store *MemSQL) UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) in
 
 func (store *MemSQL) UpdateAgentVerificationDetails(agentUUID, password, firstName,
 	lastName string, verified bool, passUpdatedAt time.Time) int {
-		logFields := log.Fields{
-			"agent_uuid": agentUUID,
-			"password": password,
-			"first_name": firstName,
-			"last_name": lastName,
-			"verified": verified,
-			"pass_updated_at": passUpdatedAt,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"agent_uuid":      agentUUID,
+		"password":        password,
+		"first_name":      firstName,
+		"last_name":       lastName,
+		"verified":        verified,
+		"pass_updated_at": passUpdatedAt,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if agentUUID == "" {
 		log.Error("UpdateAgentVerificationDetails Failed. Missing params")
@@ -312,12 +313,40 @@ func (store *MemSQL) UpdateAgentVerificationDetails(agentUUID, password, firstNa
 	return updateAgent(agentUUID, options...)
 }
 
-func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int {
+func (store *MemSQL) UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int {
 	logFields := log.Fields{
 		"agent_uuid": agentUUID,
 		"first_name": firstName,
-		"last_name": lastName,
-		"phone": phone,
+		"last_name":  lastName,
+		"verified":   verified,
+		"auth0":      true,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if agentUUID == "" {
+		log.Error("UpdateAgentVerificationDetails Failed. Missing params")
+		return http.StatusBadRequest
+	}
+
+	options := make([]model.Option, 0)
+	if firstName != "" {
+		options = append(options, model.Firstname(firstName))
+	}
+	if lastName != "" {
+		options = append(options, model.Lastname(lastName))
+	}
+	options = append(options, model.IsEmailVerified(verified))
+	options = append(options, model.IsAuth0User(true))
+	options = append(options, model.Auth0Value(value))
+	return updateAgent(agentUUID, options...)
+}
+
+func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int {
+	logFields := log.Fields{
+		"agent_uuid":              agentUUID,
+		"first_name":              firstName,
+		"last_name":               lastName,
+		"phone":                   phone,
 		"in_onboarding_flow_seen": isOnboardingFlowSeen,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -343,7 +372,7 @@ func (store *MemSQL) UpdateAgentInformation(agentUUID, firstName, lastName, phon
 func updateAgent(agentUUID string, options ...model.Option) int {
 	logFields := log.Fields{
 		"agent_uuid": agentUUID,
-		"options": options,
+		"options":    options,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if agentUUID == "" {

@@ -56,6 +56,11 @@ func Signin(c *gin.Context) {
 		return
 	}
 
+	if agent.IsAuth0User {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "You have signed up with OAuth flow, sign in with the same."})
+		return
+	}
+
 	if !model.IsPasswordAndHashEqual(password, agent.Password) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -666,6 +671,11 @@ func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 		return
 	}
 
+	if agent.IsAuth0User {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User is already registered with Auth0"})
+		return
+	}
+
 	err = sendAgentResetPasswordEmail(agent)
 	if err != nil {
 		logCtx.WithField("email", email).Error("Failed to sendAgentResetPasswordEmail")
@@ -992,6 +1002,11 @@ func UpdateAgentPassword(c *gin.Context) {
 		return
 	} else if errCode == http.StatusNotFound {
 		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	if agent.IsAuth0User {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot change password for Auth0 user"})
 		return
 	}
 

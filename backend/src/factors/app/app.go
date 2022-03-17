@@ -5,6 +5,7 @@ import (
 	Const "factors/constants"
 	H "factors/handler"
 	mid "factors/middleware"
+	session "factors/session/store"
 	U "factors/util"
 	"flag"
 	"strconv"
@@ -140,6 +141,14 @@ func main() {
 	hubspotAPIOnboardingHAPIKey := flag.String("hubspot_API_onboarding_HAPI_key", "", "")
 	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 
+	auth0ClientID := flag.String("auth0_client_id", "", "")
+	auth0ClientSecret := flag.String("auth0_client_secret", "", "")
+	auth0Domain := flag.String("auth0_domain", "", "")
+	auth0CallbackURL := flag.String("callback_url", "", "")
+
+	sessionStore := flag.String("session_store", "cookie", "")
+	sessionStoreSecret := flag.String("session_store_secret", "", "")
+
 	fivetranGroupId := flag.String("fivetran_group_id", "", "")
 	fivetranLicenseKey := flag.String("fivetran_license_key", "", "")
 	allowEventsFunnelsGroupSupport := flag.String("allow_events_funnels_group_support", "", "")
@@ -178,6 +187,14 @@ func main() {
 			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
 			UseExactConnFromConfig: true,
 		},
+		Auth0Info: C.Auth0Conf{
+			Domain:       *auth0Domain,
+			ClientId:     *auth0ClientID,
+			ClientSecret: *auth0ClientSecret,
+			CallbackUrl:  *auth0CallbackURL,
+		},
+		SessionStore:                            *sessionStore,
+		SessionStoreSecret:                      *sessionStoreSecret,
 		PrimaryDatastore:                        *primaryDatastore,
 		RedisHost:                               *redisHost,
 		RedisPort:                               *redisPort,
@@ -277,8 +294,23 @@ func main() {
 	} else if config.Env == C.STAGING {
 		swaggerDocs.SwaggerInfo.Host = "staging-api.factors.ai"
 	}
+	err = session.GetSessionStore().InitSessionStore(r)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to initialize session store.")
+		return
+	}
 	H.InitAppRoutes(r)
 	H.InitIntRoutes(r)
+
+	if *auth0ClientID != "" && *auth0ClientSecret != "" && *auth0Domain != "" && *auth0CallbackURL != "" {
+		authenticator, err := H.NewAuth()
+		if err != nil {
+			log.WithError(err).Fatal("Failed to initialize auth.")
+			return
+		}
+		H.InitExternalAuth(r, authenticator)
+	}
+
 	Const.SetSmartPropertiesReservedNames()
 
 	C.KillDBQueriesOnExit()
