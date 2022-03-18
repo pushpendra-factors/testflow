@@ -52,7 +52,7 @@ func (store *MemSQL) satisfiesEventNameForeignConstraints(eventName model.EventN
 }
 
 func (store *MemSQL) CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int) {
-	
+
 	logFields := log.Fields{
 		"event_name": eventName,
 	}
@@ -168,7 +168,7 @@ func (store *MemSQL) CreateOrGetCRMSmartEventFilterEventName(projectID uint64, e
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	logCtx := log.WithFields(logFields)
-		if !model.IsValidSmartEventFilterExpr(filterExpr) || filterExpr == nil || eventName.Type != "" ||
+	if !model.IsValidSmartEventFilterExpr(filterExpr) || filterExpr == nil || eventName.Type != "" ||
 		eventName.Name == "" {
 		logCtx.Error("Invalid fields.")
 		return nil, http.StatusBadRequest
@@ -1085,7 +1085,7 @@ func (store *MemSQL) updateCRMSmartEventFilter(projectID uint64, id string, name
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	logCtx := log.WithFields(logFields)	// Validation
+	logCtx := log.WithFields(logFields) // Validation
 	if id == "" || projectID == 0 || eventName.ProjectId != 0 ||
 		!isValidName(eventName.Name, eventName.Type) {
 		logCtx.Error("Missing required Fields")
@@ -1369,11 +1369,11 @@ func getHighDefinitionFilter(filters []*FilterInfo) *FilterInfo {
 // matchEventNameWithFilters match uri by passing through filters.
 func matchEventURIWithFilters(filters *[]FilterInfo,
 	tokenizedEventURI []string) (*FilterInfo, bool) {
-		logFields := log.Fields{
-			"tokenized_event_uri": tokenizedEventURI,
-			"filters": filters,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"tokenized_event_uri": tokenizedEventURI,
+		"filters":             filters,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if len(tokenizedEventURI) == 0 {
 		return nil, false
 	}
@@ -1398,11 +1398,11 @@ func matchEventURIWithFilters(filters *[]FilterInfo,
 // compare after_popped_uri with filter.
 func popAndMatchEventURIWithFilters(filters *[]FilterInfo,
 	eventURI string) (*FilterInfo, bool) {
-		logFields := log.Fields{
-			"filters": filters,
-			"event_uri": eventURI,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"filters":   filters,
+		"event_uri": eventURI,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	for afterPopURI := eventURI; afterPopURI != ""; afterPopURI, _ = U.PopURIBySlash(afterPopURI) {
 		tokenizedEventURI := U.TokenizeURI(afterPopURI)
@@ -1448,7 +1448,7 @@ func makeFilterInfos(eventNames []model.EventName) (*[]FilterInfo, error) {
 func (store *MemSQL) FilterEventNameByEventURL(projectId uint64, eventURL string) (*model.EventName, int) {
 	logFields := log.Fields{
 		"project_id": projectId,
-		"event_url": eventURL,
+		"event_url":  eventURL,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectId == 0 && eventURL == "" {
@@ -1489,7 +1489,7 @@ func (store *MemSQL) FilterEventNameByEventURL(projectId uint64, eventURL string
 
 func (store *MemSQL) GetEventNameFromEventNameId(eventNameId string, projectId uint64) (*model.EventName, error) {
 	logFields := log.Fields{
-		"project_id": projectId,
+		"project_id":    projectId,
 		"event_name_id": eventNameId,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1527,12 +1527,12 @@ func convert(eventNamesWithAggregation []model.EventNameWithAggregation) []model
 
 func (store *MemSQL) GetEventTypeFromDb(
 	projectID uint64, eventNames []string, limit int64) (map[string]string, error) {
-		logFields := log.Fields{
-			"project_id": projectID,
-			"event_names": eventNames,
-			"limit": limit,
-		}
-		defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logFields := log.Fields{
+		"project_id":  projectID,
+		"event_names": eventNames,
+		"limit":       limit,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// var err string
 	db := C.GetServices().Db
 	hasLimit := limit > 0

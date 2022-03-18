@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	C "factors/config"
 	U "factors/util"
 	"fmt"
 	"sort"
@@ -137,6 +138,11 @@ func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRe
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To, U.TimeZoneString(q.Query.Timezone))
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+}
+
+func GetStringKeyFromCacheRedisKey(Key *cacheRedis.Key) string {
+
+	return fmt.Sprintf("pid:%d:puid:%s:%s:%s", Key.ProjectID, Key.ProjectUID, Key.Prefix, Key.Suffix)
 }
 
 func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
@@ -1078,7 +1084,7 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 	return rows
 }
 
-func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData) *QueryResult {
+func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry) *QueryResult {
 
 	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents)
 	result := &QueryResult{}
@@ -1091,7 +1097,7 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 	if err != nil {
 		return nil
 	}
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey)
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, logCtx)
 
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndex(result.Headers)
@@ -1136,7 +1142,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		return nil
 	}
 
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey)
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, *logCtx)
 
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
@@ -1327,9 +1333,8 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 }
 
 // MergeDataRowsHavingSameKey merges rows having same key by adding each column value
-func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionKey string) [][]interface{} {
+func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionKey string, logCtx log.Entry) [][]interface{} {
 
-	logCtx := log.WithFields(log.Fields{"Method": "MergeDataRowsHavingSameKey"})
 	rowKeyMap := make(map[string][]interface{})
 	maxRowSize := 0
 	for _, row := range rows {
@@ -1343,7 +1348,7 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionK
 			val, ok := row[j].(string)
 			// Ignore row if key is not proper
 			if !ok {
-				logCtx.WithFields(log.Fields{"RowKeyCandidate": row[j], "Row": row}).Info("empty key value error. Ignoring row and continuing.")
+				logCtx.Info("empty key value error. Ignoring row and continuing.")
 				continue
 			}
 			key = key + val
@@ -2066,7 +2071,7 @@ func GetKeyMapToData(attributionKey string, allRows []MarketingData) map[string]
 	return keyToData
 }
 
-func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry) (map[string]map[string]UserSessionData, []string, error) {
+func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx log.Entry) (map[string]map[string]UserSessionData, []string, error) {
 
 	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
 	userIdMap := make(map[string]bool)
@@ -2161,8 +2166,9 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.En
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
-func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry, reports *MarketingReports, contentGroupNamesList []string) (map[string]map[string]UserSessionData, []string, error) {
+func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]UserSessionData, []string, error) {
 
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
@@ -2174,6 +2180,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 		AdgroupID      string
 	}
 	var missingIDs []MissingCollection
+	count := 0
 	for rows.Next() {
 
 		var userIDNull sql.NullString
@@ -2319,6 +2326,10 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 				MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
 				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
+		}
+		count++
+		if count%49999 == 0 {
+			log.WithFields(log.Fields{"Method": "ProcessEventRows", "Count": count}).Info("Processing event rows")
 		}
 	}
 	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).Info("no document was found in any of the reports for ID. Logging and continuing %+v", missingIDs[:U.MinInt(100, len(missingIDs))])

@@ -83,8 +83,8 @@ func TestAttributionModelCompare(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 			QueryType:                     model.AttributionQueryTypeEngagementBased,
 		}
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -103,8 +103,8 @@ func TestAttributionModelCompare(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -133,8 +133,8 @@ func TestAttributionModelCompare(t *testing.T) {
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 			QueryType:                     model.AttributionQueryTypeEngagementBased,
 		}
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -161,9 +161,9 @@ func TestAttributionModelCompare(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
+		var debugQueryKey string
 		//Should only have user2 with no 0 linked event count
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -225,9 +225,9 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 		ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 		ConversionEventCompare:        model.QueryEventWithProperties{},
 	}
-
+	var debugQueryKey string
 	// Should find within lookBack window
-	_, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+	_, err = store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 	assert.Nil(t, err)
 
 	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID,
@@ -237,9 +237,8 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	_, errCode = createSession(project.ID, createdUserID1, timestamp+8*U.SECONDS_IN_A_DAY, "campaign1", "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	query.From = timestamp + 5*U.SECONDS_IN_A_DAY
-
 	//event beyond look back window
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "campaign1"))
 	assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "$none"))
@@ -317,8 +316,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -341,8 +340,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -364,8 +363,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -387,8 +386,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
@@ -420,8 +419,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -448,8 +447,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		var debugQueryKey string
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -497,9 +496,9 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
+		var debugQueryKey string
 		//Should only have user2 with no 0 linked event count
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -546,9 +545,9 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
-
+		var debugQueryKey string
 		//Should only have user2 with no 0 linked event count
-		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))

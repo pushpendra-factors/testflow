@@ -875,8 +875,8 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = baseQuery
 	}
 	var reportCollector sync.Map
-	dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitIDs, 1, &reportCollector)
+	//dashboardUnitIDs := make([]uint64, 0)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, nil, nil, 1, &reportCollector)
 	assert.Equal(t, 5, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -994,8 +994,8 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 		dashboardUnitQueriesMap[dashboardUnit.ID]["queries"] = baseQuery
 	}
 	var reportCollector sync.Map
-	dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitIDs, 1, &reportCollector)
+	//dashboardUnitIDs := make([]uint64, 0)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, nil, nil, 1, &reportCollector)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to, errCode := rangeFunction(timezoneString)
@@ -1092,8 +1092,8 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 	}
 
 	var reportCollector sync.Map
-	dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitIDs, 1, &reportCollector)
+	//dashboardUnitIDs := make([]uint64, 0)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, nil, nil, 1, &reportCollector)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	timezonestring := U.TimeZoneString(project.TimeZone)
 	for _, rangeFunction := range U.QueryDateRangePresets {
@@ -1219,8 +1219,8 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 	dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = query1
 
 	var reportCollector sync.Map
-	dashboardUnitIDs := make([]uint64, 0)
-	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitIDs, 1, &reportCollector)
+	//dashboardUnitIDs := make([]uint64, 0)
+	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, nil, nil, 1, &reportCollector)
 	result := struct {
 		Cache  bool              `json:"cache"`
 		Result model.QueryResult `json:"result"`

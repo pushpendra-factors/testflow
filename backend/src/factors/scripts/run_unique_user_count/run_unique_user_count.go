@@ -102,16 +102,16 @@ func main() {
 	}
 
 	query := &model.AttributionQuery{
-		LinkedEvents:           linkedEventsArray,
-		From:                   *customStartTime,
-		To:                     *customEndTime,
-		ConversionEvent:        *eventName,
+		//LinkedEvents:           linkedEventsArray,
+		From: *customStartTime,
+		To:   *customEndTime,
+		//ConversionEvent:        *eventName,
 		LookbackDays:           *lookbackDays,
 		AttributionKey:         *attributionKey,
 		AttributionMethodology: *attributionMethod,
 	}
-
-	result, err := store.GetStore().ExecuteAttributionQuery(*projectIdFlag, query)
+	var debugQueryKey string
+	result, err := store.GetStore().ExecuteAttributionQuery(*projectIdFlag, query, debugQueryKey)
 	if err != nil {
 		log.Error("Failed to execute query")
 	}

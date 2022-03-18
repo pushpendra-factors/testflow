@@ -838,8 +838,8 @@ func (store *MemSQL) runFunnelAndInsightsUnit(projectID uint64, queryOriginal mo
 }
 
 func (store *MemSQL) runAttributionUnit(projectID uint64, queryOriginal *model.AttributionQuery, c chan Result) {
-
-	r, err := store.ExecuteAttributionQuery(projectID, queryOriginal)
+	var debugQueryKey string
+	r, err := store.ExecuteAttributionQuery(projectID, queryOriginal, debugQueryKey)
 	result := Result{res: r, err: err, errMsg: ""}
 	c <- result
 }

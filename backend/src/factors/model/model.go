@@ -55,15 +55,15 @@ type Model interface {
 	GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
 
 	// attribution
-	ExecuteAttributionQuery(projectID uint64, query *model.AttributionQuery) (*model.QueryResult, error)
-	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error)
+	ExecuteAttributionQuery(projectID uint64, query *model.AttributionQuery, debugQueryKey string) (*model.QueryResult, error)
+	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64, logCtx log.Entry) (map[string]model.UserInfo, error)
 	GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
-		userIDInfo map[string]model.UserInfo) (error, []model.UserEventInfo)
+		userIDInfo map[string]model.UserInfo, logCtx log.Entry) (error, []model.UserEventInfo)
 	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error)
 	GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
 		goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
-		eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
+		eventNameToIdList map[string][]interface{}, logCtx log.Entry) (map[string]model.UserInfo,
 		map[string][]model.UserIDPropID, map[string]int64, error)
 
 	// bigquery_setting

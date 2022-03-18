@@ -7,8 +7,6 @@ import (
 	U "factors/util"
 
 	C "factors/config"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type ConfigSchema struct {
@@ -75,14 +73,12 @@ func FiveTranCreateBingAdsConnector(projectId uint64) (int, string, string, stri
 		TrustCertificates: true,
 		RunSetupTests:     false,
 		Paused:            true,
-		PauseAfterTrial:   true,
 		SyncFrequency:     1440,
 		Config: ConfigSchema{
 			Schema: fmt.Sprintf("%v_%v_%v", "bingads", projectId, U.TimeNowUnix()),
 		},
 	}
 	statusCode, response, errResponse := HttpRequestWrapper("connectors", Authorization, connectorCreateRequest, "POST")
-	log.Info(response)
 	if statusCode == http.StatusCreated {
 		connectorId := response["data"].(map[string]interface{})["id"].(string)
 		schemaId := response["data"].(map[string]interface{})["schema"].(string)
@@ -100,8 +96,7 @@ func FiveTranReloadBingAdsConnectorSchema(ConnectorId string) (int, string) {
 	reloadRequest := FiveTranSchemaReloadRequest{
 		ExcludeMode: "EXCLUDE",
 	}
-	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%v/schemas/reload", ConnectorId), Authorization, reloadRequest, "POST")
-	log.Info(response)
+	statusCode, _, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%v/schemas/reload", ConnectorId), Authorization, reloadRequest, "POST")
 	if statusCode == http.StatusOK {
 		return statusCode, "" // statuscode, errstring
 	} else {
@@ -140,8 +135,7 @@ func FiveTranPatchBingAdsConnectorSchema(ConnectorId string, SchemaName string) 
 			},
 		},
 	}
-	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s/schemas/%s", ConnectorId, SchemaName), Authorization, schemaPatchRequest, "PATCH")
-	log.Info(response)
+	statusCode, _, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s/schemas/%s", ConnectorId, SchemaName), Authorization, schemaPatchRequest, "PATCH")
 	if statusCode == http.StatusOK {
 		return statusCode, "" // statuscode, errstring
 	} else {
@@ -155,7 +149,6 @@ func FiveTranCreateConnectorCard(ConnectorId string) (int, string, string) {
 		"Content-Type":  "application/json",
 	}
 	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s/connect-card-token", ConnectorId), Authorization, nil, "POST")
-	log.Info(response)
 	if statusCode == http.StatusOK {
 		fe_host := C.GetProtocol() + C.GetAPPDomain()
 		redirectUri := fmt.Sprintf("https://fivetran.com/connect-card/setup?redirect_uri=%s&auth=%s", fe_host, response["token"].(string))
@@ -174,8 +167,7 @@ func FiveTranPatchConnector(ConnectorId string) (int, string) {
 		Paused:           false,
 		IsHistoricalSync: true,
 	}
-	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s", ConnectorId), Authorization, request, "PATCH")
-	log.Info(response)
+	statusCode, _, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s", ConnectorId), Authorization, request, "PATCH")
 	if statusCode == http.StatusOK {
 		return statusCode, ""
 	} else {
@@ -188,8 +180,7 @@ func FiveTranDeleteConnector(ConnectorId string) (int, string) {
 		"Authorization": C.GetFivetranLicenseKey(),
 		"Content-Type":  "application/json",
 	}
-	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s", ConnectorId), Authorization, nil, "DELETE")
-	log.Info(response)
+	statusCode, _, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s", ConnectorId), Authorization, nil, "DELETE")
 	if statusCode == http.StatusOK {
 		return statusCode, ""
 	} else {
@@ -203,7 +194,6 @@ func FiveTranGetConnector(ConnectorId string) (int, string, bool, string) {
 		"Content-Type":  "application/json",
 	}
 	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s", ConnectorId), Authorization, nil, "GET")
-	log.Info(response)
 
 	if statusCode == http.StatusOK {
 		setupcomplete := response["data"].(map[string]interface{})["status"].(map[string]interface{})["setup_state"].(string)

@@ -623,7 +623,8 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 	} else if baseQuery.GetClass() == model.QueryClassAttribution {
 		attributionQuery := baseQuery.(*model.AttributionQueryUnit)
 		unitReport.Query = attributionQuery
-		result, err = pg.ExecuteAttributionQuery(projectID, attributionQuery.Query)
+		var debugQueryKey string
+		result, err = pg.ExecuteAttributionQuery(projectID, attributionQuery.Query, debugQueryKey)
 		logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": err}).Info("Got attribution result")
 		if err != nil && !model.IsIntegrationNotFoundError(err) {
 			errCode = http.StatusInternalServerError

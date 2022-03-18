@@ -111,6 +111,7 @@ func (pg *Postgres) RunInsightsQuery(projectId uint64, query model.Query) (*mode
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
+	model.AddMissingEventNamesInResult(result, &query, isTimezoneEnabled)
 	err = SanitizeQueryResult(result, &query, isTimezoneEnabled)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to sanitize query results.")

@@ -20,7 +20,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
     const [filterDD, setFilterDD] = useState(false);
     const [timestampRef, setTimestampRefState] = tchType === '2'? useState('LAST_MODIFIED_TIME_REF') : useState('campaign_member_created_date');
     //touch_point_time_ref
-    const [touchPointPropRef, setTouchPointPropRef] = useState('');
+    const [touchPointPropRef, setTouchPointPropRef] = tchType === '2'? useState('LAST_MODIFIED_TIME_REF') : useState('campaign_member_created_date');
     const [timestampPropertyRef, setTimestampPropRef] = useState(false);
     const [dateTypeDD, setDateTypeDD] = useState(false);
     const [dateTypeProps, setDateTypeProps] = useState([]);
@@ -214,7 +214,7 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
 
     const renderFilterBlock = () => {
         return (<Row className={`mt-4`}>
-            <Col span={4} className={`justify-items-start`}>
+            <Col span={6} className={`justify-items-start`}>
                 <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>Add a Touchpoint Rule<sup>*</sup></Text>
             </Col>
 
@@ -505,9 +505,6 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
             <div>
                 <Row className={`mt-20 relative justify-start`}>
                     <Text level={7} type={'title'} extraClass={'m-0 italic'} weight={'thin'}><sup>*</sup> All these fields are mandatory</Text>
-                </Row>
-                <Row className={`mt-4 relative justify-start`}>
-                    {(!validateRuleInfo() || !validateInputs()) && <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'} color='red'><sup>*</sup> Please fill mandatory fields</Text>}
                 </Row>
                 <Row  className={`border-top--thin mt-4 relative justify-start`}>
                     <Col className={`mt-6`} span={10}>
