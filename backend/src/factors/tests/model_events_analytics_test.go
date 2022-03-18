@@ -980,6 +980,42 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 			assert.Equal(t, float64(2), result.Rows[0][2])
 		}
 	})
+
+	t.Run("TestingEventsWithZeroValuesAndEventsWithValues", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name:       "s0",
+					Properties: []model.QueryProperty{},
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+			},
+			Class: model.QueryClassEvents,
+
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with fliter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "s0", result.Rows[0][1])
+		assert.Equal(t, "s1", result.Rows[1][1])
+		assert.Equal(t, "s3", result.Rows[2][1])
+		assert.Equal(t, "s2", result.Rows[3][1])
+	})
 }
 
 func TestCoalUniqueUsersEachEventQuery(t *testing.T) {

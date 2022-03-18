@@ -68,7 +68,6 @@ func (store *MemSQL) GetFiveTranMapping(ProjectID uint64, Integration string) (s
 	db := C.GetServices().Db
 	var records []model.FivetranMappings
 	if err := db.Where("project_id = ?", ProjectID).Where("integration = ?", Integration).Find(&records).Error; err != nil {
-		log.Error(err)
 		return "", err
 	}
 	if len(records) > 0 {
@@ -87,7 +86,6 @@ func (store *MemSQL) GetActiveFiveTranMapping(ProjectID uint64, Integration stri
 	db := C.GetServices().Db
 	var records model.FivetranMappings
 	if err := db.Where("project_id = ?", ProjectID).Where("integration = ?", Integration).Where("status = ?", true).First(&records).Error; err != nil {
-		log.Error(err)
 		return records, err
 	}
 	return records, nil
@@ -97,7 +95,6 @@ func (store *MemSQL) GetLatestFiveTranMapping(ProjectID uint64, Integration stri
 	db := C.GetServices().Db
 	var records []model.FivetranMappings
 	if err := db.Where("project_id = ?", ProjectID).Where("integration = ?", Integration).Find(&records).Error; err != nil {
-		log.Error(err)
 		return "", err
 	}
 	if len(records) > 0 {
@@ -114,7 +111,6 @@ func (store *MemSQL) GetAllActiveFiveTranMapping(ProjectID uint64, Integration s
 	db := C.GetServices().Db
 	var records []model.FivetranMappings
 	if err := db.Where("project_id = ?", ProjectID).Where("integration = ?", Integration).Where("status = ?", true).Find(&records).Error; err != nil {
-		log.Error(err)
 		return nil, err
 	}
 	mappings := make([]string, 0)
@@ -134,7 +130,6 @@ func (store *MemSQL) GetAllActiveFiveTranMappingByIntegration(Integration string
 	db := C.GetServices().Db
 	var records []model.FivetranMappings
 	if err := db.Where("integration = ?", Integration).Where("status = ?", true).Find(&records).Error; err != nil {
-		log.Error(err)
 		return nil, err
 	}
 	return records, nil

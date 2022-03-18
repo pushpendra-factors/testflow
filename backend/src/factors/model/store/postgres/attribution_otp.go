@@ -3,12 +3,12 @@ package postgres
 import (
 	"factors/model/model"
 	U "factors/util"
+
 	log "github.com/sirupsen/logrus"
 )
 
-func (pg *Postgres) fetchOTPSessions(projectID uint64, offlineTouchPointEventNameId string, query *model.AttributionQuery) (map[string]map[string]model.UserSessionData, []string, error) {
+func (pg *Postgres) fetchOTPSessions(projectID uint64, offlineTouchPointEventNameId string, query *model.AttributionQuery, logCtx log.Entry) (map[string]map[string]model.UserSessionData, []string, error) {
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
 	effectiveTo := query.To
 	// extend the campaign window for engagement based attribution

@@ -658,7 +658,7 @@ func (p *Pattern) GetPerUserCount(
 		log.Error(errorString)
 		return 0, fmt.Errorf(errorString)
 	}
-	if p.PatternVersion == 2 {
+	if p.PatternVersion >= 2 {
 		//p.GenFrequentProperties()
 
 		epf, upf := int(p.PerUserCount), int(p.PerUserCount)
