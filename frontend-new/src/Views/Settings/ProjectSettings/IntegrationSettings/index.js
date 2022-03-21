@@ -32,7 +32,7 @@ const IntegrationProviderData = [
     desc:
       'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Segment_ads',
-    kbLink: false,
+    kbLink: 'https://help.factors.ai/en/articles/5835006-segment',
   },
   {
     name: 'Hubspot',

@@ -1271,13 +1271,14 @@ const CaretDownSVG = ({ size = 16, color, extraClass }) => {
     <svg
       width={size}
       height={size}
+      className={extraClass}
       viewBox='0 0 16 16'
-      fill='none'
+      fill={color}
       xmlns='http://www.w3.org/2000/svg'
     >
       <path
         d='M4.52475 6C4.056 6 3.82162 6.57292 4.16016 6.91146L7.4935 10.2448C7.70183 10.4531 8.04037 10.4531 8.2487 10.2448L11.582 6.91146C11.9206 6.57292 11.6862 6 11.2175 6H4.52475Z'
-        fill='#8692A3'
+        fill={color}
       />
     </svg>
   );
@@ -1870,6 +1871,24 @@ const Delete1SVG = () => {
   );
 };
 
+const PlayButtonSVG = ({ size = 16, extraClass, color }) => {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle opacity="0.5" cx="16" cy="16" r="16" fill="#FFD6D6"/>
+      <circle cx="15.9999" cy="16.0001" r="11.4474" fill="#FF5151"/>
+      <path d="M20.9169 15.2972C21.3475 15.5458 21.3475 16.1673 20.9169 16.4159L14.0258 20.3945C13.5952 20.6431 13.057 20.3323 13.057 19.8352V11.8779C13.057 11.3807 13.5952 11.07 14.0258 11.3186L20.9169 15.2972Z" fill="white"/>
+    </svg>
+  );
+};
+
+const CheckCircleSVG = ({ size = 16, extraClass, color }) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 17 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8.03125 1C4.16563 1 1.03125 4.13438 1.03125 8C1.03125 11.8656 4.16563 15 8.03125 15C11.8969 15 15.0312 11.8656 15.0312 8C15.0312 4.13438 11.8969 1 8.03125 1ZM11.0547 5.71406L7.76406 10.2766C7.71807 10.3408 7.65744 10.3931 7.5872 10.4291C7.51696 10.4652 7.43912 10.4841 7.36016 10.4841C7.28119 10.4841 7.20336 10.4652 7.13311 10.4291C7.06287 10.3931 7.00224 10.3408 6.95625 10.2766L5.00781 7.57656C4.94844 7.49375 5.00781 7.37813 5.10938 7.37813H5.84219C6.00156 7.37813 6.15312 7.45469 6.24687 7.58594L7.35938 9.12969L9.81563 5.72344C9.90938 5.59375 10.0594 5.51562 10.2203 5.51562H10.9531C11.0547 5.51562 11.1141 5.63125 11.0547 5.71406Z" fill="#52C41A"/>
+    </svg>
+  );
+};
+
 export {
   BrandSVG,
   DeleteSVG,
@@ -1998,5 +2017,7 @@ export {
   PluscopySVG,
   AddtodashSVG,
   InfocircleSVG,
-  Delete1SVG
+  Delete1SVG,
+  PlayButtonSVG,
+  CheckCircleSVG,
 };

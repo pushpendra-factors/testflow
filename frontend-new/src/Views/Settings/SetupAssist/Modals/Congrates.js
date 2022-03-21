@@ -15,7 +15,7 @@ function Congrates({handleCancel}) {
 
     const handleContinue = () => {
         handleCancel();
-        history.push('/project-setup');
+        history.push('/welcome');
     }
 
     const handleInvite = () => {

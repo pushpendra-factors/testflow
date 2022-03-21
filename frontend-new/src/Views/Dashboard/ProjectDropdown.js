@@ -26,6 +26,7 @@ import { DASHBOARD_DELETED } from '../../reducers/types';
 import factorsai from 'factorsai';
 import { fetchDemoProject, getHubspotContact } from 'Reducers/global';
 import NewProject from '../Settings/SetupAssist/Modals/NewProject';
+import { meetLink } from '../../utils/hubspot';
 
 function ProjectDropdown({
   setaddDashboardModal,
@@ -76,11 +77,6 @@ function ProjectDropdown({
         console.log(err.data.error)
     });
 }, []);
-
-let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
-                :ownerID === '116047122'? 'https://calendly.com/priyanka-267/30min'
-                :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': 'https://calendly.com/factors-ai/30min';
-
 
   const changeActiveDashboard = useCallback(
     (val) => {
@@ -375,7 +371,7 @@ let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factor
                   }
                 </Col>
                 <Col className={'mr-12 mt-3'}>
-                  <a href={meetLink} target='_blank' ><Button type={'default'} style={{background:'white', border: '1px solid gray'}} className={'m-0 mr-2'} >Talk to an expert</Button></a>
+                  <a href={meetLink(ownerID)} target='_blank' ><Button type={'default'} style={{background:'white', border: '1px solid gray'}} className={'m-0 mr-2'} >Get a Personalized Demo</Button></a>
                   {projects.length == 1 ?
                   <Button type={'primary'} className={'m-0'} onClick={() => setShowProjectModal(true)}>Set up my own Factors project</Button>
                   : null}
