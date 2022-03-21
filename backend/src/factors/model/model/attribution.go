@@ -1910,6 +1910,7 @@ func AddPerformanceData(attributionData *map[string]*AttributionData, attributio
 	AddAdwordsPerformanceReportInfo(attributionData, attributionKey, marketingData)
 	AddFacebookPerformanceReportInfo(attributionData, attributionKey, marketingData)
 	AddLinkedinPerformanceReportInfo(attributionData, attributionKey, marketingData)
+	AddBingAdsPerformanceReportInfo(attributionData, attributionKey, marketingData)
 }
 
 func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
@@ -1923,6 +1924,20 @@ func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionDat
 		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData, attributionKey, ChannelAdwords)
 	default:
 		// no enrichment for any other type
+		return
+	}
+}
+
+func AddBingAdsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+
+	switch attributionKey {
+	case AttributionKeyCampaign:
+		addMetricsFromReport(attributionData, marketingData.BingAdsCampaignKeyData, attributionKey, ChannelBingAds)
+	case AttributionKeyAdgroup:
+		addMetricsFromReport(attributionData, marketingData.BingAdsAdgroupKeyData, attributionKey, ChannelBingAds)
+	case AttributionKeyKeyword:
+		addMetricsFromReport(attributionData, marketingData.BingAdsKeywordKeyData, attributionKey, ChannelBingAds)
+	default:
 		return
 	}
 }
@@ -2293,6 +2308,9 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 			}
 		}
 
+		if sourceName == "bing" {
+			marketingValues.Channel = ChannelBingAds
+		}
 		// Name
 		marketingValues.Name = attributionKeyName
 		// Add the unique attributionKey key
