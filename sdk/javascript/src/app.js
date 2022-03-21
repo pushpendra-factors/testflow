@@ -196,6 +196,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
         .then(function(response) {
             _this.config = response.body;
             _this.client = _client;
+            window.dispatchEvent(new CustomEvent('FACTORS_INITIALISED_EVENT'));
             return response;
         })
         .then(function() {

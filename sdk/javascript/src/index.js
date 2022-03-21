@@ -1,9 +1,11 @@
 "use strict";
 
+const logger = require("./utils/logger");
 var App = require("./app");
 
 // Global reference.
 var app = new App();
+var isQueueBeingProcessed = false;
 
 /**
  * Initializes sdk environment on user application. Overwrites if initialized already.
@@ -117,6 +119,64 @@ function getUserId() {
     return app.getUserId();
 }
 
+function processQueue() {
+    if(factors && factors.q && factors.q.length > 0 && !isQueueBeingProcessed) {
+        isQueueBeingProcessed = true;
+        console.log("Queue");
+        logger.debug("Starting Queue", false);
+        try{
+            while(factors.q.length > 0) {
+                logger.debug("Processing Queue", false);
+                switch(factors.q[0].k) {
+                    case 'track': {
+                        track(factors.q[0].a[0], factors.q[0].a[1]);
+                        factors.q.shift();
+                        break;
+                    }
+                    case 'reset': {
+                        reset();
+                        factors.q.shift();
+                        break;
+                    }
+                    case 'page': {
+                        page(factors.q[0].a[0], factors.q[0].a[1]);
+                        factors.q.shift();
+                        break;
+                    }
+                    case 'updateEventProperties': {
+                        updateEventProperties(factors.q[0].a[0], factors.q[0].a[1]);
+                        factors.q.shift();
+                        break;
+                    }
+                    case 'identify': {
+                        identify(factors.q[0].a[0], factors.q[0].a[1]);
+                        factors.q.shift();
+                        break;
+                    }
+                    case 'addUserProperties': {
+                        addUserProperties(factors.q[0].a[0]);
+                        factors.q.shift();
+                        break;
+                    }
+                    case 'getUserId': {
+                        getUserId();
+                        factors.q.shift();
+                        break;
+                    }
+                    default:
+                        app.handleError("Unknown call parameters");
+                }
+            }
+        } 
+        catch (e) {
+            app.handleError(e);
+            isQueueBeingProcessed = false;
+        }
+        logger.debug("Queue Processed", false);
+        isQueueBeingProcessed = false;
+    }
+}
+
 let exposed = { init, reset, track, page, updateEventProperties, 
     identify, addUserProperties, getUserId };
 
@@ -124,5 +184,18 @@ if (process.env.NODE_ENV === "development") {
     exposed["test"] = require("./test/suite.js");
     exposed["app"] = app;
 }
+
+if(factors && factors.TOKEN) {
+    init(factors.TOKEN, factors.INIT_PARAMS, INIT_CALLBACK);
+}
+
+
+window.addEventListener('FACTORS_INITIALISED_EVENT', function(e){
+    processQueue();
+    window.addEventListener('FACTORS_QUEUED_EVENT', function(e) {
+            processQueue();
+    })
+});
+
 module.exports = exports = exposed;
 

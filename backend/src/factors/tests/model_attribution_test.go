@@ -2,10 +2,11 @@ package tests
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"reflect"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 
 	"encoding/json"
 	H "factors/handler"
@@ -323,6 +324,7 @@ func TestAttributionLandingPage(t *testing.T) {
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           10,
+			TacticOfferType:        model.MarketingEventTypeOffer,
 		}
 
 		var debugQueryKey string
@@ -339,6 +341,7 @@ func TestAttributionLandingPage(t *testing.T) {
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           10,
+			TacticOfferType:        model.MarketingEventTypeOffer,
 		}
 
 		var debugQueryKey string
@@ -365,6 +368,7 @@ func TestAttributionLandingPage(t *testing.T) {
 			AttributionMethodology: model.AttributionMethodLastTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           10,
+			TacticOfferType:        model.MarketingEventTypeOffer,
 		}
 
 		var debugQueryKey string
@@ -388,6 +392,7 @@ func TestAttributionLandingPage(t *testing.T) {
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           20,
+			TacticOfferType:        model.MarketingEventTypeOffer,
 		}
 
 		var debugQueryKey string
@@ -419,6 +424,7 @@ func TestAttributionLandingPage(t *testing.T) {
 			ConversionEvent:          model.QueryEventWithProperties{Name: "event2"},
 			LookbackDays:             10,
 			AttributionContentGroups: []string{"cg_123"},
+			TacticOfferType:          model.MarketingEventTypeOffer,
 		}
 
 		var debugQueryKey string
@@ -438,10 +444,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
-	var debugQueryKey string
-	// Should not return error for no adwords customer account id
-	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{}, debugQueryKey)
-	assert.Nil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
@@ -499,7 +501,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -515,7 +517,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 	})
@@ -539,7 +541,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 		var debugQueryKey string
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
@@ -563,7 +565,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 		}
 		var debugQueryKey string
 		//Should only have user2 with no 0 linked event count
-		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
+		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query, debugQueryKey)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))

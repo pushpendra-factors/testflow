@@ -1,8 +1,8 @@
-module.exports = {
+const CONFIG = {
   entry: "./src/index.js",
   output: {
-    filename: "factors.prod.js",
-    library: "factors",
+    filename: "factors.v1.js",
+    library: "factorsai",
     libraryTarget: "var"
   },
   module: {
@@ -19,3 +19,5 @@ module.exports = {
   mode: "production",
   watch: false
 };
+
+module.exports = (env) => {return CONFIG}; 
