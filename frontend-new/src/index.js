@@ -30,11 +30,11 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
     integrations: [
       new Integrations.BrowserTracing(),
     ],
-  
+
     // We recommend adjusting this value in production, or using tracesSampler
     // for finer control
     tracesSampleRate: 1.0,
-  }); 
+  });
 }
 
 
@@ -42,7 +42,7 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['agent','factors']
+  whitelist: ['agent']
 };
 const persistedReducer = persistReducer(persistConfig, reducers);
 
@@ -62,7 +62,7 @@ ReactDOM.render(
       <PersistGate loading={null} persistor={persistor}>
         <ErrorBoundary>
           {/* <TourProvider steps={steps}> */}
-            <App /> 
+          <App />
           {/* </TourProvider> */}
         </ErrorBoundary>
       </PersistGate>

@@ -1,0 +1,121 @@
+.explain-table--row{
+    border-bottom: thin solid $fa-color--mono-1; 
+    // border-right: thin solid $fa-color--mono-2;
+    .column_right{
+        border-left: thin solid $fa-color--mono-1;  
+        width: 130px;
+    }
+}
+
+.explain-insight--container
+{
+    .explain-insight--item-right{
+        border-left: thin solid $fa-color--mono-2;  
+    }
+}
+
+.explain-insight--wrapper
+{
+    min-width: 900px;
+    max-width: 1200px;
+    .explain-insight--item{ 
+
+        &.arrow-right{ 
+            position: relative;
+            &:after{
+                // content: "";
+                // width: 0; 
+                // height: 0;  
+                // border-top: 40px solid transparent;
+                // border-bottom: 40px solid transparent; 
+                // border-left: 40px solid green; 
+                // position: absolute;
+                // right:-38px;
+                // top: 0;  
+               
+                content: "";
+                width: 59px; 
+                height: 59px;   
+                background-color: $fa-color--brand-1; 
+                // background-color: red; 
+                border-top: 4px solid white;
+                border-right: 4px solid white;
+                position: absolute;
+                transform: rotate(45deg);
+                right:0;
+                top: 0;  
+                bottom:0;
+                margin: auto;
+                z-index: 1;
+            }
+        }
+    } 
+
+}
+
+
+.explain-insight--modal{
+    min-width: 1000px;
+    width: 90% !important;
+}
+
+
+.explain-insight--tag{
+    height: 24px;
+    width: 24px;
+    border: 1px solid transparent; 
+    border-radius: 100%; 
+    color: $fa-color--white;
+    &.blue{
+        background-color: #4D7DB4   
+    }
+    &.yellow{ 
+        background-color: #CCC36D
+
+    }
+
+}
+
+.query_block--actions
+{
+    transition: all 0.3s;
+    .fa-btn--custom{
+        display: none;
+        transition: all 0.3s;
+    }
+    &:hover{
+        .fa-btn--custom{
+            display: block;
+        } 
+    }
+}
+ 
+
+.explain-builder--content{
+
+     
+    height: auto;
+    overflow: scroll;
+    transition: all 0.5s;
+    &.explain-builder--collapsed{ 
+        height: 180px;
+        overflow: hidden;
+        pointer-events: none;
+        position: relative;
+        transition: all 0.5s;
+
+        &::after{
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0; 
+            z-index: 2;
+            background-image: linear-gradient(#ffffff2b, #ffffff);
+            pointer-events: none;
+        }
+    }
+}
