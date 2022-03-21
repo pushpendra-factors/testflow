@@ -2308,6 +2308,9 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *Marketin
 			}
 		}
 
+		if sourceName == "bing" {
+			marketingValues.Channel = ChannelBingAds
+		}
 		// Name
 		marketingValues.Name = attributionKeyName
 		// Add the unique attributionKey key
