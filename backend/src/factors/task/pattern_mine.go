@@ -1531,52 +1531,52 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 		}
 	}
 
-	// userPropertiesList, errInt := store.GetStore().GetAllActiveFactorsTrackedUserPropertiesByProject(projectId)
-	// if errInt != http.StatusFound {
-	// 	mineLog.WithFields(log.Fields{"err": errInt}).Error("Unable to fetch UserProperties from db")
-	// 	return nil, nil
-	// }
-
-	// if len(userPropertiesList) > 0 {
-	// 	mineLog.WithFields(log.Fields{"user properties": userPropertiesList}).Info("Number of User properties from db :", len(userPropertiesList))
-
-	// 	for _, v := range userPropertiesList {
-	// 		if _, ok := userPropertiesMap[v.UserPropertyName]; ok {
-	// 			upFilteredMap[v.UserPropertyName] = true
-	// 		} else {
-	// 			mineLog.Info("Missing user property in events File or blacklisted: ", v.UserPropertyName)
-	// 		}
-	// 	}
-	// } else {
-
-	// if the DB is not populated , based on counting logic
-	// populate the DB and use the user properties
-	upSortedList := U.RankByWordCount(userPropertiesMap)
-	var userPropertiesCount = 0
-	for _, u := range upSortedList {
-		if !upFilteredMap[u.Key] {
-			upFilteredMap[u.Key] = true
-			userPropertiesCount++
-		}
+	userPropertiesList, errInt := store.GetStore().GetAllActiveFactorsTrackedUserPropertiesByProject(projectId)
+	if errInt != http.StatusFound {
+		mineLog.WithFields(log.Fields{"err": errInt}).Error("Unable to fetch UserProperties from db")
+		return nil, nil
 	}
 
-	// delete keys based on disabled_Properties
-	for _, Uprop := range U.DISABLED_FACTORS_USER_PROPERTIES {
-		if upFilteredMap[Uprop] {
-			delete(upFilteredMap, Uprop)
+	if len(userPropertiesList) > 0 {
+		mineLog.WithFields(log.Fields{"user properties": userPropertiesList}).Info("Number of User properties from db :", len(userPropertiesList))
 
+		for _, v := range userPropertiesList {
+			if _, ok := userPropertiesMap[v.UserPropertyName]; ok {
+				upFilteredMap[v.UserPropertyName] = true
+			} else {
+				mineLog.Info("Missing user property in events File or blacklisted: ", v.UserPropertyName)
+			}
+		}
+	} else {
+		// if the DB is not populated , based on counting logic
+		// populate the DB and use the user properties
+		upSortedList := U.RankByWordCount(userPropertiesMap)
+		var userPropertiesCount = 0
+		for _, u := range upSortedList {
+			if !upFilteredMap[u.Key] {
+				upFilteredMap[u.Key] = true
+				userPropertiesCount++
+			}
+		}
+
+		// delete keys based on disabled_Properties
+		for _, Uprop := range U.DISABLED_FACTORS_USER_PROPERTIES {
+			if upFilteredMap[Uprop] {
+				delete(upFilteredMap, Uprop)
+
+			}
+		}
+
+		for key := range upFilteredMap {
+			mineLog.Info("insert user property", key)
+			_, errInt = store.GetStore().CreateFactorsTrackedUserProperty(projectId, key, "")
+			if errInt != http.StatusCreated {
+				errorString := fmt.Sprintf("unable to insert user property to db %s", key)
+				mineLog.WithFields(log.Fields{"http status": errInt}).Error(errorString)
+
+			}
 		}
 	}
-	// 	for key := range upFilteredMap {
-	// 		mineLog.Info("insert user property", key)
-	// 		_, errInt = store.GetStore().CreateFactorsTrackedUserProperty(projectId, key, "")
-	// 		if errInt != http.StatusCreated {
-	// 			errorString := fmt.Sprintf("unable to insert user property to db %s", key)
-	// 			mineLog.WithFields(log.Fields{"http status": errInt}).Error(errorString)
-
-	// 		}
-	// 	}
-	// }
 	// ep : event Properties : addkeys based on ranking , add based on whitelist properties
 	// delete based on disables properties
 
