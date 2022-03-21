@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"path"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -16,33 +17,41 @@ import (
 type Pattern struct {
 	EventNames []string `json:"en"`
 	// Histograms.
-	GenericPropertiesHistogram              *Hist.NumericHistogramStruct     `json:gph`
-	PerUserEventNumericProperties           *Hist.NumericHistogramStruct     `json:"enp"`
-	PerUserEventCategoricalProperties       *Hist.CategoricalHistogramStruct `json:"ecp"`
-	PerUserUserNumericProperties            *Hist.NumericHistogramStruct     `json:"unp"`
-	PerUserUserCategoricalProperties        *Hist.CategoricalHistogramStruct `json:"ucp"`
-	PerOccurrenceEventNumericProperties     *Hist.NumericHistogramStruct     `json:"oenp"`
-	PerOccurrenceEventCategoricalProperties *Hist.CategoricalHistogramStruct `json:"oecp"`
-	PerOccurrenceUserNumericProperties      *Hist.NumericHistogramStruct     `json:"ounp"`
-	PerOccurrenceUserCategoricalProperties  *Hist.CategoricalHistogramStruct `json:"oucp"`
-	PatternVersion                          int                              `json:"pv"`
+	GenericPropertiesHistogram              *Hist.NumericHistogramStruct     `json:gph`    // v1
+	PerUserEventNumericProperties           *Hist.NumericHistogramStruct     `json:"enp"`  // v1
+	PerUserEventCategoricalProperties       *Hist.CategoricalHistogramStruct `json:"ecp"`  // v1
+	PerUserUserNumericProperties            *Hist.NumericHistogramStruct     `json:"unp"`  // v1
+	PerUserUserCategoricalProperties        *Hist.CategoricalHistogramStruct `json:"ucp"`  // v1
+	PerOccurrenceEventNumericProperties     *Hist.NumericHistogramStruct     `json:"oenp"` // v1
+	PerOccurrenceEventCategoricalProperties *Hist.CategoricalHistogramStruct `json:"oecp"` // v1
+	PerOccurrenceUserNumericProperties      *Hist.NumericHistogramStruct     `json:"ounp"` // v1
+	PerOccurrenceUserCategoricalProperties  *Hist.CategoricalHistogramStruct `json:"oucp"` // v1
+	PatternVersion                          int                              `json:"pv"`   // v1
 	// The total number of times this pattern occurs allowing multiple counts
 	// per user.
-	PerOccurrenceCount uint `json:"c"`
+	PerOccurrenceCount uint `json:"c"` // v1
 	// Counted only once per user.
-	PerUserCount uint `json:"ouc"`
+	PerUserCount uint `json:"ouc"` // v1
 	// Number of users the pattern was counted on.
-	TotalUserCount uint `json:"uc"`
+	TotalUserCount uint `json:"uc"` // v1
 
-	userTree      Fp.Tree
-	eventTree     Fp.Tree
-	userTreePath  string
-	eventTreePath string
-
-	UserPropertiesPatterns  []Fp.ConditionalPattern `json:"ufp"`
-	EventPropertiesPatterns []Fp.ConditionalPattern `json:"efp"`
+	userTree                Fp.Tree                 //v2
+	eventTree               Fp.Tree                 //v2
+	userTreePath            string                  //v3
+	eventTreePath           string                  //v3
+	UserProps               [][]string              `json:"ups"` //v3
+	EventProps              [][]string              `json:"eps"` //v3
+	EpFName                 string                  //v3
+	UpFname                 string                  //v3
+	PropertiesBasePath      string                  //v3
+	PropertiesBaseFolder    string                  //v3
+	UserPropertiesPatterns  []Fp.ConditionalPattern `json:"ufp"` //v3
+	EventPropertiesPatterns []Fp.ConditionalPattern `json:"efp"` //v3
+	numPropsEvent           int64                   //v3
+	numPropsUser            int64                   //v3
 
 	FreqProps *Fp.FrequentPropertiesStruct
+
 	// Private variables.
 	waitIndex                       int
 	currentUserId                   string
@@ -53,10 +62,10 @@ type Pattern struct {
 	currentUserEventOccurenceCounts map[string][]uint
 
 	// These are tracked by default for first seen events.
-	currentEPropertiesNMap map[string]float64
-	currentEPropertiesCMap map[string]string
-	currentUPropertiesNMap map[string]float64
-	currentUPropertiesCMap map[string]string
+	currentEPropertiesNMap map[string]float64 // v1
+	currentEPropertiesCMap map[string]string  // v1
+	currentUPropertiesNMap map[string]float64 // v1
+	currentUPropertiesCMap map[string]string  // v1
 }
 
 const num_T_BINS = 20
@@ -93,6 +102,13 @@ type EventConstraints struct {
 	EPCategoricalConstraints []CategoricalConstraint
 	UPNumericConstraints     []NumericConstraint
 	UPCategoricalConstraints []CategoricalConstraint
+}
+
+type CountAlgoProperties struct {
+	// properties related to hmine and other counting algo
+	Counting_version int
+	Hmine_support    float32
+	Hmine_persist    int
 }
 
 func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern, error) {
@@ -157,8 +173,16 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		currentUPropertiesCMap:                  make(map[string]string),
 	}
 
-	pattern.userTree = Fp.InitTree()
-	pattern.eventTree = Fp.InitTree()
+	pattern.userTree = Fp.Tree{}
+	pattern.numPropsEvent = 0
+	pattern.numPropsUser = 0
+	pattern.eventTree = Fp.Tree{}
+	pattern.UserProps = make([][]string, 0)
+	pattern.EventProps = make([][]string, 0)
+	pattern.UserPropertiesPatterns = make([]Fp.ConditionalPattern, 0)
+	pattern.EventPropertiesPatterns = make([]Fp.ConditionalPattern, 0)
+	pattern.PropertiesBasePath = U.RandStringBytes(5) + ".json"
+	pattern.PropertiesBaseFolder = ""
 
 	if userAndEventsInfo == nil {
 		return &pattern, nil
@@ -458,11 +482,16 @@ func AddNumericAndCategoricalProperties(projectID uint64, eventName string,
 // Further the distribution of timestamps, event properties and number of occurrences
 // are stored with the patterns.
 func (p *Pattern) CountForEvent(projectID uint64, userId string,
-	userJoinTimestamp int64, shouldCountOccurence bool, ets EvSameTs, countVersion int) error {
+	userJoinTimestamp int64, shouldCountOccurence bool, ets EvSameTs, cAlgoProps CountAlgoProperties) error {
 	eventNames := ets.EventsNames
 	evMap := ets.EventsMap
 	eventTimestamp := ets.EventTimestamp
 	var err error
+	var persistHmineProperties bool = false
+	var countVersion int = cAlgoProps.Counting_version
+	if cAlgoProps.Hmine_persist == 1 {
+		persistHmineProperties = true
+	}
 
 	if len(eventNames) == 0 || eventTimestamp <= 0 {
 		return fmt.Errorf("missing eventId or eventTimestamp")
@@ -592,26 +621,7 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 			if p.currentUserOccurrenceCount == 1 {
 				p.PerUserCount += 1
 
-				if countVersion == 2 {
-					userCatProperties := FilterCategoricalProperties(projectID, eventName, p.waitIndex, userProperties, true)
-					eventCatProperties := FilterCategoricalProperties(projectID, eventName, p.waitIndex, eventProperties, false)
-
-					if len(userCatProperties) > 0 {
-						err := p.userTree.OrderAndInsertTrans(userCatProperties)
-						if err != nil {
-							log.Errorf("err inserting user properties into tree:%v", err)
-						}
-					}
-
-					if len(eventCatProperties) > 0 {
-						err = p.eventTree.OrderAndInsertTrans(eventCatProperties)
-						if err != nil {
-							log.Errorf("counts map :%v", p.eventTree.CountMap)
-							log.Errorf("err inserting event properties into tree:%s,%v", eventName, err)
-						}
-					}
-
-				} else if countVersion == 1 {
+				if countVersion == 1 {
 
 					// Update properties histograms.
 					if p.PerUserEventNumericProperties != nil {
@@ -634,7 +644,51 @@ func (p *Pattern) CountForEvent(projectID uint64, userId string,
 							return err
 						}
 					}
+				} else if countVersion == 3 {
+					var eventCatProperties_ []string = make([]string, 0)
+					var userCatProperties_ []string = make([]string, 0)
+
+					userCatProperties_ = FilterCategoricalProperties(projectID, eventName, p.waitIndex, userProperties, true)
+					eventCatProperties_ = FilterCategoricalProperties(projectID, eventName, p.waitIndex, eventProperties, false)
+					persistHmineProperties = false // set this to true if you need to write the properties to file for each pattern
+					if persistHmineProperties == true {
+						var basePathUserProps string
+						var basePathEventProps string
+
+						if len(p.PropertiesBaseFolder) == 0 {
+							basePathUserProps = path.Join("/", "tmp", "fptree", "userProps")
+							basePathEventProps = path.Join("/", "tmp", "fptree", "eventProps")
+						} else {
+							basePathUserProps = path.Join(p.PropertiesBaseFolder, "fptree", "userProps")
+							basePathEventProps = path.Join(p.PropertiesBaseFolder, "fptree", "eventProps")
+						}
+						ptName := p.PropertiesBasePath
+						treePathEvent := path.Join(basePathEventProps, ptName)
+						treePathUser := path.Join(basePathUserProps, ptName)
+						if len(eventCatProperties_) > 0 {
+							Fp.WriteSinglePropertyToFile(treePathEvent, eventCatProperties_)
+							p.numPropsEvent += 1
+						}
+						if len(userCatProperties_) > 0 {
+							Fp.WriteSinglePropertyToFile(treePathUser, userCatProperties_)
+							p.numPropsUser += 1
+						}
+					} else {
+
+						if len(eventCatProperties_) > 0 {
+							p.numPropsEvent += 1
+							p.EventProps = append(p.EventProps, eventCatProperties_)
+						}
+
+						if len(eventCatProperties_) > 0 {
+							p.numPropsUser += 1
+							p.UserProps = append(p.UserProps, userCatProperties_)
+
+						}
+					}
+
 				}
+
 			}
 			// Reset.
 			p.waitIndex = 0

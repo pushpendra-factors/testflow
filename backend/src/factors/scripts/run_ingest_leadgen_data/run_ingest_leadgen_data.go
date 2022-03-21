@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
@@ -57,6 +58,7 @@ func main() {
 	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 	jsonKey := flag.String("json_key", "", "")
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "*", "")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -97,12 +99,13 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		SentryDSN:           *sentryDSN,
+		PrimaryDatastore:          *primaryDatastore,
+		RedisHost:                 *redisHost,
+		RedisPort:                 *redisPort,
+		RedisHostPersistent:       *redisHostPersistent,
+		RedisPortPersistent:       *redisPortPersistent,
+		SentryDSN:                 *sentryDSN,
+		CaptureSourceInUsersTable: *captureSourceInUsersTable,
 	}
 	C.InitConf(config)
 	C.InitRedis(config.RedisHost, config.RedisPort)
@@ -115,6 +118,7 @@ func main() {
 	}
 	db := C.GetServices().Db
 	defer db.Close()
+	log.Info("jsonKey ", *jsonKey)
 	key := Key{}
 	err = json.Unmarshal([]byte(*jsonKey), &key)
 	if err != nil {
@@ -180,19 +184,28 @@ func main() {
 			} else {
 				trackStatus := ""
 				for _, record := range resp.Values {
-					eventProperties, userProperties, errTransform := model.TransformAndGenerateTrackPayload(record, leadgenSetting.ProjectID, model.SourceAliasMapping[leadgenSetting.Source])
+					eventProperties, userProperties, timestamp, errTransform := model.TransformAndGenerateTrackPayload(record, leadgenSetting.ProjectID, model.SourceAliasMapping[leadgenSetting.Source])
 					if errTransform != nil {
-						log.WithFields(log.Fields{"record": record, "document": leadgenSetting}).Error(err)
+						log.WithFields(log.Fields{"record": record, "document": leadgenSetting}).Error(errTransform)
 						trackStatus = "failed"
 						err = errTransform
 						break
 					} else {
+						userID, errUser := CreateOrGetUserBySource(eventProperties, userProperties, leadgenSetting.ProjectID, leadgenSetting.Source, timestamp)
+						if errUser != nil {
+							log.WithFields(log.Fields{"record": record, "document": leadgenSetting}).Error(errUser)
+							trackStatus = "failed"
+							err = errUser
+							break
+						}
 						payload := &SDK.TrackPayload{
 							ProjectId:       leadgenSetting.ProjectID,
+							UserId:          userID,
 							EventProperties: eventProperties,
 							UserProperties:  userProperties,
 							RequestSource:   leadgenSetting.Source,
 							Name:            U.EVENT_NAME_OFFLINE_TOUCH_POINT,
+							Timestamp:       timestamp,
 						}
 						status, _ := SDK.Track(leadgenSetting.ProjectID, payload, true, "", "")
 						if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -251,4 +264,45 @@ func main() {
 	} else {
 		log.Info(syncStatus)
 	}
+}
+
+func CreateOrGetUserBySource(eventProperties map[string]interface{}, userProperties map[string]interface{}, projectID uint64,
+	source int, timestamp int64) (string, error) {
+	email, phone, code := "", "", 0
+	customerUserID, userID := "", ""
+	var err error
+	emailInterface, emailExists := userProperties[U.UP_EMAIL]
+	if emailExists {
+		email = fmt.Sprintf("%v", emailInterface)
+	}
+	phoneInterface, phoneExists := userProperties[U.UP_PHONE]
+	if phoneExists {
+		phone = fmt.Sprintf("%v", phoneInterface)
+	}
+	if email != "" {
+		customerUserID = email
+	} else if phone != "" {
+		customerUserID = phone
+	}
+
+	if customerUserID == "" {
+		err = errors.New("both phone and email not present")
+		return userID, err
+	} else {
+		user, code := store.GetStore().GetUserLatestByCustomerUserId(projectID, customerUserID, source)
+		if code == http.StatusFound {
+			return user.ID, nil
+		}
+	}
+
+	userID, code = store.GetStore().CreateUser(&model.User{
+		ProjectId:      projectID,
+		JoinTimestamp:  timestamp,
+		CustomerUserId: customerUserID,
+		Source:         &source})
+	if code != http.StatusCreated {
+		err = errors.New("failed to create user")
+		return userID, err
+	}
+	return userID, nil
 }

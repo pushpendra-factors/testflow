@@ -50,7 +50,7 @@ function EmptyDashboard() {
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
                         Connect to at least one data source using
                     </Text>
-                    <Button type={'link'} style={{backgroundColor:'white'}} onClick={()=> history.push('/project-setup')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
+                    <Button type={'link'} style={{backgroundColor:'white'}} onClick={()=> history.push('/welcome')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
                     <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />} onClick={handleClick}>Invite a teammate for help</Button>
                 </div>
 

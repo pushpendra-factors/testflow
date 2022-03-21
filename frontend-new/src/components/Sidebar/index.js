@@ -207,7 +207,7 @@ function Sidebar(props) {
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Setup Assist" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-                <NavLink activeClassName="active" to="/project-setup"><SVG name={'Emoji'} size={40} color="white"/></NavLink>
+                <NavLink activeClassName="active" to="/welcome"><SVG name={'Emoji'} size={40} color="white"/></NavLink>
                 {/* <Badge dot offset={[25,-35]}></Badge> */}
               </Tooltip>
             </Row>

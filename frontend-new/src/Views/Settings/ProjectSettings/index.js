@@ -16,6 +16,7 @@ import {ErrorBoundary} from 'react-error-boundary';
 import ContentGroups from './ContentGroups';
 import Touchpoints from './Touchpoints';
 import CustomKPI from './CustomKPI';
+import ExplainDP from './ExplainDataPoints';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -28,7 +29,8 @@ const MenuTabs = {
   MarketingInteractions: 'Marketing Touchpoints',
   ContentGroups: 'Content Groups',
   Touchpoints: 'Touchpoints',
-  CustomKPI: 'Custom KPIs'
+  CustomKPI: 'Custom KPIs',
+  ExplainDP: 'Top Events and Properties'
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents }) {
@@ -69,7 +71,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
           </Col>
         </Row>
         <Row gutter={[24, 24]}>
-          <Col span={5}>
+          <Col span={6}>
 
             <Menu
               onClick={handleClick}
@@ -85,10 +87,11 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               <Menu.Item key={MenuTabs.Properties}>{MenuTabs.Properties}</Menu.Item>
               <Menu.Item key={MenuTabs.ContentGroups}>{MenuTabs.ContentGroups}</Menu.Item>
               <Menu.Item key={MenuTabs.CustomKPI}>{MenuTabs.CustomKPI}</Menu.Item>
+              <Menu.Item key={MenuTabs.ExplainDP}>{MenuTabs.ExplainDP}</Menu.Item>
             </Menu>
 
           </Col>
-          <Col span={15}>
+          <Col span={16}>
             {selectedMenu === MenuTabs.generalSettings && <BasicSettings /> }
             {selectedMenu === MenuTabs.SDK && <SDKSettings /> }
             {selectedMenu === MenuTabs.Users && <UserSettings /> }
@@ -98,6 +101,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
             {(selectedMenu === MenuTabs.Properties) && <Properties />}
             {(selectedMenu === MenuTabs.ContentGroups) && <ContentGroups />}
             {(selectedMenu === MenuTabs.CustomKPI) && <CustomKPI />}
+            {(selectedMenu === MenuTabs.ExplainDP) && <ExplainDP />}
           </Col>
         </Row>
       </div>

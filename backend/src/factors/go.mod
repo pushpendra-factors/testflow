@@ -22,6 +22,7 @@ require (
 	github.com/clearbit/clearbit-go v1.1.0
 	github.com/client9/misspell v0.3.4 // indirect
 	github.com/coreos/etcd v3.3.10+incompatible
+	github.com/coreos/go-oidc/v3 v3.1.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dghubble/sling v1.4.0 // indirect
@@ -33,8 +34,9 @@ require (
 	github.com/getsentry/raven-go v0.2.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/cors v0.0.0-20170318125340-cf4846e6a636
+	github.com/gin-contrib/sessions v0.0.4
 	github.com/gin-gonic/autotls v0.0.0-20180426091246-be87bd5ef97b // indirect
-	github.com/gin-gonic/gin v1.6.3
+	github.com/gin-gonic/gin v1.7.4
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/spec v0.19.13 // indirect
 	github.com/go-openapi/swag v0.19.12 // indirect
@@ -66,7 +68,7 @@ require (
 	github.com/jinzhu/now v1.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.10.1 // indirect
-	github.com/lib/pq v1.0.0
+	github.com/lib/pq v1.10.3
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/manucorporat/stats v0.0.0-20180402194714-3ba42d56d227 // indirect
 	github.com/mattn/go-colorable v0.1.0 // indirect
@@ -91,7 +93,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/streadway/amqp v1.0.0
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/swaggo/files v0.0.0-20190704085106-630677cd5c14
 	github.com/swaggo/gin-swagger v1.3.0
 	github.com/swaggo/swag v1.6.7
@@ -112,6 +114,7 @@ require (
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	golang.org/x/tools v0.0.0-20201118030313-598b068a9102 // indirect
 	golang.org/x/tools/gopls v0.5.1 // indirect

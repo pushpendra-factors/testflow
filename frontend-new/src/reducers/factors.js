@@ -39,8 +39,14 @@
           case 'FETCH_FACTORS_MODELS_FULFILLED': {
             return { ...state, factors_models: action.payload };
           } 
+          case 'FETCH_FACTORS_MODELS_METADATA_FULFILLED': {
+            return { ...state, factors_model_metadata: action.payload };
+          } 
           case 'FETCH_FACTORS_MODELS_REJECTED': {
             return { ...state, factors_models: action.payload };
+          } 
+          case 'SET_GOAL_INSIGHTS': {
+            return { ...state, goal_insights: action.payload };
           } 
           case 'SAVE_GOAL_INSIGHT_RULES_FULFILLED': {
             return { ...state, factors_insight_rules: action.payload };
@@ -158,10 +164,29 @@
       });
     }
   }
+  export function fetchFactorsModelMetadata(projectID, modelID) {
+    return function(dispatch) {
+      return new Promise((resolve,reject) => {
+        get(dispatch, host + "projects/"+projectID+"/v1/factor/model_metadata?model_id="+modelID)
+          .then((response)=>{        
+            dispatch({type:"FETCH_FACTORS_MODELS_METADATA_FULFILLED", payload: response.data});
+            resolve(response)
+          }).catch((err)=>{        
+            dispatch({type:"FETCH_FACTORS_MODELS_METADATA_REJECTED", payload: err});
+            reject(err);
+          });
+      });
+    }
+  }
 
 export function saveGoalInsightRules(data) {
     return function(dispatch) {
       dispatch({type:"SAVE_GOAL_INSIGHT_RULES_FULFILLED", payload: data}); 
+    }
+}
+export function setGoalInsight(data) {
+    return function(dispatch) {
+      dispatch({type:"SET_GOAL_INSIGHTS", payload: data}); 
     }
 }
 export function saveGoalInsightModel(data) {

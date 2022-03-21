@@ -1113,6 +1113,7 @@ func TestPatternFilterTopKpatternTypes(t *testing.T) {
 func TestGenCombinationPatternsEndingWithGoal(t *testing.T) {
 	var err bool
 	err = false
+
 	allEvents := []string{"uc1", "uc2", "pgv1", "pgv2", "ie1", "ie2", "$sp1", "$sp2"}
 	goalEvents := []string{"G1", "G2", "G3", "G4", "G5"}
 

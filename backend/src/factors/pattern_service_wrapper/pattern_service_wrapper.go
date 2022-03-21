@@ -1220,7 +1220,8 @@ func roundTo1Decimal(value float64) float64 {
 func FactorV1(reqId string, projectId uint64, startEvent string,
 	startEventConstraints *P.EventConstraints, endEvent string,
 	endEventConstraints *P.EventConstraints, countType string,
-	pw PatternServiceWrapperInterface, debugKey string, debugParams map[string]string) (Factors, error, interface{}) {
+	pw PatternServiceWrapperInterface, debugKey string, debugParams map[string]string, includedEvents map[string]bool,
+	includedEventProperties map[string]bool, includedUserProperties map[string]bool) (Factors, error, interface{}) {
 
 	if countType != P.COUNT_TYPE_PER_OCCURRENCE && countType != P.COUNT_TYPE_PER_USER {
 		err := fmt.Errorf(fmt.Sprintf("Unknown count type: %s, for req: %s", countType, reqId))
@@ -1230,9 +1231,6 @@ func FactorV1(reqId string, projectId uint64, startEvent string,
 	rootNode := &ItreeNode{}
 	iPatternNodesUnsorted := []*ItreeNode{}
 	var debugData interface{}
-	includedEventProperties := make(map[string]bool)
-	includedUserProperties := make(map[string]bool)
-	includedEvents := make(map[string]bool)
 	if itree, err, debugInfo := BuildNewItreeV1(reqId, startEvent, startEventConstraints,
 		endEvent, endEventConstraints, pw, countType, debugKey, debugParams, projectId, includedEventProperties, includedUserProperties, includedEvents); err != nil {
 		log.Error(err)

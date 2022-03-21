@@ -60,6 +60,8 @@ func main() {
 	numCampaignsLimit := flag.Int("max_campaigns_limit", -1, "Max number of campaigns")
 	runBeam := flag.Int("run_beam", 1, "run build seq on beam ")
 	countsVersion := flag.Int("count_version", 1, "run fp tree code")
+	hmineSupport := flag.Float64("hmine_support", 0.010, "value for hmine support")
+	hmine_persist := flag.Int("hmine_persist", 0, "persist properties file while counting")
 
 	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
 	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
@@ -81,7 +83,7 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
-	createMetadata := flag.Bool("create_metadata",false,"")
+	createMetadata := flag.Bool("create_metadata", false, "")
 	flag.Parse()
 
 	defer util.NotifyOnPanic("Task#PatternMine", *envFlag)
@@ -229,6 +231,8 @@ func main() {
 	configs["beamConfig"] = &beamConfig
 	configs["countsVersion"] = *countsVersion
 	configs["create_metadata"] = *createMetadata
+	configs["hmineSupport"] = float32(*hmineSupport)
+	configs["hminePersist"] = *hmine_persist
 
 	// profiling
 

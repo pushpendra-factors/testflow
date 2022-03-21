@@ -45,13 +45,13 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
       if(!res.failed_to_invite_agent_idx[0]) {
           message.success('Invitation sent successfully!');
           handleCancel();
-          history.push('/project-setup');
+          history.push('/welcome');
         } else {
           for (let i = 0; i < finalData.length; i++) {
             if(!res.failed_to_invite_agent_idx[i]) {
               message.success(finalData[i]['email'] + ' : Invitation sent successfully!');
               handleCancel();
-              history.push('/project-setup');
+              history.push('/welcome');
             } else {
               message.error(finalData[i]['email'] + ' : ' + res.failed_to_invite_agent_idx[i]);
             }
@@ -63,7 +63,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
   const onSkip = () => {
     form.resetFields();
     handleCancel();
-    history.push('/project-setup');
+    history.push('/welcome');
   };
 
   const RoleTypes =[

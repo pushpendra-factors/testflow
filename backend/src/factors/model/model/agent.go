@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
 type Agent struct {
@@ -36,6 +37,9 @@ type Agent struct {
 	CompanyURL                   string `json:"company_url"`
 	SubscribeNewsletter          bool   `json:"subscribe_newsletter"`
 	IntGoogleOrganicRefreshToken string `json:"int_google_organic_refresh_token"`
+
+	IsAuth0User bool            `json:"is_auth0_user" gorm:"default:false"`
+	Value       *postgres.Jsonb `json:"value"`
 }
 
 type CreateAgentParams struct {
@@ -160,5 +164,17 @@ func IntSalesforceInstanceURL(instanceUrl string) Option {
 func IsEmailVerified(verified bool) Option {
 	return func(fields FieldsToUpdate) {
 		fields["is_email_verified"] = verified
+	}
+}
+
+func IsAuth0User(auth0 bool) Option {
+	return func(fields FieldsToUpdate) {
+		fields["is_auth0_user"] = auth0
+	}
+}
+
+func Auth0Value(value *postgres.Jsonb) Option {
+	return func(fields FieldsToUpdate) {
+		fields["value"] = value
 	}
 }

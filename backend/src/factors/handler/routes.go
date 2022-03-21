@@ -23,6 +23,14 @@ const ROUTE_DATA_SERVICE_ROOT = "/data_service"
 const ROUTE_SDK_ADWORDS_ROOT = "/adwords_sdk_service"
 const ROUTE_VERSION_V1 = "/v1"
 
+func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
+	routePrefix := C.GetRoutesURLPrefix() + "/oauth"
+	r.GET(routePrefix+"/signup", ExternalAuthentication(auth, SIGNUP_FLOW))
+	r.GET(routePrefix+"/login", ExternalAuthentication(auth, SIGNIN_FLOW))
+	r.GET(routePrefix+"/activate", ExternalAuthentication(auth, ACTIVATE_FLOW))
+	r.GET(routePrefix+"/callback", CallbackHandler(auth))
+}
+
 func InitAppRoutes(r *gin.Engine) {
 	routePrefix := C.GetRoutesURLPrefix()
 

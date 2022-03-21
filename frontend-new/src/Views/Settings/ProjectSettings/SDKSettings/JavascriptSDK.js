@@ -28,6 +28,9 @@ const ViewSetup = ({ activeProject }) => {
             </code>
             </pre>
           </Col>
+          <Col span={24}> 
+            <Text type={'paragraph'} extraClass={'m-0 mt-2 mb-2'}>For detailed help or instructions to setup via GTM (Google Tag Manager), please refer to our <a className={'fa-anchor'} href="https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website" target='_blank'>JavaScript developer documentation.</a></Text> 
+          </Col>
           <Col span={24}>
             <Text type={'title'} level={5} weight={'bold'} color={'grey'} extraClass={'m-0 mt-4'}>Setup 2 (Optional)</Text>
             <Text type={'paragraph'} extraClass={'m-0'}>Send us an event (Enable Auto-track for capturing user visits automatically).</Text>
@@ -38,9 +41,6 @@ const ViewSetup = ({ activeProject }) => {
 {'factors.track("YOUR_EVENT");'}
             </code>
             </pre>
-          </Col>
-          <Col span={24}> 
-            <Text type={'paragraph'} extraClass={'m-0 mt-2'}>For detailed instructions on how to install and initialize the JavaScript SDK please refer to our <a className={'fa-anchor'} href="https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website" target='_blank'>JavaScript developer documentation.</a></Text> 
           </Col>
     </Row>
   );
