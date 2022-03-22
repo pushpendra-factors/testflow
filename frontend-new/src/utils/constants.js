@@ -47,6 +47,7 @@ export const CHART_TYPE_BARCHART = 'barchart';
 export const CHART_TYPE_LINECHART = 'linechart';
 export const CHART_TYPE_TABLE = 'table';
 export const CHART_TYPE_SCATTER_PLOT = 'scatterplotchart';
+export const CHART_TYPE_PIVOT_CHART = 'pivotchart';
 export const BARCHART_TICK_LENGTH = 20;
 export const UNGROUPED_FUNNEL_TICK_LENGTH = 50;
 
@@ -149,6 +150,7 @@ export const presentationObj = {
   ps: CHART_TYPE_STACKED_BAR,
   sp: CHART_TYPE_SCATTER_PLOT,
   hb: CHART_TYPE_HORIZONTAL_BAR_CHART,
+  pi: CHART_TYPE_PIVOT_CHART,
 };
 
 export const apiChartAnnotations = {
@@ -160,6 +162,7 @@ export const apiChartAnnotations = {
   [CHART_TYPE_STACKED_BAR]: 'ps',
   [CHART_TYPE_SCATTER_PLOT]: 'sp',
   [CHART_TYPE_HORIZONTAL_BAR_CHART]: 'hb',
+  [CHART_TYPE_PIVOT_CHART]: 'pi',
 };
 
 export const MAX_ALLOWED_VISIBLE_PROPERTIES = 10;
@@ -467,9 +470,17 @@ export const ProfileMapper = {
 };
 
 export const ReverseProfileMapper = {
-  web: {users:'Website Visitors'},
-  hubspot: {users:'Hubspot Contacts', $hubspot_deal:'All Deals', $hubspot_company:'All Companies'},
-  salesforce: {users:'Salesforce Users', $salesforce_opportunity:'All Opportunities', $salesforce_account:'All Accounts'},
+  web: { users: 'Website Visitors' },
+  hubspot: {
+    users: 'Hubspot Contacts',
+    $hubspot_deal: 'All Deals',
+    $hubspot_company: 'All Companies',
+  },
+  salesforce: {
+    users: 'Salesforce Users',
+    $salesforce_opportunity: 'All Opportunities',
+    $salesforce_account: 'All Accounts',
+  },
 };
 
 export const DISPLAY_PROP = { $none: '(Not Set)' };

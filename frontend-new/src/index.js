@@ -15,6 +15,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import ErrorBoundary from './ErrorBoundary';
 import * as Sentry from "@sentry/react";
 import { Integrations } from "@sentry/tracing";
+import 'react-pivottable/pivottable.css';
 // import { TourProvider } from '@reactour/tour';
 // import steps from './steps';
 

@@ -20,6 +20,7 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
+  CHART_TYPE_PIVOT_CHART,
 } from '../../../utils/constants';
 import LineChart from '../../../components/HCLineChart';
 import BarChart from '../../../components/BarChart';
@@ -111,7 +112,7 @@ const BreakdownCharts = ({
     );
   }
 
-  if (chartType === CHART_TYPE_TABLE) {
+  if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
     chartContent = (
       <BreakdownTable
         kpis={kpis}
