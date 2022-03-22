@@ -135,7 +135,7 @@ type Model interface {
 	DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID uint64, dashboardUnitIDs []uint64) (int, string)
 	UpdateDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64, unit *model.DashboardUnit) (*model.DashboardUnit, int)
 	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map)
-	CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnitIDs []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map) int
+	CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnits []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map) int
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string)
 	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
