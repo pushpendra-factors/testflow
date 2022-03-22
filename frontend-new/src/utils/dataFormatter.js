@@ -16,6 +16,7 @@ import {
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
+  CHART_TYPE_PIVOT_CHART,
 } from './constants';
 import { Text } from '../components/factorsComponents';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
@@ -375,6 +376,12 @@ export const getChartTypeMenuItems = (queryType, breakdownLength, events) => {
       menuItems.push({
         key: CHART_TYPE_HORIZONTAL_BAR_CHART,
         name: 'Bars',
+      });
+    }
+    if (breakdownLength > 1) {
+      menuItems.push({
+        key: CHART_TYPE_PIVOT_CHART,
+        name: 'Pivot Chart',
       });
     }
   }
