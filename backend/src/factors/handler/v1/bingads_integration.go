@@ -100,6 +100,9 @@ func GetBingAdsIntegration(c *gin.Context) (interface{}, int, string, string, bo
 		}
 		return resp, http.StatusOK, "", "", false
 	} else {
+		if statusCode == http.StatusUnauthorized {
+			statusCode = http.StatusBadRequest
+		}
 		return nil, statusCode, "", errMsg, true
 	}
 }
