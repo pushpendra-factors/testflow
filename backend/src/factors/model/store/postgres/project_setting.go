@@ -771,7 +771,6 @@ func (pg *Postgres) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings(
 func (pg *Postgres) IsBingIntegrationAvailable(projectID uint64) bool {
 	ftMapping, err := pg.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch connector id from db")
 		return false
 	}
 	if ftMapping.ConnectorID == "" {
