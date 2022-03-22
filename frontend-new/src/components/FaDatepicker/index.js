@@ -241,7 +241,7 @@ const FaDatepicker = ({
   const menu = (
     <Menu>
       {nowPicker && (
-        <Menu.Item>
+        <Menu.Item key="now">
           <a target='_blank' onClick={() => returnPreSetDate('now')}>
             Now
           </a>
@@ -250,32 +250,32 @@ const FaDatepicker = ({
 
       {presetRange && (
         <>
-          <Menu.Item>
+          <Menu.Item key="today">
             <a target='_blank' onClick={() => returnPreSetDate('today')}>
               Today
             </a>
           </Menu.Item>
-          <Menu.Item>
+          <Menu.Item key="yesterday">
             <a target='_blank' onClick={() => returnPreSetDate('yesterday')}>
               Yesterday
             </a>
           </Menu.Item>
-          <Menu.Item>
+          <Menu.Item key="this_week">
             <a target='_blank' onClick={() => returnPreSetDate('this_week')}>
               This Week
             </a>
           </Menu.Item>
-          <Menu.Item>
+          <Menu.Item key="last_week">
             <a target='_blank' onClick={() => returnPreSetDate('last_week')}>
               Last Week
             </a>
           </Menu.Item>
-          <Menu.Item>
+          <Menu.Item key="this_month">
             <a target='_blank' onClick={() => returnPreSetDate('this_month')}>
               This Month
             </a>
           </Menu.Item>
-          <Menu.Item>
+          <Menu.Item key="last_month">
             <a target='_blank' onClick={() => returnPreSetDate('last_month')}>
               Last Month
             </a>
@@ -285,28 +285,28 @@ const FaDatepicker = ({
       )}
 
       {weekPicker && (
-        <Menu.Item>
+        <Menu.Item key="week">
           <a target='_blank' onClick={() => showDatePickerFn('week')}>
             Select Week
           </a>
         </Menu.Item>
       )}
       {monthPicker && (
-        <Menu.Item>
+        <Menu.Item key="month">
           <a target='_blank' onClick={() => showDatePickerFn('month')}>
             Select Month
           </a>
         </Menu.Item>
       )}
       {quarterPicker && (
-        <Menu.Item>
+        <Menu.Item key="quarter">
           <a target='_blank' onClick={() => showDatePickerFn('quarter')}>
             Select Quarter
           </a>
         </Menu.Item>
       )}
       {yearPicker && (
-        <Menu.Item>
+        <Menu.Item key="year">
           <a target='_blank' onClick={() => showDatePickerFn('year')}>
             Select Year
           </a>
@@ -317,7 +317,7 @@ const FaDatepicker = ({
       )}
 
       {customPicker && (
-        <Menu.Item>
+        <Menu.Item key="custom">
           <a target='_blank' onClick={() => showDatePickerFn('custom')}>
             Select Custom Range
           </a>
@@ -327,7 +327,7 @@ const FaDatepicker = ({
       {comparison_supported && <Menu.Divider />}
 
       {comparison_supported && (
-        <Menu.Item>
+        <Menu.Item key="compare">
           <a target='_blank' onClick={handleCompareWithClick}>
             Compare with...
           </a>
