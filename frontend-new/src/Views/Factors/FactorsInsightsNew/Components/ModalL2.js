@@ -8,8 +8,8 @@ import CardInsight from './CardInsight';
 import ModalTable from './ModalTable';
 
 const L2Modal = ({ data, setModalL2, showModalL2, modalData }) => {
-    console.log('L2Modal data', data)
-    console.log('L2Modal modalData', modalData)
+    console.log('Debug Mode: Insights L1 -->', data)
+    console.log('Debug Mode: Subinsights L2+ -->', modalData)
     const isAttribute = modalData?.factors_insights_type == "attribute";
     return (
         <>
@@ -34,34 +34,46 @@ const L2Modal = ({ data, setModalL2, showModalL2, modalData }) => {
 
                     <div className={'flex items-center justify-center w-full explain-insight--wrapper'}>
 
+                        {/* first insight card */} 
+
+                        {!isAttribute ? 
                         <CardInsight
-                            title={data?.goal?.st_en ? data?.goal?.st_en : "All Visitors"}
-                            count={data?.total_users_count}
-                            arrow={true}
-                            tagTitle={isAttribute ? 'A' : ''}
-                        />
-                        {!isAttribute && <CardInsight
+                        title={data?.goal?.st_en ? data?.goal?.st_en : "All Visitors"}
+                        count={data?.total_users_count}
+                        arrow={true}
+                        tagTitle={isAttribute ? 'A' : ''}
+                        /> :
+                        <CardInsight
+                        title={`All Visitors with ${modalData?.factors_insights_attribute[0]?.factors_attribute_key} = ${modalData?.factors_insights_attribute[0]?.factors_attribute_value} `}
+                        count={modalData?.factors_insights_users_count}
+                        arrow={true}
+                        tagTitle={isAttribute ? 'A' : ''}
+                        />  
+                    }
+
+                        {/* second insight card only for journeys */}
+                        {!isAttribute && <> 
+                        <CardInsight
                             title={modalData?.factors_insights_attribute ? modalData?.factors_insights_attribute[0]?.factors_attribute_key : modalData?.factors_insights_key}
                             count={modalData?.factors_insights_users_count}
                             arrow={true}
                             // conv={modalData?.factors_insights_percentage}
-                        />}
+                            /></>}
+                        
+                        {/* third insight card for both */}
                         <CardInsight
                             title={data?.goal?.en_en}
                             count={modalData?.factors_goal_users_count}
                             arrow={false}
                             conv={modalData?.factors_insights_percentage}
                             tagTitle={isAttribute ? 'B' : ''}
-                        />
-
-
-
+                        />  
 
                     </div>
 
                         {isAttribute && <div className={'flex items-center justify-center mt-4'}>
                             <Text type={'title'} level={7} extraClass={'m-0 mr-1'}>
-                                {`From A, ${data?.total_users_count} were of `}
+                                {`From A, ${modalData?.factors_insights_users_count} were of `}
                             </Text>
                             <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'} style={{ maxWidth: '350px' }}>
                                 {`${modalData?.factors_insights_attribute[0]?.factors_attribute_key}`}
@@ -110,6 +122,7 @@ const L2Modal = ({ data, setModalL2, showModalL2, modalData }) => {
                                             arrow={false}
                                             conv={item?.factors_insights_percentage}
                                             flag={item?.factors_multiplier_increase_flag}
+                                            showflag={true}
                                         />
                                     </div>
                                 )
