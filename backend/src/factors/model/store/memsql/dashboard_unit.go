@@ -422,7 +422,7 @@ func (store *MemSQL) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePr
 
 		dashboardUnits, errCode := store.GetDashboardUnitsForProjectID(projectID)
 		if errCode != http.StatusFound || len(dashboardUnits) == 0 {
-			logCtx.Error("not running caching for the project - units not found")
+			logCtx.Info("not running caching for the project - units not found")
 			continue
 		}
 
