@@ -60,6 +60,7 @@ type EvSameTs struct {
 
 const CURRENT_MODEL_VERSION = 3.0
 const topk_patterns = 20000
+const up_value_threshold = 2
 
 var CRM_EVENT_PREFIXES = []string{"$sf_", "$hubspot_"}
 
@@ -441,7 +442,7 @@ func CollectPropertiesInfoFiltered(projectID uint64, scanner *bufio.Scanner, use
 				}
 				categoricalValue := U.GetPropertyValueAsString(value)
 				if _, ok := upCount[eventName][key]; ok {
-					if _, ok := upCount[eventName][key][categoricalValue]; ok {
+					if freq, ok := upCount[eventName][key][categoricalValue]; ok && freq >= up_value_threshold {
 						cmap, ok := userPropertiesInfo.CategoricalPropertyKeyValues[key]
 						if !ok {
 							cmap = make(map[string]bool)
