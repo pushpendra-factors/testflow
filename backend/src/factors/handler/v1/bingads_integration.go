@@ -89,7 +89,6 @@ func GetBingAdsIntegration(c *gin.Context) (interface{}, int, string, string, bo
 	}
 	connectorId, err := store.GetStore().GetFiveTranMapping(projectID, model.BingAdsIntegration)
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch connector id from db")
 		return nil, http.StatusNotFound, "", err.Error(), true
 	}
 	statusCode, errMsg, isActive, accounts := fivetran.FiveTranGetConnector(connectorId)
