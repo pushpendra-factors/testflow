@@ -435,8 +435,10 @@ const FaDatepicker = ({
                         autoFocus={true}
                         allowClear={true}
                         open={true}
-                        onOpenChange={() => {
-                          setShowDatePicker(false);
+                        onOpenChange={(open) => { 
+                          if(open){
+                            setShowDatePicker(false); 
+                          }
                         }}
                         onChange={onCustomChange}
                       />
@@ -447,8 +449,10 @@ const FaDatepicker = ({
                         dropdownClassName={'fa-custom-datepicker--datepicker'}
                         autoFocus={true}
                         open={true}
-                        onOpenChange={() => {
-                          setShowDatePicker(false);
+                        onOpenChange={(open) => { 
+                          if(open){
+                            setShowDatePicker(false); 
+                          }
                         }}
                         size={'small'}
                         suffixIcon={null}
