@@ -168,6 +168,7 @@ function CalendarRow({
                 bordered={false}
                 autoFocus={true}
                 allowClear={false}
+                placement="bottomLeft"
                 open={true}
                 onOpenChange={() => {
                   setShowDatePicker(false);
@@ -189,8 +190,8 @@ function CalendarRow({
           range={{
             startDate: durationObj.from,
             endDate: durationObj.to,
-          }}
-          placement='topRight'
+          }} 
+          placement="bottomLeft"
           onSelect={setDateRange}
           comparison_supported={comparison_supported}
           handleCompareWithClick={handleCompareWithClick}
