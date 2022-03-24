@@ -1039,6 +1039,10 @@ func enrichOpportunityContactRoles(projectID uint64, document *model.SalesforceD
 		}
 
 		if status == http.StatusFound {
+			if documents[0].Synced == false { // record not processed should be picked later for association
+				return http.StatusOK
+			}
+
 			contactUserID := documents[0].UserID
 			_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
