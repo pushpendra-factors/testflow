@@ -12,9 +12,10 @@ type ProjectSetting struct {
 	ProjectId uint64 `gorm:"primary_key:true" json:"project_id,omitempty"`
 	// Using pointers to avoid update by default value.
 	// omit empty to avoid nil(filelds not updated) on resp json.
-	AutoTrack       *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
-	AutoFormCapture *bool `gorm:"not null;default:false" json:"auto_form_capture,omitempty"`
-	ExcludeBot      *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
+	AutoTrack            *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
+	AutoTrackSPAPageView *bool `gorm:"not null;default:false" json:"auto_track_spa_page_view"`
+	AutoFormCapture      *bool `gorm:"not null;default:false" json:"auto_form_capture,omitempty"`
+	ExcludeBot           *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
 	// Segment integration settings.
 	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
 	// Adwords integration settings.

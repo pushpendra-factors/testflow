@@ -48,7 +48,7 @@
                     this.q.push(callMap);
                     window.dispatchEvent(factorsQueuedEvent);
                 }
-                this.init("${projectToken}", {'param': 'asd'}, function(){console.log("Init callback")});
+                this.init("${projectToken}", {'opt': 'value'}, function(){console.log("Init callback")});
                 return this;
             })();
 
