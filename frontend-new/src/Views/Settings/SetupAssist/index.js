@@ -68,7 +68,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                     <Col span={ checkIntegration ? 17 : 20}>
                         <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'}>Let's get started</Text>
                         <Text type={'title'} level={6} weight={'regular'} extraClass={'m-0'} color={'grey'}>The first step to get up and running with Factors is to get data into your project:</Text>
-                        <img src='../../assets/images/Illustration=pop gift.png' style={{width: '100%',maxWidth: '80px', marginLeft:'610px',marginTop:'-80px'}}/>
+                        <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/pop-gift.png' style={{width: '100%',maxWidth: '80px', marginLeft:'610px',marginTop:'-80px'}}/>
                     </Col>
                     <Col>
                     { checkIntegration ?
@@ -134,7 +134,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                                 <a href={meetLink(ownerID)} target='_blank' ><Button type={'text'} style={{color: '#1890FF'}} className={'ml-6 mb-4'}>Setup a Call</Button></a>
                             </Col>
                             <Col className={`${styles.callimg}`}>
-                                <img src='Assets/images/1to1.svg' />
+                                <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/1to1.svg' />
                             </Col>
                         </Row>
                     </Col>

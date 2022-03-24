@@ -40,7 +40,7 @@ function EmptyDashboard() {
                     'flex justify-center flex-col items-center fa-dashboard--no-data-container'
                     }
                 >
-                    <img alt='no-data' src='assets/images/no-data.png' className={'mb-6'} />
+                    <img alt='no-data' src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/no-data.png' className={'mb-6'} />
                     <Text type={'title'} level={5} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>
                         We don’t have enough data yet
                     </Text>

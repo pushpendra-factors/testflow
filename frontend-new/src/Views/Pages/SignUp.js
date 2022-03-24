@@ -187,12 +187,12 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                 </Row>
                                 <Row>
                                     <Col span={24}>
-                                        <img src="assets/images/Group 11.svg" className={'m-0 mt-4 -ml-2'}/>
+                                        <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/review.svg" className={'m-0 mt-4 -ml-2'}/>
                                     </Col>
                                 </Row>
                                 <Row>
                                     <Col span={24}>
-                                    <img src="assets/images/Frame 825.svg" className={'m-0 -ml-2'}/>
+                                    <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/marketing-teams.svg" className={'m-0 -ml-2'}/>
                                     </Col>
                                 </Row>
                             </Col>
