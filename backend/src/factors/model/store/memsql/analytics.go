@@ -501,7 +501,7 @@ func getNoneHandledGroupBySelectWithFirst(projectID uint64, groupProp model.Quer
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
 	} else {
-		propertyName := "JSON_EXTRACT_STRING(" + entityField + ", ?)"
+		propertyName := "JSON_EXTRACT_STRING(FIRST(" + entityField + ", FROM_UNIXTIME(events.timestamp)), ?)"
 		timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, propertyName, timezoneString)
 		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) = '' THEN '%s' WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) = '0' THEN '%s' ELSE %s END AS %s",
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, timestampStr, groupKey)
