@@ -12,12 +12,8 @@ import (
 	"sort"
 )
 
-var eventsKeyMap map[string]bool
-
-
 func GetChunksMetaData(projectId, modelId uint64) (metadata []T.ChunkMetaData, errmsg error) {
 	path, name := C.GetConfig().CloudManager.GetChunksMetaDataFilePathAndName(projectId, modelId)
-	fmt.Println(path)
 	reader, err := C.GetCloudManager().Get(path, name)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -44,7 +40,7 @@ func GetChunksMetaData(projectId, modelId uint64) (metadata []T.ChunkMetaData, e
 			return nil, err
 		}
 	}
-	eventsKeyMap = make(map[string]bool)
+	eventsKeyMap := make(map[string]bool)
 	scanner := bufio.NewScanner(reader)
 	Metadata := []T.ChunkMetaData{}
 	for scanner.Scan() {
@@ -55,20 +51,20 @@ func GetChunksMetaData(projectId, modelId uint64) (metadata []T.ChunkMetaData, e
 			log.WithError(err).Error("Error unmarshalling response")
 			return nil, err
 		}
-		Metadata = MergeMetaData(Metadata, metadataObj)
+		Metadata = MergeMetaData(Metadata, metadataObj, &eventsKeyMap)
 	}
 	response := DedupProperties(Metadata)
 	return response, nil
 }
-func MergeMetaData(result []T.ChunkMetaData, new T.ChunkMetaData) []T.ChunkMetaData {
+func MergeMetaData(result []T.ChunkMetaData, new T.ChunkMetaData, eventsKeyMap *map[string]bool) []T.ChunkMetaData {
 	if len(result) == 0 {
 		result = append(result, new)
 		return result
 	}
 	// for events
 	for _, event := range new.Events {
-		if _, exists := eventsKeyMap[event]; !exists {
-			eventsKeyMap[event] = true
+		if _, exists := (*eventsKeyMap)[event]; !exists {
+			(*eventsKeyMap)[event] = true
 			result[0].Events = append(result[0].Events, event)
 		}
 	}

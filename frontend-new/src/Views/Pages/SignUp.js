@@ -9,7 +9,8 @@ import { signup } from 'Reducers/agentActions';
 import factorsai from 'factorsai';
 import Congrats from './Congrats';
 import { createHubspotContact, getHubspotContact } from '../../reducers/global';
-
+import { getOwner } from '../../utils/hubspot';
+import { URL1, URL2 } from '../../utils/mailmodo';
 function SignUp({ signup, createHubspotContact, getHubspotContact }) {
   const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
@@ -29,8 +30,6 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
   }
 
   const startMailModo = (email) => {
-    let url1 = 'https://api.mailmodo.com/hooks/start/ed1fefd2-4c55-419e-a88b-d23b59f22461';
-    let url2 = 'https://api.mailmodo.com/hooks/start/ef8af6d0-e925-47e2-8c03-2b010c9a59f5';
     let data = {
             "email": email,
             "data": {} 
@@ -44,7 +43,7 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
         body: JSON.stringify(data)
     }
 
-    fetch(url1, params)
+    fetch(URL1, params)
     .then((response) => response.json())
     .then((response) => {
       console.log(response);
@@ -53,7 +52,7 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
       console.log('err',err);
     });
 
-    fetch(url2, params)
+    fetch(URL2, params)
     .then((response) => response.json())
     .then((response) => {
       console.log(response);
@@ -61,23 +60,6 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
     .catch((err) => {
       console.log('err',err);
     });
-  }
-
-  const getOwner = () => {
-    const ownersData = [
-        {
-            "value" : "116046946",
-        },
-        {
-            "value" : "116047122",
-        },
-        {
-            "value" : "116053799",
-        }
-    ]
-    const index = Math.floor(Math.random()*3);
-    const data = ownersData[index];
-    return data;
   }
 
   const hubspotCall = (data) => {
@@ -103,6 +85,10 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                 {
                     "property": "lastname",
                     "value": data.last_name
+                },
+                {
+                    "property": "phone",
+                    "value": data?.phone
                 },
                 {
                     "property": "hubspot_owner_id",
@@ -201,12 +187,12 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                 </Row>
                                 <Row>
                                     <Col span={24}>
-                                        <img src="assets/images/Group 11.svg" className={'m-0 mt-4 -ml-2'}/>
+                                        <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/review.svg" className={'m-0 mt-4 -ml-2'}/>
                                     </Col>
                                 </Row>
                                 <Row>
                                     <Col span={24}>
-                                    <img src="assets/images/Frame 825.svg" className={'m-0 -ml-2'}/>
+                                    <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/marketing-teams.svg" className={'m-0 -ml-2'}/>
                                     </Col>
                                 </Row>
                             </Col>
@@ -292,7 +278,7 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                                     },
                                                     ({ getFieldValue }) => ({
                                                         validator(rule, value) { 
-                                                          if (!value || value.match(/^([\w-\.]+@(?!gmail)(?!yahoo)(?!hotmail)(?!hey)(?!aol)(?!abc)(?!xyz)(?!pqr)(?!rediffmail)(?!live)(?!outlook)(?!me)(?!msn)(?!ymail)([\w-]+\.)+[\w-]{2,})?$/)) {
+                                                          if (!value || value.match(/^([\w-\.]+@(?!gmail.com)(?!yahoo.com)(?!hotmail.com)(?!yahoo.co.in)(?!hey.com)(?!icloud.com)(?!me.com)(?!mac.com)(?!aol.com)(?!abc.com)(?!xyz.com)(?!pqr.com)(?!rediffmail.com)(?!live.com)(?!outlook.com)(?!msn.com)(?!ymail.com)([\w-]+\.)+[\w-]{2,})?$/)) {
                                                             return Promise.resolve();
                                                           }
                                                           return Promise.reject(new Error('Please enter your business email address.'));
@@ -302,6 +288,31 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                                 >
                                                 <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
                                                 placeholder="Work Email"
+                                                 />
+                                            </Form.Item>
+                                        </div>
+                                </Col>
+                            </Row>
+
+                            <Row>
+                                <Col span={24}>
+                                        <div className={'flex flex-col mt-5 w-full'} >
+                                            {/* <Text type={'title'} level={7} extraClass={'m-0'}>Phone Number</Text> */}
+                                            <Form.Item label={null}
+                                                name="phone"
+                                                rules={[
+                                                    ({ getFieldValue }) => ({
+                                                        validator(rule, value) { 
+                                                          if (!value || value.match(/^[0-9\b]+$/)) {
+                                                            return Promise.resolve();
+                                                          }
+                                                          return Promise.reject(new Error('Please enter valid phone number.'));
+                                                        }
+                                                    })
+                                                ]}
+                                                >
+                                                <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
+                                                placeholder="Phone Number"
                                                  />
                                             </Form.Item>
                                         </div>

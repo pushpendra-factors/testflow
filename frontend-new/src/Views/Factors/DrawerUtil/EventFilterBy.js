@@ -28,10 +28,8 @@ moment.tz.setDefault(timeZone);
 
   const readableTimstamp = (unixTime) => {
     return moment.unix(unixTime).utc().format('MMM DD, YYYY');
-  } 
-  const factorsModels = !_.isEmpty(props.factors_models) && _.isArray(props.factors_models) ? props.factors_models.map((item)=>{return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]}) : [];
+  }  
   
-
   useEffect(()=>{   
     if(props.activeProject && props.activeProject.id) {
       props.getUserProperties(props.activeProject.id, 'channel')
@@ -52,13 +50,13 @@ moment.tz.setDefault(timeZone);
   },[props.event])
 
   useEffect(() => {
-    const assignFilterProps = Object.assign({}, filterProps);
-    // console.log("assignFilterProps---->",assignFilterProps);
+    const assignFilterProps = Object.assign({}, filterProps); 
     assignFilterProps.user = props.userProperties;
     let  catAndNumericalProps = [];
 
-    // console.log('eventProperties-->>',props.eventProperties);
-    // console.log('event props-->>',props.eventProperties, props.event);
+    // console.log('userProperties-->>',props.userProperties);
+    // console.log('eventProperties-->>',props.eventProperties); 
+
     if (props.event && props.eventProperties[props.event]) {
       assignFilterProps.event = props.eventProperties[props.event];
     }
@@ -177,12 +175,11 @@ const renderFilterBlock = () => {
 const mapStateToProps = (state) => {
   return {
     activeProject: state.global.active_project, 
-    userProperties: state.coreQuery.userProperties,
     GlobalEventNames: state.coreQuery?.eventOptions[0]?.values,
-    userProperties: state.coreQuery.userProperties,
     factors_models: state.factors.factors_models,
     goal_insights: state.factors.goal_insights,
     tracked_events: state.factors.tracked_events,
+    userProperties: state.coreQuery.userProperties, 
     eventProperties: state.coreQuery.eventProperties,
   };
 };

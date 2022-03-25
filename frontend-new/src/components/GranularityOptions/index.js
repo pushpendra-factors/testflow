@@ -51,7 +51,7 @@ function GranularityOptions({ durationObj, onClick, queryType }) {
   );
 
   return (
-    <Dropdown overlay={menu}>
+    <Dropdown overlay={menu} placement="bottomLeft">
       <Button className={`ant-dropdown-link flex items-center`}>
         {currentValue.title}
       </Button>

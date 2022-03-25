@@ -35,28 +35,28 @@ const TemplatesModal = ({
     {
       name: 'Google Search Ads Anomaly',
       desc: 'Know what metrics have changed substantially for your Search Campaigns and Keywords and the reason behind the change in conversions.',
-      img: 'assets/images/template_thumbnail-1.png',
+      img: 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/template-thumbnail-1.png',
       tag: 'Paid Marketing',
       active: true,
     },
     {
       name: 'SEO Anomaly',
       desc: 'Know what metrics have changed substantially for your organic search terms and landing pages and the reason behind the change in conversions.',
-      img: 'assets/images/template_thumbnail-2.png',
+      img: 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/template-thumbnail-2.png',
       tag: 'SEO & Organic Marketing',
       active: false,
     },
     {
       name: 'B2B SaaS Marketing Planning',
       desc: 'Plan the leads, opportunities and pipeline in accordance to revenue targets.',
-      img: 'assets/images/template_thumbnail-3.png',
+      img: 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/template-thumbnail-3.png',
       tag: 'Marketing Planning',
       active: false,
     },
     {
       name: 'Marketing Sourced vs Marketing Influenced',
       desc: 'Know how many opportunities, deals, pipeline and revenue was marketing sourced vs marketing influenced.',
-      img: 'assets/images/template_thumbnail-4.png',
+      img: 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/template-thumbnail-4.png',
       tag: 'Marketing Effectiveness',
       active: false,
     },
@@ -94,7 +94,7 @@ const TemplatesModal = ({
           <Row gutter={[24, 24]} justify={'center'}>
             <Col span={8}>
               <div className={'flex flex-col items-center mt-10 mb-10 mb-10'}>
-                <img src="assets/images/templates-bg.png" className={'mb-2'} style={{ maxHeight: '75px' }} />
+                <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/templates-bg.png" className={'mb-2'} style={{ maxHeight: '75px' }} />
                 <Text type={'title'} align={'center'} level={4} weight={'bold'} extraClass={'m-0'}>Start with Quick Templates</Text>
                 <Text type={'title'} align={'center'} level={7} color={'grey'} extraClass={'m-0'}>Browse the templates from our wide range of commonly used questions. Curated from top marketers in the industry.</Text>
               </div>

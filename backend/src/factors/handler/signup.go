@@ -54,7 +54,11 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	} else if code == http.StatusFound {
-		if !existingAgent.IsEmailVerified {
+
+		if existingAgent.IsAuth0User {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "You have already signed up with OAuth flow with this email."})
+			return
+		} else if !existingAgent.IsEmailVerified {
 			err = sendSignUpEmail(existingAgent)
 			if err != nil {
 				c.AbortWithStatus(http.StatusInternalServerError)

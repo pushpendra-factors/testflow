@@ -212,13 +212,13 @@ function TemplateResults({
 
   const NoSubInsightsData = () => {
     return (<div className={'flex flex-col my-20 py-10 px-5 items-center'}>
-      <img src={'assets/images/add-widget-icon.png'} style={{ maxHeight: '80px' }} />
+      <img src={'https://s3.amazonaws.com/www.factors.ai/assets/img/product/add-widget-icon.png'} style={{ maxHeight: '80px' }} />
       <Text type={'title'} level={8} color={'grey'} weight={'thin'} extraClass={'m-0 mr-3'}>{`Select the ${column1} to see the ${column2} data`}</Text>
     </div>)
   }
   const NoData = () => {
     return (<div className={'flex flex-col my-20 py-10 px-5 items-center'}>
-      <img src={'assets/images/add-widget-icon.png'} style={{ maxHeight: '80px' }} />
+      <img src={'https://s3.amazonaws.com/www.factors.ai/assets/img/product/add-widget-icon.png'} style={{ maxHeight: '80px' }} />
       <Text type={'title'} level={8} color={'grey'} weight={'thin'} extraClass={'m-0 mr-3'}>{`No insights available`}</Text>
     </div>)
   }

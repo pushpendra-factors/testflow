@@ -10,6 +10,7 @@ import (
 	U "factors/util"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -225,6 +226,26 @@ func (pg *Postgres) UpdateAgentVerificationDetails(agentUUID, password, firstNam
 	}
 	options = append(options, model.IsEmailVerified(verified))
 	options = append(options, model.PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt))
+	return updateAgent(agentUUID, options...)
+}
+
+func (pg *Postgres) UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int {
+
+	if agentUUID == "" {
+		log.Error("UpdateAgentVerificationDetails Failed. Missing params")
+		return http.StatusBadRequest
+	}
+
+	options := make([]model.Option, 0)
+	if firstName != "" {
+		options = append(options, model.Firstname(firstName))
+	}
+	if lastName != "" {
+		options = append(options, model.Lastname(lastName))
+	}
+	options = append(options, model.IsEmailVerified(verified))
+	options = append(options, model.IsAuth0User(true))
+	options = append(options, model.Auth0Value(value))
 	return updateAgent(agentUUID, options...)
 }
 

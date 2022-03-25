@@ -78,16 +78,18 @@ if __name__ == "__main__":
     input_to_timestamp = scripts.adwords.CONFIG.ADWORDS_APP.to_timestamp
     metrics_controller = scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller
     input_timezone = scripts.adwords.CONFIG.ADWORDS_APP.timezone
+    new_extract_project_id = scripts.adwords.CONFIG.ADWORDS_APP.new_extract_project_id
 
     final_last_sync_infos = get_last_sync_infos(input_project_ids, input_exclude_project_ids, input_document_type, input_timezone)
-
+    
     for last_sync in final_last_sync_infos:
-        next_sync_infos = AdwordsSyncUtil.get_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp)
+        next_sync_infos = AdwordsSyncUtil.get_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp)    
         if next_sync_infos is None:
             continue
         for next_sync in next_sync_infos:
             if JobScheduler.validate(next_sync, skip_today):
-                JobScheduler(next_sync, skip_today).sync(env, is_dry)
+                is_new_job = '*' in new_extract_project_id or next_sync["project_id"] in new_extract_project_id
+                JobScheduler(next_sync, skip_today).sync(env, is_dry, is_new_job)
             else:
                 log.warning("Skipping job scheduler for following project with following properties: "+ str(next_sync))
                 continue

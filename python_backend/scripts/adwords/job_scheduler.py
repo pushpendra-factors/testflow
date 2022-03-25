@@ -15,7 +15,15 @@ from scripts.adwords.jobs.customer_account_properties_job import GetCustomerAcco
 from scripts.adwords.jobs.keywords_performance_report_job import KeywordPerformanceReportsJob
 from scripts.adwords.jobs.search_performance_reports_job import SeachPerformanceReportsJob
 
-
+from scripts.adwords.new_jobs.ad_group_performance_report_job import NewAdGroupPerformanceReportJob
+from scripts.adwords.new_jobs.ad_groups_job import NewGetAdGroupsJob
+from scripts.adwords.new_jobs.ad_performance_reports_job import NewAdPerformanceReportsJob
+from scripts.adwords.new_jobs.ads_job import NewGetAdsJob
+from scripts.adwords.new_jobs.campaign_performance_reports_job import NewCampaignPerformanceReportsJob
+from scripts.adwords.new_jobs.campaigns_job import NewGetCampaignsJob
+from scripts.adwords.new_jobs.click_performance_report_job import NewClickPerformanceReportsJob
+from scripts.adwords.new_jobs.customer_account_properties_job import NewGetCustomerAccountPropertiesJob
+from scripts.adwords.new_jobs.keywords_performance_report_job import NewKeywordPerformanceReportsJob
 
 class JobScheduler:
 
@@ -62,48 +70,82 @@ class JobScheduler:
                        "doc_type": self.doc_type, "status": "success"}
         self.permission_error_key = str(self.customer_acc_id) + ":" + str(self.refresh_token)
 
-    def sync(self, env, dry):
+    def sync(self, env, dry, new=False):
         doc_type = self.doc_type
         project_id = self.next_info.get("project_id")
         customer_acc_id = self.next_info.get("customer_acc_id")
         refresh_token = self.next_info.get("refresh_token")
         metrics_controller = scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller
         try:
-            if doc_type == CUSTOMER_ACCOUNT_PROPERTIES:
-                GetCustomerAccountPropertiesJob(self.next_info).start()
+            if new:
+                if doc_type == CUSTOMER_ACCOUNT_PROPERTIES:
+                    NewGetCustomerAccountPropertiesJob(self.next_info).start()
 
-            elif doc_type == CAMPAIGNS:
-                GetCampaignsJob(self.next_info).start()
+                elif doc_type == CAMPAIGNS:
+                    NewGetCampaignsJob(self.next_info).start()
 
-            elif doc_type == ADS:
-                GetAdsJob(self.next_info).start()
+                elif doc_type == ADS:
+                    NewGetAdsJob(self.next_info).start()
 
-            elif doc_type == AD_GROUPS:
-                GetAdGroupsJob(self.next_info).start()
+                elif doc_type == AD_GROUPS:
+                    NewGetAdGroupsJob(self.next_info).start()
 
-            elif doc_type == CLICK_PERFORMANCE_REPORT:
-                ClickPerformanceReportsJob(self.next_info).start()
+                elif doc_type == CLICK_PERFORMANCE_REPORT:
+                    NewClickPerformanceReportsJob(self.next_info).start()
 
-            elif doc_type == CAMPAIGN_PERFORMANCE_REPORT:
-                CampaignPerformanceReportsJob(self.next_info).start()
+                elif doc_type == CAMPAIGN_PERFORMANCE_REPORT:
+                    NewCampaignPerformanceReportsJob(self.next_info).start()
 
-            elif doc_type == AD_PERFORMANCE_REPORT:
-                AdPerformanceReportsJob(self.next_info).start()
+                elif doc_type == AD_PERFORMANCE_REPORT:
+                    NewAdPerformanceReportsJob(self.next_info).start()
 
-            elif doc_type == AD_GROUP_PERFORMANCE_REPORT:
-                AdGroupPerformanceReportJob(self.next_info).start()
+                elif doc_type == AD_GROUP_PERFORMANCE_REPORT:
+                    NewAdGroupPerformanceReportJob(self.next_info).start()
 
-            elif doc_type == SEARCH_PERFORMANCE_REPORT:
-                SeachPerformanceReportsJob(self.next_info).start()
+                elif doc_type == KEYWORD_PERFORMANCE_REPORT:
+                    NewKeywordPerformanceReportsJob(self.next_info).start()
 
-            elif doc_type == KEYWORD_PERFORMANCE_REPORT:
-                KeywordPerformanceReportsJob(self.next_info).start()
-
+                else:
+                    status = STATUS_FAILED
+                    message = "Invalid document type " + str(doc_type)
+                    scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller.update_job_stats(project_id, customer_acc_id,
+                                                                                        status, message)
             else:
-                status = STATUS_FAILED
-                message = "Invalid document type " + str(doc_type)
-                scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller.update_job_stats(project_id, customer_acc_id,
-                                                                                       status, message)
+                if doc_type == CUSTOMER_ACCOUNT_PROPERTIES:
+                    GetCustomerAccountPropertiesJob(self.next_info).start()
+
+                elif doc_type == CAMPAIGNS:
+                    GetCampaignsJob(self.next_info).start()
+
+                elif doc_type == ADS:
+                    GetAdsJob(self.next_info).start()
+
+                elif doc_type == AD_GROUPS:
+                    GetAdGroupsJob(self.next_info).start()
+
+                elif doc_type == CLICK_PERFORMANCE_REPORT:
+                    ClickPerformanceReportsJob(self.next_info).start()
+
+                elif doc_type == CAMPAIGN_PERFORMANCE_REPORT:
+                    CampaignPerformanceReportsJob(self.next_info).start()
+
+                elif doc_type == AD_PERFORMANCE_REPORT:
+                    AdPerformanceReportsJob(self.next_info).start()
+
+                elif doc_type == AD_GROUP_PERFORMANCE_REPORT:
+                    AdGroupPerformanceReportJob(self.next_info).start()
+
+                elif doc_type == SEARCH_PERFORMANCE_REPORT:
+                    SeachPerformanceReportsJob(self.next_info).start()
+
+                elif doc_type == KEYWORD_PERFORMANCE_REPORT:
+                    KeywordPerformanceReportsJob(self.next_info).start()
+
+                else:
+                    status = STATUS_FAILED
+                    message = "Invalid document type " + str(doc_type)
+                    scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller.update_job_stats(project_id, customer_acc_id,
+                                                                                        status, message)
 
 
         except Exception as e:

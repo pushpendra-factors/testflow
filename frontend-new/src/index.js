@@ -15,6 +15,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import ErrorBoundary from './ErrorBoundary';
 import * as Sentry from "@sentry/react";
 import { Integrations } from "@sentry/tracing";
+import 'react-pivottable/pivottable.css';
 // import { TourProvider } from '@reactour/tour';
 // import steps from './steps';
 
@@ -30,11 +31,11 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
     integrations: [
       new Integrations.BrowserTracing(),
     ],
-  
+
     // We recommend adjusting this value in production, or using tracesSampler
     // for finer control
     tracesSampleRate: 1.0,
-  }); 
+  });
 }
 
 
@@ -42,7 +43,7 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['agent','factors']
+  whitelist: ['agent']
 };
 const persistedReducer = persistReducer(persistConfig, reducers);
 
@@ -62,7 +63,7 @@ ReactDOM.render(
       <PersistGate loading={null} persistor={persistor}>
         <ErrorBoundary>
           {/* <TourProvider steps={steps}> */}
-            <App /> 
+          <App />
           {/* </TourProvider> */}
         </ErrorBoundary>
       </PersistGate>

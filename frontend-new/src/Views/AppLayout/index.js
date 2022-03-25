@@ -30,7 +30,9 @@ import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { fetchKPIConfig, fetchPageUrls } from '../../reducers/kpi';
+import Welcome from "../Settings/SetupAssist/Welcome";
 
+const FactorsInsights = lazyWithRetry(() => import("../Factors/FactorsInsightsNew"));
 const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Dashboard'));
 const Factors = lazyWithRetry(() => import('../Factors'));
@@ -132,8 +134,12 @@ function AppLayout({
                     name="Home"
                     component={CoreQuery}
                   />
-                  <Route path="/explain" name="Factors" component={Factors} />
+
+                  <Route exact path="/explain" name="Factors" component={Factors} />
+                  <Route exact path="/explain/insights" name="Factors" component={FactorsInsights} />
+
                   <Route path="/project-setup" component={SetupAssist} />
+                  <Route path="/welcome" component={Welcome} />
                 </Switch>
               </Suspense>
             </Content>

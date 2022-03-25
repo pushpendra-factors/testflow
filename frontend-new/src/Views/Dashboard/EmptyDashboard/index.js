@@ -40,7 +40,7 @@ function EmptyDashboard() {
                     'flex justify-center flex-col items-center fa-dashboard--no-data-container'
                     }
                 >
-                    <img alt='no-data' src='assets/images/no-data.png' className={'mb-6'} />
+                    <img alt='no-data' src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/no-data.png' className={'mb-6'} />
                     <Text type={'title'} level={5} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>
                         We don’t have enough data yet
                     </Text>
@@ -50,7 +50,7 @@ function EmptyDashboard() {
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>
                         Connect to at least one data source using
                     </Text>
-                    <Button type={'link'} style={{backgroundColor:'white'}} onClick={()=> history.push('/project-setup')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
+                    <Button type={'link'} style={{backgroundColor:'white'}} onClick={()=> history.push('/welcome')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
                     <Button type={'text'} icon={<PlusOutlined style={{color:'gray', fontSize:'18px'}} />} onClick={handleClick}>Invite a teammate for help</Button>
                 </div>
 

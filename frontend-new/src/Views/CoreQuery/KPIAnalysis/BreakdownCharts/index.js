@@ -23,6 +23,7 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
+  CHART_TYPE_PIVOT_CHART,
 } from '../../../../utils/constants';
 import LineChart from '../../../../components/HCLineChart';
 import BarChart from '../../../../components/BarChart';
@@ -30,6 +31,7 @@ import BreakdownTable from './BreakdownTable';
 import HorizontalBarChartTable from './HorizontalBarChartTable';
 import StackedAreaChart from '../../../../components/StackedAreaChart';
 import StackedBarChart from '../../../../components/StackedBarChart';
+import PivotTable from '../../../../components/PivotTable';
 
 const BreakdownCharts = forwardRef(
   (
@@ -190,6 +192,12 @@ const BreakdownCharts = forwardRef(
             data={visibleSeriesData}
             showAllLegends={true}
           />
+        </div>
+      );
+    } else if (chartType === CHART_TYPE_PIVOT_CHART) {
+      chart = (
+        <div className='w-full'>
+          <PivotTable data={aggregateData} breakdown={breakdown} kpis={kpis} />
         </div>
       );
     }

@@ -308,6 +308,7 @@ function SaveQuery({
   return (
     <>
       <QueryActions
+        queryType={queryType}
         savedQueryId={savedQueryId}
         handleSaveClick={handleSaveClick}
         handleEditClick={handleEditClick}

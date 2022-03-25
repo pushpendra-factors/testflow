@@ -155,6 +155,8 @@ CREATE TABLE IF NOT EXISTS agents (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     is_onboarding_flow_seen boolean,
+    is_auth0_user boolean DEFAULT false,
+    value json,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
     KEY (updated_at),

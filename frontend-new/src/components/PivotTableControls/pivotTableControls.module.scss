@@ -1,0 +1,28 @@
+@import '../../styles/abstracts/variables';
+
+.controls {
+  border-top-right-radius: 0.625rem;
+  border-top-left-radius: 0.625rem;
+  border-color: $fa-color--mono-2;
+}
+
+.selectedBtn {
+  border: 1px solid $fa-color--mono-2;
+  background: $fa-color--mono-1;
+  border-radius: 0.25rem;
+}
+
+.selectedAggregatorBtn {
+  background: $fa-color--mono-1;
+  border: 1px solid $fa-color--mono-2;
+  box-sizing: border-box;
+  border-radius: 5px;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+}
+
+.dropdownMenu {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  border-radius: 0.25rem;
+}
