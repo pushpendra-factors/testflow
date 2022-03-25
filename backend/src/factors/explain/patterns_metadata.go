@@ -62,11 +62,15 @@ func MergeMetaData(result []T.ChunkMetaData, new T.ChunkMetaData, eventsKeyMap *
 	filterEvents := getToBeFilteredKeysInMetaData()
 	if len(result) == 0 {
 		var newResult T.ChunkMetaData
-		for filter := range filterEvents {
-			for _, event := range new.Events {
-				if !strings.HasPrefix(event, filter) {
-					newResult.Events = append(newResult.Events, event)
+		for _, event := range new.Events {
+			isBlacklisted := false
+			for filter := range filterEvents {
+				if strings.HasPrefix(event, filter) {
+					isBlacklisted = true
 				}
+			}
+			if isBlacklisted == false {
+				newResult.Events = append(newResult.Events, event)
 			}
 		}
 		newResult.EventProperties = new.EventProperties
@@ -78,10 +82,14 @@ func MergeMetaData(result []T.ChunkMetaData, new T.ChunkMetaData, eventsKeyMap *
 	for _, event := range new.Events {
 		if _, exists := (*eventsKeyMap)[event]; !exists {
 			(*eventsKeyMap)[event] = true
+			isBlacklisted := false
 			for filter := range filterEvents {
-				if !strings.HasPrefix(event, filter) {
-					result[0].Events = append(result[0].Events, event)
+				if strings.HasPrefix(event, filter) {
+					isBlacklisted = true
 				}
+			}
+			if isBlacklisted == false {
+				result[0].Events = append(result[0].Events, event)
 			}
 		}
 	}
