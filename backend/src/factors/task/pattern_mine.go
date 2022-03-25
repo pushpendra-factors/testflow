@@ -2662,11 +2662,18 @@ func removePropertiesTree(val string) bool {
 }
 
 func GetChunkMetaData(Patterns []*P.Pattern) []ChunkMetaData {
+	filterEvents := getToBeFilteredKeysInMetaData()
 	var metaData []ChunkMetaData
 	for _, pattern := range Patterns {
 		var metadataObj ChunkMetaData
 		if pattern.PatternVersion < 2 { // histogram
-			metadataObj.Events = pattern.EventNames
+			for _, eventName := range pattern.EventNames {
+				for filter := range filterEvents {
+					if !strings.HasPrefix(eventName, filter) {
+						metadataObj.Events = append(metadataObj.Events, eventName)
+					}
+				}
+			}
 			// For Events
 			EventPropertiesObj := Properties{
 				CategoricalProperties: make(map[string][]string),
@@ -2746,13 +2753,19 @@ func GetChunkMetaData(Patterns []*P.Pattern) []ChunkMetaData {
 			metadataObj.UserProperties = UserPropertiesObj
 
 		} else if pattern.PatternVersion >= 2 { // fp tree and hmine
-			metadataObj.Events = pattern.EventNames
+			for _, eventName := range pattern.EventNames {
+				for filter := range filterEvents {
+					if !strings.HasPrefix(eventName, filter) {
+						metadataObj.Events = append(metadataObj.Events, eventName)
+					}
+				}
+			}
 			// only categorical properties
 			// for Events Fp-tree
 			var EventPropertiesObj Properties
 			var EventCategoricalProperty = make(map[string][]string)
 			if pattern.EventPropertiesPatterns != nil {
-				for _, eventCategoricalProperty := range *&pattern.EventPropertiesPatterns {
+				for _, eventCategoricalProperty := range pattern.EventPropertiesPatterns {
 					for _, item := range eventCategoricalProperty.Items {
 						keyVal := strings.Split(item, "::") // splitting key and value
 						if len(keyVal) == 2 {
@@ -2774,7 +2787,7 @@ func GetChunkMetaData(Patterns []*P.Pattern) []ChunkMetaData {
 			var UserPropertiesObj Properties
 			var UserCategoricalProperty = make(map[string][]string)
 			if pattern.UserPropertiesPatterns != nil {
-				for _, userCategoricalProperty := range *&pattern.UserPropertiesPatterns {
+				for _, userCategoricalProperty := range pattern.UserPropertiesPatterns {
 					for _, item := range userCategoricalProperty.Items {
 						keyVal := strings.Split(item, "::")
 						if len(keyVal) == 2 {
@@ -2796,4 +2809,11 @@ func GetChunkMetaData(Patterns []*P.Pattern) []ChunkMetaData {
 		metaData = append(metaData, metadataObj)
 	}
 	return metaData
+}
+func getToBeFilteredKeysInMetaData() map[string]bool {
+	keys := map[string]bool{
+		"$session[":       true,
+		"$AllActiveUsers": true,
+	}
+	return keys
 }
