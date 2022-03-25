@@ -89,7 +89,7 @@ function CalendarRow({
                 customPicker
                 presetRange
                 monthPicker
-                placement='topRight'
+                placement='bottomLeft'
                 range={
                   comparison_duration && {
                     startDate: comparison_duration.from,
