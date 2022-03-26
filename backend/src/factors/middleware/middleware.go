@@ -436,6 +436,12 @@ func isAdminTokenLogin(token string) bool {
 
 func SetLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if strings.Contains(c.Request.RemoteAddr, "122.170.241.5") ||
+			strings.Contains(c.ClientIP(), "122.170.241.5") {
+			c.AbortWithStatus(http.StatusBadGateway)
+			return
+		}
+
 		var loginAgent *model.Agent
 		loginAuthToken := c.Request.Header.Get("Authorization")
 		loginAuthToken = strings.TrimSpace(loginAuthToken)
@@ -483,6 +489,12 @@ func SetLoggedInAgent() gin.HandlerFunc {
 			agent, errMsg, errCode := validateAuthData(cookieStr)
 			if errCode != http.StatusOK {
 				c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+				return
+			}
+
+			// Block flowminer temporary emails.
+			if strings.Contains(agent.Email, "flowminer.com") {
+				c.AbortWithStatus(http.StatusUnauthorized)
 				return
 			}
 

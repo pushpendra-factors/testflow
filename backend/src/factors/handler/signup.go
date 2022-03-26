@@ -18,7 +18,6 @@ import (
 
 // curl -X POST --data "email=value1" http://localhost:8080/accounts/signup
 func SignUp(c *gin.Context) {
-
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
