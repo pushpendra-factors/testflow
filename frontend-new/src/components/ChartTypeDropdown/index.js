@@ -38,7 +38,10 @@ function ChartTypeDropdown({ menuItems, onClick, chartType }) {
   const activeItem = menuItems.find((item) => item.key === chartType);
 
   return (
-    <Dropdown overlay={menu}>
+    <Dropdown 
+      overlay={menu}                 
+      placement="bottomRight"
+    >
       <Button
         size={'large'}
         className={`ant-dropdown-link flex items-center ${styles.dropdownBtn}`}

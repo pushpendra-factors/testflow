@@ -2,7 +2,7 @@ window.factors = window.factors||(function(){
     this.q = [];
     var factorsQueuedEvent = new CustomEvent('FACTORS_QUEUED_EVENT');
     var addToQueue = function(k,a) {
-        this.q.push({k,a});
+        this.q.push({'k': k,'a': a});
         window.dispatchEvent(factorsQueuedEvent);   
     }
     this.track = function(ev, ep, ac) {
@@ -12,6 +12,7 @@ window.factors = window.factors||(function(){
         this.TOKEN = at;
         this.INIT_PARAMS = op;
         this.INIT_CALLBACK = ac;
+        window.dispatchEvent(new CustomEvent('FACTORS_INIT_EVENT'))
     }
     this.reset = function() {
         addToQueue('reset', arguments);
@@ -42,7 +43,7 @@ window.factors = window.factors||(function(){
         this.q.push(callMap);
         window.dispatchEvent(factorsQueuedEvent);
     }
-    this.init("${projectToken}", {'param': 'asd'}, function(){console.log("Init callback")});
+    this.init("${projectToken}");
     return this;
 })();
 

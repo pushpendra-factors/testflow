@@ -274,7 +274,7 @@ const CustomKPI = ({
                                     dataSource={tableData}
                                     pagination={false}
                                     loading={tableLoading}
-                                // tableLayout= 'fixed'
+                                    tableLayout={'fixed'}
                                 />
                             </div>
                         </Col>

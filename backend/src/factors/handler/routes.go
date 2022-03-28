@@ -25,6 +25,7 @@ const ROUTE_VERSION_V1 = "/v1"
 
 func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
 	routePrefix := C.GetRoutesURLPrefix() + "/oauth"
+	r.Use(mid.BlockMaliciousPayload())
 	r.GET(routePrefix+"/signup", ExternalAuthentication(auth, SIGNUP_FLOW))
 	r.GET(routePrefix+"/login", ExternalAuthentication(auth, SIGNIN_FLOW))
 	r.GET(routePrefix+"/activate", ExternalAuthentication(auth, ACTIVATE_FLOW))
@@ -46,6 +47,9 @@ func InitAppRoutes(r *gin.Engine) {
 	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
+
+	// NOTE: Always keep BlockMaliciousPayload middlware on top of the chain.
+	r.Use(mid.BlockMaliciousPayload())
 
 	r.Use(mid.SkipAPIWritesIfDisabled())
 	r.GET(routePrefix+"/health", mid.MonitoringAPIMiddleware(), Monitoring)

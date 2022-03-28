@@ -6,8 +6,9 @@ import (
 	"factors/util"
 	U "factors/util"
 	"fmt"
-	"github.com/clearbit/clearbit-go/clearbit"
 	"testing"
+
+	"github.com/clearbit/clearbit-go/clearbit"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
@@ -105,6 +106,7 @@ func TestGetDashboardCacheResultExpiryInSeconds(t *testing.T) {
 func TestEmailValidations(t *testing.T) {
 	assert.Equal(t, true, util.IsEmail("test.o’'brien@test123.com"))
 	assert.Equal(t, true, util.IsEmail("test.test1@test123.com-xn"))
+	assert.Equal(t, false, util.IsEmail("test.test1@test123.com-xn ping 10.2"))
 }
 
 func TestParseProjectIDToStringMapFromConfig(t *testing.T) {

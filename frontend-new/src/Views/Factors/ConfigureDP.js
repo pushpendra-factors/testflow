@@ -193,12 +193,15 @@ const ConfigureDP = (props) => {
                         <li><Text type={'paragraph'} extraClass={'m-0 mb-2'} >You can track upto 50 events and user properties while analyzing Factors</Text></li>
                         <li><Text type={'paragraph'} extraClass={'m-0 mb-2'} >Your Goals should be comprised of these datapoints</Text></li>
                         <li><Text type={'paragraph'} extraClass={'m-0 mb-2'} >Please note that it may take a few days for us to index newly added data points in your queries</Text></li>
-                        <li><Text type={'paragraph'} extraClass={'m-0 mb-2'} >Apart from these, all your active campaigns will be tracked. Learn more about <a>Configuring your Ad accounts</a></Text></li>
+                        <li><Text type={'paragraph'} extraClass={'m-0 mb-2'} >Apart from these, all your active campaigns will be tracked. 
+                        {/* Learn more about  */}
+                          {/* <a>Configuring your Ad accounts</a> */}
+                        </Text></li>
                     </ul>
                 </div>
                 <div className={'flex items-center mt-6'}>
                 <Button size={'large'} type={'primary'} onClick={()=>setshowInfo(false)}>Got it</Button>
-                <Button ghost size={'large'} className={'ml-4'}>Learn more</Button>
+                {/* <Button ghost size={'large'} className={'ml-4'}>Learn more</Button> */}
 
                 </div>
                 </div>

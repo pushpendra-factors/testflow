@@ -6,7 +6,7 @@ const NoDataChart = () => {
     <div className={'flex flex-col items-center fa-no-data--img'}>
       <img
         alt='no-data'
-        src='assets/images/no-data-charts.png'
+        src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/no-data-charts.png'
         className={'mb-2'}
       />
       <Text

@@ -32,7 +32,7 @@ const NoData = ({data}) => {
 
     return (
         <div className={'flex flex-col items-center pt-10'}>
-            <img src="assets/images/weekly-insights-no-data.png" className={'mb-2'} style={{ maxWidth: '175px', width: '100%' }} />
+            <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/weekly-insights-no-data.png" className={'mb-2'} style={{ maxWidth: '175px', width: '100%' }} />
             <Text type={"title"} level={7} weight={'bold'} extraClass={"m-0"}>{text.title}</Text>
             <Text type={"title"} level={8} weight={'thin'} color={'grey'} extraClass={"m-0 mb-4"}>{text.subtitle}</Text>
 

@@ -50,7 +50,7 @@ const Welcome = ({currentAgent, activeProject, getHubspotContact}) => {
                                         <Button type={'primary'} size={'large'} className={'ml-6 mb-4'} onClick={handleRoute}>Get started</Button>
                                     </Col>
                                     <Col className={`${styles.img}`}>
-                                        <img src='Assets/images/cuate.svg' />
+                                        <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/cuate.svg' />
                                     </Col>
                                 </Row>
                             </div>
@@ -62,7 +62,7 @@ const Welcome = ({currentAgent, activeProject, getHubspotContact}) => {
                                         <Button type={'text'} size={'large'} className={'ml-2 mb-4'} onClick={() => setShowModal(true)}><SVG name={'PlayButton'} size={25}/>Play video</Button>
                                     </Col>
                                     <Col className={`${styles.img}`}>
-                                        <img src='Assets/images/rafiki.svg' />
+                                        <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/rafiki.svg' />
                                     </Col>
                                 </Row>
                             </div>
@@ -78,7 +78,7 @@ const Welcome = ({currentAgent, activeProject, getHubspotContact}) => {
                                 <a href={meetLink(ownerID)} target='_blank' ><Button type={'text'} style={{background: 'bottom', color: 'white'}} className={'ml-4 mb-4'}>Let’s Chat<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'white'} /></Button></a>
                             </Col>
                             <Col className={`${styles.callimg}`}>
-                                <img src='Assets/images/1to1.svg' />
+                                <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/1to1.svg' />
                             </Col>
                         </Row>
                     </Col>

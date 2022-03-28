@@ -56,7 +56,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                 <Header>
                     <div className={'rounded-lg border-2 border-gray-200 w-full h-24 mt-8'}>
                             <div className='w-20 float-left mt-2 ml-4 mr-4 mb-1'>
-                                <img src='assets/images/NoData.png'/>
+                                <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/NoData.png'/>
                             </div>
                             <div className={'mt-4 mb-4'}>
                                 <Text type={'title'} level={4} color={'grey-2'} weight={'bold'} extraClass={'m-0 mt-2 mb-1'}>
@@ -78,7 +78,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                     'flex justify-center flex-col items-center fa-dashboard--no-data-container'
                     }
                 >
-                    <img alt='no-data' src='assets/images/Group 880.png' className={'mb-2'} />
+                    <img alt='no-data' src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/bar-chart.png' className={'mb-2'} />
                     <Text type={'title'} level={6} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>
                         Create a dashboard to moniter your metrics in one place.
                     </Text>

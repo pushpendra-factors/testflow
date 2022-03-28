@@ -154,6 +154,7 @@ func main() {
 	allowEventsFunnelsGroupSupport := flag.String("allow_events_funnels_group_support", "", "")
 
 	enableBingAdsAttribution := flag.Bool("enable_bing_ads_attribution", false, "")
+	salesforcePropertyLookBackTimeHr := flag.Int("salesforce_property_lookback_time_hr", 0, "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -260,6 +261,7 @@ func main() {
 		IntegrationQueueThreshold:                      *integrationQueueThreshold,
 		EnableBingAdsAttribution:                       *enableBingAdsAttribution,
 		MonitoringAPIToken:                             *monitoringAPIToken,
+		SalesforcePropertyLookBackTimeHr:               *salesforcePropertyLookBackTimeHr,
 	}
 	C.InitConf(config)
 

@@ -5,13 +5,13 @@ ENV PYTHONPATH "${PYTHONPATH}:$HOME/repos/factors:$HOME/repos/factors/python_bac
 RUN mkdir -p /usr/local/var/factors
 
 WORKDIR /usr/local/var/factors
-COPY debug_start.sh requirements.txt ./
+COPY debug_start.sh adwords_requirements.txt ./
 
 RUN apk update && \
-    apk add --no-cache --virtual .build-deps gcc libc-dev libxslt-dev libffi-dev && \
+    apk add --no-cache --virtual .build-deps libstdc++ gcc g++ libc-dev libxslt-dev libffi-dev && \
     apk add --no-cache libxslt libffi && \
     pip install --no-cache-dir lxml>=3.5.0 && \
-    pip install -r requirements.txt && \
+    pip install -r adwords_requirements.txt && \
     apk del .build-deps
 
 RUN ["chmod", "+x", "./debug_start.sh"]

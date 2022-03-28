@@ -94,8 +94,7 @@
 .explain-builder--content{
 
      
-    height: auto;
-    overflow: scroll;
+    height: auto; 
     transition: all 0.5s;
     &.explain-builder--collapsed{ 
         height: 180px;
