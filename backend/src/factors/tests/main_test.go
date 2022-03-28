@@ -98,6 +98,7 @@ func TestMain(m *testing.M) {
 		DisableCRMUniquenessConstraintsCheckByProjectID: "*",
 		AllowEventsFunnelsGroupSupport:                  "*",
 		UseHubspotBatchInsertByProjectID:                "*",
+		SalesforcePropertyLookBackTimeHr:                48,
 	}
 	C.InitConf(config)
 
