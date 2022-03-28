@@ -39,6 +39,11 @@ TEST = "test"
 STAGING = "staging"
 PRODUCTION = "production"
 
+COST_PER_ACTION_TYPE = 'cost_per_action_type'
+WEBSITE_PURCHASE_ROAS = 'website_purchase_roas'
+ACTION_TYPE = 'action_type'
+VALUE = 'value'
+
 
 # Workflow
 EXTRACT_AND_LOAD_WORKFLOW = "extract_and_load_workflow"
