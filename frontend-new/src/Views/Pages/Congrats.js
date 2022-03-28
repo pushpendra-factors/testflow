@@ -43,7 +43,7 @@ function Congrats({ signup, data }) {
                         <Row>
                             <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-10 w-full'} >
-                                        <img src='../../assets/images/Illustration=pop gift.png' style={{width:'100%', maxWidth:'160px', marginLeft:'20px'}} />
+                                        <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/pop-gift.png' style={{width:'100%', maxWidth:'160px', marginLeft:'20px'}} />
                                     </div>
                             </Col>
 

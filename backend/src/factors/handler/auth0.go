@@ -43,7 +43,6 @@ type Auth0Values struct {
 const SIGNUP_FLOW = "signup"
 const SIGNIN_FLOW = "login"
 const ACTIVATE_FLOW = "activate"
-const FRONTEND = "http://factors-dev.com:3000/"
 
 func NewAuth() (*Authenticator, error) {
 	auth := C.GetAuth0Info()
@@ -110,43 +109,43 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		state := session.GetSessionStore().GetValueAsString(c, C.GetAuth0StateCookieName())
 		if state == "" {
-			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL("", "NO_STATE"))
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "NO_STATE"))
 			return
 		}
 
 		if state != c.Query("state") {
-			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL("", "INVALID_STATE"))
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_STATE"))
 			return
 		}
 
 		err := session.GetSessionStore().DeleteValue(c, C.GetAuth0StateCookieName())
 		if err != nil {
 			log.WithError(err).Error(err.Error())
-			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL("", "SESSION_ERROR"))
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "SESSION_ERROR"))
 			return
 		}
 
 		token, err := auth.Exchange(c.Request.Context(), c.Query("code"))
 		if err != nil {
-			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL("", "TOKEN_ERROR"))
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "TOKEN_ERROR"))
 			return
 		}
 
 		idToken, err := auth.verifyIDToken(c.Request.Context(), token)
 		if err != nil {
-			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL("", "VERIFY_ERROR"))
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "VERIFY_ERROR"))
 			return
 		}
 
 		profile := model.Auth0Profile{}
 		if err := idToken.Claims(&profile); err != nil {
-			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL("", "TOKEN_ERROR"))
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "TOKEN_ERROR"))
 			return
 		}
 
 		flow, err := decodeState(state)
 		if err != nil {
-			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL("", "INVALID_STATE"))
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_STATE"))
 			return
 		}
 
@@ -154,23 +153,23 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 
 		if flow == SIGNUP_FLOW {
 			if existingAgent, errCode := store.GetStore().GetAgentByEmail(profile.Email); errCode == http.StatusInternalServerError {
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(flow, "DB_ERROR"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "DB_ERROR"))
 				return
 			} else if errCode == http.StatusFound {
 				if !existingAgent.IsEmailVerified {
 					err = sendSignUpEmail(existingAgent)
 					if err != nil {
-						c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(flow, "ACTIVATE_EMAIL_ERROR"))
+						c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "ACTIVATE_EMAIL_ERROR"))
 						return
 					}
 				}
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(flow, "ALREADY_EXISTS"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "ALREADY_EXISTS"))
 				return
 			}
 
 			value, err := generateValueBytes(profile.Subject, profile.IssuedAt, profile.ExpiresAt, profile.UpdatedAt)
 			if err != nil {
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(flow, "SERVER_ERROR"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 				return
 			}
 			createAgentParams := model.CreateAgentParams{
@@ -187,7 +186,7 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			createAgentResp, errCode := store.GetStore().CreateAgentWithDependencies(&createAgentParams)
 			if errCode == http.StatusInternalServerError {
 				log.WithField("email", profile.Email).Error("Failed To Create Agent")
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(flow, "SERVER_ERROR"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 				return
 			}
 			existingAgent = createAgentResp.Agent
@@ -195,12 +194,12 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			var errCode int
 			existingAgent, errCode = store.GetStore().GetAgentByEmail(profile.Email)
 			if errCode != http.StatusFound {
-				c.Redirect(http.StatusTemporaryRedirect, buildRedirectURL(flow, "INVALID_AGENT"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "INVALID_AGENT"))
 				return
 			}
 
 			if !existingAgent.IsEmailVerified {
-				c.Redirect(http.StatusTemporaryRedirect, buildRedirectURL(flow, "AGENT_NOT_ACTIVE"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "AGENT_NOT_ACTIVE"))
 				return
 			}
 
@@ -209,39 +208,39 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			errCode = store.GetStore().UpdateAgentLastLoginInfo(existingAgent.UUID, ts)
 			if errCode != http.StatusAccepted {
 				log.WithField("email", existingAgent.Email).Error("Failed to update Agent lastLoginInfo")
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(flow, "SERVER_ERROR"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 				return
 			}
 		} else if flow == ACTIVATE_FLOW {
 			var errCode int
 			existingAgent, errCode = store.GetStore().GetAgentByEmail(profile.Email)
 			if errCode != http.StatusFound {
-				c.Redirect(http.StatusTemporaryRedirect, buildRedirectURL(flow, "INVALID_AGENT"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "INVALID_AGENT"))
 				return
 			} else if existingAgent.IsEmailVerified {
-				c.Redirect(http.StatusTemporaryRedirect, buildRedirectURL(flow, "ALREADY_ACTIVE"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "ALREADY_ACTIVE"))
 				return
 			}
 
 			value, err := generateValueBytes(profile.Subject, profile.IssuedAt, profile.ExpiresAt, profile.UpdatedAt)
 			if err != nil {
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(flow, "SERVER_ERROR"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 				return
 			}
 
 			errCode = store.GetStore().UpdateAgentVerificationDetailsFromAuth0(existingAgent.UUID, profile.FirstName, profile.LastName, profile.IsEmailVerified, value)
 			if errCode != http.StatusAccepted {
 				log.WithField("email", existingAgent.Email).Error("Failed to update Agent verification details")
-				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(flow, "SERVER_ERROR"))
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 				return
 			}
 		} else {
-			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL("", "INVALID_FLOW"))
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_FLOW"))
 			return
 		}
 		cookieData, err := helpers.GetAuthData(existingAgent.Email, existingAgent.UUID, existingAgent.Salt, helpers.SecondsInOneMonth*time.Second)
 		if err != nil {
-			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(flow, "SERVER_ERROR"))
+			c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "SERVER_ERROR"))
 			return
 		}
 		domain := C.GetCookieDomian()
@@ -254,7 +253,7 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 			c.SetSameSite(http.SameSiteNoneMode)
 		}
 		c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, cookie, httpOnly)
-		c.Redirect(http.StatusTemporaryRedirect, buildRedirectURL("", ""))
+		c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", ""))
 	}
 }
 
@@ -293,14 +292,16 @@ func generateValueBytes(Subject string, IssuedAt, ExpiresAt uint64, UpdatedAt ti
 	return &value, nil
 }
 
-func buildRedirectURL(flow string, errMsg string) string {
-	// u, err := url.Parse("")
-	u, err := url.Parse(FRONTEND + flow)
-	if err != nil {
-		return ""
+func buildRedirectURL(c *gin.Context, flow string, errMsg string) string {
+	scheme := "http"
+	if c.Request.TLS != nil {
+		scheme = "https"
 	}
-	// u.Scheme = "http"
-	// u.Host = "factors-dev.com:3000"
+	u := url.URL{
+		Scheme: scheme,
+		Host:   C.GetAPPDomain(),
+		Path:   flow,
+	}
 	q := u.Query()
 	q.Set("error", errMsg)
 	q.Set("mode", "auth0")

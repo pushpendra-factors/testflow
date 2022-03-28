@@ -124,7 +124,7 @@ type Configuration struct {
 	MemSQLInfo                                     DBConf
 	Auth0Info                                      Auth0Conf
 	SessionStore                                   string
-	SessionStoreSecret							   string
+	SessionStoreSecret                             string
 	RedisHost                                      string
 	RedisPort                                      int
 	RedisHostPersistent                            string
@@ -237,6 +237,7 @@ type Configuration struct {
 	EnableHubspotFormsEventsByProjectID             string
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
+	SalesforcePropertyLookBackTimeHr                int
 }
 
 type Services struct {
@@ -2133,4 +2134,8 @@ func GetSessionStore() string {
 
 func GetSessionStoreSecret() string {
 	return configuration.SessionStoreSecret
+}
+
+func GetSalesforcePropertyLookBackTimeHr() int {
+	return GetConfig().SalesforcePropertyLookBackTimeHr
 }

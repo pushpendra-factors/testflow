@@ -200,11 +200,14 @@ const CreateGoalDrawer = (props) => {
 
     //fetching model metada for 'events to include'
     let modelID = props.factors_models ? props.factors_models[0]?.mid : 0;
-    modelMetaDataFn(props.activeProject.id, modelID);
-
+    modelMetaDataFn(props.activeProject.id, modelID); 
 
     if (props.factors_models) {
-      setSelectedModel(factorsModels[0]);
+      if(props.factors_insight_model){
+        setSelectedModel(props.factors_insight_model); 
+      }else{
+        setSelectedModel(factorsModels[0]); 
+      }
     }
     if (props.activeProject && props.activeProject.id) {
       props.getUserProperties(props.activeProject.id, 'channel')
@@ -215,7 +218,7 @@ const CreateGoalDrawer = (props) => {
       });
       SetTrackedEventNames(fromatterTrackedEvents);
     }
-  }, [props.activeProject, props.tracked_events, props.factors_models, props.goal_insights])
+  }, [props.activeProject, props.tracked_events, props.factors_models, props.goal_insights, props.factors_insight_model])
 
   useEffect(() => {
     const assignFilterProps = Object.assign({}, filterProps);
@@ -347,8 +350,7 @@ const CreateGoalDrawer = (props) => {
   };
 
   const modelMetadataDDValue = modelMetadata?.map((item) => { return [item] })
-  const queryBuilderCollapse = !_.isEmpty(props?.goal_insights?.insights)  
-
+  const queryBuilderCollapse = !_.isEmpty(props?.goal_insights?.insights)   
   return (
     <div
     >
@@ -565,7 +567,8 @@ const mapStateToProps = (state) => {
     factors_models: state.factors.factors_models,
     goal_insights: state.factors.goal_insights,
     tracked_events: state.factors.tracked_events,
-    factors_model_metadata: state.factors.factors_model_metadata
+    factors_model_metadata: state.factors.factors_model_metadata,
+    factors_insight_model: state.factors.factors_insight_model,
   };
 };
 export default connect(mapStateToProps, {

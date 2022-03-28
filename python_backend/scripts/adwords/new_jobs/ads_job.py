@@ -1,4 +1,3 @@
-from tkinter.tix import Tree
 from .fields_mapping import FieldsMapping
 from .service_fetch_job import ServicesFetch
 

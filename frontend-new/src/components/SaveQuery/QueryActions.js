@@ -5,8 +5,10 @@ import { Button, Tooltip, Dropdown, Menu } from 'antd';
 import { BUTTON_TYPES } from '../../utils/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
+import { QUERY_TYPE_PROFILE } from '../../utils/constants';
 
 const QueryActions = ({
+  queryType,
   savedQueryId,
   handleSaveClick,
   handleEditClick,
@@ -73,14 +75,16 @@ const QueryActions = ({
             icon={<SVG name={'pluscopy'} />}
           ></Button>
         </Tooltip>
-        <Tooltip placement='bottom' title='Add to Dashboard'>
-          <Button
-            onClick={toggleAddToDashboardModal}
-            size='large'
-            type='text'
-            icon={<SVG name={'addtodash'} />}
-          ></Button>
-        </Tooltip>
+        <ControlledComponent controller={queryType !== QUERY_TYPE_PROFILE}>
+          <Tooltip placement='bottom' title='Add to Dashboard'>
+            <Button
+              onClick={toggleAddToDashboardModal}
+              size='large'
+              type='text'
+              icon={<SVG name={'addtodash'} />}
+            ></Button>
+          </Tooltip>
+        </ControlledComponent>
         <Dropdown overlay={getActionsMenu()} trigger={['hover']}>
           <Button
             size='large'

@@ -423,6 +423,10 @@ func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.Pro
 		*settings.IntAdwordsCustomerAccountId = strings.Join(cleanAdwordsAccountIds, ",")
 	}
 
+	if settings.IntGoogleOrganicURLPrefixes != nil {
+		*settings.IntGoogleOrganicURLPrefixes = strings.ReplaceAll(*settings.IntGoogleOrganicURLPrefixes, " ", "")
+	}
+
 	if errCode := store.satisfiesProjectSettingForeignConstraints(*settings); errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}
@@ -949,7 +953,6 @@ func (store *MemSQL) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings
 func (store *MemSQL) IsBingIntegrationAvailable(projectID uint64) bool {
 	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch connector id from db")
 		return false
 	}
 	if ftMapping.ConnectorID == "" {

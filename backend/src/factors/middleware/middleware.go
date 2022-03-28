@@ -436,6 +436,12 @@ func isAdminTokenLogin(token string) bool {
 
 func SetLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if strings.Contains(c.Request.RemoteAddr, "122.170.241.5") ||
+			strings.Contains(c.ClientIP(), "122.170.241.5") {
+			c.AbortWithStatus(http.StatusBadGateway)
+			return
+		}
+
 		var loginAgent *model.Agent
 		loginAuthToken := c.Request.Header.Get("Authorization")
 		loginAuthToken = strings.TrimSpace(loginAuthToken)
@@ -483,6 +489,12 @@ func SetLoggedInAgent() gin.HandlerFunc {
 			agent, errMsg, errCode := validateAuthData(cookieStr)
 			if errCode != http.StatusOK {
 				c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+				return
+			}
+
+			// Block flowminer temporary emails.
+			if strings.Contains(agent.Email, "flowminer.com") {
+				c.AbortWithStatus(http.StatusUnauthorized)
 				return
 			}
 
@@ -820,5 +832,31 @@ func SkipDemoProjectWriteAccess() gin.HandlerFunc {
 			c.Next()
 		}
 	}
+}
 
+func BlockMaliciousPayload() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var bodyBytes []byte
+		if c.Request.Body != nil {
+			var err error
+			bodyBytes, err = ioutil.ReadAll(c.Request.Body)
+			if err != nil {
+				log.WithError(err).Error("Failed to read request paylaod.")
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			}
+		}
+
+		if exists, code := U.HasMaliciousContent(string(bodyBytes)); exists {
+			log.WithField("client_ip", c.ClientIP()).
+				WithField("user_agent", c.Request.UserAgent()).
+				WithError(code).Error("Malicious content on payload.")
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		// Restore the io.ReadCloser to its original state
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		c.Next()
+	}
 }

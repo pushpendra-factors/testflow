@@ -6,6 +6,8 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/model/model"
+	"factors/model/store"
+	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -40,7 +42,6 @@ func sendCreateProjectRequest(r *gin.Engine, projectName string, agent *model.Ag
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	return w
-
 }
 
 func sendGetProjectsRequest(r *gin.Engine, agent *model.Agent) *httptest.ResponseRecorder {
@@ -95,7 +96,7 @@ func TestAPICreateProject(t *testing.T) {
 	H.InitAppRoutes(r)
 
 	t.Run("CreateProject", func(t *testing.T) {
-		projectName := "test_project_name"
+		projectName := "Test_Project_Name"
 		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+254346477")
 		assert.Equal(t, http.StatusCreated, errCode)
 		w := sendCreateProjectRequest(r, projectName, agent)
@@ -103,7 +104,6 @@ func TestAPICreateProject(t *testing.T) {
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
-		fmt.Println(jsonResponseMap)
 		assert.NotEqual(t, 0, jsonResponseMap["id"])
 		assert.Equal(t, projectName, jsonResponseMap["name"].(string))
 		assert.Equal(t, "factors.ai", jsonResponseMap["project_uri"].(string))
@@ -120,7 +120,57 @@ func TestAPICreateProject(t *testing.T) {
 		assert.Nil(t, jsonResponseMap["salesforce_touch_points"])
 		assert.Nil(t, jsonResponseMap["hubspot_touch_points"])
 		assert.Equal(t, 17, len(jsonResponseMap))
+
+		project, status := store.GetStore().GetProject(uint64(jsonResponseMap["id"].(float64)))
+		assert.Equal(t, http.StatusFound, status)
+		// The project name should match exactly by case.
+		assert.Equal(t, projectName, project.Name)
 	})
+}
+
+func TestBlockMaliciousPayloadMiddleware(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	t.Run("CreateProjectPayloadWithScript", func(t *testing.T) {
+		projectName := "random tex||<script>alert(0)</script>||random text."
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+254346477")
+		assert.Equal(t, http.StatusCreated, errCode)
+		w := sendCreateProjectRequest(r, projectName, agent)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("CreateProjectPayloadWithSQL", func(t *testing.T) {
+		projectName := "random text||SELECT * FROM projects||random text."
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+254346477")
+		assert.Equal(t, http.StatusCreated, errCode)
+		w := sendCreateProjectRequest(r, projectName, agent)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+func TestHasMaliciousContent(t *testing.T) {
+	y, _ := U.HasMaliciousContent("text text text <script>|| text.")
+	assert.True(t, y)
+
+	y, _ = U.HasMaliciousContent("text text text SELECT * FROM x; text.")
+	assert.True(t, y)
+
+	y, _ = U.HasMaliciousContent("text text text INSERT INTO x VALUES(y);|| text.")
+	assert.True(t, y)
+
+	y, _ = U.HasMaliciousContent("text text text UPDATE x SET y=10 text.")
+	assert.True(t, y)
+
+	y, _ = U.HasMaliciousContent("text text text DELETE FROM text.")
+	assert.True(t, y)
+
+	y, _ = U.HasMaliciousContent("text text text ALTER TABLE x ADD COLUMN y text.")
+	assert.True(t, y)
+
+	// Usage of SQL keywords without valid query, should not be considered malicious.
+	y, _ = U.HasMaliciousContent("text text text|| SELECT || DELETE || UPDATE || INSERT || ALTER || text.")
+	assert.False(t, y)
 }
 
 func TestAPIEditProject(t *testing.T) {

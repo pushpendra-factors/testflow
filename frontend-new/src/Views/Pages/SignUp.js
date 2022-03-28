@@ -187,12 +187,12 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                 </Row>
                                 <Row>
                                     <Col span={24}>
-                                        <img src="assets/images/Group 11.svg" className={'m-0 mt-4 -ml-2'}/>
+                                        <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/review.svg" className={'m-0 mt-4 -ml-2'}/>
                                     </Col>
                                 </Row>
                                 <Row>
                                     <Col span={24}>
-                                    <img src="assets/images/Frame 825.svg" className={'m-0 -ml-2'}/>
+                                    <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/marketing-teams.svg" className={'m-0 -ml-2'}/>
                                     </Col>
                                 </Row>
                             </Col>
@@ -278,7 +278,7 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                                     },
                                                     ({ getFieldValue }) => ({
                                                         validator(rule, value) { 
-                                                          if (!value || value.match(/^([\w-\.]+@(?!gmail)(?!yahoo)(?!hotmail)(?!hey)(?!aol)(?!abc)(?!xyz)(?!pqr)(?!rediffmail)(?!live)(?!outlook)(?!me)(?!msn)(?!ymail)([\w-]+\.)+[\w-]{2,})?$/)) {
+                                                          if (!value || value.match(/^([\w-\.]+@(?!gmail.com)(?!yahoo.com)(?!hotmail.com)(?!yahoo.co.in)(?!hey.com)(?!icloud.com)(?!me.com)(?!mac.com)(?!aol.com)(?!abc.com)(?!xyz.com)(?!pqr.com)(?!rediffmail.com)(?!live.com)(?!outlook.com)(?!msn.com)(?!ymail.com)([\w-]+\.)+[\w-]{2,})?$/)) {
                                                             return Promise.resolve();
                                                           }
                                                           return Promise.reject(new Error('Please enter your business email address.'));

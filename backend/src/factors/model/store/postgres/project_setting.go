@@ -309,6 +309,10 @@ func (pg *Postgres) UpdateProjectSettings(projectId uint64, settings *model.Proj
 		*settings.IntAdwordsCustomerAccountId = strings.Join(cleanAdwordsAccountIds, ",")
 	}
 
+	if settings.IntGoogleOrganicURLPrefixes != nil {
+		*settings.IntGoogleOrganicURLPrefixes = strings.ReplaceAll(*settings.IntGoogleOrganicURLPrefixes, " ", "")
+	}
+
 	if settings.IntHubspotApiKey != "" {
 		existingSettings, status := pg.GetProjectSetting(projectId)
 		if status != http.StatusFound {
@@ -771,7 +775,6 @@ func (pg *Postgres) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings(
 func (pg *Postgres) IsBingIntegrationAvailable(projectID uint64) bool {
 	ftMapping, err := pg.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
 	if err != nil {
-		log.WithError(err).Error("Failed to fetch connector id from db")
 		return false
 	}
 	if ftMapping.ConnectorID == "" {

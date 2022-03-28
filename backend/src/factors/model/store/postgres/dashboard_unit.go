@@ -331,7 +331,7 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 
 		dashboardUnits, errCode := pg.GetDashboardUnitsForProjectID(projectID)
 		if errCode != http.StatusFound || len(dashboardUnits) == 0 {
-			logCtx.Error("not running caching for the project - units not found")
+			logCtx.Info("not running caching for the project - units not found")
 			continue
 		}
 

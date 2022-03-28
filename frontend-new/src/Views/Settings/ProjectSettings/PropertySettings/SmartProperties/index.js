@@ -12,7 +12,6 @@ import PropetyValueModal from '../PropetyValueModal';
 
 import { operatorMap, reverseOperatorMap } from '../utils';
 import ConfirmationModal from "../../../../../components/ConfirmationModal";
-import NoData from "../../../../../assets/images/NoData.png"
 const { Option, OptGroup } = Select;
 
 function SmartProperties({ activeProject,
@@ -411,7 +410,7 @@ function SmartProperties({ activeProject,
 
                             renderEmpty={() =>
                                 <Empty
-                                    image={NoData}
+                                    image={'https://s3.amazonaws.com/www.factors.ai/assets/img/product/NoData.png'}
                                     imageStyle={{
                                         display: "flex",
                                         flexDirection: "vertical",

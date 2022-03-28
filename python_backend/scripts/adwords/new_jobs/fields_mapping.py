@@ -1,5 +1,4 @@
 
-from numpy import double
 import re
 
 
@@ -334,7 +333,7 @@ class FieldsMapping:
     
     @staticmethod
     def transform_percentage(field):
-        return str(double(field)*100) + '%'
+        return str(float(field)*100) + '%'
 
     @staticmethod
     def transform_interaction_types(field):
