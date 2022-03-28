@@ -13,19 +13,19 @@ func GetTimeFromTimestampStr(timestampStr string) time.Time {
 	return ts
 }
 
-func getTimezoneOffsetFromString(timezone string) string {
+func getTimezoneOffsetFromString(currentTime time.Time, timezone string) string {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return "+00:00"
 	}
 
-	return time.Now().In(loc).Format("-07:00")
+	return currentTime.In(loc).Format("-07:00")
 }
 
 // GetTimestampAsStrWithTimezone - Appends timezone doesn't converts.
 func GetTimestampAsStrWithTimezone(t time.Time, timezone string) string {
 	return fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d%s", t.Year(),
-		t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), getTimezoneOffsetFromString(timezone))
+		t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), getTimezoneOffsetFromString(t, timezone))
 }
 
 // This relies on fact of above parse.
@@ -73,6 +73,8 @@ func GetAllDatesAsTimestamp(fromUnix int64, toUnix int64, timezone string, isTim
 		tStr = GetTimestampAsStrWithTimezone(t, timezone)
 		rTimestamps = append(rTimestamps, t)
 		t = t.AddDate(0, 0, 1) // next day.
+		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone, isTimezoneEnabled)
+		t = now.New(t).BeginningOfDay()
 	}
 
 	return rTimestamps
@@ -100,6 +102,7 @@ func GetAllQuartersAsTimestamp(fromUnix int64, toUnix int64, timezone string, is
 		rTimestamps = append(rTimestamps, t)
 		// get the some date in next quarter, here it is 120+10 i.e. 10day in next quarter
 		t = t.AddDate(0, 0, 130) // next quarter.
+		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone, isTimezoneEnabled)
 		t = now.New(t).BeginningOfQuarter()
 	}
 
@@ -129,6 +132,7 @@ func GetAllMonthsAsTimestamp(fromUnix int64, toUnix int64, timezone string, isTi
 		rTimestamps = append(rTimestamps, t)
 		// get the some date in next month, here it can be 4th, 5th, or 6th
 		t = t.AddDate(0, 0, 35) // next week.
+		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone, isTimezoneEnabled)
 		t = now.New(t).BeginningOfMonth()
 	}
 
@@ -157,6 +161,8 @@ func GetAllWeeksAsTimestamp(fromUnix int64, toUnix int64, timezone string, isTim
 		tStr = GetTimestampAsStrWithTimezone(t, timezone)
 		rTimestamps = append(rTimestamps, t)
 		t = t.AddDate(0, 0, 7) // next week.
+		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone, isTimezoneEnabled)
+		t = now.New(t).BeginningOfWeek()
 	}
 
 	return rTimestamps
@@ -182,6 +188,8 @@ func GetAllHoursAsTimestamp(fromUnix int64, toUnix int64, timezone string, isTim
 		tStr = GetTimestampAsStrWithTimezone(t, timezone)
 		rTimestamps = append(rTimestamps, t)
 		t = t.Add(1 * time.Hour) // next hour.
+		t, _ = GetTimeFromUnixTimestampWithZone(t.Unix(), timezone, isTimezoneEnabled)
+		t = now.New(t).BeginningOfHour()
 	}
 
 	return rTimestamps

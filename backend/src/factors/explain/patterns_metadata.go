@@ -7,9 +7,11 @@ import (
 	"factors/model/store"
 	T "factors/task"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GetChunksMetaData(projectId, modelId uint64) (metadata []T.ChunkMetaData, errmsg error) {
@@ -57,15 +59,38 @@ func GetChunksMetaData(projectId, modelId uint64) (metadata []T.ChunkMetaData, e
 	return response, nil
 }
 func MergeMetaData(result []T.ChunkMetaData, new T.ChunkMetaData, eventsKeyMap *map[string]bool) []T.ChunkMetaData {
+	filterEvents := getToBeFilteredKeysInMetaData()
 	if len(result) == 0 {
-		result = append(result, new)
+		var newResult T.ChunkMetaData
+		for _, event := range new.Events {
+			isBlacklisted := false
+			for filter := range filterEvents {
+				if strings.HasPrefix(event, filter) {
+					isBlacklisted = true
+				}
+			}
+			if isBlacklisted == false {
+				newResult.Events = append(newResult.Events, event)
+			}
+		}
+		newResult.EventProperties = new.EventProperties
+		newResult.UserProperties = new.UserProperties
+		result = append(result, newResult)
 		return result
 	}
 	// for events
 	for _, event := range new.Events {
 		if _, exists := (*eventsKeyMap)[event]; !exists {
 			(*eventsKeyMap)[event] = true
-			result[0].Events = append(result[0].Events, event)
+			isBlacklisted := false
+			for filter := range filterEvents {
+				if strings.HasPrefix(event, filter) {
+					isBlacklisted = true
+				}
+			}
+			if isBlacklisted == false {
+				result[0].Events = append(result[0].Events, event)
+			}
 		}
 	}
 	// for properties
@@ -114,4 +139,11 @@ func DedupArray(input []string) []string {
 		}
 	}
 	return values
+}
+func getToBeFilteredKeysInMetaData() map[string]bool {
+	keys := map[string]bool{
+		"$session[":       true,
+		"$AllActiveUsers": true,
+	}
+	return keys
 }

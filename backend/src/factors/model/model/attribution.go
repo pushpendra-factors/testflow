@@ -1470,7 +1470,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) {
 				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
-				conversionFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(conversionFunnelConversionCPC[j]+grandTotalRow[i].(float64), U.DefaultPrecision)
+				conversionFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(conversionFunnelConversionCPC[j]+row[i].(float64), U.DefaultPrecision)
 			}
 
 			if grandTotalRow[keyIndex+12].(float64) > 0 {

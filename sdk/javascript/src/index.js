@@ -122,7 +122,6 @@ function getUserId() {
 function processQueue() {
     if(factors && factors.q && factors.q.length > 0 && !isQueueBeingProcessed) {
         isQueueBeingProcessed = true;
-        console.log("Queue");
         logger.debug("Starting Queue", false);
         try{
             while(factors.q.length > 0) {
@@ -188,6 +187,10 @@ if (process.env.NODE_ENV === "development") {
 if(factors && factors.TOKEN) {
     init(factors.TOKEN, factors.INIT_PARAMS, INIT_CALLBACK);
 }
+
+window.addEventListener('FACTORS_INIT_EVENT', function(e) {
+    init(factors.TOKEN, factors.INIT_PARAMS, INIT_CALLBACK);
+})
 
 
 window.addEventListener('FACTORS_INITIALISED_EVENT', function(e){
