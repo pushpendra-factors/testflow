@@ -422,6 +422,10 @@ func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.Pro
 		*settings.IntAdwordsCustomerAccountId = strings.Join(cleanAdwordsAccountIds, ",")
 	}
 
+	if settings.IntGoogleOrganicURLPrefixes != nil {
+		*settings.IntGoogleOrganicURLPrefixes = strings.ReplaceAll(*settings.IntGoogleOrganicURLPrefixes, " ", "")
+	}
+
 	if errCode := store.satisfiesProjectSettingForeignConstraints(*settings); errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}

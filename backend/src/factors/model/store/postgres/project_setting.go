@@ -309,6 +309,10 @@ func (pg *Postgres) UpdateProjectSettings(projectId uint64, settings *model.Proj
 		*settings.IntAdwordsCustomerAccountId = strings.Join(cleanAdwordsAccountIds, ",")
 	}
 
+	if settings.IntGoogleOrganicURLPrefixes != nil {
+		*settings.IntGoogleOrganicURLPrefixes = strings.ReplaceAll(*settings.IntGoogleOrganicURLPrefixes, " ", "")
+	}
+
 	if settings.IntHubspotApiKey != "" {
 		existingSettings, status := pg.GetProjectSetting(projectId)
 		if status != http.StatusFound {
