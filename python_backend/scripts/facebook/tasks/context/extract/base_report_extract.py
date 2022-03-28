@@ -152,7 +152,7 @@ class BaseReportExtract(BaseExtract):
             self.records = JsonUtil.read(records_string)
             return "success"
 
-    def transform_array_metrics_with_action_type(records):
+    def transform_array_metrics_with_action_type(self, records):
         new_records = []
         keys= [COST_PER_ACTION_TYPE, WEBSITE_PURCHASE_ROAS]
         for record in records:
