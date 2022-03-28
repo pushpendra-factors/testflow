@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -24,6 +25,48 @@ import (
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
 const eventsLimitForProperites = 50000
 const OneDayInSeconds int64 = 24 * 60 * 60
+
+func (store *Postgres) GetHubspotFormEvents(projectID uint64, userId string, timestamps[] interface{}) ([]model.Event, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"user_id":    userId,
+		"timestamps":  timestamps,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if projectID < 1 || userId == "" {
+		log.Error("GetHubspotFormEvents Failed. Invalid projectId or userId")
+		return nil, http.StatusBadRequest
+	}
+
+	if len(timestamps) == 0 {
+		log.WithField("timestamps", timestamps).Error("GetHubspotFormEvents Failed. no available timestamp.")
+		return nil, http.StatusBadRequest
+	}
+	
+	db := C.GetServices().Db
+
+	eventName, status := store.GetEventName(U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION, projectID)
+	if status != http.StatusFound {
+		log.Error("Failed to get event name")
+		return nil, http.StatusInternalServerError
+	}
+
+	var keyValues []interface{}
+	keyValues = append(keyValues, projectID, userId, timestamps, eventName.ID)
+	stmnt := "project_id = ? AND user_id = ? AND timestamp in ( ? ) AND event_name_id = ?"
+
+	var events []model.Event
+	err := db.Model(&model.Event{}).Where(stmnt, keyValues...).Find(&events).Error
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Failed to get the rows from events table")
+		return events, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return nil, http.StatusNotFound
+	}
+	return events, http.StatusFound
+}
 
 func isDuplicateCustomerEventIdError(err error) bool {
 	return err.Error() == error_Duplicate_event_customerEventID

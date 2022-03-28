@@ -234,6 +234,7 @@ type Configuration struct {
 	OnlyKPICaching                                  int
 	SkipKPICaching                                  int
 	EnableBingAdsAttribution                        bool
+	EnableHubspotFormsEventsByProjectID             string
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
 }
@@ -2093,6 +2094,13 @@ func GetHubspotBatchInsertBatchSize() int {
 	return GetConfig().HubspotBatchInsertBatchSize
 }
 
+func EnableHubspotFormsEventsByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableHubspotFormsEventsByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
+}
 func GetUsageBasedDashboardCaching() int {
 	return configuration.UsageBasedDashboardCaching
 }
@@ -2112,6 +2120,7 @@ func UseHubspotBatchInsertByProjectID(projectID uint64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+
 }
 
 func GetAuth0Info() Auth0Conf {
