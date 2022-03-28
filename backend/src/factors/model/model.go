@@ -572,4 +572,10 @@ type Model interface {
 	// integration document
 	InsertIntegrationDocument(doc model.IntegrationDocument) error
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
+
+	//crm
+	CreateCRMUser(crmUser *model.CRMUser) (int, error)
+	CreateCRMGroup(crmGroup *model.CRMGroup) (int, error)
+	CreateCRMActivity(crmActivity *model.CRMActivity) (int, error)
+	CreateCRMRelationship(crmRelationship *model.CRMRelationship) (int, error)
 }
