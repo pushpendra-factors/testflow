@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -46,6 +47,13 @@ func Signin(c *gin.Context) {
 
 	email := params.Email
 	password := params.Password
+
+	// Basic email sanity check.
+	if !U.IsEmail(strings.TrimSpace(email)) {
+		logCtx.WithError(err).Error("Invalid email provided.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
 
 	agent, code := store.GetStore().GetAgentByEmail(email)
 	if code == http.StatusInternalServerError {

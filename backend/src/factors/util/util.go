@@ -1198,3 +1198,27 @@ func HasPrefixFromList(propKey string, prefixList []string) bool {
 	}
 	return false
 }
+
+func HasMaliciousContent(reqPayload string) (bool, error) {
+	lcasePayload := strings.ToLower(reqPayload)
+
+	// Add a better SQL matching logic. Below will block all payloads with select, delete etc.,
+	hasSQLStatement, _ := regexp.MatchString(
+		"(?i)((SELECT|DELETE)\\s+.+\\s+FROM\\s+.+)|(DELETE\\s+FROM\\s+.+)|(UPDATE\\s+.+\\s+SET\\s+.+)|(INSERT\\s+INTO\\s+.+VALUES.+)|((ALTER|DROP)\\s+TABLE\\s+.+)",
+		lcasePayload,
+	)
+	if hasSQLStatement {
+		return hasSQLStatement, errors.New("sql on payload")
+	}
+
+	hasJSScript := strings.Contains(lcasePayload, "<script") ||
+		strings.Contains(lcasePayload, "\\u003cscript") ||
+		strings.Contains(lcasePayload, "</script") ||
+		strings.Contains(lcasePayload, "\\u003c/script")
+
+	if hasJSScript {
+		return hasJSScript, errors.New("jsscript tags on payload")
+	}
+
+	return false, nil
+}

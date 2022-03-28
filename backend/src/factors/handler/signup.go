@@ -7,6 +7,7 @@ import (
 	"factors/model/store"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	C "factors/config"
@@ -38,6 +39,14 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	// Basic email sanity check.
+	if !U.IsEmail(strings.TrimSpace(params.Email)) {
+		logCtx.WithError(err).Error("Invalid email provided.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	email := params.Email
 	phone := params.Phone
 	planCode := params.PlanCode
@@ -67,6 +76,7 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusFound)
 		return
 	}
+
 	createAgentParams := model.CreateAgentParams{
 		Agent:    &model.Agent{Email: email, Phone: phone, LastName: lastName, FirstName: firstName, CompanyURL: companyUrl, SubscribeNewsletter: subscribeNewsletter},
 		PlanCode: planCode,

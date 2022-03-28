@@ -832,5 +832,31 @@ func SkipDemoProjectWriteAccess() gin.HandlerFunc {
 			c.Next()
 		}
 	}
+}
 
+func BlockMaliciousPayload() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var bodyBytes []byte
+		if c.Request.Body != nil {
+			var err error
+			bodyBytes, err = ioutil.ReadAll(c.Request.Body)
+			if err != nil {
+				log.WithError(err).Error("Failed to read request paylaod.")
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			}
+		}
+
+		if exists, code := U.HasMaliciousContent(string(bodyBytes)); exists {
+			log.WithField("client_ip", c.ClientIP()).
+				WithField("user_agent", c.Request.UserAgent()).
+				WithError(code).Error("Malicious content on payload.")
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		// Restore the io.ReadCloser to its original state
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		c.Next()
+	}
 }
