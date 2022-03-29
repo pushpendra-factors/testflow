@@ -182,12 +182,14 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 
 // DataClient salesforce data client handles data query from salesforce
 type DataClient struct {
+	ProjectID      uint64
 	accessToken    string
 	instanceURL    string
 	isFirstRun     bool
 	nextBatchRoute string
 	queryURL       string
 	APICall        int
+	ObjectName     string
 }
 
 // NewSalesforceDataClient create new instance of DataClient for fetching data from salesforce
@@ -223,7 +225,7 @@ func getSalesforceObjectFieldlList(objectName, accessToken, instanceURL string) 
 	return fields, nil
 }
 
-func (s *DataClient) getRecordByObjectNameANDFilter(objectName, filterSmnt string) (*DataClient, error) {
+func (s *DataClient) getRecordByObjectNameANDFilter(projectID uint64, objectName, filterSmnt string) (*DataClient, error) {
 	fields, err := getSalesforceObjectFieldlList(objectName, s.accessToken, s.instanceURL)
 	if err != nil {
 		return nil, err
@@ -233,17 +235,19 @@ func (s *DataClient) getRecordByObjectNameANDFilter(objectName, filterSmnt strin
 	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s+WHERE+%s", fieldList, objectName, url.QueryEscape(filterSmnt))
 	queryURL := s.instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + queryStmnt
 	dataClient := &DataClient{
+		ProjectID:      projectID,
 		accessToken:    s.accessToken,
 		instanceURL:    s.instanceURL,
 		queryURL:       queryURL,
 		isFirstRun:     true,
 		nextBatchRoute: "",
+		ObjectName:     objectName,
 	}
 
 	return dataClient, nil
 }
 
-func (s *DataClient) getRecordByObjectNameANDStartTimestamp(objectName string, lookbackTimestamp int64) (*DataClient, error) {
+func (s *DataClient) getRecordByObjectNameANDStartTimestamp(projectID uint64, objectName string, lookbackTimestamp int64) (*DataClient, error) {
 	fields, err := getSalesforceObjectFieldlList(objectName, s.accessToken, s.instanceURL)
 	if err != nil {
 		return nil, err
@@ -270,11 +274,13 @@ func (s *DataClient) getRecordByObjectNameANDStartTimestamp(objectName string, l
 	}
 
 	dataClient := &DataClient{
+		ProjectID:      projectID,
 		accessToken:    s.accessToken,
 		instanceURL:    s.instanceURL,
 		queryURL:       queryURL,
 		isFirstRun:     true,
 		nextBatchRoute: "",
+		ObjectName:     objectName,
 	}
 
 	return dataClient, nil
@@ -312,6 +318,8 @@ func (s *DataClient) getNextBatch() ([]model.SalesforceRecord, bool, error) {
 
 	s.nextBatchRoute = res.NextRecordsURL
 	s.isFirstRun = false
+	log.WithFields(log.Fields{"project_id": s.ProjectID, "object_name": s.ObjectName, "total_api_call": s.APICall, "records": len(res.Records)}).
+		Info("Downloaded salesforce objects.")
 
 	return res.Records, res.Done, nil
 }
@@ -343,7 +351,7 @@ func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
 }
 
 // GetObjectRecordsByIDs get list of records by Id and object type
-func (s *DataClient) GetObjectRecordsByIDs(objectName string, IDs []string) (*DataClient, error) {
+func (s *DataClient) GetObjectRecordsByIDs(projectID uint64, objectName string, IDs []string) (*DataClient, error) {
 	if objectName == "" {
 		return nil, errors.New("missing required fields")
 	}
@@ -360,11 +368,13 @@ func (s *DataClient) GetObjectRecordsByIDs(objectName string, IDs []string) (*Da
 	queryURL := s.instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + queryStmnt
 
 	dataClient := &DataClient{
+		ProjectID:      projectID,
 		accessToken:    s.accessToken,
 		instanceURL:    s.instanceURL,
 		isFirstRun:     true,
 		queryURL:       queryURL,
 		nextBatchRoute: "",
+		ObjectName:     objectName,
 	}
 
 	return dataClient, nil
@@ -429,7 +439,7 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 
 		batchedCampaignMemberIDs := U.GetStringListAsBatch(campaignMemberIDs, 50)
 		for i := range batchedCampaignMemberIDs {
-			paginatedCampaignMembersByID, err := salesforceDataClient.GetObjectRecordsByIDs(model.SalesforceDocumentTypeNameCampaignMember, batchedCampaignMemberIDs[i])
+			paginatedCampaignMembersByID, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, model.SalesforceDocumentTypeNameCampaignMember, batchedCampaignMemberIDs[i])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to initialize salesforce data client to getAllCampaignMemberContactAndLeadRecords.")
 				return nil, nil, 0, 0, err
@@ -467,7 +477,7 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 	for campaignMemberObject, campaignMemberObjectIDs := range map[string][]string{model.SalesforceDocumentTypeNameLead: campaignMemberLeadIDs, model.SalesforceDocumentTypeNameContact: campaignMemberContactIDs} {
 		batchedCampaignMemberObjectIDs := U.GetStringListAsBatch(campaignMemberObjectIDs, 50)
 		for i := range batchedCampaignMemberObjectIDs {
-			paginatedObjectsByID, err := salesforceDataClient.GetObjectRecordsByIDs(campaignMemberObject, batchedCampaignMemberObjectIDs[i])
+			paginatedObjectsByID, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, campaignMemberObject, batchedCampaignMemberObjectIDs[i])
 			if err != nil {
 				logCtx.WithFields(log.Fields{"object_name": campaignMemberObject}).WithError(err).Error("Failed to re-initialze salesforce data cleint for lead and contact ids.")
 				return nil, nil, 0, 0, err
@@ -505,7 +515,7 @@ func syncOpportunityPrimaryContact(projectID uint64, primaryContactIDs []string,
 		return nil, 0, true
 	}
 
-	paginatedContacts, err := salesforceDataClient.GetObjectRecordsByIDs(model.SalesforceDocumentTypeNameContact, primaryContactIDs)
+	paginatedContacts, err := salesforceDataClient.GetObjectRecordsByIDs(projectID, model.SalesforceDocumentTypeNameContact, primaryContactIDs)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to initialize salesforce data client for sync oppportunities contact.")
 		return nil, 0, true
@@ -561,7 +571,7 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 		}
 
 		filterStmnt := "ConvertedOpportunityId IN (" + "'" + strings.Join(batchedOppIDs[bi], "','") + "')"
-		paginatedLeads, err := salesforceDataClient.getRecordByObjectNameANDFilter(model.SalesforceDocumentTypeNameLead, filterStmnt)
+		paginatedLeads, err := salesforceDataClient.getRecordByObjectNameANDFilter(projectID, model.SalesforceDocumentTypeNameLead, filterStmnt)
 		if err != nil {
 			return nil, nil, 0, err
 		}
@@ -655,7 +665,7 @@ func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceUR
 		return nil, 0, 0, 0, err
 	}
 
-	paginatedOpportunitiesByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(model.SalesforceDocumentTypeNameOpportunity, timestamp)
+	paginatedOpportunitiesByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(projectID, model.SalesforceDocumentTypeNameOpportunity, timestamp)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to initialize salesforce data client for opportunity sync.")
 		return nil, 0, 0, 0, err
@@ -757,7 +767,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 	allCampaignMemberIDs := make([]string, 0)
 	allCampaignIDs := make(map[string]bool)
 
-	paginatedObjectsByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(objectName, timestamp)
+	paginatedObjectsByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(ps.ProjectID, objectName, timestamp)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to initialize salesforce data client.")
 		return salesforceObjectStatus, err
@@ -854,7 +864,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 
 		batchedDocIDs := U.GetStringListAsBatch(docIDs, 50)
 		for i := range batchedDocIDs {
-			paginatedObjectByID, err := salesforceDataClient.GetObjectRecordsByIDs(docObjectName, batchedDocIDs[i])
+			paginatedObjectByID, err := salesforceDataClient.GetObjectRecordsByIDs(ps.ProjectID, docObjectName, batchedDocIDs[i])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to re-initialize salesforce data client.")
 				return salesforceObjectStatus, err
