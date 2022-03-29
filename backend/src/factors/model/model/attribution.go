@@ -157,6 +157,7 @@ var KeyDimensionToHeaderMap = map[string]string{
 	FieldLandingPageUrl:   "LandingPage",
 }
 var AttributionFixedHeadersLandingPage = []string{"Sessions", "Users", "Average Session Time", "PageViews"}
+var AttributionFixedHeadersPostPostConversionLanding = []string{"UserConversionRate(%)", "Compare - Users", "Compare UserConversionRate(%)"}
 
 // ToDo change here as well.
 func (query *AttributionQuery) TransformDateTypeFilters() error {
@@ -758,7 +759,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, go
 		result.Headers = append(result.Headers, AttributionFixedHeadersLandingPage...)
 		conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
 		result.Headers = append(result.Headers, conversionEventUsers)
-		result.Headers = append(result.Headers, "UserConversionRate(%)")
+		result.Headers = append(result.Headers, AttributionFixedHeadersPostPostConversionLanding...)
 		if len(query.LinkedEvents) > 0 {
 			for _, event := range query.LinkedEvents {
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
@@ -1146,12 +1147,13 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 
 // GetRowsByMapsLandingPage Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
 func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *map[string]*AttributionData,
-	linkedEvents []QueryEventWithProperties) [][]interface{} {
+	linkedEvents []QueryEventWithProperties, isCompare bool) [][]interface{} {
 
 	//Sessions, (users), (AvgSessionTime), (pageViews)
-	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0), int64(0),
-		// ConversionEventCount, ConvUserRate
-		float64(0), float64(0)}
+	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0), int64(0)}
+
+	//ConversionEventCount, ConvUserRate, ConversionEventCompareCount, compareConvUserRate
+	defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0))
 
 	var contentGroups []interface{}
 	for i := 0; i < len(contentGroupNamesList); i++ {
@@ -1189,11 +1191,25 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
 			row = append(row, data.Sessions, data.Users, data.AvgSessionTime, data.PageViews, data.ConversionEventCount[0])
 			var userConvRate []float64
+
+			var compareUserConvRate []float64
+
 			userConvRate = append(userConvRate, float64(0))
 			if data.Users > 0 {
 				userConvRate[0], _ = U.FloatRoundOffWithPrecision(data.ConversionEventCount[0]/float64(data.Users)*100, U.DefaultPrecision)
 			}
-			row = append(row, userConvRate[0])
+			if isCompare {
+				compareUserConvRate = append(compareUserConvRate, float64(0))
+
+				if data.Users > 0 {
+					compareUserConvRate[0], _ = U.FloatRoundOffWithPrecision(data.ConversionEventCompareCount[0]/float64(data.Users)*100, U.DefaultPrecision)
+				}
+				row = append(row, userConvRate[0])
+				row = append(row, data.ConversionEventCompareCount[0])
+				row = append(row, compareUserConvRate[0])
+			} else {
+				row = append(row, userConvRate[0], float64(0), float64(0))
+			}
 			row = append(row, getLinkedEventColumnAsInterfaceListLandingPage(data.ConversionEventCount[0], data.LinkedEventsCount, len(linkedEvents))...)
 			rows = append(rows, row)
 		}
@@ -1205,9 +1221,9 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 	return rows
 }
 
-func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry) *QueryResult {
+func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
 
-	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents)
+	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
 	result := &QueryResult{}
 	AddHeadersByAttributionKey(result, query, nil)
 
@@ -1415,8 +1431,9 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		row1[keyIndex+4] = row1[keyIndex+4].(int64) + row2[keyIndex+4].(int64) // PageViews
 
 		row1[keyIndex+5] = row1[keyIndex+5].(float64) + row2[keyIndex+5].(float64) // Conversion.
+		row1[keyIndex+7] = row1[keyIndex+7].(float64) + row2[keyIndex+7].(float64) // Compare Conversion.
 
-		//conversion rate
+		//normal conversion rate
 		if row1[keyIndex+2].(int64) > 0 {
 			row1[keyIndex+6], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+5].(float64)/float64(row1[keyIndex+2].(int64))*100, U.DefaultPrecision)
 		} else {
@@ -1424,8 +1441,16 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 			row1[keyIndex+6] = float64(0)
 		}
 
+		//compare conversion rate
+		if row1[keyIndex+2].(int64) > 0 {
+			row1[keyIndex+8], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+7].(float64)/float64(row1[keyIndex+2].(int64))*100, U.DefaultPrecision)
+		} else {
+			row1[keyIndex+2] = int64(0)
+			row1[keyIndex+8] = float64(0)
+		}
+
 		// Remaining linked funnel events & CPCs
-		for i := keyIndex + 7; i < len(row1); i += 2 {
+		for i := keyIndex + 9; i < len(row1); i += 2 {
 			row1[i] = row1[i].(float64) + row2[i].(float64)
 			// Funnel - User Conversion Rate (%)
 			if row1[keyIndex+5].(float64) > 0 {
@@ -1750,8 +1775,8 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		grandTotalRow = append(grandTotalRow, "Grand Total")
 	}
 
-	// Sessions, (users), (AvgSessionTime), (pageViews), ConversionEventCount, ConvUserRate
-	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0), int64(0), float64(0), float64(0)}
+	// Sessions, (users), (AvgSessionTime), (pageViews), ConversionEventCount, ConvUserRate, ConversionEventCompareCount, compareConvUserRate
+	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0), int64(0), float64(0), float64(0), float64(0), float64(0)}
 
 	grandTotalRow = append(grandTotalRow, defaultMatchingRow...)
 
@@ -1777,13 +1802,15 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		grandTotalRow[keyIndex+4] = grandTotalRow[keyIndex+4].(int64) + row[keyIndex+4].(int64)     // PageViews.
 		grandTotalRow[keyIndex+5] = grandTotalRow[keyIndex+5].(float64) + row[keyIndex+5].(float64) // Conversion.
 
+		grandTotalRow[keyIndex+7] = grandTotalRow[keyIndex+7].(float64) + row[keyIndex+7].(float64) // Compare Conversion.
+
 		if row[keyIndex+1].(int64) > 0 {
 			AvgSessionTimeMultipliedSessionAST = AvgSessionTimeMultipliedSessionAST + row[keyIndex+3].(float64)*float64(row[keyIndex+1].(int64))
 			SessionsAvgSessionTimeAST = SessionsAvgSessionTimeAST + row[keyIndex+1].(int64)
 		}
 
 		// Remaining linked funnel events & Conversion rates
-		for i := keyIndex + 7; i < len(grandTotalRow); i += 2 {
+		for i := keyIndex + 9; i < len(grandTotalRow); i += 2 {
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 
 			if grandTotalRow[keyIndex+5].(float64) > 0 {
@@ -1802,6 +1829,12 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		grandTotalRow[keyIndex+6], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+5].(float64)/float64(grandTotalRow[keyIndex+2].(int64))*100, U.DefaultPrecision) //ConvUserRate
 	} else {
 		grandTotalRow[keyIndex+6] = float64(0)
+	}
+
+	if grandTotalRow[keyIndex+2].(int64) > 0 {
+		grandTotalRow[keyIndex+8], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+7].(float64)/float64(grandTotalRow[keyIndex+2].(int64))*100, U.DefaultPrecision) // conversion rate
+	} else {
+		grandTotalRow[keyIndex+8] = float64(0)
 	}
 
 	rows = append([][]interface{}{grandTotalRow}, rows...)

@@ -238,7 +238,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
-		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx)
+		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
 		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
 		queryStartTime = time.Now().UTC().Unix()
 

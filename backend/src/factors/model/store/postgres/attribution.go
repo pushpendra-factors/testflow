@@ -216,7 +216,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
-		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx)
+		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
 	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
