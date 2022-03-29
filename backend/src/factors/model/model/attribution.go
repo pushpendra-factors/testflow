@@ -1689,7 +1689,7 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 			}
 
 			if grandTotalRow[keyIndex+12].(float64) > 0 {
-				grandTotalRow[i+2], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+12].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate
+				grandTotalRow[i+2], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+12].(float64)*100, U.DefaultPrecision) // Funnel - User Conversion - CPC Rate
 			} else {
 				grandTotalRow[i+2] = float64(0)
 			}
@@ -1814,7 +1814,7 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 
 			if grandTotalRow[keyIndex+5].(float64) > 0 {
-				grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+5].(float64), U.DefaultPrecision) // Funnel - User Conversion rate
+				grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+5].(float64)*100, U.DefaultPrecision) // Funnel - User Conversion rate
 			} else {
 				grandTotalRow[i+1] = float64(0)
 			}
