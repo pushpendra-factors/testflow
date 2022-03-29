@@ -23,7 +23,7 @@ const ViewSetup = ({ activeProject }) => {
             <pre className={'fa-code-block my-4'}>
             <code>
 {`<script>
-(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="${assetURL}";s.async=true;d=document.getElementsByTagName("script")[0];document.head.insertBefore(e,d)})(function(){factors.init("${projectToken}")})
+(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="${assetURL}";s.async=true;d=document.getElementsByTagName("script")[0];document.head.insertBefore(s,d)})(function(){factors.init("${projectToken}")})
 </script>`}
             </code>
             </pre>

@@ -815,8 +815,13 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query, groupIds []int
 				}
 			}
 		}
+		isAggregateOnProperty := false
+		if q.AggregateProperty != "" && q.AggregateProperty != "1" {
+			isAggregateOnProperty = true
+		}
+
 		bucketedFromName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys :=
-			appendNumericalBucketingSteps(&qStmnt, &qParams, q.GroupByProperties,
+			appendNumericalBucketingSteps(isAggregateOnProperty, &qStmnt, &qParams, q.GroupByProperties,
 				stepFunnelName, stepTimeSelect, false,
 				strings.Join(funnelCountAliases, ", "))
 		aggregateSelectKeys = bucketedSelectKeys

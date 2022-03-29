@@ -682,6 +682,12 @@ func (store *MemSQL) BuildAndUpsertDocument(projectID uint64, objectName string,
 		return fmt.Errorf("error while creating document Status %d", status)
 	}
 
+	if status == http.StatusConflict {
+		log.WithFields(log.Fields{"project_id": projectID, "object_name": objectName}).Info("Skipped inserting salesforce record.")
+	} else {
+		log.WithFields(log.Fields{"project_id": projectID, "object_name": objectName}).Info("Successfully inserted salesforce record.")
+	}
+
 	return nil
 }
 
