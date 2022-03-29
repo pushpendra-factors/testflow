@@ -91,14 +91,20 @@ import {
   SET_NAVIGATED_FROM_DASHBOARD,
   UPDATE_CHART_TYPES,
   SET_SAVED_QUERY_SETTINGS,
+  UPDATE_PIVOT_CONFIG,
+  DEFAULT_PIVOT_CONFIG,
 } from './constants';
 import {
   getValidGranularityOptions,
   shouldDataFetch,
 } from '../../utils/dataFormatter';
 import ProfileComposer from '../../components/ProfileComposer';
-import { IconAndTextSwitchQueryType } from './coreQuery.helpers';
+import {
+  IconAndTextSwitchQueryType,
+  getSavedPivotConfig,
+} from './coreQuery.helpers';
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
+import { EMPTY_OBJECT } from '../../utils/global';
 
 function CoreQuery({
   activeProject,
@@ -195,10 +201,8 @@ function CoreQuery({
 
   const [queryOpen, setQueryOpen] = useState(true);
 
-  const {
-    show_criteria: result_criteria,
-    performance_criteria: user_type,
-  } = useSelector((state) => state.analyticsQuery);
+  const { show_criteria: result_criteria, performance_criteria: user_type } =
+    useSelector((state) => state.analyticsQuery);
 
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
@@ -227,6 +231,13 @@ function CoreQuery({
   const updateChartTypes = useCallback(
     (payload) => {
       updateLocalReducer(UPDATE_CHART_TYPES, payload);
+    },
+    [updateLocalReducer]
+  );
+
+  const updatePivotConfig = useCallback(
+    (payload) => {
+      updateLocalReducer(UPDATE_PIVOT_CONFIG, payload);
     },
     [updateLocalReducer]
   );
@@ -260,15 +271,25 @@ function CoreQuery({
       setShowResult(true);
       setQuerySaved(isQuerySaved);
       if (!isQuerySaved) {
+        //reset pivot config
+        updatePivotConfig({ ...DEFAULT_PIVOT_CONFIG });
         setNavigatedFromDashboard(false);
-        updateSavedQuerySettings({});
+        updateSavedQuerySettings(EMPTY_OBJECT);
       } else {
         if (queryType !== QUERY_TYPE_CAMPAIGN) {
-          //update the chart type to the saved chart type
           const selectedReport = savedQueries.find(
             (elem) => elem.id === isQuerySaved.id
           );
 
+          // update pivot config
+          const pivotConfig = getSavedPivotConfig({
+            queryType,
+            selectedReport,
+          });
+          console.log('pivotConfig', pivotConfig);
+          updatePivotConfig(pivotConfig);
+
+          //update the chart type to the saved chart type
           const savedChartType = _.get(
             selectedReport,
             'settings.chart',
@@ -1382,6 +1403,7 @@ function CoreQuery({
               setNavigatedFromDashboard,
               resetComparisonData,
               handleCompareWithClick,
+              updatePivotConfig,
             }}
           >
             <AnalysisResultsPage

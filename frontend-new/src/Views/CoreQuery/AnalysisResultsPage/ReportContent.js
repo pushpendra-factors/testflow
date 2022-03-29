@@ -15,7 +15,6 @@ import {
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
-  presentationObj,
   ReverseProfileMapper,
 } from '../../../utils/constants';
 import { Spin } from 'antd';
@@ -62,7 +61,7 @@ function ReportContent({
     metricsDropdown = <div className='mr-0'></div>;
 
   const {
-    coreQueryState: { chartTypes, navigatedFromDashboard },
+    coreQueryState: { chartTypes },
   } = useContext(CoreQueryContext);
 
   const chartType = useMemo(() => {

@@ -10,8 +10,7 @@ import styles from './PivotTableControls.module.scss';
 import ColumnsWrapper from './ColumnsWrapper';
 import ControlledComponent from '../ControlledComponent';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
-import { SVG } from '../factorsComponents';
-import { SORT_ORDERS } from './pivotTableControls.constants';
+import { PIVOT_SORT_ORDERS } from './pivotTableControls.constants';
 
 const PivotTableControls = ({
   selectedRows,
@@ -164,13 +163,13 @@ const PivotTableControls = ({
               dropdownMenu: functionsMenu,
               label: aggregatorName,
             })}
-            <ControlledComponent controller={rowOrder === SORT_ORDERS.ASCEND}>
+            <ControlledComponent controller={rowOrder === PIVOT_SORT_ORDERS.ASCEND}>
               <ArrowDownOutlined
                 onClick={onSortChange}
                 className='cursor-pointer'
               />
             </ControlledComponent>
-            <ControlledComponent controller={rowOrder === SORT_ORDERS.DESCEND}>
+            <ControlledComponent controller={rowOrder === PIVOT_SORT_ORDERS.DESCEND}>
               <ArrowUpOutlined
                 onClick={onSortChange}
                 className='cursor-pointer'
@@ -213,7 +212,7 @@ PivotTableControls.defaultProps = {
   rowOptions: EMPTY_ARRAY,
   functionOptions: EMPTY_ARRAY,
   aggregatorName: EMPTY_STRING,
-  rowOrder: SORT_ORDERS.ASCEND,
+  rowOrder: PIVOT_SORT_ORDERS.ASCEND,
   onRowAttributeRemove: _.noop,
   onColumnAttributeRemove: _.noop,
   onColumnChange: _.noop,
