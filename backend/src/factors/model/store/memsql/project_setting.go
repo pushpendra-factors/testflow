@@ -304,12 +304,13 @@ func getProjectSettingDefault() *model.ProjectSetting {
 	enabled := true
 	disabled := false
 	return &model.ProjectSetting{
-		AutoTrack:       &enabled,
-		AutoFormCapture: &enabled,
-		ExcludeBot:      &enabled,
-		IntSegment:      &enabled,
-		IntDrift:        &disabled,
-		IntClearBit:     &disabled,
+		AutoTrack:            &enabled,
+		AutoFormCapture:      &enabled,
+		AutoTrackSPAPageView: &disabled,
+		ExcludeBot:           &enabled,
+		IntSegment:           &enabled,
+		IntDrift:             &disabled,
+		IntClearBit:          &disabled,
 	}
 }
 

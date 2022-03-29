@@ -85,8 +85,12 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
       });  
   };
  
- 
-
+  const toggleAutoTrackSPAPageView = (checked) => { 
+    udpateProjectSettings(currentProjectId, { auto_track_spa_page_view: checked }).catch((err) => {
+      console.log('Oops! something went wrong-->', err);
+      message.error('Oops! something went wrong.');
+    }); 
+  };
 
   return (
     <Row>
@@ -101,6 +105,14 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
       <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Track standard events such as page_view, page_load time, page_spent_time and button clicks for each user</Text>
+    </Col>
+    <Col span={24}>
+      <div span={24} className={'flex flex-start items-center mt-8'}>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoTrackSPAPageView} defaultChecked={currentProjectSettings.auto_track_spa_page_view} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track Single Page Application</Text>
+      </div>
+    </Col>
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Track standard events such as page_view, page_load time, page_spent_time and button clicks for each user, on Single Page Applications like React, Angular, Vue, etc,.</Text>
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>

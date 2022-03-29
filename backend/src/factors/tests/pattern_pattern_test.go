@@ -106,9 +106,12 @@ func createEtsStruct(userId string, user1CreatedTime,
 }
 
 func TestPatternCountEvents(t *testing.T) {
-	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 1
+	cAlgoProps.Hmine_support = 0.0001
+	cAlgoProps.Hmine_persist = 0
 	// Count A -> B -> C
 	// U1: F, B, A, C, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: B, A, A, C, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
@@ -137,7 +140,7 @@ func TestPatternCountEvents(t *testing.T) {
 		etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 		for i, _ := range events {
-			err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
+			err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], cAlgoProps)
 			assert.Nil(t, err)
 		}
 
@@ -152,7 +155,7 @@ func TestPatternCountEvents(t *testing.T) {
 		etsList = createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 		for i, _ := range events {
-			err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
+			err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], cAlgoProps)
 			assert.Nil(t, err)
 			// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 		}
@@ -232,9 +235,12 @@ func TestPatternCountEvents(t *testing.T) {
 }
 
 func TestPatternGetPerUserCount(t *testing.T) {
-	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 1
+	cAlgoProps.Hmine_support = 0.0001
+	cAlgoProps.Hmine_persist = 0
 	// Count A -> B -> C
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
@@ -254,7 +260,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
+		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], cAlgoProps)
 		assert.Nil(t, err)
 		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -270,7 +276,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	etsList = createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
+		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], cAlgoProps)
 		assert.Nil(t, err)
 		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -468,11 +474,13 @@ func TestPatternGetPerUserCount(t *testing.T) {
 }
 
 func TestPatternEdgeConditions(t *testing.T) {
-	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	countOccurFlag := true
-
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 1
+	cAlgoProps.Hmine_support = 0.0001
+	cAlgoProps.Hmine_persist = 0
 	// Test NewPattern with empty array.
 	p, err := P.NewPattern([]string{}, nil)
 	assert.NotNil(t, err)
@@ -507,7 +515,7 @@ func TestPatternEdgeConditions(t *testing.T) {
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	etsList := createEtsStruct("user1", userCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
-	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.NotNil(t, err)
 
 	// Test Count Event, with wrong userId or wrong userCreatedTime.
@@ -518,16 +526,16 @@ func TestPatternEdgeConditions(t *testing.T) {
 	err = p.ResetForNewUser("user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
 	etsList = createEtsStruct("user1", userCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
-	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.Nil(t, err)
 	// Wrong userId.
 	etsList = createEtsStruct("user2", userCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
-	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.NotNil(t, err)
 	// Wrong userCreatedTime. Error is ignored.
 	etsList = createEtsStruct("user1", eventCreatedTime, eventCreatedTime, []string{"J"}, []uint{1})
 
-	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.Nil(t, err)
 
 	// Test Events out of order. Out of order events are noticed only when
@@ -558,10 +566,10 @@ func TestPatternEdgeConditions(t *testing.T) {
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
 	etsList = createEtsStruct(userId, userCreatedTime, event1CreatedTime, []string{"A"}, []uint{1})
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.Nil(t, err)
 	etsList = createEtsStruct(userId, userCreatedTime, event2CreatedTime, []string{"B"}, []uint{1})
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.NotNil(t, err)
 
 }
@@ -597,9 +605,12 @@ func TestAddNumericAndCategoricalProperties(t *testing.T) {
 }
 
 func TestPatternCountEventsOccurenceFalse(t *testing.T) {
-	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 1
+	cAlgoProps.Hmine_support = 0.0001
+	cAlgoProps.Hmine_persist = 0
 	// Count A -> B -> C
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
@@ -625,7 +636,7 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 	etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
+		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], cAlgoProps)
 		assert.Nil(t, err)
 		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -641,7 +652,7 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 	etsList = createEtsStruct(userId, user2CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
+		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], cAlgoProps)
 		assert.Nil(t, err)
 		// nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -721,9 +732,12 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 }
 
 func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
-	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 1
+	cAlgoProps.Hmine_support = 0.0001
+	cAlgoProps.Hmine_persist = 0
 	// Count A -> B -> C
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
@@ -743,7 +757,7 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 	etsList := createEtsStruct(userId, user1CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
+		err = p.CountForEvent(project.ID, userId, user1CreatedTime.Unix(), countOccurFlag, etsList[i], cAlgoProps)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -758,7 +772,7 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 	etsList = createEtsStruct(userId, user2CreatedTime, nextEventCreatedTime, events, cardinalities)
 
 	for i, _ := range events {
-		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], countVersion)
+		err = p.CountForEvent(project.ID, userId, user2CreatedTime.Unix(), countOccurFlag, etsList[i], cAlgoProps)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -956,10 +970,14 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 }
 
 func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
-	countVersion := 0
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	countOccurFlag := false
+
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 1
+	cAlgoProps.Hmine_support = 0.0001
+	cAlgoProps.Hmine_persist = 0
 
 	// Test NewPattern with empty array.
 	p, err := P.NewPattern([]string{}, nil)
@@ -999,7 +1017,7 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	userId := "user1"
 	etsList := createEtsStruct(userId, userCreatedTime, eventCreatedTime, events, cardinalities)
 
-	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, "user1", userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.NotNil(t, err)
 
 	// Test Count Event, with wrong userId or wrong userCreatedTime.
@@ -1012,17 +1030,17 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 
 	etsList = createEtsStruct(userId, userCreatedTime, eventCreatedTime, events, cardinalities)
 
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.Nil(t, err)
 	// Wrong userId.
 	events = []string{"J"}
 	etsList = createEtsStruct("user2", userCreatedTime, eventCreatedTime, events, cardinalities)
-	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, "user2", userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.NotNil(t, err)
 	etsList = createEtsStruct("user1", eventCreatedTime, eventCreatedTime, events, cardinalities)
 
 	// Wrong userCreatedTime. Error is ignored.
-	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, "user1", eventCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.Nil(t, err)
 
 	// Test Events out of order. Out of order events are noticed only when
@@ -1053,10 +1071,10 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
 	etsList = createEtsStruct(userId, userCreatedTime, event1CreatedTime, []string{"A"}, []uint{1})
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.Nil(t, err)
 	etsList = createEtsStruct(userId, userCreatedTime, event2CreatedTime, []string{"B"}, []uint{1})
-	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], countVersion)
+	err = p.CountForEvent(project.ID, userId, userCreatedTime.Unix(), countOccurFlag, etsList[0], cAlgoProps)
 	assert.NotNil(t, err)
 
 }
@@ -1068,7 +1086,10 @@ func TestPatternFilterTopKpatternTypes(t *testing.T) {
 	topIEEvents := []string{"ie1", "ie2", "ie3", "ie4", "ie5"}
 	topSpecEvents := []string{"$sp1", "$sp2", "$sp3", "$sp4", "$sp5"}
 	topCampEvents := []string{"$session[campaign=1]", "$session[campaign=2]", "$session[campaign=3]", "$session[campaign=4]", "$session[campaign=5]"}
-
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 1
+	cAlgoProps.Hmine_support = 0.0001
+	cAlgoProps.Hmine_persist = 0
 	patterns := make([]*P.Pattern, 0)
 	eNT := make(map[string]string)
 

@@ -222,6 +222,7 @@ type Model interface {
 	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int
 	AssociateSessionByEventIds(projectId uint64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
+	GetHubspotFormEvents(projectID uint64, userId string, timestamps[] interface{}) ([]model.Event, int)
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
@@ -571,4 +572,10 @@ type Model interface {
 	// integration document
 	InsertIntegrationDocument(doc model.IntegrationDocument) error
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
+
+	//crm
+	CreateCRMUser(crmUser *model.CRMUser) (int, error)
+	CreateCRMGroup(crmGroup *model.CRMGroup) (int, error)
+	CreateCRMActivity(crmActivity *model.CRMActivity) (int, error)
+	CreateCRMRelationship(crmRelationship *model.CRMRelationship) (int, error)
 }
