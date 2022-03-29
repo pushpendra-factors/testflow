@@ -1781,7 +1781,7 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 	grandTotalRow = append(grandTotalRow, defaultMatchingRow...)
 
 	// Remaining linked funnel events
-	for i := keyIndex + 7; i < len(headers); i++ {
+	for i := keyIndex + 9; i < len(headers); i++ {
 		grandTotalRow = append(grandTotalRow, float64(0))
 	}
 
