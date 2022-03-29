@@ -11,6 +11,69 @@ type AttributionKeyWeight struct {
 	Weight float64
 }
 
+func ApplyAttributionKPI(attributionType string,
+	method string,
+	sessions map[string]map[string]UserSessionData,
+	kpiData map[string]KPIInfo,
+	lookbackDays int, campaignFrom, campaignTo int64,
+	attributionKey string) (map[string][]AttributionKeyWeight, error) {
+
+	usersAttribution := make(map[string][]AttributionKeyWeight)
+	lookbackPeriod := int64(lookbackDays) * SecsInADay
+
+	for kpiID, kpiInfo := range kpiData {
+		// kpiID := kpiInfo.KpiID
+		conversionTime := kpiInfo.Timestamp
+		userSessions := sessions[kpiID]
+
+		var attributionKeys []AttributionKeyWeight
+		switch method {
+		case AttributionMethodFirstTouch:
+			attributionKeys = getFirstTouchId(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
+
+		case AttributionMethodLastTouch:
+			attributionKeys = getLastTouchId(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
+		case AttributionMethodUShaped:
+			attributionKeys = getUShaped(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
+
+		case AttributionMethodFirstTouchNonDirect:
+			attributionKeys = getFirstTouchNDId(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo, attributionKey)
+			break
+
+		case AttributionMethodLastTouchNonDirect:
+			attributionKeys = getLastTouchNDId(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo, attributionKey)
+			break
+
+		case AttributionMethodLinear:
+			attributionKeys = getLinearTouch(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
+		case AttributionMethodTimeDecay:
+			attributionKeys = getTimeDecay(attributionType, userSessions, conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
+			break
+
+		default:
+			break
+		}
+		// In case a successful attribution could not happen, remove converted user.
+		if len(attributionKeys) == 0 {
+			delete(usersAttribution, kpiID)
+			continue
+		}
+		usersAttribution[kpiID] = attributionKeys
+	}
+	return usersAttribution, nil
+}
+
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
 	sessions map[string]map[string]UserSessionData, coalUserIdConversionTimestamp map[string]int64,
 	lookbackDays int, campaignFrom, campaignTo int64, attributionKey string) (map[string][]AttributionKeyWeight, map[string]map[string][]AttributionKeyWeight, error) {
