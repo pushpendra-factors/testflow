@@ -584,7 +584,7 @@ func isGroupByTypeWithBuckets(groupProps []model.QueryGroupByProperty) bool {
 	return false
 }
 
-func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, groupProps []model.QueryGroupByProperty, refStepName, eventNameSelect string,
+func appendNumericalBucketingSteps(isAggregateOnProperty bool, qStmnt *string, qParams *[]interface{}, groupProps []model.QueryGroupByProperty, refStepName, eventNameSelect string,
 	isGroupByTimestamp bool, additionalSelectKeys string) (bucketedStepName, aggregateSelectKeys string, aggregateGroupBys, aggregateOrderBys []string) {
 	logFields := log.Fields{
 		"q_stmnt":                qStmnt,
@@ -601,6 +601,10 @@ func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, group
 	if eventNameSelect != "" {
 		bucketedSelect = bucketedSelect + eventNameSelect + ", "
 	}
+	if isAggregateOnProperty {
+		bucketedSelect = bucketedSelect + model.AliasAggr + ", "
+	}
+
 	var boundStepNames []string
 	var bucketedNumericValueFilter []string
 	for _, gbp := range groupProps {
