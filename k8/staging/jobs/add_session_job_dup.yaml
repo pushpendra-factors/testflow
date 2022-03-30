@@ -39,9 +39,9 @@ spec:
             - --memsql_cert
             - $(MEMSQL_CERTIFICATE)
             - --redis_host
-            - $(REDIS_HOST_2)
+            - $(REDIS_HOST)
             - --redis_port
-            - $(REDIS_PORT_2)
+            - $(REDIS_PORT)
             - --project_ids
             - "*"
             - --num_project_routines
@@ -59,9 +59,9 @@ spec:
             - --end_timestamp
             - "0"
             - --redis_host_ps
-            - $(REDIS_HOST_2)
+            - $(PERSISTENT_REDIS_HOST)
             - --redis_port_ps
-            - $(REDIS_PORT_2)
+            - $(PERSISTENT_REDIS_PORT)
             - --sentry_dsn
             - $(SENTRY_DSN)
             - --gcp_project_id

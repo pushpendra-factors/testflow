@@ -44,16 +44,6 @@ spec:
         args:
           - --env
           - $(ENV)
-          - --db_host
-          - $(DB_HOST)
-          - --db_port
-          - $(DB_PORT)
-          - --db_name
-          - $(POSTGRES_DB)
-          - --db_user
-          - $(POSTGRES_USER)
-          - --db_pass
-          - $(POSTGRES_PASSWORD)
           - --redis_host
           - $(REDIS_HOST)
           - --redis_port
@@ -89,8 +79,6 @@ spec:
         - configMapRef:
             name: config-env
         - configMapRef:
-            name: config-postgres
-        - configMapRef:
             name: config-redis
         - configMapRef:
             name: config-persistent-redis
@@ -98,8 +86,6 @@ spec:
             name: config-queue-redis
         - configMapRef:
             name: config-add-session-job
-        - secretRef:
-            name: secret-postgres
         - secretRef:
             name: secret-sentry
       initContainers:

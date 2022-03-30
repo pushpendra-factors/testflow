@@ -19,7 +19,7 @@ spec:
             imagePullPolicy: IfNotPresent
             envFrom:
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
           restartPolicy: Never
