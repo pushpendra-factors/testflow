@@ -391,6 +391,7 @@ CREATE TABLE IF NOT EXISTS project_billing_account_mappings (
 
 CREATE TABLE IF NOT EXISTS project_settings (
     project_id bigint,
+    attribution_config json,
     auto_track boolean NOT NULL DEFAULT FALSE, 
     auto_track_spa_page_view boolean NOT NULL DEFAULT FALSE,
     auto_form_capture boolean NOT NULL DEFAULT FALSE,
