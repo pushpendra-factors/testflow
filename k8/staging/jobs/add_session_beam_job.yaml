@@ -86,7 +86,7 @@ spec:
             - configMapRef:
                 name: config-env
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
             - configMapRef:
                 name: config-redis
             - configMapRef:
@@ -94,7 +94,7 @@ spec:
             - configMapRef:
                 name: config-add-session-job
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
             - secretRef:
                 name: secret-sentry
             - configMapRef:

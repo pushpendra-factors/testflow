@@ -58,16 +58,18 @@ spec:
           - $(ENV)
           - --port
           - $(SDK_SERVER_PORT)
-          - --db_host
-          - $(DB_HOST)
-          - --db_port
-          - $(DB_PORT)
-          - --db_name
-          - $(POSTGRES_DB)
-          - --db_user
-          - $(POSTGRES_USER)
-          - --db_pass
-          - $(POSTGRES_PASSWORD)
+          - --memsql_host
+          - $(MEMSQL_HOST)
+          - --memsql_port
+          - $(MEMSQL_PORT)
+          - --memsql_name
+          - $(MEMSQL_DB)
+          - --memsql_user
+          - $(MEMSQL_OLTP_USER)
+          - --memsql_pass
+          - $(MEMSQL_PASSWORD)
+          - --memsql_cert
+          - $(MEMSQL_CERTIFICATE)
           - --redis_host
           - $(REDIS_HOST)
           - --redis_port
@@ -118,7 +120,7 @@ spec:
         - configMapRef:
             name: config-env
         - configMapRef:
-            name: config-postgres
+            name: config-memsql        
         - configMapRef:
             name: config-redis
         - configMapRef:
@@ -128,9 +130,9 @@ spec:
         - configMapRef:
             name: config-add-session-job
         - secretRef:
-            name: secret-postgres
-        - secretRef:
             name: secret-sentry
+        - secretRef:
+            name: secret-memsql
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine

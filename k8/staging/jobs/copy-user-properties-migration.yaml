@@ -48,9 +48,9 @@ spec:
             - configMapRef:
                 name: config-env
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
             - secretRef:
                 name: secret-sentry
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
           restartPolicy: OnFailure

@@ -29,16 +29,18 @@ spec:
             - $(BUCKET_NAME)
             - --local_disk_tmp_dir
             - /tmp
-            - --db_host
-            - $(DB_HOST)
-            - --db_port
-            - $(DB_PORT)
-            - --db_name
-            - $(POSTGRES_DB)
-            - --db_user
-            - $(POSTGRES_USER)
-            - --db_pass
-            - $(POSTGRES_PASSWORD)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
             - --model_type
             - "monthly"
             - --start_time
@@ -53,7 +55,7 @@ spec:
             - configMapRef:
                 name: config-bucket
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
           restartPolicy: OnFailure
