@@ -67,9 +67,9 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 			kpiKeys = append(kpiKeys)
 
 			// get time
-			eventTime, err := time.Parse("2022-03-14T00:00:00+05:30", row[datetimeIdx].(string))
+			eventTime, err := time.Parse(time.RFC3339, row[datetimeIdx].(string))
 			if err != nil {
-				logCtx.WithError(err).WithFields(log.Fields{"timestamp": row[datetimeIdx]}).Error("couldn't parse the timestamp for KPI query")
+				logCtx.WithError(err).WithFields(log.Fields{"timestamp": row[datetimeIdx]}).Error("couldn't parse the timestamp for KPI query, continuing")
 				continue
 			}
 			kpiDetail.Timestamp = eventTime.Unix()
