@@ -78,7 +78,20 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 			// add kpi values
 			var kpiVals []float64
 			for i := valIdx; i < len(row); i++ {
-				kpiVals = append(kpiVals, row[i].(float64))
+				val := float64(0)
+				vInt, okInt := row[i].(int64)
+				if !okInt {
+					vFloat, okFloat := row[i].(float64)
+					if !okFloat {
+						logCtx.WithError(err).WithFields(log.Fields{"value": row[i]}).Error("couldn't parse the value for KPI query, continuing")
+						val = 0.0
+					} else {
+						val = vFloat
+					}
+				} else {
+					val = float64(vInt)
+				}
+				kpiVals = append(kpiVals, val)
 			}
 			kpiDetail.KpiValues = kpiVals
 
