@@ -9,6 +9,7 @@ import {
   CHART_TYPE_HORIZONTAL_BAR_CHART,
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_TABLE,
+  CHART_TYPE_PIVOT_CHART,
 } from '../../../utils/constants';
 
 export const addShadowToHeader = () => {
@@ -50,6 +51,15 @@ export const getChartType = ({
       breakdown.length > 3 &&
       chartTypes[queryType][key] === CHART_TYPE_HORIZONTAL_BAR_CHART
     ) {
+      // horizontal bar charts are not supported for more than 3 breakdowns
+      return CHART_TYPE_BARCHART;
+    }
+    if (
+      breakdown.length &&
+      breakdown.length === 1 &&
+      chartTypes[queryType][key] === CHART_TYPE_PIVOT_CHART
+    ) {
+      // pivot charts are not supported for 1 breakdown
       return CHART_TYPE_BARCHART;
     }
     return chartTypes[queryType][key] === CHART_TYPE_TABLE

@@ -1,4 +1,13 @@
-import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL, QUERY_TYPE_KPI, QUERY_TYPE_CAMPAIGN, QUERY_TYPE_PROFILE, QUERY_TYPE_ATTRIBUTION } from "../../utils/constants";
+import {
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_FUNNEL,
+  QUERY_TYPE_KPI,
+  QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_PROFILE,
+  QUERY_TYPE_ATTRIBUTION,
+} from '../../utils/constants';
+import { DEFAULT_PIVOT_CONFIG } from './constants';
+import { isPivotSupported } from '../../utils/chart.helpers';
 
 export const IconAndTextSwitchQueryType = (queryType) => {
   switch (queryType) {
@@ -37,5 +46,20 @@ export const IconAndTextSwitchQueryType = (queryType) => {
         text: 'Templates',
         icon: 'templates_cq',
       };
+  }
+};
+
+export const getSavedPivotConfig = ({ queryType, selectedReport }) => {
+  if (!isPivotSupported({ queryType })) {
+    return { ...DEFAULT_PIVOT_CONFIG };
+  } else {
+    const savedPivotConfig = _.get(
+      selectedReport,
+      'settings.pivotConfig',
+      null
+    );
+    return savedPivotConfig
+      ? JSON.parse(savedPivotConfig)
+      : { ...DEFAULT_PIVOT_CONFIG };
   }
 };

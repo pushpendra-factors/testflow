@@ -179,6 +179,19 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 		assert.NotNil(t, jsonRespMap["error"])
 		assert.Equal(t, 1, len(jsonRespMap))
 	})
+	// Test updating autotrack_spa_page_view
+	t.Run("UpdateAutoTrackSpaPageView", func(t *testing.T) {
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
+			"auto_track_spa_page_view": false,
+		})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonRespMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonRespMap)
+		assert.NotNil(t, jsonRespMap["auto_track_spa_page_view"])
+	})
+
 }
 
 func TestUpdateHubspotProjectSettings(t *testing.T) {

@@ -1,4 +1,10 @@
-import React, { useState, memo, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  memo,
+  useEffect,
+  useCallback,
+  useContext,
+} from 'react';
 import PropTypes from 'prop-types';
 import PivotTableUI from 'react-pivottable/PivotTableUI';
 
@@ -15,16 +21,20 @@ import {
 import styles from './pivotTable.module.scss';
 import ControlledComponent from '../ControlledComponent';
 import PivotTableControls from '../PivotTableControls';
-import { SORT_ORDERS } from '../PivotTableControls/pivotTableControls.constants';
+import { PIVOT_SORT_ORDERS } from '../PivotTableControls/pivotTableControls.constants';
+import { CoreQueryContext } from '../../contexts/CoreQueryContext';
 
 const PivotTable = ({ data, breakdown, kpis, showControls }) => {
+  const {
+    coreQueryState: { pivotConfig },
+    updatePivotConfig,
+  } = useContext(CoreQueryContext);
+
+  const { configLoaded } = pivotConfig;
+
   const [pivotState, setPivotState] = useState({
-    aggregatorName: 'Sum',
-    vals: [kpis[0]],
     data: EMPTY_ARRAY,
-    rows: EMPTY_ARRAY,
-    cols: EMPTY_ARRAY,
-    rowOrder: SORT_ORDERS.ASCEND,
+    hiddenFromAggregators: EMPTY_ARRAY,
   });
 
   const updateState = useCallback((updates) => {
@@ -36,75 +46,69 @@ const PivotTable = ({ data, breakdown, kpis, showControls }) => {
     });
   }, []);
 
-  const handleRowAttributeRemove = useCallback((attr) => {
-    setPivotState((currState) => {
-      return {
-        ...currState,
-        rows: currState.rows.filter((row) => row !== attr),
-      };
-    });
-  }, []);
+  const handleRowAttributeRemove = useCallback(
+    (attr) => {
+      updatePivotConfig({
+        rows: pivotConfig.rows.filter((row) => row !== attr),
+      });
+    },
+    [pivotConfig, updatePivotConfig]
+  );
 
   const handleColumnAttributeRemove = useCallback(() => {
-    updateState({ cols: [] });
-  }, []);
+    updatePivotConfig({ cols: [] });
+  }, [updatePivotConfig]);
 
   const handleValueChange = useCallback(
     (val) => {
-      updateState({
+      updatePivotConfig({
         vals: [val],
       });
     },
-    [updateState]
+    [updatePivotConfig]
   );
 
   const handleFunctionChange = useCallback(
     (val) => {
-      updateState({
+      updatePivotConfig({
         aggregatorName: val,
       });
     },
-    [updateState]
+    [updatePivotConfig]
   );
 
   const handleColumnChange = useCallback(
     (val) => {
-      setPivotState((currState) => {
-        return {
-          ...currState,
-          cols: [val],
-          rows: currState.rows.filter((row) => row !== val),
-        };
+      updatePivotConfig({
+        cols: [val],
+        rows: pivotConfig.rows.filter((row) => row !== val),
       });
     },
-    [updateState]
+    [pivotConfig, updatePivotConfig]
   );
 
-  const handleRowOptionSelect = useCallback((val) => {
-    setPivotState((currState) => {
-      return {
-        ...currState,
-        cols: currState.cols.filter((col) => col !== val),
+  const handleRowOptionSelect = useCallback(
+    (val) => {
+      updatePivotConfig({
+        cols: pivotConfig.cols.filter((col) => col !== val),
         rows: SortRowOptions({
-          data: [...currState.rows, val],
+          data: [...pivotConfig.rows, val],
           kpis,
           breakdown,
         }),
-      };
-    });
-  }, []);
+      });
+    },
+    [updatePivotConfig, pivotConfig]
+  );
 
   const handleSortChange = useCallback(() => {
-    setPivotState((currState) => {
-      return {
-        ...currState,
-        rowOrder:
-          currState.rowOrder === SORT_ORDERS.ASCEND
-            ? SORT_ORDERS.DESCEND
-            : SORT_ORDERS.ASCEND,
-      };
+    updatePivotConfig({
+      rowOrder:
+        pivotConfig.rowOrder === PIVOT_SORT_ORDERS.ASCEND
+          ? PIVOT_SORT_ORDERS.DESCEND
+          : PIVOT_SORT_ORDERS.ASCEND,
     });
-  }, []);
+  }, [updatePivotConfig, pivotConfig]);
 
   useEffect(() => {
     const [breakdownAttributes, attributes, values] = formatPivotData({
@@ -113,51 +117,56 @@ const PivotTable = ({ data, breakdown, kpis, showControls }) => {
       kpis,
     });
 
+    if (!configLoaded) {
+      updatePivotConfig({
+        rows: attributes,
+        vals: [kpis[0]],
+        configLoaded: true,
+      });
+    }
+
     updateState({
-      rows: attributes,
       data: [attributes, ...values],
       hiddenFromAggregators: breakdownAttributes,
     });
-  }, [data, breakdown, kpis, updateState]);
+  }, [data, breakdown, kpis, updateState, configLoaded, updatePivotConfig]);
 
   return (
     <div className={styles.pivotTable}>
       <ControlledComponent controller={showControls}>
         <PivotTableControls
-          selectedCol={
-            pivotState.cols && pivotState.cols.length
-              ? pivotState.cols[0]
-              : null
-          }
-          selectedRows={pivotState.rows ? pivotState.rows : EMPTY_ARRAY}
-          selectedValue={pivotState.vals[0]}
+          selectedCol={pivotConfig.cols.length ? pivotConfig.cols[0] : null}
+          selectedRows={pivotConfig.rows}
+          selectedValue={pivotConfig.vals}
           aggregatorOptions={getValueOptions({ kpis })}
           columnOptions={getColumnOptions({ breakdown })}
           rowOptions={getRowOptions({
-            selectedRows: pivotState.rows,
+            selectedRows: pivotConfig.rows,
             kpis,
             breakdown,
           })}
           functionOptions={getFunctionOptions()}
-          aggregatorName={pivotState.aggregatorName}
+          aggregatorName={pivotConfig.aggregatorName}
           onRowAttributeRemove={handleRowAttributeRemove}
           onColumnAttributeRemove={handleColumnAttributeRemove}
           onValueChange={handleValueChange}
           onColumnChange={handleColumnChange}
           onRowChange={handleRowOptionSelect}
           onFunctionChange={handleFunctionChange}
-          rowOrder={pivotState.rowOrder}
+          rowOrder={pivotConfig.rowOrder}
           onSortChange={handleSortChange}
         />
       </ControlledComponent>
-
-      <PivotTableUI
-        onChange={(s) => {
-          console.log(s.rowOrder);
-          setPivotState(s);
-        }}
-        {...pivotState}
-      />
+      <div className='w-full overflow-auto'>
+        <PivotTableUI
+          onChange={(s) => {
+            console.log(s.rowOrder);
+            setPivotState(s);
+          }}
+          {...pivotState}
+          {...pivotConfig}
+        />
+      </div>
     </div>
   );
 };

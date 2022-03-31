@@ -60,6 +60,7 @@ func main() {
 	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
+	enableHubspotFormEventsByProjectID := flag.String("enable_hubspot_form_events_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -109,6 +110,7 @@ func main() {
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
+		EnableHubspotFormsEventsByProjectID:    *enableHubspotFormEventsByProjectID,
 	}
 
 	C.InitConf(config)

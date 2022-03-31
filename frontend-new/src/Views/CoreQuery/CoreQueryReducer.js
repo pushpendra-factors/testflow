@@ -9,6 +9,7 @@ import {
   SET_COMPARE_DURATION,
   UPDATE_CHART_TYPES,
   SET_SAVED_QUERY_SETTINGS,
+  UPDATE_PIVOT_CONFIG,
 } from './constants';
 
 export default function (state, action) {
@@ -77,6 +78,15 @@ export default function (state, action) {
       return {
         ...state,
         savedQuerySettings: payload,
+      };
+    }
+    case UPDATE_PIVOT_CONFIG: {
+      return {
+        ...state,
+        pivotConfig: {
+          ...state.pivotConfig,
+          ...payload,
+        },
       };
     }
     default:

@@ -607,7 +607,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		"Adgroup_Adwords_200", "Keyword_Adwords_300", "Cj0KCQjwmpb0BRCBARIsAG7y4zbZArcUWztiqP5bs", "google", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	t.Run("AttributionWithMarketingPropertyCampaign", func(t *testing.T) {
+	/*t.Run("AttributionWithMarketingPropertyCampaign", func(t *testing.T) {
 		query := &model.AttributionQuery{
 			From:                    timestamp,
 			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
@@ -703,7 +703,7 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-	})
+	})*/
 
 	errCode = createEventWithSession(project.ID, "event1",
 		createdUserID2, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",

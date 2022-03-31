@@ -259,6 +259,7 @@ func (pg *Postgres) GetEventName(name string, projectId uint64) (*model.EventNam
 		return nil, http.StatusBadRequest
 	}
 
+
 	db := C.GetServices().Db
 
 	var eventName model.EventName

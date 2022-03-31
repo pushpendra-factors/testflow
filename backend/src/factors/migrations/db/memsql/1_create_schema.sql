@@ -392,6 +392,7 @@ CREATE TABLE IF NOT EXISTS project_billing_account_mappings (
 CREATE TABLE IF NOT EXISTS project_settings (
     project_id bigint,
     auto_track boolean NOT NULL DEFAULT FALSE, 
+    auto_track_spa_page_view boolean NOT NULL DEFAULT FALSE,
     auto_form_capture boolean NOT NULL DEFAULT FALSE,
     exclude_bot boolean NOT NULL DEFAULT FALSE,
     int_segment boolean NOT NULL DEFAULT FALSE,
@@ -427,6 +428,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
+    
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)

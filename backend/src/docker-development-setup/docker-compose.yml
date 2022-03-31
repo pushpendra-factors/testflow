@@ -92,6 +92,7 @@ services:
                 -  REDIS_HOST=redis
                 -  MEMSQL_HOST=memsql
                 -  PRI_DS=$PRIMARY_DATASTORE
+            entrypoint: [ "sh","-c","/go/bin/sdkserver --env=development --memsql_host=memsql --primary_datastore=${PRIMARY_DATASTORE}"]
             image: testing/sdk:1.0
             ports:
                 - "8085:8085"
