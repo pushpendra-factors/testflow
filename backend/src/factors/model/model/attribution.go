@@ -1332,6 +1332,8 @@ func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*Attri
 	AddHeadersByAttributionKey(result, query, goalEvents)
 	result.Rows = dataRows
 
+	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("Before GetUpdatedRowsByDimensions")
+
 	// Update result based on Key Dimensions
 	err := GetUpdatedRowsByDimensions(result, query)
 	if err != nil {

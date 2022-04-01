@@ -6,6 +6,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
@@ -274,6 +275,8 @@ func (store *MemSQL) runAttributionKPI(projectID uint64,
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
+	logCtx.WithFields(log.Fields{"sessionWT": sessionWT}).Info(fmt.Sprintf("KPI-Attribution sessionWT"))
+
 	// Apply attribution based on given attribution methodology
 	userConversionHit, err := model.ApplyAttributionKPI(
 		query.QueryType,
@@ -285,8 +288,12 @@ func (store *MemSQL) runAttributionKPI(projectID uint64,
 		return nil, err
 	}
 
+	logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).Info(fmt.Sprintf("KPI-Attribution userConversionHit"))
+
 	attributionData := make(map[string]*model.AttributionData)
 	attributionData = model.AddUpConversionEventCount(userConversionHit, sessionWT)
+	logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info(fmt.Sprintf("KPI-Attribution attributionData"))
+
 	return &attributionData, nil
 }
 
