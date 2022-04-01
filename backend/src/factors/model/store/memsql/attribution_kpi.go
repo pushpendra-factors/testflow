@@ -154,15 +154,15 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get groupUserQuery result for project")
 	}
 	for gURows.Next() {
-		var userIDNull sql.NullString
-		var groupIDDealOppIDNull sql.NullString
-		if err = gURows.Scan(&userIDNull, &groupIDDealOppIDNull); err != nil {
+		var groupUserIDNull sql.NullString
+		var kpiIDNull sql.NullString
+		if err = gURows.Scan(&groupUserIDNull, &kpiIDNull); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
 
-		groupUserID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
-		kpiID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
+		groupUserID := U.IfThenElse(groupUserIDNull.Valid, groupUserIDNull.String, model.PropertyValueNone).(string)
+		kpiID := U.IfThenElse(kpiIDNull.Valid, kpiIDNull.String, model.PropertyValueNone).(string)
 
 		if groupUserID == model.PropertyValueNone || kpiID == model.PropertyValueNone {
 			continue

@@ -155,6 +155,11 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		}
 
 		log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData}).Info("KPI Attribution kpiData")
+		/*emptyMarketingValue:= model.MarketingData{Channel: model.PropertyValueNone,
+			CampaignID: model.PropertyValueNone, CampaignName: model.PropertyValueNone, AdgroupID: model.PropertyValueNone,
+			AdgroupName: model.PropertyValueNone, KeywordName: model.PropertyValueNone, KeywordMatchType: model.PropertyValueNone,
+			Source: model.PropertyValueNone, ChannelGroup: model.PropertyValueNone, LandingPageUrl: model.PropertyValueNone, ContentGroupValuesMap: nil}
+		noneKey := model.GetMarketingDataKey(query.AttributionKey, emptyMarketingValue)*/
 
 		// creating group sessions by transforming sessions
 		groupSessions := make(map[string]map[string]model.UserSessionData)
@@ -163,6 +168,10 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 
 			if _, exists := groupSessions[kpiID]; !exists {
 				groupSessions[kpiID] = make(map[string]model.UserSessionData)
+			}
+			if kpiInfo.KpiCoalUserIds == nil || len(kpiInfo.KpiCoalUserIds) == 0 {
+				//groupSessions[kpiID][noneKey] = model.UserSessionData{}
+				continue
 			}
 			for _, user := range kpiInfo.KpiCoalUserIds {
 				// check if user has session/otp
@@ -189,6 +198,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 				}
 			}
 		}
+		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info(fmt.Sprintf("KPI-Attribution Group session"))
 
 		// Build attribution weight
 		sessionWT := make(map[string][]float64)
