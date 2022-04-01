@@ -484,8 +484,6 @@ func (store *MemSQL) PullBingAdsMarketingData(projectID uint64, from, to int64, 
 }
 func (store *MemSQL) PullCustomDimensionData(projectID uint64, attributionKey string, marketingReport *model.MarketingReports, logCtx log.Entry) error {
 
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
-
 	// Custom Dimensions are support only for Campaign and Adgroup currently
 	if attributionKey != model.AttributionKeyCampaign && attributionKey != model.AttributionKeyAdgroup {
 		return nil
@@ -548,9 +546,6 @@ func (store *MemSQL) PullSmartProperties(projectID uint64, campaignIDPlaceHolder
 		"object_type":                 objectType,
 		"attribution_key":             attributionKey,
 	}
-
-	logCtx = *logCtx.WithFields(logFields)
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	// GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory
 	logCtx1 := logCtx.WithFields(logFields)

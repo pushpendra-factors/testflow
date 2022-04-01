@@ -31,6 +31,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey, duplicatedRequest)
+		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
 			logCtx.Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
@@ -42,6 +43,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
 			if res.Headers[0] == "datetime" {
 				kpiQueryResult = res
+				log.WithFields(log.Fields{"KpiQueryResult": kpiQueryResult}).Info("KPI-Attribution result set")
 				break
 			}
 		}
@@ -57,14 +59,17 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 		for idx := valIdx; idx < len(kpiQueryResult.Headers); idx++ {
 			kpiValueHeaders = append(kpiValueHeaders, kpiQueryResult.Headers[idx])
 		}
+		log.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
 
 		for _, row := range kpiQueryResult.Rows {
+
+			log.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
 
 			var kpiDetail model.KPIInfo
 
 			// get ID
 			kpiID := row[keyIdx].(string)
-			kpiKeys = append(kpiKeys)
+			kpiKeys = append(kpiKeys, kpiID)
 
 			// get time
 			eventTime, err := time.Parse(time.RFC3339, row[datetimeIdx].(string))
@@ -77,13 +82,13 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 
 			// add kpi values
 			var kpiVals []float64
-			for i := valIdx; i < len(row); i++ {
+			for vi := valIdx; vi < len(row); vi++ {
 				val := float64(0)
-				vInt, okInt := row[i].(int64)
+				vInt, okInt := row[vi].(int)
 				if !okInt {
-					vFloat, okFloat := row[i].(float64)
+					vFloat, okFloat := row[vi].(float64)
 					if !okFloat {
-						logCtx.WithError(err).WithFields(log.Fields{"value": row[i]}).Error("couldn't parse the value for KPI query, continuing")
+						logCtx.WithError(err).WithFields(log.Fields{"value": row[vi]}).Error("couldn't parse the value for KPI query, continuing")
 						val = 0.0
 					} else {
 						val = vFloat
@@ -134,6 +139,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 
 	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
 	var kpiKeyGroupUserIDList []string
+	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
 
 	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeys))
 	kpiKeysIdValue := U.GetInterfaceList(kpiKeys)
@@ -168,6 +174,8 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 		kpiKeyGroupUserIDList = append(kpiKeyGroupUserIDList, groupUserID)
 
 	}
+	log.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
+
 	logCtx.Info("done pulling group ids for Deal or Opportunity")
 
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
@@ -209,6 +217,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 			kpiData[kpiID] = v
 		}
 	}
+	log.WithFields(log.Fields{"kpiData": kpiData}).Info("KPI-Attribution group set")
 
 	logCtx.Info("done pulling group user list ids for Deal or Opportunity")
 
