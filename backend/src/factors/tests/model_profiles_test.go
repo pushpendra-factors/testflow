@@ -87,6 +87,7 @@ func TestProfiles(t *testing.T) {
 		assert.Equal(t, "query_index", result.Results[0].Headers[0])
 		assert.Equal(t, model.AliasAggr, result.Results[0].Headers[1])
 	})
+
 	t.Run("joinTime check", func(t *testing.T) {
 		query := model.ProfileQuery{
 			Type:          "web",
@@ -142,6 +143,35 @@ func TestProfiles(t *testing.T) {
 		assert.Equal(t, "country", result.Results[0].Headers[2])
 	})
 
+	t.Run("No filter, 1 group by bucketed", func(t *testing.T) {
+		query := model.ProfileQuery{
+			Type:          "web",
+			Filters:       []model.QueryProperty{},
+			GroupBys:      []model.QueryGroupByProperty{{Entity: "user", Property: "age", Type: "numerical", GroupByType: "with_buckets"}},
+			From:          joinTime - 100,
+			To:            nextUserJoinTime + 100,
+			GroupAnalysis: "users",
+		}
+		queryGroup := model.ProfileQueryGroup{
+			Class:          "profiles",
+			Queries:        []model.ProfileQuery{query},
+			GlobalFilters:  []model.QueryProperty{},
+			GlobalGroupBys: []model.QueryGroupByProperty{},
+			From:           joinTime - 100,
+			To:             nextUserJoinTime + 100,
+		}
+		result, statusCode := store.GetStore().RunProfilesGroupQuery(queryGroup.Queries, projectID)
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.Equal(t, float64(1), result.Results[0].Rows[0][1])
+		assert.Equal(t, int(0), result.Results[0].Rows[0][0])
+		assert.Equal(t, "20", result.Results[0].Rows[0][2])
+		assert.Equal(t, float64(1), result.Results[0].Rows[1][1])
+		assert.Equal(t, int(0), result.Results[0].Rows[1][0])
+		assert.Equal(t, "30", result.Results[0].Rows[1][2])
+		assert.Equal(t, "query_index", result.Results[0].Headers[0])
+		assert.Equal(t, model.AliasAggr, result.Results[0].Headers[1])
+		assert.Equal(t, "age", result.Results[0].Headers[2])
+	})
 }
 
 func TestProfilesDateRangeQuery(t *testing.T) {
