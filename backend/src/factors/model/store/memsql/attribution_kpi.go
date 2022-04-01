@@ -168,9 +168,12 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 			continue
 		}
 
+		// enrich KPI group ID
 		v := kpiData[kpiID]
 		v.KpiGroupID = groupUserID
 		kpiData[kpiID] = v
+
+		groupUserIDToKpiID[groupUserID] = kpiID
 		kpiKeyGroupUserIDList = append(kpiKeyGroupUserIDList, groupUserID)
 
 	}
