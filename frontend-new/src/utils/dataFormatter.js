@@ -453,28 +453,8 @@ export const clearLocalStorage = (key) => {
   localStorage.clear();
 };
 
-export const getValidGranularityOptions = ({ from, to }, queryType) => {
-  const startDate = moment(from).startOf('day').utc().unix() * 1000;
-  const endDate = moment(to).endOf('day').utc().unix() * 1000 + 1000;
-  const daysDiff = moment(endDate).diff(startDate, 'days');
-  //whatever will be returned, 0th element will be treated as default
-  if (daysDiff > 93) {
-    return ['date', 'week', 'month', 'quarter'];
-  }
-  if (daysDiff > 31) {
-    return ['date', 'week', 'month'];
-  }
-  if (daysDiff > 7) {
-    return ['date', 'week'];
-  }
-  if (daysDiff > 1) {
-    return ['date'];
-  }
-  //hourly data is not supported for campaigns
-  if (queryType === QUERY_TYPE_CAMPAIGN) {
-    return ['date'];
-  }
-  return ['hour'];
+export const getValidGranularityOptions = () => {
+  return ['hour', 'date', 'week', 'month', 'quarter'];
 };
 
 export const isSeriesChart = (chartType) => {

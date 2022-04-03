@@ -866,7 +866,7 @@ function CoreQuery({
         queryType === QUERY_TYPE_CAMPAIGN ||
         queryType === QUERY_TYPE_KPI
       ) {
-        frequency = getValidGranularityOptions({ from, to }, queryType)[0];
+        frequency = getValidGranularityOptions()[0];
       }
 
       const payload = {

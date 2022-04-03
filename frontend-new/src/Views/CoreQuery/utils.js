@@ -297,7 +297,7 @@ export const getFunnelQuery = (
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gbt = '';
+  query.gbt = dateRange.frequency;
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
   query.gbp = appliedGroupBy.map((opt) => {
@@ -452,14 +452,14 @@ export const getKPIQuery = (
   if (date_range?.from && date_range?.to) {
     period.from = MomentTz(date_range.from).startOf('day').utc().unix();
     period.to = MomentTz(date_range.to).endOf('day').utc().unix();
-    period.frequency = date_range.frequency || 'date';
+    period.frequency = date_range.frequency;
   } else {
     period.from = MomentTz().startOf('week').utc().unix();
     period.to =
       MomentTz().format('dddd') !== 'Sunday'
         ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
         : MomentTz().utc().unix();
-    period.frequency = date_range.frequency || 'date';
+    period.frequency = date_range.frequency;
   }
 
   const eventGrpBy = [...groupBy.event];
@@ -856,6 +856,12 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
         overAllIndex: index,
       };
     });
+
+  const dateRange = {
+    from: requestQuery.fr * 1000,
+    to: requestQuery.to * 1000,
+    frequency: requestQuery.gbt,
+  };
   const result = {
     events,
     queryType,
@@ -865,6 +871,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       event,
       global,
     },
+    dateRange: dateRange,
   };
   return result;
 };
@@ -1044,7 +1051,8 @@ export const getAttributionQuery = (
 
   if (touchpoint !== MARKETING_TOUCHPOINTS.SOURCE) {
     query.query.attribution_key_dimensions = attribution_key_dimensions;
-    query.query.attribution_key_custom_dimensions = attribution_key_custom_dimensions;
+    query.query.attribution_key_custom_dimensions =
+      attribution_key_custom_dimensions;
   }
 
   return query;
@@ -1670,11 +1678,16 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     global: globalBreakdown,
     event: [], //will be added later
   };
+  const dateRange = {
+    ...DefaultDateRangeFormat,
+    frequency: requestQuery.qG[1].gbt,
+  };
   const result = {
     events: queries,
     queryType,
     globalFilters: filters,
     breakdown: groupBy,
+    dateRange: dateRange,
   };
   return result;
 };

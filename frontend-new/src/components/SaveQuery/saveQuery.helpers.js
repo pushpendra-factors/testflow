@@ -36,9 +36,9 @@ export const getQuery = ({ queryType, requestQuery }) => {
       query_group: requestQuery.map((q) => {
         return {
           ...q,
-          fr: startOfWeek,
-          to: todayNow,
-          gbt: q.gbt ? 'date' : '',
+          fr: q.fr,
+          to: q.to,
+          gbt: q?.gbt,
         };
       }),
     };
@@ -52,7 +52,7 @@ export const getQuery = ({ queryType, requestQuery }) => {
           ...q,
           fr: startOfWeek,
           to: todayNow,
-          gbt: q.gbt ? 'date' : '',
+          gbt: q.gbt ? q.gbt : '',
         };
       }),
     };
@@ -66,7 +66,7 @@ export const getQuery = ({ queryType, requestQuery }) => {
           ...q,
           fr: startOfWeek,
           to: todayNow,
-          gbt: q.gbt ? 'date' : '',
+          gbt: q.gbt ? q.gbt : '',
         };
       }),
     };

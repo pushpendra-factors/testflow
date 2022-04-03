@@ -246,18 +246,25 @@ function CoreQuery({
 
   const updateEventFunnelsState = useCallback(
     (equivalentQuery, navigatedFromDashboard) => {
+      const savedDateRange = { ...equivalentQuery.dateRange };
+      let newDateRange = getDashboardDateRange();
+      const dashboardDateRange = {
+        ...newDateRange,
+        frequency: equivalentQuery.dateRange.frequency,
+      };
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: equivalentQuery.breakdown,
       });
       setQueries(equivalentQuery.events);
       setQueryOptions((currData) => {
-        let newDateRange = {};
+        let queryDateRange = {};
         if (navigatedFromDashboard) {
-          newDateRange = { date_range: getDashboardDateRange() };
-        }
+          queryDateRange = { date_range: dashboardDateRange };
+        } else queryDateRange = { date_range: savedDateRange };
 
-        return {
+        let queryOpts = {};
+        queryOpts = {
           ...currData,
           session_analytics_seq: equivalentQuery.session_analytics_seq,
           groupBy: [
@@ -265,8 +272,9 @@ function CoreQuery({
             ...equivalentQuery.breakdown.event,
           ],
           globalFilters: equivalentQuery.globalFilters,
-          ...newDateRange,
+          ...queryDateRange,
         };
+        return queryOpts;
       });
     },
     [dispatch]
@@ -291,6 +299,42 @@ function CoreQuery({
           globalFilters: equivalentQuery.globalFilters,
           group_analysis: equivalentQuery.groupAnalysis,
           date_range: { ...DefaultDateRangeFormat, ...dateRange },
+        };
+        return queryOpts;
+      });
+    },
+    [dispatch]
+  );
+
+  const updateKPIQueryState = useCallback(
+    (equivalentQuery, navigatedFromDashboard) => {
+      const savedDateRange = { ...equivalentQuery.dateRange };
+      let newDateRange = getDashboardDateRange();
+      const dashboardDateRange = {
+        ...newDateRange,
+        frequency: equivalentQuery.dateRange.frequency,
+      };
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: equivalentQuery.breakdown,
+      });
+      setQueries(equivalentQuery.events);
+      setQueryOptions((currData) => {
+        let queryDateRange = {};
+        if (navigatedFromDashboard) {
+          queryDateRange = { date_range: dashboardDateRange };
+        } else queryDateRange = { date_range: savedDateRange };
+
+        let queryOpts = {};
+        queryOpts = {
+          ...currData,
+          session_analytics_seq: equivalentQuery.session_analytics_seq,
+          groupBy: [
+            ...equivalentQuery.breakdown.global,
+            ...equivalentQuery.breakdown.event,
+          ],
+          globalFilters: equivalentQuery.globalFilters,
+          ...queryDateRange,
         };
         return queryOpts;
       });
@@ -402,7 +446,7 @@ function CoreQuery({
             record.query,
             kpiConfig
           );
-          updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
+          updateKPIQueryState(equivalentQuery, navigatedFromDashboard);
         } else if (
           record.query.cl &&
           record.query.cl === QUERY_TYPE_ATTRIBUTION
