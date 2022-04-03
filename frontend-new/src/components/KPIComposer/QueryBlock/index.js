@@ -469,7 +469,9 @@ function QueryBlock({
           </div>
           {(event?.pageViewVal || event?.group == 'page_views') &&
             selectPageUrls()}
-          {additionalActions()}
+          <div className={styles.query_block__additional_actions}>
+            {additionalActions()}
+          </div>
         </div>
       </div>
       {eventFilters()}

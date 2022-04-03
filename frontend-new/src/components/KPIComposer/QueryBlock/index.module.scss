@@ -1,7 +1,16 @@
 .query_block {
+  &__additional_actions {
+    visibility: hidden;
+  }
+
   &__event {
     position: relative;
     margin-top: 12px;
+    &:hover {
+      .query_block__additional_actions {
+        visibility: visible;
+      }
+    }
   }
 
   &__filters {
@@ -28,7 +37,8 @@
 
   &__event_selector {
     position: absolute;
-    top: 32px;
+    top: 36px;
+    left: 0;
 
     &__btn {
       position: relative;

@@ -83,8 +83,7 @@ const IntegrationProviderData = [
   },
   {
     name: 'Bing Ads',
-    desc:
-      'Sync Bing ads reports with Factors for performance reporting',
+    desc: 'Sync Bing ads reports with Factors for performance reporting',
     icon: 'Bing',
     kbLink: false,
   },
@@ -177,27 +176,38 @@ const IntegrationCard = ({ item, index }) => {
         }
         onError={FaErrorLog}
       >
-        <div className={'flex justify-between'}>
-          <div className={'flex'}>
-            <Avatar
-              size={40}
-              shape={'square'}
-              icon={<SVG name={item.icon} size={40} color={'purple'} />}
-              style={{ backgroundColor: '#F5F6F8' }}
-            />
-          </div>
+        <div>
           <div
-            className={'flex flex-col justify-start items-start ml-4 w-full'}
+            className={`flex justify-between`}
+            onClick={() => setToggle(!toggle)}
           >
-            <div className={'flex items-center'}>
-              <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
-                {item.name}
-              </Text>
-              {(isActive || isStatus === 'Active') && (
-                <Tag color='green' style={{ marginLeft: '8px' }}>
-                  Active
-                </Tag>
-              )}
+            <div className='flex'>
+              <Avatar
+                size={40}
+                shape={'square'}
+                icon={<SVG name={item.icon} size={40} color={'purple'} />}
+                style={{ backgroundColor: '#F5F6F8' }}
+              />
+            </div>
+            <div
+              className={`flex flex-col justify-start items-start ml-4 w-full`}
+            >
+              <div className={`flex flex-row items-center justify-start`}>
+                <Text
+                  type={'title'}
+                  level={5}
+                  weight={'bold'}
+                  extraClass={'m-0'}
+                >
+                  {item.name}
+                </Text>
+                {(isActive || isStatus === 'Active') && (
+                  <Tag color='green' style={{ marginLeft: '8px' }}>
+                    Active
+                  </Tag>
+                )}
+              </div>
+
               {isStatus === 'Pending' && (
                 <Tooltip
                   title={
@@ -211,20 +221,17 @@ const IntegrationCard = ({ item, index }) => {
                   </Tag>
                 </Tooltip>
               )}
+              <Text
+                type={'paragraph'}
+                mini
+                extraClass={'m-0 w-9/12'}
+                color={'grey'}
+                lineHeight={'medium'}
+              >
+                {item.desc}
+              </Text>
             </div>
-            <Text
-              type={'paragraph'}
-              mini
-              extraClass={'m-0 w-9/12'}
-              color={'grey'}
-              lineHeight={'medium'}
-            >
-              {item.desc}
-            </Text>
-            {toggle && loadIntegrationForm(item)}
-          </div>
-          {(isActive || isStatus === 'Active') && (
-            <div className={'flex flex-col items-start'}>
+            {(isActive || isStatus === 'Active') && (
               <Button
                 type={'text'}
                 onClick={() => setToggle(!toggle)}
@@ -236,8 +243,11 @@ const IntegrationCard = ({ item, index }) => {
                   )
                 }
               />
-            </div>
-          )}
+            )}
+          </div>
+          <div className={`ml-16 flex flex-col items-start`}>
+            {toggle && loadIntegrationForm(item)}
+          </div>
         </div>
       </ErrorBoundary>
     </div>
@@ -247,7 +257,7 @@ function IntegrationSettings({
   currentProjectSettings,
   activeProject,
   fetchProjectSettings,
-  currentAgent
+  currentAgent,
 }) {
   const [dataLoading, setDataLoading] = useState(true);
 
