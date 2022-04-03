@@ -135,7 +135,7 @@ const columns = [
     render: (text) => (
       <div className='flex items-center'>
         <Avatar src='assets/avatar/avatar.png' size={24} className={'mr-2'} />
-        &nbsp; {text}{' '}
+        &nbsp; {text}
       </div>
     ),
   },
@@ -675,8 +675,7 @@ function CoreQuery({
                           weight={'bold'}
                           extraClass={'m-0'}
                         >
-                          {' '}
-                          {item.title}{' '}
+                          {item.title}
                         </Text>
                         <Text
                           type={'title'}
@@ -684,8 +683,7 @@ function CoreQuery({
                           color={'grey'}
                           extraClass={'m-0 mt-1 fai--custom-card-new--desc'}
                         >
-                          {' '}
-                          {item.desc}{' '}
+                          {item.desc}
                         </Text>
                       </div>
                     </div>

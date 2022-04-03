@@ -6,7 +6,10 @@ import { bindActionCreators } from 'redux';
 import GroupSelect2 from '../../QueryComposer/GroupSelect2';
 import AttrFilterBlock from '../AttrFilterBlock';
 
-import { setTouchPointFilters, setTacticOfferType } from '../../../reducers/coreQuery/middleware';
+import {
+  setTouchPointFilters,
+  setTacticOfferType,
+} from '../../../reducers/coreQuery/middleware';
 
 import { Button, Radio, Row } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
@@ -22,7 +25,7 @@ const MarkTouchpointBlock = ({
   setTouchPointFilters,
   filters,
   setTacticOfferType,
-  touchPointRef
+  touchPointRef,
 }) => {
   const [tpDimensionsSelection, setTPDimensionsSelection] = useState(false);
   const [selectVisible, setSelectVisible] = useState(false);
@@ -85,14 +88,18 @@ const MarkTouchpointBlock = ({
 
   const selectTouchPointOpts = () => {
     let tchPointOpts = [];
-    if(!touchPointRef || touchPointRef === 'Tactic'){
-      tchPointOpts = touchPointOptions[0].values.map(option=>new Array(option[0],option[0]));
+    if (!touchPointRef || touchPointRef === 'Tactic') {
+      tchPointOpts = touchPointOptions[0].values.map(
+        (option) => new Array(option[0], option[0])
+      );
     } else {
-      tchPointOpts = touchPointOptions[0].values.filter(opt => !['AdGroup', 'Keyword'].includes(opt[0])).map(option=>new Array(option[0],option[0]));
+      tchPointOpts = touchPointOptions[0].values
+        .filter((opt) => !['AdGroup', 'Keyword'].includes(opt[0]))
+        .map((option) => new Array(option[0], option[0]));
     }
-    
+
     return tchPointOpts;
-  }
+  };
 
   const selectEvents = () => {
     return (
@@ -105,7 +112,6 @@ const MarkTouchpointBlock = ({
             extraClass={touchPoint ? styles.touchPointSelector : ''}
             showIcon={false}
           ></FaSelect>
-
         ) : null}
       </div>
     );
@@ -113,8 +119,18 @@ const MarkTouchpointBlock = ({
 
   const renderTouchPointSelect = () => {
     return (
-      <div className={`${styles.block_touchpoint_select} flex justify-start items-center mt-3`}>
-        {<Button type="text" onClick={toggleTouchPointSelect} icon={<SVG name={'plus'} color={'grey'} />}>Add a Property</Button>}
+      <div
+        className={`${styles.block_touchpoint_select} flex justify-start items-center mt-3`}
+      >
+        {
+          <Button
+            type='text'
+            onClick={toggleTouchPointSelect}
+            icon={<SVG name={'plus'} color={'grey'} />}
+          >
+            Add a Property
+          </Button>
+        }
         {selectEvents()}
       </div>
     );
@@ -160,15 +176,26 @@ const MarkTouchpointBlock = ({
               <SVG name='more'></SVG>
             </Button>
 
-            {moreOptions ? <FaSelect
-              options={[[`Filter By`, 'filter']]}
-              optionClick={(val) => { addFilterBlock(); setMoreOptions(false) }}
-              onClickOutside={() => setMoreOptions(false)}
-            ></FaSelect> : false}
+            {moreOptions ? (
+              <FaSelect
+                options={[[`Filter By`, 'filter']]}
+                optionClick={(val) => {
+                  addFilterBlock();
+                  setMoreOptions(false);
+                }}
+                onClickOutside={() => setMoreOptions(false)}
+              ></FaSelect>
+            ) : (
+              false
+            )}
           </div>
-
         )}
-        <Button className={'fa-btn--custom'} size={'large'} type='text' onClick={deleteItem}>
+        <Button
+          className={'fa-btn--custom'}
+          size={'large'}
+          type='text'
+          onClick={deleteItem}
+        >
           <SVG name='trash'></SVG>
         </Button>
       </div>
@@ -226,7 +253,7 @@ const MarkTouchpointBlock = ({
   const renderMarkTouchpointBlockContent = () => {
     return (
       <div
-        className={`${styles.block__content} fa--query_block_section--basic relative mt-2 pt-1`}
+        className={`${styles.block__content} fa--query_block_section--basic relative mt-3`}
       >
         {
           <Button type='link' onClick={toggleTouchPointSelect}>
@@ -245,7 +272,9 @@ const MarkTouchpointBlock = ({
 
         {selectEvents()}
 
-        <div className={styles.block__additional_actions}>{additionalActions()}</div>
+        <div className={styles.block__additional_actions}>
+          {additionalActions()}
+        </div>
       </div>
     );
   };
@@ -253,35 +282,54 @@ const MarkTouchpointBlock = ({
   const setTouchpointRef = (val) => {
     setTacticOfferType(val.target.value);
     setTouchpoint('');
-  }
+  };
 
   return (
     <>
       <div className={styles.block}>
         <Row className={`mt-2`}>
-          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-2'}>Type</Text>
+          <Text
+            type={'title'}
+            level={7}
+            weight={'bold'}
+            color={'grey'}
+            extraClass={'m-0 ml-2'}
+          >
+            Type
+          </Text>
         </Row>
         <Row className={`mt-2 ml-2`}>
-          <Radio.Group onChange={setTouchpointRef} value={touchPointRef? touchPointRef : 'Tactic'}>
+          <Radio.Group
+            onChange={setTouchpointRef}
+            value={touchPointRef ? touchPointRef : 'Tactic'}
+          >
             <Radio value={`Tactic`}>Tactics</Radio>
             <Radio value={`Offer`}>Offers</Radio>
             <Radio value={`TacticOffer`}>Tactics and Offers</Radio>
           </Radio.Group>
-
         </Row>
       </div>
       <div className={`${styles.block} mt-4`}>
         <Row className={`mt-2`}>
-          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 ml-2'}>Property</Text>
+          <Text
+            type={'title'}
+            level={7}
+            weight={'bold'}
+            color={'grey'}
+            extraClass={'m-0 ml-2'}
+          >
+            Property
+          </Text>
         </Row>
 
-        <Row className={`mt-2 ml-2`}>
+        <Row className={`ml-2`}>
           {touchPoint?.length
             ? renderMarkTouchpointBlockContent()
             : renderTouchPointSelect()}
+        </Row>
+        <Row className={`ml-2`}>
           {touchPoint?.length ? renderFilterBlock() : null}
         </Row>
-
       </div>
     </>
   );
@@ -299,7 +347,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       setTouchPointFilters,
-      setTacticOfferType
+      setTacticOfferType,
     },
     dispatch
   );

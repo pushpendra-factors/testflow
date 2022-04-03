@@ -23,14 +23,14 @@ const EventGroupBlock = ({
   delGroupState,
   closeDropDown,
   selectedMainCategory,
-  KPI_config
+  KPI_config,
 }) => {
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'Event Properties',
       icon: 'mouseclick',
       values: [],
-    }
+    },
   ]);
 
   const [propSelVis, setSelVis] = useState(false);
@@ -45,26 +45,30 @@ const EventGroupBlock = ({
     const filterOpts = [...filterOptions];
 
     let KPIlist = KPI_config || [];
-    let selGroup = KPIlist.find((item)=>{
-      return item.display_category == event?.group
-    }) 
-    let DDvalues =  selGroup?.properties?.map((item)=>{
-      if (item == null) return
-      let ddName = item.display_name ? item.display_name  : item.name;
-      let ddtype = selGroup?.category == 'channels' ? item.object_type : (item.entity ? item.entity : item.object_type)
-      return [ddName, item.name, item.data_type, ddtype]
-    })  
+    let selGroup = KPIlist.find((item) => {
+      return item.display_category == event?.group;
+    });
+    let DDvalues = selGroup?.properties?.map((item) => {
+      if (item == null) return;
+      let ddName = item.display_name ? item.display_name : item.name;
+      let ddtype =
+        selGroup?.category == 'channels'
+          ? item.object_type
+          : item.entity
+          ? item.entity
+          : item.object_type;
+      return [ddName, item.name, item.data_type, ddtype];
+    });
 
-    filterOpts[0].values = DDvalues; 
-    setFilterOptions(filterOpts); 
+    filterOpts[0].values = DDvalues;
+    setFilterOptions(filterOpts);
   }, [eventProperties]);
-
 
   // useEffect(() => {
   //   const filterOpts = [...filterOptions];
   //   filterOpts[0].values = eventProperties[event.label];
   //   setFilterOptions(filterOpts);
-  // }, [eventProperties]); 
+  // }, [eventProperties]);
 
   const onChange = (group, val) => {
     const newGroupByState = Object.assign({}, groupByEvent);
@@ -136,7 +140,7 @@ const EventGroupBlock = ({
 
     return (
       <div className={styles.grpProps}>
-        show as{' '}
+        show as
         <div className={styles.grpProps__select}>
           <span
             className={styles.grpProps__select__opt}
@@ -158,12 +162,16 @@ const EventGroupBlock = ({
 
   const renderGroupContent = () => {
     let propName = '';
-    if(groupByEvent.property && groupByEvent.prop_category === 'user') {
-      propName = userPropNames[groupByEvent.property]? userPropNames[groupByEvent.property] : groupByEvent.property;
+    if (groupByEvent.property && groupByEvent.prop_category === 'user') {
+      propName = userPropNames[groupByEvent.property]
+        ? userPropNames[groupByEvent.property]
+        : groupByEvent.property;
     }
 
-    if(groupByEvent.property && groupByEvent.prop_category === 'event') {
-      propName = eventPropNames[groupByEvent.property]? eventPropNames[groupByEvent.property] : groupByEvent.property;
+    if (groupByEvent.property && groupByEvent.prop_category === 'event') {
+      propName = eventPropNames[groupByEvent.property]
+        ? eventPropNames[groupByEvent.property]
+        : groupByEvent.property;
     }
 
     return (
@@ -178,7 +186,6 @@ const EventGroupBlock = ({
 
   const renderGroupBySelect = () => {
     return (
-
       <div className={styles.group_block__event_selector}>
         <GroupSelect2
           groupedProperties={filterOptions}
@@ -195,13 +202,15 @@ const EventGroupBlock = ({
   return (
     <div className={`flex items-center relative w-full`}>
       <Button
-          type="text"
-          onClick={() => delGroupState(groupByEvent)}
-          size={'small'}
-          className={`mr-1`}
-        >  <SVG name={'remove'} />  </Button>
+        type='text'
+        onClick={() => delGroupState(groupByEvent)}
+        size={'small'}
+        className={`mr-1`}
+      >
+        <SVG name={'remove'} />
+      </Button>
       <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>
-        {grpIndex<1? 'Breakdown' : '...and'}{' '}
+        {grpIndex < 1 ? 'Breakdown' : '...and'}
       </Text>
       {groupByEvent && groupByEvent.property ? (
         renderGroupContent()
@@ -218,7 +227,7 @@ const mapStateToProps = (state) => ({
   eventProperties: state.coreQuery.eventProperties,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
-  KPI_config: state.kpi?.config
+  KPI_config: state.kpi?.config,
 });
 
 export default connect(mapStateToProps)(EventGroupBlock);

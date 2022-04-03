@@ -63,7 +63,6 @@ function AliasModal({ visible, onOk, onCancel, alias, event }) {
             type='primary'
             onClick={() => onOk(aliasName)}
           >
-            {' '}
             {alias?.length ? 'Update' : 'Create'}
           </Button>
         </div>

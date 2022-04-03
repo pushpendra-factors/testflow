@@ -11,7 +11,6 @@ import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import FaSelect from '../../FaSelect';
 import _ from 'lodash';
 
-
 function GroupBlock({
   groupByState,
   setGroupBy,
@@ -29,14 +28,14 @@ function GroupBlock({
     {
       label: 'User Properties',
       icon: 'user',
-      values: []
-    }
+      values: [],
+    },
   ]);
 
   useEffect(() => {
     const filterOpts = [...filterOptions];
     filterOpts[0].values = KPIConfigProps;
-    setFilterOptions(filterOpts); 
+    setFilterOptions(filterOpts);
   }, [KPIConfigProps]);
 
   const delOption = (index) => {
@@ -55,14 +54,14 @@ function GroupBlock({
     const ddVis = [...propSelVis];
     ddVis[index] = false;
     setSelVis(ddVis);
-  }
+  };
 
   const onChange = (value, index, category) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
     newGroupByState.prop_category = value[1][3];
     newGroupByState.eventName = value[1][2];
     newGroupByState.property = value[1][1];
-    newGroupByState.prop_type = value[1][2]; 
+    newGroupByState.prop_type = value[1][2];
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }
@@ -83,23 +82,27 @@ function GroupBlock({
     const ddVis = [...isDDVisible];
     ddVis[index] = !close;
     setDDVisible(ddVis);
-  }; 
-  
-  const renderInitGroupSelect = (index) => {
-    return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center mt-2`} >
-      {<Button
-        className={`fa-button--truncate`}
-        type="text"
-        onClick={() => triggerDropDown(index)}
-        icon={<SVG name="plus" />}> Add new
-      </Button>}
+  };
 
-      <div className={styles.group_block__event_selector}>
-        {isDDVisible[index]
-          ? (
-            <div className={styles.group_block__event_selector__btn}>
-              <GroupSelect2 groupedProperties={filterOptions}
-                placeholder="Select Property"
+  const renderInitGroupSelect = (index) => {
+    return (
+      <div key={0} className={`m-0 mt-2`}>
+        <div className={`flex relative`}>
+          {
+            <Button
+              className={`fa-button--truncate`}
+              type='text'
+              onClick={() => triggerDropDown(index)}
+              icon={<SVG name='plus' />}
+            >
+              Add new
+            </Button>
+          }
+          {isDDVisible[index] ? (
+            <div className={`${styles.group_block__event_selector}`}>
+              <GroupSelect2
+                groupedProperties={filterOptions}
+                placeholder='Select Property'
                 optionClick={(group, val) => onChange([group, val], index)}
                 onClickOutside={() => triggerDropDown(index, true)}
                 hideTitle={true}
@@ -107,24 +110,26 @@ function GroupBlock({
               ></GroupSelect2>
             </div>
           ) : null}
+        </div>
       </div>
-    </div>);
+    );
   };
 
   const renderGroupPropertyOptions = (opt, index) => {
     if (!opt || opt.prop_type === 'categorical') return;
 
     const propOpts = {
-      'numerical': [
+      numerical: [
         ['original values', null, 'raw_values'],
-        ['bucketed values', null, 'with_buckets']],
-      'datetime': [
+        ['bucketed values', null, 'with_buckets'],
+      ],
+      datetime: [
         ['hour', null, 'hour'],
         ['date', null, 'day'],
         ['week', null, 'week'],
-        ['month', null, 'month']
-      ]
-    }
+        ['month', null, 'month'],
+      ],
+    };
 
     const getProp = (opt) => {
       if (opt.prop_type === 'numerical') {
@@ -135,96 +140,115 @@ function GroupBlock({
         const propSel = propOpts['datetime'].filter((v) => v[2] === opt.grn);
         return propSel[0] ? propSel[0][0] : 'Select options';
       }
-    }
+    };
 
     const setProp = (opt, i = index) => {
       onGrpPropChange(opt[2], i);
-      selectVisToggle()
-    }
+      selectVisToggle();
+    };
 
     const selectVisToggle = (i = index) => {
       const visState = [...propSelVis];
       visState[i] = !visState[i];
       setSelVis(visState);
-    }
+    };
 
-    return (<div className={styles.grpProps}>
-      show as <div className={styles.grpProps__select}>
-        <span className={styles.grpProps__select__opt}
-          onClick={() => selectVisToggle()}>
+    return (
+      <div className={`flex items-center m-0 mx-2`}>
+        show as
+        <div
+          className={`flex relative m-0 mx-2 ${styles.grpProps__select__opt}`}
+          onClick={() => selectVisToggle()}
+        >
           {getProp(opt)}
-        </span>
-        {propSelVis[index] &&
-          <FaSelect options={propOpts[opt.prop_type]}
-            optionClick={setProp}
-            onClickOutside={() => selectVisToggle()}
-          ></FaSelect>
-        }
+          {propSelVis[index] && (
+            <FaSelect
+              options={propOpts[opt.prop_type]}
+              optionClick={setProp}
+              onClickOutside={() => selectVisToggle()}
+            ></FaSelect>
+          )}
+        </div>
       </div>
-    </div>);
-  }
+    );
+  };
 
-  const renderGroupDisplayName = (opt, index) => { 
+  const renderGroupDisplayName = (opt, index) => {
     let propertyName = '';
     // if (opt.property && opt.prop_category === 'user') {
     //   propertyName = userPropNames[opt.property] ? userPropNames[opt.property] : opt.property;
     // }
     // if (opt.property && opt.prop_category === 'event') {
     //   propertyName = eventPropNames[opt.property] ? eventPropNames[opt.property] : opt.property;
-    // } 
+    // }
     if (opt?.property) {
-      propertyName =  _.startCase(opt.property);
+      propertyName = _.startCase(opt.property);
     }
     if (!opt.property) {
       propertyName = 'Select user property';
     }
     return (
       <Tooltip title={propertyName}>
-        <Button className={`fa-button--truncate`} type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {propertyName}</Button>
+        <Button
+          className={`fa-button--truncate`}
+          type='link'
+          onClick={() => triggerDropDown(index)}
+        >
+          {!opt.property && <SVG name='plus' extraClass={`mr-2`} />}
+          {propertyName}
+        </Button>
       </Tooltip>
-    )
-  }
+    );
+  };
 
   const renderExistingBreakdowns = () => {
     if (groupByState.global.length < 1) return;
-    return (groupByState.global.map((opt, index) => (
-      <div key={index} className={`${styles.group_block__select} flex justify-start items-center mt-2`} >
-        {<>
-          <Button
-            type="text"
-            onClick={() => delOption(index)}
-            size={'small'}
-            className={`mr-1`}
-          >  <SVG name={"remove"} />  </Button>
-          {
-            <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>{index >= 1 ? '...and' : 'Breakdown'}</Text>
-          }
-          {renderGroupDisplayName(opt, index)}
-          {renderGroupPropertyOptions(opt, index)}
-        </>
+    return groupByState.global.map((opt, index) => (
+      <div key={index} className={`flex relative items-center mt-2`}>
+        {
+          <>
+            <Button
+              type='text'
+              onClick={() => delOption(index)}
+              size={'small'}
+              className={`fa-btn--custom mr-1`}
+            >
+              <SVG name={'remove'} />
+            </Button>
+            {
+              <Text
+                level={8}
+                type={'title'}
+                extraClass={'m-0 mr-2'}
+                weight={'thin'}
+              >
+                {index >= 1 ? '...and' : 'Breakdown'}
+              </Text>
+            }
+            <div className={`flex relative`}>
+              {renderGroupDisplayName(opt, index)}
+              {isDDVisible[index] ? (
+                <div className={`${styles.group_block__event_selector}`}>
+                  <GroupSelect2
+                    groupedProperties={filterOptions}
+                    placeholder='Select Property'
+                    optionClick={(group, val) => onChange([group, val], index)}
+                    onClickOutside={() => triggerDropDown(index, true)}
+                    hideTitle={true}
+                    textStartCase
+                  ></GroupSelect2>
+                </div>
+              ) : null}
+            </div>
+            {renderGroupPropertyOptions(opt, index)}
+          </>
         }
-
-        <div className={styles.group_block__event_selector}>
-          {isDDVisible[index]
-            ? (
-              <div className={styles.group_block__event_selector__btn}>
-                <GroupSelect2 groupedProperties={filterOptions}
-                  placeholder="Select Property"  
-                  optionClick={(group, val) => onChange([group, val], index)}
-                  onClickOutside={() => triggerDropDown(index, true)}
-                  hideTitle={true}
-                  textStartCase
-                ></GroupSelect2>
-              </div>
-            ) : null}
-        </div>
       </div>
-    )));
+    ));
   };
 
   return (
     <div className={'flex flex-col justify-start'}>
-
       {/* <div className={`${styles.group_block__event} flex justify-start items-center`}>
         <div className={'fa--query_block--add-event inactive flex justify-center items-center mr-2'}><SVG name={'groupby'} size={24} color={'purple'}/></div>
         <Text type={'title'} level={6} weight={'thin'} extraClass={'m-0'}>Breakdown</Text>
@@ -242,13 +266,16 @@ const mapStateToProps = (state) => ({
   eventProperties: state.coreQuery.eventProperties,
   userPropNames: state.coreQuery.userPropNames,
   eventPropNames: state.coreQuery.eventPropNames,
-  groupByState: state.coreQuery.groupBy
+  groupByState: state.coreQuery.groupBy,
 });
 
-const mapDispatchToProps = dispatch => bindActionCreators({
-  setGroupBy,
-  delGroupBy
-
-}, dispatch);
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      setGroupBy,
+      delGroupBy,
+    },
+    dispatch
+  );
 
 export default connect(mapStateToProps, mapDispatchToProps)(GroupBlock);

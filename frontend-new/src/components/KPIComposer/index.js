@@ -1,14 +1,18 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { connect, useSelector } from "react-redux";
-import { bindActionCreators } from "redux";
-import { Button, Collapse, Select, Popover } from "antd";
+import React, { useState, useEffect, useCallback } from 'react';
+import { connect, useSelector } from 'react-redux';
+import { bindActionCreators } from 'redux';
+import { Button, Collapse, Select, Popover } from 'antd';
 import MomentTz from 'Components/MomentTz';
-import { SVG, Text } from "../factorsComponents";
-import styles from "./index.module.scss";
-import QueryBlock from "./QueryBlock";
-import SeqSelector from "./AnalysisSeqSelector";
-import GroupBlock from "./GroupBlock";
-import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT, QUERY_TYPE_KPI } from "../../utils/constants";
+import { SVG, Text } from '../factorsComponents';
+import styles from './index.module.scss';
+import QueryBlock from './QueryBlock';
+import SeqSelector from './AnalysisSeqSelector';
+import GroupBlock from './GroupBlock';
+import {
+  QUERY_TYPE_FUNNEL,
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_KPI,
+} from '../../utils/constants';
 
 import FaDatepicker from '../../components/FaDatepicker';
 
@@ -22,7 +26,7 @@ import {
   fetchEventNames,
   getUserProperties,
   getEventProperties,
-} from "Reducers/coreQuery/middleware";
+} from 'Reducers/coreQuery/middleware';
 
 import GLobalFilter from './GlobalFilter';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
@@ -50,11 +54,11 @@ function KPIComposer({
   setCollapse,
   selectedMainCategory,
   setSelectedMainCategory,
-  KPIConfigProps
+  KPIConfigProps,
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
-  const [criteriaTabOpen, setCriteriaTabOpen] = useState(false); 
+  const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
 
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
 
@@ -66,7 +70,7 @@ function KPIComposer({
   // }, [activeProject, fetchEventNames]);
 
   useEffect(() => {
-    setSelectedMainCategory(queries[0])
+    setSelectedMainCategory(queries[0]);
   }, [queries]);
 
   useEffect(() => {
@@ -86,7 +90,7 @@ function KPIComposer({
             queries={queries}
             eventChange={eventChange}
             selectedMainCategory={selectedMainCategory}
-            setSelectedMainCategory={setSelectedMainCategory} 
+            setSelectedMainCategory={setSelectedMainCategory}
             KPIConfigProps={KPIConfigProps}
           />
         </div>
@@ -114,15 +118,15 @@ function KPIComposer({
   };
 
   const setGlobalFiltersOption = (filters) => {
-    const opts = Object.assign({}, queryOptions)
+    const opts = Object.assign({}, queryOptions);
     opts.globalFilters = filters;
     setQueryOptions(opts);
-  }
+  };
 
   const renderGlobalFilterBlock = (isSameKPIgrp) => {
     const [filterBlockOpen, setFilterBlockOpen] = useState(true);
-    if(!isSameKPIgrp || _.isEmpty(queries)){
-      return null
+    if (!isSameKPIgrp || _.isEmpty(queries)) {
+      return null;
     }
     try {
       if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
@@ -133,31 +137,37 @@ function KPIComposer({
       }
 
       return (
-        <ComposerBlock 
-          blockTitle={'FILTER BY'} 
-          isOpen={filterBlockOpen} 
-          showIcon={true} 
+        <ComposerBlock
+          blockTitle={'FILTER BY'}
+          isOpen={filterBlockOpen}
+          showIcon={true}
           onClick={() => setFilterBlockOpen(!filterBlockOpen)}
           extraClass={`no-padding-l`}
         >
-          <div key={0} className={"fa--query_block borderless no-padding "}>
-            <GLobalFilter filters={queryOptions.globalFilters} 
+          <div key={0} className={'fa--query_block borderless no-padding '}>
+            <GLobalFilter
+              filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
-              onFiltersLoad={[() => {getUserProperties(activeProject.id, queryType)}]}
+              onFiltersLoad={[
+                () => {
+                  getUserProperties(activeProject.id, queryType);
+                },
+              ]}
               selectedMainCategory={selectedMainCategory}
               KPIConfigProps={KPIConfigProps}
             ></GLobalFilter>
           </div>
         </ComposerBlock>
-
       );
-    } catch (err) { console.log(err) };
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const groupByBlock = (isSameKPIgrp) => {
     const [groupBlockOpen, setGroupBlockOpen] = useState(true);
-    if(!isSameKPIgrp || _.isEmpty(queries)){
-      return null
+    if (!isSameKPIgrp || _.isEmpty(queries)) {
+      return null;
     }
 
     try {
@@ -169,14 +179,17 @@ function KPIComposer({
       }
 
       return (
-        <ComposerBlock blockTitle={'BREAKDOWN'} isOpen={groupBlockOpen} 
-          showIcon={true} onClick={() => setGroupBlockOpen(!groupBlockOpen)}
+        <ComposerBlock
+          blockTitle={'BREAKDOWN'}
+          isOpen={groupBlockOpen}
+          showIcon={true}
+          onClick={() => setGroupBlockOpen(!groupBlockOpen)}
           extraClass={`no-padding-l`}
         >
           <div key={0} className={'fa--query_block borderless no-padding '}>
-            <GroupBlock 
-              queryType={queryType} 
-              events={queries} 
+            <GroupBlock
+              queryType={queryType}
+              events={queries}
               selectedMainCategory={selectedMainCategory}
               KPIConfigProps={KPIConfigProps}
             />
@@ -217,7 +230,7 @@ function KPIComposer({
     return ranges;
   };
 
-  const setDateRange = (dates) => { 
+  const setDateRange = (dates) => {
     const queryOptionsState = Object.assign({}, queryOptions);
     if (dates && dates.startDate && dates.endDate) {
       if (Array.isArray(dates.startDate)) {
@@ -251,37 +264,56 @@ function KPIComposer({
   //   // } else {
   //   //   runFunnelQuery(false);
   //   // }
-  //   handleRunQuery() 
+  //   handleRunQuery()
   // }, [runFunnelQuery, runQuery, queryType]);
 
-  const handleRunQueryCamp = () => { 
+  const handleRunQueryCamp = () => {
     handleRunQuery();
-  }; 
+  };
 
   const footer = () => {
-    try {   
+    try {
       if (queryType === QUERY_TYPE_KPI && queries.length == 0) {
         return null;
       } else {
         return (
-          <div className={!collapse? styles.composer_footer: styles.composer_footer_right}>
-            {!collapse? <FaDatepicker
-              customPicker
-              presetRange
-              monthPicker
-              placement='topRight'
-              buttonSize={'large'}
-              range={{
-                startDate: queryOptions.date_range.from,
-                endDate: queryOptions.date_range.to,
-              }}
-              onSelect={setDateRange}
-            />: <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(false)}>
-            <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse all
-          </Button>}
-          <Button className={`ml-2`} size={'large'} type='primary' onClick={handleRunQueryCamp}> 
+          <div
+            className={
+              !collapse ? styles.composer_footer : styles.composer_footer_right
+            }
+          >
+            {!collapse ? (
+              <FaDatepicker
+                customPicker
+                presetRange
+                monthPicker
+                placement='topRight'
+                buttonSize={'large'}
+                range={{
+                  startDate: queryOptions.date_range.from,
+                  endDate: queryOptions.date_range.to,
+                }}
+                onSelect={setDateRange}
+              />
+            ) : (
+              <Button
+                className={`mr-2`}
+                size={'large'}
+                type={'default'}
+                onClick={() => setCollapse(false)}
+              >
+                <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>
+                Collapse all
+              </Button>
+            )}
+            <Button
+              className={`ml-2`}
+              size={'large'}
+              type='primary'
+              onClick={handleRunQueryCamp}
+            >
               Run Analysis
-          </Button>
+            </Button>
           </div>
         );
       }
@@ -305,7 +337,7 @@ function KPIComposer({
     if (
       queryOptions.session_analytics_seq.start &&
       queryOptions.session_analytics_seq.end
-  ) {
+    ) {
       return (
         <>
           <Text
@@ -343,7 +375,7 @@ function KPIComposer({
             extraClass={'m-0 ml-2 inline'}
           >
             happened in the same session
-          </Text>{' '}
+          </Text>
         </>
       );
     } else {
@@ -381,12 +413,12 @@ function KPIComposer({
             extraClass={'m-0 ml-2 inline'}
           >
             happened in the same session
-          </Text>{' '}
+          </Text>
         </>
       );
     }
   };
- 
+
   const renderFuCrit = () => {
     return (
       <div className={'flex justify-start items-center mt-2'}>
@@ -404,8 +436,15 @@ function KPIComposer({
         if (queries.length <= 0) return null;
 
         return (
-          <ComposerBlock blockTitle={'CRITERIA'} isOpen={criterieaBlockOpen} showIcon={true} 
-            onClick={() => {setCriterieaBlockOpen(!criterieaBlockOpen)}} extraClass={`no-padding-l`}>
+          <ComposerBlock
+            blockTitle={'CRITERIA'}
+            isOpen={criterieaBlockOpen}
+            showIcon={true}
+            onClick={() => {
+              setCriterieaBlockOpen(!criterieaBlockOpen);
+            }}
+            extraClass={`no-padding-l`}
+          >
             <div className={styles.criteria}>{renderEACrit()}</div>
           </ComposerBlock>
         );
@@ -430,9 +469,10 @@ function KPIComposer({
     const [eventBlockOpen, setEventBlockOpen] = useState(true);
     try {
       return (
-        <ComposerBlock 
-          blockTitle={'KPI TO ANALYSE'} isOpen={eventBlockOpen} 
-          showIcon={true} 
+        <ComposerBlock
+          blockTitle={'KPI TO ANALYSE'}
+          isOpen={eventBlockOpen}
+          showIcon={true}
           onClick={() => setEventBlockOpen(!eventBlockOpen)}
           extraClass={`no-padding-l`}
         >
@@ -444,7 +484,9 @@ function KPIComposer({
     }
   };
 
-  const isSameKPIgrp = queries.every((item,index) => queries[0].group == queries[index].group)
+  const isSameKPIgrp = queries.every(
+    (item, index) => queries[0].group == queries[index].group
+  );
   return (
     <div className={styles.composer_body}>
       {renderQueryList()}
@@ -458,7 +500,7 @@ function KPIComposer({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties
+  eventProperties: state.coreQuery.eventProperties,
 });
 
 const mapDispatchToProps = (dispatch) =>

@@ -53,8 +53,7 @@ function ReportTitle({
     <div className='pb-2 border-bottom--thin-2'>
       <div className='flex justify-between items-center'>
         <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 mt-6'}>
-          {' '}
-          {title || `Untitled Analysis ${moment().format('DD/MM/YYYY')}`}{' '}
+          {title || `Untitled Analysis ${moment().format('DD/MM/YYYY')}`}
         </Text>
         {section === DASHBOARD_MODAL ? (
           <Button
@@ -70,8 +69,7 @@ function ReportTitle({
           onClick={queryType !== QUERY_TYPE_WEB ? handleClick : null}
         >
           <Text type={'title'} level={6} color={'grey'} extraClass={'m-0 mr-2'}>
-            {' '}
-            {displayQueryName(queryDetail)}{' '}
+            {displayQueryName(queryDetail)}
           </Text>
           <SVG name='edit' color={'grey'} />
         </div>

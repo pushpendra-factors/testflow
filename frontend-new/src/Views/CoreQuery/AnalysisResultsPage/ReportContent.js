@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useContext,
-} from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import ReportTitle from './ReportTitle';
 import {
   QUERY_TYPE_EVENT,
@@ -355,7 +350,7 @@ function ReportContent({
             handleGranularityChange={handleGranularityChange}
             section={section}
           />
-        </div>{' '}
+        </div>
       </>
 
       <div className='mt-12'>{content}</div>
