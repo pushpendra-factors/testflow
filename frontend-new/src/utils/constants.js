@@ -179,6 +179,7 @@ export const MARKETING_TOUCHPOINTS = {
   SOURCE: 'Source',
   KEYWORD: 'Keyword',
   MATCHTYPE: 'MatchType',
+  LANDING_PAGE: 'LandingPage',
 };
 
 export const INITIAL_SESSION_ANALYTICS_SEQ = {
@@ -200,6 +201,11 @@ export const ATTRIBUTION_METRICS = [
   {
     title: 'Spend',
     header: 'Spend',
+    enabled: false,
+  },
+  {
+    title: 'CTR (%)',
+    header: 'CTR(%)',
     enabled: true,
   },
   {
@@ -208,9 +214,9 @@ export const ATTRIBUTION_METRICS = [
     enabled: true,
   },
   {
-    title: 'CTR (%)',
-    header: 'CTR(%)',
-    enabled: false,
+    title: 'Users',
+    header: 'Users',
+    enabled: true,
   },
   {
     title: 'Average CPC',
@@ -225,11 +231,6 @@ export const ATTRIBUTION_METRICS = [
   {
     title: 'Click Conversion Rate (%)',
     header: 'ConversionRate(%) OR ClickConversionRate(%)',
-    enabled: false,
-  },
-  {
-    title: 'Users',
-    header: 'Users',
     enabled: false,
   },
   {
@@ -345,6 +346,27 @@ export const KEY_TOUCH_POINT_DIMENSIONS = [
     enabled: true,
     type: 'key',
     touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
+    defaultValue: true,
+  },
+  {
+    title: 'Landing Page URL',
+    header: 'landing_page_url',
+    responseHeader: MARKETING_TOUCHPOINTS.LANDING_PAGE,
+    enabled: true,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.LANDING_PAGE,
+    defaultValue: true,
+  },
+];
+
+export const KEY_CONTENT_GROUPS = [
+  {
+    title: 'Landing Page URL',
+    header: 'landing_page_url',
+    responseHeader: MARKETING_TOUCHPOINTS.LANDING_PAGE,
+    enabled: true,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.LANDING_PAGE,
     defaultValue: true,
   },
 ];

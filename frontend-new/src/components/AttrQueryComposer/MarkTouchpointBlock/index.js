@@ -88,10 +88,10 @@ const MarkTouchpointBlock = ({
 
   const selectTouchPointOpts = () => {
     let tchPointOpts = [];
-    if (!touchPointRef || touchPointRef === 'Tactic') {
-      tchPointOpts = touchPointOptions[0].values.map(
-        (option) => new Array(option[0], option[0])
-      );
+    if (!touchPointRef || touchPointRef.includes('Tactic')) {
+      tchPointOpts = touchPointOptions[0].values
+        .filter((opt) => !['LandingPage'].includes(opt[0]))
+        .map((option) => new Array(option[0], option[0]));
     } else {
       tchPointOpts = touchPointOptions[0].values
         .filter((opt) => !['AdGroup', 'Keyword'].includes(opt[0]))

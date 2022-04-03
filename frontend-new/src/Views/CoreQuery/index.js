@@ -162,6 +162,7 @@ function CoreQuery({
     linkedEvents: [],
     date_range: {},
     attr_dimensions: [],
+    content_groups: []
   });
 
   const [campaignState, setCampaignState] = useState({
@@ -195,6 +196,7 @@ function CoreQuery({
     attr_dateRange,
     eventNames,
     attr_dimensions,
+    content_groups
   } = useSelector((state) => state.coreQuery);
 
   const [activeTab, setActiveTab] = useState(1);
@@ -539,6 +541,7 @@ function CoreQuery({
           eventGoal,
           touchpoint,
           attr_dimensions,
+          content_groups,
           touchpoint_filters,
           attr_query_type,
           models,
@@ -561,6 +564,7 @@ function CoreQuery({
             models,
             linkedEvents,
             attr_dimensions,
+            content_groups,
             tacticOfferType,
             date_range: { ...durationObj },
           });
@@ -621,6 +625,7 @@ function CoreQuery({
       attr_dateRange,
       updateResultState,
       attr_dimensions,
+      content_groups,
       getDashboardConfigs,
       configActionsOnRunningQuery,
       resetComparisonData,

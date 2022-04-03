@@ -982,6 +982,7 @@ export const getAttributionQuery = (
   eventGoal,
   touchpoint,
   attr_dimensions,
+  content_groups,
   touchpointFilters,
   queryType,
   models,
@@ -1040,12 +1041,23 @@ export const getAttributionQuery = (
       };
     });
   }
-  const attribution_key_dimensions = attr_dimensions
+  const list_dimensions =
+    touchpoint === 'LandingPage'
+      ? content_groups.slice()
+      : attr_dimensions.slice();
+
+  const attribution_key_dimensions = list_dimensions
     .filter((d) => d.touchPoint === touchpoint && d.enabled && d.type === 'key')
     .map((d) => d.header);
-  const attribution_key_custom_dimensions = attr_dimensions
+  const attribution_key_custom_dimensions = list_dimensions
     .filter(
       (d) => d.touchPoint === touchpoint && d.enabled && d.type === 'custom'
+    )
+    .map((d) => d.header);
+  const attribution_content_groups = list_dimensions
+    .filter(
+      (d) =>
+        d.touchPoint === touchpoint && d.enabled && d.type === 'content_group'
     )
     .map((d) => d.header);
 
@@ -1053,6 +1065,7 @@ export const getAttributionQuery = (
     query.query.attribution_key_dimensions = attribution_key_dimensions;
     query.query.attribution_key_custom_dimensions =
       attribution_key_custom_dimensions;
+    query.query.attribution_content_groups = attribution_content_groups;
   }
 
   return query;
@@ -1060,7 +1073,8 @@ export const getAttributionQuery = (
 
 export const getAttributionStateFromRequestQuery = (
   requestQuery,
-  initial_attr_dimensions
+  initial_attr_dimensions,
+  initial_content_groups
 ) => {
   const filters = [];
   requestQuery.ce.pr.forEach((pr) => {
@@ -1115,6 +1129,21 @@ export const getAttributionStateFromRequestQuery = (
     return dimension;
   });
 
+  const content_groups = initial_content_groups.map((dimension) => {
+    if (dimension.touchPoint === touchpoint) {
+      return {
+        ...dimension,
+        enabled: !requestQuery.attribution_key_dimensions
+          ? dimension.defaultValue
+          : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
+              -1 ||
+            requestQuery.attribution_content_groups?.indexOf(dimension.header) >
+              -1,
+      };
+    }
+    return dimension;
+  });
+
   const result = {
     queryType: QUERY_TYPE_ATTRIBUTION,
     eventGoal: {
@@ -1125,6 +1154,7 @@ export const getAttributionStateFromRequestQuery = (
     attr_query_type: requestQuery.query_type,
     touchpoint,
     attr_dimensions,
+    content_groups,
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
     tacticOfferType: requestQuery.tactic_offer_type,

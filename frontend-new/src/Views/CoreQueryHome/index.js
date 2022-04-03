@@ -168,7 +168,9 @@ function CoreQuery({
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
   const dispatch = useDispatch();
-  const { attr_dimensions } = useSelector((state) => state.coreQuery);
+  const { attr_dimensions, content_groups } = useSelector(
+    (state) => state.coreQuery
+  );
   const { config: kpiConfig } = useSelector((state) => state.kpi);
   const { metadata } = useSelector((state) => state.insights);
   const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
@@ -453,7 +455,8 @@ function CoreQuery({
         ) {
           equivalentQuery = getAttributionStateFromRequestQuery(
             record.query.query,
-            attr_dimensions
+            attr_dimensions,
+            content_groups
           );
           let newDateRange = {};
           if (navigatedFromDashboard) {
@@ -493,7 +496,7 @@ function CoreQuery({
         console.log(err);
       }
     },
-    [updateEventFunnelsState, attr_dimensions, kpiConfig]
+    [updateEventFunnelsState, attr_dimensions, content_groups, kpiConfig]
   );
 
   const getMenu = (row) => {

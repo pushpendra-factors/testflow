@@ -33,6 +33,7 @@ import {
   INITIALIZE_MTA_STATE,
   INITIALIZE_CAMPAIGN_STATE,
   INITIALIZE_TOUCHPOINT_DIMENSIONS,
+  INITIALIZE_CONTENT_GROUPS,
 } from '../types';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 
@@ -42,6 +43,7 @@ const DEFAULT_TOUCHPOINTS = [
   'AdGroup',
   'Keyword',
   'Channel',
+  'LandingPage',
 ];
 
 const defaultState = {
@@ -70,6 +72,7 @@ const defaultState = {
     dateStr: '',
   },
   attr_dimensions: [],
+  content_groups: [],
   models: [],
   window: null,
   linkedEvents: [],
@@ -196,6 +199,12 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         attr_dimensions: action.payload,
+      };
+    }
+    case INITIALIZE_CONTENT_GROUPS: {
+      return {
+        ...state,
+        content_groups: action.payload,
       };
     }
     case SET_TOUCHPOINT_FILTERS: {
