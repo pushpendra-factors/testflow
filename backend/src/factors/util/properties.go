@@ -29,7 +29,6 @@ const EVENT_NAME_SESSION = "$session"
 const EVENT_NAME_OFFLINE_TOUCH_POINT = "$offline_touch_point"
 const EVENT_NAME_FORM_SUBMITTED = "$form_submitted"
 
-
 // Integration: Hubspot event names.
 const EVENT_NAME_HUBSPOT_CONTACT_CREATED = "$hubspot_contact_created"
 const EVENT_NAME_HUBSPOT_CONTACT_UPDATED = "$hubspot_contact_updated"
@@ -1143,6 +1142,7 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$hubspot_contact_created":        "Contact Created",
 	"$hubspot_contact_updated":        "Contact Updated",
 	"$hubspot_deal_state_changed":     "Deal State Changed",
+	"$hubspot_form_submission":        "Form Submission",
 	"$sf_contact_created":             "Contact Created",
 	"$sf_contact_updated":             "Contact Updated",
 	"$sf_lead_created":                "Lead Created",
@@ -1174,6 +1174,7 @@ var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
 	"$hubspot_company_updated":        "Hubspot",
 	"$hubspot_deal_created":           "Hubspot",
 	"$hubspot_deal_updated":           "Hubspot",
+	"$hubspot_form_submission":        "Hubspot",
 	"$sf_contact_created":             "Salesforce",
 	"$sf_contact_updated":             "Salesforce",
 	"$sf_lead_created":                "Salesforce",

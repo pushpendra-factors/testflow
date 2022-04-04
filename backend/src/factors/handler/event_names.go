@@ -29,11 +29,13 @@ var FORCED_EVENT_NAMES = map[uint64][]string{
 }
 
 var BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES = map[string]string{
-	"$hubspot_":        "$hubspot_",
-	"$sf_contact_":     "$salesforce_",
-	"$sf_lead_":        "$salesforce_",
-	"$sf_account_":     "$salesforce_",
-	"$sf_opportunity_": "$salesforce_",
+	"$hubspot_contact_": "$hubspot_",
+	"$hubspot_company_": "$hubspot_",
+	"$hubspot_deal_":    "$hubspot_",
+	"$sf_contact_":      "$salesforce_",
+	"$sf_lead_":         "$salesforce_",
+	"$sf_account_":      "$salesforce_",
+	"$sf_opportunity_":  "$salesforce_",
 }
 
 // GetEventNamesHandler godoc
