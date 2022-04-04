@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import {
-  Row, Col, Button, Input, Form, Checkbox
+  Row, Col, Button, Input, Form, Checkbox, Modal, message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
@@ -11,23 +11,36 @@ import Congrats from './Congrats';
 import { createHubspotContact, getHubspotContact } from '../../reducers/global';
 import { getOwner } from '../../utils/hubspot';
 import { URL1, URL2 } from '../../utils/mailmodo';
+import MoreAuthOptions from './MoreAuthOptions';
+import { SSO_SIGNUP_URL } from '../../utils/sso';
+
 function SignUp({ signup, createHubspotContact, getHubspotContact }) {
   const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
   const [formData, setformData] = useState(null);
   const [ownerID, setownerID] = useState();
+  const [showModal, setShowModal] = useState(false);
+  const [Showform, setShowform] = useState(false);
 
   const history = useHistory();
   const routeChange = (url) => {
     history.push(url);
   };
 
-  const getEmail = () => {
+  const checkError = () => {
     const url = new URL(window.location.href);
-    const email = url.searchParams.get('email');
-    return email;
+    const error = url.searchParams.get('error');
+    if(error) {
+        let str = error.replace("_", " ");
+        let finalmsg = str.toLocaleLowerCase();
+        message.error(finalmsg);
+    }
   }
+
+  useEffect(() => {
+      checkError();
+  },[]);
 
   const startMailModo = (email) => {
     let data = {
@@ -233,7 +246,8 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                     </div>
                                 </Col>
                             </Row>
-
+                            {Showform? 
+                            <>
                             <Row>
                                 <Col span={24}>
                                         <div className={'flex flex-col mt-5'} >
@@ -270,7 +284,6 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                         <div className={'flex flex-col mt-5 w-full'} >
                                             {/* <Text type={'title'} level={7} extraClass={'m-0'}>Work Email</Text> */}
                                             <Form.Item label={null}
-                                                initialValue={getEmail()? getEmail() : ""}
                                                 name="email"
                                                 rules={[
                                                     { 
@@ -367,13 +380,54 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                     </div>
                                 </Col>
                                 }
+                            </Row>
+
+                            <Row>
                                 <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-6'} >
-                                    <Text type={'paragraph'} mini color={'grey'}>Already have an account?<a disabled={dataLoading} onClick={() => routeChange('/login')}> Sign In</a></Text>
+                                <div className={'flex flex-col justify-center items-center mt-6'} >
+                                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} color={'grey'}>OR</Text>
+                                </div>
+                                </Col>
+                            </Row>
+                            </>
+                            : 
+                            <Row>
+                                <Col span={24}>
+                                    <div className={'flex flex-col justify-center items-center mt-5'} >
+                                        <Form.Item className={'m-0 w-full'} loading={dataLoading}>
+                                            <Button loading={dataLoading} type={'primary'} size={'large'} className={'w-full'} onClick={() => setShowform(true)}>Signup with Email</Button>
+                                        </Form.Item>
+                                    </div>
+                                </Col>
+                            </Row>}
+
+                            <Row>   
+                                <Col span={24}>
+                                    <div className={'flex flex-col justify-center items-center mt-5'} >
+                                    <Form.Item className={'m-0 w-full'} loading={dataLoading}>
+                                        <a href={SSO_SIGNUP_URL}><Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
+                                    </Form.Item>
                                     </div>
                                 </Col>
                             </Row>
 
+                            {/* <Row>
+                                <Col span={24}>
+                                    <div className={'flex flex-col justify-center items-center mt-5'} >
+                                    <Form.Item className={'m-0 w-full'} loading={dataLoading}>
+                                        <Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'} onClick={() => setShowModal(true)}><SVG name={'S_Key'} size={24} color={'#8692A3'} /> More SSO Options</Button>
+                                    </Form.Item>
+                                    </div>
+                                </Col>
+                            </Row> */}
+
+                            <Row>
+                                <Col span={24}>
+                                    <div className={'flex flex-col justify-center items-center mt-6'} >
+                                    <Text type={'paragraph'} mini color={'grey'}>Already have an account?<a disabled={dataLoading} onClick={() => routeChange('/login')}> Log In</a></Text>
+                                    </div>
+                                </Col>
+                            </Row>
                         </Form>
                         </Col>
 
@@ -390,6 +444,8 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
         {formData &&
             <Congrats data = {formData} />
         }
+
+        {/* <MoreAuthOptions showModal={showModal} setShowModal={setShowModal}/>   */}
     </>
 
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Row, Col, Button, Input, Form, message
 } from 'antd';
@@ -8,16 +8,33 @@ import queryString from 'query-string';
 import { activate } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 import styles from './index.module.scss';
+import MoreAuthOptions from './MoreAuthOptions';
+import { SSO_ACTIVATE_URL } from '../../utils/sso';
 
 function Activate(props) {
   const [form] = Form.useForm();
   const [errorInfo, seterrorInfo] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const history = useHistory();
   const routeChange = (url) => {
     history.push(url);
   };
+
+  const checkError = () => {
+    const url = new URL(window.location.href);
+    const error = url.searchParams.get('error');
+    if(error) {
+        let str = error.replace("_", " ");
+        let finalmsg = str.toLocaleLowerCase();
+        message.error(finalmsg);
+    }
+  }
+
+  useEffect(() => {
+      checkError();
+  },[]);
 
   const ResetPassword = () => {
     setDataLoading(true);
@@ -135,6 +152,28 @@ function Activate(props) {
                                 </div>
                             </Col>
                             }
+
+                            <Col span={24}>
+                              <div className={'flex justify-center items-center mt-6'} >
+                                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} color={'grey'}>OR</Text>
+                              </div>
+                            </Col>
+
+                            <Col span={24}>
+                                <div className={'flex flex-col justify-center items-center mt-5'} >
+                                  <Form.Item className={'m-0'} loading={dataLoading}>
+                                    <a href={SSO_ACTIVATE_URL}><Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
+                                  </Form.Item>
+                                </div>
+                            </Col>
+
+                            {/* <Col span={24}>
+                                <div className={'flex flex-col justify-center items-center mt-5'} >
+                                  <Form.Item className={'m-0'} loading={dataLoading}>
+                                    <Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'} onClick={() => setShowModal(true)}><SVG name={'S_Key'} size={24} color={'#8692A3'} /> More SSO Options</Button>
+                                  </Form.Item>
+                                </div>
+                            </Col> */}
                             {/* <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
                                     <a type={'text'} size={'large'} onClick={() => routeChange('/login')}>Go back to login</a>
@@ -155,6 +194,8 @@ function Activate(props) {
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
             </div>
       </div>
+
+      {/* <MoreAuthOptions showModal={showModal} setShowModal={setShowModal}/> */}
 
     </>
 
