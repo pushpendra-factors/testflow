@@ -83,8 +83,8 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                                 <div className={`${current == 0? styles.sideActive: styles.side}`}>
                                 </div>
                                 <div className={`${current == 0? styles.textActive: styles.text}`}>
-                                    <p className={``}>Connect with your</p>
-                                    <p className={`${styles.text1}`}>Ad Platforms</p>
+                                    <p className={`${styles.text1}`}>Connect with your</p>
+                                    <p className={`${styles.text2}`}>Ad Platforms</p>
                                 </div>
                                 <div className={`m-0`}>
                                     <SVG name={'CaretDown'} size={20} color={'blue'} extraClass={`${current == 0? styles.caretActive: styles.caret}`}/>
@@ -95,8 +95,8 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                                 <div className={`${current == 1? styles.sideActive: styles.side}`}>
                                 </div>
                                 <div className={`${current == 1? styles.textActive: styles.text}`}>
-                                    <p className={``}>Connect with your</p>
-                                    <p className={`${styles.text1}`}>Website Data</p>
+                                    <p className={`${styles.text1}`}>Connect with your</p>
+                                    <p className={`${styles.text2}`}>Website Data</p>
                                 </div>
                                 <div className={`m-0`}>
                                     <SVG name={'CaretDown'} size={20} color={'blue'} extraClass={`${current == 1? styles.caretActive: styles.caret}`}/>
@@ -107,8 +107,8 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                                 <div className={`${current == 2? styles.sideActive: styles.side}`}>
                                 </div>
                                 <div className={`${current == 2? styles.textActive: styles.text}`}>
-                                    <p className={``}>Connect with your</p>
-                                    <p className={`${styles.text1}`}>CRMs</p>
+                                    <p className={`${styles.text1}`}>Connect with your</p>
+                                    <p className={`${styles.text2}`}>CRMs</p>
                                 </div>
                                 <div className={`m-0`}>
                                     <SVG name={'CaretDown'} size={20} color={'blue'} extraClass={`${current == 2? styles.caretActive: styles.caret}`}/>
@@ -119,8 +119,8 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                                 <div className={`${current == 3? styles.sideActive: styles.side}`}>
                                 </div>
                                 <div className={`${current == 3? styles.textActive: styles.text}`}>
-                                    <p className={``}>Other</p>
-                                    <p className={`${styles.text1}`}>Integrations</p>
+                                    <p className={`${styles.text1}`}>Other</p>
+                                    <p className={`${styles.text2}`}>Integrations</p>
                                 </div>
                                 <div className={`m-0`}>
                                     <SVG name={'CaretDown'} size={20} color={'blue'} extraClass={`${current == 3? styles.caretActive: styles.caret}`}/>

@@ -8,6 +8,19 @@ import styles from './index.module.scss';
 
 const Video = ({showModal, setShowModal}) => {
 
+    const closeBTn = () => {
+        setShowModal(false);
+        let videos = document.querySelectorAll('iframe, video');
+        Array.prototype.forEach.call(videos, function (video) {
+            if (video.tagName.toLowerCase() === 'video') {
+                video.pause();
+            } else {
+                let src = video.src;
+                video.src = src;
+            }
+        });
+    }
+
     return (
         <>
             <Modal
@@ -21,6 +34,7 @@ const Video = ({showModal, setShowModal}) => {
                 closable={false}
                 onCancel={()=> setShowModal(false)}
                 className={'fa-modal--regular'}
+                width={700}
             >
                 <div className={'m-0 '}>
                     <Row className={'mt-2 mb-4'}>
@@ -34,7 +48,7 @@ const Video = ({showModal, setShowModal}) => {
                     </div>
                     <Row justify='end' className={'pt-6 ml-4'}>
                         <Col>
-                            <Button type={'default'} size={'large'} onClick={() => setShowModal(false)}>Close</Button>
+                            <Button type={'default'} size={'large'} onClick={closeBTn}>Close</Button>
                         </Col>
                     </Row>
                 </div>
