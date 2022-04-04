@@ -116,10 +116,15 @@ func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
 func extractingFormSubmissionDetails(projectId uint64, contact Contact, properties map[string]interface{}) []map[string]interface{} {
 	form := make([]map[string]interface{}, 0)
 	keyArr := []string{"conversion-id", "form-id", "form-type", "page-title", "page-url", "portal-id", "timestamp", "title"}
+
 	for userFormNo := range contact.FormSubmissions {
 		form = append(form, make(map[string]interface{}))
 
 		for idx := range keyArr {
+			if contact.FormSubmissions[userFormNo][keyArr[idx]] == nil {
+				continue
+			}
+
 			if keyArr[idx] == "timestamp" {
 				if _, exists := form[userFormNo][keyArr[idx]]; !exists {
 					val := contact.FormSubmissions[userFormNo][keyArr[idx]]
@@ -130,7 +135,7 @@ func extractingFormSubmissionDetails(projectId uint64, contact Contact, properti
 			} else if keyArr[idx] == "page-url" {
 				val := contact.FormSubmissions[userFormNo][keyArr[idx]]
 				if _, exists := form[userFormNo][keyArr[idx]]; !exists {
-					urlParameters := GetURLParameterAsMap(val.(string))
+					urlParameters := GetURLParameterAsMap(util.GetPropertyValueAsString(val))
 					for k, v := range urlParameters {
 						form[userFormNo][k] = v
 					}
