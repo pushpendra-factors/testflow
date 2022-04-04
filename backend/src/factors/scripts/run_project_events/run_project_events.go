@@ -128,16 +128,7 @@ func main() {
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	envFlag := flag.String("env", "development", "environment")
 	var cloudManager filestore.FileManager
-	if *envFlag == "development" {
-		cloudManager = serviceDisk.New(*bucketName)
-	} else {
-		var err error
-		cloudManager, err = serviceGCS.New(*bucketName)
-		if err != nil {
-			log.Error("Failed to init New GCS Client")
-			panic(err)
-		}
-	}
+
 	//Taking flag inputs
 	date := time.Now().AddDate(0, 0, -7)
 	for date.Weekday() != time.Sunday {
@@ -148,6 +139,16 @@ func main() {
 	modelType := flag.String("modelType", "w", "Model Type of events")
 	flag.Parse()
 
+	if *envFlag == "development" {
+		cloudManager = serviceDisk.New(*bucketName)
+	} else {
+		var err error
+		cloudManager, err = serviceGCS.New(*bucketName)
+		if err != nil {
+			log.Error("Failed to init New GCS Client")
+			panic(err)
+		}
+	}
 	fromTime, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, *fromDate)
 	if err != nil {
 		log.Fatal("Failed in parsing date. Error = ", err)
