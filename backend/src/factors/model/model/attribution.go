@@ -1888,6 +1888,7 @@ func AddUpConversionEventCount(usersIdAttributionIdMap map[string][]AttributionK
 			}
 		}
 	}
+	// non-used sessionWT rows can be written back to '$none' userID
 	return attributionData
 }
 
@@ -2014,7 +2015,7 @@ func DoesLinkedinReportExist(attributionKey string) bool {
 	return false
 }
 
-func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, query *AttributionQuery, sessions map[string]map[string]UserSessionData) {
+func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, query *AttributionQuery, sessions map[string]map[string]UserSessionData, noOfConversionEvents int) {
 
 	// Extract out key based info
 	sessionKeyMarketingInfo := make(map[string]MarketingData)
@@ -2055,6 +2056,12 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 	}
 
 	// Creating an empty linked events row.
+	emptyConversionEventRow := make([]float64, 0)
+	for i := 0; i < noOfConversionEvents; i++ {
+		emptyConversionEventRow = append(emptyConversionEventRow, float64(0))
+	}
+
+	// Creating an empty linked events row.
 	emptyLinkedEventRow := make([]float64, 0)
 	for i := 0; i < len(query.LinkedEvents); i++ {
 		emptyLinkedEventRow = append(emptyLinkedEventRow, float64(0))
@@ -2067,8 +2074,9 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 				// Create a row in AttributionData if no key is present for this session
 				if _, ok := (*attributionData)[key]; !ok {
 					(*attributionData)[key] = &AttributionData{}
-					(*attributionData)[key].ConversionEventCount = []float64{float64(0)}
-					(*attributionData)[key].ConversionEventCompareCount = []float64{float64(0)}
+
+					(*attributionData)[key].ConversionEventCount = emptyConversionEventRow
+					(*attributionData)[key].ConversionEventCompareCount = emptyConversionEventRow
 					if len(query.LinkedEvents) > 0 {
 						// Init the linked events with 0.0 value.
 						tempRow := emptyLinkedEventRow
@@ -2146,50 +2154,50 @@ func ApplyFilter(attributionData *map[string]*AttributionData, query *Attributio
 	}
 }
 
-func AddPerformanceData(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddPerformanceData(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
 
-	AddAdwordsPerformanceReportInfo(attributionData, attributionKey, marketingData)
-	AddFacebookPerformanceReportInfo(attributionData, attributionKey, marketingData)
-	AddLinkedinPerformanceReportInfo(attributionData, attributionKey, marketingData)
-	AddBingAdsPerformanceReportInfo(attributionData, attributionKey, marketingData)
+	AddAdwordsPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
+	AddFacebookPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
+	AddLinkedinPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
+	AddBingAdsPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
 }
 
-func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignKeyData, attributionKey, ChannelAdwords)
+		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignKeyData, attributionKey, ChannelAdwords, noOfConversionEvents)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupKeyData, attributionKey, ChannelAdwords)
+		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupKeyData, attributionKey, ChannelAdwords, noOfConversionEvents)
 	case AttributionKeyKeyword:
-		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData, attributionKey, ChannelAdwords)
+		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData, attributionKey, ChannelAdwords, noOfConversionEvents)
 	default:
 		// no enrichment for any other type
 		return
 	}
 }
 
-func AddBingAdsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddBingAdsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.BingAdsCampaignKeyData, attributionKey, ChannelBingAds)
+		addMetricsFromReport(attributionData, marketingData.BingAdsCampaignKeyData, attributionKey, ChannelBingAds, noOfConversionEvents)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.BingAdsAdgroupKeyData, attributionKey, ChannelBingAds)
+		addMetricsFromReport(attributionData, marketingData.BingAdsAdgroupKeyData, attributionKey, ChannelBingAds, noOfConversionEvents)
 	case AttributionKeyKeyword:
-		addMetricsFromReport(attributionData, marketingData.BingAdsKeywordKeyData, attributionKey, ChannelBingAds)
+		addMetricsFromReport(attributionData, marketingData.BingAdsKeywordKeyData, attributionKey, ChannelBingAds, noOfConversionEvents)
 	default:
 		return
 	}
 }
 
-func AddFacebookPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddFacebookPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.FacebookCampaignKeyData, attributionKey, ChannelFacebook)
+		addMetricsFromReport(attributionData, marketingData.FacebookCampaignKeyData, attributionKey, ChannelFacebook, noOfConversionEvents)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupKeyData, attributionKey, ChannelFacebook)
+		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupKeyData, attributionKey, ChannelFacebook, noOfConversionEvents)
 	case AttributionKeyKeyword:
 		// No keyword report for fb.
 		return
@@ -2199,13 +2207,13 @@ func AddFacebookPerformanceReportInfo(attributionData *map[string]*AttributionDa
 	}
 }
 
-func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignKeyData, attributionKey, ChannelLinkedin)
+		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignKeyData, attributionKey, ChannelLinkedin, noOfConversionEvents)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupKeyData, attributionKey, ChannelLinkedin)
+		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupKeyData, attributionKey, ChannelLinkedin, noOfConversionEvents)
 	case AttributionKeyKeyword:
 		// No keyword report for Linkedin.
 		return
@@ -2215,7 +2223,13 @@ func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionDa
 	}
 }
 
-func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string, channel string) {
+func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string, channel string, noOfConversionEvents int) {
+
+	// Creating an empty linked events row.
+	emptyConversionEventRow := make([]float64, 0)
+	for i := 0; i < noOfConversionEvents; i++ {
+		emptyConversionEventRow = append(emptyConversionEventRow, float64(0))
+	}
 
 	for key, value := range reportKeyData {
 
@@ -2245,8 +2259,8 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 			case AttributionKeyLandingPage:
 				(*attributionData)[key].Name = reportKeyData[key].LandingPageUrl
 			}
-			(*attributionData)[key].ConversionEventCount = []float64{float64(0)}
-			(*attributionData)[key].ConversionEventCompareCount = []float64{float64(0)}
+			(*attributionData)[key].ConversionEventCount = emptyConversionEventRow
+			(*attributionData)[key].ConversionEventCompareCount = emptyConversionEventRow
 			(*attributionData)[key].Sessions = 0
 			(*attributionData)[key].Users = 0
 			(*attributionData)[key].PageViews = 0

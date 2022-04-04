@@ -145,6 +145,12 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 			return nil, err
 		}
 
+		// Add the Added keys with no of conversion event = 1
+		model.AddTheAddedKeysAndMetrics(attributionData, query, sessions, 1)
+
+		// Add the performance information no of conversion event = 1
+		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, 1)
+
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
 		kpiData, _, _, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey, *logCtx)
@@ -202,13 +208,17 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info(fmt.Sprintf("KPI-Attribution Group session"))
 
 		// Build attribution weight
+		noOfConversionEvents := 1
 		sessionWT := make(map[string][]float64)
-		for key := range sessions {
+		for key := range groupSessions {
 			sessionWT[key] = kpiData[key].KpiValues
+			if kpiData[key].KpiValues != nil || len(kpiData[key].KpiValues) > 1 {
+				noOfConversionEvents = U.MaxInt(noOfConversionEvents, len(kpiData[key].KpiValues))
+			}
 		}
 
 		if C.GetAttributionDebug() == 1 {
-			uniqUsers := len(sessions)
+			uniqUsers := len(groupSessions)
 			logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
 		}
 
@@ -225,13 +235,13 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 			uniqueKeys := len(*attributionData)
 			logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 		}
+
+		// Add the Added keys
+		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
+
+		// Add the performance information
+		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
 	}
-
-	// Add the Added keys
-	model.AddTheAddedKeysAndMetrics(attributionData, query, sessions)
-
-	// Add the performance information
-	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports)
 
 	// Filter out the key values from query (apply filter after performance enrichment)
 	model.ApplyFilter(attributionData, query)

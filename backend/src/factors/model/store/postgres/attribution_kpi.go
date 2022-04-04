@@ -15,10 +15,6 @@ import (
 // ExecuteKPIForAttribution Executes the KPI sub-query for Attribution
 func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.AttributionQuery, debugQueryKey string, logCtx log.Entry) (map[string]model.KPIInfo, map[string]string, []string, error) {
 
-	// todo add timers for attribution query to log/track time..
-	// to return map[string]model.KPIInfo, map[string]string, []string
-	// to return kpiData, groupUserIDToKpiID, kpiKeys
-
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	kpiData := make(map[string]model.KPIInfo)
@@ -64,7 +60,7 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 
 			// get ID
 			kpiID := row[keyIdx].(string)
-			kpiKeys = append(kpiKeys)
+			kpiKeys = append(kpiKeys, kpiID)
 
 			// get time
 			eventTime, err := time.Parse(time.RFC3339, row[datetimeIdx].(string))
@@ -77,13 +73,13 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 
 			// add kpi values
 			var kpiVals []float64
-			for i := valIdx; i < len(row); i++ {
+			for vi := valIdx; vi < len(row); vi++ {
 				val := float64(0)
-				vInt, okInt := row[i].(int64)
+				vInt, okInt := row[vi].(int)
 				if !okInt {
-					vFloat, okFloat := row[i].(float64)
+					vFloat, okFloat := row[vi].(float64)
 					if !okFloat {
-						logCtx.WithError(err).WithFields(log.Fields{"value": row[i]}).Error("couldn't parse the value for KPI query, continuing")
+						logCtx.WithError(err).WithFields(log.Fields{"value": row[vi]}).Error("couldn't parse the value for KPI query, continuing")
 						val = 0.0
 					} else {
 						val = vFloat
@@ -134,6 +130,7 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 
 	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
 	var kpiKeyGroupUserIDList []string
+	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
 
 	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeys))
 	kpiKeysIdValue := U.GetInterfaceList(kpiKeys)
@@ -148,23 +145,26 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get groupUserQuery result for project")
 	}
 	for gURows.Next() {
-		var userIDNull sql.NullString
-		var groupIDDealOppIDNull sql.NullString
-		if err = gURows.Scan(&userIDNull, &groupIDDealOppIDNull); err != nil {
+		var groupUserIDNull sql.NullString
+		var kpiIDNull sql.NullString
+		if err = gURows.Scan(&groupUserIDNull, &kpiIDNull); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
 
-		groupUserID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
-		kpiID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
+		groupUserID := U.IfThenElse(groupUserIDNull.Valid, groupUserIDNull.String, model.PropertyValueNone).(string)
+		kpiID := U.IfThenElse(kpiIDNull.Valid, kpiIDNull.String, model.PropertyValueNone).(string)
 
 		if groupUserID == model.PropertyValueNone || kpiID == model.PropertyValueNone {
 			continue
 		}
 
+		// enrich KPI group ID
 		v := kpiData[kpiID]
 		v.KpiGroupID = groupUserID
 		kpiData[kpiID] = v
+
+		groupUserIDToKpiID[groupUserID] = kpiID
 		kpiKeyGroupUserIDList = append(kpiKeyGroupUserIDList, groupUserID)
 
 	}
@@ -237,7 +237,6 @@ func (pg *Postgres) FireAttributionForKPI(projectID uint64, query *model.Attribu
 		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 	var attributionData *map[string]*model.AttributionData
-	// todo add compare KPI
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true

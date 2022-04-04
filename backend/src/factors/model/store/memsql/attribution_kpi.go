@@ -16,10 +16,6 @@ import (
 // ExecuteKPIForAttribution Executes the KPI sub-query for Attribution
 func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.AttributionQuery, debugQueryKey string, logCtx log.Entry) (map[string]model.KPIInfo, map[string]string, []string, error) {
 
-	// todo add timers for attribution query to log/track time..
-	// to return map[string]model.KPIInfo, map[string]string, []string
-	// to return kpiData, groupUserIDToKpiID, kpiKeys
-
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
 	kpiData := make(map[string]model.KPIInfo)
@@ -252,7 +248,6 @@ func (store *MemSQL) FireAttributionForKPI(projectID uint64, query *model.Attrib
 		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 	var attributionData *map[string]*model.AttributionData
-	// todo add compare KPI
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
