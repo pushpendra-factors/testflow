@@ -25,7 +25,10 @@ function Events({smart_events, fetchEventNames, activeProject, removeSmartEvents
       <Menu> 
         <Menu.Item key="0" onClick={() => confirmRemove(values)}>
           <a>Remove Event</a> 
-        </Menu.Item> 
+        </Menu.Item>
+        <Menu.Item key="0" onClick={() => viewEvent(values)}>
+          <a>View Event</a> 
+        </Menu.Item>
       </Menu>
       );
     };
@@ -70,6 +73,11 @@ const columns = [
       console.log('error in removing Smartevent:', err)
     });
     return false
+  }
+
+  const viewEvent = (values) =>{ 
+    setSeletedEvent(values); 
+    setShowSmartEventForm(true);
   }
 
   useEffect(()=>{
