@@ -193,7 +193,7 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 			isAggregateOnProperty = true
 		}
 		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(isAggregateOnProperty, &sqlStmnt, &params, query.GroupBys, "step_0", "", false, selectAliases)
-		selectAliases = aggregateSelectKeys + selectAliases
+		selectAliases = selectAliases + ", " + aggregateSelectKeys[:len(aggregateSelectKeys)-2]
 		finalGroupBy := model.AliasAggr + ", " + strings.Join(aggregateGroupBys, ",")
 		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
 		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s LIMIT 1000", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)

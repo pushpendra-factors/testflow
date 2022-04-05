@@ -6,6 +6,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
@@ -14,10 +15,6 @@ import (
 
 // ExecuteKPIForAttribution Executes the KPI sub-query for Attribution
 func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.AttributionQuery, debugQueryKey string, logCtx log.Entry) (map[string]model.KPIInfo, map[string]string, []string, error) {
-
-	// todo add timers for attribution query to log/track time..
-	// to return map[string]model.KPIInfo, map[string]string, []string
-	// to return kpiData, groupUserIDToKpiID, kpiKeys
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
@@ -31,6 +28,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
 		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey, duplicatedRequest)
+		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
 		if statusCode != http.StatusOK {
 			logCtx.Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
@@ -42,6 +40,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
 			if res.Headers[0] == "datetime" {
 				kpiQueryResult = res
+				log.WithFields(log.Fields{"KpiQueryResult": kpiQueryResult}).Info("KPI-Attribution result set")
 				break
 			}
 		}
@@ -57,19 +56,22 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 		for idx := valIdx; idx < len(kpiQueryResult.Headers); idx++ {
 			kpiValueHeaders = append(kpiValueHeaders, kpiQueryResult.Headers[idx])
 		}
+		log.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
 
 		for _, row := range kpiQueryResult.Rows {
+
+			log.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
 
 			var kpiDetail model.KPIInfo
 
 			// get ID
 			kpiID := row[keyIdx].(string)
-			kpiKeys = append(kpiKeys)
+			kpiKeys = append(kpiKeys, kpiID)
 
 			// get time
-			eventTime, err := time.Parse("2022-03-14T00:00:00+05:30", row[datetimeIdx].(string))
+			eventTime, err := time.Parse(time.RFC3339, row[datetimeIdx].(string))
 			if err != nil {
-				logCtx.WithError(err).WithFields(log.Fields{"timestamp": row[datetimeIdx]}).Error("couldn't parse the timestamp for KPI query")
+				logCtx.WithError(err).WithFields(log.Fields{"timestamp": row[datetimeIdx]}).Error("couldn't parse the timestamp for KPI query, continuing")
 				continue
 			}
 			kpiDetail.Timestamp = eventTime.Unix()
@@ -77,8 +79,21 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 
 			// add kpi values
 			var kpiVals []float64
-			for i := valIdx; i < len(row); i++ {
-				kpiVals = append(kpiVals, row[i].(float64))
+			for vi := valIdx; vi < len(row); vi++ {
+				val := float64(0)
+				vInt, okInt := row[vi].(int)
+				if !okInt {
+					vFloat, okFloat := row[vi].(float64)
+					if !okFloat {
+						logCtx.WithError(err).WithFields(log.Fields{"value": row[vi]}).Error("couldn't parse the value for KPI query, continuing")
+						val = 0.0
+					} else {
+						val = vFloat
+					}
+				} else {
+					val = float64(vInt)
+				}
+				kpiVals = append(kpiVals, val)
 			}
 			kpiDetail.KpiValues = kpiVals
 
@@ -121,6 +136,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 
 	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
 	var kpiKeyGroupUserIDList []string
+	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
 
 	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeys))
 	kpiKeysIdValue := U.GetInterfaceList(kpiKeys)
@@ -135,26 +151,31 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get groupUserQuery result for project")
 	}
 	for gURows.Next() {
-		var userIDNull sql.NullString
-		var groupIDDealOppIDNull sql.NullString
-		if err = gURows.Scan(&userIDNull, &groupIDDealOppIDNull); err != nil {
+		var groupUserIDNull sql.NullString
+		var kpiIDNull sql.NullString
+		if err = gURows.Scan(&groupUserIDNull, &kpiIDNull); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
 
-		groupUserID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
-		kpiID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
+		groupUserID := U.IfThenElse(groupUserIDNull.Valid, groupUserIDNull.String, model.PropertyValueNone).(string)
+		kpiID := U.IfThenElse(kpiIDNull.Valid, kpiIDNull.String, model.PropertyValueNone).(string)
 
 		if groupUserID == model.PropertyValueNone || kpiID == model.PropertyValueNone {
 			continue
 		}
 
+		// enrich KPI group ID
 		v := kpiData[kpiID]
 		v.KpiGroupID = groupUserID
 		kpiData[kpiID] = v
+
+		groupUserIDToKpiID[groupUserID] = kpiID
 		kpiKeyGroupUserIDList = append(kpiKeyGroupUserIDList, groupUserID)
 
 	}
+	log.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
+
 	logCtx.Info("done pulling group ids for Deal or Opportunity")
 
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
@@ -196,6 +217,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 			kpiData[kpiID] = v
 		}
 	}
+	log.WithFields(log.Fields{"kpiData": kpiData}).Info("KPI-Attribution group set")
 
 	logCtx.Info("done pulling group user list ids for Deal or Opportunity")
 
@@ -226,7 +248,6 @@ func (store *MemSQL) FireAttributionForKPI(projectID uint64, query *model.Attrib
 		conversionTo = model.LookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 	var attributionData *map[string]*model.AttributionData
-	// todo add compare KPI
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
@@ -249,6 +270,8 @@ func (store *MemSQL) runAttributionKPI(projectID uint64,
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
+	logCtx.WithFields(log.Fields{"sessionWT": sessionWT}).Info(fmt.Sprintf("KPI-Attribution sessionWT"))
+
 	// Apply attribution based on given attribution methodology
 	userConversionHit, err := model.ApplyAttributionKPI(
 		query.QueryType,
@@ -260,8 +283,12 @@ func (store *MemSQL) runAttributionKPI(projectID uint64,
 		return nil, err
 	}
 
+	logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).Info(fmt.Sprintf("KPI-Attribution userConversionHit"))
+
 	attributionData := make(map[string]*model.AttributionData)
 	attributionData = model.AddUpConversionEventCount(userConversionHit, sessionWT)
+	logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info(fmt.Sprintf("KPI-Attribution attributionData"))
+
 	return &attributionData, nil
 }
 

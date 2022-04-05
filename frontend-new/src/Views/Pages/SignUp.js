@@ -312,7 +312,7 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                                 ]}
                                                 >
                                                 <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'}
-                                                placeholder="Phone Number"
+                                                placeholder="Phone Number (Optional)"
                                                  />
                                             </Form.Item>
                                         </div>
