@@ -98,11 +98,11 @@ const coreQueryoptions = [
     icon: 'events_cq',
     desc: 'Create charts from events and related properties',
   },
-  {
-    title: 'Campaigns',
-    icon: 'campaigns_cq',
-    desc: 'Find the effect of your marketing campaigns',
-  },
+  // {
+  //   title: 'Campaigns',
+  //   icon: 'campaigns_cq',
+  //   desc: 'Find the effect of your marketing campaigns',
+  // },
   {
     title: 'Templates',
     icon: 'templates_cq',
