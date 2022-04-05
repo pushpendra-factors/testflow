@@ -27,16 +27,18 @@ spec:
             - $(ENV)
             - --api_domain
             - $(API_DOMAIN)
-            - --db_host
-            - $(DB_HOST)
-            - --db_port
-            - $(DB_PORT)
-            - --db_name
-            - $(POSTGRES_DB)
-            - --db_user
-            - $(POSTGRES_USER)
-            - --db_pass
-            - $(POSTGRES_PASSWORD)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
             - --redis_host
             - $(REDIS_HOST)
             - --redis_port
@@ -59,13 +61,13 @@ spec:
             - configMapRef:
                 name: config-env
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
             - secretRef:
                 name: secret-sentry
             - secretRef:
                 name: secret-salesforce
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
             - configMapRef:
                 name: config-redis
             - configMapRef:

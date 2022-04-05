@@ -48,13 +48,13 @@ spec:
             - configMapRef:
                 name: config-env
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
             - configMapRef:
                 name: config-redis
             - configMapRef:
                 name: config-persistent-redis
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
             - secretRef:
                 name: secret-sentry
           restartPolicy: OnFailure

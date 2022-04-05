@@ -136,15 +136,26 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 			logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 		}
 
-	} else {
-		// this thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities
-		// todo add time logging for entire flow of attribution query
+		// Add the Added keys with no of conversion event = 1
+		model.AddTheAddedKeysAndMetrics(attributionData, query, sessions, 1)
 
-		// groupUserIDToKpiID, kpiKeys,
+		// Add the performance information no of conversion event = 1
+		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, 1)
+
+	} else {
+		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
 		kpiData, _, _, err = pg.ExecuteKPIForAttribution(projectID, query, debugQueryKey, *logCtx)
 		if err != nil {
 			return nil, err
 		}
+
+		log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData}).Info("KPI Attribution kpiData")
+		/*emptyMarketingValue:= model.MarketingData{Channel: model.PropertyValueNone,
+			CampaignID: model.PropertyValueNone, CampaignName: model.PropertyValueNone, AdgroupID: model.PropertyValueNone,
+			AdgroupName: model.PropertyValueNone, KeywordName: model.PropertyValueNone, KeywordMatchType: model.PropertyValueNone,
+			Source: model.PropertyValueNone, ChannelGroup: model.PropertyValueNone, LandingPageUrl: model.PropertyValueNone, ContentGroupValuesMap: nil}
+		noneKey := model.GetMarketingDataKey(query.AttributionKey, emptyMarketingValue)*/
+
 		// creating group sessions by transforming sessions
 		groupSessions := make(map[string]map[string]model.UserSessionData)
 
@@ -152,6 +163,11 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 			if _, exists := groupSessions[kpiID]; !exists {
 				groupSessions[kpiID] = make(map[string]model.UserSessionData)
+			}
+			if kpiInfo.KpiCoalUserIds == nil || len(kpiInfo.KpiCoalUserIds) == 0 {
+				logCtx.WithFields(log.Fields{"KpiInfo": kpiInfo, "KPI_ID": kpiID}).Info("no user found for the KPI group, ignoring")
+				//groupSessions[kpiID][noneKey] = model.UserSessionData{}
+				continue
 			}
 			for _, user := range kpiInfo.KpiCoalUserIds {
 				// check if user has session/otp
@@ -178,19 +194,25 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 				}
 			}
 		}
+		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info(fmt.Sprintf("KPI-Attribution Group session"))
 
 		// Build attribution weight
+		noOfConversionEvents := 1
 		sessionWT := make(map[string][]float64)
-		for key := range sessions {
+		for key := range groupSessions {
 			sessionWT[key] = kpiData[key].KpiValues
+			if kpiData[key].KpiValues != nil || len(kpiData[key].KpiValues) > 1 {
+				noOfConversionEvents = U.MaxInt(noOfConversionEvents, len(kpiData[key].KpiValues))
+			}
 		}
 
 		if C.GetAttributionDebug() == 1 {
-			uniqUsers := len(sessions)
+			uniqUsers := len(groupSessions)
 			logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
 		}
 
 		attributionData, isCompare, err = pg.FireAttributionForKPI(projectID, query, groupSessions, kpiData, sessionWT, *logCtx)
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info(fmt.Sprintf("KPI-Attribution attributionData"))
 
 		logCtx.Info("Done FireAttribution")
 		if err != nil {
@@ -202,13 +224,12 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 			logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 		}
 
+		// Add the Added keys
+		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
+
+		// Add the performance information
+		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
 	}
-
-	// Add the Added keys
-	model.AddTheAddedKeysAndMetrics(attributionData, query, sessions)
-
-	// Add the performance information
-	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports)
 
 	// Filter out the key values from query (apply filter after performance enrichment)
 	model.ApplyFilter(attributionData, query)

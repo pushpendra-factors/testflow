@@ -73,9 +73,9 @@ spec:
           - --primary_datastore
           - "memsql"
           - --redis_host
-          - $(REDIS_HOST_2)
+          - $(REDIS_HOST)
           - --redis_port
-          - $(REDIS_PORT_2)
+          - $(REDIS_PORT)
           - --sentry_dsn
           - $(SENTRY_DSN)
           - --gcp_project_id

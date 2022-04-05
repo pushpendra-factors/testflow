@@ -61,7 +61,7 @@ spec:
             - configMapRef:
                 name: config-bucket
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
             - configMapRef:
                 name: config-redis
             - configMapRef:
@@ -69,5 +69,5 @@ spec:
             - configMapRef:
                 name: config-buildseqjob
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
           restartPolicy: OnFailure

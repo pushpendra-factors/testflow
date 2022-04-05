@@ -58,9 +58,9 @@ spec:
             - configMapRef:
                 name: config-persistent-redis
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
             - secretRef:
                 name: secret-sentry
             - configMapRef:

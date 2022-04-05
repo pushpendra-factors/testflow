@@ -29,16 +29,18 @@ spec:
             - $(BUCKET_NAME)
             - --local_disk_tmp_dir
             - /tmp
-            - --db_host
-            - $(DB_HOST)
-            - --db_port
-            - $(DB_PORT)
-            - --db_name
-            - $(POSTGRES_DB)
-            - --db_user
-            - $(POSTGRES_USER)
-            - --db_pass
-            - $(POSTGRES_PASSWORD)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
             - --project_ids
             - 483,399,386,576,631,628,591,594,578,602,559,616,622,655,645,641,640,684,695,699,658,2251799815000001
             - --lookback
@@ -65,11 +67,11 @@ spec:
             - configMapRef:
                 name: config-bucket
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
             - configMapRef:
                 name: config-memsql
             - secretRef:
                 name: secret-memsql
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
           restartPolicy: OnFailure

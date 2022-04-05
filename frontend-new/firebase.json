@@ -45,77 +45,7 @@
       ]
     },
     {
-      "target": "sloth-staging", 
-      "public": "dist/staging",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
-      ],
-      "headers" : [
-        {
-          "source" : "/assets/factors.js",
-          "headers" : [ 
-            {
-              "key" : "Cache-Control",
-              "value" : "public, max-age=3600, s-maxage=3600"
-            }
-          ]
-        },
-        {
-          "source" : "/assets/sha256.js",
-          "headers" : [ 
-            {
-              "key" : "Cache-Control",
-              "value" : "public, max-age=3600, s-maxage=3600"
-            }
-          ]
-        },
-        {
-          "source" : "/assets/sha256.min.js",
-          "headers" : [ 
-            {
-              "key" : "Cache-Control",
-              "value" : "public, max-age=3600, s-maxage=3600"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "target": "production",
-      "public": "dist/production",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
-      ],
-      "headers" : [
-        {
-          "source" : "/assets/factors.js",
-          "headers" : [ 
-            {
-              "key" : "Cache-Control",
-              "value" : "public, max-age=3600, s-maxage=3600"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "target": "sloth-production",
       "public": "dist/production",
       "ignore": [
         "firebase.json",

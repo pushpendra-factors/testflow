@@ -184,6 +184,7 @@ class NewCampaignPerformanceReportsJob(ReportsFetch):
     TRANSFORM_MAP_V01 = [
         {ReportsFetch.FIELD: "campaign_trial_type", ReportsFetch.MAP: FieldsMapping.CAMPAIGN_TRIAL_TYPE_MAPPING},
         {ReportsFetch.FIELD: "advertising_channel_type", ReportsFetch.MAP: FieldsMapping.ADVERTISING_CHANNEL_TYPE_MAPPING},
+        {ReportsFetch.FIELD: "advertising_channel_sub_type", ReportsFetch.MAP: FieldsMapping.ADVERTISING_CHANNEL_SUB_TYPE_MAPPING},
     ]
 
     def __init__(self, next_info):

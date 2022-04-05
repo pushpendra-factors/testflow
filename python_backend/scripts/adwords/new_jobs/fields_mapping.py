@@ -78,6 +78,28 @@ class FieldsMapping:
         '11' : "Local Services",
     }
 
+    ADVERTISING_CHANNEL_SUB_TYPE_MAPPING = {
+        '0': "Unspecified",
+        '1': "Unknown",
+        '2': "Search Mobile App",
+        '3': "Display Mobile App",
+        '4': "Search Express",
+        '5': "Display Express",
+        '6': "Shopping Smart Ads",
+        '7': "Gmail Ad campaign",
+        '8': "Smart display campaign",
+        '9': "Video Outstrem",
+        '10': "Video Action",
+        '11': "Video Non Skippable",
+        '12': "App Campaign",
+        '13': "App Campaign for Engagement",
+        '14': "Local Campaign",
+        '15': "Shopping Comparison Listing Ads",
+        '16': "Smart Campaign",
+        '17': "Video Sequence",
+        '18': "App Campaign for Pre Registration",
+    }   
+
     INTERACTION_TYPES_MAPPING = {
         '<InteractionEventType.UNSPECIFIED: 0>' : "unspecified",
         '<InteractionEventType.UNKNOWN: 1>' : "unknown",
@@ -262,15 +284,15 @@ class FieldsMapping:
         '7': "DISPLAY_GMAIL_AD",
         '8': "DISPLAY_SMART_CAMPAIGN",
         '9': "VIDEO_OUTSTREAM",
-        '10': "VIDEO_ACTION ",
-        '11': "VIDEO_NON_SKIPPABLE ",
+        '10': "VIDEO_ACTION",
+        '11': "VIDEO_NON_SKIPPABLE",
         '12': "APP_CAMPAIGN ",
-        '13': "APP_CAMPAIGN_FOR_ENGAGEMENT ",
-        '14': "LOCAL_CAMPAIGN ",
-        '15': "SHOPPING_COMPARISON_LISTING_ADS ",
-        '16': "SMART_CAMPAIGN ",
-        '17': "VIDEO_SEQUENCE ",
-        '18': "APP_CAMPAIGN_FOR_PRE_REGISTRATION ",
+        '13': "APP_CAMPAIGN_FOR_ENGAGEMENT",
+        '14': "LOCAL_CAMPAIGN",
+        '15': "SHOPPING_COMPARISON_LISTING_ADS",
+        '16': "SMART_CAMPAIGN",
+        '17': "VIDEO_SEQUENCE",
+        '18': "APP_CAMPAIGN_FOR_PRE_REGISTRATION",
     }
 
     SERVICE_CAMPAIGN_TRIAL_TYPE_MAPPING = {

@@ -56,18 +56,15 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	}
 
 	marketingReports, err := store.FetchMarketingReports(projectID, *query, *projectSetting)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Fetch marketing report took time")
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Fetch marketing report took time")
 	queryStartTime = time.Now().UTC().Unix()
 
 	if err != nil {
 		return nil, err
 	}
-	if C.GetAttributionDebug() == 1 {
-		logCtx.WithFields(log.Fields{"campaign_data": marketingReports.AdwordsCampaignIDData}).Info("Done FetchMarketingReports")
-	}
 
 	err = store.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports, *logCtx)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Pull Custom dimension data took time")
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Custom dimension data took time")
 	queryStartTime = time.Now().UTC().Unix()
 
 	if err != nil {
@@ -98,7 +95,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	if query.TacticOfferType != model.MarketingEventTypeOffer || query.AttributionKey == model.AttributionKeyLandingPage {
 		// Get all the sessions (userId, attributionId, UserSessionData) for given period by attribution key
 		_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports, contentGroupNamesList, *logCtx)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Pull Sessions data data took time")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Sessions data data took time")
 		queryStartTime = time.Now().UTC().Unix()
 
 		if err != nil {
@@ -106,20 +103,20 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		}
 
 		usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID, *logCtx)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Get Coalesce user data took time")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Get Coalesce user data took time")
 		queryStartTime = time.Now().UTC().Unix()
 		if err != nil {
 			return nil, err
 		}
 
 		model.UpdateSessionsMapWithCoalesceID(_sessions, usersInfo, &sessions)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Update Sessions Coalesce user data took time")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Update Sessions Coalesce user data took time")
 		queryStartTime = time.Now().UTC().Unix()
 	}
 
 	// Pull Offline touch points for all the cases: "Tactic",  "Offer", "TacticOffer"
 	store.AppendOTPSessions(projectID, query, &sessions, *logCtx)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Pull Offline touch points user data took time")
 	queryStartTime = time.Now().UTC().Unix()
 
 	isCompare := false
@@ -140,7 +137,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		}
 
 		attributionData, isCompare, err = store.FireAttribution(projectID, query, eventNameToIDList, sessions, sessionWT, *logCtx)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("FireAttribution took time")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution took time")
 		queryStartTime = time.Now().UTC().Unix()
 
 		logCtx.Info("Done FireAttribution")
@@ -148,21 +145,27 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 			return nil, err
 		}
 
-		if C.GetAttributionDebug() == 1 {
-			uniqueKeys := len(*attributionData)
-			logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
-		}
+		// Add the Added keys with no of conversion event = 1
+		model.AddTheAddedKeysAndMetrics(attributionData, query, sessions, 1)
+
+		// Add the performance information no of conversion event = 1
+		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, 1)
 
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
 		kpiData, _, _, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey, *logCtx)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("KPI query execution took time")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("KPI query execution took time")
 		queryStartTime = time.Now().UTC().Unix()
 		if err != nil {
 			return nil, err
 		}
 
 		log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData}).Info("KPI Attribution kpiData")
+		/*emptyMarketingValue:= model.MarketingData{Channel: model.PropertyValueNone,
+			CampaignID: model.PropertyValueNone, CampaignName: model.PropertyValueNone, AdgroupID: model.PropertyValueNone,
+			AdgroupName: model.PropertyValueNone, KeywordName: model.PropertyValueNone, KeywordMatchType: model.PropertyValueNone,
+			Source: model.PropertyValueNone, ChannelGroup: model.PropertyValueNone, LandingPageUrl: model.PropertyValueNone, ContentGroupValuesMap: nil}
+		noneKey := model.GetMarketingDataKey(query.AttributionKey, emptyMarketingValue)*/
 
 		// creating group sessions by transforming sessions
 		groupSessions := make(map[string]map[string]model.UserSessionData)
@@ -171,6 +174,11 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 
 			if _, exists := groupSessions[kpiID]; !exists {
 				groupSessions[kpiID] = make(map[string]model.UserSessionData)
+			}
+			if kpiInfo.KpiCoalUserIds == nil || len(kpiInfo.KpiCoalUserIds) == 0 {
+				logCtx.WithFields(log.Fields{"KpiInfo": kpiInfo, "KPI_ID": kpiID}).Info("no user found for the KPI group, ignoring")
+				//groupSessions[kpiID][noneKey] = model.UserSessionData{}
+				continue
 			}
 			for _, user := range kpiInfo.KpiCoalUserIds {
 				// check if user has session/otp
@@ -197,21 +205,27 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 				}
 			}
 		}
+		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info(fmt.Sprintf("KPI-Attribution Group session"))
 
 		// Build attribution weight
+		noOfConversionEvents := 1
 		sessionWT := make(map[string][]float64)
-		for key := range sessions {
+		for key := range groupSessions {
 			sessionWT[key] = kpiData[key].KpiValues
+			if kpiData[key].KpiValues != nil || len(kpiData[key].KpiValues) > 1 {
+				noOfConversionEvents = U.MaxInt(noOfConversionEvents, len(kpiData[key].KpiValues))
+			}
 		}
 
 		if C.GetAttributionDebug() == 1 {
-			uniqUsers := len(sessions)
+			uniqUsers := len(groupSessions)
 			logCtx.WithFields(log.Fields{"AttributionDebug": "sessions"}).Info(fmt.Sprintf("Total users with session: %d", uniqUsers))
 		}
 
 		attributionData, isCompare, err = store.FireAttributionForKPI(projectID, query, groupSessions, kpiData, sessionWT, *logCtx)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("FireAttribution KPI took time")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution KPI took time")
 		queryStartTime = time.Now().UTC().Unix()
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info(fmt.Sprintf("KPI-Attribution attributionData"))
 
 		if err != nil {
 			return nil, err
@@ -221,17 +235,17 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 			uniqueKeys := len(*attributionData)
 			logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 		}
+
+		// Add the Added keys
+		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
+
+		// Add the performance information
+		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
 	}
-
-	// Add the Added keys
-	model.AddTheAddedKeysAndMetrics(attributionData, query, sessions)
-
-	// Add the performance information
-	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports)
 
 	// Filter out the key values from query (apply filter after performance enrichment)
 	model.ApplyFilter(attributionData, query)
-	logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Metrics, Performance report, filter took time")
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Metrics, Performance report, filter took time")
 	queryStartTime = time.Now().UTC().Unix()
 
 	result := &model.QueryResult{}
@@ -239,17 +253,18 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	if query.AttributionKey == model.AttributionKeyLandingPage {
 
 		result = model.ProcessQueryLandingPageUrl(query, attributionData, *logCtx, isCompare)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Landing PageUrl took time")
 		queryStartTime = time.Now().UTC().Unix()
 
 	} else if query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities {
 		// execution similar to the normal run - still keeping it separate for better understanding
 		result = model.ProcessQueryKPI(query, attributionData, marketingReports, isCompare, kpiData)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Process Query KPI took time")
+		logCtx.WithFields(log.Fields{"result": result}).Info(fmt.Sprintf("KPI-Attribution result"))
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query KPI took time")
 		queryStartTime = time.Now().UTC().Unix()
 	} else {
 		result = model.ProcessQuery(query, attributionData, marketingReports, isCompare)
-		logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartTime) / 60}).Info("Process Query Normal took time")
+		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("Process Query Normal took time")
 		queryStartTime = time.Now().UTC().Unix()
 	}
 	result.Meta.Currency = ""
@@ -257,7 +272,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		currency, _ := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
 		result.Meta.Currency = currency
 	}
-	logCtx.WithFields(log.Fields{"TimePassedInMins": (time.Now().UTC().Unix() - queryStartORG) / 60}).Info("Total query took time")
+	logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartORG) / 60}).Info("Total query took time")
 	queryStartTime = time.Now().UTC().Unix()
 	return result, nil
 }
@@ -351,8 +366,6 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 	conversionFrom, conversionTo int64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]model.UserSessionData, sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
 
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
-
 	// Empty linkedEvents as they are not analyzed in compare events.
 	var linkedEvents []model.QueryEventWithProperties
 
@@ -430,7 +443,6 @@ func (store *MemSQL) runAttributionKpi(projectID uint64,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]model.UserSessionData, sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	goalEventName := goalEvent.Name
 	goalEventProperties := goalEvent.Properties
@@ -479,7 +491,6 @@ func (store *MemSQL) runAttribution(projectID uint64,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]model.UserSessionData, sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	goalEventName := goalEvent.Name
 	goalEventProperties := goalEvent.Properties
@@ -567,8 +578,8 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 		"project_id":            projectId,
 		"session_event_name_id": sessionEventNameId,
 	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx = *logCtx.WithFields(logFields)
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 	effectiveFrom := model.LookbackAdjustedFrom(query.From, query.LookbackDays)
 	effectiveTo := query.To
 	// extend the campaign window for engagement based attribution
@@ -660,8 +671,6 @@ func (store *MemSQL) getOfflineEventData(projectID uint64, logCtx log.Entry) (mo
 // Return conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
 func (store *MemSQL) getEventInformation(projectId uint64,
 	query *model.AttributionQuery, logCtx log.Entry) (string, map[string][]interface{}, error) {
-
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
 	names := model.BuildEventNamesPlaceholder(query)
 	conversionAndFunnelEventMap := make(map[string]bool)

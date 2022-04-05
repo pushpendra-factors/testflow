@@ -28,16 +28,18 @@ spec:
             - $(ENV)
             - --bucket_name
             - $(ARCHIVE_BUCKET_NAME)
-            - --db_host
-            - $(DB_HOST)
-            - --db_port
-            - $(DB_PORT)
-            - --db_name
-            - $(POSTGRES_DB)
-            - --db_user
-            - $(POSTGRES_USER)
-            - --db_pass
-            - $(POSTGRES_PASSWORD)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_HEAVY_USER)
+            - --memsql_pass
+            - $(MEMSQL_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
             - --all
             - $(UPLOAD_ALL)
             - --sentry_dsn
@@ -52,11 +54,11 @@ spec:
             - configMapRef:
                 name: config-bucket
             - configMapRef:
-                name: config-postgres
+                name: config-memsql
             - configMapRef:
                 name: config-bigqueryuploadjob
             - secretRef:
-                name: secret-postgres
+                name: secret-memsql
             - secretRef:
                 name: secret-sentry
           restartPolicy: OnFailure
