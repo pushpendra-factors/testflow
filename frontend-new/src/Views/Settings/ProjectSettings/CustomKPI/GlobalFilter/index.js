@@ -13,6 +13,7 @@ const GLobalFilter = ({
   selKPICategory,
   selectedMainCategory,
   DDKPIValues,
+  viewMode = false
 }) => {
   const userProperties = useSelector((state) => state.coreQuery.userProperties);
   const activeProject = useSelector((state) => state.global.active_project);
@@ -68,6 +69,7 @@ const GLobalFilter = ({
             filterProps={filterProps}
             propsConstants={['user']}
             selectedMainCategory={selectedMainCategory}
+            viewMode={viewMode}
           ></GlobalFilterBlock>
         </div>
       );
@@ -89,11 +91,12 @@ const GLobalFilter = ({
             deleteFilter={() => closeFilter()}
             selectedMainCategory={selectedMainCategory}
             closeFilter={closeFilter}
+            viewMode={viewMode}
           ></GlobalFilterBlock>
         </div>
       );
     } else {
-      filtrs.push(
+      !viewMode && filtrs.push(
         <div key={filtrs.length} className={`flex mt-2`}>
           <Button
             className={`fa-button--truncate`}

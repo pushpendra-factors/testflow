@@ -38,6 +38,7 @@ function GlobalFilterBlock({
   closeFilter,
   fetchKPIFilterValues,
   selectedMainCategory,
+  viewMode = false
 }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
@@ -138,7 +139,7 @@ function GlobalFilterBlock({
       const newFilter = Object.assign({}, newFilterState);
       newFilter[filterTypeState][0]
         ? (newFilter[filterTypeState][0] =
-            newFilter[filterTypeState][0] + userInput.currentTarget.value)
+          newFilter[filterTypeState][0] + userInput.currentTarget.value)
         : (newFilter[filterTypeState][0] = userInput.currentTarget.value);
       setNewFilterState(newFilter);
       setSearchTerm('');
@@ -149,17 +150,17 @@ function GlobalFilterBlock({
     const filterState = Object.assign({}, newFilterState);
     filterTypeState === 'operator'
       ? (() => {
-          filterState.props = [];
-          changeFilterTypeState(false);
-        })()
+        filterState.props = [];
+        changeFilterTypeState(false);
+      })()
       : null;
     if (filterTypeState === 'values') {
       filterState.values.length
         ? filterState.values.pop()
         : (() => {
-            filterState.operator = '';
-            changeFilterTypeState(false);
-          })();
+          filterState.operator = '';
+          changeFilterTypeState(false);
+        })();
     }
     setNewFilterState(filterState);
   };
@@ -169,14 +170,14 @@ function GlobalFilterBlock({
       filterTypeState === 'props'
         ? setFilterTypeState('operator')
         : filterTypeState === 'operator'
-        ? setFilterTypeState('values')
-        : (() => {})();
+          ? setFilterTypeState('values')
+          : (() => { })();
     } else {
       filterTypeState === 'values'
         ? setFilterTypeState('operator')
         : filterTypeState === 'operator'
-        ? setFilterTypeState('props')
-        : (() => {})();
+          ? setFilterTypeState('props')
+          : (() => { })();
     }
   };
 
@@ -283,44 +284,44 @@ function GlobalFilterBlock({
               >
                 {collState
                   ? (() => {
-                      const valuesOptions = [];
-                      filterProps[propsConstants[grpIndex]].forEach((val) => {
-                        if (
-                          val[0]
-                            .toLowerCase()
-                            .includes(searchTerm.toLowerCase())
-                        ) {
-                          valuesOptions.push(
-                            <div
-                              title={val[0]}
-                              className={`fa-select-group-select--options`}
-                              onClick={() =>
-                                optionClick([...val, propsConstants[grpIndex]])
-                              }
+                    const valuesOptions = [];
+                    filterProps[propsConstants[grpIndex]].forEach((val) => {
+                      if (
+                        val[0]
+                          .toLowerCase()
+                          .includes(searchTerm.toLowerCase())
+                      ) {
+                        valuesOptions.push(
+                          <div
+                            title={val[0]}
+                            className={`fa-select-group-select--options`}
+                            onClick={() =>
+                              optionClick([...val, propsConstants[grpIndex]])
+                            }
+                          >
+                            {searchTerm.length > 0 && (
+                              <div>
+                                <SVG
+                                  color={'purple'}
+                                  name={group.icon}
+                                  extraClass={'self-center'}
+                                ></SVG>
+                              </div>
+                            )}
+                            <Text
+                              level={7}
+                              type={'title'}
+                              extraClass={'m-0'}
+                              weight={'thin'}
                             >
-                              {searchTerm.length > 0 && (
-                                <div>
-                                  <SVG
-                                    color={'purple'}
-                                    name={group.icon}
-                                    extraClass={'self-center'}
-                                  ></SVG>
-                                </div>
-                              )}
-                              <Text
-                                level={7}
-                                type={'title'}
-                                extraClass={'m-0'}
-                                weight={'thin'}
-                              >
-                                {val[0]}
-                              </Text>
-                            </div>
-                          );
-                        }
-                      });
-                      return valuesOptions;
-                    })()
+                              {val[0]}
+                            </Text>
+                          </div>
+                        );
+                      }
+                    });
+                    return valuesOptions;
+                  })()
                   : null}
               </div>
             </div>
@@ -433,10 +434,10 @@ function GlobalFilterBlock({
     const tagClass = styles.filter_block__filter_select__tag;
     newFilterState.props?.length
       ? tags.push(<span className={tagClass}>{newFilterState.props[0]}</span>)
-      : (() => {})();
+      : (() => { })();
     newFilterState.operator?.length
       ? tags.push(<span className={tagClass}>{newFilterState.operator}</span>)
-      : (() => {})();
+      : (() => { })();
 
     if (newFilterState.values.length > 0) {
       if (newFilterState.props[1] === 'categorical') {
@@ -447,7 +448,7 @@ function GlobalFilterBlock({
         });
         newFilterState.values.length >= 3
           ? tags.push(<span>...+{newFilterState.values.length - 2}</span>)
-          : (() => {})();
+          : (() => { })();
       } else if (newFilterState.props[1] === 'datetime') {
         const parsedValues = JSON.parse(newFilterState.values);
         const parsedDatetimeValue = parseDateRangeFilter(
@@ -508,10 +509,9 @@ function GlobalFilterBlock({
         <div className={'border-top--thin-2 '}>
           <div
             className={`${styles.filter_block__filter_select__options} 
-            ${
-              filterTypeState === 'values' &&
+            ${filterTypeState === 'values' &&
               styles.filter_block__filter_select__values__options
-            }`}
+              }`}
           >
             {filterTypeState !== 'values'
               ? renderOptions(filterDropDownOptions[filterTypeState])
@@ -586,7 +586,7 @@ function GlobalFilterBlock({
 
   return (
     <div className={`flex items-center relative w-full`}>
-      {delFilter && (
+      {(!viewMode && delFilter) && (
         <Button
           type='text'
           onClick={delFilter}
