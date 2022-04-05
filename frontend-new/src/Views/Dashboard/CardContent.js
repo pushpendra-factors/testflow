@@ -36,7 +36,7 @@ import {
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
-  const { eventNames, attr_dimensions } = useSelector(
+  const { eventNames, attr_dimensions, content_groups } = useSelector(
     (state) => state.coreQuery
   );
   const { config: kpiConfig } = useSelector((state) => state.kpi);
@@ -60,7 +60,8 @@ function CardContent({ unit, resultState, durationObj }) {
     ) {
       return getAttributionStateFromRequestQuery(
         unit.query.query.query,
-        attr_dimensions
+        attr_dimensions,
+        content_groups
       );
     } else if (
       unit.query.query.cl &&
@@ -70,7 +71,7 @@ function CardContent({ unit, resultState, durationObj }) {
     } else {
       return getStateQueryFromRequestQuery(unit.query.query);
     }
-  }, [unit.query.query, attr_dimensions]);
+  }, [unit.query.query, attr_dimensions, content_groups]);
 
   const { queryType } = equivalentQuery;
   const breakdownType = useMemo(() => {
@@ -134,6 +135,7 @@ function CardContent({ unit, resultState, durationObj }) {
         models: equivalentQuery.models,
         linkedEvents: equivalentQuery.linkedEvents,
         attr_dimensions: equivalentQuery.attr_dimensions,
+        content_groups: equivalentQuery.content_groups,
       };
     }
   }, [equivalentQuery, queryType]);

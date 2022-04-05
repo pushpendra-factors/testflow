@@ -1,72 +1,61 @@
+.group_block {
+  &__selector_group {
+    display: flex;
 
-.group_block { 
-
-    &__selector_group {
-
-        display: flex;
-
-        svg {
-            align-self: center;
-        }
-
-        span {
-            background: #FFFFFF;
-            margin-left: 8px;
-            font-weight: 600;
-            font-size: 12px;
-            color: #0E2647;
-            text-transform: uppercase;
-        }
-
-        
+    svg {
+      align-self: center;
     }
 
-    &__select {
-        position: relative;
+    span {
+      background: #ffffff;
+      margin-left: 8px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #0e2647;
+      text-transform: uppercase;
+    }
+  }
 
-        
+  &__select {
+    position: relative;
+  }
+
+  &__event_selector {
+    position: absolute;
+    top: 32px;
+
+    &__btn {
+      position: relative;
     }
 
-    &__event_selector { 
-        position: absolute;
-        top: 48px;
-        left: 0;
-
-        &__btn {
-            position: relative;
-        }
-
-        .ant-select-selector {
-            border-radius: 12px;
-        }
+    .ant-select-selector {
+      border-radius: 12px;
     }
+  }
 
-    &__remove {
-        
-    }
+  &__remove {
+  }
 }
 
 .grpProps {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  margin-left: 8px;
+  font-size: 14px;
+  color: #8692a3;
+
+  &__select {
     display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
     margin-left: 8px;
-    font-size: 14px;
-    color: #8692A3;
 
-    &__select {
-        display: flex;
-        margin-left: 8px;
-
-        &__opt {
-            color: #5949BC;
-            text-transform: capitalize;
-        }
-
-        &__opt:hover {
-            cursor: pointer;
-        }
-
+    &__opt {
+      color: #5949bc;
+      text-transform: capitalize;
     }
-}
 
+    &__opt:hover {
+      cursor: pointer;
+    }
+  }
+}

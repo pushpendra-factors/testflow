@@ -54,6 +54,7 @@ const AttributionsChart = ({
   section,
   durationObj,
   attr_dimensions,
+  content_groups,
   chartType,
   cardSize,
   unitId,
@@ -128,11 +129,13 @@ const AttributionsChart = ({
         eventNames,
         attributionMetrics,
         attr_dimensions,
+        content_groups,
         durationObj
       )
     );
   }, [
     attr_dimensions,
+    content_groups,
     attributionMetrics,
     attribution_method,
     attribution_method_compare,
@@ -155,7 +158,8 @@ const AttributionsChart = ({
       touchpoint,
       linkedEvents,
       attributionMetrics,
-      attr_dimensions
+      attr_dimensions,
+      content_groups
     );
     setTableData(tableData);
     setVisibleIndices(
@@ -170,6 +174,7 @@ const AttributionsChart = ({
     );
   }, [
     attr_dimensions,
+    content_groups,
     attributionMetrics,
     attribution_method_compare,
     data,
@@ -187,6 +192,7 @@ const AttributionsChart = ({
           tableData,
           visibleIndices,
           attr_dimensions,
+          content_groups,
           touchpoint,
           attribution_method,
           attribution_method_compare,
@@ -200,6 +206,7 @@ const AttributionsChart = ({
           tableData,
           visibleIndices,
           attr_dimensions,
+          content_groups,
           touchpoint
         );
         setAggregateData(chartData);
@@ -209,6 +216,7 @@ const AttributionsChart = ({
     tableData,
     visibleIndices,
     attr_dimensions,
+    content_groups,
     touchpoint,
     attribution_method,
     attribution_method_compare,
@@ -222,6 +230,7 @@ const AttributionsChart = ({
       visibleIndices={visibleIndices}
       selectedTouchpoint={touchpoint}
       attr_dimensions={attr_dimensions}
+      content_groups={content_groups}
       data={tableData}
       attribution_method={attribution_method}
       attribution_method_compare={attribution_method_compare}

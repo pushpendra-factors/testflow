@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import {
-  Row, Col, Button, Input, Form
+  Row, Col, Button, Input, Form, Modal, message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
@@ -9,16 +9,33 @@ import { login } from '../../reducers/agentActions';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import factorsai from 'factorsai';
 import styles from './index.module.scss';
+import MoreAuthOptions from './MoreAuthOptions';
+import { SSO_LOGIN_URL } from '../../utils/sso';
 
 function Login(props) {
   const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   const history = useHistory();
   const routeChange = (url) => {
     history.push(url);
   };
+
+  const checkError = () => {
+    const url = new URL(window.location.href);
+    const error = url.searchParams.get('error');
+    if(error) {
+        let str = error.replace("_", " ");
+        let finalmsg = str.toLocaleLowerCase();
+        message.error(finalmsg);
+    }
+  }
+
+  useEffect(() => {
+      checkError();
+  },[]);
 
   const CheckLogin = () => {
     setDataLoading(true);
@@ -58,7 +75,7 @@ function Login(props) {
                     <div className={'flex flex-col justify-center items-center login-container'}>
                         <Row>
                             <Col span={24} >
-                                <div className={'flex justify-center items-center mb-5'} >
+                                <div className={'flex justify-center items-center'} >
                                     <SVG name={'BrandFull'} size={40} color="white"/>
                                 </div>
                             </Col>
@@ -75,12 +92,12 @@ function Login(props) {
                         >
                         <Row>
                             <Col span={24}>
-                                <div className={'flex justify-center items-center mt-10'} >
+                                <div className={'flex justify-center items-center mt-6 ml-4'} >
                                     <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>Login to Continue</Text>
                                 </div>
                             </Col>
                             <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-10 w-full'} >
+                                    <div className={'flex flex-col justify-center items-center mt-8 w-full'} >
                                         <Form.Item label={null}
                                             name="form_username"
                                             rules={[{ required: true, type: 'email', message: 'Please enter email' }]}
@@ -118,9 +135,32 @@ function Login(props) {
                                 </div>
                             </Col>
                             }
+                           
+                            <Col span={24}>
+                              <div className={'flex justify-center items-center mt-6'} >
+                                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} color={'grey'}>OR</Text>
+                              </div>
+                            </Col>
+
+                            <Col span={24}>
+                                <div className={'flex flex-col justify-center items-center mt-5'} >
+                                  <Form.Item className={'m-0'} loading={dataLoading}>
+                                    <a href={SSO_LOGIN_URL}><Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
+                                  </Form.Item>
+                                </div>
+                            </Col>
+
+                            {/* <Col span={24}>
+                                <div className={'flex flex-col justify-center items-center mt-5'} >
+                                  <Form.Item className={'m-0'} loading={dataLoading}>
+                                    <Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'} onClick={() => setShowModal(true)}><SVG name={'S_Key'} size={24} color={'#8692A3'} /> More Login Options</Button>
+                                  </Form.Item>
+                                </div>
+                            </Col> */}
+                            
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
-                                    <a disabled={dataLoading} type={'text'} size={'large'} onClick={() => routeChange('/forgotpassword')}>Forgot Password</a>
+                                    <a disabled={dataLoading} type={'text'} size={'large'} onClick={() => routeChange('/forgotpassword')}>Forgot Password<SVG name={'Arrowright'} size={16} extraClass={'ml-1 -mt-1 inline'} color={'blue'} /></a>
                                 </div>
                             </Col>
                             <Col span={24}>
@@ -140,7 +180,8 @@ function Login(props) {
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
             </div>
       </div>
-
+    
+        {/* <MoreAuthOptions showModal={showModal} setShowModal={setShowModal}/> */}
     </>
 
   );

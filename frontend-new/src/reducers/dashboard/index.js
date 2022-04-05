@@ -108,6 +108,9 @@ export default function (state = defaultState, action) {
       };
     }
     case WIDGET_DELETED: {
+      const updatedUnitsPosition = { ...state.activeDashboard.units_position };
+      _.unset(updatedUnitsPosition, `position.${action.payload}`);
+      _.unset(updatedUnitsPosition, `size.${action.payload}`);
       return {
         ...state,
         activeDashboardUnits: {
@@ -115,6 +118,10 @@ export default function (state = defaultState, action) {
           data: state.activeDashboardUnits.data.filter(
             (elem) => elem.id !== action.payload
           ),
+        },
+        activeDashboard: {
+          ...state.activeDashboard,
+          units_position: updatedUnitsPosition,
         },
       };
     }

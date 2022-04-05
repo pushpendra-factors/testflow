@@ -15,6 +15,7 @@ function Attributions({
     models,
     linkedEvents,
     attr_dimensions,
+    content_groups,
   } = attributionsState;
 
   return (
@@ -31,6 +32,7 @@ function Attributions({
       attribution_method_compare={models[1]}
       section={section}
       attr_dimensions={attr_dimensions}
+      content_groups={content_groups}
       currMetricsValue={0}
       chartType={chartType}
       cardSize={unit.cardSize}

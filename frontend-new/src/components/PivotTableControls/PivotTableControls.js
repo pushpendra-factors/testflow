@@ -9,8 +9,8 @@ import SelectedItem from './SelectedItem';
 import styles from './PivotTableControls.module.scss';
 import ColumnsWrapper from './ColumnsWrapper';
 import ControlledComponent from '../ControlledComponent';
-import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
-import { PIVOT_SORT_ORDERS } from './pivotTableControls.constants';
+// import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
+// import { PIVOT_SORT_ORDERS } from './pivotTableControls.constants';
 
 const PivotTableControls = ({
   selectedRows,
@@ -21,7 +21,7 @@ const PivotTableControls = ({
   rowOptions,
   functionOptions,
   aggregatorName,
-  rowOrder,
+  // rowOrder,
   onRowAttributeRemove,
   onColumnAttributeRemove,
   onValueChange,
@@ -163,7 +163,7 @@ const PivotTableControls = ({
               dropdownMenu: functionsMenu,
               label: aggregatorName,
             })}
-            <ControlledComponent controller={rowOrder === PIVOT_SORT_ORDERS.ASCEND}>
+            {/* <ControlledComponent controller={rowOrder === PIVOT_SORT_ORDERS.ASCEND}>
               <ArrowDownOutlined
                 onClick={onSortChange}
                 className='cursor-pointer'
@@ -174,7 +174,7 @@ const PivotTableControls = ({
                 onClick={onSortChange}
                 className='cursor-pointer'
               />
-            </ControlledComponent>
+            </ControlledComponent> */}
           </div>
         </div>
       </div>
@@ -193,7 +193,7 @@ PivotTableControls.propTypes = {
   rowOptions: PropTypes.array,
   functionOptions: PropTypes.array,
   aggregatorName: PropTypes.string,
-  rowOrder: PropTypes.string,
+  // rowOrder: PropTypes.string,
   onRowAttributeRemove: PropTypes.func,
   onColumnAttributeRemove: PropTypes.func,
   onColumnChange: PropTypes.func,
@@ -212,7 +212,7 @@ PivotTableControls.defaultProps = {
   rowOptions: EMPTY_ARRAY,
   functionOptions: EMPTY_ARRAY,
   aggregatorName: EMPTY_STRING,
-  rowOrder: PIVOT_SORT_ORDERS.ASCEND,
+  // rowOrder: PIVOT_SORT_ORDERS.ASCEND,
   onRowAttributeRemove: _.noop,
   onColumnAttributeRemove: _.noop,
   onColumnChange: _.noop,

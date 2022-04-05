@@ -1,11 +1,7 @@
 import React from 'react';
 import cx from 'classnames';
 import moment from 'moment';
-import {
-  SVG,
-  Number as NumFormat,
-  Text,
-} from 'factorsComponents';
+import { SVG, Number as NumFormat, Text } from 'factorsComponents';
 import {
   SortData,
   formatCount,
@@ -17,7 +13,7 @@ import {
   FIRST_METRIC_IN_ATTR_RESPOSE,
   ARR_JOINER,
   ATTRIBUTION_METRICS,
-  DISPLAY_PROP
+  DISPLAY_PROP,
 } from '../../../utils/constants';
 import styles from './index.module.scss';
 
@@ -46,10 +42,15 @@ export const getSingleTouchPointChartData = (
   data,
   visibleIndices,
   attr_dimensions,
+  content_groups,
   touchpoint,
   isComparisonApplied
 ) => {
-  const enabledDimensions = attr_dimensions.filter(
+  const list_dimensions =
+    touchpoint === 'LandingPage'
+      ? content_groups.slice()
+      : attr_dimensions.slice();
+  const enabledDimensions = list_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
   const slicedTableData = data.filter(
@@ -59,8 +60,8 @@ export const getSingleTouchPointChartData = (
   const categories = slicedTableData.map((d) => {
     const cat = enabledDimensions.length
       ? enabledDimensions.map((dimension) => {
-        return d[dimension.title];
-      })
+          return d[dimension.title];
+        })
       : [d[touchpoint]];
     return cat.join(', ');
   });
@@ -125,12 +126,17 @@ export const getDualTouchPointChartData = (
   data,
   visibleIndices,
   attr_dimensions,
+  content_groups,
   touchpoint,
   attribution_method,
   attribution_method_compare,
   currMetricsValue
 ) => {
-  const enabledDimensions = attr_dimensions.filter(
+  const list_dimensions =
+    touchpoint === 'LandingPage'
+      ? content_groups.slice()
+      : attr_dimensions.slice();
+  const enabledDimensions = list_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
   const slicedTableData = data.filter(
@@ -139,8 +145,8 @@ export const getDualTouchPointChartData = (
   const result = slicedTableData.map((d) => {
     const name = enabledDimensions.length
       ? enabledDimensions.map((dimension) => {
-        return d[dimension.title];
-      })
+          return d[dimension.title];
+        })
       : [d[touchpoint]];
     return {
       name: name.join(', '),
@@ -160,6 +166,7 @@ export const formatData = (
   touchPoint,
   event,
   attr_dimensions,
+  content_groups,
   comparison_data
 ) => {
   if (
@@ -178,7 +185,12 @@ export const formatData = (
   }
   const { headers, rows } = data;
   const touchpointIdx = headers.indexOf(touchPoint);
-  const enabledDimensions = attr_dimensions.filter(
+
+  const list_dimensions =
+    touchPoint === 'LandingPage'
+      ? content_groups.slice()
+      : attr_dimensions.slice();
+  const enabledDimensions = list_dimensions.filter(
     (d) => d.touchPoint === touchPoint && d.enabled
   );
   let categories;
@@ -386,23 +398,23 @@ export const getTableColumns = (
   eventNames,
   metrics,
   attr_dimensions,
+  content_groups,
   durationObj,
   comparison_data,
   cmprDuration
 ) => {
-
   const getEventColumnConfig = ({ title, key, method, hasBorder = false }) => {
     return {
       title: getClickableTitleSorter(
         <div className='flex flex-col items-start justify-center'>
           <div>{title}</div>
-          {!!method && (<div className={cx("w-full text-right", styles.attributionMethodLabel)}>
-            {
-              ATTRIBUTION_METHODOLOGY.find(
-                (m) => m.value === method
-              ).text
-            }
-          </div>)}
+          {!!method && (
+            <div
+              className={cx('w-full text-right', styles.attributionMethodLabel)}
+            >
+              {ATTRIBUTION_METHODOLOGY.find((m) => m.value === method).text}
+            </div>
+          )}
         </div>,
         { key, type: 'numerical', subtype: null },
         currentSorter,
@@ -415,8 +427,8 @@ export const getTableColumns = (
       render: (d) => {
         return renderMetric(d, comparison_data);
       },
-    }
-  }
+    };
+  };
 
   const getDimensionsColConfig = (d, index) => {
     return {
@@ -431,14 +443,21 @@ export const getTableColumns = (
       ),
       dataIndex: d.title,
       fixed: !index ? 'left' : '',
-      width: (comparison_data && !index) ? 300 : 200,
+      width: comparison_data && !index ? 300 : 200,
       className: cx({ [styles.touchPointCol]: comparison_data && !index }),
       render: (d) =>
-        !index ? firstColumn(d, durationObj, comparison_data ? cmprDuration : null) : d,
-    }
-  }
+        !index
+          ? firstColumn(d, durationObj, comparison_data ? cmprDuration : null)
+          : d,
+    };
+  };
 
-  const enabledDimensions = attr_dimensions.filter(
+  const list_dimensions =
+    touchpoint === 'LandingPage'
+      ? content_groups.slice()
+      : attr_dimensions.slice();
+
+  const enabledDimensions = list_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
 
@@ -471,16 +490,14 @@ export const getTableColumns = (
     .filter((metric) => metric.enabled && !metric.isEventMetric)
     .map((metric) => {
       return {
-        title: (
-          getClickableTitleSorter(
-            metric.title,
-            { key: metric.title, type: 'numerical', subtype: null },
-            currentSorter,
-            handleSorting,
-            'right',
-            'end',
-            'pb-3'
-          )
+        title: getClickableTitleSorter(
+          metric.title,
+          { key: metric.title, type: 'numerical', subtype: null },
+          currentSorter,
+          handleSorting,
+          'right',
+          'end',
+          'pb-3'
         ),
         dataIndex: metric.title,
         width: 180,
@@ -497,33 +514,93 @@ export const getTableColumns = (
   const conversionBorderCondition = !showCPC && !showCR;
   const costBorderCondition = !showCR;
 
-  const eventColumns = [getEventColumnConfig({ title: 'Conversion', key: 'Conversion', method: attribution_method, hasBorder: conversionBorderCondition })];
+  const eventColumns = [
+    getEventColumnConfig({
+      title: 'Conversion',
+      key: 'Conversion',
+      method: attribution_method,
+      hasBorder: conversionBorderCondition,
+    }),
+  ];
   if (showCPC) {
-    eventColumns.push(getEventColumnConfig({ title: 'Cost Per Conversion', key: 'Cost per Conversion', method: attribution_method, hasBorder: costBorderCondition }))
+    eventColumns.push(
+      getEventColumnConfig({
+        title: 'Cost Per Conversion',
+        key: 'Cost per Conversion',
+        method: attribution_method,
+        hasBorder: costBorderCondition,
+      })
+    );
   }
   if (showCR) {
-    eventColumns.push(getEventColumnConfig({ title: 'Conversion Rate', key: 'Conversion Rate', method: attribution_method, hasBorder: true }))
+    eventColumns.push(
+      getEventColumnConfig({
+        title: 'Conversion Rate',
+        key: 'Conversion Rate',
+        method: attribution_method,
+        hasBorder: true,
+      })
+    );
   }
 
   if (attribution_method_compare) {
-    eventColumns.push(getEventColumnConfig({ title: 'Conversion', key: 'conversion_compare', method: attribution_method_compare, hasBorder: conversionBorderCondition }))
+    eventColumns.push(
+      getEventColumnConfig({
+        title: 'Conversion',
+        key: 'conversion_compare',
+        method: attribution_method_compare,
+        hasBorder: conversionBorderCondition,
+      })
+    );
     if (showCPC) {
-      eventColumns.push(getEventColumnConfig({ title: 'Cost Per Conversion', key: 'cost_compare', method: attribution_method_compare, hasBorder: costBorderCondition }))
+      eventColumns.push(
+        getEventColumnConfig({
+          title: 'Cost Per Conversion',
+          key: 'cost_compare',
+          method: attribution_method_compare,
+          hasBorder: costBorderCondition,
+        })
+      );
     }
     if (showCR) {
-      eventColumns.push(getEventColumnConfig({ title: 'Conversion Rate', key: 'conversion_rate_compare', method: attribution_method_compare, hasBorder: true }))
+      eventColumns.push(
+        getEventColumnConfig({
+          title: 'Conversion Rate',
+          key: 'conversion_rate_compare',
+          method: attribution_method_compare,
+          hasBorder: true,
+        })
+      );
     }
   }
 
   let linkedEventsColumns = [];
   if (linkedEvents.length) {
     linkedEventsColumns = linkedEvents.map((le) => {
-      const linkedEventsChildren = [getEventColumnConfig({ title: 'Conversion', key: 'Linked Event - ' + le.label + ' - Users', hasBorder: conversionBorderCondition })];
+      const linkedEventsChildren = [
+        getEventColumnConfig({
+          title: 'Conversion',
+          key: 'Linked Event - ' + le.label + ' - Users',
+          hasBorder: conversionBorderCondition,
+        }),
+      ];
       if (showCPC) {
-        linkedEventsChildren.push(getEventColumnConfig({ title: 'Cost Per Conversion', key: 'Linked Event - ' + le.label + ' - CPC', hasBorder: costBorderCondition }))
+        linkedEventsChildren.push(
+          getEventColumnConfig({
+            title: 'Cost Per Conversion',
+            key: 'Linked Event - ' + le.label + ' - CPC',
+            hasBorder: costBorderCondition,
+          })
+        );
       }
       if (showCR) {
-        linkedEventsChildren.push(getEventColumnConfig({ title: 'Conversion Rate', key: 'Linked Event - ' + le.label + ' - Conversion Rate', hasBorder: true }))
+        linkedEventsChildren.push(
+          getEventColumnConfig({
+            title: 'Conversion Rate',
+            key: 'Linked Event - ' + le.label + ' - Conversion Rate',
+            hasBorder: true,
+          })
+        );
       }
       return {
         title: eventNames[le.label] || le.label,
@@ -541,7 +618,7 @@ export const getTableColumns = (
       className: 'bg-white tableParentHeader ',
       children: eventColumns,
     },
-    ...linkedEventsColumns
+    ...linkedEventsColumns,
   ];
 };
 
@@ -589,6 +666,7 @@ export const getTableData = (
   linkedEvents,
   metrics,
   attr_dimensions,
+  content_groups,
   comparison_data
 ) => {
   const { headers } = data;
@@ -598,7 +676,12 @@ export const getTableData = (
   const compareUsersIdx = headers.indexOf(`Compare - Users`);
   const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
   const compareConvRateIdx = headers.indexOf(`Compare UserConversionRate(%)`);
-  const enabledDimensions = attr_dimensions.filter(
+
+  const list_dimensions =
+    touchpoint === 'LandingPage'
+      ? content_groups.slice()
+      : attr_dimensions.slice();
+  const enabledDimensions = list_dimensions.filter(
     (d) => d.touchPoint === touchpoint && d.enabled
   );
   const equivalentIndicesMapper = comparison_data
@@ -652,27 +735,27 @@ export const getTableData = (
         Conversion: !comparison_data
           ? formatCount(row[userIdx], 1)
           : {
-            value: formatCount(row[userIdx], 1),
-            compare_value: equivalent_compare_row
-              ? equivalent_compare_row[userIdx]
-              : 0,
-          },
+              value: formatCount(row[userIdx], 1),
+              compare_value: equivalent_compare_row
+                ? equivalent_compare_row[userIdx]
+                : 0,
+            },
         'Cost per Conversion': !comparison_data
           ? formatCount(row[costIdx], 1)
           : {
-            value: formatCount(row[costIdx], 1),
-            compare_value: equivalent_compare_row
-              ? formatCount(equivalent_compare_row[costIdx], 1)
-              : 0,
-          },
+              value: formatCount(row[costIdx], 1),
+              compare_value: equivalent_compare_row
+                ? formatCount(equivalent_compare_row[costIdx], 1)
+                : 0,
+            },
         'Conversion Rate': !comparison_data
           ? formatCount(row[conversionRateIdx], 1)
           : {
-            value: formatCount(row[conversionRateIdx], 1),
-            compare_value: equivalent_compare_row
-              ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
-              : 0,
-          },
+              value: formatCount(row[conversionRateIdx], 1),
+              compare_value: equivalent_compare_row
+                ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
+                : 0,
+            },
       };
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
@@ -684,29 +767,28 @@ export const getTableData = (
           resultantRow[`Linked Event - ${le.label} - Users`] = !comparison_data
             ? formatCount(row[eventUsersIdx], 1)
             : {
-              value: formatCount(row[eventUsersIdx], 1),
-              compare_value: equivalent_compare_row
-                ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
-                : 0,
-            };
+                value: formatCount(row[eventUsersIdx], 1),
+                compare_value: equivalent_compare_row
+                  ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
+                  : 0,
+              };
           resultantRow[`Linked Event - ${le.label} - CPC`] = !comparison_data
             ? formatCount(row[eventCPCIdx], 1)
             : {
-              value: formatCount(row[eventCPCIdx], 1),
-              compare_value: equivalent_compare_row
-                ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
-                : 0,
-            };
-          resultantRow[
-            `Linked Event - ${le.label} - Conversion Rate`
-          ] = !comparison_data
-              ? formatCount(row[eventConvRateIdx], 1)
-              : {
-                value: formatCount(row[eventConvRateIdx], 1),
+                value: formatCount(row[eventCPCIdx], 1),
                 compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
+                  ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
                   : 0,
               };
+          resultantRow[`Linked Event - ${le.label} - Conversion Rate`] =
+            !comparison_data
+              ? formatCount(row[eventConvRateIdx], 1)
+              : {
+                  value: formatCount(row[eventConvRateIdx], 1),
+                  compare_value: equivalent_compare_row
+                    ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
+                    : 0,
+                };
         });
       }
       if (attribution_method_compare) {
@@ -735,13 +817,18 @@ export const getTableData = (
 export const getScatterPlotChartData = (
   selectedTouchPoint,
   attr_dimensions,
+  content_groups,
   data,
   visibleIndices,
   xAxisMetric,
   yAxisMetric,
   isComparisonApplied
 ) => {
-  const enabledDimensions = attr_dimensions.filter(
+  const list_dimensions =
+    selectedTouchPoint === 'LandingPage'
+      ? content_groups.slice()
+      : attr_dimensions.slice();
+  const enabledDimensions = list_dimensions.filter(
     (d) => d.touchPoint === selectedTouchPoint && d.enabled
   );
   const visibleData = data.filter((d) => visibleIndices.indexOf(d.index) > -1);
@@ -789,26 +876,27 @@ export const getScatterPlotChartData = (
 };
 
 export const getAxisMetricOptions = (
+  selectedTouchPoint,
   linkedEvents,
   attribution_method,
   attribution_method_compare,
   eventNames
 ) => {
-  const result = ATTRIBUTION_METRICS.filter(
-    (metric) => !metric.isEventMetric
-  ).map((metric) => {
-    return {
-      title: metric.title,
-      value: metric.title,
-    };
-  });
+  const result = getResultantMetrics(selectedTouchPoint, ATTRIBUTION_METRICS)
+    .filter((metric) => !metric.isEventMetric)
+    .map((metric) => {
+      return {
+        title: metric.title,
+        value: metric.title,
+      };
+    });
 
   result.push({
     title: attribution_method_compare
       ? `Conversion - ${
-      ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-        .text
-      }`
+          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+            .text
+        }`
       : 'Conversion',
     value: 'Conversion',
   });
@@ -816,9 +904,9 @@ export const getAxisMetricOptions = (
   result.push({
     title: attribution_method_compare
       ? `Cost per Conversion - ${
-      ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-        .text
-      }`
+          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+            .text
+        }`
       : 'Cost per Conversion',
     value: 'Cost per Conversion',
   });
@@ -826,9 +914,9 @@ export const getAxisMetricOptions = (
   result.push({
     title: attribution_method_compare
       ? `Conversion Rate - ${
-      ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
-        .text
-      }`
+          ATTRIBUTION_METHODOLOGY.find((m) => m.value === attribution_method)
+            .text
+        }`
       : 'Conversion Rate',
     value: 'Conversion Rate',
   });
@@ -839,7 +927,7 @@ export const getAxisMetricOptions = (
         ATTRIBUTION_METHODOLOGY.find(
           (m) => m.value === attribution_method_compare
         ).text
-        }`,
+      }`,
       value: 'conversion_compare',
     });
 
@@ -848,7 +936,7 @@ export const getAxisMetricOptions = (
         ATTRIBUTION_METHODOLOGY.find(
           (m) => m.value === attribution_method_compare
         ).text
-        }`,
+      }`,
       value: 'cost_compare',
     });
 
@@ -857,7 +945,7 @@ export const getAxisMetricOptions = (
         ATTRIBUTION_METHODOLOGY.find(
           (m) => m.value === attribution_method_compare
         ).text
-        }`,
+      }`,
       value: 'conversion_rate_compare',
     });
   }
@@ -880,4 +968,34 @@ export const getAxisMetricOptions = (
   });
 
   return result;
+};
+
+export const listAttributionDimensions = (
+  touchpoint,
+  attr_dimensions,
+  content_groups
+) => {
+  return touchpoint === 'LandingPage'
+    ? content_groups.slice()
+    : attr_dimensions.slice();
+};
+
+export const getResultantMetrics = (touchpoint, attribution_metrics) => {
+  const array = [
+    'Sessions',
+    'Users',
+    'Average Session Time',
+    'PageViews',
+    'ALL CR',
+  ];
+  return touchpoint === 'LandingPage'
+    ? attribution_metrics.filter(
+        (metrics) =>
+          metrics.header.includes('Sessions') ||
+          metrics.header.includes('Users') ||
+          metrics.header.includes('Average Session Time') ||
+          metrics.header.includes('PageViews') ||
+          metrics.header.includes('ALL CR')
+      )
+    : attribution_metrics;
 };

@@ -98,11 +98,11 @@ const coreQueryoptions = [
     icon: 'events_cq',
     desc: 'Create charts from events and related properties',
   },
-  {
-    title: 'Campaigns',
-    icon: 'campaigns_cq',
-    desc: 'Find the effect of your marketing campaigns',
-  },
+  // {
+  //   title: 'Campaigns',
+  //   icon: 'campaigns_cq',
+  //   desc: 'Find the effect of your marketing campaigns',
+  // },
   {
     title: 'Templates',
     icon: 'templates_cq',
@@ -135,7 +135,7 @@ const columns = [
     render: (text) => (
       <div className='flex items-center'>
         <Avatar src='assets/avatar/avatar.png' size={24} className={'mr-2'} />
-        &nbsp; {text}{' '}
+        &nbsp; {text}
       </div>
     ),
   },
@@ -168,7 +168,9 @@ function CoreQuery({
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
   const dispatch = useDispatch();
-  const { attr_dimensions } = useSelector((state) => state.coreQuery);
+  const { attr_dimensions, content_groups } = useSelector(
+    (state) => state.coreQuery
+  );
   const { config: kpiConfig } = useSelector((state) => state.kpi);
   const { metadata } = useSelector((state) => state.insights);
   const [templatesModalVisible, setTemplatesModalVisible] = useState(false);
@@ -246,18 +248,25 @@ function CoreQuery({
 
   const updateEventFunnelsState = useCallback(
     (equivalentQuery, navigatedFromDashboard) => {
+      const savedDateRange = { ...equivalentQuery.dateRange };
+      let newDateRange = getDashboardDateRange();
+      const dashboardDateRange = {
+        ...newDateRange,
+        frequency: equivalentQuery.dateRange.frequency,
+      };
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: equivalentQuery.breakdown,
       });
       setQueries(equivalentQuery.events);
       setQueryOptions((currData) => {
-        let newDateRange = {};
+        let queryDateRange = {};
         if (navigatedFromDashboard) {
-          newDateRange = { date_range: getDashboardDateRange() };
-        }
+          queryDateRange = { date_range: dashboardDateRange };
+        } else queryDateRange = { date_range: savedDateRange };
 
-        return {
+        let queryOpts = {};
+        queryOpts = {
           ...currData,
           session_analytics_seq: equivalentQuery.session_analytics_seq,
           groupBy: [
@@ -265,8 +274,9 @@ function CoreQuery({
             ...equivalentQuery.breakdown.event,
           ],
           globalFilters: equivalentQuery.globalFilters,
-          ...newDateRange,
+          ...queryDateRange,
         };
+        return queryOpts;
       });
     },
     [dispatch]
@@ -291,6 +301,42 @@ function CoreQuery({
           globalFilters: equivalentQuery.globalFilters,
           group_analysis: equivalentQuery.groupAnalysis,
           date_range: { ...DefaultDateRangeFormat, ...dateRange },
+        };
+        return queryOpts;
+      });
+    },
+    [dispatch]
+  );
+
+  const updateKPIQueryState = useCallback(
+    (equivalentQuery, navigatedFromDashboard) => {
+      const savedDateRange = { ...equivalentQuery.dateRange };
+      let newDateRange = getDashboardDateRange();
+      const dashboardDateRange = {
+        ...newDateRange,
+        frequency: equivalentQuery.dateRange.frequency,
+      };
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: equivalentQuery.breakdown,
+      });
+      setQueries(equivalentQuery.events);
+      setQueryOptions((currData) => {
+        let queryDateRange = {};
+        if (navigatedFromDashboard) {
+          queryDateRange = { date_range: dashboardDateRange };
+        } else queryDateRange = { date_range: savedDateRange };
+
+        let queryOpts = {};
+        queryOpts = {
+          ...currData,
+          session_analytics_seq: equivalentQuery.session_analytics_seq,
+          groupBy: [
+            ...equivalentQuery.breakdown.global,
+            ...equivalentQuery.breakdown.event,
+          ],
+          globalFilters: equivalentQuery.globalFilters,
+          ...queryDateRange,
         };
         return queryOpts;
       });
@@ -402,14 +448,15 @@ function CoreQuery({
             record.query,
             kpiConfig
           );
-          updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
+          updateKPIQueryState(equivalentQuery, navigatedFromDashboard);
         } else if (
           record.query.cl &&
           record.query.cl === QUERY_TYPE_ATTRIBUTION
         ) {
           equivalentQuery = getAttributionStateFromRequestQuery(
             record.query.query,
-            attr_dimensions
+            attr_dimensions,
+            content_groups
           );
           let newDateRange = {};
           if (navigatedFromDashboard) {
@@ -423,6 +470,12 @@ function CoreQuery({
           }
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
+          setQueryOptions((currData) => {
+            return {
+              ...currData,
+              group_analysis: record.query.query.analyze_type
+            }
+          })
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_PROFILE) {
           equivalentQuery = getProfileQueryFromRequestQuery(record.query);
           updateProfileQueryState(equivalentQuery);
@@ -449,7 +502,7 @@ function CoreQuery({
         console.log(err);
       }
     },
-    [updateEventFunnelsState, attr_dimensions, kpiConfig]
+    [updateEventFunnelsState, attr_dimensions, content_groups, kpiConfig]
   );
 
   const getMenu = (row) => {
@@ -657,14 +710,14 @@ function CoreQuery({
                       <div
                         className={`fai--custom-card-new--top-section flex justify-center items-center`}
                       >
-                        {item.title == 'KPIs' && (
+                        {/* {item.title == 'KPIs' && (
                           <Tag
                             color='orange'
                             className={'fai--custom-card--badge'}
                           >
                             BETA
                           </Tag>
-                        )}
+                        )} */}
                         <SVG name={item.icon} size={40} />
                       </div>
 
@@ -675,8 +728,7 @@ function CoreQuery({
                           weight={'bold'}
                           extraClass={'m-0'}
                         >
-                          {' '}
-                          {item.title}{' '}
+                          {item.title}
                         </Text>
                         <Text
                           type={'title'}
@@ -684,8 +736,7 @@ function CoreQuery({
                           color={'grey'}
                           extraClass={'m-0 mt-1 fai--custom-card-new--desc'}
                         >
-                          {' '}
-                          {item.desc}{' '}
+                          {item.desc}
                         </Text>
                       </div>
                     </div>

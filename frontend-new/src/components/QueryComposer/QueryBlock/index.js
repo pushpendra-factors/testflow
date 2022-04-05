@@ -90,19 +90,19 @@ function QueryBlock({
 
   const selectEvents = () => {
     return (
-      <div className={styles.query_block__event_selector}>
+      <>
         {isDDVisible ? (
-          <div className={styles.query_block__event_selector__btn}>
+          <div className={styles.query_block__event_selector}>
             <GroupSelect2
               groupedProperties={eventOptions}
               placeholder='Select Event'
-              optionClick={(group, val) => onChange(val[1]? val[1]: val[0])}
+              optionClick={(group, val) => onChange(val[1] ? val[1] : val[0])}
               onClickOutside={() => setDDVisible(false)}
               allowEmpty={true}
             ></GroupSelect2>
           </div>
         ) : null}
-      </div>
+      </>
     );
   };
 
@@ -116,17 +116,17 @@ function QueryBlock({
 
   const insertFilters = (filter, filterIndex) => {
     const newEvent = Object.assign({}, event);
-    if(filterIndex >= 0) {
+    if (filterIndex >= 0) {
       newEvent.filters = newEvent.filters.map((filt, i) => {
-        if(i === filterIndex) {
+        if (i === filterIndex) {
           return filter;
-        } 
+        }
         return filt;
-      })
+      });
     } else {
       newEvent.filters.push(filter);
     }
-    
+
     eventChange(newEvent, index - 1, 'filters_updated');
   };
 
@@ -139,16 +139,16 @@ function QueryBlock({
   };
 
   const selectEventFilter = () => {
-      return (
-        <EventFilterWrapper
-          filterProps={filterProps}
-          activeProject={activeProject}
-          event={event}
-          deleteFilter={() => setFilterDDVisible(false)}
-          insertFilter={insertFilters}
-          closeFilter={() => setFilterDDVisible(false)}
-        ></EventFilterWrapper>
-      );
+    return (
+      <EventFilterWrapper
+        filterProps={filterProps}
+        activeProject={activeProject}
+        event={event}
+        deleteFilter={() => setFilterDDVisible(false)}
+        insertFilter={insertFilters}
+        closeFilter={() => setFilterDDVisible(false)}
+      ></EventFilterWrapper>
+    );
   };
 
   const deleteGroupBy = (groupState, id, type = 'event') => {
@@ -175,15 +175,15 @@ function QueryBlock({
   };
 
   const setAdditionalactions = (opt) => {
-    if(opt[1] === 'filter') {
+    if (opt[1] === 'filter') {
       addFilter();
-    } else if(opt[1] === 'groupby') {
+    } else if (opt[1] === 'groupby') {
       addGroupBy();
-    } else { 
+    } else {
       showModal();
     }
     setMoreOptions(false);
-  }
+  };
 
   const additionalActions = () => {
     return (
@@ -192,26 +192,34 @@ function QueryBlock({
           <Button
             type='text'
             onClick={() => setMoreOptions(true)}
-            className={`fa-btn--custom ml-1 mr-1`}
+            className={`fa-btn--custom mr-1`}
           >
             <SVG name='more'></SVG>
           </Button>
 
-          {moreOptions ? <FaSelect
-            options={[['Filter By', 'filter'], ['Breakdown', 'groupby'], [ !event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit']]}
-            optionClick={(val) => setAdditionalactions(val)}
-            onClickOutside={() => setMoreOptions(false)}
-          ></FaSelect> : false}
+          {moreOptions ? (
+            <FaSelect
+              options={[
+                ['Filter By', 'filter'],
+                ['Breakdown', 'groupby'],
+                [!event?.alias?.length ? 'Create Alias' : 'Edit Alias', 'edit'],
+              ]}
+              optionClick={(val) => setAdditionalactions(val)}
+              onClickOutside={() => setMoreOptions(false)}
+            ></FaSelect>
+          ) : (
+            false
+          )}
 
           <AliasModal
             visible={isModalVisible}
-            event={eventNames[event.label]? eventNames[event.label] : event.label}
+            event={
+              eventNames[event.label] ? eventNames[event.label] : event.label
+            }
             onOk={handleOk}
             onCancel={handleCancel}
             alias={event.alias}
-          >
-          </AliasModal>
-    
+          ></AliasModal>
         </div>
         <Button type='text' onClick={deleteItem} className={`fa-btn--custom`}>
           <SVG name='trash'></SVG>
@@ -303,15 +311,15 @@ function QueryBlock({
         <div
           className={`${styles.query_block__event} flex justify-start items-center`}
         >
-          { 
-              <Button
-                type='text'
-                onClick={triggerDropDown}
-                icon={<SVG name={'plus'} color={'grey'} />}
-              >
-                {ifQueries ? 'Add another event' : 'Add First Event'}
-              </Button>
-            }
+          {
+            <Button
+              type='text'
+              onClick={triggerDropDown}
+              icon={<SVG name={'plus'} color={'grey'} />}
+            >
+              {ifQueries ? 'Add another event' : 'Add First Event'}
+            </Button>
+          }
           {selectEvents()}
         </div>
       </div>
@@ -323,7 +331,9 @@ function QueryBlock({
       className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}
     >
       <div
-        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${styles.query_block__event} block_section items-center`}
+        className={`${!event?.alias?.length ? 'flex justify-start' : ''} ${
+          styles.query_block__event
+        } block_section items-center`}
       >
         <div className={'flex items-center'}>
           <div
@@ -338,42 +348,49 @@ function QueryBlock({
               color={'white'}
               extraClass={'m-0'}
             >
-              {queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}
-            </Text>{' '}
+              {queryType === QUERY_TYPE_FUNNEL
+                ? index
+                : alphabetIndex[index - 1]}
+            </Text>
           </div>
-          {event?.alias?.length
-            ? (
-              <Text
-                type={'title'}
-                level={7}
-                weight={'bold'}
-                extraClass={'m-0'}
-              >
-                {event?.alias}
-                <Tooltip title={'Edit Alias'}>
-                  <Button
-                    className={`${styles.custombtn} mx-1`} type="text" onClick={showModal} ><SVG size={20} name="edit" color={'grey'} />
-                  </Button>
-                </Tooltip>
-              </Text>)
-            : null}
+          {event?.alias?.length ? (
+            <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
+              {event?.alias}
+              <Tooltip title={'Edit Alias'}>
+                <Button
+                  className={`${styles.custombtn} mx-1`}
+                  type='text'
+                  onClick={showModal}
+                >
+                  <SVG size={20} name='edit' color={'grey'} />
+                </Button>
+              </Tooltip>
+            </Text>
+          ) : null}
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-2'}`}>
-          <div className="max-w-7xl">
-            <Tooltip title={eventNames[event.label] ? eventNames[event.label] : event.label}>
+          <div className='relative'>
+            <Tooltip
+              title={
+                eventNames[event.label] ? eventNames[event.label] : event.label
+              }
+            >
               <Button
                 icon={<SVG name='mouseevent' size={16} color={'purple'} />}
                 className={`fa-button--truncate fa-button--truncate-lg`}
                 type='link'
                 onClick={triggerDropDown}
               >
-                {' '}
-                {eventNames[event.label] ? eventNames[event.label] : event.label}{' '}
+                {eventNames[event.label]
+                  ? eventNames[event.label]
+                  : event.label}
               </Button>
               {selectEvents()}
             </Tooltip>
           </div>
-          <div className={styles.query_block__additional_actions}>{additionalActions()}</div>
+          <div className={styles.query_block__additional_actions}>
+            {additionalActions()}
+          </div>
         </div>
       </div>
       {eventFilters()}
@@ -388,7 +405,7 @@ const mapStateToProps = (state) => ({
   userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,
   groupBy: state.coreQuery.groupBy.event,
-  eventNames: state.coreQuery.eventNames
+  eventNames: state.coreQuery.eventNames,
 });
 
 const mapDispatchToProps = (dispatch) =>

@@ -48,7 +48,7 @@ function ChartTypeDropdown({ menuItems, onClick, chartType }) {
       >
         {chartType ? (
           <>
-            <SVG name={chartType} size={25} color='#0E2647' />{' '}
+            <SVG name={chartType} size={25} color='#0E2647' />
             {activeItem ? activeItem.name : ''}
           </>
         ) : null}

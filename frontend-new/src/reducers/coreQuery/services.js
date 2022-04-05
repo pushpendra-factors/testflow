@@ -9,6 +9,7 @@ import {
   GROUPS_LOADING,
   GROUPS_LOADED,
   GROUPS_LOADING_FAILED,
+  INITIALIZE_CONTENT_GROUPS,
 } from '../types';
 import { notification } from 'antd';
 import { getErrorMessage } from '../../utils/dataFormatter';
@@ -16,6 +17,7 @@ import { getErrorMessage } from '../../utils/dataFormatter';
 import {
   MARKETING_TOUCHPOINTS_ALIAS,
   KEY_TOUCH_POINT_DIMENSIONS,
+  KEY_CONTENT_GROUPS,
 } from '../../utils/constants';
 const host = getHostUrl();
 
@@ -248,7 +250,6 @@ export const fetchGroups = (projectId) => {
   };
 };
 
-
 export const getAttributionsData = (
   projectId,
   reqBody,
@@ -336,6 +337,32 @@ export const fetchSmartPropertyRules = (projectId) => {
       dispatch({
         type: INITIALIZE_TOUCHPOINT_DIMENSIONS,
         payload: [...KEY_TOUCH_POINT_DIMENSIONS, ...customDimensions],
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+};
+
+export const fetchAttrContentGroups = (projectId) => {
+  return async function (dispatch) {
+    try {
+      const url = host + 'projects/' + projectId + '/v1/contentgroup';
+      const res = await get(null, url);
+      const content_group = res.data.map((elem) => {
+        return {
+          title: elem.content_group_name,
+          header: elem.content_group_name,
+          responseHeader: elem.content_group_name,
+          enabled: false,
+          type: 'content_group',
+          touchPoint: 'LandingPage',
+          defaultValue: false,
+        };
+      });
+      dispatch({
+        type: INITIALIZE_CONTENT_GROUPS,
+        payload: [...KEY_CONTENT_GROUPS, ...content_group],
       });
     } catch (err) {
       console.log(err);

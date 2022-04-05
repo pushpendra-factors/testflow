@@ -64,7 +64,10 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
         </div>
 
         {data.length ? (
-          <div className='search-list pb-4 fa-global-search--contents'>
+          <div
+            className='search-list pb-4 fa-global-search--contents overflow-hidden'
+            style={{ overflow: 'hidden' }}
+          >
             <div className={`p-4 ${styles.searchHeadings}`}>Saved Reports</div>
             <div className='fa-global-search--contents'>
               {data.map((d) => {

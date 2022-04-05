@@ -57,11 +57,7 @@ export const getDataFromServer = (
           ...elem,
           fr: MomentTz(durationObj.from).startOf('day').utc().unix(),
           to: MomentTz(durationObj.to).endOf('day').utc().unix(),
-          gbt: elem.gbt
-            ? isCampaignQuery
-              ? 'date'
-              : durationObj.frequency
-            : '',
+          gbt: elem.gbt ? (isCampaignQuery ? 'date' : elem.gbt) : '',
         };
         if (!isCampaignQuery) {
           obj.ewp = obj.ewp.map((e) => {
@@ -84,11 +80,7 @@ export const getDataFromServer = (
             MomentTz().format('dddd') !== 'Sunday'
               ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
               : MomentTz().utc().unix(),
-          gbt: elem.gbt
-            ? isCampaignQuery
-              ? 'date'
-              : durationObj.frequency
-            : '',
+          gbt: elem.gbt ? (isCampaignQuery ? 'date' : elem.gbt) : '',
         };
         if (!isCampaignQuery) {
           obj.ewp = obj.ewp.map((e) => {
@@ -149,7 +141,7 @@ export const getDataFromServer = (
         };
       }),
     };
-    
+
     return getKPIData(
       activeProjectId,
       KPIQuery,
@@ -208,6 +200,7 @@ export const getDataFromServer = (
     );
   } else {
     let funnelQuery = query.query;
+    console.log('funnelquery', funnelQuery);
     if (durationObj.from && durationObj.to) {
       funnelQuery = {
         ...funnelQuery,

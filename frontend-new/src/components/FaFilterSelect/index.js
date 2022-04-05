@@ -29,7 +29,7 @@ const FAFilterSelect = ({
   setValuesByProps,
   applyFilter,
   filter,
-  disabled=false
+  disabled = false,
 }) => {
   const [propState, setPropState] = useState({
     icon: '',
@@ -70,7 +70,10 @@ const FAFilterSelect = ({
   }, [valuesState]);
 
   useEffect(() => {
-    if ((filter && !valuesState) || (filter && (filter?.values !== valuesState))) {
+    if (
+      (filter && !valuesState) ||
+      (filter && filter?.values !== valuesState)
+    ) {
       const prop = filter.props;
       setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
       setOperatorState(filter.operator);
@@ -222,7 +225,11 @@ const FAFilterSelect = ({
 
   const renderPropSelect = () => {
     return (
-      <div className={`${styles.filter__propContainer} ${disabled? `fa-truncate-150` : ''}`}>
+      <div
+        className={`${styles.filter__propContainer} ${
+          disabled ? `fa-truncate-150` : ''
+        }`}
+      >
         <Tooltip title={renderGroupDisplayName(propState)}>
           <Button
             disabled={disabled}
@@ -231,26 +238,23 @@ const FAFilterSelect = ({
                 <SVG name={propState.icon} size={16} color={'purple'} />
               ) : null
             }
-            className={`fa-button--truncate fa-button--truncate-xs`}
+            className={`fa-button--truncate fa-button--truncate-xs mr-2`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
           >
-            {' '}
             {renderGroupDisplayName(propState)}
           </Button>
         </Tooltip>
-        <div className={styles.filter__event_selector}>
-          {propSelectOpen && (
-            <div className={styles.filter__event_selector__btn}>
-              <GroupSelect2
-                groupedProperties={propOpts}
-                placeholder='Select Property'
-                optionClick={(group, val) => propSelect([...val, group])}
-                onClickOutside={() => setPropSelectOpen(false)}
-              ></GroupSelect2>
-            </div>
-          )}
-        </div>
+        {propSelectOpen && (
+          <div className={styles.filter__event_selector}>
+            <GroupSelect2
+              groupedProperties={propOpts}
+              placeholder='Select Property'
+              optionClick={(group, val) => propSelect([...val, group])}
+              onClickOutside={() => setPropSelectOpen(false)}
+            ></GroupSelect2>
+          </div>
+        )}
       </div>
     );
   };
@@ -260,11 +264,10 @@ const FAFilterSelect = ({
       <div className={styles.filter__propContainer}>
         <Button
           disabled={disabled}
-          className={`fa-button--truncate ml-2`}
+          className={`fa-button--truncate`}
           type='link'
           onClick={() => setOperSelectOpen(true)}
         >
-          {' '}
           {operatorState ? operatorState : 'Select Operator'}
         </Button>
 
@@ -532,10 +535,13 @@ const FAFilterSelect = ({
     }
 
     return (
-      <div className={`${styles.filter__propContainer} ml-2 ${disabled? `fa-truncate-150` : ''}`}>
+      <div
+        className={`${styles.filter__propContainer} ml-2 ${
+          disabled ? `fa-truncate-150` : ''
+        }`}
+      >
         {propState.type === 'categorical' ? (
           <>
-            {' '}
             <Tooltip
               mouseLeaveDelay={0}
               title={
@@ -552,15 +558,14 @@ const FAFilterSelect = ({
                 disabled={disabled}
                 onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
               >
-                {' '}
                 {valuesState && valuesState.length
                   ? valuesState
                       .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                       .join(', ')
                   : 'Select Values'}
-              </Button>{' '}
-            </Tooltip>{' '}
-            {valuesSelectionOpen && selectionComponent}{' '}
+              </Button>
+            </Tooltip>
+            {valuesSelectionOpen && selectionComponent}
           </>
         ) : null}
 

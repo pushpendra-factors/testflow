@@ -69,7 +69,10 @@ const GlobalFilterSelect = ({
   }, [valuesState]);
 
   useEffect(() => {
-    if ((filter && !valuesState) || (filter && (filter?.values !== valuesState))) {
+    if (
+      (filter && !valuesState) ||
+      (filter && filter?.values !== valuesState)
+    ) {
       const prop = filter.props;
       setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
       setOperatorState(filter.operator);
@@ -138,7 +141,6 @@ const GlobalFilterSelect = ({
   };
 
   const renderDisplayName = (propState) => {
-    // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
     let propertyName = '';
     if (
       propState.name &&
@@ -242,27 +244,24 @@ const GlobalFilterSelect = ({
                 <SVG name={propState.icon} size={16} color={'purple'} />
               ) : null
             }
-            className={`fa-button--truncate fa-button--truncate-xs`}
+            className={`fa-button--truncate fa-button--truncate-xs mr-2`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
           >
-            {' '}
             {renderDisplayName(propState)}
           </Button>
         </Tooltip>
 
-        <div className={styles.filter__event_selector}>
-          {propSelectOpen && (
-            <div className={styles.filter__event_selector__btn}>
-              <GroupSelect2
-                groupedProperties={propOpts}
-                placeholder='Select Property'
-                optionClick={(group, val) => propSelect([...val, group])}
-                onClickOutside={() => setPropSelectOpen(false)}
-              ></GroupSelect2>
-            </div>
-          )}
-        </div>
+        {propSelectOpen && (
+          <div className={styles.filter__event_selector}>
+            <GroupSelect2
+              groupedProperties={propOpts}
+              placeholder='Select Property'
+              optionClick={(group, val) => propSelect([...val, group])}
+              onClickOutside={() => setPropSelectOpen(false)}
+            ></GroupSelect2>
+          </div>
+        )}
       </div>
     );
   };
@@ -271,11 +270,10 @@ const GlobalFilterSelect = ({
     return (
       <div className={styles.filter__propContainer}>
         <Button
-          className={` ml-2`}
+          className={`mr-2`}
           type='link'
           onClick={() => setOperSelectOpen(true)}
         >
-          {' '}
           {operatorState ? operatorState : 'Select Operator'}
         </Button>
 
@@ -534,7 +532,7 @@ const GlobalFilterSelect = ({
     if (!operatorState || !propState?.name) return null;
 
     return (
-      <div className={`${styles.filter__propContainer} ml-2 w-7/12`}>
+      <div className={`${styles.filter__propContainer} w-7/12`}>
         {propState.type === 'categorical' ? (
           <Tooltip
             title={
@@ -550,13 +548,12 @@ const GlobalFilterSelect = ({
               type='link'
               onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
             >
-              {' '}
               {valuesState && valuesState.length
                 ? valuesState
                     .map((vl) => (DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl))
                     .join(', ')
                 : 'Select Values'}
-            </Button>{' '}
+            </Button>
           </Tooltip>
         ) : null}
 

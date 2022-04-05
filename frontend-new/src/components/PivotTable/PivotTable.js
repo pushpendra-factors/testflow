@@ -119,7 +119,7 @@ const PivotTable = ({ data, breakdown, kpis, showControls }) => {
 
     if (!configLoaded) {
       updatePivotConfig({
-        rows: attributes,
+        rows: breakdownAttributes,
         vals: [kpis[0]],
         configLoaded: true,
       });
@@ -153,18 +153,19 @@ const PivotTable = ({ data, breakdown, kpis, showControls }) => {
           onColumnChange={handleColumnChange}
           onRowChange={handleRowOptionSelect}
           onFunctionChange={handleFunctionChange}
-          rowOrder={pivotConfig.rowOrder}
+          // rowOrder={pivotConfig.rowOrder}
           onSortChange={handleSortChange}
         />
       </ControlledComponent>
       <div className='w-full overflow-auto'>
         <PivotTableUI
           onChange={(s) => {
-            console.log(s.rowOrder);
+            console.log(s);
             setPivotState(s);
           }}
           {...pivotState}
           {...pivotConfig}
+          rowOrder='key_a_to_z' // hardcoded for now to remove sorting. Will be removed later
         />
       </div>
     </div>
