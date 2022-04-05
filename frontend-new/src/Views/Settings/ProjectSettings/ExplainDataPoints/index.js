@@ -63,8 +63,12 @@ const ConfigureDP = (props) => {
   }, [activeProject, tracked_events, tracked_user_property]);
 
 
+  useEffect(()=>{
+    fetchFactorsTrackedEvents(activeProject.id);
+  },[activeProject]);
+  
   const onChangeEventDD = (grp, value) => {
-    console.log('grp, value onChangeEventDD',grp, value);
+    // console.log('grp, value onChangeEventDD',grp, value);
     setShowDropDown(false);  
     const EventData = {
       "event_name": `${value[1] ? value[1] : value[0]}`

@@ -12,7 +12,8 @@ import { Text, SVG, FaErrorComp, FaErrorLog, Number } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import L2Modal from './ModalL2';
 import CardInsight from './CardInsight';
-import ExplainData from './Data';
+
+
 
 const CardInsightWrapper = ({ data }) => {
   return (
@@ -58,13 +59,12 @@ const InsightColumnTitle = ({ title, isIncreased, resultTitle }) => {
   )
 }
 
-const InsightItem = ({ data, sort, setModalL2, showModalL2, showIncrease = false, isAttribute, setModalData, searchTerm='' }) => {
-
+const InsightItem = ({ data, sort, setModalL2, showModalL2, showIncrease = false, isAttribute, setModalData, searchTerm = '', explainMatchEventName }) => {
   let dataSet = sort ? data?.insights?.sort() : data?.insights?.reverse();
 
   return dataSet?.map((item) => {
     if ((item?.factors_insights_type == "journey" || item?.factors_insights_type == "campaign") && !isAttribute) {
-      if (item?.factors_multiplier_increase_flag == showIncrease && item?.factors_insights_key.toLowerCase().includes(searchTerm) ) {
+      if (item?.factors_multiplier_increase_flag == showIncrease && item?.factors_insights_key.toLowerCase().includes(searchTerm)) {
         return (
           <div className={`flex items-center justify-between cursor-pointer explain-table--row`} onClick={() => {
             setModalL2(true)
@@ -72,7 +72,7 @@ const InsightItem = ({ data, sort, setModalL2, showModalL2, showIncrease = false
           }}>
             <div className={`py-2 px-4 flex items-center `}>
               <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3'}>{item?.factors_insights_type == "journey" ? `Users who visit` : `Users from`}</Text>
-              <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'} style={{ maxWidth: '350px' }}>{item?.factors_insights_key}</Tag>
+              <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'}>{explainMatchEventName(item?.factors_insights_key, false, 'blue')}</Tag>
 
             </div>
             <div className={'py-2 px-4 flex justify-end column_right'}>
@@ -94,8 +94,8 @@ const InsightItem = ({ data, sort, setModalL2, showModalL2, showIncrease = false
             setModalData(item)
           }}>
             <div className={`py-2 px-4 flex items-center `}>
-              <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'} style={{ maxWidth: '350px' }}>
-                {`${item?.factors_insights_attribute[0]?.factors_attribute_key}`}
+              <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'}>
+                {explainMatchEventName(item?.factors_insights_attribute[0]?.factors_attribute_key, false, 'blue')}
               </Tag>
               <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3'}>
                 {`= ${item?.factors_insights_attribute[0]?.factors_attribute_value}`}
@@ -117,12 +117,13 @@ const InsightItem = ({ data, sort, setModalL2, showModalL2, showIncrease = false
   )
 }
 
-const InsightTable = ({ 
-  data,  
-  setModalL2, 
-  showModalL2, 
-  isAttribute = false, 
+const InsightTable = ({
+  data,
+  setModalL2,
+  showModalL2,
+  isAttribute = false,
   setModalData,
+  explainMatchEventName
 }) => {
 
   const [tableData, setTableData] = useState(false);
@@ -136,10 +137,10 @@ const InsightTable = ({
     setSearchTerm(searchWord);
   };
 
-  const onSortChange = () => { 
-      setSort(!sort)
-  } 
- 
+  const onSortChange = () => {
+    setSort(!sort)
+  }
+
   return (
     <Row gutter={[24, 24]}>
       <Col span={24}>
@@ -149,29 +150,30 @@ const InsightTable = ({
               <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 capitalize'}>{`${isAttribute ? 'Segments (Attributes)' : `Engagements (Journeys + Campaigns)`}`}</Text>
               <div className={'flex justify-between'}>
                 {showSearch ? <Input
-                  onChange={onInputSearch} 
+                  onChange={onInputSearch}
                   prefix={(<SVG name="search" size={16} color={'grey'} />)}
                 /> : null}
-                <Button className='fa-button-ghost' type='text' onClick={()=>{
-                    if(!showSearch){ 
-                      setShowSearch(true) 
-                    }else {
-                      setShowSearch(false)  
-                      setSearchTerm('');
-                    }
-                  }}> <SVG name={!showSearch ? 'search' : 'close'} size={20} color={'grey'} /> </Button>
+                <Button className='fa-button-ghost' type='text' onClick={() => {
+                  if (!showSearch) {
+                    setShowSearch(true)
+                  } else {
+                    setShowSearch(false)
+                    setSearchTerm('');
+                  }
+                }}> <SVG name={!showSearch ? 'search' : 'close'} size={20} color={'grey'} /> </Button>
                 {/* <Button className='fa-button-ghost' type='text' onClick={()=>onSortChange()} > <SVG name={ sort ? 'sortdown' : 'sortup'} size={20} color={'grey'} /> </Button> */}
               </div>
             </div>
             <div className={'explain-insight--container'}>
               <Row gutter={[0, 0]}>
-                <Col span={12}> 
+                <Col span={12}>
                   <div>
 
                     <InsightColumnTitle
                       title={`What’s working well?`}
                       isIncreased={true}
                       resultTitle={`Conversion`}
+                      explainMatchEventName={explainMatchEventName}
                     />
                     <InsightItem
                       setModalL2={setModalL2}
@@ -182,6 +184,7 @@ const InsightTable = ({
                       data={data}
                       searchTerm={searchTerm}
                       sort={sort}
+                      explainMatchEventName={explainMatchEventName}
                     />
 
                   </div>
@@ -192,6 +195,7 @@ const InsightTable = ({
                       title={`What’s working poorly?`}
                       isIncreased={false}
                       resultTitle={`Conversion`}
+                      explainMatchEventName={explainMatchEventName}
                     />
                     <InsightItem
                       setModalL2={setModalL2}
@@ -202,6 +206,7 @@ const InsightTable = ({
                       data={data}
                       searchTerm={searchTerm}
                       sort={sort}
+                      explainMatchEventName={explainMatchEventName}
                     />
                   </div>
                 </Col>
@@ -216,11 +221,11 @@ const InsightTable = ({
 
 
 
-const ResultsTableL1 = ({ goalInsights }) => {
+const ResultsTableL1 = ({ goalInsights, explainMatchEventName }) => {
   const [loading, setLoading] = useState(false);
   const [subInsightData, setSubInsightData] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
-  const [showSearchSub, setShowSearchSub] = useState(false); 
+  const [showSearchSub, setShowSearchSub] = useState(false);
   const [sortSubInsight, setSortSubInsight] = useState(false);
   const [showModalL2, setModalL2] = useState(false);
   const [modalData, setModalData] = useState(false);
@@ -250,12 +255,30 @@ const ResultsTableL1 = ({ goalInsights }) => {
                 setModalData={setModalData}
                 modalData={modalData}
                 data={goalInsights}
+                explainMatchEventName={explainMatchEventName}
               />
 
               <div className='mt-6'>
 
-                <InsightTable showSearch={showSearch} showModalL2={showModalL2} setModalL2={setModalL2} isAttribute={false} setModalData={setModalData} data={goalInsights} />
-                <InsightTable showSearch={showSearch} showModalL2={showModalL2} setModalL2={setModalL2} isAttribute={true} setModalData={setModalData} data={goalInsights} />
+                <InsightTable
+                  showSearch={showSearch}
+                  showModalL2={showModalL2}
+                  setModalL2={setModalL2}
+                  isAttribute={false}
+                  setModalData={setModalData}
+                  data={goalInsights}
+                  explainMatchEventName={explainMatchEventName}
+                />
+
+                <InsightTable
+                  showSearch={showSearch}
+                  showModalL2={showModalL2}
+                  setModalL2={setModalL2}
+                  isAttribute={true}
+                  setModalData={setModalData}
+                  data={goalInsights}
+                  explainMatchEventName={explainMatchEventName}
+                />
 
               </div> </> : <NoData />
             }

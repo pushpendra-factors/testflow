@@ -16,6 +16,7 @@ import ResultsTableL1 from './Components/ResultsTableL1';
 import ExplainQueryBuilder from '../ExplainQueryBuilder';
 import HeaderContents from './HeaderContents';
 import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
+import matchEventName from './Utils/MatchEventNames';
 
 const Factors = ({
   fetchFactorsGoals
@@ -32,7 +33,9 @@ const Factors = ({
   goalInsights,
   saveGoalInsightRules,
   saveGoalInsightModel,
-  setGoalInsight
+  setGoalInsight,
+  eventPropNames,
+  userPropNames,
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -71,10 +74,10 @@ const Factors = ({
   useEffect(() => {
     if (goalInsights) {
       setTimeout(() => {
-        smoothScroll('#explain-builder--footer'); 
+        smoothScroll('#explain-builder--footer');
       }, 200);
     }
-    return () => { 
+    return () => {
       saveGoalInsightRules(null);
       saveGoalInsightModel(null);
       setGoalInsight(null);
@@ -84,6 +87,10 @@ const Factors = ({
   const handleCancel = () => {
     setConfigureDPModal(false);
   };
+  const explainMatchEventName = (eventName, stringOnly = false, color = 'grey') => {
+
+    return matchEventName(eventName, eventPropNames, userPropNames, stringOnly, color)
+  }
 
   return (
     <>
@@ -97,7 +104,10 @@ const Factors = ({
               <div className={'mt-24'}>
                 <ExplainQueryBuilder />
                 <div id='fa-explain-results--container'>
-                  {!_.isEmpty(goalInsights?.insights) && <ResultsTableL1 goalInsights={goalInsights} />} 
+                  {!_.isEmpty(goalInsights?.insights) && <ResultsTableL1
+                    goalInsights={goalInsights}
+                    explainMatchEventName={explainMatchEventName}
+                  />}
                 </div>
               </div>
             </div>
@@ -114,7 +124,9 @@ const mapStateToProps = (state) => {
     goals: state.factors.goals,
     agents: state.agent.agents,
     factors_models: state.factors.factors_models,
-    goalInsights: state.factors.goal_insights
+    goalInsights: state.factors.goal_insights,
+    eventPropNames: state.coreQuery.eventPropNames,
+    userPropNames: state.coreQuery.userPropNames
   };
 };
 export default connect(mapStateToProps, { fetchFactorsGoals, setGoalInsight, saveGoalInsightModel, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchGoalInsights, fetchFactorsModels, fetchEventNames, getUserProperties })(Factors);

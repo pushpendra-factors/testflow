@@ -50,7 +50,7 @@ const CustomKPI = ({
                 <Menu.Item key="0"
                 //   onClick={() => showDeleteWidgetModal(obj.id)}
                 >
-                    <a>Remove</a>
+                    <a>View</a>
                 </Menu.Item>
                 {/* <Menu.Item key="1"
                 //   onClick={() => editProp(obj)}
@@ -68,28 +68,29 @@ const CustomKPI = ({
             title: 'KPI Name',
             dataIndex: 'name',
             key: 'name',
-            render: (text) => <span className={'font-medium'}>{text}</span>,
-            width: 100,
+            render: (text) => <Text type={'title'} level={7} truncate={true} charLimit={25}>{text}</Text>,
+            // width: 100,
         },
         {
             title: 'Description',
             dataIndex: 'desc',
             key: 'desc',
-            render: (text) => <span className={'text-gray-700'}>{text}</span>,
-            width: 200,
+            render: (text) => <Text type={'title'} level={7} truncate={true} charLimit={25}>{text}</Text>,
+            // width: 200,
         },
         {
             title: 'Aggregate Function',
             dataIndex: 'transformations',
             key: 'transformations',
-            render: (item) => <span className={'text-gray-700'}>{`${item.agFn}(${item.agPr ? item.agPr : (item.daFie ? item.daFie : '') })`}</span>,
-            width: 400,
+            render: (item) => <Text type={'title'} level={7} truncate={true} charLimit={25}>{`${item.agFn}(${item.agPr ? item.agPr : (item.daFie ? item.daFie : '') })`}</Text>,
+            width: 'auto',
         },
         // {
         //     title: '',
         //     dataIndex: 'actions',
         //     key: 'actions',
         //     align: 'right',
+        //     width: 75,
         //     render: (obj) => (
         //         <Dropdown overlay={() => menu(obj)} trigger={['click']}>
         //             <Button type="text" icon={<MoreOutlined rotate={90} style={{ color: 'gray', fontSize: '18px' }} />} />
@@ -189,13 +190,14 @@ const CustomKPI = ({
                 message: "KPI Saved",
                 description: "New KPI is created and saved successfully. You can start using it across the product shortly.", 
             }); 
+            form.resetFields();
             setShowForm(false);
         }).catch((err) => {
             setLoading(false);
             notification.error({
                 message: "Error",
                 description: err?.data?.error, 
-            }); 
+            });
             console.log('addNewCustomKPI error->', err)
         })
 
@@ -273,7 +275,7 @@ const CustomKPI = ({
                                     columns={columns}
                                     dataSource={tableData}
                                     pagination={false}
-                                    loading={tableLoading}
+                                    loading={tableLoading}  
                                     tableLayout={'fixed'}
                                 />
                             </div>
@@ -297,7 +299,10 @@ const CustomKPI = ({
                             </Col>
                             <Col span={12}>
                                 <div className={'flex justify-end'}>
-                                    <Button size={'large'} disabled={loading} onClick={() => setShowForm(false)}>Cancel</Button>
+                                    <Button size={'large'} disabled={loading} onClick={() => {
+                                        setShowForm(false);
+                                        form.resetFields();
+                                        }}>Cancel</Button>
                                     <Button size={'large'} disabled={loading} loading={loading} className={'ml-2'} type={'primary'} htmlType="submit">Save</Button>
                                 </div>
                             </Col>

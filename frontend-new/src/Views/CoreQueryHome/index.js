@@ -704,14 +704,14 @@ function CoreQuery({
                       <div
                         className={`fai--custom-card-new--top-section flex justify-center items-center`}
                       >
-                        {item.title == 'KPIs' && (
+                        {/* {item.title == 'KPIs' && (
                           <Tag
                             color='orange'
                             className={'fai--custom-card--badge'}
                           >
                             BETA
                           </Tag>
-                        )}
+                        )} */}
                         <SVG name={item.icon} size={40} />
                       </div>
 
