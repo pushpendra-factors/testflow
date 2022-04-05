@@ -196,6 +196,7 @@ function CoreQuery({
     attr_dateRange,
     eventNames,
     attr_dimensions,
+    attrQueries,
     content_groups
   } = useSelector((state) => state.coreQuery);
 
@@ -550,6 +551,15 @@ function CoreQuery({
           durationObj,
           tacticOfferType
         );
+
+        if(queryOptions.group_analysis !== 'users') {
+          const kpiQuery = getKPIQuery(attrQueries, durationObj, {event:[], global: []}, queryOptions, []);
+          if(queryOptions.group_analysis === 'hubspot_deals') {
+            kpiQuery.gGBy = [{"gr":"","prNa":"$hubspot_deal_hs_object_id","prDaTy":"numerical","en":"user","objTy":"","gbty":"raw_values"}];
+          }
+          query.query.analyze_type = queryOptions.group_analysis;
+          query.query.kpi_query_group = kpiQuery;
+        }
 
         //Factors RUN_QUERY tracking
         factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_ATTRIBUTION });
@@ -1162,7 +1172,11 @@ function CoreQuery({
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      return <AttrQueryComposer runAttributionQuery={handleRunQuery} />;
+      return <AttrQueryComposer 
+        queryOptions={queryOptions}
+        setQueryOptions={setExtraOptions} 
+        runAttributionQuery={handleRunQuery} 
+      />;
     }
 
     if (queryType === QUERY_TYPE_KPI) {
@@ -1323,9 +1337,13 @@ function CoreQuery({
   };
 
   useEffect(() => {
+    setKPIConfigProps(findKPIitem(selectedMainCategory?.group));
+  }, [selectedMainCategory]);
+
+  const findKPIitem = (groupName) => {
     let KPIlist = KPI_config || [];
     let selGroup = KPIlist.find((item) => {
-      return item.display_category == selectedMainCategory?.group;
+      return item.display_category == groupName;
     });
 
     let DDvalues = selGroup?.properties?.map((item) => {
@@ -1339,9 +1357,8 @@ function CoreQuery({
           : item.object_type;
       return [ddName, item.name, item.data_type, ddtype];
     });
-
-    setKPIConfigProps(DDvalues);
-  }, [selectedMainCategory]);
+    return DDvalues;
+  }
 
   return (
     <>

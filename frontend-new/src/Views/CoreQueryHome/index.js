@@ -470,6 +470,12 @@ function CoreQuery({
           }
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
+          setQueryOptions((currData) => {
+            return {
+              ...currData,
+              group_analysis: record.query.query.analyze_type
+            }
+          })
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_PROFILE) {
           equivalentQuery = getProfileQueryFromRequestQuery(record.query);
           updateProfileQueryState(equivalentQuery);

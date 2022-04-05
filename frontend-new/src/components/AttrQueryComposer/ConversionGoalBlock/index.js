@@ -12,37 +12,105 @@ import { isArray } from 'lodash';
 import FaSelect from 'Components/FaSelect';
 
 const ConversionGoalBlock = ({
-  eventGoal,
-  eventGoalChange,
-  delEvent,
-  eventNameOptions,
-  eventNames,
-  activeProject,
-  eventProperties,
-  userProperties,
+    eventGoal, 
+    eventGoalChange, 
+    delEvent, 
+    eventNameOptions, 
+    eventNames,
+    activeProject, 
+    eventProperties,
+    userProperties,
+    group_analysis = 'users',
+    KPI_config
 }) => {
-  const [selectVisible, setSelectVisible] = useState(false);
-  const [filterBlockVisible, setFilterBlockVisible] = useState(false);
 
-  const [moreOptions, setMoreOptions] = useState(false);
+    const [selectVisible, setSelectVisible] = useState(false);
+    const [filterBlockVisible, setFilterBlockVisible] = useState(false);
 
-  const [filterProps, setFilterProperties] = useState({
-    event: [],
-    user: [],
-  });
+    const [moreOptions, setMoreOptions] = useState(false);
 
-  useEffect(() => {
-    if (!eventGoal || !eventGoal?.label?.length) {
-      return;
+    const [filterProps, setFilterProperties] = useState({
+        event: [],
+        user: []
+    });
+
+    
+    
+    useEffect(() => {
+        if(group_analysis === 'users') {
+            setEventPropsForUserGroup();
+        } else {
+            setFilterPropsforKpiGroups();
+        }
+        
+    }, [userProperties, eventProperties, group_analysis]);
+
+
+    const setEventPropsForUserGroup = () => {
+        if(!eventGoal || !eventGoal?.label?.length) {return};
+        const assignFilterProps = Object.assign({}, filterProps);
+    
+        if (eventProperties[eventGoal.label]) {
+          assignFilterProps.event = eventProperties[eventGoal.label];
+        }
+        assignFilterProps.user = userProperties;
+        setFilterProperties(assignFilterProps);
     }
-    const assignFilterProps = Object.assign({}, filterProps);
 
-    if (eventProperties[eventGoal.label]) {
-      assignFilterProps.event = eventProperties[eventGoal.label];
+    const setFilterPropsforKpiGroups = () => {
+        const assignFilterProps = Object.assign({}, filterProps);
+        assignFilterProps.event = getKPIProps(group_analysis);
+        setFilterProperties(assignFilterProps);
     }
-    assignFilterProps.user = userProperties;
-    setFilterProperties(assignFilterProps);
-  }, [userProperties, eventProperties]);
+
+    const getKPIProps = (groupName) => {
+        let KPIlist = KPI_config || [];
+        let selGroup = KPIlist.find((item) => {
+          return item.display_category == groupName;
+        });
+    
+        let DDvalues = selGroup?.properties?.map((item) => {
+          if (item == null) return;
+          let ddName = item.display_name ? item.display_name : item.name;
+          let ddtype =
+            selGroup?.category == 'channels'
+              ? item.object_type
+              : item.entity
+              ? item.entity
+              : item.object_type;
+          return [ddName, item.name, item.data_type, ddtype];
+        });
+        return DDvalues;
+
+    }
+
+    const getKpiGroupList = (groupName) => {
+        let KPIlist = KPI_config || [];
+        let selGroup = KPIlist.find((item) => {
+          return item.display_category == groupName;
+        });
+
+        const group = ((selGroup) => {
+            let metricsValues = selGroup?.metrics?.map((value) => {
+              if (value?.display_name) {
+                return [value?.display_name, value?.name]
+              }
+              else {
+                return [value, value]
+              }
+        
+            })
+            return {
+              "label": selGroup.display_category,
+              "group": selGroup.display_category,
+              "category": selGroup.category,
+              "icon": "custom_events",
+              "values": metricsValues
+            }
+          })(selGroup);
+        return [group];
+    }
+
 
   const toggleEventSelect = () => {
     setSelectVisible(!selectVisible);
@@ -136,14 +204,22 @@ const ConversionGoalBlock = ({
     return filters;
   };
 
-  const onEventSelect = (val) => {
+  const onEventSelect = (val,group,category) => {
     const currentEventGoal = Object.assign({}, eventGoal);
-    currentEventGoal.label = val;
+    currentEventGoal.label = val[1]? val[1]: val[0];
     currentEventGoal.filters = [];
+    if(group_analysis !== 'users') {
+        currentEventGoal.label = val[0];
+        currentEventGoal.metric = val[1]? val[1]: val[0];
+        currentEventGoal.group = group;
+        if(category){
+            currentEventGoal.category = category;
+        } 
+    }
     eventGoalChange(currentEventGoal);
     setSelectVisible(false);
     closeFilter();
-  };
+};
 
   const additionalActions = () => {
     return (
@@ -177,15 +253,21 @@ const ConversionGoalBlock = ({
     );
   };
 
+    const renderCountLabel = () => {
+        return (<Text type={'title'} level={7} weight={'regular'} color={'grey'} extraClass={'m-0 ml-2'}>as count of unique users</Text>)
+    }
+
   const selectEvents = () => {
+
+    const groupedProps = group_analysis === 'users' ? eventNameOptions : getKpiGroupList(group_analysis);
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
           <GroupSelect2
-            groupedProperties={eventNameOptions}
+            groupedProperties={groupedProps}
             placeholder='Select Event'
-            optionClick={(group, val) =>
-              onEventSelect(val[1] ? val[1] : val[0])
+            optionClick={(group, val, category) =>
+              onEventSelect(val, group, category)
             }
             onClickOutside={() => setSelectVisible(false)}
           ></GroupSelect2>
@@ -222,15 +304,7 @@ const ConversionGoalBlock = ({
 
         {selectEvents()}
 
-        <Text
-          type={'title'}
-          level={7}
-          weight={'regular'}
-          color={'grey'}
-          extraClass={'m-0 ml-2'}
-        >
-          as count of unique users
-        </Text>
+        {group_analysis === 'users' && renderCountLabel()}
 
         <div className={styles.block__additional_actions}>
           {additionalActions()}
@@ -265,11 +339,12 @@ const ConversionGoalBlock = ({
 };
 
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties,
-  userProperties: state.coreQuery.userProperties,
-  eventNameOptions: state.coreQuery.eventOptions,
-  eventNames: state.coreQuery.eventNames,
+    activeProject: state.global.active_project,
+    eventProperties: state.coreQuery.eventProperties,
+    userProperties: state.coreQuery.userProperties,
+    eventNameOptions: state.coreQuery.eventOptions,
+    eventNames: state.coreQuery.eventNames,
+    KPI_config: state.kpi?.config,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators({}, dispatch);

@@ -26,6 +26,7 @@ export const SET_CAMP_GROUBY = 'SET_CAMP_GROUBY';
 export const SET_CAMP_DATE_RANGE = 'SET_CAMP_DATE_RANGE';
 export const SET_DEFAULT_STATE = 'SET_DEFAULT_STATE';
 export const SET_EVENT_NAMES = 'SET_EVENT_NAMES';
+export const SET_ATTR_QUERIES = 'SET_ATTR_QUERIES';
 
 // Action creators
 export const fetchEventsAction = (events, status = 'started') => {

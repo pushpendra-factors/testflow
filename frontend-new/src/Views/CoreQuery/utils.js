@@ -979,7 +979,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
 };
 
 export const getAttributionQuery = (
-  eventGoal,
+  eventGoal = {filters: []},
   touchpoint,
   attr_dimensions,
   content_groups,
@@ -1019,6 +1019,9 @@ export const getAttributionQuery = (
       tactic_offer_type: tacticOfferType,
     },
   };
+  if(!eventGoal || !eventGoal.label) {
+    query.query.ce = {};
+  }
   if (dateRange.from && dateRange.to) {
     query.query.from = MomentTz(dateRange.from).startOf('day').utc().unix();
     query.query.to = MomentTz(dateRange.to).endOf('day').utc().unix();
@@ -1076,8 +1079,15 @@ export const getAttributionStateFromRequestQuery = (
   initial_attr_dimensions,
   initial_content_groups
 ) => {
+
+  let attrQueries = [];
+  if(requestQuery.analyze_type !== 'users') {
+    const kpiQuery = getKPIStateFromRequestQuery(requestQuery.kpi_query_group);
+    attrQueries = kpiQuery.events;
+  } 
+
   const filters = [];
-  requestQuery.ce.pr.forEach((pr) => {
+  requestQuery.ce?.pr?.forEach((pr) => {
     if (pr.lop === 'AND') {
       let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
@@ -1150,6 +1160,7 @@ export const getAttributionStateFromRequestQuery = (
       label: requestQuery.ce.na,
       filters,
     },
+    attrQueries: attrQueries,
     touchpoint_filters: touchPointFilters,
     attr_query_type: requestQuery.query_type,
     touchpoint,

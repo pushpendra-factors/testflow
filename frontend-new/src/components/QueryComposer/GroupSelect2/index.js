@@ -109,43 +109,38 @@ function GroupSelect2({
           >
             {collState
               ? (() => {
-                  group?.values?.forEach((val, i) => {
-                    if (
-                      val[0].toLowerCase().includes(searchTerm.toLowerCase())
-                    ) {
-                      hasSearchTerm = true;
-                      valuesOptions.push(
-                        <div
-                          key={i}
-                          title={val[0]}
-                          className={`fa-select-group-select--options`}
-                          onClick={() =>
-                            optionClick(
-                              group.label ? group.label : group.icon,
-                              val
-                            )
-                          }
+                group?.values?.forEach((val, i) => {
+                  if (
+                    val[0].toLowerCase().includes(searchTerm.toLowerCase())
+                  ) {
+                    hasSearchTerm = true;
+                    valuesOptions.push(
+                      <div
+                        key={i}
+                        title={val[0]}
+                        className={`fa-select-group-select--options`}
+                        onClick={() => optionClick(group.label ? group.label : group.icon, val, group.category)}
+                      >
+                        {searchTerm.length > 0}
+                        <Text
+                          level={7}
+                          type={'title'}
+                          extraClass={'m-0 truncate'}
+                          weight={'thin'}
                         >
-                          {searchTerm.length > 0}
-                          <Text
-                            level={7}
-                            type={'title'}
-                            extraClass={'m-0 truncate'}
-                            weight={'thin'}
-                          >
-                            <HighlightSearchText
-                              text={val[0]}
-                              highlight={searchTerm}
-                            />
-                          </Text>
-                        </div>
-                      );
-                    }
-                  });
-                  return showFull[grpIndex]
-                    ? valuesOptions
-                    : valuesOptions.slice(0, 5);
-                })()
+                          <HighlightSearchText
+                            text={val[0]}
+                            highlight={searchTerm}
+                          />
+                        </Text>
+                      </div>
+                    );
+                  }
+                });
+                return showFull[grpIndex]
+                  ? valuesOptions
+                  : valuesOptions.slice(0, 5);
+              })()
               : null}
           </div>
 

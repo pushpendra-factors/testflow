@@ -27,6 +27,7 @@ import {
   SET_EVENT_NAMES,
   SET_USER_PROP_NAME,
   SET_EVENT_PROP_NAME,
+  SET_ATTR_QUERIES
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -62,7 +63,8 @@ const defaultState = {
     },
   ],
   show_analytics_result: false,
-  eventGoal: {},
+  attrQueries: [],
+  eventGoal: {filters: []},
   touchpoint: '',
   touchpoint_filters: [],
   attr_query_type: 'EngagementBased',
@@ -187,6 +189,12 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         eventGoal: action.payload,
+      };
+    }
+    case SET_ATTR_QUERIES: {
+      return {
+        ...state,
+        attrQueries: action.payload,
       };
     }
     case SET_TOUCHPOINTS: {
