@@ -134,8 +134,8 @@ const (
 	MarketingEventTypeTacticOffer = "TacticOffer"
 
 	AnalyzeTypeUsers           = "users"
-	AnalyzeTypeSFOpportunities = "sf_opportunities"
-	AnalyzeTypeHSDeals         = "hs_deals"
+	AnalyzeTypeSFOpportunities = "salesforce_opportunities"
+	AnalyzeTypeHSDeals         = "hubspot_deals"
 
 	HSDealIDProperty        = "$hubspot_deal_hs_object_id"
 	SFOpportunityIDProperty = "$salesforce_opportunity_id"
