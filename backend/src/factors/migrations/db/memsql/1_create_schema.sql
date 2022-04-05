@@ -865,5 +865,21 @@ CREATE TABLE IF NOT EXISTS integration_documents (
     KEY (project_id, customer_account_id, document_id, document_type, source, timestamp)  USING CLUSTERED COLUMNSTORE
 );
 
+CREATE TABLE IF NOT EXISTS alerts(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    alert_name text,
+    created_by text,
+    alert_type int,
+    alert_description json,
+    alert_configuration json,
+    last_alert_sent bool,
+    last_run_time timestamp(6),
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    is_deleted boolean,
+    SHARD KEY (project_id),
+    PRIMARY KEY (id),
+);
 
 -- DROP DATABASE factors;
