@@ -132,6 +132,10 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 	var kpiKeyGroupUserIDList []string
 	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
 
+	if kpiKeys == nil || len(kpiKeys) == 0 {
+		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
+	}
+
 	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeys))
 	kpiKeysIdValue := U.GetInterfaceList(kpiKeys)
 
