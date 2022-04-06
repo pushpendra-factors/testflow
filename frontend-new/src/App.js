@@ -41,6 +41,8 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
     }
   }
 
+  ssoLogin();
+
   const sendSlackNotification = (email, projectname) => {
     let webhookURL = 'https://hooks.slack.com/services/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';
     let data = {
@@ -94,9 +96,6 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
         })
       }
     }
-
-    // SSO Login Func Call
-    ssoLogin();
 
     if (Sentry) {
       Sentry.setUser({
@@ -178,7 +177,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
       }
     }
 
-  }, [agent_details, dispatch]);
+  }, [agent_details]);
 
   useEffect(() => {
     const tz = active_project?.time_zone;
@@ -190,6 +189,10 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
       localStorage.setItem('project_timeZone', 'Asia/Kolkata');
     }
   });
+
+  useEffect(() => {
+    ssoLogin();
+  }, [agent_details])
 
   return (
     <div className="App">
@@ -225,11 +228,9 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
               )}
               {isAgentLoggedIn ? (
                 <Route path="/" name="Home" component={AppLayout} />
-              ) : <>
-                {ssoLogin()}
+              ) : (
                 <Redirect to="/login" />
-              </>
-              }
+              )}
             </Switch>
           </Router>
         </Suspense>

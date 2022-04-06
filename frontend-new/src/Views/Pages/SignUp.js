@@ -404,8 +404,8 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                             <Row>   
                                 <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Form.Item className={'m-0 w-full'} loading={dataLoading}>
-                                        <a href={SSO_SIGNUP_URL}><Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
+                                    <Form.Item className={'m-0 w-full'}>
+                                        <a href={SSO_SIGNUP_URL}><Button type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
                                     </Form.Item>
                                     </div>
                                 </Col>
