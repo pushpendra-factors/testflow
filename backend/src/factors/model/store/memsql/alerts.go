@@ -67,7 +67,7 @@ func (store *MemSQL) UpdateAlert(id string, projectID uint64) (int, string) {
 		return http.StatusBadRequest, "Invalid id for alert"
 	}
 	db := C.GetServices().Db
-	err := db.Where("project_id = ? AND id = ?", projectID, id).Updates(map[string]interface{}{"is_deleted": true, "updated_at": time.Now().UTC()}).Error
+	err := db.Table("alerts").Where("project_id = ? AND id = ?", projectID, id).Updates(map[string]interface{}{"is_deleted": true, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error(err)
 		return http.StatusInternalServerError, err.Error()
