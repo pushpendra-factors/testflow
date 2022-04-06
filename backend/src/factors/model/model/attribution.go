@@ -2300,7 +2300,10 @@ func ComputeAdditionalMetrics(attributionData *map[string]*AttributionData) {
 		}
 		if v.Clicks > 0 {
 			(*attributionData)[k].AvgCPC, _ = U.FloatRoundOffWithPrecision(float64(v.Spend)/float64(v.Clicks), U.DefaultPrecision)
-			(*attributionData)[k].ClickConversionRate, _ = U.FloatRoundOffWithPrecision(100*float64(v.ConversionEventCount[0])/float64(v.Clicks), U.DefaultPrecision)
+			if (*attributionData)[k].ConversionEventCount == nil || len((*attributionData)[k].ConversionEventCount) == 0 {
+				(*attributionData)[k].ConversionEventCount = append((*attributionData)[k].ConversionEventCount, float64(0))
+			}
+			(*attributionData)[k].ClickConversionRate, _ = U.FloatRoundOffWithPrecision(100*float64((*attributionData)[k].ConversionEventCount[0])/float64(v.Clicks), U.DefaultPrecision)
 		}
 	}
 }
