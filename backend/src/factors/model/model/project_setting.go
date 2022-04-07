@@ -9,8 +9,8 @@ import (
 type ProjectSetting struct {
 	// Foreign key constraint project_id -> projects(id)
 	// Used project_id as primary key also, becase of 1-1 relationship.
-	ProjectId         uint64            `gorm:"primary_key:true" json:"project_id,omitempty"`
-	AttributionConfig AttributionConfig `json:"attribution_config"`
+	ProjectId         uint64          `gorm:"primary_key:true" json:"project_id,omitempty"`
+	AttributionConfig *postgres.Jsonb `json:"attribution_config"`
 
 	// Using pointers to avoid update by default value.
 	// omit empty to avoid nil(filelds not updated) on resp json.
