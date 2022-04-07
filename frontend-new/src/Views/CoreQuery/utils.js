@@ -1615,7 +1615,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
   return result;
 };
 
-const convertDateTimeObjectValuesToMilliSeconds = (obj) => {
+export const convertDateTimeObjectValuesToMilliSeconds = (obj) => {
   const parsedObj = JSON.parse(obj);
   parsedObj.fr = isDateInMilliSeconds(parsedObj.fr)
     ? parsedObj.fr
