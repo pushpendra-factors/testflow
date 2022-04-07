@@ -125,6 +125,8 @@ function ReportsLayout({
         <AttrQueryComposer
           runAttributionQuery={composerFunctions.runAttributionQuery}
           collapse={composerFunctions.showResult}
+          queryOptions={composerFunctions.queryOptions}
+          setQueryOptions={composerFunctions.setExtraOptions}
           setCollapse={() => setQueryOpen(false)}
         />
       );

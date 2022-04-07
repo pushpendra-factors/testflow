@@ -27,12 +27,14 @@ import {
   SET_EVENT_NAMES,
   SET_USER_PROP_NAME,
   SET_EVENT_PROP_NAME,
+  SET_ATTR_QUERIES
 } from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
   INITIALIZE_MTA_STATE,
   INITIALIZE_CAMPAIGN_STATE,
   INITIALIZE_TOUCHPOINT_DIMENSIONS,
+  INITIALIZE_CONTENT_GROUPS,
 } from '../types';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 
@@ -42,6 +44,7 @@ const DEFAULT_TOUCHPOINTS = [
   'AdGroup',
   'Keyword',
   'Channel',
+  'LandingPage',
 ];
 
 const defaultState = {
@@ -60,7 +63,8 @@ const defaultState = {
     },
   ],
   show_analytics_result: false,
-  eventGoal: {},
+  attrQueries: [],
+  eventGoal: {filters: []},
   touchpoint: '',
   touchpoint_filters: [],
   attr_query_type: 'EngagementBased',
@@ -70,6 +74,7 @@ const defaultState = {
     dateStr: '',
   },
   attr_dimensions: [],
+  content_groups: [],
   models: [],
   window: null,
   linkedEvents: [],
@@ -186,6 +191,12 @@ export default function (state = defaultState, action) {
         eventGoal: action.payload,
       };
     }
+    case SET_ATTR_QUERIES: {
+      return {
+        ...state,
+        attrQueries: action.payload,
+      };
+    }
     case SET_TOUCHPOINTS: {
       return {
         ...state,
@@ -196,6 +207,12 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         attr_dimensions: action.payload,
+      };
+    }
+    case INITIALIZE_CONTENT_GROUPS: {
+      return {
+        ...state,
+        content_groups: action.payload,
       };
     }
     case SET_TOUCHPOINT_FILTERS: {

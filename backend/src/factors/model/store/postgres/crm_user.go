@@ -1,0 +1,130 @@
+package postgres
+
+import (
+	"errors"
+	C "factors/config"
+	"factors/model/model"
+	U "factors/util"
+	"net/http"
+	"time"
+
+	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
+)
+
+// isExistCRMUserByID check for existing user by external user id, source, object type
+func isExistCRMUserByID(projectID uint64, source model.CRMSource, userType int, id string) (int, error) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+		"type":       userType,
+		"id":         id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if !model.AllowedCRMBySource(source) {
+		logCtx.Error("Invalid source.")
+		return http.StatusBadRequest, errors.New("invalid source")
+	}
+
+	if projectID == 0 || userType <= 0 || id == "" {
+		logCtx.Error("Missing required parameters.")
+		return http.StatusBadRequest, errors.New("missing required fields project_id, user_type, id")
+	}
+
+	var crmUser model.CRMUser
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMUser{}).Where("project_id = ? AND source = ? "+
+		"AND type = ? AND id = ? AND action = ? ",
+		projectID, source, userType, id, model.CRMActionCreated).Select("id").Limit(1).Find(&crmUser).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound, nil
+		}
+
+		logCtx.WithError(err).Error("Failed to get user from crm_user table.")
+		return http.StatusInternalServerError, err
+	}
+
+	if crmUser.ID == "" {
+		return http.StatusNotFound, nil
+	}
+
+	return http.StatusFound, nil
+}
+
+func (pg *Postgres) CreateCRMUser(crmUser *model.CRMUser) (int, error) {
+	logFields := log.Fields{
+		"project_id": crmUser.ProjectID,
+		"source":     crmUser.Source,
+		"id":         crmUser.ID,
+		"user_type":  crmUser.Type,
+		"properties": crmUser.Properties,
+		"timestamp":  crmUser.Timestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if !model.AllowedCRMBySource(crmUser.Source) {
+		logCtx.Error("Invalid source.")
+		return http.StatusBadRequest, errors.New("invalid source")
+	}
+
+	/*
+	 ID - External source user id, unique per user. Used to track user state by external id
+	 Type - Object name defined by external source for user
+	 Properties - user object properties as key and value
+	*/
+	if crmUser.ProjectID == 0 || crmUser.ID == "" || crmUser.Type <= 0 || crmUser.Properties == nil {
+		logCtx.Error("Missing required parameters.")
+		return http.StatusBadRequest, errors.New("missing required field project_id, id, type, properties")
+	}
+
+	// timestamp when the user state occured
+	if crmUser.Timestamp <= 0 {
+		logCtx.Error("Missing document timestamp.")
+		return http.StatusBadRequest, errors.New("missing timstamp")
+	}
+
+	if U.IsEmptyPostgresJsonb(crmUser.Properties) {
+		logCtx.Error("Empty document properties.")
+		return http.StatusBadRequest, errors.New("empty properties")
+	}
+
+	// metadata should be used to store other information from source object if required for special case
+	if crmUser.Metadata != nil && U.IsEmptyPostgresJsonb(crmUser.Metadata) {
+		logCtx.Error("Empty document metadata.")
+		return http.StatusBadRequest, errors.New("empty metadata")
+	}
+
+	status, err := isExistCRMUserByID(crmUser.ProjectID, crmUser.Source, crmUser.Type, crmUser.ID)
+	if status == http.StatusInternalServerError {
+		logCtx.WithError(err).Error("Failed to check existing user document.")
+		return http.StatusInternalServerError, err
+	}
+
+	// first state of a user should be stored as action created representing new user, followed by only updated
+	// To track the action used for user refer the same object
+	isNew := status == http.StatusNotFound
+	if isNew {
+		crmUser.Action = model.CRMActionCreated
+	} else {
+		crmUser.Action = model.CRMActionUpdated
+	}
+
+	db := C.GetServices().Db
+	err = db.Create(&crmUser).Error
+	if err != nil {
+		if U.IsPostgresIntegrityViolationError(err) {
+			return http.StatusConflict, nil
+		}
+
+		logCtx.WithError(err).
+			Error("Failed to insert crm user document.")
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusCreated, nil
+}

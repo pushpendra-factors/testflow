@@ -196,9 +196,14 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
         .then(function(response) {
             _this.config = response.body;
             _this.client = _client;
+            window.dispatchEvent(new CustomEvent('FACTORS_INITIALISED_EVENT'));
             return response;
         })
         .then(function() {
+            // Enable auto-track SPA page based on settings or init option.
+            var enableTrackSPA = Cache.getFactorsCache(Cache.trackPageOnSPA) || _this.getConfig("auto_track_spa_page_view");
+            Cache.setFactorsCache(Cache.trackPageOnSPA, enableTrackSPA);
+            // Auto-track current page on init, if not disabled.
             return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), false, afterPageTrackCallback) : null;
         })
         .then(function() {

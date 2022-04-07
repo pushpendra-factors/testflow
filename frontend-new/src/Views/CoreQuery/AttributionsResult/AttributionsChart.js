@@ -13,6 +13,7 @@ import {
   getTableData,
   getSingleTouchPointChartData,
   getDualTouchPointChartData,
+  getResultantMetrics,
 } from './utils';
 
 import AttributionTable from './AttributionTable';
@@ -50,6 +51,7 @@ const AttributionsChart = forwardRef(
       section,
       durationObj,
       attr_dimensions,
+      content_groups,
       chartType,
     },
     ref
@@ -80,6 +82,10 @@ const AttributionsChart = forwardRef(
         : defaultSortProp()
     );
     const [visibleIndices, setVisibleIndices] = useState([]);
+
+    const displayedAttributionMetrics = useMemo(() => {
+      return getResultantMetrics(touchpoint, attributionMetrics);
+    }, [touchpoint, attributionMetrics]);
 
     useImperativeHandle(ref, () => {
       return {
@@ -131,11 +137,11 @@ const AttributionsChart = forwardRef(
     const metricsOptionsPopover = useMemo(() => {
       return (
         <OptionsPopover
-          options={attributionMetrics}
+          options={displayedAttributionMetrics}
           onChange={handleMetricsVisibilityChange}
         />
       );
-    }, [attributionMetrics, handleMetricsVisibilityChange]);
+    }, [displayedAttributionMetrics, handleMetricsVisibilityChange]);
 
     useEffect(() => {
       setColumns(
@@ -148,8 +154,9 @@ const AttributionsChart = forwardRef(
           linkedEvents,
           event,
           eventNames,
-          attributionMetrics,
+          displayedAttributionMetrics,
           attr_dimensions,
+          content_groups,
           durationObj,
           comparison_data.data,
           comparison_duration
@@ -157,7 +164,8 @@ const AttributionsChart = forwardRef(
       );
     }, [
       attr_dimensions,
-      attributionMetrics,
+      content_groups,
+      displayedAttributionMetrics,
       attribution_method,
       attribution_method_compare,
       event,
@@ -180,8 +188,9 @@ const AttributionsChart = forwardRef(
         attribution_method_compare,
         touchpoint,
         linkedEvents,
-        attributionMetrics,
+        displayedAttributionMetrics,
         attr_dimensions,
+        content_groups,
         comparison_data.data
       );
       setTableData(tableData);
@@ -197,7 +206,8 @@ const AttributionsChart = forwardRef(
       );
     }, [
       attr_dimensions,
-      attributionMetrics,
+      content_groups,
+      displayedAttributionMetrics,
       attribution_method_compare,
       data,
       event,
@@ -215,6 +225,7 @@ const AttributionsChart = forwardRef(
             tableData,
             visibleIndices,
             attr_dimensions,
+            content_groups,
             touchpoint,
             attribution_method,
             attribution_method_compare,
@@ -228,6 +239,7 @@ const AttributionsChart = forwardRef(
             tableData,
             visibleIndices,
             attr_dimensions,
+            content_groups,
             touchpoint,
             !!comparison_data.data
           );
@@ -238,6 +250,7 @@ const AttributionsChart = forwardRef(
       tableData,
       visibleIndices,
       attr_dimensions,
+      content_groups,
       touchpoint,
       comparison_data.data,
       attribution_method,
@@ -252,6 +265,7 @@ const AttributionsChart = forwardRef(
         visibleIndices={visibleIndices}
         selectedTouchpoint={touchpoint}
         attr_dimensions={attr_dimensions}
+        content_groups={content_groups}
         data={tableData}
         attribution_method={attribution_method}
         attribution_method_compare={attribution_method_compare}
@@ -319,7 +333,7 @@ const AttributionsChart = forwardRef(
                 ? GROUPED_MAX_ALLOWED_VISIBLE_PROPERTIES
                 : MAX_ALLOWED_VISIBLE_PROPERTIES
             }
-            attributionMetrics={attributionMetrics}
+            attributionMetrics={displayedAttributionMetrics}
             section={section}
             columns={columns}
             tableData={tableData}

@@ -7,6 +7,7 @@ import { Button, message, notification } from 'antd';
 import Header from '../../AppLayout/Header';
 import { connect } from 'react-redux';
 import { getHubspotContact, setActiveProject, fetchDemoProject } from 'Reducers/global';
+import { meetLink } from '../../../utils/hubspot';
 
 function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, currentAgent, setActiveProject, fetchDemoProject, projects}) {
     const [dataLoading, setdataLoading] = useState(true);
@@ -38,10 +39,6 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
         });
     }, []);
 
-    let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
-                    :ownerID === '116047122'? 'https://calendly.com/priyanka-267/30min'
-                    :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': 'https://calendly.com/factors-ai/30min';
-
     return (
         <>
             <ErrorBoundary
@@ -59,7 +56,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                 <Header>
                     <div className={'rounded-lg border-2 border-gray-200 w-full h-24 mt-8'}>
                             <div className='w-20 float-left mt-2 ml-4 mr-4 mb-1'>
-                                <img src='assets/images/NoData.png'/>
+                                <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/NoData.png'/>
                             </div>
                             <div className={'mt-4 mb-4'}>
                                 <Text type={'title'} level={4} color={'grey-2'} weight={'bold'} extraClass={'m-0 mt-2 mb-1'}>
@@ -70,7 +67,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                                 </Text>
                             </div>
                             <div className={'float-right -mt-20 pt-2 mr-8'}>
-                                <Button type={'link'} style={{backgroundColor:'white'}} className={'mt-2'} onClick={()=> history.push('/project-setup')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
+                                <Button type={'link'} style={{backgroundColor:'white'}} className={'mt-2'} onClick={()=> history.push('/welcome')}>Setup Assist<SVG name={'Arrowright'} size={16} extraClass={'ml-1'} color={'blue'} /></Button>
                             </div>
                     </div>
                 </Header>
@@ -81,7 +78,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                     'flex justify-center flex-col items-center fa-dashboard--no-data-container'
                     }
                 >
-                    <img alt='no-data' src='assets/images/Group 880.png' className={'mb-2'} />
+                    <img alt='no-data' src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/bar-chart.png' className={'mb-2'} />
                     <Text type={'title'} level={6} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>
                         Create a dashboard to moniter your metrics in one place.
                     </Text>
@@ -102,7 +99,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                         <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>
                             or
                         </Text>
-                        <a href={meetLink} target='_blank' ><Button type={'default'} size={'large'} className={'w-full'}>Need Help?</Button></a>
+                        <a href={meetLink(ownerID)} target='_blank' ><Button type={'default'} size={'large'} className={'w-full'}>Need Help?</Button></a>
                     </div>
                     {/* } */}
                 </div>

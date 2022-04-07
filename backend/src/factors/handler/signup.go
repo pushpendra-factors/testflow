@@ -7,6 +7,7 @@ import (
 	"factors/model/store"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	C "factors/config"
@@ -18,7 +19,6 @@ import (
 
 // curl -X POST --data "email=value1" http://localhost:8080/accounts/signup
 func SignUp(c *gin.Context) {
-
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
@@ -39,6 +39,14 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	// Basic email sanity check.
+	if !U.IsEmail(strings.TrimSpace(params.Email)) {
+		logCtx.WithError(err).Error("Invalid email provided.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	email := params.Email
 	phone := params.Phone
 	planCode := params.PlanCode
@@ -54,7 +62,11 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	} else if code == http.StatusFound {
-		if !existingAgent.IsEmailVerified {
+
+		if existingAgent.IsAuth0User {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "You have already signed up with OAuth flow with this email."})
+			return
+		} else if !existingAgent.IsEmailVerified {
 			err = sendSignUpEmail(existingAgent)
 			if err != nil {
 				c.AbortWithStatus(http.StatusInternalServerError)
@@ -64,6 +76,7 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusFound)
 		return
 	}
+
 	createAgentParams := model.CreateAgentParams{
 		Agent:    &model.Agent{Email: email, Phone: phone, LastName: lastName, FirstName: firstName, CompanyURL: companyUrl, SubscribeNewsletter: subscribeNewsletter},
 		PlanCode: planCode,

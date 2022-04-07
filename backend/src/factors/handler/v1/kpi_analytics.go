@@ -223,7 +223,9 @@ func ExecuteKPIQueryHandler(c *gin.Context) (interface{}, int, string, string, b
 	model.SetQueryCachePlaceholder(projectID, &request)
 	H.SleepIfHeaderSet(c)
 
-	queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, reqID, request)
+	var duplicatedRequest model.KPIQueryGroup
+	U.DeepCopy(&request, &duplicatedRequest)
+	queryResult, statusCode := store.GetStore().ExecuteKPIQueryGroup(projectID, reqID, duplicatedRequest)
 	if statusCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectID, &request)
 		logCtx.Error("Failed to process query from DB")

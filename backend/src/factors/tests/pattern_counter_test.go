@@ -75,8 +75,9 @@ func TestCountPatterns(t *testing.T) {
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
 
-	countVersion := 1
-	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
+	var cProps P.CountAlgoProperties
+	cProps.Counting_version = 1
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, cProps)
 	assert.Nil(t, erronFalse)
 
 	// Test pABC output.
@@ -612,8 +613,9 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	pC, _ := P.NewPattern([]string{"C"}, &userAndEventsInfo)
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
-	countVersion := 1
-	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
+	var cProps P.CountAlgoProperties
+	cProps.Counting_version = 1
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, cProps)
 	assert.Nil(t, erronFalse)
 
 	// A-B-C occurs twice PerUser with the following Generic Properties.
@@ -1261,8 +1263,10 @@ func TestCollectAndCountEventsWithPropertiesWithOccurenceFalse(t *testing.T) {
 	pC, _ := P.NewPattern([]string{"C"}, &userAndEventsInfo)
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
-	countVersion := 1
-	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
+	var cProps P.CountAlgoProperties
+	cProps.Counting_version = 1
+
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, cProps)
 	assert.Nil(t, erronFalse)
 
 	// A-B-C occurs twice PerUser with the following Generic Properties.
@@ -1741,9 +1745,10 @@ func TestCountPatternsWithOccurenceFalse(t *testing.T) {
 	pC, _ := P.NewPattern([]string{"C"}, nil)
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
+	var cProps P.CountAlgoProperties
+	cProps.Counting_version = 1
 
-	countVersion := 1
-	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, cProps)
 	assert.Nil(t, erronFalse)
 
 	// Test pABC output.
@@ -1993,9 +1998,9 @@ func TestCountPatternsWithSameTimeStamp(t *testing.T) {
 	pC, _ := P.NewPattern([]string{"C"}, nil)
 
 	patterns := []*P.Pattern{pABC, pCAB, pACB, pAB, pBA, pBC, pAC, pA, pB, pC}
-
-	countVersion := 1
-	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
+	var cProps P.CountAlgoProperties
+	cProps.Counting_version = 1
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, cProps)
 	assert.Nil(t, erronFalse)
 
 	// Test pABC output.
@@ -2070,9 +2075,9 @@ func TestCountPatternsWithSameTimeStamp2(t *testing.T) {
 	patterns := []*P.Pattern{pA, pB, pC,
 		pAB, pAC, pBA, pBC, pCA, pCB, pABC,
 		pACB, pBAC, pBCA, pCAB, pCBA}
-
-	countVersion := 1
-	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
+	var cProps P.CountAlgoProperties
+	cProps.Counting_version = 1
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, cProps)
 	assert.Nil(t, erronFalse)
 
 	for _, v := range patterns {
@@ -2141,8 +2146,10 @@ func TestCountPatternsWithSameTimeStamp3(t *testing.T) {
 	patterns := []*P.Pattern{pA, pB, pC, pAB, pAC, pBA, pBC, pCA, pCB, pABC, pACB,
 		pBAC, pBCA, pCAB, pCBA, pD, pABD, pACD, pBCD, pAD, pBD, pCD}
 
-	countVersion := 1
-	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
+	var cProps P.CountAlgoProperties
+	cProps.Counting_version = 1
+
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, cProps)
 	assert.Nil(t, erronFalse)
 
 	for _, v := range patterns {
@@ -2212,8 +2219,9 @@ func TestCountPatternsWithSameTimeStamp4(t *testing.T) {
 		pAB, pAC, pBA, pBC, pCA, pCB, pABC,
 		pACB, pBAC, pBCA, pCAB, pCBA}
 
-	countVersion := 1
-	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, countVersion)
+	var cProps P.CountAlgoProperties
+	cProps.Counting_version = 1
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag, cProps)
 	assert.Nil(t, erronFalse)
 
 	for _, v := range patterns {

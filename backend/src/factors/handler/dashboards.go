@@ -13,14 +13,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
 type DashboardRequestPayload struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Type        string `json:"type"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Type        string          `json:"type"`
+	Settings    *postgres.Jsonb `json:"settings"`
 }
 
 type DashboardIdUnitsPositions struct {
@@ -88,8 +91,18 @@ func CreateDashboardHandler(c *gin.Context) {
 		return
 	}
 
-	dashboard, errCode := store.GetStore().CreateDashboard(projectId, agentUUID,
-		&model.Dashboard{Name: requestPayload.Name, Description: requestPayload.Description, Type: requestPayload.Type})
+	dashboardRequest := &model.Dashboard{
+		Name:        requestPayload.Name,
+		Description: requestPayload.Description,
+		Type:        requestPayload.Type,
+		Settings:    postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+	}
+	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
+		dashboardRequest.Settings = *requestPayload.Settings
+	}
+
+	dashboard, errCode := store.GetStore().CreateDashboard(projectId, agentUUID, dashboardRequest)
+
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to create dashboard."})
 		return

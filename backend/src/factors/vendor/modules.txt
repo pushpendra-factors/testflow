@@ -164,6 +164,8 @@ github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 ## explicit
+# github.com/boj/redistore v0.0.0-20180917114910-cd5dcc76aeff
+github.com/boj/redistore
 # github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 ## explicit
 github.com/bradfitz/gomemcache/memcache
@@ -188,6 +190,9 @@ github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes
 github.com/coreos/etcd/etcdserver/etcdserverpb
 github.com/coreos/etcd/mvcc/mvccpb
 github.com/coreos/etcd/pkg/types
+# github.com/coreos/go-oidc/v3 v3.1.0
+## explicit
+github.com/coreos/go-oidc/v3/oidc
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 ## explicit
 # github.com/davecgh/go-spew v1.1.1
@@ -221,11 +226,16 @@ github.com/getsentry/raven-go
 # github.com/gin-contrib/cors v0.0.0-20170318125340-cf4846e6a636
 ## explicit
 github.com/gin-contrib/cors
+# github.com/gin-contrib/sessions v0.0.4
+## explicit
+github.com/gin-contrib/sessions
+github.com/gin-contrib/sessions/cookie
+github.com/gin-contrib/sessions/redis
 # github.com/gin-contrib/sse v0.1.0
 github.com/gin-contrib/sse
 # github.com/gin-gonic/autotls v0.0.0-20180426091246-be87bd5ef97b
 ## explicit
-# github.com/gin-gonic/gin v1.6.3
+# github.com/gin-gonic/gin v1.7.4
 ## explicit
 github.com/gin-gonic/gin
 github.com/gin-gonic/gin/binding
@@ -248,7 +258,7 @@ github.com/go-playground/locales
 github.com/go-playground/locales/currency
 # github.com/go-playground/universal-translator v0.17.0
 github.com/go-playground/universal-translator
-# github.com/go-playground/validator/v10 v10.2.0
+# github.com/go-playground/validator/v10 v10.4.1
 github.com/go-playground/validator/v10
 # github.com/go-redis/redis v6.15.7+incompatible
 ## explicit
@@ -330,6 +340,8 @@ github.com/gorilla/rpc/json
 # github.com/gorilla/securecookie v1.1.1
 ## explicit
 github.com/gorilla/securecookie
+# github.com/gorilla/sessions v1.2.0
+github.com/gorilla/sessions
 # github.com/grpc-ecosystem/grpc-gateway v1.5.0
 ## explicit
 # github.com/hashicorp/golang-lru v0.5.1
@@ -379,11 +391,12 @@ github.com/klauspost/compress/zstd/internal/xxhash
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/leodido/go-urn v1.2.0
 github.com/leodido/go-urn
-# github.com/lib/pq v1.0.0
+# github.com/lib/pq v1.10.3
 ## explicit
 github.com/lib/pq
 github.com/lib/pq/hstore
 github.com/lib/pq/oid
+github.com/lib/pq/scram
 # github.com/mailru/easyjson v0.7.6
 ## explicit
 github.com/mailru/easyjson/buffer
@@ -457,7 +470,7 @@ github.com/sirupsen/logrus
 # github.com/streadway/amqp v1.0.0
 ## explicit
 github.com/streadway/amqp
-# github.com/stretchr/testify v1.6.1
+# github.com/stretchr/testify v1.7.0
 ## explicit
 github.com/stretchr/testify/assert
 # github.com/swaggo/files v0.0.0-20190704085106-630677cd5c14
@@ -565,10 +578,13 @@ go.opencensus.io/trace/tracestate
 ## explicit
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
+golang.org/x/crypto/ed25519
+golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/md4
 golang.org/x/crypto/ocsp
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ripemd160
+golang.org/x/crypto/sha3
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6
 ## explicit
@@ -597,6 +613,7 @@ golang.org/x/net/trace
 golang.org/x/net/webdav
 golang.org/x/net/webdav/internal/xml
 # golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
@@ -606,6 +623,7 @@ golang.org/x/oauth2/jwt
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -809,6 +827,10 @@ google.golang.org/protobuf/types/known/wrapperspb
 google.golang.org/protobuf/types/pluginpb
 # gopkg.in/go-playground/validator.v8 v8.18.2
 ## explicit
+# gopkg.in/square/go-jose.v2 v2.5.1
+gopkg.in/square/go-jose.v2
+gopkg.in/square/go-jose.v2/cipher
+gopkg.in/square/go-jose.v2/json
 # gopkg.in/yaml.v2 v2.3.0
 ## explicit
 gopkg.in/yaml.v2

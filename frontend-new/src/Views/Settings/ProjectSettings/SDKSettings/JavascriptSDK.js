@@ -23,10 +23,13 @@ const ViewSetup = ({ activeProject }) => {
             <pre className={'fa-code-block my-4'}>
             <code>
 {`<script>
-(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="${assetURL}";s.async=true;d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("${projectToken}")})
+(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="${assetURL}";s.async=true;d=document.getElementsByTagName("script")[0];document.head.insertBefore(s,d)})(function(){factors.init("${projectToken}")})
 </script>`}
             </code>
             </pre>
+          </Col>
+          <Col span={24}> 
+            <Text type={'paragraph'} extraClass={'m-0 mt-2 mb-2'}>For detailed help or instructions to setup via GTM (Google Tag Manager), please refer to our <a className={'fa-anchor'} href="https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website" target='_blank'>JavaScript developer documentation.</a></Text> 
           </Col>
           <Col span={24}>
             <Text type={'title'} level={5} weight={'bold'} color={'grey'} extraClass={'m-0 mt-4'}>Setup 2 (Optional)</Text>
@@ -38,9 +41,6 @@ const ViewSetup = ({ activeProject }) => {
 {'factors.track("YOUR_EVENT");'}
             </code>
             </pre>
-          </Col>
-          <Col span={24}> 
-            <Text type={'paragraph'} extraClass={'m-0 mt-2'}>For detailed instructions on how to install and initialize the JavaScript SDK please refer to our <a className={'fa-anchor'} href="https://help.factors.ai/en/articles/5754974-placing-factors-s-javascript-sdk-on-your-website" target='_blank'>JavaScript developer documentation.</a></Text> 
           </Col>
     </Row>
   );
@@ -85,8 +85,12 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
       });  
   };
  
- 
-
+  const toggleAutoTrackSPAPageView = (checked) => { 
+    udpateProjectSettings(currentProjectId, { auto_track_spa_page_view: checked }).catch((err) => {
+      console.log('Oops! something went wrong-->', err);
+      message.error('Oops! something went wrong.');
+    }); 
+  };
 
   return (
     <Row>
@@ -101,6 +105,14 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
       <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Track standard events such as page_view, page_load time, page_spent_time and button clicks for each user</Text>
+    </Col>
+    <Col span={24}>
+      <div span={24} className={'flex flex-start items-center mt-8'}>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoTrackSPAPageView} defaultChecked={currentProjectSettings.auto_track_spa_page_view} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track Single Page Application</Text>
+      </div>
+    </Col>
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Track standard events such as page_view, page_load time, page_spent_time and button clicks for each user, on Single Page Applications like React, Angular, Vue, etc,.</Text>
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>

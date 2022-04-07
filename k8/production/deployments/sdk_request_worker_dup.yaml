@@ -54,13 +54,13 @@ spec:
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)
           - --redis_host
-          - $(REDIS_HOST_2)
+          - $(REDIS_HOST)
           - --redis_port
-          - $(REDIS_PORT_2)
+          - $(REDIS_PORT)
           - --redis_host_ps
-          - $(REDIS_HOST_2)
+          - $(PERSISTENT_REDIS_HOST)
           - --redis_port_ps
-          - $(REDIS_PORT_2)
+          - $(PERSISTENT_REDIS_PORT)
           - --queue_redis_host
           - $(QUEUE_REDIS_HOST)
           - --queue_redis_port

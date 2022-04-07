@@ -174,8 +174,6 @@ spec:
         - configMapRef:
             name: config-env
         - configMapRef:
-            name: config-postgres
-        - configMapRef:
             name: config-memsql
         - configMapRef:
             name: config-redis
@@ -183,8 +181,6 @@ spec:
             name: config-persistent-redis
         - configMapRef:
             name: config-add-session-job
-        - secretRef:
-            name: secret-postgres
         - secretRef:
             name: secret-memsql
         - secretRef:

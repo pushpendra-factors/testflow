@@ -1,0 +1,60 @@
+@import '../../styles/abstracts/variables';
+
+.pivotTable {
+  width: 100%;
+
+  :global(.pvtUi) {
+    width: 100%;
+  }
+
+  :global(.pvtRenderers),
+  :global(.pvtAxisContainer) {
+    display: none;
+  }
+
+  :global(.pvtVals) {
+    display: none;
+  }
+
+  :global(.pvtTable) {
+    width: 100%;
+    margin: 0;
+    border-radius: 0.625rem;
+
+    th {
+      background-color: $fa-color--mono-1;
+    }
+  }
+
+  :global(.pvtAxisLabel),
+  :global(.pvtRowLabel),
+  :global(.pvtColLabel),
+  :global(.pvtTotalLabel),
+  :global(.pvtVal),
+  :global(.pvtTotal),
+  :global(.pvtGrandTotal) {
+    background-color: $fa-color--mono-1;
+    padding: 1rem;
+    color: $fa-color--mono-5;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 25px;
+    border: 1px solid $fa-color--mono-3;
+    text-align: left;
+  }
+
+  :global(.pvtRowLabel),
+  :global(.pvtVal) {
+    background-color: $fa-color--white !important;
+    font-weight: 400;
+    color: $fa-color--mono-6;
+  }
+
+  :global(.pvtTotal),
+  :global(.pvtGrandTotal) {
+    background-color: $fa-color--white !important;
+    font-weight: 600;
+    color: $fa-color--mono-6;
+    text-align: right !important;
+  }
+}

@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -47,12 +48,24 @@ func Signin(c *gin.Context) {
 	email := params.Email
 	password := params.Password
 
+	// Basic email sanity check.
+	if !U.IsEmail(strings.TrimSpace(email)) {
+		logCtx.WithError(err).Error("Invalid email provided.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	agent, code := store.GetStore().GetAgentByEmail(email)
 	if code == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	} else if code == http.StatusNotFound {
 		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	if agent.IsAuth0User {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "You have signed up with OAuth flow, sign in with the same."})
 		return
 	}
 
@@ -129,7 +142,6 @@ func getAgentBatchInviteParams(c *gin.Context) (*[]agentInviteParams, error) {
 // @Success 201 {string} json "{"status": "success", "agents": agentInfoMap, "project_agent_mappings": projectAgentMappings}"
 // @Router /{project_id}/agents/invite [post]
 func AgentInvite(c *gin.Context) {
-
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
@@ -272,7 +284,6 @@ func AgentInvite(c *gin.Context) {
 	return
 }
 func AgentInviteBatch(c *gin.Context) {
-
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
@@ -584,7 +595,6 @@ func getAgentVerifyParams(c *gin.Context) (*agentVerifyParams, error) {
 
 // curl -X POST -d '{"first_name":"value1", "last_name":"value1", "password":"value"}' http://localhost:8080/agents/activate?token=value -v
 func AgentActivate(c *gin.Context) {
-
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
@@ -663,6 +673,11 @@ func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 		return
 	} else if errCode == http.StatusNotFound {
 		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	if agent.IsAuth0User {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User is already registered with Auth0"})
 		return
 	}
 
@@ -992,6 +1007,11 @@ func UpdateAgentPassword(c *gin.Context) {
 		return
 	} else if errCode == http.StatusNotFound {
 		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	if agent.IsAuth0User {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot change password for Auth0 user"})
 		return
 	}
 

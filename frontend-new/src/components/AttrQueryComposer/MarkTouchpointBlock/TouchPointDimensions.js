@@ -10,10 +10,16 @@ function TouchPointDimensions({
   tpDimensionsSelection,
   setTPDimensionsSelection,
 }) {
-  const { attr_dimensions } = useSelector((state) => state.coreQuery);
+  const { attr_dimensions, content_groups } = useSelector(
+    (state) => state.coreQuery
+  );
+  const list_dimensions =
+    touchPoint === 'LandingPage'
+      ? content_groups.slice()
+      : attr_dimensions.slice();
 
   const dimensionsHeading = useMemo(() => {
-    const heading = attr_dimensions
+    const heading = list_dimensions
       .filter((d) => d.touchPoint === touchPoint && d.enabled)
       .map((d) => d.title)
       .join(', ');
@@ -22,7 +28,7 @@ function TouchPointDimensions({
     } else {
       return heading;
     }
-  }, [attr_dimensions, touchPoint]);
+  }, [list_dimensions, touchPoint]);
 
   if (!dimensionsHeading) {
     return null;

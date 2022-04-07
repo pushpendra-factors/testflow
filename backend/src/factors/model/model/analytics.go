@@ -862,15 +862,36 @@ func GetPropertyEntityFieldForFilter(entityName string) string {
 	return ""
 }
 
+func AddMissingEventNamesInResult(result *QueryResult, query *Query, isTimezoneEnabled bool) {
+	eventNameIndex := getEventNameIndex(result)
+	if eventNameIndex == -1 || len(result.Rows) == 0 {
+		return
+	}
+
+	mapOfEventNamesPresentInResult := make(map[string]bool)
+	for _, row := range result.Rows {
+		mapOfEventNamesPresentInResult[row[eventNameIndex].(string)] = true
+	}
+
+	for index, eventWithProperties := range query.EventsWithProperties {
+		eventWithPrefix := fmt.Sprintf("%d_%s", index, eventWithProperties.Name)
+		if _, exists := mapOfEventNamesPresentInResult[eventWithPrefix]; !exists {
+			defaultRow := make([]interface{}, 0)
+			defaultRow = append(defaultRow, result.Rows[0]...)
+
+			defaultRow[len(defaultRow)-1] = 0
+
+			mapOfEventNamesPresentInResult[eventWithPrefix] = true
+			defaultRow[eventNameIndex] = eventWithPrefix
+			result.Rows = append(result.Rows, defaultRow)
+		}
+	}
+}
+
 // AddAliasNameOnEventCondEachGivenEventQueryResult replaces EventName in the result's header with the AliasName
 func AddAliasNameOnEventCondEachGivenEventQueryResult(result *QueryResult, query Query) {
 	// Identify the index for the event_name
-	eventNameIndex := -1
-	for k, key := range result.Headers {
-		if key == AliasEventName {
-			eventNameIndex = k
-		}
-	}
+	eventNameIndex := getEventNameIndex(result)
 
 	// If eventNameIndex == -1, the AliasEventName is not found in the header. Hence skip!
 	if eventNameIndex == -1 {
@@ -902,6 +923,16 @@ func AddAliasNameOnEventCondEachGivenEventQueryResult(result *QueryResult, query
 		}
 		i += 1
 	}
+}
+
+func getEventNameIndex(result *QueryResult) int {
+	eventNameIndex := -1
+	for k, key := range result.Headers {
+		if key == AliasEventName {
+			eventNameIndex = k
+		}
+	}
+	return eventNameIndex
 }
 
 func HasGroupByDateTypeProperties(groupProps []QueryGroupByProperty) bool {

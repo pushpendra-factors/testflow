@@ -9,7 +9,7 @@ function GranularityOptions({ durationObj, onClick, queryType }) {
   const validDateBreakdowns = [...DateBreakdowns];
   
   const options = useMemo(() => {
-    const enabledOptions = getValidGranularityOptions(durationObj, queryType);
+    const enabledOptions = getValidGranularityOptions();
     return validDateBreakdowns.map((db) => {
       return {
         ...db,
@@ -51,7 +51,7 @@ function GranularityOptions({ durationObj, onClick, queryType }) {
   );
 
   return (
-    <Dropdown overlay={menu}>
+    <Dropdown overlay={menu} placement="bottomLeft">
       <Button className={`ant-dropdown-link flex items-center`}>
         {currentValue.title}
       </Button>

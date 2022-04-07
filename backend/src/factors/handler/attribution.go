@@ -112,8 +112,33 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 			logCtx.WithError(err).Error("Query failed. Failed to get Timezone.")
 			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
 		}
-		// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+
+		// For a KPI query, set the timezone internally for correct execution
+		if requestPayload.Query.AnalyzeType == model.AnalyzeTypeSFOpportunities || requestPayload.Query.AnalyzeType == model.AnalyzeTypeHSDeals {
+			if requestPayload.Query.KPI.Queries[0].Timezone != "" {
+				_, errCode := time.LoadLocation(string(requestPayload.Query.KPI.Queries[0].Timezone))
+				if errCode != nil {
+					return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid Timezone provided.", true
+				}
+
+				timezoneString = U.TimeZoneString(requestPayload.Query.KPI.Queries[0].Timezone)
+			} else {
+				timezoneString, statusCode = store.GetStore().GetTimezoneForProject(projectId)
+				if statusCode != http.StatusFound {
+					logCtx.Error("Query failed. Failed to get Timezone.")
+					return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Failed to get Timezone.", true
+				}
+				// logCtx.WithError(err).Error("Query failed. Invalid Timezone.")
+			}
+
+			requestPayload.Query.KPI.SetTimeZone(timezoneString)
+			err = requestPayload.Query.KPI.TransformDateTypeFilters()
+			if err != nil {
+				return nil, http.StatusBadRequest, V1.INVALID_INPUT, err.Error(), true
+			}
+		}
 	}
+
 	queryRange := float64(requestPayload.Query.To-requestPayload.Query.From) / float64(model.SecsInADay)
 	if queryRange > model.QueryRangeLimit {
 		logCtx.Error("Query failed. Query range is out of limit.")
@@ -172,9 +197,11 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)
-	H.SleepIfHeaderSet(c)
 
-	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query)
+	H.SleepIfHeaderSet(c)
+	QueryKey, _ := attributionQueryUnitPayload.GetQueryCacheRedisKey(projectId)
+	debugQueryKey := model.GetStringKeyFromCacheRedisKey(QueryKey)
+	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query, debugQueryKey)
 	if err != nil {
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
 		logCtx.WithError(err).Error("Failed to process query from DB")
@@ -209,7 +236,8 @@ func decodeAttributionPayload(r *http.Request, logCtx *log.Entry) (bool, string,
 	}
 
 	decoder2 := json.NewDecoder(bytes.NewReader(data))
-	decoder2.DisallowUnknownFields()
+	// commenting out this for KPI queries for attribution
+	// decoder2.DisallowUnknownFields()
 	var requestPayloadUnit model.AttributionQueryUnit
 	if err = decoder2.Decode(&requestPayloadUnit); err == nil {
 		requestPayload.Query = requestPayloadUnit.Query

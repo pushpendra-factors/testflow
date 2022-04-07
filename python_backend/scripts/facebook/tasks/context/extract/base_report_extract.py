@@ -88,7 +88,8 @@ class BaseReportExtract(BaseExtract):
         resp_status = self.read_records_for_current_columns_and_update_metrics()
         if resp_status != "success":
             return resp_status
-        records_with_metrics2 = self.records
+        transformed_records = self.transform_array_metrics_with_action_type(self.records)
+        records_with_metrics2 = transformed_records
         self.records = self.merge_records_of_metrics1_and_2(records_with_metrics1, records_with_metrics2)
         return "success"
 
@@ -151,3 +152,13 @@ class BaseReportExtract(BaseExtract):
             self.records = JsonUtil.read(records_string)
             return "success"
 
+    def transform_array_metrics_with_action_type(self, records):
+        new_records = []
+        keys= [COST_PER_ACTION_TYPE, WEBSITE_PURCHASE_ROAS]
+        for record in records:
+            for key in keys:
+                if key in record:
+                    for action_type_value in record[key]:
+                        record[key + "_" + action_type_value[ACTION_TYPE]] = action_type_value[VALUE]
+            new_records.append(record)
+        return new_records

@@ -9,12 +9,15 @@ import (
 type ProjectSetting struct {
 	// Foreign key constraint project_id -> projects(id)
 	// Used project_id as primary key also, becase of 1-1 relationship.
-	ProjectId uint64 `gorm:"primary_key:true" json:"project_id,omitempty"`
+	ProjectId         uint64            `gorm:"primary_key:true" json:"project_id,omitempty"`
+	AttributionConfig AttributionConfig `json:"attribution_config"`
+
 	// Using pointers to avoid update by default value.
 	// omit empty to avoid nil(filelds not updated) on resp json.
-	AutoTrack       *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
-	AutoFormCapture *bool `gorm:"not null;default:false" json:"auto_form_capture,omitempty"`
-	ExcludeBot      *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
+	AutoTrack            *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
+	AutoTrackSPAPageView *bool `gorm:"not null;default:false" json:"auto_track_spa_page_view"`
+	AutoFormCapture      *bool `gorm:"not null;default:false" json:"auto_form_capture,omitempty"`
+	ExcludeBot           *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
 	// Segment integration settings.
 	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
 	// Adwords integration settings.
@@ -56,6 +59,18 @@ type ProjectSetting struct {
 	IntDrift                      *bool   `gorm:"not null;default:false" json:"int_drift,omitempty"`
 	IntGoogleIngestionTimezone    string  `json:"int_google_ingestion_timezone"`
 	IntClearBit                   *bool   `gorm:"not null;default:false" json:"int_clear_bit,omitempty"`
+}
+
+type AttributionConfig struct {
+	KpisToAttribute   AttributionKpis `json:"kpis_to_attribute"`
+	AttributionWindow int64           `json:"attribution_window"`
+	Enabled           *bool           `json:"enabled"`
+}
+
+type AttributionKpis struct {
+	UserKpi []*postgres.Jsonb `json:"user_kpi"`
+	HsKpi   []*postgres.Jsonb `json:"hs_kpi"`
+	SfKpi   []*postgres.Jsonb `json:"sf_kpi"`
 }
 
 const ProjectSettingKeyToken = "token"

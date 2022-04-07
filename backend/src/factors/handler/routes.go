@@ -23,6 +23,15 @@ const ROUTE_DATA_SERVICE_ROOT = "/data_service"
 const ROUTE_SDK_ADWORDS_ROOT = "/adwords_sdk_service"
 const ROUTE_VERSION_V1 = "/v1"
 
+func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
+	routePrefix := C.GetRoutesURLPrefix() + "/oauth"
+	r.Use(mid.BlockMaliciousPayload())
+	r.GET(routePrefix+"/signup", ExternalAuthentication(auth, SIGNUP_FLOW))
+	r.GET(routePrefix+"/login", ExternalAuthentication(auth, SIGNIN_FLOW))
+	r.GET(routePrefix+"/activate", ExternalAuthentication(auth, ACTIVATE_FLOW))
+	r.GET(routePrefix+"/callback", CallbackHandler(auth))
+}
+
 func InitAppRoutes(r *gin.Engine) {
 	routePrefix := C.GetRoutesURLPrefix()
 
@@ -38,6 +47,9 @@ func InitAppRoutes(r *gin.Engine) {
 	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
+
+	// NOTE: Always keep BlockMaliciousPayload middlware on top of the chain.
+	r.Use(mid.BlockMaliciousPayload())
 
 	r.Use(mid.SkipAPIWritesIfDisabled())
 	r.GET(routePrefix+"/health", mid.MonitoringAPIMiddleware(), Monitoring)
@@ -221,6 +233,13 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/v1/bingads/disable", responseWrapper(V1.DisableBingAdsIntegration))
 	authRouteGroup.GET("/:project_id/v1/bingads", responseWrapper(V1.GetBingAdsIntegration))
 	authRouteGroup.PUT("/:project_id/v1/bingads/enable", responseWrapper(V1.EnableBingAdsIntegration))
+
+	// alerts
+	authRouteGroup.POST("/:project_id/v1/alerts", responseWrapper(V1.CreateAlertHandler))
+	authRouteGroup.GET("/:project_id/v1/alerts", responseWrapper(V1.GetAlertsHandler))
+	authRouteGroup.GET("/:project_id/v1/alerts/:id", responseWrapper(V1.GetAlertByIDHandler))
+	authRouteGroup.DELETE("/:project_id/v1/alerts/:id", responseWrapper(V1.DeleteAlertHandler))
+
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

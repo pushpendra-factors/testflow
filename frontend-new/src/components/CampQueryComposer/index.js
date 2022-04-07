@@ -271,7 +271,7 @@ const CampQueryComposer = ({
         key={0}
         className={` ${styles.groupItem} flex justify-start items-center mt-4`}
       >
-        {(
+        {
           <>
             {init === false ? (
               <Button
@@ -309,20 +309,19 @@ const CampQueryComposer = ({
               )}
             </Button>
           </>
-        )}
+        }
         <div className={styles.group_block__event_selector}>
-        {groupByDD[index] ? (
-          <div className={styles.group_block__event_selector__btn}>
-          <GroupSelect2
-            groupedProperties={groupByProps}
-            placeholder='Select Property'
-            optionClick={(group, val) => onGroupBySet([group, val], index)}
-            onClickOutside={() => triggerGroupDD(index)}
-          ></GroupSelect2>
-          </div>
-        ) : null}
+          {groupByDD[index] ? (
+            <div className={styles.group_block__event_selector__btn}>
+              <GroupSelect2
+                groupedProperties={groupByProps}
+                placeholder='Select Property'
+                optionClick={(group, val) => onGroupBySet([group, val], index)}
+                onClickOutside={() => triggerGroupDD(index)}
+              ></GroupSelect2>
+            </div>
+          ) : null}
         </div>
-        
       </div>
     );
   };
@@ -339,13 +338,7 @@ const CampQueryComposer = ({
       }
     }
 
-    const frequency = getValidGranularityOptions(
-      {
-        from: dtRange.from,
-        to: dtRange.to,
-      },
-      QUERY_TYPE_CAMPAIGN
-    )[0];
+    const frequency = getValidGranularityOptions()[0];
     dtRange.frequency = frequency;
     setCampDateRange(dtRange);
   };
@@ -375,7 +368,7 @@ const CampQueryComposer = ({
     );
   };
 
-  console.log("inside campquery compioser")
+  console.log('inside campquery compioser');
 
   try {
     return (

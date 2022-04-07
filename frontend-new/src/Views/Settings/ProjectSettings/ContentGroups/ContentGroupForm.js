@@ -218,14 +218,14 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
             <Row className={'mt-8'}>
                 <Col span={18}>
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Name</Text>
-                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={''}>{smartPropState.content_group_name}</Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartPropState.content_group_name}</Text>
                 </Col> 
             </Row>
 
             <Row className={'mt-6'}>
                 <Col span={18}>
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Description </Text>
-                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={''}>{smartPropState.content_group_description}</Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartPropState.content_group_description}</Text>
                     {formState === 'view' ? 
                     <Button size={'large'} className={'m-0 mt-2'} type={'primary'}  onClick={() => setFormState('edit')}>Edit</Button>
                     : null}
@@ -242,7 +242,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
             <Row className={'mt-8'}>
                 <Col span={18}>
                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Name</Text>
-                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} extraClass={''}>{smartPropState.content_group_name}</Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartPropState.content_group_name}</Text>
                 </Col> 
             </Row>
             :
@@ -327,7 +327,7 @@ function ContentGroupsForm({activeProject, selectedGroup, setShowSmartProperty, 
                             <Row className={'mt-8'}>
                                 <Col span={24}>
                                     <div className={'flex justify-center'}>
-                                        <img src='assets/images/NoData.png' className={'w-20'}/>
+                                        <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/NoData.png' className={'w-20'}/>
                                     </div>
                                     <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 flex justify-center mt-4'}>Create Values that defines this content group</Text>
                                     <div className={'flex justify-center mt-8'}>

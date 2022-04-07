@@ -65,11 +65,7 @@ spec:
                 - --num_routines_for_web_analytics
                 - "1"
                 - --running_for_memsql
-                - "0"
-                - --only_attribution
-                - "0"
-                - --skip_attribution
-                - "0"
+                - "1"
                 - --healthcheck_ping_id
                 - 9a632a74-030c-494a-aa1d-01a489921f3e
                 - --app_name
@@ -78,8 +74,8 @@ spec:
                 - '*'
                 - --skip_user_join_in_event_query_by_project_id
                 - '*'
-                - --dashboard_unit_id
-                - '*'
+                - --enable_usage_based_caching
+                - "1"
                 - --debug_enabled
                 - "false"
               envFrom:

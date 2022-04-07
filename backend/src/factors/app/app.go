@@ -5,6 +5,7 @@ import (
 	Const "factors/constants"
 	H "factors/handler"
 	mid "factors/middleware"
+	session "factors/session/store"
 	U "factors/util"
 	"flag"
 	"strconv"
@@ -48,7 +49,7 @@ func main() {
 	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
 	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
 
-	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	disableDBWrites := flag.Bool("disable_db_writes", false, "To disable DB writes.")
 	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	disableQueryCache := flag.Bool("disable_query_cache", false, "To disable dashboard and query analytics cache.")
@@ -140,11 +141,20 @@ func main() {
 	hubspotAPIOnboardingHAPIKey := flag.String("hubspot_API_onboarding_HAPI_key", "", "")
 	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 
+	auth0ClientID := flag.String("auth0_client_id", "", "")
+	auth0ClientSecret := flag.String("auth0_client_secret", "", "")
+	auth0Domain := flag.String("auth0_domain", "", "")
+	auth0CallbackURL := flag.String("callback_url", "", "")
+
+	sessionStore := flag.String("session_store", "cookie", "")
+	sessionStoreSecret := flag.String("session_store_secret", "", "")
+
 	fivetranGroupId := flag.String("fivetran_group_id", "", "")
 	fivetranLicenseKey := flag.String("fivetran_license_key", "", "")
 	allowEventsFunnelsGroupSupport := flag.String("allow_events_funnels_group_support", "", "")
 
 	enableBingAdsAttribution := flag.Bool("enable_bing_ads_attribution", false, "")
+	salesforcePropertyLookBackTimeHr := flag.Int("salesforce_property_lookback_time_hr", 0, "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -178,6 +188,14 @@ func main() {
 			MaxIdleConnections:     *memSQLDBMaxIdleConnections,
 			UseExactConnFromConfig: true,
 		},
+		Auth0Info: C.Auth0Conf{
+			Domain:       *auth0Domain,
+			ClientId:     *auth0ClientID,
+			ClientSecret: *auth0ClientSecret,
+			CallbackUrl:  *auth0CallbackURL,
+		},
+		SessionStore:                            *sessionStore,
+		SessionStoreSecret:                      *sessionStoreSecret,
 		PrimaryDatastore:                        *primaryDatastore,
 		RedisHost:                               *redisHost,
 		RedisPort:                               *redisPort,
@@ -243,6 +261,7 @@ func main() {
 		IntegrationQueueThreshold:                      *integrationQueueThreshold,
 		EnableBingAdsAttribution:                       *enableBingAdsAttribution,
 		MonitoringAPIToken:                             *monitoringAPIToken,
+		SalesforcePropertyLookBackTimeHr:               *salesforcePropertyLookBackTimeHr,
 	}
 	C.InitConf(config)
 
@@ -277,8 +296,23 @@ func main() {
 	} else if config.Env == C.STAGING {
 		swaggerDocs.SwaggerInfo.Host = "staging-api.factors.ai"
 	}
+	err = session.GetSessionStore().InitSessionStore(r)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to initialize session store.")
+		return
+	}
 	H.InitAppRoutes(r)
 	H.InitIntRoutes(r)
+
+	if *auth0ClientID != "" && *auth0ClientSecret != "" && *auth0Domain != "" && *auth0CallbackURL != "" {
+		authenticator, err := H.NewAuth()
+		if err != nil {
+			log.WithError(err).Fatal("Failed to initialize auth.")
+			return
+		}
+		H.InitExternalAuth(r, authenticator)
+	}
+
 	Const.SetSmartPropertiesReservedNames()
 
 	C.KillDBQueriesOnExit()

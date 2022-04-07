@@ -114,6 +114,19 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
 		assert.NotNil(t, jsonResponseMap["auto_track"])
+
+	})
+
+	t.Run("UpdateAttribution_config", func(t *testing.T) {
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
+			"attribution_config": model.AttributionConfig{AttributionWindow: 6},
+		})
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var projectSettings model.ProjectSetting
+		json.Unmarshal(jsonResponse, &projectSettings)
+		assert.Equal(t, int64(6), projectSettings.AttributionConfig.AttributionWindow)
+
 	})
 
 	t.Run("UpdateIntDrift", func(t *testing.T) {
@@ -179,6 +192,19 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 		assert.NotNil(t, jsonRespMap["error"])
 		assert.Equal(t, 1, len(jsonRespMap))
 	})
+	// Test updating autotrack_spa_page_view
+	t.Run("UpdateAutoTrackSpaPageView", func(t *testing.T) {
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
+			"auto_track_spa_page_view": false,
+		})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonRespMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonRespMap)
+		assert.NotNil(t, jsonRespMap["auto_track_spa_page_view"])
+	})
+
 }
 
 func TestUpdateHubspotProjectSettings(t *testing.T) {

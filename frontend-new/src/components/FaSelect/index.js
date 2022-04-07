@@ -77,8 +77,7 @@ const FaSelect = ({
           }
         >
           <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
-            {' '}
-            Select:{' '}
+            Select:
           </Text>
           <span className={`ml-1 ${styles.optText}`}>{searchTerm}</span>
           {isSelected ? (
@@ -94,7 +93,13 @@ const FaSelect = ({
 
       options.forEach((op, index) => {
         isSelected = isSelectedCheck(op);
-        if (op[0].toLowerCase().includes(searchTerm.toLowerCase()) || (op[0]==='$none' && DISPLAY_PROP[op[0]].toLowerCase().includes(searchTerm.toLowerCase()))) {
+        if (
+          op[0].toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (op[0] === '$none' &&
+            DISPLAY_PROP[op[0]]
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase()))
+        ) {
           rendOpts.push(
             <div
               key={index}

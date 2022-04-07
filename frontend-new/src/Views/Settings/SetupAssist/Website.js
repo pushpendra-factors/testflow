@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Row, Col, Tag, Avatar, Skeleton, Button, Tooltip, Switch } from "antd";
+import { Row, Col, Tag, Avatar, Skeleton, Button, Tooltip, Switch, Spin } from "antd";
 import { Text, SVG, FaErrorComp, FaErrorLog } from "factorsComponents";
 import { connect } from "react-redux";
 import { fetchProjectSettings } from "Reducers/global";
@@ -17,7 +17,7 @@ const IntegrationProviderData = [
     name: 'Segment',
     desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Segment_ads',
-    kbLink:false,
+    kbLink: 'https://help.factors.ai/en/articles/5835006-segment',
   },
 ];
 
@@ -71,6 +71,7 @@ const IntegrationCard = ({ item, index }) => {
 };
 function IntegrationSettings({ currentProjectSettings, activeProject, fetchProjectSettings, setsdkCheck, sdkCheck }) {
   const [dataLoading, setDataLoading] = useState(true);
+  const [loading, setloading] = useState(false); 
 
   useEffect(() => {
     fetchProjectSettings(activeProject.id).then(() => {
@@ -78,8 +79,12 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
     }); 
   },[activeProject]);
 
-  const onSDKcheck = (checked) => { 
-    setsdkCheck(checked);
+  const onSDKcheck = () => {
+    setloading(true);
+    setTimeout(() => {
+      setloading(false);
+    }, 2000);
+    setsdkCheck(!sdkCheck);
   };
 
   currentProjectSettings = currentProjectSettings?.project_settings || currentProjectSettings;
@@ -103,10 +108,29 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
         </Row>
         <JavascriptSDK />
 
-        <Col span={24}>
-          <div span={24} className={'flex flex-start items-center mt-2'}>
-            <span style={{ width: '50px' }}><Switch checkedChildren="On"  unCheckedChildren="OFF" onChange={onSDKcheck} defaultChecked={sdkCheck} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>I’m finished</Text>
-          </div>
+        <Col span={24} className={'mb-4'}>
+          {loading ? 
+            <div className='flex justify-center items-center w-full'>
+              <Spin />
+            </div>
+          :
+            <>
+              { sdkCheck ?
+                <Row justify={'space-between'}>
+                  <Col span={20}>
+                    <SVG name={'CheckCircle'} extraClass={'inline'} /><Text type={'title'} level={6} color={'grey-2'} extraClass={'m-0 ml-2 inline'}>Verified. Your script is up and running.</Text>
+                  </Col>
+                  <Col>
+                    <Button type={'text'} size={'small'} style={{color: '#1890FF'}} onClick={onSDKcheck}>Verify again</Button>
+                  </Col>
+                </Row>
+                :
+                <div>
+                  <Text type={'title'} level={6} extraClass={'m-0 ml-2 mr-1'}>SDK not detected yet. Have you added the code? <Button type={'default'} size={'small'} onClick={onSDKcheck}>Verify it now</Button></Text>
+                </div>
+              }
+            </>
+          }
         </Col>
 
         <Text type={'title'} level={5} weight={'bold'} align={'center'} color={'grey'} extraClass={'pb-2 m-0'}>OR</Text>

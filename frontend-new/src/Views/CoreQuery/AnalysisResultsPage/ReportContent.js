@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useContext,
-} from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import ReportTitle from './ReportTitle';
 import {
   QUERY_TYPE_EVENT,
@@ -15,7 +10,6 @@ import {
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
   CHART_TYPE_BARCHART,
-  presentationObj,
   ReverseProfileMapper,
 } from '../../../utils/constants';
 import { Spin } from 'antd';
@@ -62,7 +56,7 @@ function ReportContent({
     metricsDropdown = <div className='mr-0'></div>;
 
   const {
-    coreQueryState: { chartTypes, navigatedFromDashboard },
+    coreQueryState: { chartTypes },
   } = useContext(CoreQueryContext);
 
   const chartType = useMemo(() => {
@@ -356,7 +350,7 @@ function ReportContent({
             handleGranularityChange={handleGranularityChange}
             section={section}
           />
-        </div>{' '}
+        </div>
       </>
 
       <div className='mt-12'>{content}</div>

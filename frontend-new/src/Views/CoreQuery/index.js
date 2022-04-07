@@ -91,14 +91,20 @@ import {
   SET_NAVIGATED_FROM_DASHBOARD,
   UPDATE_CHART_TYPES,
   SET_SAVED_QUERY_SETTINGS,
+  UPDATE_PIVOT_CONFIG,
+  DEFAULT_PIVOT_CONFIG,
 } from './constants';
 import {
   getValidGranularityOptions,
   shouldDataFetch,
 } from '../../utils/dataFormatter';
 import ProfileComposer from '../../components/ProfileComposer';
-import { IconAndTextSwitchQueryType } from './coreQuery.helpers';
+import {
+  IconAndTextSwitchQueryType,
+  getSavedPivotConfig,
+} from './coreQuery.helpers';
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
+import { EMPTY_OBJECT } from '../../utils/global';
 
 function CoreQuery({
   activeProject,
@@ -156,6 +162,7 @@ function CoreQuery({
     linkedEvents: [],
     date_range: {},
     attr_dimensions: [],
+    content_groups: []
   });
 
   const [campaignState, setCampaignState] = useState({
@@ -189,16 +196,16 @@ function CoreQuery({
     attr_dateRange,
     eventNames,
     attr_dimensions,
+    attrQueries,
+    content_groups
   } = useSelector((state) => state.coreQuery);
 
   const [activeTab, setActiveTab] = useState(1);
 
   const [queryOpen, setQueryOpen] = useState(true);
 
-  const {
-    show_criteria: result_criteria,
-    performance_criteria: user_type,
-  } = useSelector((state) => state.analyticsQuery);
+  const { show_criteria: result_criteria, performance_criteria: user_type } =
+    useSelector((state) => state.analyticsQuery);
 
   const dateRange = queryOptions.date_range;
   const { session_analytics_seq } = queryOptions;
@@ -227,6 +234,13 @@ function CoreQuery({
   const updateChartTypes = useCallback(
     (payload) => {
       updateLocalReducer(UPDATE_CHART_TYPES, payload);
+    },
+    [updateLocalReducer]
+  );
+
+  const updatePivotConfig = useCallback(
+    (payload) => {
+      updateLocalReducer(UPDATE_PIVOT_CONFIG, payload);
     },
     [updateLocalReducer]
   );
@@ -260,15 +274,25 @@ function CoreQuery({
       setShowResult(true);
       setQuerySaved(isQuerySaved);
       if (!isQuerySaved) {
+        //reset pivot config
+        updatePivotConfig({ ...DEFAULT_PIVOT_CONFIG });
         setNavigatedFromDashboard(false);
-        updateSavedQuerySettings({});
+        updateSavedQuerySettings(EMPTY_OBJECT);
       } else {
         if (queryType !== QUERY_TYPE_CAMPAIGN) {
-          //update the chart type to the saved chart type
           const selectedReport = savedQueries.find(
             (elem) => elem.id === isQuerySaved.id
           );
 
+          // update pivot config
+          const pivotConfig = getSavedPivotConfig({
+            queryType,
+            selectedReport,
+          });
+          console.log('pivotConfig', pivotConfig);
+          updatePivotConfig(pivotConfig);
+
+          //update the chart type to the saved chart type
           const savedChartType = _.get(
             selectedReport,
             'settings.chart',
@@ -518,6 +542,7 @@ function CoreQuery({
           eventGoal,
           touchpoint,
           attr_dimensions,
+          content_groups,
           touchpoint_filters,
           attr_query_type,
           models,
@@ -526,6 +551,15 @@ function CoreQuery({
           durationObj,
           tacticOfferType
         );
+
+        if(queryOptions.group_analysis !== 'users') {
+          const kpiQuery = getKPIQuery(attrQueries, durationObj, {event:[], global: []}, queryOptions, []);
+          if(queryOptions.group_analysis === 'hubspot_deals') {
+            kpiQuery.gGBy = [{"gr":"","prNa":"$hubspot_deal_hs_object_id","prDaTy":"numerical","en":"user","objTy":"","gbty":"raw_values"}];
+          }
+          query.query.analyze_type = queryOptions.group_analysis;
+          query.query.kpi_query_group = kpiQuery;
+        }
 
         //Factors RUN_QUERY tracking
         factorsai.track('RUN-QUERY', { query_type: QUERY_TYPE_ATTRIBUTION });
@@ -540,6 +574,7 @@ function CoreQuery({
             models,
             linkedEvents,
             attr_dimensions,
+            content_groups,
             tacticOfferType,
             date_range: { ...durationObj },
           });
@@ -600,6 +635,7 @@ function CoreQuery({
       attr_dateRange,
       updateResultState,
       attr_dimensions,
+      content_groups,
       getDashboardConfigs,
       configActionsOnRunningQuery,
       resetComparisonData,
@@ -845,7 +881,7 @@ function CoreQuery({
         queryType === QUERY_TYPE_CAMPAIGN ||
         queryType === QUERY_TYPE_KPI
       ) {
-        frequency = getValidGranularityOptions({ from, to }, queryType)[0];
+        frequency = getValidGranularityOptions()[0];
       }
 
       const payload = {
@@ -1136,7 +1172,11 @@ function CoreQuery({
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      return <AttrQueryComposer runAttributionQuery={handleRunQuery} />;
+      return <AttrQueryComposer 
+        queryOptions={queryOptions}
+        setQueryOptions={setExtraOptions} 
+        runAttributionQuery={handleRunQuery} 
+      />;
     }
 
     if (queryType === QUERY_TYPE_KPI) {
@@ -1297,9 +1337,13 @@ function CoreQuery({
   };
 
   useEffect(() => {
+    setKPIConfigProps(findKPIitem(selectedMainCategory?.group));
+  }, [selectedMainCategory]);
+
+  const findKPIitem = (groupName) => {
     let KPIlist = KPI_config || [];
     let selGroup = KPIlist.find((item) => {
-      return item.display_category == selectedMainCategory?.group;
+      return item.display_category == groupName;
     });
 
     let DDvalues = selGroup?.properties?.map((item) => {
@@ -1313,9 +1357,8 @@ function CoreQuery({
           : item.object_type;
       return [ddName, item.name, item.data_type, ddtype];
     });
-
-    setKPIConfigProps(DDvalues);
-  }, [selectedMainCategory]);
+    return DDvalues;
+  }
 
   return (
     <>
@@ -1382,6 +1425,7 @@ function CoreQuery({
               setNavigatedFromDashboard,
               resetComparisonData,
               handleCompareWithClick,
+              updatePivotConfig,
             }}
           >
             <AnalysisResultsPage

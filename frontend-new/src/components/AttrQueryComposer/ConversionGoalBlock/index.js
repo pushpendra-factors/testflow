@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -19,7 +19,9 @@ const ConversionGoalBlock = ({
     eventNames,
     activeProject, 
     eventProperties,
-    userProperties
+    userProperties,
+    group_analysis = 'users',
+    KPI_config
 }) => {
 
     const [selectVisible, setSelectVisible] = useState(false);
@@ -31,8 +33,20 @@ const ConversionGoalBlock = ({
         event: [],
         user: []
     });
+
+    
     
     useEffect(() => {
+        if(group_analysis === 'users') {
+            setEventPropsForUserGroup();
+        } else {
+            setFilterPropsforKpiGroups();
+        }
+        
+    }, [userProperties, eventProperties, group_analysis]);
+
+
+    const setEventPropsForUserGroup = () => {
         if(!eventGoal || !eventGoal?.label?.length) {return};
         const assignFilterProps = Object.assign({}, filterProps);
     
@@ -41,189 +55,301 @@ const ConversionGoalBlock = ({
         }
         assignFilterProps.user = userProperties;
         setFilterProperties(assignFilterProps);
-    }, [userProperties, eventProperties]);
-
-    const toggleEventSelect = () => {
-        setSelectVisible(!selectVisible);
     }
 
-    const addFilter = (val) => {
-        const updatedEvent = Object.assign({}, eventGoal);
-        const filt = updatedEvent.filters.filter(fil => JSON.stringify(fil) === JSON.stringify(val));
-        if (filt && filt.length) return;
-        updatedEvent.filters.push(val);
-        eventGoalChange(updatedEvent);
-    };
-
-    const editFiler = (index, val) => {
-        const updatedEvent = Object.assign({}, eventGoal);
-        const filt = Object.assign({}, val);
-        filt.operator = isArray(val.operator) ? val.operator[0] : val.operator;
-        updatedEvent.filters[index] = filt;
-        eventGoalChange(updatedEvent);
+    const setFilterPropsforKpiGroups = () => {
+        const assignFilterProps = Object.assign({}, filterProps);
+        assignFilterProps.event = getKPIProps(group_analysis);
+        setFilterProperties(assignFilterProps);
     }
 
-    const delFilter = (val) => {
-        const updatedEvent = Object.assign({}, eventGoal);
-        const filt = updatedEvent.filters.filter((v, i) => i !== val);
-        updatedEvent.filters = filt;
-        eventGoalChange(updatedEvent);
-    };
+    const getKPIProps = (groupName) => {
+        let KPIlist = KPI_config || [];
+        let selGroup = KPIlist.find((item) => {
+          return item.display_category == groupName;
+        });
+    
+        let DDvalues = selGroup?.properties?.map((item) => {
+          if (item == null) return;
+          let ddName = item.display_name ? item.display_name : item.name;
+          let ddtype =
+            selGroup?.category == 'channels'
+              ? item.object_type
+              : item.entity
+              ? item.entity
+              : item.object_type;
+          return [ddName, item.name, item.data_type, ddtype];
+        });
+        return DDvalues;
 
-    const closeFilter = () => {
-        setFilterBlockVisible(false);
-    };
-
-    const deleteItem = () => {
-        delEvent();
-        closeFilter();
-    };
-
-    const addFilterBlock = () => {
-        setFilterBlockVisible(true);
     }
 
-    const selectEventFilter = () => {
-          return <EventFilterWrapper
-          filterProps={filterProps}
-          activeProject={activeProject}
-          event={eventGoal}
-          deleteFilter={() => closeFilter()}
-          insertFilter={addFilter}
-          closeFilter={closeFilter}
-          >
-          </EventFilterWrapper>;
-    };
-    
+    const getKpiGroupList = (groupName) => {
+        let KPIlist = KPI_config || [];
+        let selGroup = KPIlist.find((item) => {
+          return item.display_category == groupName;
+        });
 
-    const eventFilters = () => {
-        const filters = [];
-        if (eventGoal && eventGoal?.filters?.length) {
-            eventGoal.filters.forEach((filter, index) => {
-                let filterContent = filter;
-                filterContent.values = filter.props[1] === 'datetime' && isArray(filter.values)? filter.values[0] : filter.values;
-                filters.push(
-                            <div key={index} className={'fa--query_block--filters'}>
-                                <EventFilterWrapper index={index} 
-                                    filter={filter} 
-                                    filterProps={filterProps} 
-                                    activeProject={activeProject} 
-                                    deleteFilter={delFilter} 
-                                    insertFilter={(val) => editFiler(index, val)} 
-                                    closeFilter={closeFilter}
-                                    event={eventGoal}
-                                ></EventFilterWrapper>
-                            </div>
-                );
-          });
-        }
-    
-        if (filterBlockVisible) {
-          filters.push(<div key={'init'} className={'fa--query_block--filters'}>
-                {selectEventFilter()}
-            </div>);
-        }
-    
-        return filters;
-      };
+        const group = ((selGroup) => {
+            let metricsValues = selGroup?.metrics?.map((value) => {
+              if (value?.display_name) {
+                return [value?.display_name, value?.name]
+              }
+              else {
+                return [value, value]
+              }
+        
+            })
+            return {
+              "label": selGroup.display_category,
+              "group": selGroup.display_category,
+              "category": selGroup.category,
+              "icon": "custom_events",
+              "values": metricsValues
+            }
+          })(selGroup);
+        return [group];
+    }
 
-    const onEventSelect = (val) => {
-        const currentEventGoal = Object.assign({}, eventGoal);
-        currentEventGoal.label = val;
-        currentEventGoal.filters = [];
-        eventGoalChange(currentEventGoal);
-        setSelectVisible(false);
-        closeFilter();
-    };
 
-    const additionalActions = () => {
-        return (
-                <div className={'fa--query_block--actions-cols flex relative ml-2'}>
-                <div className={`relative flex`}>
-                    <Button
-                        type='text'
-                        onClick={() => setMoreOptions(true)}
-                        className={'fa-btn--custom mr-1'}
-                    >
-                        <SVG name='more'></SVG>
-                    </Button>
+  const toggleEventSelect = () => {
+    setSelectVisible(!selectVisible);
+  };
 
-                    {moreOptions ? <FaSelect
-                        options={[[`Filter By`, 'filter']]}
-                        optionClick={(val) => {addFilterBlock(); setMoreOptions(false)}}
-                        onClickOutside={() => setMoreOptions(false)}
-                    ></FaSelect> : false}
-                </div>
-                <Button className={'fa-btn--custom'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
-                </div>
-        );
-    };
+  const addFilter = (val) => {
+    const updatedEvent = Object.assign({}, eventGoal);
+    const filt = updatedEvent.filters.filter(
+      (fil) => JSON.stringify(fil) === JSON.stringify(val)
+    );
+    if (filt && filt.length) return;
+    updatedEvent.filters.push(val);
+    eventGoalChange(updatedEvent);
+  };
 
-    const selectEvents = () => {
-    
-        return (
-            <div className={styles.block__event_selector}>
-                   {selectVisible
-                     ? <GroupSelect2
-                            groupedProperties={eventNameOptions}
-                            placeholder="Select Event"
-                            optionClick={(group, val) => onEventSelect(val[1]? val[1]: val[0])}
-                            onClickOutside={() => setSelectVisible(false)}
-                        ></GroupSelect2>
-                     : null }
-            </div>
-        );
-    };
+  const editFiler = (index, val) => {
+    const updatedEvent = Object.assign({}, eventGoal);
+    const filt = Object.assign({}, val);
+    filt.operator = isArray(val.operator) ? val.operator[0] : val.operator;
+    updatedEvent.filters[index] = filt;
+    eventGoalChange(updatedEvent);
+  };
 
-    const renderGoalBlockContent = () => {
-        return (
-            <div className={`${styles.block__content} flex items-center relative mt-1`}>
-                {<Tooltip title={eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}>
-                <Button 
-                    type="link" 
-                    onClick={toggleEventSelect}
-                    icon={<SVG name="mouseevent" />}
-                    className={`fa-button--truncate fa-button--truncate-lg`}
-                    >
-                        {eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}
-                </Button> 
-                </Tooltip> }
+  const delFilter = (val) => {
+    const updatedEvent = Object.assign({}, eventGoal);
+    const filt = updatedEvent.filters.filter((v, i) => i !== val);
+    updatedEvent.filters = filt;
+    eventGoalChange(updatedEvent);
+  };
 
-                {selectEvents()}
+  const closeFilter = () => {
+    setFilterBlockVisible(false);
+  };
 
-                <Text type={'title'} level={7} weight={'regular'} color={'grey'} extraClass={'m-0 ml-2'}>as count of unique users</Text>
+  const deleteItem = () => {
+    delEvent();
+    closeFilter();
+  };
 
-                <div className={styles.block__additional_actions}>{additionalActions()}</div>
-            </div>
-        )
-    };
+  const addFilterBlock = () => {
+    setFilterBlockVisible(true);
+  };
 
-    const renderGoalSelect = () => {
-        return (
-            <div className={'flex justify-start items-center pt-3 mt-1'}>
-                {<Button type="text" onClick={toggleEventSelect} icon={<SVG name={'plus'} color={'grey'} />}>Add a goal event</Button>}
-                {selectEvents()}
-            </div>
-        );
-    };
-
+  const selectEventFilter = () => {
     return (
-        <div className={`${styles.block} fa--query_block_section--basic relative`}>
-            {eventGoal?.label?.length ? renderGoalBlockContent() : renderGoalSelect()}
-            {eventFilters()}
+      <EventFilterWrapper
+        filterProps={filterProps}
+        activeProject={activeProject}
+        event={eventGoal}
+        deleteFilter={() => closeFilter()}
+        insertFilter={addFilter}
+        closeFilter={closeFilter}
+      ></EventFilterWrapper>
+    );
+  };
+
+  const eventFilters = () => {
+    const filters = [];
+    if (eventGoal && eventGoal?.filters?.length) {
+      eventGoal.filters.forEach((filter, index) => {
+        let filterContent = filter;
+        filterContent.values =
+          filter.props[1] === 'datetime' && isArray(filter.values)
+            ? filter.values[0]
+            : filter.values;
+        filters.push(
+          <div key={index} className={'fa--query_block--filters'}>
+            <EventFilterWrapper
+              index={index}
+              filter={filter}
+              filterProps={filterProps}
+              activeProject={activeProject}
+              deleteFilter={delFilter}
+              insertFilter={(val) => editFiler(index, val)}
+              closeFilter={closeFilter}
+              event={eventGoal}
+            ></EventFilterWrapper>
+          </div>
+        );
+      });
+    }
+
+    if (filterBlockVisible) {
+      filters.push(
+        <div key={'init'} className={'fa--query_block--filters'}>
+          {selectEventFilter()}
         </div>
-    )
-}
+      );
+    }
+
+    return filters;
+  };
+
+  const onEventSelect = (val,group,category) => {
+    const currentEventGoal = Object.assign({}, eventGoal);
+    currentEventGoal.label = val[1]? val[1]: val[0];
+    currentEventGoal.filters = [];
+    if(group_analysis !== 'users') {
+        currentEventGoal.label = val[0];
+        currentEventGoal.metric = val[1]? val[1]: val[0];
+        currentEventGoal.group = group;
+        if(category){
+            currentEventGoal.category = category;
+        } 
+    }
+    eventGoalChange(currentEventGoal);
+    setSelectVisible(false);
+    closeFilter();
+};
+
+  const additionalActions = () => {
+    return (
+      <div className={'fa--query_block--actions-cols flex relative ml-2'}>
+        <div className={`relative flex`}>
+          <Button
+            type='text'
+            onClick={() => setMoreOptions(true)}
+            className={'fa-btn--custom mr-1'}
+          >
+            <SVG name='more'></SVG>
+          </Button>
+
+          {moreOptions ? (
+            <FaSelect
+              options={[[`Filter By`, 'filter']]}
+              optionClick={(val) => {
+                addFilterBlock();
+                setMoreOptions(false);
+              }}
+              onClickOutside={() => setMoreOptions(false)}
+            ></FaSelect>
+          ) : (
+            false
+          )}
+        </div>
+        <Button className={'fa-btn--custom'} type='text' onClick={deleteItem}>
+          <SVG name='trash'></SVG>
+        </Button>
+      </div>
+    );
+  };
+
+    const renderCountLabel = () => {
+        return (<Text type={'title'} level={7} weight={'regular'} color={'grey'} extraClass={'m-0 ml-2'}>as count of unique users</Text>)
+    }
+
+  const selectEvents = () => {
+
+    const groupedProps = group_analysis === 'users' ? eventNameOptions : getKpiGroupList(group_analysis);
+    return (
+      <div className={styles.block__event_selector}>
+        {selectVisible ? (
+          <GroupSelect2
+            groupedProperties={groupedProps}
+            placeholder='Select Event'
+            optionClick={(group, val, category) =>
+              onEventSelect(val, group, category)
+            }
+            onClickOutside={() => setSelectVisible(false)}
+          ></GroupSelect2>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderGoalBlockContent = () => {
+    return (
+      <div
+        className={`${styles.block__content} flex items-center relative mt-4`}
+      >
+        {
+          <Tooltip
+            title={
+              eventNames[eventGoal?.label]
+                ? eventNames[eventGoal?.label]
+                : eventGoal?.label
+            }
+          >
+            <Button
+              type='link'
+              onClick={toggleEventSelect}
+              icon={<SVG name='mouseevent' />}
+              className={`fa-button--truncate fa-button--truncate-lg`}
+            >
+              {eventNames[eventGoal?.label]
+                ? eventNames[eventGoal?.label]
+                : eventGoal?.label}
+            </Button>
+          </Tooltip>
+        }
+
+        {selectEvents()}
+
+        {group_analysis === 'users' && renderCountLabel()}
+
+        <div className={styles.block__additional_actions}>
+          {additionalActions()}
+        </div>
+      </div>
+    );
+  };
+
+  const renderGoalSelect = () => {
+    return (
+      <div className={'flex justify-start items-center mt-4'}>
+        {
+          <Button
+            type='text'
+            onClick={toggleEventSelect}
+            icon={<SVG name={'plus'} color={'grey'} />}
+          >
+            Add a goal event
+          </Button>
+        }
+        {selectEvents()}
+      </div>
+    );
+  };
+
+  return (
+    <div className={`${styles.block} fa--query_block_section--basic relative`}>
+      {eventGoal?.label?.length ? renderGoalBlockContent() : renderGoalSelect()}
+      {eventFilters()}
+    </div>
+  );
+};
 
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
     eventProperties: state.coreQuery.eventProperties,
     userProperties: state.coreQuery.userProperties,
     eventNameOptions: state.coreQuery.eventOptions,
-    eventNames: state.coreQuery.eventNames
+    eventNames: state.coreQuery.eventNames,
+    KPI_config: state.kpi?.config,
 });
-  
-const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);
 
+const mapDispatchToProps = (dispatch) => bindActionCreators({}, dispatch);
 
-export default connect(mapStateToProps, mapDispatchToProps)(ConversionGoalBlock);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(ConversionGoalBlock);

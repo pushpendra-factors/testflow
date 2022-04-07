@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,6 +16,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/sdk"
 	SDK "factors/sdk"
 	"factors/util"
 	U "factors/util"
@@ -58,6 +60,7 @@ type Contact struct {
 	Vid              int64                    `json:"vid"`
 	Properties       map[string]Property      `json:"properties"`
 	IdentityProfiles []ContactIdentityProfile `json:"identity-profiles"`
+	FormSubmissions  []map[string]interface{} `json:"form-submissions"`
 }
 
 // Deal definition
@@ -87,6 +90,168 @@ var syncOrderByType = [...]int{
 	model.HubspotDocumentTypeContact,
 	model.HubspotDocumentTypeCompany,
 	model.HubspotDocumentTypeDeal,
+}
+
+func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
+
+	u, err := url.Parse(pageUrl)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	queries := u.Query()
+
+	urlParameters := make(map[string]interface{})
+	for key, value := range queries {
+		if _, exists := urlParameters[key]; !exists && strings.HasPrefix(key, "utm_") {
+			for _, v := range value {
+				urlParameters[key] = v
+			}
+		}
+	}
+
+	return urlParameters
+}
+
+func extractingFormSubmissionDetails(projectId uint64, contact Contact, properties map[string]interface{}) []map[string]interface{} {
+	form := make([]map[string]interface{}, 0)
+	keyArr := []string{"conversion-id", "form-id", "form-type", "page-title", "page-url", "portal-id", "timestamp", "title"}
+
+	for userFormNo := range contact.FormSubmissions {
+		form = append(form, make(map[string]interface{}))
+
+		for idx := range keyArr {
+			if contact.FormSubmissions[userFormNo][keyArr[idx]] == nil {
+				continue
+			}
+
+			if keyArr[idx] == "timestamp" {
+				if _, exists := form[userFormNo][keyArr[idx]]; !exists {
+					val := contact.FormSubmissions[userFormNo][keyArr[idx]]
+					vfloat, _ := util.GetPropertyValueAsFloat64(val)
+
+					form[userFormNo][keyArr[idx]] = (int64)(vfloat / 1000)
+				}
+			} else if keyArr[idx] == "page-url" {
+				val := contact.FormSubmissions[userFormNo][keyArr[idx]]
+				if _, exists := form[userFormNo][keyArr[idx]]; !exists {
+					urlParameters := GetURLParameterAsMap(util.GetPropertyValueAsString(val))
+					for k, v := range urlParameters {
+						form[userFormNo][k] = v
+					}
+				}
+
+				form[userFormNo][keyArr[idx]] = val
+			} else {
+				if _, exists := form[userFormNo][keyArr[idx]]; !exists {
+					val := contact.FormSubmissions[userFormNo][keyArr[idx]]
+					form[userFormNo][keyArr[idx]] = val
+				}
+			}
+		}
+		key, value := getCustomerUserIDFromProperties(projectId, properties)
+		if _, exists := form[userFormNo][key]; !exists {
+			form[userFormNo][key] = value
+		}
+	}
+	return form
+}
+
+func syncContactFormSubmissions(project *model.Project, userId string, document *model.HubspotDocument) {
+	logFields := log.Fields{
+		"project":  project,
+		"user_id":  userId,
+		"document": document,
+	}
+
+	logCtx := log.WithFields(logFields)
+	if userId == "" {
+		log.Error("syncContactFormSubmissions Failed. Invalid userId")
+		return
+	}
+
+	var contact Contact
+	err := json.Unmarshal((document.Value).RawMessage, &contact)
+	if err != nil {
+		logCtx.Error("Error occured during unmarshal of hubspot document")
+		return
+	}
+
+	enProperties, _, err := GetContactProperties(project.ID, document)
+	if err != nil {
+		return
+	}
+
+	form := extractingFormSubmissionDetails(project.ID, contact, *enProperties)
+
+	if len(form) == 0 {
+		return
+	}
+
+	var timestamps []interface{}
+	for i := range form {
+		timestamps = append(timestamps, form[i]["timestamp"])
+	}
+
+	events, status := store.GetStore().GetHubspotFormEvents(project.ID, userId, timestamps)
+	if status == http.StatusInternalServerError {
+		logCtx.Error("Internal server error")
+		return
+	}
+
+	for idx := range form {
+		encodeProperties := make(map[string]interface{}, 0)
+		formID := form[idx]["form-id"]
+		conversionID := form[idx]["conversion-id"]
+		eventTimestamp := form[idx]["timestamp"].(int64)
+
+		eventExists := false
+		for i := range events {
+			if events[i].Timestamp == eventTimestamp {
+				propertiesMap := make(map[string]interface{})
+				err := json.Unmarshal(events[i].Properties.RawMessage, &propertiesMap)
+				if err != nil {
+					log.Error("Error occured during unmarshal of hubspot document")
+					return
+				}
+
+				encodeFormId := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameFormSubmission, "form-id")
+				encodeConversionId := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameFormSubmission, "conversion-id")
+
+				if propertiesMap[encodeFormId] == formID && propertiesMap[encodeConversionId] == conversionID {
+					eventExists = true
+					break
+				}
+			}
+		}
+		if eventExists {
+			continue
+		}
+
+		for key, val := range form[idx] {
+			if !strings.HasPrefix(key, "utm_") {
+				enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameFormSubmission, key)
+				encodeProperties[enkey] = val
+			} else {
+				encodeProperties[key] = val
+			}
+		}
+
+		payload := &SDK.TrackPayload{
+			ProjectId:       project.ID,
+			Name:            U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION,
+			EventProperties: encodeProperties,
+			UserId:          userId,
+			Timestamp:       eventTimestamp,
+		}
+
+		status, _ := sdk.Track(project.ID, payload, true, SDK.SourceHubspot, "")
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.Error("Failed to create hubspot form-submission event")
+			return
+		}
+
+	}
 }
 
 func GetContactProperties(projectID uint64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
@@ -145,14 +310,14 @@ func GetContactProperties(projectID uint64, document *model.HubspotDocument) (*m
 	return &enrichedProperties, &properties, nil
 }
 
-func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}) string {
+func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}) (string, string) {
 	// identify using email if exist on properties.
 	emailInt, emailExists := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 		model.HubspotDocumentTypeNameContact, "email")]
 	if emailExists || emailInt != nil {
 		email, ok := emailInt.(string)
 		if ok && email != "" {
-			return U.GetEmailLowerCase(email)
+			return "email", U.GetEmailLowerCase(email)
 		}
 	}
 
@@ -163,7 +328,7 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 		phone := U.GetPropertyValueAsString(phoneInt)
 		identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
 		if identifiedPhone != "" {
-			return identifiedPhone
+			return "phone", identifiedPhone
 		}
 
 	}
@@ -175,12 +340,12 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 			phone := U.GetPropertyValueAsString(properties[key])
 			identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
 			if identifiedPhone != "" {
-				return identifiedPhone
+				return "phone", identifiedPhone
 			}
 		}
 	}
 
-	return ""
+	return "", ""
 }
 
 func getEventTimestamp(timestamp int64) int64 {
@@ -560,8 +725,7 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, 
 }
 
 func syncContact(project *model.Project, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
-	logCtx := log.WithField("project_id",
-		project.ID).WithField("document_id", document.ID)
+	logCtx := log.WithField("project_id", project.ID).WithField("document_id", document.ID)
 
 	if document.Action == model.HubspotDocumentActionDeleted {
 		contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{document.ID}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
@@ -700,7 +864,7 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 	logCtx = logCtx.WithField("action", document.Action).WithField(
 		model.UserPropertyHubspotContactLeadGUID, leadGUID)
 
-	customerUserID := getCustomerUserIDFromProperties(project.ID, *enProperties)
+	_, customerUserID := getCustomerUserIDFromProperties(project.ID, *enProperties)
 	var eventID, userID string
 	if document.Action == model.HubspotDocumentActionCreated {
 
@@ -822,6 +986,10 @@ func syncContact(project *model.Project, document *model.HubspotDocument, hubspo
 	for i := range hubspotSmartEventNames {
 		prevProperties = TrackHubspotSmartEvent(project.ID, &hubspotSmartEventNames[i], eventID, document.ID, userID, document.Type,
 			properties, prevProperties, defaultSmartEventTimestamp, false)
+	}
+
+	if C.EnableHubspotFormsEventsByProjectID(project.ID) {
+		syncContactFormSubmissions(project, userID, document)
 	}
 
 	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
@@ -1940,7 +2108,7 @@ func Sync(projectID uint64, workersPerProject int) ([]Status, bool) {
 	}
 
 	var orderedTimeSeries [][]int64
-	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID)
+	minTimestamp, errCode := store.GetStore().GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID, syncOrderByType[:])
 	if errCode != http.StatusFound {
 		if errCode == http.StatusNotFound {
 			statusByProjectAndType = append(statusByProjectAndType, Status{ProjectId: projectID,

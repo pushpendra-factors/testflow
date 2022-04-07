@@ -64,7 +64,7 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
 	filePath := flag.String("file_path", "", "")
 	projectName := flag.String("project_name", "", "")
@@ -432,6 +432,10 @@ func getPatterns(projectID uint64, file *os.File, countOccurence bool) ([]*P.Pat
 
 	// A -> $session , B -> Fund Project , C -> View Project
 
+	var cAlgoProps P.CountAlgoProperties
+	cAlgoProps.Counting_version = 1
+	cAlgoProps.Hmine_persist = 0
+	cAlgoProps.Hmine_support = 0.005
 	actualEventInfoMap := make(map[string]*P.PropertiesInfo)
 	// Initialize.
 	for _, eventName := range []string{"Fund Project", "$session", "View Project"} {
@@ -470,7 +474,7 @@ func getPatterns(projectID uint64, file *os.File, countOccurence bool) ([]*P.Pat
 		return nil, err
 	}
 	scanner = bufio.NewScanner(file)
-	err = P.CountPatterns(projectID, scanner, patterns, countOccurence, 2)
+	err = P.CountPatterns(projectID, scanner, patterns, countOccurence, cAlgoProps)
 	if err != nil {
 		return nil, err
 	}

@@ -1,57 +1,53 @@
-
 .group_block {
+  display: flex;
+  position: relative;
+  align-items: center;
 
+  &__group_content {
+    color: #5949bc;
+    font-weight: 500;
+    font-size: 14px;
     display: flex;
-    position: relative;
-    align-items: center;
+  }
 
-    &__group_content {
-        color: #5949BC;
-        font-weight: 500;
-        font-size: 14px;
-        display: flex;
+  &__event_selector {
+    position: absolute;
+    top: 32px;
+
+    &__btn {
+      position: relative;
     }
 
-    &__event_selector { 
-        position: absolute;
-        top: 32px;
-        left: 0;
-
-        &__btn {
-            position: relative;
-        }
-
-        .ant-select-selector {
-            border-radius: 12px;
-        }
+    .ant-select-selector {
+      border-radius: 12px;
     }
+  }
 
-    &__remove {
-        position: absolute;
-        left: -12px;
-    }
+  &__remove {
+    position: absolute;
+    left: -12px;
+  }
 }
 
 .grpProps {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  margin-left: 8px;
+  font-size: 14px;
+  color: #8692a3;
+
+  &__select {
     display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
     margin-left: 8px;
-    font-size: 14px;
-    color: #8692A3;
 
-    &__select {
-        display: flex;
-        margin-left: 8px;
-
-        &__opt {
-            color: #5949BC;
-            text-transform: capitalize;
-        }
-
-        &__opt:hover {
-            cursor: pointer;
-        }
-
+    &__opt {
+      color: #5949bc;
+      text-transform: capitalize;
     }
+
+    &__opt:hover {
+      cursor: pointer;
+    }
+  }
 }

@@ -13,6 +13,8 @@ import { useHistory } from 'react-router-dom';
 import Lottie from 'react-lottie';
 import setupAssistData from '../../../assets/lottie/Final Jan 3 Setupassist.json'
 import { fetchProjectSettingsV1, getHubspotContact, fetchBingAdsIntegration } from 'Reducers/global';
+import styles from './index.module.scss';
+import { meetLink } from '../../../utils/hubspot';
 
 const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSettingsV1, getHubspotContact, bingAds, fetchBingAdsIntegration}) => {
     const [current, setCurrent] = useState(0);
@@ -30,10 +32,6 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
             console.log(err.data.error)
         });
     }, []);
-    
-    let meetLink = ownerID === '116046946'? 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0'
-                    :ownerID === '116047122'? 'https://calendly.com/priyanka-267/30min'
-                    :ownerID === '116053799'? 'https://factors1.us4.opv1.com/meeting/factors/ralitsa': 'https://calendly.com/factors-ai/30min';
 
     const defaultOptions = {
         loop: true,
@@ -70,7 +68,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                     <Col span={ checkIntegration ? 17 : 20}>
                         <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'}>Let's get started</Text>
                         <Text type={'title'} level={6} weight={'regular'} extraClass={'m-0'} color={'grey'}>The first step to get up and running with Factors is to get data into your project:</Text>
-                        <img src='../../assets/images/Illustration=pop gift.png' style={{width: '100%',maxWidth: '80px', marginLeft:'610px',marginTop:'-80px'}}/>
+                        <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/pop-gift.png' style={{width: '100%',maxWidth: '80px', marginLeft:'610px',marginTop:'-80px'}}/>
                     </Col>
                     <Col>
                     { checkIntegration ?
@@ -80,23 +78,68 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                 </Row>
                 <Row gutter={[24, 24]} justify={'center'}>
                     <Col span={5} style={{paddingRight: '20px'}}>
-                        <Timeline>
-                            <Timeline.Item color ={current === 0 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 0 ? 'brand-color': null} onClick={() => setCurrent(0)}>Connect with your website data</Text></Timeline.Item>
-                            <Timeline.Item color ={current === 1 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 1 ? 'brand-color': null} onClick={() => setCurrent(1)}>Connect with your Ad platforms</Text></Timeline.Item>
-                            <Timeline.Item color ={current === 2 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 2 ? 'brand-color': null} onClick={() => setCurrent(2)}>Connect with your CRMs</Text></Timeline.Item>
-                            <Timeline.Item color ={current === 3 ? 'blue': 'grey'}><Text type={'title'} level={6} style={{paddingBottom:'20px', cursor: 'pointer'}} color ={current === 3 ? 'brand-color': null} onClick={() => setCurrent(3)}>Other integrations</Text></Timeline.Item>
-                        </Timeline>
-                        <Row className={'pt-16'}>
+                        <div>
+                            <div className={`${current == 0? styles.divActive: styles.div}`} onClick={() => setCurrent(0)}>
+                                <div className={`${current == 0? styles.sideActive: styles.side}`}>
+                                </div>
+                                <div className={`${current == 0? styles.textActive: styles.text}`}>
+                                    <p className={`${styles.text1}`}>Connect with your</p>
+                                    <p className={`${styles.text2}`}>Ad Platforms</p>
+                                </div>
+                                <div className={`m-0`}>
+                                    <SVG name={'CaretDown'} size={20} color={'blue'} extraClass={`${current == 0? styles.caretActive: styles.caret}`}/>
+                                </div>
+                            </div>
+
+                            <div className={`${current == 1? styles.divActive: styles.div}`} onClick={() => setCurrent(1)}>
+                                <div className={`${current == 1? styles.sideActive: styles.side}`}>
+                                </div>
+                                <div className={`${current == 1? styles.textActive: styles.text}`}>
+                                    <p className={`${styles.text1}`}>Connect with your</p>
+                                    <p className={`${styles.text2}`}>Website Data</p>
+                                </div>
+                                <div className={`m-0`}>
+                                    <SVG name={'CaretDown'} size={20} color={'blue'} extraClass={`${current == 1? styles.caretActive: styles.caret}`}/>
+                                </div>
+                            </div>
+
+                            <div className={`${current == 2? styles.divActive: styles.div}`} onClick={() => setCurrent(2)}>
+                                <div className={`${current == 2? styles.sideActive: styles.side}`}>
+                                </div>
+                                <div className={`${current == 2? styles.textActive: styles.text}`}>
+                                    <p className={`${styles.text1}`}>Connect with your</p>
+                                    <p className={`${styles.text2}`}>CRMs</p>
+                                </div>
+                                <div className={`m-0`}>
+                                    <SVG name={'CaretDown'} size={20} color={'blue'} extraClass={`${current == 2? styles.caretActive: styles.caret}`}/>
+                                </div>
+                            </div>
+
+                            <div className={`${current == 3? styles.divActive: styles.div}`} onClick={() => setCurrent(3)}>
+                                <div className={`${current == 3? styles.sideActive: styles.side}`}>
+                                </div>
+                                <div className={`${current == 3? styles.textActive: styles.text}`}>
+                                    <p className={`${styles.text1}`}>Other</p>
+                                    <p className={`${styles.text2}`}>Integrations</p>
+                                </div>
+                                <div className={`m-0`}>
+                                    <SVG name={'CaretDown'} size={20} color={'blue'} extraClass={`${current == 3? styles.caretActive: styles.caret}`}/>
+                                </div>
+                            </div>
+                        </div>
+                        <Row className={`${styles.help} mt-4`}>
                             <Col>
-                                <Text type={'title'} level={4} weight={'bold'} extraClass={'pb-4 m-0'}>Need help? We’re here!</Text>
-                                <Text type={'title'} level={6} extraClass={'pb-6 m-0'}>We’d love to help out</Text>
-                                <a href={meetLink} target='_blank' ><Button type={'primary'}>Setup Call</Button></a>
-                                <img src='../../assets/images/character-1.png' style={{width: '100%',maxWidth: '80px',marginLeft:'110px', marginTop:'-30px'}}/>
+                                <Text type={'title'} level={5} weight={'bold'} color={'white'} extraClass={'m-0 ml-6 mt-4'}>Need help with setup?</Text>
+                                <Text type={'title'} level={7} color={'white'} extraClass={'m-0 ml-6 mb-6'} style={{opacity: 0.7}}>Setup a call with our rep. We are always happy to assist to you</Text>
+                                <a href={meetLink(ownerID)} target='_blank' ><Button type={'text'} style={{color: '#1890FF'}} className={'ml-6 mb-4'}>Setup a Call</Button></a>
+                            </Col>
+                            <Col className={`${styles.callimg}`}>
+                                <img src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/1to1.svg' />
                             </Col>
                         </Row>
                     </Col>
                     <Col span={16} style={{padding: '0px 0px 0px 30px'}}>
-                        {current === 0 ? <Website setsdkCheck={setsdkCheck} sdkCheck={sdkCheck}/>: current === 1 ? <AdPlatforms />: current === 2 ? <CRMS /> : <OtherIntegrations />}
+                        {current === 0 ? <AdPlatforms />: current === 1 ? <Website setsdkCheck={setsdkCheck} sdkCheck={sdkCheck}/>: current === 2 ? <CRMS /> : <OtherIntegrations />}
                     </Col>
                 </Row>
             </div>

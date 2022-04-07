@@ -1039,6 +1039,10 @@ func enrichOpportunityContactRoles(projectID uint64, document *model.SalesforceD
 		}
 
 		if status == http.StatusFound {
+			if documents[0].Synced == false { // record not processed should be picked later for association
+				return http.StatusOK
+			}
+
 			contactUserID := documents[0].UserID
 			_, status = store.GetStore().UpdateUserGroup(projectID, contactUserID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, "", groupUserID)
 			if status != http.StatusAccepted && status != http.StatusNotModified {
@@ -1563,7 +1567,7 @@ func ApplySFOfflineTouchPointRule(project *model.Project, trackPayload *SDK.Trac
 		err := U.DecodePostgresJsonbToStructType(&project.SalesforceTouchPoints, &touchPointRules)
 		if err != nil {
 			// logging and continuing.
-			logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to fetch offline touch point rules for salesforce document.")
+			logCtx.WithField("Document", trackPayload).WithError(err).Error("Failed to decode/fetch offline touch point rules for salesforce document.")
 			return err
 		}
 

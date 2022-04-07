@@ -165,7 +165,7 @@ class ReportsFetch(BaseJob):
         return row
 
     def write_after_extract(self, rows_string):
-        rows = CsvUtil.unmarshall(rows_string)
+        rows, _ = CsvUtil.unmarshall(rows_string)
         self._rows = rows
         for timestamp in self._extract_load_timestamps:
             job_storage = scripts.adwords.CONFIG.ADWORDS_APP.job_storage
@@ -179,7 +179,7 @@ class ReportsFetch(BaseJob):
         else:
             job_storage = scripts.adwords.CONFIG.ADWORDS_APP.job_storage
             result_string = job_storage.read(timestamp, self._project_id, self._customer_acc_id, self._doc_type)
-            rows = CsvUtil.unmarshall(result_string)
+            rows, _ = CsvUtil.unmarshall(result_string)
         return rows
 
     # Internal Methods for Transformation. Please check context.

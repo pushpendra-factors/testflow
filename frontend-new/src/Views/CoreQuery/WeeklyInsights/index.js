@@ -32,7 +32,7 @@ const NoData = ({data}) => {
 
     return (
         <div className={'flex flex-col items-center pt-10'}>
-            <img src="assets/images/weekly-insights-no-data.png" className={'mb-2'} style={{ maxWidth: '175px', width: '100%' }} />
+            <img src="https://s3.amazonaws.com/www.factors.ai/assets/img/product/weekly-insights-no-data.png" className={'mb-2'} style={{ maxWidth: '175px', width: '100%' }} />
             <Text type={"title"} level={7} weight={'bold'} extraClass={"m-0"}>{text.title}</Text>
             <Text type={"title"} level={8} weight={'thin'} color={'grey'} extraClass={"m-0 mb-4"}>{text.subtitle}</Text>
 
@@ -62,7 +62,7 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
 
   const matchEventName = (item) => {   
       let findItem = eventPropNames?.[item] || userPropNames?.[item] 
-    return findItem ? findItem : item
+    return <Text type={"title"} level={8} color={'blue'} extraClass={"m-0"} truncate={true} charLimit={25}>{findItem ? findItem : item}</Text>
   }
 
     const panelActive = (panelNo) =>{ 
@@ -159,9 +159,9 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
                         <Number suffix={'%'} number={data.percentage} />
                     </Tag>
                     <Text type={"title"} level={7} extraClass={"m-0 mx-2"}>{`${data.isIncrease ? 'Increase' : 'Decrease'}  where`}</Text>
-                    <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight'}>{`${matchEventName(item.key)}`}</Tag>
+                    <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight'}>{matchEventName(item.key)}</Tag>
                     <Text type={"title"} level={7} extraClass={"m-0 ml-2"}>is</Text>
-                    <Text type={"title"} level={7} weight={'bold'} extraClass={"m-0 ml-1 mr-2"}>{`${item.value}`}</Text>
+                    <Text type={"title"} level={7} weight={'bold'} extraClass={"m-0 ml-1 mr-2"} truncate={true} charLimit={50}>{`${item.value}`}</Text>
                     <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0"}>{`(`}<Number number={data?.w1}   /> {` -> `}<Number number={data?.w2}   />{`)`}</Text>
                 </div>
                 <div className={'flex  items-center'}>
@@ -187,9 +187,9 @@ const WeeklyInishgtsResults = ({data, activeInsight, requestQuery,activeProject 
             return( 
                     <div className={'flex  items-center pl-10'}> 
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mr-2"}> {`Share of`}</Text> 
-                        <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight'}>{`${matchEventName(item.key)}`}</Tag>
+                        <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight'}>{matchEventName(item.key)}</Tag>
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 ml-1"}> {`is`}</Text> 
-                        <Text type={"title"} weight={'bold'} color={'grey'} level={8} extraClass={"m-0 ml-1"}>{item.value}</Text>
+                        <Text type={"title"} weight={'bold'} color={'grey'} level={8} extraClass={"m-0 ml-1"} truncate={true} charLimit={50}>{item.value}</Text>
                         <Text type={"title"} weight={'thin'} color={'grey'} level={8} extraClass={"m-0 mx-1"}>{`${data.isIncrease ? 'increased' : 'decreased'} by`}</Text>  
                         <Tag color={data.isIncrease ? 'green' : "red"} className={`m-0 mx-1 ${data.isIncrease ? 'fa-tag--green' : "fa-tag--red"}`}>
                             {data.isIncrease ? <SVG name={UpIcon} size={TagIconSize} color={'green'} /> : <SVG name={DownIcon} size={TagIconSize} color={'red'} />}

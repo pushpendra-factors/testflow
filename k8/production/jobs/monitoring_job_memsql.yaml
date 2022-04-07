@@ -60,7 +60,6 @@ spec:
             - "50000"
             - --primary_datastore
             - memsql
-            - --enable_sdk_and_integration_request_queue_duplication
             envFrom:
             - configMapRef:
                 name: config-env

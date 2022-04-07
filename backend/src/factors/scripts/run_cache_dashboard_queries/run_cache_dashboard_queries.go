@@ -19,7 +19,6 @@ func main() {
 	envFlag := flag.String("env", C.DEVELOPMENT, "Environment. Could be development|staging|production")
 	projectIDFlag := flag.String("project_id", "", "Comma separated project ids to run for. * to run for all")
 	excludeProjectIDFlag := flag.String("exclude_project_id", "", "Comma separated project ids to exclude for the run")
-	dashboardUnitIDFlag := flag.String("dashboard_unit_id", "", "Comma separated dashboard unit ids to run. * for all")
 	debugEnabled := flag.Bool("debug_enabled", false, "Enabled/Disable debug for the query.")
 	numRoutinesFlag := flag.Int("num_routines", 4, "Number of dashboard units to sync in parallel. Each dashboard unit runs 4 queries")
 	numRoutinesForWebAnalyticsFlag := flag.Int("num_routines_for_web_analytics", 1,
@@ -37,13 +36,14 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
 	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
 	memSQLDBMaxIdleConnections := flag.Int("memsql_max_idle_connections", 50, "Max no.of idle connections allowed on connection pool of memsql")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
-	onlyWebAnalytics := flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
+	onlyWebAnalytics := flag.Int("only_web_analytics", 0, "Cache only web analytics dashboards.")
+	skipWebAnalytics := flag.Int("skip_web_analytics", 0, "Skip Caching for web analytics dashboards.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -55,6 +55,8 @@ func main() {
 	onlyAttribution := flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
 	skipAttribution := flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
 	enableUsageBasedDashboardCaching := flag.Int("enable_usage_based_caching", 0, "Usage based dashboard caching analytics for 14 days limit.")
+	onlyKPICaching := flag.Int("only_kpi_caching", 0, "Cache only KPI Queries on dashboards.")
+	skipKPICaching := flag.Int("skip_kpi_caching", 0, "Skip caching KPI Queries on dashboards.")
 
 	runningForMemsql := flag.Int("running_for_memsql", 0, "Disable routines for memsql.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -87,8 +89,6 @@ func main() {
 		panic(fmt.Errorf("Invalid project id %s", *projectIDFlag))
 	} else if *numRoutinesFlag == 0 {
 		panic(fmt.Errorf("Num routines must at least be 1"))
-	} else if *dashboardUnitIDFlag == "" {
-		panic(fmt.Errorf("invalid dashboard unit id %s", *dashboardUnitIDFlag))
 	}
 
 	logCtx.Info("Starting to initialize database.")
@@ -133,6 +133,8 @@ func main() {
 		DebugEnabled:                        *debugEnabled,
 		ResourcePoolForAnalytics:            *resourcePoolForAnalytics,
 		UsageBasedDashboardCaching:          *enableUsageBasedDashboardCaching,
+		OnlyKPICaching:                      *onlyKPICaching,
+		SkipKPICaching:                      *skipKPICaching,
 	}
 
 	C.InitConf(config)
@@ -159,19 +161,21 @@ func main() {
 	var waitGroup sync.WaitGroup
 	var reportCollector sync.Map
 
-	if !*onlyWebAnalytics {
+	if *onlyWebAnalytics == 0 {
 		if C.GetIsRunningForMemsql() == 0 {
 			waitGroup.Add(1)
-			go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *dashboardUnitIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
+			go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
 		} else {
-			cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *dashboardUnitIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
+			cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &reportCollector, &waitGroup)
 		}
 	}
-	if C.GetIsRunningForMemsql() == 0 {
-		waitGroup.Add(1)
-		go cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
-	} else {
-		cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
+	if *skipWebAnalytics == 0 {
+		if C.GetIsRunningForMemsql() == 0 {
+			waitGroup.Add(1)
+			go cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
+		} else {
+			cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &reportCollector, &waitGroup)
+		}
 	}
 
 	if C.GetIsRunningForMemsql() == 0 {
@@ -228,13 +232,13 @@ func main() {
 
 }
 
-func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, dashboardUnitIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup) {
+func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map, waitGroup *sync.WaitGroup) {
 
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
 	startTime := util.TimeNowUnix()
-	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, dashboardUnitIDs, numRoutines, reportCollector)
+	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines, reportCollector)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	reportCollector.Store("all", timeTakenString)
 }

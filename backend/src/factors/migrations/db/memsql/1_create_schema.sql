@@ -155,6 +155,8 @@ CREATE TABLE IF NOT EXISTS agents (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     is_onboarding_flow_seen boolean,
+    is_auth0_user boolean DEFAULT false,
+    value json,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
     KEY (updated_at),
@@ -230,6 +232,7 @@ CREATE TABLE IF NOT EXISTS dashboards (
     type varchar(5),
     class text,
     is_deleted boolean NOT NULL DEFAULT FALSE,
+    settings json,
     created_at timestamp(6),
     updated_at timestamp(6),
     SHARD KEY (project_id),
@@ -388,7 +391,9 @@ CREATE TABLE IF NOT EXISTS project_billing_account_mappings (
 
 CREATE TABLE IF NOT EXISTS project_settings (
     project_id bigint,
+    attribution_config json,
     auto_track boolean NOT NULL DEFAULT FALSE, 
+    auto_track_spa_page_view boolean NOT NULL DEFAULT FALSE,
     auto_form_capture boolean NOT NULL DEFAULT FALSE,
     exclude_bot boolean NOT NULL DEFAULT FALSE,
     int_segment boolean NOT NULL DEFAULT FALSE,
@@ -424,6 +429,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
+    
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
@@ -859,5 +865,21 @@ CREATE TABLE IF NOT EXISTS integration_documents (
     KEY (project_id, customer_account_id, document_id, document_type, source, timestamp)  USING CLUSTERED COLUMNSTORE
 );
 
+CREATE TABLE IF NOT EXISTS alerts(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    alert_name text,
+    created_by text,
+    alert_type int,
+    alert_description json,
+    alert_configuration json,
+    last_alert_sent bool,
+    last_run_time timestamp(6),
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    is_deleted boolean,
+    SHARD KEY (project_id),
+    PRIMARY KEY (id),
+);
 
 -- DROP DATABASE factors;

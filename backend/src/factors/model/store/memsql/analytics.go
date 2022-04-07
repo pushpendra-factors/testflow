@@ -501,7 +501,7 @@ func getNoneHandledGroupBySelectWithFirst(projectID uint64, groupProp model.Quer
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
 	} else {
-		propertyName := "JSON_EXTRACT_STRING(" + entityField + ", ?)"
+		propertyName := "JSON_EXTRACT_STRING(FIRST(" + entityField + ", FROM_UNIXTIME(events.timestamp)), ?)"
 		timestampStr := getSelectTimestampByTypeAndPropertyName(groupProp.Granularity, propertyName, timezoneString)
 		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) = '' THEN '%s' WHEN JSON_EXTRACT_STRING(FIRST(%s, FROM_UNIXTIME(events.timestamp)), ?) = '0' THEN '%s' ELSE %s END AS %s",
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, timestampStr, groupKey)
@@ -584,7 +584,7 @@ func isGroupByTypeWithBuckets(groupProps []model.QueryGroupByProperty) bool {
 	return false
 }
 
-func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, groupProps []model.QueryGroupByProperty, refStepName, eventNameSelect string,
+func appendNumericalBucketingSteps(isAggregateOnProperty bool, qStmnt *string, qParams *[]interface{}, groupProps []model.QueryGroupByProperty, refStepName, eventNameSelect string,
 	isGroupByTimestamp bool, additionalSelectKeys string) (bucketedStepName, aggregateSelectKeys string, aggregateGroupBys, aggregateOrderBys []string) {
 	logFields := log.Fields{
 		"q_stmnt":                qStmnt,
@@ -601,6 +601,10 @@ func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, group
 	if eventNameSelect != "" {
 		bucketedSelect = bucketedSelect + eventNameSelect + ", "
 	}
+	if isAggregateOnProperty {
+		bucketedSelect = bucketedSelect + model.AliasAggr + ", "
+	}
+
 	var boundStepNames []string
 	var bucketedNumericValueFilter []string
 	for _, gbp := range groupProps {
@@ -1502,7 +1506,7 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	db := C.GetServices().Db
 	tx, err := db.DB().Begin()
 	if err != nil {
-		log.WithError(err).Error("Failed to beging transaction.")
+		log.WithError(err).Error("Failed to begin DB transaction.")
 		return nil, nil, err
 	}
 

@@ -188,8 +188,12 @@ func buildAllUsersQuery(projectID uint64, query model.ProfileQuery) (string, []i
 	if isGroupByTypeWithBuckets(query.GroupBys) {
 		selectAliases := model.AliasAggr
 		sqlStmnt := "WITH step_0 AS (" + stepSqlStmnt + ")"
-		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(&sqlStmnt, &params, query.GroupBys, "step_0", "", false, selectAliases)
-		selectAliases = aggregateSelectKeys + selectAliases
+		isAggregateOnProperty := false
+		if query.AggregateProperty != "" && query.AggregateProperty != "1" {
+			isAggregateOnProperty = true
+		}
+		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(isAggregateOnProperty, &sqlStmnt, &params, query.GroupBys, "step_0", "", false, selectAliases)
+		selectAliases = selectAliases + ", " + aggregateSelectKeys[:len(aggregateSelectKeys)-2]
 		finalGroupBy := model.AliasAggr + ", " + strings.Join(aggregateGroupBys, ",")
 		finalOrderBy := model.AliasAggr + ", " + strings.Join(aggregateOrderBys, ",")
 		finalSQLStmnt = fmt.Sprintf("%s SELECT %s FROM %s GROUP BY %s ORDER BY %s LIMIT 1000", sqlStmnt, selectAliases, bucketedStepName, finalGroupBy, finalOrderBy)

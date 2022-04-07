@@ -473,7 +473,7 @@ func getSalesforceDocumentValuesByPropertyAndLimit(salesforceDocument []model.Sa
 	return propertyValues
 }
 
-func getLatestSalesforceDocumetsByLimit(projectID uint64, docType int, limit int) ([]model.SalesforceDocument, error) {
+func getLatestSalesforceDocumetsByLimit(projectID uint64, docType int, limit int, lookbackTimeHr int) ([]model.SalesforceDocument, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"limit":      limit,
@@ -489,7 +489,7 @@ func getLatestSalesforceDocumetsByLimit(projectID uint64, docType int, limit int
 	}
 
 	var salesforceDocument []model.SalesforceDocument
-	lbTimestamp := U.UnixTimeBeforeDuration(48 * time.Hour)
+	lbTimestamp := U.UnixTimeBeforeDuration(time.Duration(lookbackTimeHr) * time.Hour)
 	db := C.GetServices().Db
 	err := db.Model(&model.SalesforceDocument{}).Where("project_id = ? AND type = ? AND action = ? AND timestamp > ?",
 		projectID, docType, model.SalesforceDocumentUpdated, lbTimestamp).Order("timestamp desc").Limit(limit).Find(&salesforceDocument).Error
@@ -517,7 +517,7 @@ func (store *MemSQL) GetSalesforceObjectPropertiesName(ProjectID uint64, objectT
 	}
 
 	logCtx := log.WithFields(logFields)
-	salesforceDocument, err := getLatestSalesforceDocumetsByLimit(ProjectID, docType, 1000)
+	salesforceDocument, err := getLatestSalesforceDocumetsByLimit(ProjectID, docType, 1000, C.GetSalesforcePropertyLookBackTimeHr())
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to GetSalesforceObjectPropertiesName")
 		return nil, nil
@@ -544,7 +544,7 @@ func (store *MemSQL) GetSalesforceObjectValuesByPropertyName(ProjectID uint64, o
 	}
 
 	logCtx := log.WithFields(logFields)
-	salesforceDocument, err := getLatestSalesforceDocumetsByLimit(ProjectID, docType, 1000)
+	salesforceDocument, err := getLatestSalesforceDocumetsByLimit(ProjectID, docType, 1000, C.GetSalesforcePropertyLookBackTimeHr())
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to GetSalesforceObjectPropertiesValues")
 		return nil
@@ -680,6 +680,12 @@ func (store *MemSQL) BuildAndUpsertDocument(projectID uint64, objectName string,
 	status := store.CreateSalesforceDocument(projectID, &document)
 	if status != http.StatusCreated && status != http.StatusConflict {
 		return fmt.Errorf("error while creating document Status %d", status)
+	}
+
+	if status == http.StatusConflict {
+		log.WithFields(log.Fields{"project_id": projectID, "object_name": objectName}).Info("Skipped inserting salesforce record.")
+	} else {
+		log.WithFields(log.Fields{"project_id": projectID, "object_name": objectName}).Info("Successfully inserted salesforce record.")
 	}
 
 	return nil

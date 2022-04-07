@@ -11,7 +11,7 @@ import _ from 'lodash';
 const { TabPane } = Tabs; 
 const { Option, OptGroup } = Select;
 
-function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesData, fetchSmartEvents, fetchSpecificPropertiesValue, fetchObjectPropertiesbySource, setShowSmartEventForm, saveSmartEvents, activeProject, events}) { 
+function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesData, fetchSmartEvents, fetchSpecificPropertiesValue, fetchObjectPropertiesbySource, setShowSmartEventForm, saveSmartEvents, activeProject, events, seletedEvent}) { 
     
     const [loading, setLoading] = useState(false); 
     const [errorInfo, seterrorInfo] = useState(null);
@@ -22,6 +22,8 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
     const [specificEvaluation, setSpecificEvaluation] = useState(false);
     const [objPropertiesSourceArr, setobjPropertiesSourceArr] = useState(null);
     const [objPropertiesSourceArrDT, setobjPropertiesSourceArrDT] = useState(null);
+    const [formState, setFormState] = useState('add');
+    const [smartEventState, setsmartEventState] = useState({});
     
     // Specific Rules
     const [currOperator, setCurrOperator] = useState('EQUAL'); 
@@ -34,6 +36,13 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
     const onChange = () => {
         seterrorInfo(null);
       };
+
+    useEffect(() => {
+        if(seletedEvent) {
+            setsmartEventState(seletedEvent);
+            setFormState('view');
+        }
+    }, [seletedEvent])
     
     const postDataFormat = {
         "expr": {
@@ -212,6 +221,119 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
         setLastVal(defaultValue);
         setCurrVal(defaultValue);
       },[specificPropertiesData])
+
+
+    const renderCunstomEventDetails = () => {
+        return (
+            <>
+                <Row>
+                    <Col span={12}>
+                        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Custom Event Details</Text>
+                    </Col>
+                    <Col span={12}>
+                        <div className={'flex justify-end'}>
+                        <Button size={'large'} disabled={loading} onClick={() => setShowSmartEventForm(false)}>Cancel</Button>
+                        </div>
+                    </Col>
+                </Row> 
+                                            
+                <Row className={'mt-8'}>
+                    <Col span={18}>
+                    <Text type={'title'} level={7} extraClass={'m-0'}>Display Name</Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.name}</Text>
+                    </Col> 
+                </Row>
+
+                <Row className={'mt-8'}>
+                    <Col span={18}>
+                    <Text type={'title'} level={7} extraClass={'m-0'}>Description </Text>
+                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.description}</Text>
+                    </Col> 
+                </Row>
+
+                <Row className={'mt-8'}>
+                    <Col span={18}>
+                        <Text type={'title'} level={7} extraClass={'m-0'}>Event type</Text>
+                        <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.event_type ? smartEventState?.expr?.event_type : 'CRM transition based event'}</Text>
+                    </Col>
+                </Row>
+
+
+                <Row className={'mt-8'}>
+                    <Col span={18}>
+                        <div className={'border-top--thin pt-5 mt-5'}>
+                            <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Event Rule</Text> 
+
+                        </div>
+                    </Col>
+                </Row>
+                <Row className={'mt-8'}>
+                    <Col span={18}>
+                        <Text type={'title'} level={7} extraClass={'m-0'}>Select data source</Text>
+                        <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.source}</Text>
+                    </Col>
+                </Row>
+                {smartEventState?.expr?.object_type &&
+                <Row className={'mt-8'}>
+                    <Col span={18}>
+                        <Text type={'title'} level={7} extraClass={'m-0'}>Select object</Text>
+                        <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.object_type}</Text>
+                    </Col>
+                </Row>
+                }
+                { smartEventState?.expr?.property_evaluation_type &&
+                <Row className={'mt-8'}>
+                    <Col span={18}> 
+                        <Text type={'title'} level={7} extraClass={'m-0'}>Rule for evaluation</Text>
+                        <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.property_evaluation_type}</Text>
+                    </Col>
+                </Row>
+                }
+                           
+                {smartEventState?.expr?.filters[0]?.property_name &&
+                <Row className={'mt-8'}>
+                    <Col span={18}>
+                        <Text type={'title'} level={7} extraClass={'m-0'}>Select object property</Text>
+                        <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.filters[0]?.property_name}</Text>
+                    </Col>
+                </Row>
+                }
+                { smartEventState?.expr?.filters[0]?.Rules[0] &&
+                <Row className={'mt-8'}>
+                    <Col span={24}> 
+                        <div className={'flex items-center'}>
+                            <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>New Value</Text>
+                            <div>
+                                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.filters[0]?.Rules[0]?.op}</Text>
+                            </div>
+                            <div className={'ml-2'}>
+                                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.filters[0]?.Rules[0]?.value}</Text>
+                            </div>
+                            <Text type={'title'} level={7} extraClass={'m-0 mx-2'}>and previous value</Text>
+                            <div>
+                                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.filters[0]?.Rules[1]?.op}</Text>
+                            </div>
+                            <div className={'ml-2'}>
+                                <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState?.expr?.filters[0]?.Rules[1]?.value}</Text>
+                            </div>
+                        </div>
+                    </Col>
+                    <Col span={24}> 
+                        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Previous and current values of the object property will be available as custom event properties</Text> 
+                    </Col>
+                </Row> }
+
+                { smartEventState?.expr?.timestamp_reference_field &&
+                <Row className={'mt-8'}>
+                    <Col span={18}> 
+                        <Text type={'title'} level={7} extraClass={'m-0'}>Select time of event</Text>
+                        <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{smartEventState.expr.timestamp_reference_field}</Text>
+                    </Col>
+                </Row>
+                }
+            </>
+        );
+    }
  
   return (
     <>
@@ -230,6 +352,8 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                             property_evaluation_type: 'any',
                           }}
                         >
+                        {formState !== 'view' ?
+                        <>
                             <Row>
                                 <Col span={12}>
                                     <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>New Custom Event</Text>
@@ -464,9 +588,10 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                                 </Col>
                             </Row> 
                             }
-
-                
-                        </Form>
+                        </>
+                        : renderCunstomEventDetails()
+                        }
+                    </Form>
             </div>  
         </Col> 
         </Row> 

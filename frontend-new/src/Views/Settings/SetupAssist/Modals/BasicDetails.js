@@ -32,8 +32,11 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
   const [showProfile, setShowProfile] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [checkbox, setcheckbox] = useState(true);
+  const [loading, setloading] = useState(false); 
 
   const onFinish = values => {
+      setloading(true);
+
        let projectData = {
         name: values.projectName,
         time_zone: TimeZoneOffsetValues[values.time_zone]?.city
@@ -47,24 +50,22 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
         if(checkbox) {
           projectAgentInvite(projectId, {'email': 'solutions@factors.ai','role': 2}).then(() => {
             message.success('Invitation sent successfully!');
-            setFormData(projectData);
           }).catch((err) => {
             message.error(err);
-            setFormData(projectData);
           });
         }
         if(imageUrl) {
           udpateProjectDetails(projectId, {'profile_picture':imageUrl}).then(() => {
             message.success('Profile Image Uploaded')
-            setFormData(projectData);
           }).catch((err) => {
             message.error('error:',err)
-            setFormData(projectData);
           })
         }
+        setloading(false);
         setFormData(projectData);
         message.success('New Project Created!');
       }).catch((err) => {
+        setloading(false);
         message.error('Oops! Something went wrong.');
         console.log('createProject Failed:', err);
       });
@@ -200,7 +201,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
                         <Col span={24}>
                             <div className={'mt-8 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type="primary" style={{width:'27vw', height:'36px'}} className={'m-0'} htmlType="submit">
+                                    <Button size={'large'} type="primary" loading={loading} style={{width:'27vw', height:'36px'}} className={'m-0'} htmlType="submit">
                                     Create
                                     </Button>
                                 </Form.Item>

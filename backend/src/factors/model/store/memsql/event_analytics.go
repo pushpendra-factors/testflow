@@ -156,6 +156,7 @@ func (store *MemSQL) RunInsightsQuery(projectId uint64, query model.Query) (*mod
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
+	model.AddMissingEventNamesInResult(result, &query, isTimezoneEnabled)
 	err = SanitizeQueryResult(result, &query, isTimezoneEnabled)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to sanitize query results.")
@@ -1082,7 +1083,11 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 		if query.EventsCondition == model.EventCondEachGivenEvent {
 			eventName = model.AliasEventName
 		}
-		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
+		isAggregateOnProperty := false
+		if query.AggregateProperty != "" && query.AggregateProperty != "1" {
+			isAggregateOnProperty = true
+		}
+		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(isAggregateOnProperty,
 			&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id, coal_user_id")
 		aggregateFromStepName = bucketedStepName
 		aggregateSelectKeys = bucketedSelectKeys
@@ -1855,7 +1860,11 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 		aggregateSelect = aggregateSelect + model.AliasDateTime + ", "
 	}
 	if isGroupByTypeWithBuckets(q.GroupByProperties) {
-		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(
+		isAggregateOnProperty := false
+		if q.AggregateProperty != "" && q.AggregateProperty != "1" {
+			isAggregateOnProperty = true
+		}
+		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(isAggregateOnProperty,
 			&qStmnt, &qParams, q.GroupByProperties, withUsersStepName, eventNameSelect, isGroupByTimestamp, "event_user_id")
 		aggregateGroupBys = append(aggregateGroupBys, eventNameSelect)
 		aggregateSelectKeys = eventNameSelect + ", " + aggregateSelectKeys
@@ -2254,7 +2263,11 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
 	if isGroupByTypeWithBuckets(query.GroupByProperties) {
 		eventName := model.AliasEventName
-		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
+		isAggregateOnProperty := false
+		if query.AggregateProperty != "" && query.AggregateProperty != "1" {
+			isAggregateOnProperty = true
+		}
+		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(isAggregateOnProperty,
 			&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_id")
 		aggregateFromStepName = bucketedStepName
 		aggregateSelectKeys = bucketedSelectKeys

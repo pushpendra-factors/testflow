@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback, lazy, Suspense } from "react";
-import { Layout, Spin } from "antd";
-import Sidebar from "../../components/Sidebar"; 
-import ProjectSettings from "../Settings/ProjectSettings";
-import componentsLib from "../../Views/componentsLib";
-import SetupAssist from "../Settings/SetupAssist";
-import { connect, useSelector, useDispatch } from "react-redux";
-import { bindActionCreators } from "redux";
+import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
+import { Layout, Spin } from 'antd';
+import Sidebar from '../../components/Sidebar';
+import ProjectSettings from '../Settings/ProjectSettings';
+import componentsLib from '../../Views/componentsLib';
+import SetupAssist from '../Settings/SetupAssist';
+import { connect, useSelector, useDispatch } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import {
   BrowserRouter as Router,
   Route,
@@ -14,6 +14,7 @@ import {
 } from 'react-router-dom';
 import { fetchProjects, setActiveProject } from 'Reducers/global';
 import {
+  fetchAttrContentGroups,
   fetchGroups,
   fetchQueries,
   fetchSmartPropertyRules,
@@ -30,7 +31,9 @@ import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { fetchKPIConfig, fetchPageUrls } from '../../reducers/kpi';
+import Welcome from "../Settings/SetupAssist/Welcome";
 
+const FactorsInsights = lazyWithRetry(() => import("../Factors/FactorsInsightsNew"));
 const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
 const Dashboard = lazyWithRetry(() => import('../Dashboard'));
 const Factors = lazyWithRetry(() => import('../Factors'));
@@ -74,10 +77,17 @@ function AppLayout({
     if (projects.length && _.isEmpty(active_project)) {
       let activeItem = projects?.filter(
         (item) => item.id == localStorage.getItem('activeProject')
-      ); 
+      );
       //handling Saas factors demo
-      let default_project = projects[0]?.id == 519 ? (projects[1] ? projects[1] : projects[0]) : projects[0];
-      let projectDetails = _.isEmpty(activeItem) ? default_project : activeItem[0];
+      let default_project =
+        projects[0]?.id == 519
+          ? projects[1]
+            ? projects[1]
+            : projects[0]
+          : projects[0];
+      let projectDetails = _.isEmpty(activeItem)
+        ? default_project
+        : activeItem[0];
       setActiveProject(projectDetails);
     }
   }, [projects]);
@@ -94,6 +104,7 @@ function AppLayout({
       getUserProperties(active_project.id);
       dispatch(fetchSmartPropertyRules(active_project.id));
       fetchWeeklyIngishtsMetaData(active_project.id);
+      dispatch(fetchAttrContentGroups(active_project.id));
     }
   }, [dispatch, active_project]);
 
@@ -132,8 +143,12 @@ function AppLayout({
                     name="Home"
                     component={CoreQuery}
                   />
-                  <Route path="/explain" name="Factors" component={Factors} />
+
+                  <Route exact path="/explain" name="Factors" component={Factors} />
+                  <Route exact path="/explain/insights" name="Factors" component={FactorsInsights} />
+
                   <Route path="/project-setup" component={SetupAssist} />
+                  <Route path="/welcome" component={Welcome} />
                 </Switch>
               </Suspense>
             </Content>

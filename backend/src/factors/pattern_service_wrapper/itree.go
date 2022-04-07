@@ -1669,6 +1669,30 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 		}
 		childNodes = append(childNodes, child...)
 	}
+
+	if pLen > 1 {
+		child := it.buildCategoricalPropertyChildNodesV1(reqId,
+			eventCatProperties, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
+			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)
+		debugKey = fmt.Sprintf("itree_attribute_totaleventCategorical_filtered_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		for _, node := range child {
+			debugData["EPCat"] = append(debugData["EPCat"], node.PatternConstraints)
+		}
+		childNodes = append(childNodes, child...)
+	}
+
+	if pLen > 1 {
+		child := it.buildNumericalPropertyChildNodesV1(reqId,
+			eventNumProperties, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
+			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)
+		debugKey = fmt.Sprintf("itree_attribute_totaleventNumerical_filtered_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		for _, node := range child {
+			debugData["EPNum"] = append(debugData["EPNum"], node.PatternConstraints)
+		}
+		childNodes = append(childNodes, child...)
+	}
 	// Sort in decreasing order of infoDrop.
 	sort.SliceStable(childNodes,
 		func(i, j int) bool {

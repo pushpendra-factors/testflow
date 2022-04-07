@@ -32,7 +32,7 @@ function SortableCards({
           'flex flex-col justify-center fa-dashboard--no-data-container items-center'
         }
       >
-        <img alt='no-data' src='assets/images/no-data.png' className={'mb-8'} />
+        <img alt='no-data' src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/no-data.png' className={'mb-8'} />
         <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
           Add widgets to start monitoring.
         </Text>

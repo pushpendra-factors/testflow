@@ -11,7 +11,8 @@ import {
     getUserProperties,
 } from "Reducers/coreQuery/middleware";
 import { formatFilterDate } from '../../../../utils/dataFormatter';
-import _ from 'lodash'; 
+import _ from 'lodash';
+import { reverseOperatorMap, reverseDateOperatorMap } from '../../../../Views/CoreQuery/utils';
 
 
 const { Panel } = Collapse;
@@ -36,6 +37,8 @@ const CustomKPI = ({
     const [filterDDValues, setFilterDDValues] = useState();
     const [filterValues, setFilterValues] = useState([]);
     const [KPIFn, setKPIFn] = useState(false);
+    const [viewMode, KPIviewMode] = useState(false);
+    const [viewKPIDetails, setKPIDetails] = useState(false);
 
 
 
@@ -44,19 +47,17 @@ const CustomKPI = ({
     const [queryOptions, setQueryOptions] = useState({});
 
 
-    const menu = (obj) => {
+    const menu = (item) => {
         return (
             <Menu>
                 <Menu.Item key="0"
-                //   onClick={() => showDeleteWidgetModal(obj.id)}
+                    onClick={() => {
+                        KPIviewMode(true)
+                        setKPIDetails(item)
+                    }}
                 >
-                    <a>Remove</a>
+                    <a>View</a>
                 </Menu.Item>
-                {/* <Menu.Item key="1"
-                //   onClick={() => editProp(obj)}
-                >
-                    <a>Edit</a>
-                </Menu.Item> */}
             </Menu>
         );
     };
@@ -68,43 +69,44 @@ const CustomKPI = ({
             title: 'KPI Name',
             dataIndex: 'name',
             key: 'name',
-            render: (text) => <span className={'font-medium'}>{text}</span>,
-            width: 100,
+            render: (text) => <Text type={'title'} level={7} truncate={true} charLimit={25}>{text}</Text>,
+            // width: 100,
         },
         {
             title: 'Description',
             dataIndex: 'desc',
             key: 'desc',
-            render: (text) => <span className={'text-gray-700'}>{text}</span>,
-            width: 200,
+            render: (text) => <Text type={'title'} level={7} truncate={true} charLimit={25}>{text}</Text>,
+            // width: 200,
         },
         {
             title: 'Aggregate Function',
             dataIndex: 'transformations',
             key: 'transformations',
-            render: (item) => <span className={'text-gray-700'}>{`${item.agFn}(${item.agPr ? item.agPr : (item.daFie ? item.daFie : '') })`}</span>,
-            width: 400,
+            render: (item) => <Text type={'title'} level={7} truncate={true} charLimit={25}>{`${item.agFn}(${item.agPr ? item.agPr : (item.daFie ? item.daFie : '')})`}</Text>,
+            width: 'auto',
         },
-        // {
-        //     title: '',
-        //     dataIndex: 'actions',
-        //     key: 'actions',
-        //     align: 'right',
-        //     render: (obj) => (
-        //         <Dropdown overlay={() => menu(obj)} trigger={['click']}>
-        //             <Button type="text" icon={<MoreOutlined rotate={90} style={{ color: 'gray', fontSize: '18px' }} />} />
-        //         </Dropdown>
-        //     )
-        // }
+        {
+            title: '',
+            dataIndex: 'actions',
+            key: 'actions',
+            align: 'right',
+            width: 75,
+            render: (obj) => (
+                <Dropdown overlay={() => menu(obj)} trigger={['click']}>
+                    <Button type="text" icon={<MoreOutlined rotate={90} style={{ color: 'gray', fontSize: '18px' }} />} />
+                </Dropdown>
+            )
+        }
     ];
     const onChange = () => {
         seterrorInfo(null);
     };
 
-    const setGlobalFiltersOption = (filters) => { 
+    const setGlobalFiltersOption = (filters) => {
         const opts = Object.assign({}, queryOptions)
         opts.globalFilters = filters;
-        setFilterValues(opts); 
+        setFilterValues(opts);
     }
 
     const operatorMap = {
@@ -124,49 +126,49 @@ const CustomKPI = ({
         'not in the current': 'notInCurrent',
         before: 'before',
         since: 'since',
-      }; 
-      
+    };
 
-    const getEventsWithPropertiesKPI = (filters, category=null) => {
+
+    const getEventsWithPropertiesKPI = (filters, category = null) => {
         const filterProps = [];
         // adding fil?.extra ? fil?.extra[*] check as a hotfix for timestamp filters
         filters.forEach((fil) => {
-          if (Array.isArray(fil.values)) {
-            fil.values.forEach((val, index) => {
-              filterProps.push({
-                prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
-                prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
-                co: operatorMap[fil.operator],
-                lOp: !index ? 'AND' : 'OR',
-                en:
-                  category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
-                objTy:
-                  category == 'channels'
-                    ? fil?.extra
-                      ? fil?.extra[3]
-                      : 'event'
-                    : '',
-                va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
-              });
-            });
-          } else {
-            filterProps.push({
-              prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
-              prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
-              co: operatorMap[fil.operator],
-              lOp: 'AND',
-              en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
-              objTy:
-                category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
-              va:
-                fil.props[1] === 'datetime'
-                  ? formatFilterDate(fil.values)
-                  : fil.values,
-            });
-          }
+            if (Array.isArray(fil.values)) {
+                fil.values.forEach((val, index) => {
+                    filterProps.push({
+                        prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+                        prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+                        co: operatorMap[fil.operator],
+                        lOp: !index ? 'AND' : 'OR',
+                        en:
+                            category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+                        objTy:
+                            category == 'channels'
+                                ? fil?.extra
+                                    ? fil?.extra[3]
+                                    : 'event'
+                                : '',
+                        va: fil.props[1] === 'datetime' ? formatFilterDate(val) : val,
+                    });
+                });
+            } else {
+                filterProps.push({
+                    prNa: fil?.extra ? fil?.extra[1] : `$${_.lowerCase(fil?.props[0])}`,
+                    prDaTy: fil?.extra ? fil?.extra[2] : fil?.props[1],
+                    co: operatorMap[fil.operator],
+                    lOp: 'AND',
+                    en: category == 'channels' ? '' : fil?.extra ? fil?.extra[3] : 'event',
+                    objTy:
+                        category == 'channels' ? (fil?.extra ? fil?.extra[3] : 'event') : '',
+                    va:
+                        fil.props[1] === 'datetime'
+                            ? formatFilterDate(fil.values)
+                            : fil.values,
+                });
+            }
         });
         return filterProps;
-      };
+    };
 
     const onFinish = data => {
         let payload = {
@@ -178,24 +180,25 @@ const CustomKPI = ({
                 "agPr": KPIPropertyDetails?.name,
                 "agPrTy": KPIPropertyDetails?.data_type,
                 "fil": filterValues?.globalFilters ? getEventsWithPropertiesKPI(filterValues?.globalFilters) : [],
-                "daFie": data.kpi_dateField, 
+                "daFie": data.kpi_dateField,
             },
-        } 
+        }
         setLoading(true);
         addNewCustomKPI(activeProject.id, payload).then(() => {
             setLoading(false);
-            fetchSavedCustomKPI(activeProject.id); 
+            fetchSavedCustomKPI(activeProject.id);
             notification.success({
                 message: "KPI Saved",
-                description: "New KPI is created and saved successfully. You can start using it across the product shortly.", 
-            }); 
+                description: "New KPI is created and saved successfully. You can start using it across the product shortly.",
+            });
+            form.resetFields();
             setShowForm(false);
         }).catch((err) => {
             setLoading(false);
             notification.error({
                 message: "Error",
-                description: err?.data?.error, 
-            }); 
+                description: err?.data?.error,
+            });
             console.log('addNewCustomKPI error->', err)
         })
 
@@ -247,11 +250,30 @@ const CustomKPI = ({
         }
     }, [savedCustomKPI]);
 
+    const getStateFromFilters = (rawFilters = []) => {
+        const filters = [];
+        rawFilters.forEach((pr) => {
+            if (pr.lOp === 'AND') {
+                filters.push({
+                    operator:
+                        pr.objTy === 'datetime'
+                            ? reverseDateOperatorMap[pr.co]
+                            : reverseOperatorMap[pr.co],
+                    props: [pr.prNa, pr.prDaTy, pr.objTy],
+                    values: [pr.va],
+                });
+            } else {
+                filters[filters.length - 1].values.push(pr.va);
+            }
+        }); 
+        return filters;
+    }; 
+
     return (
         <>
             <div className={'mb-10 pl-4'}>
 
-                {!showForm && <>
+                {(!showForm && !viewMode) && <>
                     <Row>
                         <Col span={12}>
                             <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Custom KPIs</Text>
@@ -265,7 +287,7 @@ const CustomKPI = ({
                     <Row className={'mt-4'}>
                         <Col span={24}>
                             <div className={'mt-6'}>
-                                <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0'}>Define Custom KPIs using the Website and CRM data. Add filters and set the date field to be used for the horizontal axes of the KPI. 
+                                <Text type={'title'} level={7} color={'grey-2'} extraClass={'m-0'}>Define Custom KPIs using the Website and CRM data. Add filters and set the date field to be used for the horizontal axes of the KPI.
                                     {/* Learn <a href='#'>more</a> */}
                                 </Text>
 
@@ -274,14 +296,14 @@ const CustomKPI = ({
                                     dataSource={tableData}
                                     pagination={false}
                                     loading={tableLoading}
-                                // tableLayout= 'fixed'
+                                    tableLayout={'fixed'}
                                 />
                             </div>
                         </Col>
                     </Row>
                 </>
                 }
-                {showForm && <>
+                {(showForm && !viewMode) && <>
 
 
                     <Form
@@ -297,7 +319,10 @@ const CustomKPI = ({
                             </Col>
                             <Col span={12}>
                                 <div className={'flex justify-end'}>
-                                    <Button size={'large'} disabled={loading} onClick={() => setShowForm(false)}>Cancel</Button>
+                                    <Button size={'large'} disabled={loading} onClick={() => {
+                                        setShowForm(false);
+                                        form.resetFields();
+                                    }}>Cancel</Button>
                                     <Button size={'large'} disabled={loading} loading={loading} className={'ml-2'} type={'primary'} htmlType="submit">Save</Button>
                                 </div>
                             </Col>
@@ -341,7 +366,7 @@ const CustomKPI = ({
                                         showSearch
                                         filterOption={(input, option) =>
                                             option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                                          }
+                                        }
                                     >
                                         {
                                             customKPIConfig?.result?.objTyAndProp?.map((item) => {
@@ -352,34 +377,33 @@ const CustomKPI = ({
                             </Col>
                         </Row>
 
-                      {  selKPICategory && 
-                        <Row className={'mt-8'}>
-                            <Col span={18}>
-                                <Text type={'title'} level={7} extraClass={'m-0'}>Select Function</Text>
-                                <Form.Item
-                                    name="kpi_function"
-                                    className={'m-0'}
-                                    rules={[{ required: true, message: 'Please select a Function' }]}
-                                >
-                                    <Select className={'fa-select w-full'} size={'large'}
-                                        placeholder="Function"
-                                        onChange={(value, details) => {
-                                            console.log('setKPIFn',value, details)
+                        {selKPICategory &&
+                            <Row className={'mt-8'}>
+                                <Col span={18}>
+                                    <Text type={'title'} level={7} extraClass={'m-0'}>Select Function</Text>
+                                    <Form.Item
+                                        name="kpi_function"
+                                        className={'m-0'}
+                                        rules={[{ required: true, message: 'Please select a Function' }]}
+                                    >
+                                        <Select className={'fa-select w-full'} size={'large'}
+                                            placeholder="Function"
+                                            onChange={(value, details) => { 
                                                 setKPIFn(value)
                                             }}
-                                        showSearch
-                                        filterOption={(input, option) =>
-                                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                                          }
-                                    >
-                                        {
-                                            customKPIConfig?.result?.agFn?.map((item) => {
-                                                return <Option key={item} value={item}>{_.startCase(item)}</Option>
-                                            })}
-                                    </Select>
-                                </Form.Item>
-                            </Col>
-                        </Row>}
+                                            showSearch
+                                            filterOption={(input, option) =>
+                                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                            }
+                                        >
+                                            {
+                                                customKPIConfig?.result?.agFn?.map((item) => {
+                                                    return <Option key={item} value={item}>{_.startCase(item)}</Option>
+                                                })}
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+                            </Row>}
 
                         {(KPIFn && KPIFn != "unique" && filterDDValues) && <>
                             <Row className={'mt-8'}>
@@ -398,14 +422,14 @@ const CustomKPI = ({
                                             showSearch
                                             filterOption={(input, option) =>
                                                 option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                                              }
+                                            }
                                         >
                                             {
                                                 customKPIConfig?.result?.objTyAndProp?.map((category) => {
                                                     if (category.objTy == selKPICategory) {
                                                         return category?.properties?.map((item) => {
-                                                            if(item.data_type == 'numerical'){
-                                                                return <Option key={item.name} value={item.display_name} name={item.name} data_type={item.data_type} entity={item.entity} >{_.startCase(item.display_name)}</Option> 
+                                                            if (item.data_type == 'numerical') {
+                                                                return <Option key={item.name} value={item.display_name} name={item.name} data_type={item.data_type} entity={item.entity} >{_.startCase(item.display_name)}</Option>
                                                             }
                                                         })
                                                     }
@@ -415,7 +439,7 @@ const CustomKPI = ({
                                 </Col>
                             </Row>
 
-                            </>}
+                        </>}
 
                         {filterDDValues && <>
                             <Row className={'mt-8'}>
@@ -426,8 +450,8 @@ const CustomKPI = ({
                                         {/* <Collapse defaultActiveKey={['1']} ghost expandIconPosition={'right'}>
                                         <Panel header={<Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>FILTER BY</Text>} key="1">
                                          */}
-                                         
-                                        <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>FILTER BY</Text> 
+
+                                        <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>FILTER BY</Text>
                                         <GLobalFilter
                                             filters={filterValues?.globalFilters}
                                             onFiltersLoad={[() => { getUserProperties(activeProject.id, null) }]}
@@ -457,7 +481,7 @@ const CustomKPI = ({
                                             showSearch
                                             filterOption={(input, option) =>
                                                 option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                                              }
+                                            }
                                         >
                                             {
                                                 customKPIConfig?.result?.objTyAndProp?.map((category) => {
@@ -473,15 +497,78 @@ const CustomKPI = ({
                                 </Col>
                             </Row>
 
-                            </>}
+                        </>}
 
-                        
+
 
 
 
 
 
                     </Form>
+
+
+                </>}
+
+                {viewMode && <>
+
+                    <Row>
+                        <Col span={12}>
+                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>View Custom KPI</Text>
+                        </Col>
+                        <Col span={12}>
+                            <div className={'flex justify-end'}>
+                                <Button size={'large'} disabled={loading} onClick={() => {
+                                    KPIviewMode(false);
+                                }}>Back</Button>
+                            </div>
+                        </Col>
+                    </Row>
+                    <Row className={'mt-8'}>
+                        <Col span={18}>
+                            <Text type={'title'} level={7} extraClass={'m-0'}>KPI Name</Text>
+                            <Input disabled={true} size="large" value={viewKPIDetails?.name} className={'fa-input w-full'} placeholder="Display Name" />
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col span={18}>
+                            <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>Description</Text>
+                            <Input disabled={true} size="large" value={viewKPIDetails?.description} className={'fa-input w-full'} placeholder="Display Name" />
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col span={18}>
+                            <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>KPI Category</Text>
+                            <Input disabled={true} size="large" value={viewKPIDetails?.objTy} className={'fa-input w-full'} placeholder="Display Name" />
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col span={18}>
+                            <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>Function</Text>
+                            <Input disabled={true} size="large" value={viewKPIDetails?.transformations?.agFn} className={'fa-input w-full'} placeholder="Display Name" />
+                        </Col>
+                    </Row>
+                    {!_.isEmpty(viewKPIDetails?.transformations?.fil) && <Row>
+                        <Col span={18}>
+                            <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>Filter</Text>
+                            {/* {getGlobalFilters(viewKPIDetails?.transformations?.fil)} */}
+                            <GLobalFilter
+                                filters={getStateFromFilters(viewKPIDetails?.transformations?.fil)}
+                                onFiltersLoad={[() => { getUserProperties(activeProject.id, null) }]}
+                                setGlobalFilters={setGlobalFiltersOption}
+                                selKPICategory={selKPICategory}
+                                DDKPIValues={filterDDValues}
+                                delFilter={false}
+                                viewMode={true}
+                            />
+                        </Col>
+                    </Row>}
+                    <Row>
+                        <Col span={18}>
+                            <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>Set time to</Text>
+                            <Input disabled={true} size="large" value={viewKPIDetails?.transformations?.daFie} className={'fa-input w-full'} placeholder="Display Name" />
+                        </Col>
+                    </Row>
 
 
                 </>}

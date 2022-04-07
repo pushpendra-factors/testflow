@@ -848,7 +848,10 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		model.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
 		model.QueryClassKPI:         `{"cl":"kpi","qG":[{"ca":"events","pgUrl":"www.acme.com/pricing","dc":"page_views","me":["page_views"],"gBy":[],"fil":[],"gbt":"","fr":1633233600,"to":1633579199}],"gFil":[],"gGBy":[]}`,
 	}
+	var dashboardQueryClassList []string
+	var dashboardUnitsList []model.DashboardUnit
 	for queryClass, queryString := range dashboardQueriesStr {
+		dashboardQueryClassList = append(dashboardQueryClassList, queryClass)
 		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
 		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
 		assert.Nil(t, err)
@@ -869,14 +872,14 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 		})
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit)
-
+		dashboardUnitsList = append(dashboardUnitsList, *dashboardUnit)
 		dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
 		dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = queryClass
 		dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = baseQuery
 	}
 	var reportCollector sync.Map
-	dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitIDs, 1, &reportCollector)
+	//dashboardUnitIDs := make([]uint64, 0)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
 	assert.Equal(t, 5, updatedUnitsCount)
 
 	for rangeString, rangeFunction := range U.QueryDateRangePresets {
@@ -966,6 +969,8 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 		`{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2},{"pr":"$city","en":"user","pty":"categorical","ena":"$session","eni":1},{"pr":"$city","en":"user","pty":"categorical","ena":"MagazineViews","eni":2},{"pr":"$city","en":"user","pty":"categorical","ena":"$present"}],"gbt":"date","tz":"Asia/Calcutta"}]}`,
 	}
 	queryClass := model.QueryClassEvents
+	var dashboardQueryClassList []string
+	var dashboardUnitsList []model.DashboardUnit
 	for _, queryString := range dashboardQueriesStr {
 		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
 		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
@@ -988,14 +993,15 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 		})
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit)
-
+		dashboardUnitsList = append(dashboardUnitsList, *dashboardUnit)
+		dashboardQueryClassList = append(dashboardQueryClassList, queryClass)
 		dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
 		dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = queryClass
 		dashboardUnitQueriesMap[dashboardUnit.ID]["queries"] = baseQuery
 	}
 	var reportCollector sync.Map
-	dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitIDs, 1, &reportCollector)
+	//dashboardUnitIDs := make([]uint64, 0)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to, errCode := rangeFunction(timezoneString)
@@ -1062,6 +1068,8 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 		`{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 1585679400, "to": 1585765800 }], "cl": "channel_v1" }`,
 	}
 	queryClass := model.QueryClassChannelV1
+	var dashboardQueryClassList []string
+	var dashboardUnitsList []model.DashboardUnit
 	for _, queryString := range dashboardQueriesStr {
 		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
 		baseQuery, err := model.DecodeQueryForClass(queryJSON, queryClass)
@@ -1085,15 +1093,16 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 		})
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit)
-
+		dashboardUnitsList = append(dashboardUnitsList, *dashboardUnit)
+		dashboardQueryClassList = append(dashboardQueryClassList, queryClass)
 		dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
 		dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = queryClass
 		dashboardUnitQueriesMap[dashboardUnit.ID]["queries"] = baseQuery
 	}
 
 	var reportCollector sync.Map
-	dashboardUnitIDs := make([]uint64, 0)
-	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitIDs, 1, &reportCollector)
+	//dashboardUnitIDs := make([]uint64, 0)
+	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 	timezonestring := U.TimeZoneString(project.TimeZone)
 	for _, rangeFunction := range U.QueryDateRangePresets {
@@ -1217,10 +1226,13 @@ func TestDashboardUnitEventForDateTypeFilters(t *testing.T) {
 	dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
 	dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = query1.GetClass()
 	dashboardUnitQueriesMap[dashboardUnit.ID]["query"] = query1
-
+	var dashboardQueryClassList []string
+	var dashboardUnitsList []model.DashboardUnit
+	dashboardUnitsList = append(dashboardUnitsList, *dashboardUnit)
+	dashboardQueryClassList = append(dashboardQueryClassList, query1.GetClass())
 	var reportCollector sync.Map
-	dashboardUnitIDs := make([]uint64, 0)
-	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitIDs, 1, &reportCollector)
+	//dashboardUnitIDs := make([]uint64, 0)
+	store.GetStore().CacheDashboardUnitsForProjectID(project.ID, dashboardUnitsList, dashboardQueryClassList, 1, &reportCollector)
 	result := struct {
 		Cache  bool              `json:"cache"`
 		Result model.QueryResult `json:"result"`

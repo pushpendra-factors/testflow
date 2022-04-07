@@ -28,6 +28,118 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestHubspotContactFormSubmission(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	createdAt := time.Now().Unix() * 1000
+	lastModified := createdAt + 100
+
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt":1647500074000,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "lead" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "abc@xyz.com"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "123-456"
+			  }
+			]
+		  }
+		],
+		"form-submissions": [
+			{
+			  "conversion-id": "1d379075-bc57-4d45-80d2-5004e6ad9c44",
+			  "form-id": "k61337ec-9102-441d-a7af-cf9eaa2d0774",
+			  "form-type": "FACEBOOK_LEAD_AD",
+			  "meta-data": [
+				
+			  ],
+			  "page-title": "LinkedIn Lead Generation Ad",
+			  "page-url": "https://www.abc.com/ad/portal/500811370/leadgen/view/5371576?hsa_acc=500811370&hsa_cam=619271286&hsa_grp=175608976&hsa_ad=157523466&hsa_src=&utm_campaign=US%257CTravel%2526HospitalityWebinar%257C20thJan2021%257CInmail%257COpen&hsa_la=true&hsa_ol=false&hsa_net=linkedin&hsa_ver=3&utm_source=linkedin&utm_medium=paid",
+			  "portal-id": 2361873,
+			  "timestamp": 1647393874000,
+			  "title": " Webinar 20th Jan 2021"
+			},
+			{
+				"conversion-id": "2d379075-bc57-4d45-80d2-5004e6ad9c44",
+				"form-id": "i61337ec-9102-441d-a7af-cf9eaa2d0774",
+				"form-type": "FACEBOOK_LEAD_AD",
+				"meta-data": [
+				  
+				],
+				"page-title": "Facebook Lead Generation Ad",
+				"page-url": "https://www.adb.com/ad/portal/500811370/leadgen/view/5371576?hsa_acc=500811370&hsa_cam=619271286&hsa_grp=175608976&hsa_ad=157523466&hsa_src=&utm_campaign=US%257CTravel%2526HospitalityWebinar%257C20thJan2021%257CInmail%257COpen&hsa_la=true&hsa_ol=false&hsa_net=linkedin&hsa_ver=3&utm_source=linkedin&utm_medium=paid",
+				"portal-id": 2361873,
+				"timestamp": 1647393874010,
+				"title": " Webinar 20th Jan 2021"
+		}
+		]
+	}`
+
+	jsonContact := fmt.Sprintf(jsonContactModel, 2, createdAt, lastModified)
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 1)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	doc, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"2"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	events, status := store.GetStore().GetHubspotFormEvents(project.ID, doc[0].UserId, []interface{}{1647393874})
+
+	assert.Len(t, events, 2)
+
+	propertyValues := make(map[string]interface{})
+	err = json.Unmarshal(events[1].Properties.RawMessage, &propertyValues)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "2d379075-bc57-4d45-80d2-5004e6ad9c44", propertyValues["$hubspot_form_submission_conversion-id"])
+	assert.Equal(t, "i61337ec-9102-441d-a7af-cf9eaa2d0774", propertyValues["$hubspot_form_submission_form-id"])
+	assert.Equal(t, "FACEBOOK_LEAD_AD", propertyValues["$hubspot_form_submission_form-type"])
+	assert.Equal(t, "Facebook Lead Generation Ad", propertyValues["$hubspot_form_submission_page-title"])
+	assert.Equal(t, (float64)(2361873), propertyValues["$hubspot_form_submission_portal-id"])
+	pageURL := "https://www.adb.com/ad/portal/500811370/leadgen/view/5371576?hsa_acc=500811370&hsa_cam=619271286&hsa_grp=175608976&hsa_ad=157523466&hsa_src=&utm_campaign=US%257CTravel%2526HospitalityWebinar%257C20thJan2021%257CInmail%257COpen&hsa_la=true&hsa_ol=false&hsa_net=linkedin&hsa_ver=3&utm_source=linkedin&utm_medium=paid"
+	urlParameters := IntHubspot.GetURLParameterAsMap(pageURL)
+	assert.Equal(t, urlParameters["utm_source"], propertyValues["utm_source"])
+	assert.Equal(t, urlParameters["utm_medium"], propertyValues["utm_medium"])
+	assert.Equal(t, (float64)(1647393874), propertyValues["$hubspot_form_submission_timestamp"])
+	assert.Equal(t, " Webinar 20th Jan 2021", propertyValues["$hubspot_form_submission_title"])
+
+	propertyValues = make(map[string]interface{})
+	err = json.Unmarshal(events[0].Properties.RawMessage, &propertyValues)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "1d379075-bc57-4d45-80d2-5004e6ad9c44", propertyValues["$hubspot_form_submission_conversion-id"])
+	assert.Equal(t, "k61337ec-9102-441d-a7af-cf9eaa2d0774", propertyValues["$hubspot_form_submission_form-id"])
+	assert.Equal(t, "FACEBOOK_LEAD_AD", propertyValues["$hubspot_form_submission_form-type"])
+	assert.Equal(t, "LinkedIn Lead Generation Ad", propertyValues["$hubspot_form_submission_page-title"])
+	pageURL = "https://www.adb.com/ad/portal/500811370/leadgen/view/5371576?hsa_acc=500811370&hsa_cam=619271286&hsa_grp=175608976&hsa_ad=157523466&hsa_src=&utm_campaign=US%257CTravel%2526HospitalityWebinar%257C20thJan2021%257CInmail%257COpen&hsa_la=true&hsa_ol=false&hsa_net=linkedin&hsa_ver=3&utm_source=linkedin&utm_medium=paid"
+	urlParameters = IntHubspot.GetURLParameterAsMap(pageURL)
+	assert.Equal(t, urlParameters["utm_source"], propertyValues["utm_source"])
+	assert.Equal(t, urlParameters["utm_medium"], propertyValues["utm_medium"])
+	assert.Equal(t, (float64)(2361873), propertyValues["$hubspot_form_submission_portal-id"])
+	assert.Equal(t, (float64)(1647393874), propertyValues["$hubspot_form_submission_timestamp"])
+	assert.Equal(t, " Webinar 20th Jan 2021", propertyValues["$hubspot_form_submission_title"])
+}
+
 func TestHubspotCRMSmartEvent(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)

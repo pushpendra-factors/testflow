@@ -31,6 +31,7 @@ import { getErrorMessage } from '../../utils/dataFormatter';
 import { deleteReport } from '../../reducers/coreQuery/services';
 import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { apiChartAnnotations } from '../../utils/constants';
+import { isPivotSupported } from '../../utils/chart.helpers';
 
 function SaveQuery({
   requestQuery,
@@ -52,7 +53,7 @@ function SaveQuery({
 
   const {
     attributionMetrics,
-    coreQueryState: { chartTypes },
+    coreQueryState: { chartTypes, pivotConfig },
   } = useContext(CoreQueryContext);
 
   const [saveQueryState, localDispatch] = useReducer(
@@ -218,6 +219,10 @@ function SaveQuery({
             ],
         };
 
+        if (isPivotSupported({ queryType })) {
+          querySettings.pivotConfig = JSON.stringify(pivotConfig);
+        }
+
         if (queryType === QUERY_TYPE_ATTRIBUTION) {
           querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
         }
@@ -308,6 +313,7 @@ function SaveQuery({
   return (
     <>
       <QueryActions
+        queryType={queryType}
         savedQueryId={savedQueryId}
         handleSaveClick={handleSaveClick}
         handleEditClick={handleEditClick}

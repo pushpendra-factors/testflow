@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	C "factors/config"
 	U "factors/util"
 	"fmt"
 	"sort"
@@ -13,6 +14,8 @@ import (
 )
 
 type AttributionQuery struct {
+	AnalyzeType            string                     `json:"analyze_type"`
+	KPI                    KPIQueryGroup              `json:"kpi_query_group"`
 	CampaignMetrics        []string                   `json:"cm"`
 	ConversionEvent        QueryEventWithProperties   `json:"ce"`
 	ConversionEventCompare QueryEventWithProperties   `json:"ce_c"`
@@ -34,6 +37,127 @@ type AttributionQuery struct {
 	TacticOfferType string `json:"tactic_offer_type"`
 	Timezone        string `json:"time_zone"`
 }
+
+type KPIInfo struct {
+	KpiID          string    `json:"kpi_id"`
+	KpiGroupID     string    `json:"kpi_group_id"`
+	KpiUserIds     []string  `json:"kpi_users"`
+	KpiCoalUserIds []string  `json:"kpi_coal_users"`
+	KpiHeaderNames []string  `json:"kpi_header_names"` //  headers (in case of multiple KPIs) (revenue, pipleine, dealWon etc)
+	KpiValues      []float64 `json:"kpi_value"`        // list of values (revenue, pipleine, dealWon etc)
+	TimeString     string    `json:"time_string"`
+	Timestamp      int64     `json:"timestamp"` // unix time
+}
+
+const (
+	AttributionMethodFirstTouch          = "First_Touch"
+	AttributionMethodFirstTouchNonDirect = "First_Touch_ND"
+	AttributionMethodLastTouch           = "Last_Touch"
+	AttributionMethodLastTouchNonDirect  = "Last_Touch_ND"
+	AttributionMethodLinear              = "Linear"
+	AttributionMethodUShaped             = "U_Shaped"
+	AttributionMethodTimeDecay           = "Time_Decay"
+	AttributionKeyCampaign               = "Campaign"
+	AttributionKeySource                 = "Source"
+	AttributionKeyAdgroup                = "AdGroup"
+	AttributionKeyKeyword                = "Keyword"
+	AttributionKeyChannel                = "ChannelGroup"
+	AttributionKeyLandingPage            = "LandingPage"
+
+	ReportCampaign = "Campaign"
+	ReportAdGroup  = "AdGroup"
+	ReportKeyword  = "Keyword"
+
+	AttributionQueryTypeConversionBased = "ConversionBased"
+	AttributionQueryTypeEngagementBased = "EngagementBased"
+
+	SortASC  = "ASC"
+	SortDESC = "DESC"
+
+	AttributionErrorIntegrationNotFound = "no ad-words customer account id found for attribution query"
+
+	AdwordsCampaignID   = "campaign_id"
+	AdwordsCampaignName = "campaign_name"
+
+	AdwordsAdgroupID   = "ad_group_id"
+	AdwordsAdgroupName = "ad_group_name"
+
+	AdwordsKeywordID        = "id"
+	AdwordsKeywordName      = "criteria"
+	AdwordsKeywordMatchType = "keyword_match_type"
+
+	BingadsCampaignID   = "campaign_id"
+	BingadsCampaignName = "campaign_name"
+
+	BingadsAdgroupID   = "ad_group_id"
+	BingadsAdgroupName = "ad_group_name"
+
+	BingadsKeywordID   = "keyword_id"
+	BingadsKeywordName = "keyword_name"
+
+	FacebookCampaignID   = "campaign_id"
+	FacebookCampaignName = "campaign_name"
+
+	FacebookAdgroupID   = "adset_id"
+	FacebookAdgroupName = "adset_name"
+
+	LinkedinCampaignID   = "campaign_group_id"
+	LinkedinCampaignName = "campaign_group_name"
+
+	LinkedinAdgroupID   = "campaign_id"
+	LinkedinAdgroupName = "campaign_name"
+
+	KeyDelimiter = ":-:"
+
+	ChannelAdwords    = "adwords"
+	ChannelBingads    = "bingads"
+	ChannelFacebook   = "facebook"
+	ChannelLinkedin   = "linkedin"
+	ChannelGoogleAds  = "google ads"
+	ChannelBingAds    = "bingads"
+	SessionChannelOTP = "OfflineTouchPoint"
+
+	FieldChannelName      = "channel_name"
+	FieldCampaignName     = "campaign_name"
+	FieldAdgroupName      = "adgroup_name"
+	FieldKeywordMatchType = "keyword_match_type"
+	FieldKeyword          = "keyword"
+	FieldSource           = "source"
+	FieldChannelGroup     = "channel_group"
+	FieldLandingPageUrl   = "landing_page_url"
+
+	EventTypeGoalEvent         = 0
+	EventTypeLinkedFunnelEvent = 1
+
+	MarketingEventTypeTactic      = "Tactic"
+	MarketingEventTypeOffer       = "Offer"
+	MarketingEventTypeTacticOffer = "TacticOffer"
+
+	AnalyzeTypeUsers           = "users"
+	AnalyzeTypeSFOpportunities = "sf_opportunities"
+	AnalyzeTypeHSDeals         = "hs_deals"
+
+	HSDealIDProperty        = "$hubspot_deal_hs_object_id"
+	SFOpportunityIDProperty = "$salesforce_opportunity_id"
+)
+
+var AddedKeysForCampaign = []string{"ChannelName"}
+var AddedKeysForAdgroup = []string{"ChannelName", "Campaign"}
+var AddedKeysForKeyword = []string{"ChannelName", "Campaign", "AdGroup", "MatchType"}
+var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR(%)", "Average CPC", "CPM", "ClickConversionRate(%)", "Sessions", "Users", "Average Session Time", "PageViews"}
+var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "UserConversionRate(%)", "Compare - Users", "Compare Cost Per Conversion", "Compare UserConversionRate(%)"}
+var KeyDimensionToHeaderMap = map[string]string{
+	FieldChannelName:      "ChannelName",
+	FieldCampaignName:     "Campaign",
+	FieldAdgroupName:      "AdGroup",
+	FieldKeywordMatchType: "MatchType",
+	FieldKeyword:          "Keyword",
+	FieldSource:           "Source",
+	FieldChannelGroup:     "ChannelGroup",
+	FieldLandingPageUrl:   "LandingPage",
+}
+var AttributionFixedHeadersLandingPage = []string{"Sessions", "Users", "Average Session Time", "PageViews"}
+var AttributionFixedHeadersPostPostConversionLanding = []string{"UserConversionRate(%)", "Compare - Users", "Compare UserConversionRate(%)"}
 
 // ToDo change here as well.
 func (query *AttributionQuery) TransformDateTypeFilters() error {
@@ -139,6 +263,11 @@ func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRe
 	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
+func GetStringKeyFromCacheRedisKey(Key *cacheRedis.Key) string {
+
+	return fmt.Sprintf("pid:%d:puid:%s:%s:%s", Key.ProjectID, Key.ProjectUID, Key.Prefix, Key.Suffix)
+}
+
 func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
 	return getQueryCacheResultExpiry(q.Query.From, q.Query.To, q.Query.Timezone)
 }
@@ -151,108 +280,6 @@ func (query *AttributionQueryUnit) ConvertAllDatesFromTimezone1ToTimezone2(curre
 	query.Query.ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone)
 	return nil
 }
-
-const (
-	AttributionMethodFirstTouch          = "First_Touch"
-	AttributionMethodFirstTouchNonDirect = "First_Touch_ND"
-	AttributionMethodLastTouch           = "Last_Touch"
-	AttributionMethodLastTouchNonDirect  = "Last_Touch_ND"
-	AttributionMethodLinear              = "Linear"
-	AttributionMethodUShaped             = "U_Shaped"
-	AttributionMethodTimeDecay           = "Time_Decay"
-	AttributionKeyCampaign               = "Campaign"
-	AttributionKeySource                 = "Source"
-	AttributionKeyAdgroup                = "AdGroup"
-	AttributionKeyKeyword                = "Keyword"
-	AttributionKeyChannel                = "ChannelGroup"
-	AttributionKeyLandingPage            = "LandingPage"
-
-	ReportCampaign = "Campaign"
-	ReportAdGroup  = "AdGroup"
-	ReportKeyword  = "Keyword"
-
-	AttributionQueryTypeConversionBased = "ConversionBased"
-	AttributionQueryTypeEngagementBased = "EngagementBased"
-
-	SortASC  = "ASC"
-	SortDESC = "DESC"
-
-	AttributionErrorIntegrationNotFound = "no ad-words customer account id found for attribution query"
-
-	AdwordsCampaignID   = "campaign_id"
-	AdwordsCampaignName = "campaign_name"
-
-	AdwordsAdgroupID   = "ad_group_id"
-	AdwordsAdgroupName = "ad_group_name"
-
-	AdwordsKeywordID        = "id"
-	AdwordsKeywordName      = "criteria"
-	AdwordsKeywordMatchType = "keyword_match_type"
-
-	BingadsCampaignID   = "campaign_id"
-	BingadsCampaignName = "campaign_name"
-
-	BingadsAdgroupID   = "ad_group_id"
-	BingadsAdgroupName = "ad_group_name"
-
-	BingadsKeywordID   = "keyword_id"
-	BingadsKeywordName = "keyword_name"
-
-	FacebookCampaignID   = "campaign_id"
-	FacebookCampaignName = "campaign_name"
-
-	FacebookAdgroupID   = "adset_id"
-	FacebookAdgroupName = "adset_name"
-
-	LinkedinCampaignID   = "campaign_group_id"
-	LinkedinCampaignName = "campaign_group_name"
-
-	LinkedinAdgroupID   = "campaign_id"
-	LinkedinAdgroupName = "campaign_name"
-
-	KeyDelimiter = ":-:"
-
-	ChannelAdwords    = "adwords"
-	ChannelBingads    = "bingads"
-	ChannelFacebook   = "facebook"
-	ChannelLinkedin   = "linkedin"
-	ChannelGoogleAds  = "google ads"
-	ChannelBingAds    = "bingads"
-	SessionChannelOTP = "OfflineTouchPoint"
-
-	FieldChannelName      = "channel_name"
-	FieldCampaignName     = "campaign_name"
-	FieldAdgroupName      = "adgroup_name"
-	FieldKeywordMatchType = "keyword_match_type"
-	FieldKeyword          = "keyword"
-	FieldSource           = "source"
-	FieldChannelGroup     = "channel_group"
-	FieldLandingPageUrl   = "landing_page_url"
-
-	EventTypeGoalEvent         = 0
-	EventTypeLinkedFunnelEvent = 1
-
-	MarketingEventTypeTactic      = "Tactic"
-	MarketingEventTypeOffer       = "Offer"
-	MarketingEventTypeTacticOffer = "TacticOffer"
-)
-
-var AddedKeysForCampaign = []string{"ChannelName"}
-var AddedKeysForAdgroup = []string{"ChannelName", "Campaign"}
-var AddedKeysForKeyword = []string{"ChannelName", "Campaign", "AdGroup", "MatchType"}
-var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR(%)", "Average CPC", "CPM", "ClickConversionRate(%)", "Sessions", "Users", "Average Session Time", "PageViews"}
-var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "UserConversionRate(%)", "Compare - Users", "Compare Cost Per Conversion", "Compare UserConversionRate(%)"}
-var KeyDimensionToHeaderMap = map[string]string{
-	FieldChannelName:      "ChannelName",
-	FieldCampaignName:     "Campaign",
-	FieldAdgroupName:      "AdGroup",
-	FieldKeywordMatchType: "MatchType",
-	FieldKeyword:          "Keyword",
-	FieldSource:           "Source",
-	FieldChannelGroup:     "ChannelGroup",
-	FieldLandingPageUrl:   "LandingPage",
-}
-var AttributionFixedHeadersLandingPage = []string{"Sessions", "Users", "Average Session Time", "PageViews"}
 
 type MarketingReports struct {
 	AdwordsGCLIDData       map[string]MarketingData
@@ -368,10 +395,10 @@ type AttributionData struct {
 	Users                         int64
 	AvgSessionTime                float64
 	PageViews                     int64
-	ConversionEventCount          float64
-	CostPerConversion             float64
-	ConversionEventCompareCount   float64
-	CostPerConversionCompareCount float64
+	ConversionEventCount          []float64
+	CostPerConversion             []float64
+	ConversionEventCompareCount   []float64
+	CostPerConversionCompareCount []float64
 	LinkedEventsCount             []float64
 	MarketingInfo                 MarketingData
 }
@@ -464,6 +491,15 @@ func UpdateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[s
 			(*sessionMap)[userInfo.CoalUserID] = make(map[string]UserSessionData)
 			(*sessionMap)[userInfo.CoalUserID][attributionID] = newUserSession
 		}
+	}
+}
+
+// AddDefaultAnalyzeType adds default Analyze Type as 'users'
+func AddDefaultAnalyzeType(query *AttributionQuery) {
+
+	// Default is set as AnalyzeTypeUsers
+	if (*query).AnalyzeType == "" {
+		(*query).AnalyzeType = AnalyzeTypeUsers
 	}
 }
 
@@ -707,7 +743,7 @@ func GetAttributionKeyForOffline(attributionKey string) (string, error) {
 }
 
 // AddHeadersByAttributionKey Adds common column names and linked events as header to the result rows.
-func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
+func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery, goalEvents []string) {
 
 	attributionKey := query.AttributionKey
 	if attributionKey == AttributionKeyLandingPage {
@@ -723,7 +759,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 		result.Headers = append(result.Headers, AttributionFixedHeadersLandingPage...)
 		conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
 		result.Headers = append(result.Headers, conversionEventUsers)
-		result.Headers = append(result.Headers, "UserConversionRate(%)")
+		result.Headers = append(result.Headers, AttributionFixedHeadersPostPostConversionLanding...)
 		if len(query.LinkedEvents) > 0 {
 			for _, event := range query.LinkedEvents {
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
@@ -731,7 +767,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 			}
 		}
 
-	} else {
+	} else if query.AnalyzeType == AnalyzeTypeUsers {
 
 		// Add up for Added Keys {Campaign, Adgroup, Keyword}
 		switch attributionKey {
@@ -757,6 +793,51 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 		conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
 		result.Headers = append(result.Headers, conversionEventUsers)
 		result.Headers = append(result.Headers, AttributionFixedHeadersPostPostConversion...)
+		if len(query.LinkedEvents) > 0 {
+			for _, event := range query.LinkedEvents {
+				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
+				result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
+				result.Headers = append(result.Headers, fmt.Sprintf("%s - UserConversionRate(", event.Name)+"%)")
+			}
+		}
+	} else if query.AnalyzeType == AnalyzeTypeHSDeals || query.AnalyzeType == AnalyzeTypeSFOpportunities {
+
+		// Add up for Added Keys {Campaign, Adgroup, Keyword}
+		switch attributionKey {
+		case AttributionKeyCampaign:
+			result.Headers = append(result.Headers, AddedKeysForCampaign...)
+		case AttributionKeyAdgroup:
+			result.Headers = append(result.Headers, AddedKeysForAdgroup...)
+		case AttributionKeyKeyword:
+			result.Headers = append(result.Headers, AddedKeysForKeyword...)
+		default:
+		}
+
+		// add up the attribution key
+		result.Headers = append(result.Headers, attributionKey)
+
+		// add up custom dimensions
+		for _, key := range query.AttributionKeyCustomDimension {
+			result.Headers = append(result.Headers, key)
+		}
+
+		// add up fixed metrics
+		result.Headers = append(result.Headers, AttributionFixedHeaders...)
+
+		for _, goal := range goalEvents {
+
+			conversion := fmt.Sprintf("%s - Conversion", goal)
+			cpc := fmt.Sprintf("%s - Cost Per Conversion", goal)
+			userCPCRate := fmt.Sprintf("%s - UserConversionRate", goal)
+			result.Headers = append(result.Headers, conversion, cpc, userCPCRate)
+
+			conversionC := fmt.Sprintf("%s - Conversion (compare)", goal)
+			cpcC := fmt.Sprintf("%s - Cost Per Conversion (compare)", goal)
+			userCPCRateC := fmt.Sprintf("%s - UserConversionRate (compare)", goal)
+			result.Headers = append(result.Headers, conversionC, cpcC, userCPCRateC)
+
+		}
+
 		if len(query.LinkedEvents) > 0 {
 			for _, event := range query.LinkedEvents {
 				result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
@@ -906,9 +987,28 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 		// (CTR, AvgCPC, CPM, ClickConversionRate)
 		float64(0), float64(0), float64(0), float64(0),
 		// Sessions, (users), (AvgSessionTime), (pageViews),
-		int64(0), int64(0), float64(0), int64(0),
-		// ConversionEventCount, CostPerConversion, ConvUserRate, ConversionEventCompareCount, CostPerConversionCompareCount, compareConvUserRate
-		float64(0), float64(0), float64(0), float64(0), float64(0), float64(0)}
+		int64(0), int64(0), float64(0), int64(0)}
+	// ConversionEventCount, CostPerConversion, ConvUserRate, ConversionEventCompareCount, CostPerConversionCompareCount, compareConvUserRate
+	//[]float64{float64(0)}, []float64{float64(0)}, []float64{float64(0)}, []float64{float64(0)}, []float64{float64(0)}, []float64{float64(0)}}
+
+	doneAddingDefault := false // doing it one time
+	noOfGoalEvents := 0
+	if *attributionData != nil {
+		for _, data := range *attributionData {
+			for idx := 0; idx < len(data.ConversionEventCount); idx++ {
+				noOfGoalEvents++
+				// one for each - ConversionEventCount, CostPerConversion, ConvUserRate, ConversionEventCompareCount, CostPerConversionCompareCount, compareConvUserRate
+				defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0), float64(0), float64(0))
+				doneAddingDefault = true
+			}
+			if doneAddingDefault {
+				break
+			}
+		}
+	}
+	if !doneAddingDefault {
+		defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0), float64(0), float64(0))
+	}
 
 	var customDims []interface{}
 	for i := 0; i < len(dimensions); i++ {
@@ -985,29 +1085,56 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 				}
 			}
 			// Append fixed Metrics
-			row = append(row, data.Impressions, data.Clicks, data.Spend, data.CTR, data.AvgCPC, data.CPM, data.ClickConversionRate, data.Sessions, data.Users, data.AvgSessionTime, data.PageViews, data.ConversionEventCount)
-			cpc := 0.0
-			if data.ConversionEventCount > 0.0 {
-				cpc, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCount, U.DefaultPrecision)
+			row = append(row, data.Impressions, data.Clicks, data.Spend, data.CTR, data.AvgCPC,
+				data.CPM, data.ClickConversionRate, data.Sessions, data.Users, data.AvgSessionTime,
+				data.PageViews)
+
+			var cpc []float64
+			var userConvRate []float64
+
+			var cpcCompare []float64
+			var compareUserConvRate []float64
+
+			for len(data.ConversionEventCount) < noOfGoalEvents {
+				data.ConversionEventCount = append(data.ConversionEventCount, float64(0))
 			}
-			userConvRate := 0.0
-			if data.Users > 0 {
-				userConvRate, _ = U.FloatRoundOffWithPrecision(data.ConversionEventCount/float64(data.Users)*100, U.DefaultPrecision)
+			for len(data.ConversionEventCompareCount) < noOfGoalEvents {
+				data.ConversionEventCompareCount = append(data.ConversionEventCompareCount, float64(0))
 			}
-			if isCompare {
-				cpcCompare := 0.0
-				if data.ConversionEventCompareCount > 0.0 {
-					cpcCompare, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCompareCount, U.DefaultPrecision)
+
+			for idx := 0; idx < len(data.ConversionEventCount); idx++ {
+				row = append(row, data.ConversionEventCount[idx])
+
+				cpc = append(cpc, float64(0))
+				userConvRate = append(userConvRate, float64(0))
+
+				if data.ConversionEventCount[idx] > 0.0 {
+					cpc[idx], _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCount[idx], U.DefaultPrecision)
 				}
-				compareUserConvRate := 0.0
 				if data.Users > 0 {
-					compareUserConvRate, _ = U.FloatRoundOffWithPrecision(data.ConversionEventCompareCount/float64(data.Users)*100, U.DefaultPrecision)
+					userConvRate[idx], _ = U.FloatRoundOffWithPrecision(data.ConversionEventCount[idx]/float64(data.Users)*100, U.DefaultPrecision)
 				}
-				row = append(row, cpc, userConvRate, data.ConversionEventCompareCount, cpcCompare, compareUserConvRate)
-			} else {
-				row = append(row, cpc, userConvRate, float64(0), float64(0), float64(0))
+				if isCompare {
+					cpcCompare = append(cpcCompare, float64(0))
+					compareUserConvRate = append(compareUserConvRate, float64(0))
+
+					if data.ConversionEventCompareCount[idx] > 0.0 {
+						cpcCompare[idx], _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCompareCount[idx], U.DefaultPrecision)
+					}
+					if data.Users > 0 {
+						compareUserConvRate[idx], _ = U.FloatRoundOffWithPrecision(data.ConversionEventCompareCount[idx]/float64(data.Users)*100, U.DefaultPrecision)
+					}
+					row = append(row, cpc[idx])
+					row = append(row, userConvRate[idx])
+					row = append(row, data.ConversionEventCompareCount[idx])
+					row = append(row, cpcCompare[idx])
+					row = append(row, compareUserConvRate[idx])
+				} else {
+					row = append(row, cpc[idx], userConvRate[idx], float64(0), float64(0), float64(0))
+				}
 			}
-			row = append(row, getLinkedEventColumnAsInterfaceList(data.ConversionEventCount, data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
+			// for linked event considering the data.ConversionEventCount[0] only
+			row = append(row, getLinkedEventColumnAsInterfaceList(data.ConversionEventCount[0], data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
 			rows = append(rows, row)
 		}
 	}
@@ -1020,12 +1147,13 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 
 // GetRowsByMapsLandingPage Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
 func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *map[string]*AttributionData,
-	linkedEvents []QueryEventWithProperties) [][]interface{} {
+	linkedEvents []QueryEventWithProperties, isCompare bool) [][]interface{} {
 
 	//Sessions, (users), (AvgSessionTime), (pageViews)
-	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0), int64(0),
-		// ConversionEventCount, ConvUserRate
-		float64(0), float64(0)}
+	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0), int64(0)}
+
+	//ConversionEventCount, ConvUserRate, ConversionEventCompareCount, compareConvUserRate
+	defaultMatchingRow = append(defaultMatchingRow, float64(0), float64(0), float64(0), float64(0))
 
 	var contentGroups []interface{}
 	for i := 0; i < len(contentGroupNamesList); i++ {
@@ -1060,14 +1188,29 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 					row = append(row, PropertyValueNone)
 				}
 			}
-			// Append fixed Metrics
-			row = append(row, data.Sessions, data.Users, data.AvgSessionTime, data.PageViews, data.ConversionEventCount)
-			userConvRate := 0.0
+			// Append fixed Metrics & ConversionEventCount[0] as only one goal event exists for landing page
+			row = append(row, data.Sessions, data.Users, data.AvgSessionTime, data.PageViews, data.ConversionEventCount[0])
+			var userConvRate []float64
+
+			var compareUserConvRate []float64
+
+			userConvRate = append(userConvRate, float64(0))
 			if data.Users > 0 {
-				userConvRate, _ = U.FloatRoundOffWithPrecision(data.ConversionEventCount/float64(data.Users)*100, U.DefaultPrecision)
+				userConvRate[0], _ = U.FloatRoundOffWithPrecision(data.ConversionEventCount[0]/float64(data.Users)*100, U.DefaultPrecision)
 			}
-			row = append(row, userConvRate)
-			row = append(row, getLinkedEventColumnAsInterfaceListLandingPage(data.ConversionEventCount, data.LinkedEventsCount, len(linkedEvents))...)
+			if isCompare {
+				compareUserConvRate = append(compareUserConvRate, float64(0))
+
+				if data.Users > 0 {
+					compareUserConvRate[0], _ = U.FloatRoundOffWithPrecision(data.ConversionEventCompareCount[0]/float64(data.Users)*100, U.DefaultPrecision)
+				}
+				row = append(row, userConvRate[0])
+				row = append(row, data.ConversionEventCompareCount[0])
+				row = append(row, compareUserConvRate[0])
+			} else {
+				row = append(row, userConvRate[0], float64(0), float64(0))
+			}
+			row = append(row, getLinkedEventColumnAsInterfaceListLandingPage(data.ConversionEventCount[0], data.LinkedEventsCount, len(linkedEvents))...)
 			rows = append(rows, row)
 		}
 	}
@@ -1078,11 +1221,11 @@ func GetRowsByMapsLandingPage(contentGroupNamesList []string, attributionData *m
 	return rows
 }
 
-func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData) *QueryResult {
+func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[string]*AttributionData, logCtx log.Entry, isCompare bool) *QueryResult {
 
-	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents)
+	dataRows := GetRowsByMapsLandingPage(query.AttributionContentGroups, attributionData, query.LinkedEvents, isCompare)
 	result := &QueryResult{}
-	AddHeadersByAttributionKey(result, query)
+	AddHeadersByAttributionKey(result, query, nil)
 
 	result.Rows = dataRows
 
@@ -1091,8 +1234,7 @@ func ProcessQueryLandingPageUrl(query *AttributionQuery, attributionData *map[st
 	if err != nil {
 		return nil
 	}
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey)
-
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndexLandingPage(result.Headers), query.AttributionKey, logCtx)
 	// sort the rows by conversionEvent
 	conversionIndex := GetConversionIndex(result.Headers)
 	sort.Slice(result.Rows, func(i, j int) bool {
@@ -1127,7 +1269,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	// Attribution data to rows
 	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 	result := &QueryResult{}
-	AddHeadersByAttributionKey(result, query)
+	AddHeadersByAttributionKey(result, query, nil)
 	result.Rows = dataRows
 
 	// Update result based on Key Dimensions
@@ -1136,7 +1278,7 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 		return nil
 	}
 
-	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey)
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, *logCtx)
 
 	// Additional filtering based on AttributionKey.
 	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
@@ -1160,6 +1302,78 @@ func ProcessQuery(query *AttributionQuery, attributionData *map[string]*Attribut
 	})
 
 	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers))
+	return result
+}
+
+func ProcessQueryKPI(query *AttributionQuery, attributionData *map[string]*AttributionData,
+	marketingReports *MarketingReports, isCompare bool, kpiData map[string]KPIInfo) *QueryResult {
+	logCtx := log.WithFields(log.Fields{"Method": "ProcessQuery"})
+
+	log.WithFields(log.Fields{"KPIAttribution": "Debug", "attributionData": attributionData}).Info("KPI Attribution data")
+	// Add additional metrics values
+	ComputeAdditionalMetrics(attributionData)
+
+	// Add custom dimensions
+	AddCustomDimensions(attributionData, query, marketingReports)
+
+	logCtx.Info("Done AddTheAddedKeysAndMetrics AddPerformanceData ApplyFilter ComputeAdditionalMetrics AddCustomDimensions")
+	// Attribution data to rows
+	dataRows := GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
+	result := &QueryResult{}
+
+	// get the headers for KPI
+	var goalEvents []string
+	if kpiData != nil {
+		for _, value := range kpiData {
+			goalEvents = value.KpiHeaderNames
+			break
+		}
+	}
+	AddHeadersByAttributionKey(result, query, goalEvents)
+	result.Rows = dataRows
+
+	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("Before GetUpdatedRowsByDimensions")
+
+	// Update result based on Key Dimensions
+	err := GetUpdatedRowsByDimensions(result, query)
+	if err != nil {
+		return nil
+	}
+
+	result.Rows = MergeDataRowsHavingSameKey(result.Rows, GetLastKeyValueIndex(result.Headers), query.AttributionKey, *logCtx)
+
+	// Additional filtering based on AttributionKey.
+	result.Rows = FilterRows(result.Rows, query.AttributionKey, GetLastKeyValueIndex(result.Headers))
+
+	logCtx.Info("Done GetRowsByMaps GetUpdatedRowsByDimensions MergeDataRowsHavingSameKey FilterRows")
+	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result")
+
+	// sort the rows by conversionEvent
+	conversionIndex := GetConversionIndex(result.Headers)
+	sort.Slice(result.Rows, func(i, j int) bool {
+		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
+			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+			return true
+		}
+		if len(result.Rows[i]) > conversionIndex && len(result.Rows[j]) > conversionIndex {
+			v1, ok1 := result.Rows[i][conversionIndex].(float64)
+			v2, ok2 := result.Rows[j][conversionIndex].(float64)
+			if !ok1 || !ok2 {
+				logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+				return true
+			}
+			return v1 > v2
+
+		} else {
+			log.WithFields(log.Fields{"KPIAttribution": "Debug", "RowI": result.Rows[i], "RowJ": result.Rows[j]}).Info("Bad row in Sorting")
+		}
+		return true
+	})
+	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result Sorting")
+
+	result.Rows = AddGrandTotalRow(result.Headers, result.Rows, GetLastKeyValueIndex(result.Headers))
+	log.WithFields(log.Fields{"KPIAttribution": "Debug", "Result": result}).Info("KPI Attribution result AddGrandTotalRow")
+
 	return result
 }
 
@@ -1219,8 +1433,9 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 		row1[keyIndex+4] = row1[keyIndex+4].(int64) + row2[keyIndex+4].(int64) // PageViews
 
 		row1[keyIndex+5] = row1[keyIndex+5].(float64) + row2[keyIndex+5].(float64) // Conversion.
+		row1[keyIndex+7] = row1[keyIndex+7].(float64) + row2[keyIndex+7].(float64) // Compare Conversion.
 
-		//conversion rate
+		//normal conversion rate
 		if row1[keyIndex+2].(int64) > 0 {
 			row1[keyIndex+6], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+5].(float64)/float64(row1[keyIndex+2].(int64))*100, U.DefaultPrecision)
 		} else {
@@ -1228,8 +1443,16 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 			row1[keyIndex+6] = float64(0)
 		}
 
+		//compare conversion rate
+		if row1[keyIndex+2].(int64) > 0 {
+			row1[keyIndex+8], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+7].(float64)/float64(row1[keyIndex+2].(int64))*100, U.DefaultPrecision)
+		} else {
+			row1[keyIndex+2] = int64(0)
+			row1[keyIndex+8] = float64(0)
+		}
+
 		// Remaining linked funnel events & CPCs
-		for i := keyIndex + 7; i < len(row1); i += 2 {
+		for i := keyIndex + 9; i < len(row1); i += 2 {
 			row1[i] = row1[i].(float64) + row2[i].(float64)
 			// Funnel - User Conversion Rate (%)
 			if row1[keyIndex+5].(float64) > 0 {
@@ -1327,9 +1550,8 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 }
 
 // MergeDataRowsHavingSameKey merges rows having same key by adding each column value
-func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionKey string) [][]interface{} {
+func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionKey string, logCtx log.Entry) [][]interface{} {
 
-	logCtx := log.WithFields(log.Fields{"Method": "MergeDataRowsHavingSameKey"})
 	rowKeyMap := make(map[string][]interface{})
 	maxRowSize := 0
 	for _, row := range rows {
@@ -1343,7 +1565,7 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int, attributionK
 			val, ok := row[j].(string)
 			// Ignore row if key is not proper
 			if !ok {
-				logCtx.WithFields(log.Fields{"RowKeyCandidate": row[j], "Row": row}).Info("empty key value error. Ignoring row and continuing.")
+				logCtx.Info("empty key value error. Ignoring row and continuing.")
 				continue
 			}
 			key = key + val
@@ -1465,11 +1687,11 @@ func AddGrandTotalRow(headers []string, rows [][]interface{}, keyIndex int) [][]
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 			if spend > 0 && i < len(grandTotalRow) && j < len(spendFunnelConversionCPC) {
 				spendFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(spendFunnelConversionCPC[j]+spend, U.DefaultPrecision)
-				conversionFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(conversionFunnelConversionCPC[j]+grandTotalRow[i].(float64), U.DefaultPrecision)
+				conversionFunnelConversionCPC[j], _ = U.FloatRoundOffWithPrecision(conversionFunnelConversionCPC[j]+row[i].(float64), U.DefaultPrecision)
 			}
 
 			if grandTotalRow[keyIndex+12].(float64) > 0 {
-				grandTotalRow[i+2], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+12].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate
+				grandTotalRow[i+2], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+12].(float64)*100, U.DefaultPrecision) // Funnel - User Conversion - CPC Rate
 			} else {
 				grandTotalRow[i+2] = float64(0)
 			}
@@ -1555,13 +1777,13 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		grandTotalRow = append(grandTotalRow, "Grand Total")
 	}
 
-	// Sessions, (users), (AvgSessionTime), (pageViews), ConversionEventCount, ConvUserRate
-	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0), int64(0), float64(0), float64(0)}
+	// Sessions, (users), (AvgSessionTime), (pageViews), ConversionEventCount, ConvUserRate, ConversionEventCompareCount, compareConvUserRate
+	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0), int64(0), float64(0), float64(0), float64(0), float64(0)}
 
 	grandTotalRow = append(grandTotalRow, defaultMatchingRow...)
 
 	// Remaining linked funnel events
-	for i := keyIndex + 7; i < len(headers); i++ {
+	for i := keyIndex + 9; i < len(headers); i++ {
 		grandTotalRow = append(grandTotalRow, float64(0))
 	}
 
@@ -1582,17 +1804,19 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		grandTotalRow[keyIndex+4] = grandTotalRow[keyIndex+4].(int64) + row[keyIndex+4].(int64)     // PageViews.
 		grandTotalRow[keyIndex+5] = grandTotalRow[keyIndex+5].(float64) + row[keyIndex+5].(float64) // Conversion.
 
+		grandTotalRow[keyIndex+7] = grandTotalRow[keyIndex+7].(float64) + row[keyIndex+7].(float64) // Compare Conversion.
+
 		if row[keyIndex+1].(int64) > 0 {
 			AvgSessionTimeMultipliedSessionAST = AvgSessionTimeMultipliedSessionAST + row[keyIndex+3].(float64)*float64(row[keyIndex+1].(int64))
 			SessionsAvgSessionTimeAST = SessionsAvgSessionTimeAST + row[keyIndex+1].(int64)
 		}
 
 		// Remaining linked funnel events & Conversion rates
-		for i := keyIndex + 7; i < len(grandTotalRow); i += 2 {
+		for i := keyIndex + 9; i < len(grandTotalRow); i += 2 {
 			grandTotalRow[i] = grandTotalRow[i].(float64) + row[i].(float64)
 
 			if grandTotalRow[keyIndex+5].(float64) > 0 {
-				grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+5].(float64), U.DefaultPrecision) // Funnel - User Conversion rate
+				grandTotalRow[i+1], _ = U.FloatRoundOffWithPrecision(grandTotalRow[i].(float64)/grandTotalRow[keyIndex+5].(float64)*100, U.DefaultPrecision) // Funnel - User Conversion rate
 			} else {
 				grandTotalRow[i+1] = float64(0)
 			}
@@ -1607,6 +1831,12 @@ func AddGrandTotalRowLandingPage(headers []string, rows [][]interface{}, keyInde
 		grandTotalRow[keyIndex+6], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+5].(float64)/float64(grandTotalRow[keyIndex+2].(int64))*100, U.DefaultPrecision) //ConvUserRate
 	} else {
 		grandTotalRow[keyIndex+6] = float64(0)
+	}
+
+	if grandTotalRow[keyIndex+2].(int64) > 0 {
+		grandTotalRow[keyIndex+8], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+7].(float64)/float64(grandTotalRow[keyIndex+2].(int64))*100, U.DefaultPrecision) // conversion rate
+	} else {
+		grandTotalRow[keyIndex+8] = float64(0)
 	}
 
 	rows = append([][]interface{}{grandTotalRow}, rows...)
@@ -1634,16 +1864,31 @@ func FilterRows(rows [][]interface{}, attributionKey string, keyIndex int) [][]i
 }
 
 // AddUpConversionEventCount Groups all unique users by attributionId and adds it to attributionData
-func AddUpConversionEventCount(usersIdAttributionIdMap map[string][]AttributionKeyWeight) map[string]*AttributionData {
+func AddUpConversionEventCount(usersIdAttributionIdMap map[string][]AttributionKeyWeight, sessionWT map[string][]float64) map[string]*AttributionData {
+
 	attributionData := make(map[string]*AttributionData)
-	for _, attributionKeys := range usersIdAttributionIdMap {
-		for _, keyWeight := range attributionKeys {
+
+	for userID, attributionKeys := range usersIdAttributionIdMap {
+
+		userIDWeightsForEachGoalEvent := sessionWT[userID] // Revenue, Pipeline, DealValue, etc
+
+		for _, keyWeight := range attributionKeys { // camp1, camp2, camp3, etc
+
 			if _, exists := attributionData[keyWeight.Key]; !exists {
 				attributionData[keyWeight.Key] = &AttributionData{}
 			}
-			attributionData[keyWeight.Key].ConversionEventCount += keyWeight.Weight
+
+			for idx := 0; idx < len(userIDWeightsForEachGoalEvent); idx++ {
+				// filling additional data if ConversionEventCount is empty
+				if len(attributionData[keyWeight.Key].ConversionEventCount) < idx+1 {
+					attributionData[keyWeight.Key].ConversionEventCount = append(attributionData[keyWeight.Key].ConversionEventCount, float64(0))
+				}
+				weightedValue := keyWeight.Weight * userIDWeightsForEachGoalEvent[idx]
+				attributionData[keyWeight.Key].ConversionEventCount[idx] = attributionData[keyWeight.Key].ConversionEventCount[idx] + weightedValue
+			}
 		}
 	}
+	// non-used sessionWT rows can be written back to '$none' userID
 	return attributionData
 }
 
@@ -1770,7 +2015,7 @@ func DoesLinkedinReportExist(attributionKey string) bool {
 	return false
 }
 
-func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, query *AttributionQuery, sessions map[string]map[string]UserSessionData) {
+func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, query *AttributionQuery, sessions map[string]map[string]UserSessionData, noOfConversionEvents int) {
 
 	// Extract out key based info
 	sessionKeyMarketingInfo := make(map[string]MarketingData)
@@ -1811,6 +2056,12 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 	}
 
 	// Creating an empty linked events row.
+	emptyConversionEventRow := make([]float64, 0)
+	for i := 0; i < noOfConversionEvents; i++ {
+		emptyConversionEventRow = append(emptyConversionEventRow, float64(0))
+	}
+
+	// Creating an empty linked events row.
 	emptyLinkedEventRow := make([]float64, 0)
 	for i := 0; i < len(query.LinkedEvents); i++ {
 		emptyLinkedEventRow = append(emptyLinkedEventRow, float64(0))
@@ -1823,6 +2074,9 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 				// Create a row in AttributionData if no key is present for this session
 				if _, ok := (*attributionData)[key]; !ok {
 					(*attributionData)[key] = &AttributionData{}
+
+					(*attributionData)[key].ConversionEventCount = emptyConversionEventRow
+					(*attributionData)[key].ConversionEventCompareCount = emptyConversionEventRow
 					if len(query.LinkedEvents) > 0 {
 						// Init the linked events with 0.0 value.
 						tempRow := emptyLinkedEventRow
@@ -1900,35 +2154,50 @@ func ApplyFilter(attributionData *map[string]*AttributionData, query *Attributio
 	}
 }
 
-func AddPerformanceData(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddPerformanceData(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
 
-	AddAdwordsPerformanceReportInfo(attributionData, attributionKey, marketingData)
-	AddFacebookPerformanceReportInfo(attributionData, attributionKey, marketingData)
-	AddLinkedinPerformanceReportInfo(attributionData, attributionKey, marketingData)
+	AddAdwordsPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
+	AddFacebookPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
+	AddLinkedinPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
+	AddBingAdsPerformanceReportInfo(attributionData, attributionKey, marketingData, noOfConversionEvents)
 }
 
-func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignKeyData, attributionKey, ChannelAdwords)
+		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignKeyData, attributionKey, ChannelAdwords, noOfConversionEvents)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupKeyData, attributionKey, ChannelAdwords)
+		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupKeyData, attributionKey, ChannelAdwords, noOfConversionEvents)
 	case AttributionKeyKeyword:
-		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData, attributionKey, ChannelAdwords)
+		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData, attributionKey, ChannelAdwords, noOfConversionEvents)
 	default:
 		// no enrichment for any other type
 		return
 	}
 }
 
-func AddFacebookPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddBingAdsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.FacebookCampaignKeyData, attributionKey, ChannelFacebook)
+		addMetricsFromReport(attributionData, marketingData.BingAdsCampaignKeyData, attributionKey, ChannelBingAds, noOfConversionEvents)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupKeyData, attributionKey, ChannelFacebook)
+		addMetricsFromReport(attributionData, marketingData.BingAdsAdgroupKeyData, attributionKey, ChannelBingAds, noOfConversionEvents)
+	case AttributionKeyKeyword:
+		addMetricsFromReport(attributionData, marketingData.BingAdsKeywordKeyData, attributionKey, ChannelBingAds, noOfConversionEvents)
+	default:
+		return
+	}
+}
+
+func AddFacebookPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
+
+	switch attributionKey {
+	case AttributionKeyCampaign:
+		addMetricsFromReport(attributionData, marketingData.FacebookCampaignKeyData, attributionKey, ChannelFacebook, noOfConversionEvents)
+	case AttributionKeyAdgroup:
+		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupKeyData, attributionKey, ChannelFacebook, noOfConversionEvents)
 	case AttributionKeyKeyword:
 		// No keyword report for fb.
 		return
@@ -1938,13 +2207,13 @@ func AddFacebookPerformanceReportInfo(attributionData *map[string]*AttributionDa
 	}
 }
 
-func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports, noOfConversionEvents int) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignKeyData, attributionKey, ChannelLinkedin)
+		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignKeyData, attributionKey, ChannelLinkedin, noOfConversionEvents)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupKeyData, attributionKey, ChannelLinkedin)
+		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupKeyData, attributionKey, ChannelLinkedin, noOfConversionEvents)
 	case AttributionKeyKeyword:
 		// No keyword report for Linkedin.
 		return
@@ -1954,7 +2223,13 @@ func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionDa
 	}
 }
 
-func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string, channel string) {
+func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string, channel string, noOfConversionEvents int) {
+
+	// Creating an empty linked events row.
+	emptyConversionEventRow := make([]float64, 0)
+	for i := 0; i < noOfConversionEvents; i++ {
+		emptyConversionEventRow = append(emptyConversionEventRow, float64(0))
+	}
 
 	for key, value := range reportKeyData {
 
@@ -1984,13 +2259,14 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 			case AttributionKeyLandingPage:
 				(*attributionData)[key].Name = reportKeyData[key].LandingPageUrl
 			}
-			(*attributionData)[key].ConversionEventCount = 0
-			(*attributionData)[key].ConversionEventCompareCount = 0
+			(*attributionData)[key].ConversionEventCount = emptyConversionEventRow
+			(*attributionData)[key].ConversionEventCompareCount = emptyConversionEventRow
 			(*attributionData)[key].Sessions = 0
 			(*attributionData)[key].Users = 0
 			(*attributionData)[key].PageViews = 0
 			(*attributionData)[key].AvgSessionTime = 0
 		}
+
 		if (*attributionData)[key].CustomDimensions == nil {
 			(*attributionData)[key].CustomDimensions = make(map[string]interface{})
 		}
@@ -2024,7 +2300,7 @@ func ComputeAdditionalMetrics(attributionData *map[string]*AttributionData) {
 		}
 		if v.Clicks > 0 {
 			(*attributionData)[k].AvgCPC, _ = U.FloatRoundOffWithPrecision(float64(v.Spend)/float64(v.Clicks), U.DefaultPrecision)
-			(*attributionData)[k].ClickConversionRate, _ = U.FloatRoundOffWithPrecision(100*float64(v.ConversionEventCount)/float64(v.Clicks), U.DefaultPrecision)
+			(*attributionData)[k].ClickConversionRate, _ = U.FloatRoundOffWithPrecision(100*float64(v.ConversionEventCount[0])/float64(v.Clicks), U.DefaultPrecision)
 		}
 	}
 }
@@ -2066,7 +2342,7 @@ func GetKeyMapToData(attributionKey string, allRows []MarketingData) map[string]
 	return keyToData
 }
 
-func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry) (map[string]map[string]UserSessionData, []string, error) {
+func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx log.Entry) (map[string]map[string]UserSessionData, []string, error) {
 
 	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
 	userIdMap := make(map[string]bool)
@@ -2142,7 +2418,7 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.En
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
-					SessionSpentTimes: []float64{0},
+					SessionSpentTimes: []float64{float64(0)},
 					PageCounts:        []int64{0},
 					MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
 					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
@@ -2161,8 +2437,9 @@ func ProcessOTPEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.En
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
-func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry, reports *MarketingReports, contentGroupNamesList []string) (map[string]map[string]UserSessionData, []string, error) {
+func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, reports *MarketingReports, contentGroupNamesList []string, logCtx log.Entry) (map[string]map[string]UserSessionData, []string, error) {
 
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
@@ -2174,6 +2451,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 		AdgroupID      string
 	}
 	var missingIDs []MissingCollection
+	count := 0
 	for rows.Next() {
 
 		var userIDNull sql.NullString
@@ -2286,6 +2564,9 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			}
 		}
 
+		if sourceName == "bing" {
+			marketingValues.Channel = ChannelBingAds
+		}
 		// Name
 		marketingValues.Name = attributionKeyName
 		// Add the unique attributionKey key
@@ -2319,6 +2600,10 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 				MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
 				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
+		}
+		count++
+		if count%49999 == 0 {
+			log.WithFields(log.Fields{"Method": "ProcessEventRows", "Count": count}).Info("Processing event rows")
 		}
 	}
 	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).Info("no document was found in any of the reports for ID. Logging and continuing %+v", missingIDs[:U.MinInt(100, len(missingIDs))])

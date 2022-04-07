@@ -77,8 +77,7 @@ const FaSelect = ({
           }
         >
           <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
-            {' '}
-            Select:{' '}
+            Select:
           </Text>
           <span className={`ml-1 ${styles.optText}`}>{searchTerm}</span>
           {isSelected ? (

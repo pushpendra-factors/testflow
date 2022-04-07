@@ -30,11 +30,14 @@ type FactorsGoalRule struct {
 
 // FactorsGoalFilter - rule object
 type FactorsGoalFilter struct {
-	StartEnEventFitler []KeyValueTuple `json:"st_en_ft"`
-	EndEnEventFitler   []KeyValueTuple `json:"en_en_ft"`
-	StartEnUserFitler  []KeyValueTuple `json:"st_us_ft"`
-	EndEnUserFitler    []KeyValueTuple `json:"en_us_ft"`
-	GlobalFilters      []KeyValueTuple `json:"ft"`
+	StartEnEventFitler      []KeyValueTuple `json:"st_en_ft"`
+	EndEnEventFitler        []KeyValueTuple `json:"en_en_ft"`
+	StartEnUserFitler       []KeyValueTuple `json:"st_us_ft"`
+	EndEnUserFitler         []KeyValueTuple `json:"en_us_ft"`
+	GlobalFilters           []KeyValueTuple `json:"ft"`
+	IncludedEvents          []string        `json:"in_en"`
+	IncludedEventProperties []string        `json:"in_epr"`
+	IncludedUserProperties  []string        `json:"in_upr"`
 }
 
 // KeyValueTuple - key value pair

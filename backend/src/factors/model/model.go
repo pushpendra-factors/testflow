@@ -42,6 +42,7 @@ type Model interface {
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
 	UpdateAgentInformation(agentUUID, firstName, lastName, phone string, isOnboardingFlowSeen *bool) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
+	UpdateAgentVerificationDetailsFromAuth0(agentUUID, firstName, lastName string, verified bool, value *postgres.Jsonb) int
 	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
 	UpdateAgentSalesforceInstanceURL(agentUUID string, instanceURL string) int
 
@@ -54,15 +55,15 @@ type Model interface {
 	GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
 
 	// attribution
-	ExecuteAttributionQuery(projectID uint64, query *model.AttributionQuery) (*model.QueryResult, error)
-	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error)
+	ExecuteAttributionQuery(projectID uint64, query *model.AttributionQuery, debugQueryKey string) (*model.QueryResult, error)
+	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64, logCtx log.Entry) (map[string]model.UserInfo, error)
 	GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
-		userIDInfo map[string]model.UserInfo) (error, []model.UserEventInfo)
+		userIDInfo map[string]model.UserInfo, logCtx log.Entry) (error, []model.UserEventInfo)
 	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error)
 	GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
 		goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
-		eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
+		eventNameToIdList map[string][]interface{}, logCtx log.Entry) (map[string]model.UserInfo,
 		map[string][]model.UserIDPropID, map[string]int64, error)
 
 	// bigquery_setting
@@ -134,9 +135,9 @@ type Model interface {
 	DeleteDashboardUnit(projectID uint64, agentUUID string, dashboardId uint64, id uint64) int
 	DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID uint64, dashboardUnitIDs []uint64) (int, string)
 	UpdateDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64, unit *model.DashboardUnit) (*model.DashboardUnit, int)
-	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs, dashboardUnitIDs string, numRoutines int, reportCollector *sync.Map)
-	CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnitIDs []uint64, numRoutines int, reportCollector *sync.Map) int
-	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map)
+	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map)
+	CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnits []model.DashboardUnit, queryClasses []string, numRoutines int, reportCollector *sync.Map) int
+	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string)
 	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass string, queryInfo *model.Queries, errMsg string)
 	GetQueryClassFromQueries(query model.Queries) (queryClass, errMsg string)
 	GetQueryAndClassFromQueryIdString(queryIdString string, projectId uint64) (queryClass string, queryInfo *model.Queries, errMsg string)
@@ -221,6 +222,7 @@ type Model interface {
 	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int
 	AssociateSessionByEventIds(projectId uint64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
+	GetHubspotFormEvents(projectID uint64, userId string, timestamps[] interface{}) ([]model.Event, int)
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
@@ -268,7 +270,7 @@ type Model interface {
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
 	GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int)
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
-	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64) (int64, int)
+	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64, docTypes []int) (int64, int)
 	GetHubspotFormDocuments(projectID uint64) ([]model.HubspotDocument, int)
 	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int) ([]model.HubspotDocument, int)
 	GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, docID string) ([]model.HubspotDocument, int)
@@ -570,4 +572,16 @@ type Model interface {
 	// integration document
 	InsertIntegrationDocument(doc model.IntegrationDocument) error
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
+	
+	// alerts
+	GetAlertById(id string, projectID uint64) (model.Alert, int)
+	GetAllAlerts(projectID uint64) ([]model.Alert, int)
+	UpdateAlert(id string, projectID uint64) (int, string)
+	CreateAlert(projectID uint64, alert model.Alert) (model.Alert, int, string)
+
+	//crm
+	CreateCRMUser(crmUser *model.CRMUser) (int, error)
+	CreateCRMGroup(crmGroup *model.CRMGroup) (int, error)
+	CreateCRMActivity(crmActivity *model.CRMActivity) (int, error)
+	CreateCRMRelationship(crmRelationship *model.CRMRelationship) (int, error)
 }

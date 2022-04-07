@@ -1,0 +1,39 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: factors-staging-node-pool
+  name: project-events-job
+spec:
+  schedule: "1 2 3 4 5" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: factors-staging-node-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: project-events-job
+            image: us.gcr.io/factors-staging/project-events-job:0.1
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --bucket_name
+            - $(BUCKET_NAME)
+            - --date
+            - "20220220"
+            - --project_id
+            - "51"
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-bucket
+          restartPolicy: OnFailure

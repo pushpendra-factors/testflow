@@ -82,14 +82,23 @@
   }
 }
 
-.more-actions-menu {
-  padding: 1.25rem;
+.additionalops {
+  top: 40px;
+  width: fit-content;
+  white-space: nowrap;
   box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
   border-radius: 10px;
+}
+
+.more-actions-menu {
+  padding: 1rem;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
 
   a {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     column-gap: 0.5rem;
     padding: 0.5rem;
 

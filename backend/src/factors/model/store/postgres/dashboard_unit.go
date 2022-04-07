@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -299,10 +300,15 @@ func (pg *Postgres) UpdateDashboardUnit(projectId uint64, agentUUID string,
 }
 
 // CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
-func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs, dashboardUnitIDsList string, numRoutines int, reportCollector *sync.Map) {
-	logCtx := log.WithFields(log.Fields{
-		"Method": "CacheDashboardUnitsForProjects",
-	})
+func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int, reportCollector *sync.Map) {
+	logFields := log.Fields{
+		"string_projects_ids": stringProjectsIDs,
+		"exclude_project_ids": excludeProjectIDs,
+		"num_routines":        numRoutines,
+		"report_collector":    reportCollector,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	projectIDs := pg.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
 	var mapOfValidDashboardUnits map[uint64]map[uint64]bool
@@ -316,31 +322,85 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 		}
 		logCtx.WithFields(log.Fields{"total_valid_units": validUnitCount}).Info("Total of units accessed in last 14 days - cache")
 	}
+
 	for _, projectID := range projectIDs {
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
 		logCtx.Info("Starting to cache units for the project")
 		startTime := U.TimeNowUnix()
-		dashboardUnitIDs := C.GetDashboardUnitIDs(dashboardUnitIDsList)
 		unitsCount := 0
 
+		dashboardUnits, errCode := pg.GetDashboardUnitsForProjectID(projectID)
+		if errCode != http.StatusFound || len(dashboardUnits) == 0 {
+			logCtx.Info("not running caching for the project - units not found")
+			continue
+		}
+
+		filterDashboardUnits := make([]model.DashboardUnit, 0)
+		filterDashboardUnitQueryClass := make([]string, 0)
+		for _, dashboardUnit := range dashboardUnits {
+
+			queryClass, _, errMsg := pg.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+			if errMsg != "" {
+				log.WithFields(logFields).Error("failed to get query class")
+				continue
+			}
+			// skip web analytics here
+			if queryClass == model.QueryClassWeb {
+				continue
+			}
+
+			// filtering attribution query for attribution run
+			if queryClass != model.QueryClassAttribution && C.GetOnlyAttributionDashboardCaching() == 1 {
+				continue
+			}
+			// skip attribution query when skip is set = 1
+			if queryClass == model.QueryClassAttribution && C.GetSkipAttributionDashboardCaching() == 1 {
+				continue
+			}
+			// filtering kpi query for attribution run
+			if queryClass != model.QueryClassKPI && C.GetOnlyKPICachingCaching() == 1 {
+				continue
+			}
+			// skip kpi query for skip enabled run
+			if queryClass == model.QueryClassKPI && C.GetSkipKPICachingCaching() == 1 {
+				continue
+			}
+
+			filterDashboardUnits = append(filterDashboardUnits, dashboardUnit)
+			filterDashboardUnitQueryClass = append(filterDashboardUnitQueryClass, queryClass)
+		}
+		if len(filterDashboardUnits) == 0 || (len(filterDashboardUnits) != len(filterDashboardUnitQueryClass)) {
+			logCtx.WithFields(log.Fields{
+				"finalDashboardUnits":          len(filterDashboardUnits),
+				"finalDashboardUnitQueryClass": len(filterDashboardUnitQueryClass),
+			}).Info("not running caching for project ")
+			continue
+		}
+
 		if C.GetUsageBasedDashboardCaching() == 1 {
-			var validDashboardIDs []uint64
+
+			var validDashboardUnitIDs []model.DashboardUnit
+			var validDashboardUnitQueryClass []string
 			if _, exists := mapOfValidDashboardUnits[projectID]; exists {
-				for _, dashboardUnitID := range dashboardUnitIDs {
-					if value, exists := mapOfValidDashboardUnits[projectID][dashboardUnitID]; exists {
+				for idx, dashboardUnit := range filterDashboardUnits {
+					if value, ex := mapOfValidDashboardUnits[projectID][dashboardUnit.ID]; ex {
 						if value {
-							validDashboardIDs = append(validDashboardIDs, dashboardUnitID)
+							validDashboardUnitIDs = append(validDashboardUnitIDs, dashboardUnit)
+							validDashboardUnitQueryClass = append(validDashboardUnitQueryClass, filterDashboardUnitQueryClass[idx])
 						}
+					} else {
+						log.WithFields(log.Fields{"dashboardUnit": dashboardUnit}).Info("skipping caching unit as not accessed")
 					}
 				}
 			}
-			log.WithFields(log.Fields{"project_id": projectID, "total_units": len(dashboardUnitIDs), "accessed_units": len(validDashboardIDs)}).Info("Project Report - last 14 days")
-			unitsCount = pg.CacheDashboardUnitsForProjectID(projectID, validDashboardIDs, numRoutines, reportCollector)
+			log.WithFields(log.Fields{"project_id": projectID, "total_units": len(filterDashboardUnits), "accessed_units": len(validDashboardUnitIDs)}).Info("Project Report - last 14 days")
+			unitsCount = pg.CacheDashboardUnitsForProjectID(projectID, validDashboardUnitIDs, validDashboardUnitQueryClass, numRoutines, reportCollector)
+
 		} else {
-			unitsCount = pg.CacheDashboardUnitsForProjectID(projectID, dashboardUnitIDs, numRoutines, reportCollector)
 
+			log.WithFields(log.Fields{"project_id": projectID, "total_units": len(filterDashboardUnits), "accessed_units": len(filterDashboardUnits)}).Info("Project Report - normal run")
+			unitsCount = pg.CacheDashboardUnitsForProjectID(projectID, filterDashboardUnits, filterDashboardUnitQueryClass, numRoutines, reportCollector)
 		}
-
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
 		log.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
@@ -349,29 +409,18 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 }
 
 // CacheDashboardUnitsForProjectID Caches all the dashboard units for the given `projectID`.
-func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnitIDs []uint64, numRoutines int, reportCollector *sync.Map) int {
+func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, dashboardUnits []model.DashboardUnit,
+	dashboardUnitQueryClass []string, numRoutines int, reportCollector *sync.Map) int {
+	logFields := log.Fields{
+		"project_id":         projectID,
+		"num_routines":       numRoutines,
+		"report_collector":   reportCollector,
+		"dashboard_unit_ids": dashboardUnits,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
 	if numRoutines == 0 {
 		numRoutines = 1
-	}
-
-	dashboardUnits, errCode := pg.GetDashboardUnitsForProjectID(projectID)
-	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
-		return 0
-	}
-	isPresent := false
-	finalDashboardUnits := make([]model.DashboardUnit, 0)
-	for _, dashboardUnit := range dashboardUnits {
-		if U.ContainsUint64InArray(dashboardUnitIDs, dashboardUnit.ID) {
-			isPresent = true
-			finalDashboardUnits = append(finalDashboardUnits, dashboardUnit)
-		}
-	}
-	if len(dashboardUnitIDs) != 0 {
-		if isPresent {
-			dashboardUnits = finalDashboardUnits
-		} else {
-			return 0
-		}
 	}
 
 	var waitGroup sync.WaitGroup
@@ -382,13 +431,13 @@ func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, dashboardU
 	for i := range dashboardUnits {
 		count++
 		if C.GetIsRunningForMemsql() == 0 {
-			go pg.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector)
+			go pg.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector, dashboardUnitQueryClass[i])
 			if count%numRoutines == 0 {
 				waitGroup.Wait()
 				waitGroup.Add(U.MinInt(len(dashboardUnits)-count, numRoutines))
 			}
 		} else {
-			pg.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector)
+			pg.CacheDashboardUnit(dashboardUnits[i], &waitGroup, reportCollector, dashboardUnitQueryClass[i])
 		}
 	}
 	if C.GetIsRunningForMemsql() == 0 {
@@ -450,7 +499,7 @@ func (pg *Postgres) GetQueryClassFromQueries(query model.Queries) (queryClass, e
 }
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
-func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map) {
+func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup, reportCollector *sync.Map, queryClass string) {
 	logCtx := log.WithFields(log.Fields{
 		"ProjectID":       dashboardUnit.ProjectID,
 		"DashboardID":     dashboardUnit.DashboardId,
@@ -459,11 +508,7 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 	if C.GetIsRunningForMemsql() == 0 {
 		defer waitGroup.Done()
 	}
-	queryClass, _, errMsg := pg.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
-	if errMsg != "" {
-		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
-		return
-	}
+
 	// excluding 'Web' class dashboard units
 	if queryClass == model.QueryClassWeb {
 		return
@@ -578,7 +623,8 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 	} else if baseQuery.GetClass() == model.QueryClassAttribution {
 		attributionQuery := baseQuery.(*model.AttributionQueryUnit)
 		unitReport.Query = attributionQuery
-		result, err = pg.ExecuteAttributionQuery(projectID, attributionQuery.Query)
+		var debugQueryKey string
+		result, err = pg.ExecuteAttributionQuery(projectID, attributionQuery.Query, debugQueryKey)
 		logCtx.WithFields(log.Fields{"Query": attributionQuery.Query, "ErrCode": err}).Info("Got attribution result")
 		if err != nil && !model.IsIntegrationNotFoundError(err) {
 			errCode = http.StatusInternalServerError

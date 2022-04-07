@@ -90,7 +90,7 @@ spec:
                 - configMapRef:
                     name: config-postgres
                 - secretRef:
-                    name: secret-postgres
+                    name: secret-memsql
                 - secretRef:
                     name: secret-sentry
           restartPolicy: OnFailure

@@ -16133,6 +16133,10 @@ video {
   z-index: 50;
 }
 
+.z-max {
+  z-index: 1000;
+}
+
 .z-auto {
   z-index: auto;
 }

@@ -1,5 +1,14 @@
 import csv
+from os import stat
 
+from scripts.adwords.new_jobs.query import QueryBuilder
+
+class CsvTextBuilder(object):
+    def __init__(self):
+        self.csv_string = []
+
+    def write(self, row):
+        self.csv_string.append(row)
 
 class CsvUtil:
 
@@ -49,4 +58,23 @@ class CsvUtil:
         lines = csv_string.splitlines()
         reader = csv.reader(lines)
         parsed_csv = list(reader)
-        return parsed_csv
+        version = "##V00"
+        if len(parsed_csv) > 0 and "##V" in parsed_csv[0][0]:
+            version = parsed_csv[0][0][:5]
+            del parsed_csv[0]
+        return parsed_csv, version
+
+    @staticmethod
+    def stream_to_csv(extract_fields , headers, stream):
+        all_data = []
+        for batch in stream:
+            for row in batch.results:
+                dict = {}
+                for i in range(len(headers)):
+                    dict[headers[i]] = QueryBuilder.getattribute(row, extract_fields[i])
+                all_data.append(dict)
+        csvfile = CsvTextBuilder()
+        writer = csv.DictWriter(csvfile, headers)
+        writer.writeheader()
+        writer.writerows(all_data)
+        return ''.join(csvfile.csv_string)

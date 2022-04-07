@@ -40,7 +40,7 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLCertificate := flag.String("memsql_cert", "", "")
-	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 
 	customStartTime := flag.Int64("start_time", 0, "")
 	customEndTime := flag.Int64("end_time", 0, "")
@@ -102,16 +102,16 @@ func main() {
 	}
 
 	query := &model.AttributionQuery{
-		LinkedEvents:           linkedEventsArray,
-		From:                   *customStartTime,
-		To:                     *customEndTime,
-		ConversionEvent:        *eventName,
+		//LinkedEvents:           linkedEventsArray,
+		From: *customStartTime,
+		To:   *customEndTime,
+		//ConversionEvent:        *eventName,
 		LookbackDays:           *lookbackDays,
 		AttributionKey:         *attributionKey,
 		AttributionMethodology: *attributionMethod,
 	}
-
-	result, err := store.GetStore().ExecuteAttributionQuery(*projectIdFlag, query)
+	var debugQueryKey string
+	result, err := store.GetStore().ExecuteAttributionQuery(*projectIdFlag, query, debugQueryKey)
 	if err != nil {
 		log.Error("Failed to execute query")
 	}

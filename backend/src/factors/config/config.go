@@ -62,6 +62,8 @@ const PRODUCTION = "production"
 // in sync with other services which uses the cookie.
 const FactorsSessionCookieName = "factors-sid"
 
+const FactorsAuth0StateCookieName = "factors-auth0-state"
+
 // URL for loading SDK on client side.
 const SDKAssetsURL = "https://app.factors.ai/assets/factors.js"
 
@@ -105,6 +107,13 @@ type DBConf struct {
 	UseExactConnFromConfig bool
 }
 
+type Auth0Conf struct {
+	Domain       string
+	ClientId     string
+	ClientSecret string
+	CallbackUrl  string
+}
+
 type Configuration struct {
 	GCPProjectID                                   string
 	GCPProjectLocation                             string
@@ -113,6 +122,9 @@ type Configuration struct {
 	Port                                           int
 	DBInfo                                         DBConf
 	MemSQLInfo                                     DBConf
+	Auth0Info                                      Auth0Conf
+	SessionStore                                   string
+	SessionStoreSecret                             string
 	RedisHost                                      string
 	RedisPort                                      int
 	RedisHostPersistent                            string
@@ -132,6 +144,7 @@ type Configuration struct {
 	AWSKey                                         string
 	AWSSecret                                      string
 	Cookiename                                     string
+	Auth0StateName                                 string
 	EmailSender                                    string
 	ErrorReportingInterval                         int
 	AdminLoginEmail                                string
@@ -218,9 +231,13 @@ type Configuration struct {
 	SdkQueueThreshold                               int
 	IntegrationQueueThreshold                       int
 	UsageBasedDashboardCaching                      int
+	OnlyKPICaching                                  int
+	SkipKPICaching                                  int
 	EnableBingAdsAttribution                        bool
+	EnableHubspotFormsEventsByProjectID             string
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
+	SalesforcePropertyLookBackTimeHr                int
 }
 
 type Services struct {
@@ -593,14 +610,18 @@ func initCookieInfo(env string) {
 	// in sync with other services which uses the cookie.
 
 	cookieName := fmt.Sprintf("%s%s", FactorsSessionCookieName, "d")
+	stateCookieName := fmt.Sprintf("%s%s", FactorsAuth0StateCookieName, "d")
 
 	if env == STAGING {
 		cookieName = fmt.Sprintf("%s%s", FactorsSessionCookieName, "s")
+		stateCookieName = fmt.Sprintf("%s%s", FactorsAuth0StateCookieName, "s")
 	} else if env == PRODUCTION {
 		cookieName = FactorsSessionCookieName
+		stateCookieName = FactorsAuth0StateCookieName
 	}
 
 	configuration.Cookiename = cookieName
+	configuration.Auth0StateName = stateCookieName
 }
 
 func InitConf(c *Configuration) {
@@ -1584,6 +1605,10 @@ func GetFactorsCookieName() string {
 	return configuration.Cookiename
 }
 
+func GetAuth0StateCookieName() string {
+	return configuration.Auth0StateName
+}
+
 func GetSkipTrackProjectIds() []uint64 {
 	return configuration.SkipTrackProjectIds
 }
@@ -2070,8 +2095,23 @@ func GetHubspotBatchInsertBatchSize() int {
 	return GetConfig().HubspotBatchInsertBatchSize
 }
 
+func EnableHubspotFormsEventsByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableHubspotFormsEventsByProjectID, "")
+	if allProjects {
+		return true
+	}
+	return allowedProjectIDs[projectID]
+}
 func GetUsageBasedDashboardCaching() int {
 	return configuration.UsageBasedDashboardCaching
+}
+
+func GetSkipKPICachingCaching() int {
+	return configuration.SkipKPICaching
+}
+
+func GetOnlyKPICachingCaching() int {
+	return configuration.OnlyKPICaching
 }
 
 func UseHubspotBatchInsertByProjectID(projectID uint64) bool {
@@ -2081,4 +2121,21 @@ func UseHubspotBatchInsertByProjectID(projectID uint64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+
+}
+
+func GetAuth0Info() Auth0Conf {
+	return configuration.Auth0Info
+}
+
+func GetSessionStore() string {
+	return configuration.SessionStore
+}
+
+func GetSessionStoreSecret() string {
+	return configuration.SessionStoreSecret
+}
+
+func GetSalesforcePropertyLookBackTimeHr() int {
+	return GetConfig().SalesforcePropertyLookBackTimeHr
 }
