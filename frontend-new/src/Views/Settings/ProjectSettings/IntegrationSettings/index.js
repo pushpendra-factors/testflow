@@ -29,22 +29,19 @@ import BingIntegration from './Bing';
 const IntegrationProviderData = [
   {
     name: 'Segment',
-    desc:
-      'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
+    desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Segment_ads',
     kbLink: 'https://help.factors.ai/en/articles/5835006-segment',
   },
   {
     name: 'Hubspot',
-    desc:
-      'Sync your Contact, Company and Deal objects with Factors on a daily basis',
+    desc: 'Sync your Contact, Company and Deal objects with Factors on a daily basis',
     icon: 'Hubspot_ads',
     kbLink: 'https://help.factors.ai/en/articles/5099532-hubspot',
   },
   {
     name: 'Salesforce',
-    desc:
-      'Sync your Leads, Contact, Account, Opportunity and Campaign objects with Factors on a daily basis',
+    desc: 'Sync your Leads, Contact, Account, Opportunity and Campaign objects with Factors on a daily basis',
     icon: 'Salesforce_ads',
     kbLink: 'https://help.factors.ai/en/articles/5099533-salesforce',
   },
@@ -56,8 +53,7 @@ const IntegrationProviderData = [
   },
   {
     name: 'Facebook',
-    desc:
-      'Pull in reports from Facebook, Instagram and Facebook Audience Network',
+    desc: 'Pull in reports from Facebook, Instagram and Facebook Audience Network',
     icon: 'Facebook_ads',
     kbLink: 'https://help.factors.ai/en/articles/5099507-facebook-ads',
   },
@@ -69,15 +65,13 @@ const IntegrationProviderData = [
   },
   {
     name: 'Drift',
-    desc:
-      'Track events and conversions from Drift’s chat solution on the website',
+    desc: 'Track events and conversions from Drift’s chat solution on the website',
     icon: 'DriftLogo',
     kbLink: false,
   },
   {
     name: 'Google Search Console',
-    desc:
-      'Track organic search impressions, clicks and position from Google Search',
+    desc: 'Track organic search impressions, clicks and position from Google Search',
     icon: 'Google',
     kbLink: 'https://help.factors.ai/en/articles/5576963-google-search-console',
   },
@@ -179,7 +173,9 @@ const IntegrationCard = ({ item, index }) => {
         <div>
           <div
             className={`flex justify-between`}
-            onClick={() => setToggle(!toggle)}
+            onClick={() =>
+              isActive || isStatus === 'Active' ? setToggle(!toggle) : null
+            }
           >
             <div className='flex'>
               <Avatar
