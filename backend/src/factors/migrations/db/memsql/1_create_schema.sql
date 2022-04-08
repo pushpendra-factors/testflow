@@ -879,7 +879,7 @@ CREATE TABLE IF NOT EXISTS alerts(
     updated_at timestamp(6) NOT NULL,
     is_deleted boolean,
     SHARD KEY (project_id),
-    PRIMARY KEY (id),
+    PRIMARY KEY (id, project_id)
 );
 
 -- DROP DATABASE factors;
