@@ -37,7 +37,7 @@ const ConversionGoalBlock = ({
     
     
     useEffect(() => {
-        if(group_analysis === 'users') {
+        if(!group_analysis || group_analysis === 'users') {
             setEventPropsForUserGroup();
         } else {
             setFilterPropsforKpiGroups();
@@ -259,7 +259,7 @@ const ConversionGoalBlock = ({
 
   const selectEvents = () => {
 
-    const groupedProps = group_analysis === 'users' ? eventNameOptions : getKpiGroupList(group_analysis);
+    const groupedProps = (!group_analysis || group_analysis === 'users') ? eventNameOptions : getKpiGroupList(group_analysis);
     return (
       <div className={styles.block__event_selector}>
         {selectVisible ? (
@@ -304,7 +304,7 @@ const ConversionGoalBlock = ({
 
         {selectEvents()}
 
-        {group_analysis === 'users' && renderCountLabel()}
+        {(!group_analysis || group_analysis === 'users') && renderCountLabel()}
 
         <div className={styles.block__additional_actions}>
           {additionalActions()}

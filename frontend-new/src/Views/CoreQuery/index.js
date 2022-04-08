@@ -552,10 +552,12 @@ function CoreQuery({
           tacticOfferType
         );
 
-        if(queryOptions.group_analysis !== 'users') {
+        if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users') {
           const kpiQuery = getKPIQuery(attrQueries, durationObj, {event:[], global: []}, queryOptions, []);
           if(queryOptions.group_analysis === 'hubspot_deals') {
             kpiQuery.gGBy = [{"gr":"","prNa":"$hubspot_deal_hs_object_id","prDaTy":"numerical","en":"user","objTy":"","gbty":"raw_values"}];
+          } else if (queryOptions.group_analysis === 'salesforce_opportunities') {
+            kpiQuery.gGBy = [{"gr":"","prNa":"$salesforce_opportunity_id","prDaTy":"numerical","en":"user","objTy":"","gbty":"raw_values"}];
           }
           query.query.analyze_type = queryOptions.group_analysis;
           query.query.kpi_query_group = kpiQuery;
