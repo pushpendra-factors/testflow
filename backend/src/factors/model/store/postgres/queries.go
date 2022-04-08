@@ -156,7 +156,7 @@ func (pg *Postgres) getQueryWithQueryID(projectID uint64, queryID uint64, queryT
 	db := C.GetServices().Db
 	var query model.Queries
 	var err error
-	if queryType == 0 {
+	if queryType == model.QueryTypeAllQueries {
 		err = db.Table("queries").Where("project_id = ? AND id=? AND is_deleted = ?",
 			projectID, queryID, "false").Find(&query).Error
 	} else {
@@ -270,6 +270,18 @@ func (pg *Postgres) UpdateSavedQuery(projectID uint64, queryID uint64, query *mo
 		return &model.Queries{}, http.StatusInternalServerError
 	}
 	return query, http.StatusAccepted
+}
+
+func (pg *Postgres) UpdateQueryIDsWithNewIDs(projectID uint64, shareableURLs []string) int {
+	db := C.GetServices().Db
+	statusCode := http.StatusAccepted
+	for _, idText := range shareableURLs {
+		if err := db.Table("queries").Where("project_id = ? AND id_text = ? AND is_deleted = ?", projectID, idText, "false").
+			Update("id_text", U.RandomStringForSharableQuery(50)).Error; err != nil {
+			statusCode = http.StatusPartialContent
+		}
+	}
+	return statusCode
 }
 
 func (pg *Postgres) SearchQueriesWithProjectId(projectID uint64, searchString string) ([]model.Queries, int) {

@@ -373,6 +373,26 @@ func (store *MemSQL) UpdateSavedQuery(projectID uint64, queryID uint64, query *m
 	return query, http.StatusAccepted
 }
 
+func (store *MemSQL) UpdateQueryIDsWithNewIDs(projectID uint64, shareableURLs []string) int {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"shareable_urls": shareableURLs,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	db := C.GetServices().Db
+	statusCode := http.StatusAccepted
+	for _, idText := range shareableURLs {
+		if err := db.Table("queries").Where("project_id = ? AND id_text = ? AND is_deleted = ?", projectID, idText, "false").
+			Update("id_text", U.RandomStringForSharableQuery(50)).Error; err != nil {
+				logCtx.Error("Failed to update query id_text: ", idText)
+			statusCode = http.StatusPartialContent
+		}
+	}
+	return statusCode
+}
+
 func (store *MemSQL) SearchQueriesWithProjectId(projectID uint64, searchString string) ([]model.Queries, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
