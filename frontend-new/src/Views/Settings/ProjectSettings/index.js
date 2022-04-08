@@ -89,7 +89,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
             </Col>
           </Row>
           <Row gutter={[24, 24]}>
-            <Col span={5}>
+            <Col span={6}>
               <Menu
                 onClick={handleClick}
                 defaultSelectedKeys={selectedMenu}
