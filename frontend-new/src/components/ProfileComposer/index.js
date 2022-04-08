@@ -119,7 +119,7 @@ function ProfileComposer({
             extraClass={`m-0 mr-3`}
           >
             Analyse
-          </Text>{' '}
+          </Text>
           <div className={`${styles.groupsection}`}>
             <Button
               className={`${styles.groupsection_button}`}

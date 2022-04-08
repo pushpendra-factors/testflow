@@ -1,29 +1,23 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { connect, useSelector } from "react-redux";
-import { bindActionCreators } from "redux";
-import { Button, Collapse, Select, Popover } from "antd";
+import React, { useState, useEffect, useCallback } from 'react';
+import { connect, useSelector } from 'react-redux';
+import { bindActionCreators } from 'redux';
+import { Button, Collapse, Select, Popover } from 'antd';
 import MomentTz from 'Components/MomentTz';
-import { SVG, Text } from "../factorsComponents";
-import styles from "./index.module.scss";
-import QueryBlock from "./QueryBlock";
-import SeqSelector from "./AnalysisSeqSelector";
-import GroupBlock from "./GroupBlock";
-import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from "../../utils/constants";
-
+import { SVG, Text } from '../factorsComponents';
+import styles from './index.module.scss';
+import QueryBlock from './QueryBlock';
+import SeqSelector from './AnalysisSeqSelector';
+import GroupBlock from './GroupBlock';
+import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from '../../utils/constants';
 import FaDatepicker from '../../components/FaDatepicker';
-
 import ComposerBlock from '../QueryCommons/ComposerBlock';
-
 import CriteriaSection from './CriteriaSection';
-
 import { DEFAULT_DATE_RANGE, displayRange } from './DateRangeSelector/utils';
-
 import {
   fetchEventNames,
   getUserProperties,
   getEventProperties,
-} from "Reducers/coreQuery/middleware";
-
+} from 'Reducers/coreQuery/middleware';
 import GLobalFilter from './GlobalFilter';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
 
@@ -45,7 +39,7 @@ function QueryComposer({
   setQueryOptions,
   runFunnelQuery,
   collapse = false,
-  setCollapse
+  setCollapse,
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
@@ -107,10 +101,10 @@ function QueryComposer({
   };
 
   const setGlobalFiltersOption = (filters) => {
-    const opts = Object.assign({}, queryOptions)
+    const opts = Object.assign({}, queryOptions);
     opts.globalFilters = filters;
     setQueryOptions(opts);
-  }
+  };
 
   const renderGlobalFilterBlock = () => {
     const [filterBlockOpen, setFilterBlockOpen] = useState(true);
@@ -123,25 +117,30 @@ function QueryComposer({
       }
 
       return (
-        <ComposerBlock 
-          blockTitle={'FILTER BY'} 
-          isOpen={filterBlockOpen} 
-          showIcon={true} 
+        <ComposerBlock
+          blockTitle={'FILTER BY'}
+          isOpen={filterBlockOpen}
+          showIcon={true}
           onClick={() => setFilterBlockOpen(!filterBlockOpen)}
           extraClass={`no-padding-l no-padding-r`}
         >
-          <div key={0} className={"fa--query_block borderless no-padding "}>
-            <GLobalFilter filters={queryOptions.globalFilters} 
+          <div key={0} className={'fa--query_block borderless no-padding '}>
+            <GLobalFilter
+              filters={queryOptions.globalFilters}
               setGlobalFilters={setGlobalFiltersOption}
-              onFiltersLoad={[() => {getUserProperties(activeProject.id, queryType)}]}
+              onFiltersLoad={[
+                () => {
+                  getUserProperties(activeProject.id, queryType);
+                },
+              ]}
             ></GLobalFilter>
           </div>
         </ComposerBlock>
-
       );
-    } catch (err) { console.log(err) };
+    } catch (err) {
+      console.log(err);
+    }
   };
-  
 
   const groupByBlock = () => {
     const [groupBlockOpen, setGroupBlockOpen] = useState(true);
@@ -155,8 +154,11 @@ function QueryComposer({
       }
 
       return (
-        <ComposerBlock blockTitle={'BREAKDOWN'} isOpen={groupBlockOpen} 
-          showIcon={true} onClick={() => setGroupBlockOpen(!groupBlockOpen)}
+        <ComposerBlock
+          blockTitle={'BREAKDOWN'}
+          isOpen={groupBlockOpen}
+          showIcon={true}
+          onClick={() => setGroupBlockOpen(!groupBlockOpen)}
           extraClass={`no-padding-l no-padding-r`}
         >
           <div key={0} className={'fa--query_block borderless no-padding '}>
@@ -191,7 +193,9 @@ function QueryComposer({
       queryOptionsState.date_range.from &&
       queryOptionsState.date_range.to
     ) {
-      ranges[0].startDate = MomentTz(queryOptionsState.date_range.from).toDate();
+      ranges[0].startDate = MomentTz(
+        queryOptionsState.date_range.from
+      ).toDate();
       ranges[0].endDate = MomentTz(queryOptionsState.date_range.to).toDate();
     }
 
@@ -199,7 +203,7 @@ function QueryComposer({
   };
 
   const setDateRange = (dates) => {
-    console.log('setDateRange',dates);
+    console.log('setDateRange', dates);
     const queryOptionsState = Object.assign({}, queryOptions);
     if (dates && dates.startDate && dates.endDate) {
       if (Array.isArray(dates.startDate)) {
@@ -209,13 +213,7 @@ function QueryComposer({
         queryOptionsState.date_range.from = dates.startDate;
         queryOptionsState.date_range.to = dates.endDate;
       }
-      const frequency = getValidGranularityOptions(
-        {
-          from: queryOptionsState.date_range.from,
-          to: queryOptionsState.date_range.to,
-        },
-        queryType
-      )[0];
+      const frequency = getValidGranularityOptions()[0];
       queryOptionsState.date_range.frequency = frequency;
       setQueryOptions(queryOptionsState);
     }
@@ -243,23 +241,43 @@ function QueryComposer({
         return null;
       } else {
         return (
-          <div className={!collapse? styles.composer_footer: styles.composer_footer_right}>
-            {!collapse? <FaDatepicker
-              customPicker
-              presetRange
-              monthPicker
-              placement='topRight'
-              buttonSize={'large'}
-              range={{
-                startDate: queryOptions.date_range.from,
-                endDate: queryOptions.date_range.to,
-              }}
-              onSelect={setDateRange}
-            />: <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(false)}>
-            <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse all</Button>}
-          <Button className={`ml-2`} size={'large'} type='primary' onClick={handleRunQuery}>
+          <div
+            className={
+              !collapse ? styles.composer_footer : styles.composer_footer_right
+            }
+          >
+            {!collapse ? (
+              <FaDatepicker
+                customPicker
+                presetRange
+                monthPicker
+                placement='topRight'
+                buttonSize={'large'}
+                range={{
+                  startDate: queryOptions.date_range.from,
+                  endDate: queryOptions.date_range.to,
+                }}
+                onSelect={setDateRange}
+              />
+            ) : (
+              <Button
+                className={`mr-2`}
+                size={'large'}
+                type={'default'}
+                onClick={() => setCollapse(false)}
+              >
+                <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>
+                Collapse all
+              </Button>
+            )}
+            <Button
+              className={`ml-2`}
+              size={'large'}
+              type='primary'
+              onClick={handleRunQuery}
+            >
               Run Analysis
-          </Button>
+            </Button>
           </div>
         );
       }
@@ -321,7 +339,7 @@ function QueryComposer({
             extraClass={'m-0 ml-2 inline'}
           >
             happened in the same session
-          </Text>{' '}
+          </Text>
         </>
       );
     } else {
@@ -359,7 +377,7 @@ function QueryComposer({
             extraClass={'m-0 ml-2 inline'}
           >
             happened in the same session
-          </Text>{' '}
+          </Text>
         </>
       );
     }
@@ -382,8 +400,15 @@ function QueryComposer({
         if (queries.length <= 0) return null;
 
         return (
-          <ComposerBlock blockTitle={'CRITERIA'} isOpen={criterieaBlockOpen} showIcon={true} 
-            onClick={() => {setCriterieaBlockOpen(!criterieaBlockOpen)}} extraClass={`no-padding-l no-padding-r`}>
+          <ComposerBlock
+            blockTitle={'CRITERIA'}
+            isOpen={criterieaBlockOpen}
+            showIcon={true}
+            onClick={() => {
+              setCriterieaBlockOpen(!criterieaBlockOpen);
+            }}
+            extraClass={`no-padding-l no-padding-r`}
+          >
             <div className={styles.criteria}>{renderEACrit()}</div>
           </ComposerBlock>
         );
@@ -408,9 +433,10 @@ function QueryComposer({
     const [eventBlockOpen, setEventBlockOpen] = useState(true);
     try {
       return (
-        <ComposerBlock 
-          blockTitle={'EVENTS'} isOpen={eventBlockOpen} 
-          showIcon={true} 
+        <ComposerBlock
+          blockTitle={'EVENTS'}
+          isOpen={eventBlockOpen}
+          showIcon={true}
           onClick={() => setEventBlockOpen(!eventBlockOpen)}
           extraClass={`no-padding-l no-padding-r pt-2`}
         >

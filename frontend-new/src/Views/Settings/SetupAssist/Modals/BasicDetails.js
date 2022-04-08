@@ -61,6 +61,7 @@ function BasicDetails({ createProjectWithTimeZone, activeProject, handleCancel, 
             message.error('error:',err)
           })
         }
+        localStorage.setItem('activeProject', projectId);
         setloading(false);
         setFormData(projectData);
         message.success('New Project Created!');

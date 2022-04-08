@@ -479,3 +479,10 @@ pack-k8-backup:
 upload-k8-backup: export IMAGE_NAME=k8-backup
 upload-k8-backup: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/k8-backup:$(TAG)
+
+pack-compute-and-send-alerts:
+	docker build -t us.gcr.io/factors-$(ENV)/compute-and-send-alerts-job:$(TAG) -f Dockerfile.compute_and_send_alerts_job .
+
+upload-compute-and-send-alerts: export IMAGE_NAME=compute-and-send-alerts-job
+upload-compute-and-send-alerts: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/compute-and-send-alerts-job:$(TAG)

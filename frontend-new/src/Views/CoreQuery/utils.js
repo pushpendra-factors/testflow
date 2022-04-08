@@ -297,7 +297,7 @@ export const getFunnelQuery = (
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gbt = '';
+  query.gbt = dateRange.frequency;
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
   query.gbp = appliedGroupBy.map((opt) => {
@@ -452,14 +452,14 @@ export const getKPIQuery = (
   if (date_range?.from && date_range?.to) {
     period.from = MomentTz(date_range.from).startOf('day').utc().unix();
     period.to = MomentTz(date_range.to).endOf('day').utc().unix();
-    period.frequency = date_range.frequency || 'date';
+    period.frequency = date_range.frequency;
   } else {
     period.from = MomentTz().startOf('week').utc().unix();
     period.to =
       MomentTz().format('dddd') !== 'Sunday'
         ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
         : MomentTz().utc().unix();
-    period.frequency = date_range.frequency || 'date';
+    period.frequency = date_range.frequency;
   }
 
   const eventGrpBy = [...groupBy.event];
@@ -856,6 +856,12 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
         overAllIndex: index,
       };
     });
+
+  const dateRange = {
+    from: requestQuery.fr * 1000,
+    to: requestQuery.to * 1000,
+    frequency: requestQuery.gbt,
+  };
   const result = {
     events,
     queryType,
@@ -865,6 +871,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       event,
       global,
     },
+    dateRange: dateRange,
   };
   return result;
 };
@@ -972,9 +979,10 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
 };
 
 export const getAttributionQuery = (
-  eventGoal,
+  eventGoal = {filters: []},
   touchpoint,
   attr_dimensions,
+  content_groups,
   touchpointFilters,
   queryType,
   models,
@@ -1011,6 +1019,9 @@ export const getAttributionQuery = (
       tactic_offer_type: tacticOfferType,
     },
   };
+  if(!eventGoal || !eventGoal.label) {
+    query.query.ce = {};
+  }
   if (dateRange.from && dateRange.to) {
     query.query.from = MomentTz(dateRange.from).startOf('day').utc().unix();
     query.query.to = MomentTz(dateRange.to).endOf('day').utc().unix();
@@ -1033,18 +1044,31 @@ export const getAttributionQuery = (
       };
     });
   }
-  const attribution_key_dimensions = attr_dimensions
+  const list_dimensions =
+    touchpoint === 'LandingPage'
+      ? content_groups.slice()
+      : attr_dimensions.slice();
+
+  const attribution_key_dimensions = list_dimensions
     .filter((d) => d.touchPoint === touchpoint && d.enabled && d.type === 'key')
     .map((d) => d.header);
-  const attribution_key_custom_dimensions = attr_dimensions
+  const attribution_key_custom_dimensions = list_dimensions
     .filter(
       (d) => d.touchPoint === touchpoint && d.enabled && d.type === 'custom'
+    )
+    .map((d) => d.header);
+  const attribution_content_groups = list_dimensions
+    .filter(
+      (d) =>
+        d.touchPoint === touchpoint && d.enabled && d.type === 'content_group'
     )
     .map((d) => d.header);
 
   if (touchpoint !== MARKETING_TOUCHPOINTS.SOURCE) {
     query.query.attribution_key_dimensions = attribution_key_dimensions;
-    query.query.attribution_key_custom_dimensions = attribution_key_custom_dimensions;
+    query.query.attribution_key_custom_dimensions =
+      attribution_key_custom_dimensions;
+    query.query.attribution_content_groups = attribution_content_groups;
   }
 
   return query;
@@ -1052,10 +1076,18 @@ export const getAttributionQuery = (
 
 export const getAttributionStateFromRequestQuery = (
   requestQuery,
-  initial_attr_dimensions
+  initial_attr_dimensions,
+  initial_content_groups
 ) => {
+
+  let attrQueries = [];
+  if(requestQuery.analyze_type && requestQuery.analyze_type !== 'users') {
+    const kpiQuery = getKPIStateFromRequestQuery(requestQuery.kpi_query_group);
+    attrQueries = kpiQuery.events;
+  } 
+
   const filters = [];
-  requestQuery.ce.pr.forEach((pr) => {
+  requestQuery.ce?.pr?.forEach((pr) => {
     if (pr.lop === 'AND') {
       let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
@@ -1107,16 +1139,33 @@ export const getAttributionStateFromRequestQuery = (
     return dimension;
   });
 
+  const content_groups = initial_content_groups.map((dimension) => {
+    if (dimension.touchPoint === touchpoint) {
+      return {
+        ...dimension,
+        enabled: !requestQuery.attribution_key_dimensions
+          ? dimension.defaultValue
+          : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
+              -1 ||
+            requestQuery.attribution_content_groups?.indexOf(dimension.header) >
+              -1,
+      };
+    }
+    return dimension;
+  });
+
   const result = {
     queryType: QUERY_TYPE_ATTRIBUTION,
     eventGoal: {
       label: requestQuery.ce.na,
       filters,
     },
+    attrQueries: attrQueries,
     touchpoint_filters: touchPointFilters,
     attr_query_type: requestQuery.query_type,
     touchpoint,
     attr_dimensions,
+    content_groups,
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
     tacticOfferType: requestQuery.tactic_offer_type,
@@ -1566,7 +1615,7 @@ export const getProfileQueryFromRequestQuery = (requestQuery) => {
   return result;
 };
 
-const convertDateTimeObjectValuesToMilliSeconds = (obj) => {
+export const convertDateTimeObjectValuesToMilliSeconds = (obj) => {
   const parsedObj = JSON.parse(obj);
   parsedObj.fr = isDateInMilliSeconds(parsedObj.fr)
     ? parsedObj.fr
@@ -1670,11 +1719,16 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     global: globalBreakdown,
     event: [], //will be added later
   };
+  const dateRange = {
+    ...DefaultDateRangeFormat,
+    frequency: requestQuery.qG[1].gbt,
+  };
   const result = {
     events: queries,
     queryType,
     globalFilters: filters,
     breakdown: groupBy,
+    dateRange: dateRange,
   };
   return result;
 };

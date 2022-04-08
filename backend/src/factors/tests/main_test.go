@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
-	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	allowedCampaignEnrichmentByProjectID := flag.String("allowed_campaign_enrichment_by_project_id", "*", "Campaign enrichment by project_id.")
 
 	redisHost := flag.String("redis_host", "localhost", "")

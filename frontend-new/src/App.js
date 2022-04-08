@@ -1,5 +1,5 @@
 import React, { useEffect, Suspense } from "react";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import {
   BrowserRouter as Router,
   Route,
@@ -14,6 +14,7 @@ import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { enableBingAdsIntegration } from 'Reducers/global';
+import { SSO_LOGIN_FULFILLED } from "./reducers/types";
 
 
 const Login = lazyWithRetry(() => import("./Views/Pages/Login"));
@@ -25,6 +26,22 @@ const Templates = lazyWithRetry(() => import("./Views/CoreQuery/Templates/Result
 const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
 
 function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsIntegration }) {
+  const dispatch = useDispatch();
+
+  const ssoLogin = () => {
+    if (window.location.href.indexOf("?error=") > -1) {
+      let searchParams = new URLSearchParams(window.location.search);
+      if (searchParams) {
+        let mode = searchParams.get("mode");
+        let err = searchParams.get("error");
+        if (mode == "auth0" && err == "") {
+          dispatch({ type: SSO_LOGIN_FULFILLED });
+        }
+      }
+    }
+  }
+
+  ssoLogin();
 
   const sendSlackNotification = (email, projectname) => {
     let webhookURL = 'https://hooks.slack.com/services/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';
@@ -172,6 +189,10 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
       localStorage.setItem('project_timeZone', 'Asia/Kolkata');
     }
   });
+
+  useEffect(() => {
+    ssoLogin();
+  }, [agent_details])
 
   return (
     <div className="App">

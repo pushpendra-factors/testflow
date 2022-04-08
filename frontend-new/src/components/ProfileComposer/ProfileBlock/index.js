@@ -166,7 +166,7 @@ function ProfileBlock({
           <Button
             type='text'
             onClick={() => setMoreOptions(true)}
-            className={`fa-btn--custom ml-1 mr-1`}
+            className={`fa-btn--custom mr-1`}
           >
             <SVG name='more'></SVG>
           </Button>
@@ -278,7 +278,7 @@ function ProfileBlock({
               extraClass={'m-0'}
             >
               {alphabetIndex[index - 1]}
-            </Text>{' '}
+            </Text>
           </div>
           {event?.alias?.length ? (
             <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
@@ -296,7 +296,7 @@ function ProfileBlock({
           ) : null}
         </div>
         <div className={`flex ${!event?.alias?.length ? '' : 'ml-8 mt-1'}`}>
-          <div className='max-w-7xl'>
+          <div className='relative'>
             <Tooltip title={ReverseProfileMapper[event.label][groupAnalysis]}>
               <Button
                 icon={<SVG name='mouseevent' size={16} color={'purple'} />}

@@ -17,24 +17,25 @@ function Header({ saveGoalInsights, activeProject, factors_insight_rules, setSav
   const [form] = Form.useForm();
 
   const saveGoal = (payload) => {
-    setshowSaveModal(false);
     setisLoading(true);
     if (factors_insight_rules) {
       let factorsData = {
         ...factors_insight_rules,
-        name: payload.title
+        name: payload?.title
       }
       saveGoalInsights(activeProject.id, factorsData).then(() => {
         setshowSaveModal(false);
         setisLoading(false);
-        setSavedName(payload.title);
+        if(payload?.title){
+          setSavedName(payload?.title); 
+        }
         message.success('Saved successfully!');
       }).catch((err) => {
-        const saveGoalErr = err?.data?.error ? err.data.error : `Oops! Something went wrong.`
-        message.error(saveGoalErr);
         console.log('Goal saving error:', err);
+        const saveGoalErr = err?.data?.error ? err.data.error : `Oops! Something went wrong.`
+        // message.error(saveGoalErr);
+        seterrorInfo(saveGoalErr);
         form.resetFields();
-        seterrorInfo(err);
         setisLoading(false);
       });
     }

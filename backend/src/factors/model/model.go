@@ -572,6 +572,12 @@ type Model interface {
 	// integration document
 	InsertIntegrationDocument(doc model.IntegrationDocument) error
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
+	
+	// alerts
+	GetAlertById(id string, projectID uint64) (model.Alert, int)
+	GetAllAlerts(projectID uint64) ([]model.Alert, int)
+	UpdateAlert(id string, projectID uint64) (int, string)
+	CreateAlert(projectID uint64, alert model.Alert) (model.Alert, int, string)
 
 	//crm
 	CreateCRMUser(crmUser *model.CRMUser) (int, error)

@@ -1,5 +1,6 @@
 /* eslint-disable */
 import _ from 'lodash';
+import { SSO_LOGIN_FULFILLED } from './types';
 import { get, post, put, getHostUrl } from '../utils/request';
 
 var host = getHostUrl();
@@ -13,6 +14,9 @@ export default function reducer(state = {
 }, action) {
   switch (action.type) {
     case 'AGENT_LOGIN_FULFILLED': {
+      return { ...state, isLoggedIn: true };
+    }
+    case SSO_LOGIN_FULFILLED: {
       return { ...state, isLoggedIn: true };
     }
     case 'AGENT_LOGIN_REJECTED': {

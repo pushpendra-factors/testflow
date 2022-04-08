@@ -8,7 +8,7 @@ function AttributionsResult({
   durationObj,
   currMetricsValue,
   renderedCompRef,
-  chartType
+  chartType,
 }) {
   const {
     eventGoal,
@@ -16,6 +16,7 @@ function AttributionsResult({
     models,
     linkedEvents,
     attr_dimensions,
+    content_groups,
   } = attributionsState;
 
   return (
@@ -32,6 +33,7 @@ function AttributionsResult({
       attribution_method_compare={models[1]}
       section={section}
       attr_dimensions={attr_dimensions}
+      content_groups={content_groups}
       currMetricsValue={currMetricsValue}
       ref={renderedCompRef}
       chartType={chartType}

@@ -355,7 +355,7 @@ function ProjectDropdown({
             />
             {active_project.id === demoProjectId ? 
             <div className={'rounded-lg h-20 bg-white mb-3 mt-8'} style={{width:'97%'}}>
-              <Row gutter={[24, 24]} justify={'space-between'} className={'m-0'}>
+              <Row justify={'space-between'} className={'m-0 p-3'}>
                 <Col span={projects.length == 1 ? 12: 18}>
                   <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-8'}>
                       Welcome! You just entered a Factors demo project

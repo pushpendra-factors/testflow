@@ -233,6 +233,13 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/v1/bingads/disable", responseWrapper(V1.DisableBingAdsIntegration))
 	authRouteGroup.GET("/:project_id/v1/bingads", responseWrapper(V1.GetBingAdsIntegration))
 	authRouteGroup.PUT("/:project_id/v1/bingads/enable", responseWrapper(V1.EnableBingAdsIntegration))
+
+	// alerts
+	authRouteGroup.POST("/:project_id/v1/alerts", responseWrapper(V1.CreateAlertHandler))
+	authRouteGroup.GET("/:project_id/v1/alerts", responseWrapper(V1.GetAlertsHandler))
+	authRouteGroup.GET("/:project_id/v1/alerts/:id", responseWrapper(V1.GetAlertByIDHandler))
+	authRouteGroup.DELETE("/:project_id/v1/alerts/:id", responseWrapper(V1.DeleteAlertHandler))
+
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

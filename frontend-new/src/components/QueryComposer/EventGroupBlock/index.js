@@ -121,15 +121,13 @@ const EventGroupBlock = ({
     };
 
     return (
-      <div className={styles.grpProps}>
-        show as{' '}
-        <div className={styles.grpProps__select}>
-          <span
-            className={styles.grpProps__select__opt}
-            onClick={() => setSelVis(true)}
-          >
-            {getProp(opt)}
-          </span>
+      <div className={`flex items-center m-0 mx-2`}>
+        show as
+        <div
+          className={`flex relative m-0 mx-2 ${styles.grpProps__select__opt}`}
+          onClick={() => setSelVis(!propSelVis)}
+        >
+          {getProp(opt)}
           {propSelVis && (
             <FaSelect
               options={propOpts[opt.prop_type]}
@@ -157,13 +155,12 @@ const EventGroupBlock = ({
     }
 
     return isGroupByDDVisible ? (
-      <>
+      <div className={`relative`}>
         <Button
           icon={
             <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
           }
           type={'link'}
-          className={'ml-2'}
         >
           {propName}
         </Button>
@@ -175,7 +172,7 @@ const EventGroupBlock = ({
             onClickOutside={() => setGroupByDDVisible(false)}
           ></GroupSelect2>
         </div>
-      </>
+      </div>
     ) : (
       <>
         <Button
@@ -183,7 +180,6 @@ const EventGroupBlock = ({
             <SVG name={groupByEvent.prop_category} size={16} color={'purple'} />
           }
           type={'link'}
-          className={'ml-2'}
           onClick={() => setGroupByDDVisible(true)}
         >
           {propName}
@@ -212,13 +208,12 @@ const EventGroupBlock = ({
         type='text'
         onClick={() => delGroupState(groupByEvent)}
         size={'small'}
-        className={`mr-1 fa-btn--custom`}
+        className={`fa-btn--custom mr-1`}
       >
-        {' '}
-        <SVG name={'remove'} />{' '}
+        <SVG name={'remove'} />
       </Button>
-      <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>
-        {grpIndex < 1 ? 'Breakdown' : '...and'}{' '}
+      <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
+        {grpIndex < 1 ? 'Breakdown' : '...and'}
       </Text>
       {groupByEvent && groupByEvent.property ? (
         renderGroupContent()

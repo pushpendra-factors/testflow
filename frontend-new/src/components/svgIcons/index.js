@@ -1871,6 +1871,24 @@ const Delete1SVG = () => {
   );
 };
 
+const MicrosoftSVG = ({ size = 16, extraClass, color }) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g clip-path="url(#clip0_1208_3326)">
+      <path d="M11.3854 11.2174H1V0.832031H11.3854V11.2174Z" fill="#F1511B"/>
+      <path d="M22.852 11.2174H12.4668V0.832031H22.852V11.2174Z" fill="#80CC28"/>
+      <path d="M11.385 22.6879H1V12.3027H11.385V22.6879Z" fill="#00ADEF"/>
+      <path d="M22.852 22.6879H12.4668V12.3027H22.852V22.6879Z" fill="#FBBC09"/>
+      </g>
+      <defs>
+      <clipPath id="clip0_1208_3326">
+      <rect width="22" height="22" fill="white" transform="translate(1 0.832031)"/>
+      </clipPath>
+      </defs>
+    </svg>
+  );
+}
+
 const OrganisationSVG = ({ size = 32, extraClass, color }) => {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2049,6 +2067,7 @@ export {
   AddtodashSVG,
   InfocircleSVG,
   Delete1SVG,
+  MicrosoftSVG,
   OrganisationSVG,
   PlayButtonSVG,
   CheckCircleSVG,

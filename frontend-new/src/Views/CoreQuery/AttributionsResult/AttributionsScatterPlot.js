@@ -16,6 +16,7 @@ import LegendsCircle from '../../../styles/components/LegendsCircle';
 function AttributionsScatterPlot({
   data,
   attr_dimensions,
+  content_groups,
   selectedTouchpoint,
   visibleIndices,
   attribution_method,
@@ -39,6 +40,7 @@ function AttributionsScatterPlot({
     return getScatterPlotChartData(
       selectedTouchpoint,
       attr_dimensions,
+      content_groups,
       data,
       visibleIndices,
       xAxisMetric,
@@ -48,6 +50,7 @@ function AttributionsScatterPlot({
   }, [
     selectedTouchpoint,
     attr_dimensions,
+    content_groups,
     data,
     visibleIndices,
     xAxisMetric,
@@ -57,12 +60,14 @@ function AttributionsScatterPlot({
 
   const options = useMemo(() => {
     return getAxisMetricOptions(
+      selectedTouchpoint,
       linkedEvents,
       attribution_method,
       attribution_method_compare,
       eventNames
     );
   }, [
+    selectedTouchpoint,
     linkedEvents,
     attribution_method,
     attribution_method_compare,

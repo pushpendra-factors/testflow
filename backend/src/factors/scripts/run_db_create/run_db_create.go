@@ -778,6 +778,13 @@ func main() {
 		log.Info("Created Groups table.")
 	}
 
+	// Create Alerts Table
+	if err := db.CreateTable(&model.Alert{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Alert table creation failed.")
+	} else {
+		log.Info("Created Alerts table.")
+	}
+
 	if *isDevSetup {
 		InitialiseDevSetup()
 	}
