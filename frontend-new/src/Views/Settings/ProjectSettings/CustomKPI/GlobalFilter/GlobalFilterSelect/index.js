@@ -66,7 +66,7 @@ const GlobalFilterSelect = ({
     ) {
       setDeltaFilt();
     }
-  }, [valuesState]);
+  }, [operatorState]);
 
   useEffect(() => {
     if (
