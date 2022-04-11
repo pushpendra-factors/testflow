@@ -147,10 +147,11 @@ type metricsAndRelated struct {
 }
 
 var nonHigherOrderMetrics = map[string]struct{}{
-	model.Impressions: {},
-	model.Clicks:      {},
-	"cost":            {},
-	"conversions":     {},
+	model.Impressions:     {},
+	model.Clicks:          {},
+	"cost":                {},
+	"conversions":         {},
+	model.ConversionValue: {},
 }
 
 // Same structure is being used for internal operations and external.
@@ -257,6 +258,11 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchRankLostTopImpressionShare, model.Impressions, model.SearchRankLostTopImpressionShare, model.TotalSearchRankLostTopImpression),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchRankLostTopImpression),
 		externalValue:            model.SearchRankLostTopImpressionShare,
+		externalOperation:        "sum",
+	},
+	model.ConversionValue: {
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.ConversionValue),
+		externalValue:            model.ConversionValue,
 		externalOperation:        "sum",
 	},
 }
