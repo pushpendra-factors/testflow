@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS agents (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     is_onboarding_flow_seen boolean,
-    is_auth0_user boolean DEFAULT false,
+    is_auth0_user boolean NOT NULL DEFAULT false,
     value json,
     SHARD KEY (uuid),
     PRIMARY KEY (uuid),
@@ -865,6 +865,37 @@ CREATE TABLE IF NOT EXISTS integration_documents (
     KEY (project_id, customer_account_id, document_id, document_type, source, timestamp)  USING CLUSTERED COLUMNSTORE
 );
 
+CREATE TABLE IF NOT EXISTS shareable_urls (
+    id text NOT NULL,
+    query_id text NOT NULL,
+    entity_type integer NOT NULL,
+    share_type integer NOT NULL,
+    entity_id bigint NOT NULL,
+    created_at timestamp(6),
+    updated_at timestamp(6),
+    is_deleted boolean NOT NULL DEFAULT false,
+    expires_at bigint,
+    project_id bigint NOT NULL,
+    created_by text NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS shareable_url_audits (
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    query_id text NOT NULL,
+    entity_type integer NOT NULL,
+    share_type integer NOT NULL,
+    entity_id bigint NOT NULL,
+    created_at timestamp(6),
+    updated_at timestamp(6),
+    is_deleted boolean NOT NULL DEFAULT false,
+    expires_at bigint,
+    project_id bigint NOT NULL,
+    accessed_by text NOT NULL,
+    PRIMARY KEY (id)
+);
+
 CREATE TABLE IF NOT EXISTS alerts(
     id text NOT NULL,
     project_id bigint NOT NULL,
@@ -879,7 +910,7 @@ CREATE TABLE IF NOT EXISTS alerts(
     updated_at timestamp(6) NOT NULL,
     is_deleted boolean,
     SHARD KEY (project_id),
-    PRIMARY KEY (id),
+    PRIMARY KEY (id, project_id)
 );
 
 -- DROP DATABASE factors;

@@ -1838,7 +1838,6 @@ func TestIntSegmentHandlerWithTrackEventQueryParam(t *testing.T) {
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, webEventProps)
-	assertKeysExistAndNotEmpty(t, eventPropertiesMap, queryParamCustomEventProps)
 
 	// Check user properties added.
 	retUser, errCode := store.GetStore().GetUser(project.ID, retEvent.UserId)

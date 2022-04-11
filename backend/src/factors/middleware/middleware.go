@@ -678,6 +678,90 @@ func ValidateAgentSetPasswordRequest() gin.HandlerFunc {
 	}
 }
 
+func ValidateAccessToSharedEntity(entityType int) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		shareString := c.Query("query_id")
+		urlParamProjectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+		if err != nil || urlParamProjectId == 0 {
+			log.WithError(err).Error("Failed to parse project_id")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid project id on param."})
+			return
+		}
+
+		var agentId string
+		cookieStr, err := c.Cookie(C.GetFactorsCookieName())
+		if err != nil {
+			agentId = ""
+		} else {
+			agent, errMsg, errCode := validateAuthData(cookieStr)
+			if errCode != http.StatusOK {
+				log.Error(errMsg + ": Failed to validate auth data.")
+				c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+				return
+			}
+			agentId = agent.UUID
+			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		}
+
+		// Check whether is part of the project, if yes than access allowed directly
+		_, agentErrCode := store.GetStore().GetProjectAgentMapping(urlParamProjectId, agentId)
+		if agentErrCode == http.StatusInternalServerError {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to get agent info",
+			})
+			return
+		} else if agentErrCode != http.StatusFound { // Not part of the project, check whether it is shared
+			sharedEntity, errCode := store.GetStore().GetShareableURLWithShareStringWithLargestScope(urlParamProjectId, shareString, entityType)
+			if errCode == http.StatusNotFound {
+				log.Error("No access to entity.")
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "cannot access entity",
+				})
+				return
+			} else if errCode != http.StatusFound {
+				log.Error("Failed to get shared entity.")
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+					"error": "failed to access entity",
+				})
+				return
+			}
+
+			if entityType == model.ShareableURLEntityTypeQuery {
+				_, errCode := store.GetStore().GetQueryWithQueryIdString(urlParamProjectId, shareString)
+				if errCode != http.StatusFound {
+					log.Error("Failed to get query.")
+					c.AbortWithStatusJSON(errCode, gin.H{
+						"error": "query not found",
+					})
+					return
+				}
+			}
+
+			if sharedEntity.ShareType == model.ShareableURLShareTypePublic {
+				// Public share, access allowed but agent is not part of the project, so add an audit log
+				errCode = store.GetStore().CreateSharableURLAudit(sharedEntity, agentId)
+				if errCode != http.StatusOK {
+					log.Error("Failed to create audit for shared entity.")
+					c.AbortWithStatusJSON(errCode, gin.H{
+						"error": "failed to create audit",
+					})
+					return
+				}
+				// Add allowed users case
+			} else {
+				log.Error("Forbidden access to entity.")
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"error": "cannot access entity",
+				})
+				return
+			}
+		}
+		U.SetScope(c, SCOPE_PROJECT_ID, urlParamProjectId)
+		c.Next()
+	}
+}
+
 func Recovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {

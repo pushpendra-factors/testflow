@@ -3,6 +3,7 @@ package handler
 import (
 	C "factors/config"
 	mid "factors/middleware"
+	"factors/model/model"
 	U "factors/util"
 	"net/http"
 
@@ -81,6 +82,20 @@ func InitAppRoutes(r *gin.Engine) {
 	r.POST(routePrefix+"/InsertTaskEndRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskEndRecordHandler))
 	r.POST("/hubspot/createcontact", V1.HubspotCreateContact)
 	r.GET("/hubspot/getcontact", V1.GetHubspotContactByEmail)
+
+	// Shareable link routes
+	shareRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
+	shareRouteGroup.Use(mid.SkipDemoProjectWriteAccess())
+	shareRouteGroup.Use(mid.ValidateAccessToSharedEntity(model.ShareableURLEntityTypeQuery))
+
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", responseWrapper(EventsQueryHandler))
+	shareRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
+	shareRouteGroup.POST("/:project_id/attribution/query", responseWrapper(AttributionHandler))
+	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
+	shareRouteGroup.POST("/:project_id/channels/query", ChannelQueryHandler)
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/channels/query", responseWrapper(V1.ExecuteChannelQueryHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
+
 	// Auth route group with authentication an authorization middleware.
 	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	authRouteGroup.Use(mid.SetLoggedInAgent())
@@ -121,15 +136,25 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/user_properties", GetUserPropertiesHandler)
 	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
 	authRouteGroup.POST("/:project_id/factor", FactorHandler)
-	authRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
-	authRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
-	authRouteGroup.POST("/:project_id/channels/query", ChannelQueryHandler)
+
+	// Moved to shareable routes
+	// authRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
+	// authRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
+	// authRouteGroup.POST("/:project_id/channels/query", ChannelQueryHandler)
+	// authRouteGroup.POST("/:project_id/attribution/query", responseWrapper(AttributionHandler))
+	// v1 API endpoints
+	// authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", responseWrapper(EventsQueryHandler))
+	// authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/channels/query", responseWrapper(V1.ExecuteChannelQueryHandler))
+	// authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
 	authRouteGroup.GET("/:project_id/channels/filter_values", GetChannelFilterValuesHandler)
-	authRouteGroup.POST("/:project_id/attribution/query", responseWrapper(AttributionHandler))
 
-	// v1 API endpoints
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", responseWrapper(EventsQueryHandler))
+	// shareable url endpoints
+	authRouteGroup.GET("/:project_id/shareable_url", GetShareableURLsHandler)
+	authRouteGroup.POST("/:project_id/shareable_url", CreateShareableURLHandler)
+	authRouteGroup.DELETE("/:project_id/shareable_url/:share_id", DeleteShareableURLHandler)
+	authRouteGroup.DELETE("/:project_id/shareable_url/revoke/:query_id", RevokeShareableURLHandler)
+
 
 	// v1 Dashboard endpoints
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", CreateDashboardUnitForMultiDashboardsHandler)
@@ -140,12 +165,10 @@ func InitAppRoutes(r *gin.Engine) {
 	// v1 Channel endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/config", V1.GetChannelConfigHandler)
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/filter_values", V1.GetChannelFilterValuesHandler)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/channels/query", responseWrapper(V1.ExecuteChannelQueryHandler))
 
 	// v1 KPI endpoints
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/kpi/config", responseWrapper(V1.GetKPIConfigHandler))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", responseWrapper(V1.GetKPIFilterValuesHandler))
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
 
 	// v1 custom metrics - admin/settings side.
 	authRouteGroup.GET("/:project_id/"+ROUTE_VERSION_V1+"/custom_metrics/config", V1.GetCustomMetricsConfig)
