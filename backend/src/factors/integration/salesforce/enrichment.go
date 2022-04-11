@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	C "factors/config"
@@ -1871,7 +1872,59 @@ func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmar
 	return &salesforceSmartEventNames
 }
 
-func enrichGroup(projectID uint64) (map[string]bool, map[string]map[string]string, int) {
+type enrichGroupWorkerStatus struct {
+	HasFailure                bool
+	OverAllPendingSyncRecords map[string]map[string]string
+	Lock                      sync.Mutex
+}
+
+func updateGroupWorkerStatus(errCode int, pendingSyncRecords map[string]map[string]string, status *enrichGroupWorkerStatus) {
+	status.Lock.Lock()
+	defer status.Lock.Unlock()
+	if errCode != http.StatusOK {
+		status.HasFailure = true
+	}
+
+	if status.OverAllPendingSyncRecords == nil {
+		status.OverAllPendingSyncRecords = make(map[string]map[string]string)
+	}
+
+	// capture pending record not synced for first time
+	for docTypeAlias := range pendingSyncRecords {
+		for docID := range pendingSyncRecords[docTypeAlias] {
+			if _, exist := status.OverAllPendingSyncRecords[docTypeAlias]; !exist {
+				status.OverAllPendingSyncRecords[docTypeAlias] = make(map[string]string)
+			}
+
+			if _, exist := status.OverAllPendingSyncRecords[docTypeAlias][docID]; !exist {
+				status.OverAllPendingSyncRecords[docTypeAlias][docID] = pendingSyncRecords[docTypeAlias][docID]
+			}
+		}
+	}
+}
+
+func enrichAllGroup(projectID uint64, wg *sync.WaitGroup, docType int, documents []model.SalesforceDocument, status *enrichGroupWorkerStatus) {
+	defer wg.Done()
+	for i := range documents {
+		startTime := time.Now().Unix()
+
+		var errCode int
+		var pendingSyncRecords map[string]map[string]string
+		switch documents[i].Type {
+		case model.SalesforceDocumentTypeAccount:
+			errCode = enrichGroupAcccount(projectID, &documents[i])
+		case model.SalesforceDocumentTypeOpportunity:
+			pendingSyncRecords, errCode = enrichGroupOpportunity(projectID, &documents[i])
+		}
+
+		updateGroupWorkerStatus(errCode, pendingSyncRecords, status)
+
+		log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType, "time_taken_in_secs": time.Now().Unix() - startTime, "doc_id": documents[i].ID}).
+			Debug("Completed group document sync.")
+	}
+}
+
+func enrichGroup(projectID uint64, workerPerProject int) (map[string]bool, map[string]map[string]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	if projectID == 0 {
@@ -1895,38 +1948,24 @@ func enrichGroup(projectID uint64) (map[string]bool, map[string]map[string]strin
 		}
 
 		overAllSyncStatus[docTypeAlias] = false
-		for i := range documents {
-			startTime := time.Now().Unix()
 
-			switch documents[i].Type {
-			case model.SalesforceDocumentTypeAccount:
-				errCode = enrichGroupAcccount(projectID, &documents[i])
-				if errCode != http.StatusOK {
-					overAllSyncStatus[docTypeAlias] = true
-				}
-			case model.SalesforceDocumentTypeOpportunity:
-				pendingSyncRecords, errCode := enrichGroupOpportunity(projectID, &documents[i])
-				if errCode != http.StatusOK {
-					overAllSyncStatus[docTypeAlias] = true
-				}
-
-				// capture pending record not synced for first time
-				for docTypeAlias := range pendingSyncRecords {
-					for docID := range pendingSyncRecords[docTypeAlias] {
-						if _, exist := overAllPendingSyncRecords[docTypeAlias]; !exist {
-							overAllPendingSyncRecords[docTypeAlias] = make(map[string]string)
-						}
-
-						if _, exist := overAllPendingSyncRecords[docTypeAlias][docID]; !exist {
-							overAllPendingSyncRecords[docTypeAlias][docID] = pendingSyncRecords[docTypeAlias][docID]
-						}
-					}
-				}
+		batches := GetBatchedOrderedDocumentsByID(documents, workerPerProject)
+		var status enrichGroupWorkerStatus
+		workerIndex := 0
+		for i := range batches {
+			batch := batches[i]
+			var wg sync.WaitGroup
+			for docID := range batch {
+				logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias, "is_group": true}).Info("Processing Batch by doc_id")
+				wg.Add(1)
+				go enrichAllGroup(projectID, &wg, docType, batch[docID], &status)
+				workerIndex++
 			}
-
-			logCtx.WithFields(log.Fields{"time_taken_in_secs": time.Now().Unix() - startTime, "doc_id": documents[i].ID}).
-				Debug("Completed group document sync.")
+			wg.Wait()
 		}
+
+		overAllSyncStatus[docTypeAlias] = status.HasFailure
+		overAllPendingSyncRecords = status.OverAllPendingSyncRecords
 	}
 
 	return overAllSyncStatus, overAllPendingSyncRecords, http.StatusOK
@@ -1967,8 +2006,61 @@ func associateGroupUserOpportunitytoUser(projectID uint64, oppLeadIds, oppContac
 	return pendingSyncRecords
 }
 
+// GetBatchedOrderedDocumentsByID return list of document in batches. Order is maintained on document id.
+func GetBatchedOrderedDocumentsByID(documents []model.SalesforceDocument, batchSize int) []map[string][]model.SalesforceDocument {
+
+	if len(documents) < 0 {
+		return nil
+	}
+
+	documentsMap := make(map[string][]model.SalesforceDocument)
+	for i := range documents {
+		if _, exist := documentsMap[documents[i].ID]; !exist {
+			documentsMap[documents[i].ID] = make([]model.SalesforceDocument, 0)
+		}
+		documentsMap[documents[i].ID] = append(documentsMap[documents[i].ID], documents[i])
+	}
+
+	batchedDocumentsByID := make([]map[string][]model.SalesforceDocument, 1)
+	isBatched := make(map[string]bool)
+	batchLen := 0
+	batchedDocumentsByID[batchLen] = make(map[string][]model.SalesforceDocument)
+	for i := range documents {
+		if isBatched[documents[i].ID] {
+			continue
+		}
+
+		if len(batchedDocumentsByID[batchLen]) >= batchSize {
+			batchedDocumentsByID = append(batchedDocumentsByID, make(map[string][]model.SalesforceDocument))
+			batchLen++
+		}
+
+		batchedDocumentsByID[batchLen][documents[i].ID] = documentsMap[documents[i].ID]
+		isBatched[documents[i].ID] = true
+	}
+
+	return batchedDocumentsByID
+}
+
+type enrichWorkerStatus struct {
+	HasFailure bool
+	Lock       sync.Mutex
+}
+
+func enrichAllWorker(project *model.Project, wg *sync.WaitGroup, enrichStatus *enrichWorkerStatus,
+	documents []model.SalesforceDocument, smartEventNames []SalesforceSmartEventName, pendingOpportunityGroupAssociations map[string]map[string]string, timeRange int64) {
+	defer wg.Done()
+	errCode := enrichAll(project, documents, smartEventNames, pendingOpportunityGroupAssociations, timeRange)
+
+	enrichStatus.Lock.Lock()
+	defer enrichStatus.Lock.Unlock()
+	if errCode != http.StatusOK {
+		enrichStatus.HasFailure = true
+	}
+}
+
 // Enrich sync salesforce documents to events
-func Enrich(projectID uint64) ([]Status, bool) {
+func Enrich(projectID uint64, workerPerProject int) ([]Status, bool) {
 
 	logCtx := log.WithField("project_id", projectID)
 
@@ -2024,7 +2116,7 @@ func Enrich(projectID uint64) ([]Status, bool) {
 	enrichOrderByType := salesforceEnrichOrderByType[:]
 	if C.IsAllowedSalesforceGroupsByProjectID(projectID) {
 		var syncStatus map[string]bool
-		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID)
+		syncStatus, pendingOpportunityGroupAssociations, status = enrichGroup(projectID, workerPerProject)
 		if status != http.StatusOK {
 			overAllSyncStatus["groups"] = true
 		}
@@ -2061,12 +2153,27 @@ func Enrich(projectID uint64) ([]Status, bool) {
 				continue
 			}
 
-			errCode = enrichAll(project, documents, (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, timeRange[1])
-			if errCode == http.StatusOK {
-				if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
-					overAllSyncStatus[docTypeAlias] = false
+			batches := GetBatchedOrderedDocumentsByID(documents, workerPerProject)
+
+			workerIndex := 0
+			var enrichStatus enrichWorkerStatus
+			for i := range batches {
+				batch := batches[i]
+				var wg sync.WaitGroup
+				for docID := range batch {
+					logCtx.WithFields(log.Fields{"worker": workerIndex, "doc_id": docID, "type": docTypeAlias}).Info("Processing Batch by doc_id")
+					wg.Add(1)
+					go enrichAllWorker(project, &wg, &enrichStatus, batch[docID], (*salesforceSmartEventNames)[docTypeAlias], pendingOpportunityGroupAssociations, timeRange[1])
+					workerIndex++
 				}
-			} else {
+				wg.Wait()
+			}
+
+			if _, exist := overAllSyncStatus[docTypeAlias]; !exist {
+				overAllSyncStatus[docTypeAlias] = false
+			}
+
+			if enrichStatus.HasFailure {
 				overAllSyncStatus[docTypeAlias] = true
 			}
 

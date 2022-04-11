@@ -44,13 +44,13 @@ func (es *EnrichStatus) AddEnrichStatus(status []IntSalesforce.Status, hasFailur
 	}
 }
 
-func syncWorker(projectID uint64, wg *sync.WaitGroup, workerIndex int, enrichStatus *EnrichStatus) {
+func syncWorker(projectID uint64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "worder_index": workerIndex})
 	logCtx.Info("Enrichment started for given project.")
 
-	status, hasFailure := IntSalesforce.Enrich(projectID)
+	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject)
 	enrichStatus.AddEnrichStatus(status, hasFailure)
 	logCtx.Info("Processing completed for given project.")
 }
@@ -109,6 +109,7 @@ func main() {
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	disableCRMUniquenessConstraintsCheckByProjectID := flag.String("disable_crm_unique_constraint_check_by_project_id", "", "")
+	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -273,7 +274,7 @@ func main() {
 			var wg sync.WaitGroup
 			for pi := range batch {
 				wg.Add(1)
-				go syncWorker(batch[pi], &wg, workerIndex, &enrichStatus)
+				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus)
 				workerIndex++
 			}
 			wg.Wait()
