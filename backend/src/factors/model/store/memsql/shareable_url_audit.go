@@ -2,6 +2,7 @@ package memsql
 
 import (
 	C "factors/config"
+	U "factors/util"
 	"factors/model/model"
 	"net/http"
 	"time"
@@ -23,6 +24,7 @@ func (store *MemSQL) CreateSharableURLAudit(sharableURL *model.ShareableURL, age
 	}
 
 	audit := &model.ShareableURLAudit{
+		ID:			U.GetUUID(),
 		ShareID:    sharableURL.ID,
 		ProjectID:  sharableURL.ProjectID,
 		QueryID:    sharableURL.QueryID,

@@ -883,6 +883,7 @@ CREATE TABLE IF NOT EXISTS shareable_urls (
 CREATE TABLE IF NOT EXISTS shareable_url_audits (
     id text NOT NULL,
     project_id bigint NOT NULL,
+    share_id text NOT NULL,
     query_id text NOT NULL,
     entity_type integer NOT NULL,
     share_type integer NOT NULL,
@@ -891,7 +892,6 @@ CREATE TABLE IF NOT EXISTS shareable_url_audits (
     updated_at timestamp(6),
     is_deleted boolean NOT NULL DEFAULT false,
     expires_at bigint,
-    project_id bigint NOT NULL,
     accessed_by text NOT NULL,
     PRIMARY KEY (id)
 );

@@ -2,6 +2,7 @@ package memsql
 
 import (
 	C "factors/config"
+	U "factors/util"
 	"factors/model/model"
 	"net/http"
 	"time"
@@ -20,6 +21,10 @@ func (store *MemSQL) CreateShareableURL(shareableURLParams *model.ShareableURL) 
 	if shareableURLParams == nil || shareableURLParams.QueryID == "" {
 		logCtx.Error("Invalid shareable url params")
 		return nil, http.StatusBadRequest
+	}
+
+	if shareableURLParams.ID == "" {
+		shareableURLParams.ID = U.GetUUID()
 	}
 
 	db := C.GetServices().Db
