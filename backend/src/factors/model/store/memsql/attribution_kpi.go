@@ -137,6 +137,9 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
 	var kpiKeyGroupUserIDList []string
 	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
+	if kpiKeys == nil || len(kpiKeys) == 0 {
+		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
+	}
 
 	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeys))
 	kpiKeysIdValue := U.GetInterfaceList(kpiKeys)

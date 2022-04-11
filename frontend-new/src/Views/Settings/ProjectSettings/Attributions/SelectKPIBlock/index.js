@@ -37,6 +37,9 @@ function SelectKPIBlock({
     const newEv = { label: '', group: '' };
     newEv.label = value[0];
     newEv.group = group;
+    opts.kpis_to_attribute[header] === null
+      ? (opts.kpis_to_attribute[header] = [])
+      : opts.kpis_to_attribute[header];
     index > opts.kpis_to_attribute[header].length
       ? opts.kpis_to_attribute[header].push(newEv)
       : (opts.kpis_to_attribute[header][index] = newEv);
@@ -50,14 +53,21 @@ function SelectKPIBlock({
     opts.kpis_to_attribute[header] = attrConfig.kpis_to_attribute[header];
     opts.kpis_to_attribute[header].splice(index, 1);
     setAttrConfig(opts);
+    editMode();
   };
 
   const selectKPI = () => {
+    const groupedProps =
+      header === 'sf_kpi'
+        ? kpiEvents.filter((ev) => ev.group == 'salesforce_opportunities')
+        : header === 'hs_kpi'
+        ? kpiEvents.filter((ev) => ev.group == 'hubspot_deals')
+        : kpiEvents;
     return (
       <div className={`absolute`}>
         {isDDVisible ? (
           <GroupSelect2
-            groupedProperties={kpiEvents ? kpiEvents : []}
+            groupedProperties={groupedProps}
             placeholder='Select Event'
             optionClick={(group, val) => onChange(group, val)}
             onClickOutside={() => setDDVisible(false)}

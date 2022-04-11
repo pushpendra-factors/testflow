@@ -80,7 +80,7 @@ function DashboardAfterIntegration({setaddDashboardModal, getHubspotContact, cur
                 >
                     <img alt='no-data' src='https://s3.amazonaws.com/www.factors.ai/assets/img/product/bar-chart.png' className={'mb-2'} />
                     <Text type={'title'} level={6} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>
-                        Create a dashboard to moniter your metrics in one place.
+                        Create a dashboard to monitor your metrics in one place.
                     </Text>
                     <Text type={'title'} level={7} color={'grey'} weight={'bold'} extraClass={'m-0'}>It should take us a day to bring in and process all your data.</Text>
                     <Text type={'title'} level={7} color={'grey'} weight={'bold'} extraClass={'m-0'}>

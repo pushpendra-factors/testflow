@@ -37,6 +37,12 @@ function Login(props) {
       checkError();
   },[]);
 
+   useEffect(() => {
+    if(props.isAgentLoggedIn) {
+      history.push('/');
+    }
+  }, [props.isAgentLoggedIn])
+
   const CheckLogin = () => {
     setDataLoading(true);
     form.validateFields().then((value) => {
@@ -136,7 +142,7 @@ function Login(props) {
                             </Col>
                             }
                            
-                            <Col span={24}>
+                            {/* <Col span={24}>
                               <div className={'flex justify-center items-center mt-6'} >
                                 <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} color={'grey'}>OR</Text>
                               </div>
@@ -144,11 +150,11 @@ function Login(props) {
 
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                  <Form.Item className={'m-0'} loading={dataLoading}>
-                                    <a href={SSO_LOGIN_URL}><Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
+                                  <Form.Item className={'m-0'}>
+                                    <a href={SSO_LOGIN_URL}><Button type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
                                   </Form.Item>
                                 </div>
-                            </Col>
+                            </Col> */}
 
                             {/* <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
@@ -187,4 +193,8 @@ function Login(props) {
   );
 }
 
-export default connect(null, { login })(Login);
+const mapStateToProps = (state) => ({
+  isAgentLoggedIn: state.agent.isLoggedIn,
+});
+
+export default connect(mapStateToProps, { login })(Login);

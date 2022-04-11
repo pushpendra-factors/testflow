@@ -153,7 +153,7 @@ function Activate(props) {
                             </Col>
                             }
 
-                            <Col span={24}>
+                            {/* <Col span={24}>
                               <div className={'flex justify-center items-center mt-6'} >
                                 <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} color={'grey'}>OR</Text>
                               </div>
@@ -165,7 +165,7 @@ function Activate(props) {
                                     <a href={SSO_ACTIVATE_URL}><Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
                                   </Form.Item>
                                 </div>
-                            </Col>
+                            </Col> */}
 
                             {/* <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >

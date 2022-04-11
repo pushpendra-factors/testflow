@@ -759,7 +759,7 @@ export const formatFilterDate = (selectedDates) => {
 };
 
 export function isDateInMilliSeconds(date) {
-  return date.toString().length === 13;
+  return date?.toString().length === 13;
 }
 
 export const getBreakdownDisplayTitle = (

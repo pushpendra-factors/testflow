@@ -12,7 +12,8 @@ import {
 } from "Reducers/coreQuery/middleware";
 import { formatFilterDate } from '../../../../utils/dataFormatter';
 import _ from 'lodash';
-import { reverseOperatorMap, reverseDateOperatorMap } from '../../../../Views/CoreQuery/utils';
+import { reverseOperatorMap, reverseDateOperatorMap, convertDateTimeObjectValuesToMilliSeconds } from '../../../../Views/CoreQuery/utils';
+import { FILTER_TYPES } from '../../../CoreQuery/constants';
 
 
 const { Panel } = Collapse;
@@ -250,22 +251,31 @@ const CustomKPI = ({
         }
     }, [savedCustomKPI]);
 
-    const getStateFromFilters = (rawFilters = []) => {
+    const getStateFromFilters = (rawFilters) => {
         const filters = [];
+        
         rawFilters.forEach((pr) => {
             if (pr.lOp === 'AND') {
-                filters.push({
-                    operator:
-                        pr.objTy === 'datetime'
-                            ? reverseDateOperatorMap[pr.co]
-                            : reverseOperatorMap[pr.co],
-                    props: [pr.prNa, pr.prDaTy, pr.objTy],
-                    values: [pr.va],
-                });
-            } else {
-                filters[filters.length - 1].values.push(pr.va);
+              const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
+        
+              const DNa = _.startCase(pr.prNa);
+                
+              filters.push({
+                operator:
+                  pr.prDaTy === 'datetime'
+                    ? reverseDateOperatorMap[pr.co]
+                    : reverseOperatorMap[pr.co],
+                props: [DNa, pr.prDaTy],
+                values:
+                  pr.prDaTy === FILTER_TYPES.DATETIME
+                    ? convertDateTimeObjectValuesToMilliSeconds(val)
+                    : val,
+                extra: [DNa, pr.prNa, pr.prDaTy],
+              });
+            } else if (pr.prDaTy === FILTER_TYPES.CATEGORICAL) {
+              filters[filters.length - 1].values.push(pr.va);
             }
-        }); 
+          });
         return filters;
     }; 
 

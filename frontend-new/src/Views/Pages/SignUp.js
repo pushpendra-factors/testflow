@@ -21,7 +21,6 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
   const [formData, setformData] = useState(null);
   const [ownerID, setownerID] = useState();
   const [showModal, setShowModal] = useState(false);
-  const [Showform, setShowform] = useState(false);
 
   const history = useHistory();
   const routeChange = (url) => {
@@ -246,8 +245,6 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                     </div>
                                 </Col>
                             </Row>
-                            {Showform? 
-                            <>
                             <Row>
                                 <Col span={24}>
                                         <div className={'flex flex-col mt-5'} >
@@ -382,34 +379,23 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                 }
                             </Row>
 
-                            <Row>
+                            {/* <Row>
                                 <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-6'} >
                                     <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} color={'grey'}>OR</Text>
                                 </div>
                                 </Col>
                             </Row>
-                            </>
-                            : 
-                            <Row>
-                                <Col span={24}>
-                                    <div className={'flex flex-col justify-center items-center mt-5'} >
-                                        <Form.Item className={'m-0 w-full'} loading={dataLoading}>
-                                            <Button loading={dataLoading} type={'primary'} size={'large'} className={'w-full'} onClick={() => setShowform(true)}>Signup with Email</Button>
-                                        </Form.Item>
-                                    </div>
-                                </Col>
-                            </Row>}
 
                             <Row>   
                                 <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Form.Item className={'m-0 w-full'} loading={dataLoading}>
-                                        <a href={SSO_SIGNUP_URL}><Button loading={dataLoading} type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
+                                    <Form.Item className={'m-0 w-full'}>
+                                        <a href={SSO_SIGNUP_URL}><Button type={'default'} size={'large'} style={{background:'#fff', boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'}} className={'w-full'}><SVG name={'Google'} size={24} />Continue with Google</Button></a>
                                     </Form.Item>
                                     </div>
                                 </Col>
-                            </Row>
+                            </Row> */}
 
                             {/* <Row>
                                 <Col span={24}>
