@@ -19,7 +19,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
-
+	"strings"
 	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 )
@@ -32,7 +32,7 @@ const Sf_updated = "$sf_contact_updated"
 const NoEvent = "NoEvent"
 const ReportName = "report.txt"
 const DetailedReportName = "detailed_report.txt"
-
+const EMAIL_SUBJECT = "Factors Report"
 type validationRule struct {
 	feild    string
 	property string
@@ -57,6 +57,23 @@ func main() {
 	projectIdFlag := flag.String("project_ids", "", "Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 
 	modelType := flag.String("modelType", "w", "Model Type of events")
+	awsRegion := flag.String("aws_region", "us-east-1", "")
+	awsAccessKeyId := flag.String("aws_key", "dummy", "")
+	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
+	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
+	emailString := flag.String("emails", "", "comma separeted list of emails to which report to be sent")
+	flag.Parse()
+	config := &C.Configuration{
+		Env:         *envFlag,
+		AWSKey:      *awsAccessKeyId,
+		AWSSecret:   *awsSecretAccessKey,
+		AWSRegion:   *awsRegion,
+		EmailSender: *factorsEmailSender,
+	}
+	C.InitConf(config)
+	C.InitSenderEmail(C.GetFactorsSenderEmail())
+	C.InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
+	emails := strings.Split(*emailString, ",")
 	flag.Parse()
 
 	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
@@ -246,6 +263,7 @@ func main() {
 		}
 		//reports uploaded
 		//closing reports
+		sendReportviaEmail(emails)
 		_ = closeFile(report)
 		_ = closeFile(detailed_report)
 		log.Info(fmt.Sprintf("Report written successfully from %s to %s.", *fromDate, toDate))
@@ -337,3 +355,39 @@ func createFile(fileName string) (*os.File, error) {
 	}
 	return f, err
 }
+func sendReportviaEmail(emails []string) {
+	var success, fail int
+	report, err := openFile(ReportName)
+	if err !=nil{
+		log.Error(err)
+		return
+	}
+	scanner := bufio.NewScanner(report)
+	// send the report as mail
+	var data []string
+	for scanner.Scan(){
+		data = append(data, scanner.Text())
+	}
+	html := getTemplateForReport(data)
+	for _, email := range emails {
+		err = C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), EMAIL_SUBJECT, html, "")
+		if err != nil {
+			fail++
+			log.WithError(err).Error("failed to send email for project_events")
+			continue
+		}
+		success++
+	}
+	defer report.Close()
+	log.Info("Report sent successfully successfully to ", success, "emails and failed to ", fail, "emails")
+}
+func getTemplateForReport(data []string) string{
+	var html string
+	html = "<html><body>"
+	for _, line := range data {
+		html += line
+		html += "<br>"
+	}
+	html += "</body></html>"
+	return html
+} 
