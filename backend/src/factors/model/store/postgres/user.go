@@ -1747,6 +1747,80 @@ func (pg *Postgres) UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, 
 	return model.UpdateUserPropertiesIdentifierMetaObject(userProperties, metaObj)
 }
 
+func (pg *Postgres) addGroupUserPropertyDetailsToCache(projectID uint64, groupName,
+	groupUserID string, properties *map[string]interface{}) {
+	logCtx := log.WithField("properties", properties).WithField("project_id", projectID)
+
+	if projectID == 0 || groupName == "" || groupUserID == "" || properties == nil {
+		logCtx.Error("Invalid params on add group user property details to cache.")
+		return
+	}
+
+	propertiesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
+	valuesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
+
+	_, status := pg.GetGroup(projectID, groupName)
+	if status != http.StatusFound {
+		logCtx.Info("Failed to get group details from groupName")
+		return
+	}
+
+	currentTime := U.TimeNowZ()
+	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
+	for property, value := range *properties {
+		if value == nil {
+			continue
+		}
+		category := pg.GetPropertyTypeByKeyValue(projectID, groupName, property, value, false)
+		var propertyValue string
+		if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {
+			category = U.PropertyTypeCategorical
+			propertyValue = fmt.Sprintf("%v", value)
+		}
+		if reflect.TypeOf(value).Kind() == reflect.String {
+			propertyValue = value.(string)
+		}
+
+		groupPropertyCategoryKeySortedSet, err := model.GetPropertiesByGroupCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache key - group property category")
+			return
+		}
+		propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
+			Key:   groupPropertyCategoryKeySortedSet,
+			Value: fmt.Sprintf("%s:SS-GN-PC:%s:%s", groupName, category, property),
+		})
+		if category == U.PropertyTypeCategorical {
+			if propertyValue != "" {
+				groupValueKeySortedSet, err := model.GetValuesByGroupPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get cache key - group values")
+					return
+				}
+				valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
+					Key:   groupValueKeySortedSet,
+					Value: fmt.Sprintf("%s:SS-GN-PC:%s:SS-GN-PV:%s", groupName, property, propertyValue),
+				})
+			}
+		}
+	}
+	begin := U.TimeNowZ()
+	keysToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
+	keysToIncrSortedSet = append(keysToIncrSortedSet, propertiesToIncrSortedSet...)
+	keysToIncrSortedSet = append(keysToIncrSortedSet, valuesToIncrSortedSet...)
+	if len(keysToIncrSortedSet) <= 0 {
+		return
+	}
+	_, err := cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
+	end := U.TimeNowZ()
+	metrics.Increment(metrics.IncrGroupCacheCounter)
+	metrics.RecordLatency(metrics.LatencyGroupCache, float64(end.Sub(begin).Milliseconds()))
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to increment keys")
+		return
+	}
+}
+
 func (pg *Postgres) CreateGroupUser(user *model.User, groupName, groupID string) (string, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": user.ProjectId, "group_name": groupName, "group_id": groupID})

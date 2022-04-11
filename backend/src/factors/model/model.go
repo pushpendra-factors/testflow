@@ -222,7 +222,7 @@ type Model interface {
 	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int
 	AssociateSessionByEventIds(projectId uint64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
-	GetHubspotFormEvents(projectID uint64, userId string, timestamps[] interface{}) ([]model.Event, int)
+	GetHubspotFormEvents(projectID uint64, userId string, timestamps []interface{}) ([]model.Event, int)
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
@@ -538,6 +538,8 @@ type Model interface {
 	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 	GetGroups(projectID uint64) ([]model.Group, int)
+	GetPropertiesByGroup(projectID uint64, groupName string, limit int, lastNDays int) (map[string][]string, int)
+	GetPropertyValuesByGroupProperty(projectID uint64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID uint64, channelName string) (int, error)

@@ -204,7 +204,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		for property, displayName := range standardPropertiesAllEvent {
 			displayNamesOp[property] = displayName
 		}
-		if eventName == "$session" {
+		if eventName == U.EVENT_NAME_SESSION {
 			standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
 			for property, displayName := range standardPropertiesSession {
 				displayNamesOp[property] = displayName
@@ -223,6 +223,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, properties)
 }
+
 func GetChannelGroupingPropertiesHandler(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)

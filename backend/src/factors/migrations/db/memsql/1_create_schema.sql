@@ -821,7 +821,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS custom_metrics(
 -- DOWN
 -- DROP TABLE IF EXISTS custom_metrics;
 
-CREATE TABLE leadgen_settings (
+CREATE ROWSTORE TABLE IF NOT EXISTS leadgen_settings (
     project_id bigint NOT NULL,
     source int NOT NULL,
     source_property text NOT NULL,

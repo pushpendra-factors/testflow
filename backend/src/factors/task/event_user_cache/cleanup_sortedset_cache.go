@@ -35,37 +35,12 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 		projId, _ := strconv.Atoi(id)
 		projectID := uint64(projId)
 		log.WithField("ProjectId", projectID).Info("Starting CLEANUP")
-		eventNamesSmartKeySortedSet, err := model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
-			currentTimeDatePart)
-		if err != nil {
-			log.WithError(err).Error("Failed to get cache key - events")
-			return nil, false
-		}
+
+		// Event name cleanup.
 		eventNamesKeySortedSet, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 			currentTimeDatePart)
 		if err != nil {
 			log.WithError(err).Error("Failed to get cache key - smart events")
-			return nil, false
-		}
-		propertyCategoryKeySortedSet, err := model.GetPropertiesByEventCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
-		if err != nil {
-			log.WithError(err).Error("Failed to get cache key - properties")
-			return nil, false
-		}
-		valueKeySortedSet, err := model.GetValuesByEventPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
-		if err != nil {
-			log.WithError(err).Error("Failed to get cache key - values")
-			return nil, false
-		}
-
-		userPropertyCategoryKeySortedSet, err := model.GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectID, currentTimeDatePart)
-		if err != nil {
-			log.WithError(err).Error("Failed to get cache key - property category")
-			return nil, false
-		}
-		userValueKeySortedSet, err := model.GetValuesByUserPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
-		if err != nil {
-			log.WithError(err).Error("Failed to get cache key - values")
 			return nil, false
 		}
 		count, err := cacheRedis.ZcardPersistent(eventNamesKeySortedSet)
@@ -74,6 +49,13 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 			return nil, false
 		}
 		eventCount := int(count)
+
+		eventNamesSmartKeySortedSet, err := model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
+			currentTimeDatePart)
+		if err != nil {
+			log.WithError(err).Error("Failed to get cache key - events")
+			return nil, false
+		}
 		count, err = cacheRedis.ZcardPersistent(eventNamesSmartKeySortedSet)
 		if err != nil {
 			log.WithError(err).Error("Failed to get count - smart events")
@@ -87,6 +69,13 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 				log.WithError(err).Error("Failed to delete - events")
 				return nil, false
 			}
+		}
+
+		// Event property name cleanup.
+		propertyCategoryKeySortedSet, err := model.GetPropertiesByEventCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
+		if err != nil {
+			log.WithError(err).Error("Failed to get cache key - properties")
+			return nil, false
 		}
 		count, err = cacheRedis.ZcardPersistent(propertyCategoryKeySortedSet)
 		if err != nil {
@@ -102,6 +91,13 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 				return nil, false
 			}
 		}
+
+		// Event property value cleanup.
+		valueKeySortedSet, err := model.GetValuesByEventPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
+		if err != nil {
+			log.WithError(err).Error("Failed to get cache key - values")
+			return nil, false
+		}
 		count, err = cacheRedis.ZcardPersistent(valueKeySortedSet)
 		if err != nil {
 			log.WithError(err).Error("Failed to get count- values")
@@ -115,6 +111,13 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 				log.WithError(err).Error("Failed to delete - values")
 				return nil, false
 			}
+		}
+
+		// User property name cleanup.
+		userPropertyCategoryKeySortedSet, err := model.GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectID, currentTimeDatePart)
+		if err != nil {
+			log.WithError(err).Error("Failed to get cache key - property category")
+			return nil, false
 		}
 		count, err = cacheRedis.ZcardPersistent(userPropertyCategoryKeySortedSet)
 		if err != nil {
@@ -130,6 +133,13 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 				return nil, false
 			}
 		}
+
+		// User property value cleanup.
+		userValueKeySortedSet, err := model.GetValuesByUserPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
+		if err != nil {
+			log.WithError(err).Error("Failed to get cache key - values")
+			return nil, false
+		}
 		count, err = cacheRedis.ZcardPersistent(userValueKeySortedSet)
 		if err != nil {
 			log.WithError(err).Error("Failed to get count - user property value")
@@ -141,6 +151,48 @@ func DoCleanUpSortedSet(configs map[string]interface{}) (map[string]interface{},
 			_, err := cacheRedis.ZRemRangePersistent(userValueKeySortedSet, 0, (userValueCount - 1 - valuesLimit))
 			if err != nil {
 				log.WithError(err).Error("Failed to delete - user property value")
+				return nil, false
+			}
+		}
+
+		// Group property name cleanup.
+		groupPropertySortedSet, err := model.GetPropertiesByGroupCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
+		if err != nil {
+			log.WithError(err).Error("Failed to get cache key - group property category")
+			return nil, false
+		}
+		count, err = cacheRedis.ZcardPersistent(groupPropertySortedSet)
+		if err != nil {
+			log.WithError(err).Error("Failed to get count - group property")
+			return nil, false
+		}
+		groupPropertyCount := int(count)
+		if groupPropertyCount > propertiesLimit {
+			log.WithField("ProjectId", projectID).WithField("Count", groupPropertyCount-1-propertiesLimit).Info("Deleting group properties")
+			_, err := cacheRedis.ZRemRangePersistent(groupPropertySortedSet, 0, (groupPropertyCount - 1 - propertiesLimit))
+			if err != nil {
+				log.WithError(err).Error("Failed to delete - group property")
+				return nil, false
+			}
+		}
+
+		// Group property value cleanup.
+		groupPropertyValueSortedSet, err := model.GetValuesByGroupPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
+		if err != nil {
+			log.WithError(err).Error("Failed to get cache key - group property values")
+			return nil, false
+		}
+		count, err = cacheRedis.ZcardPersistent(groupPropertyValueSortedSet)
+		if err != nil {
+			log.WithError(err).Error("Failed to get count - group property value")
+			return nil, false
+		}
+		groupPropertyValueCount := int(count)
+		if groupPropertyValueCount > valuesLimit {
+			log.WithField("ProjectId", projectID).WithField("Count", groupPropertyValueCount-1-valuesLimit).Info("Deleting group properties values")
+			_, err := cacheRedis.ZRemRangePersistent(groupPropertyValueSortedSet, 0, (groupPropertyValueCount - 1 - valuesLimit))
+			if err != nil {
+				log.WithError(err).Error("Failed to delete - group property value")
 				return nil, false
 			}
 		}
