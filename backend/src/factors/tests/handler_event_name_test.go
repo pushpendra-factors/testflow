@@ -452,7 +452,7 @@ func TestEnableEventLevelProperties(t *testing.T) {
 	assert.Equal(t, createdDate*1000, hubspotDocument.Timestamp)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 3)
+	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix())
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -569,7 +569,7 @@ func TestEnableEventLevelProperties(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ = IntHubspot.Sync(project.ID, 3)
+	allStatus, _ = IntHubspot.Sync(project.ID, 3, time.Now().Unix())
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}

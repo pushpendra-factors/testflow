@@ -222,7 +222,7 @@ type Model interface {
 	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int
 	AssociateSessionByEventIds(projectId uint64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
-	GetHubspotFormEvents(projectID uint64, userId string, timestamps[] interface{}) ([]model.Event, int)
+	GetHubspotFormEvents(projectID uint64, userId string, timestamps []interface{}) ([]model.Event, int)
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
@@ -272,9 +272,9 @@ type Model interface {
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
 	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64, docTypes []int) (int64, int)
 	GetHubspotFormDocuments(projectID uint64) ([]model.HubspotDocument, int)
-	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
 	GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, docID string) ([]model.HubspotDocument, int)
-	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
 	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
@@ -572,7 +572,7 @@ type Model interface {
 	// integration document
 	InsertIntegrationDocument(doc model.IntegrationDocument) error
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
-	
+
 	// alerts
 	GetAlertById(id string, projectID uint64) (model.Alert, int)
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)

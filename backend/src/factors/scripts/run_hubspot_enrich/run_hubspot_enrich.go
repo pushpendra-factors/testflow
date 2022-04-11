@@ -61,6 +61,7 @@ func main() {
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	enableHubspotFormEventsByProjectID := flag.String("enable_hubspot_form_events_by_project_id", "", "")
+	hubspotMaxCreatedAt := flag.Int64("huspot_max_created_at", time.Now().Unix(), "max created_at for records to process.")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -139,6 +140,7 @@ func main() {
 	configs["health_check_ping_id"] = defaultHealthcheckPingID
 	configs["override_healthcheck_ping_id"] = *overrideHealthcheckPingID
 	configs["num_project_routines"] = *numProjectRoutines
+	configs["max_record_created_at"] = *hubspotMaxCreatedAt
 
 	taskWrapper.TaskFunc(appName, *taskManagementLookback, T.RunHubspotEnrich, configs)
 }
