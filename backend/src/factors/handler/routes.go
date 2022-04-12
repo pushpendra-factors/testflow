@@ -156,7 +156,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/shareable_url/:share_id", DeleteShareableURLHandler)
 	authRouteGroup.DELETE("/:project_id/shareable_url/revoke/:query_id", RevokeShareableURLHandler)
 
-
 	// v1 Dashboard endpoints
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", CreateDashboardUnitForMultiDashboardsHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", CreateDashboardUnitsForMultipleQueriesHandler)
@@ -257,6 +256,12 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/v1/bingads/disable", responseWrapper(V1.DisableBingAdsIntegration))
 	authRouteGroup.GET("/:project_id/v1/bingads", responseWrapper(V1.GetBingAdsIntegration))
 	authRouteGroup.PUT("/:project_id/v1/bingads/enable", responseWrapper(V1.EnableBingAdsIntegration))
+
+	// marketo integration
+	authRouteGroup.POST("/:project_id/v1/marketo", responseWrapper(V1.CreateMarketoIntegration))
+	authRouteGroup.DELETE("/:project_id/v1/marketo/disable", responseWrapper(V1.DisableMarketoIntegration))
+	authRouteGroup.GET("/:project_id/v1/marketo", responseWrapper(V1.GetMarketoIntegration))
+	authRouteGroup.PUT("/:project_id/v1/marketo/enable", responseWrapper(V1.EnableMarketoIntegration))
 
 	// alerts
 	authRouteGroup.POST("/:project_id/v1/alerts", responseWrapper(V1.CreateAlertHandler))

@@ -25,7 +25,7 @@ func CreateBingAdsIntegration(c *gin.Context) (interface{}, int, string, string,
 	if statusCode != http.StatusCreated {
 		return nil, statusCode, "", errMsg, true
 	}
-	statusCode, errMsg = fivetran.FiveTranReloadBingAdsConnectorSchema(connectorId)
+	statusCode, errMsg = fivetran.FiveTranReloadConnectorSchema(connectorId)
 	if statusCode != http.StatusOK {
 		return nil, statusCode, "", errMsg, true
 	}

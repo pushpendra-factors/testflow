@@ -37,11 +37,13 @@ type CRMSource int
 const (
 	CRM_SOURCE_HUBSPOT    CRMSource = 1
 	CRM_SOURCE_SALESFORCE CRMSource = 2
+	CRM_SOURCE_MARKETO    CRMSource = 3
 )
 
 var ALLOWED_CRM_SOURCES = map[CRMSource]bool{
 	CRM_SOURCE_HUBSPOT:    true,
 	CRM_SOURCE_SALESFORCE: true,
+	CRM_SOURCE_MARKETO:    true,
 }
 
 func AllowedCRMBySource(crmSource CRMSource) bool {
