@@ -162,7 +162,7 @@ function CoreQuery({
     linkedEvents: [],
     date_range: {},
     attr_dimensions: [],
-    content_groups: []
+    content_groups: [],
   });
 
   const [campaignState, setCampaignState] = useState({
@@ -197,7 +197,7 @@ function CoreQuery({
     eventNames,
     attr_dimensions,
     attrQueries,
-    content_groups
+    content_groups,
   } = useSelector((state) => state.coreQuery);
 
   const [activeTab, setActiveTab] = useState(1);
@@ -552,12 +552,41 @@ function CoreQuery({
           tacticOfferType
         );
 
-        if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users') {
-          const kpiQuery = getKPIQuery(attrQueries, durationObj, {event:[], global: []}, queryOptions, []);
-          if(queryOptions.group_analysis === 'hubspot_deals') {
-            kpiQuery.gGBy = [{"gr":"","prNa":"$hubspot_deal_hs_object_id","prDaTy":"numerical","en":"user","objTy":"","gbty":"raw_values"}];
-          } else if (queryOptions.group_analysis === 'salesforce_opportunities') {
-            kpiQuery.gGBy = [{"gr":"","prNa":"$salesforce_opportunity_id","prDaTy":"numerical","en":"user","objTy":"","gbty":"raw_values"}];
+        if (
+          queryOptions.group_analysis &&
+          queryOptions.group_analysis !== 'users'
+        ) {
+          const kpiQuery = getKPIQuery(
+            attrQueries,
+            durationObj,
+            { event: [], global: [] },
+            queryOptions,
+            []
+          );
+          if (queryOptions.group_analysis === 'hubspot_deals') {
+            kpiQuery.gGBy = [
+              {
+                gr: '',
+                prNa: '$hubspot_deal_hs_object_id',
+                prDaTy: 'numerical',
+                en: 'user',
+                objTy: '',
+                gbty: 'raw_values',
+              },
+            ];
+          } else if (
+            queryOptions.group_analysis === 'salesforce_opportunities'
+          ) {
+            kpiQuery.gGBy = [
+              {
+                gr: '',
+                prNa: '$salesforce_opportunity_id',
+                prDaTy: 'numerical',
+                en: 'user',
+                objTy: '',
+                gbty: 'raw_values',
+              },
+            ];
           }
           query.query.analyze_type = queryOptions.group_analysis;
           query.query.kpi_query_group = kpiQuery;
@@ -883,7 +912,7 @@ function CoreQuery({
         queryType === QUERY_TYPE_CAMPAIGN ||
         queryType === QUERY_TYPE_KPI
       ) {
-        frequency = getValidGranularityOptions()[0];
+        frequency = getValidGranularityOptions({ from, to })[0];
       }
 
       const payload = {
@@ -1174,11 +1203,13 @@ function CoreQuery({
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      return <AttrQueryComposer 
-        queryOptions={queryOptions}
-        setQueryOptions={setExtraOptions} 
-        runAttributionQuery={handleRunQuery} 
-      />;
+      return (
+        <AttrQueryComposer
+          queryOptions={queryOptions}
+          setQueryOptions={setExtraOptions}
+          runAttributionQuery={handleRunQuery}
+        />
+      );
     }
 
     if (queryType === QUERY_TYPE_KPI) {
@@ -1360,7 +1391,7 @@ function CoreQuery({
       return [ddName, item.name, item.data_type, ddtype];
     });
     return DDvalues;
-  }
+  };
 
   return (
     <>
