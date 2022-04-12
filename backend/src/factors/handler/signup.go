@@ -93,6 +93,20 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+
+	code = onboardingMailModoAPICall(agent)
+	if code != http.StatusOK {
+		log.WithField("email", email).Error("Failed To Send Onboarding Mail")
+	}
+	code = onboardingHubspotOwner(agent)
+	if code != http.StatusOK {
+		log.WithField("email", email).Error("Failed To Create Hubspot Owner")
+	}
+	code = onboardingSlackAPICall(agent)
+	if code != http.StatusOK {
+		log.WithField("email", email).Error("Failed To Send Onboarding Slack")
+	}
+
 	// Set Cookie with exp 1 day. After that the agent will be forced to set password
 	// And probably redirect to default project view
 	resp := map[string]string{

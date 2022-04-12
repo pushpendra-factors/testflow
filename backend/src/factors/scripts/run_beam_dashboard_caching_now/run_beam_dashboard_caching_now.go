@@ -124,7 +124,6 @@ func main() {
 		RedisHost:                           *redisHost,
 		RedisPort:                           *redisPort,
 		SentryDSN:                           *sentryDSN,
-		MultipleTimezoneEnabledProjects:     C.GetTokensFromStringListAsUint64(*multipleTimezoneEnabledProjects),
 		EnableFilterOptimisation:            *enableFilterOptimisation,
 		FilterPropertiesStartTimestamp:      *filterPropertiesStartTimestamp,
 		SkipEventNameStepByProjectID:        *skipEventNameStepByProjectID,

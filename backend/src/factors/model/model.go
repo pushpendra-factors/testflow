@@ -222,7 +222,7 @@ type Model interface {
 	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int
 	AssociateSessionByEventIds(projectId uint64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
-	GetHubspotFormEvents(projectID uint64, userId string, timestamps[] interface{}) ([]model.Event, int)
+	GetHubspotFormEvents(projectID uint64, userId string, timestamps []interface{}) ([]model.Event, int)
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
@@ -351,6 +351,7 @@ type Model interface {
 	DeleteSavedQuery(projectID uint64, queryID uint64) (int, string)
 	DeleteDashboardQuery(projectID uint64, queryID uint64) (int, string)
 	UpdateSavedQuery(projectID uint64, queryID uint64, query *model.Queries) (*model.Queries, int)
+	UpdateQueryIDsWithNewIDs(projectID uint64, shareableURLs []string) int
 	SearchQueriesWithProjectId(projectID uint64, searchString string) ([]model.Queries, int)
 	GetAllNonConvertedQueries(projectID uint64) ([]model.Queries, int)
 
@@ -537,6 +538,8 @@ type Model interface {
 	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 	GetGroups(projectID uint64) ([]model.Group, int)
+	GetPropertiesByGroup(projectID uint64, groupName string, limit int, lastNDays int) (map[string][]string, int)
+	GetPropertyValuesByGroupProperty(projectID uint64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID uint64, channelName string) (int, error)
@@ -572,16 +575,35 @@ type Model interface {
 	// integration document
 	InsertIntegrationDocument(doc model.IntegrationDocument) error
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
-	
+
 	// alerts
 	GetAlertById(id string, projectID uint64) (model.Alert, int)
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)
 	UpdateAlert(id string, projectID uint64) (int, string)
 	CreateAlert(projectID uint64, alert model.Alert) (model.Alert, int, string)
 
+	// sharable url
+	CreateShareableURL(sharableURLParams *model.ShareableURL) (*model.ShareableURL, int)
+	GetAllShareableURLsWithProjectIDAndAgentID(projectID uint64, agentUUID string) ([]*model.ShareableURL, int)
+	GetShareableURLWithShareStringAndAgentID(projectID uint64, shareId, agentUUID string) (*model.ShareableURL, int)
+	GetShareableURLWithShareStringWithLargestScope(projectID uint64, shareId string, entityType int) (*model.ShareableURL, int)
+	// GetShareableURLWithID(projectID uint64, shareId string) (*model.ShareableURL, int)
+	// UpdateShareableURLShareTypeWithShareIDandCreatedBy(projectID uint64, shareId, createdBy string, shareType int, allowedUsers string) int
+	DeleteShareableURLWithShareIDandAgentID(projectID uint64, shareId, createdBy string) int
+	DeleteShareableURLWithEntityIDandType(projectID, entityID uint64, entityType int) int
+	RevokeShareableURLsWithShareString(projectId uint64, shareString string) (int, string)
+	RevokeShareableURLsWithProjectID(projectId uint64) (int, string)
+
+	CreateSharableURLAudit(sharableURL *model.ShareableURL, agentId string) int
+
 	//crm
 	CreateCRMUser(crmUser *model.CRMUser) (int, error)
 	CreateCRMGroup(crmGroup *model.CRMGroup) (int, error)
 	CreateCRMActivity(crmActivity *model.CRMActivity) (int, error)
 	CreateCRMRelationship(crmRelationship *model.CRMRelationship) (int, error)
+	GetCRMUserByTypeAndAction(projectID uint64, source model.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int)
+	UpdateCRMUserAsSynced(projectID uint64, source model.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int)
+	GetCRMUsersInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMUser, int)
+	GetCRMActivityInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMActivity, int)
+	UpdateCRMActivityAsSynced(projectID uint64, source model.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
 }

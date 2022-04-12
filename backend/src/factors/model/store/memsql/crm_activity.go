@@ -138,3 +138,87 @@ func (store *MemSQL) CreateCRMActivity(crmActivity *model.CRMActivity) (int, err
 
 	return http.StatusCreated, nil
 }
+
+func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMActivity, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	var crmActivity []model.CRMActivity
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND synced = false ",
+		projectID, source).Order("timestamp, created_at").Find(&crmActivity).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get crm activity records for sync.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(crmActivity) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return crmActivity, http.StatusFound
+}
+
+func (store *MemSQL) UpdateCRMActivityAsSynced(projectID uint64, source model.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int) {
+
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"source":        source,
+		"name":          crmActivity.Name,
+		"actor_type":    crmActivity.ActorType,
+		"actor_id":      crmActivity.ActorID,
+		"sync_id":       syncID,
+		"user_id":       userID,
+		"id":            crmActivity.ID,
+		"activity_type": crmActivity.Type,
+		"timestamp":     crmActivity.Timestamp,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 || crmActivity.ID == "" || crmActivity.Name == "" ||
+		crmActivity.ActorType == 0 || crmActivity.ActorID == "" {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	updates := make(map[string]interface{})
+	updates["synced"] = true
+
+	if syncID != "" {
+		updates["sync_id"] = syncID
+	}
+
+	if userID != "" {
+		updates["user_id"] = userID
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND id = ? AND name = ? "+
+		"AND actor_type = ? AND actor_id = ? AND type = ? AND timestamp = ? ",
+		projectID, source, crmActivity.ID, crmActivity.Name, crmActivity.ActorType,
+		crmActivity.ActorID, crmActivity.Type, crmActivity.Timestamp).Updates(updates).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update crm activity as synced.")
+		return nil, http.StatusInternalServerError
+	}
+	crmActivity.SyncID = syncID
+	crmActivity.UserID = userID
+
+	return crmActivity, http.StatusAccepted
+}

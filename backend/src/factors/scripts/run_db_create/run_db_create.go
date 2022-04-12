@@ -778,6 +778,20 @@ func main() {
 		log.Info("Created Groups table.")
 	}
 
+	// Create Sharable URL Table
+	if err := db.CreateTable(&model.ShareableURL{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Sharable URL table creation failed.")
+	} else {
+		log.Info("Created Sharable URL table.")
+	}
+
+	// Create Sharable URL Audit Table
+	if err := db.CreateTable(&model.ShareableURLAudit{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Sharable URL Audit table creation failed.")
+	} else {
+		log.Info("Created Sharable URL Audit table.")
+	}
+	
 	// Create Alerts Table
 	if err := db.CreateTable(&model.Alert{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Alert table creation failed.")
@@ -852,4 +866,3 @@ func InitialiseDevSetup() {
 	}
 
 }
-

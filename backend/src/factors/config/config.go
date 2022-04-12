@@ -217,6 +217,10 @@ type Configuration struct {
 	ResourcePoolForAnalytics                        string
 	RestrictReusingUsersByCustomerUserId            string
 	HubspotAPIOnboardingHAPIKey                     string
+	MailModoOnboardingAPIKey                        string
+	MailModoOnboardingURL1                          string
+	MailModoOnboardingURL2                          string
+	SlackOnboardingWebhookURL                       string
 	AllowProfilesGroupSupport                       string
 	DebugEnabled                                    bool
 	MergeAmpIDAndSegmentIDWithUserIDByProjectID     string
@@ -280,6 +284,8 @@ const (
 	HealthcheckSavedQueriesTimezoneChangePingID = "42f96466-c467-44cc-899d-7e55b8a1aa4e"
 	HealthcheckLeadgenInsertionJobPingID        = "830c0112-fc71-4257-b265-b3732f03115a"
 	HealthcheckBingAdsIntegrationPingID         = "33f862b1-453a-4352-b209-945b38ed1902"
+	HealthcheckMarketoEnrichmentPingID          = "72709dcf-3e85-476d-9c81-8eb4be639368"
+	HealthcheckMarketoIntegrationPingID         = ""
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
