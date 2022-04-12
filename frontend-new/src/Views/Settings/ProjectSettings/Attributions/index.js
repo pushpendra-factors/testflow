@@ -133,10 +133,7 @@ const Attributions = ({
   };
 
   const selectWindow = () => {
-    const window = [1, 3, 7, 14, 20, 30, 60, 90, 'Full User Journey'];
-    const opts = window.map((opt) =>
-      Number.isInteger(opt) ? `${opt} ${opt === 1 ? 'day' : 'days'}` : opt
-    );
+    const window = [1, 3, 7, 14, 20, 30, 60, 90, -1];
     return (
       <Select
         value={attrConfig?.attribution_window}
@@ -149,8 +146,10 @@ const Attributions = ({
         {window.map((days, index) => {
           return (
             <Option value={days}>
-              {Number.isInteger(days)
+              {Number.isInteger(days) && days !== -1
                 ? `${days} ${days === 1 ? 'day' : 'days'}`
+                : days === -1
+                ? 'Full User Journey'
                 : days}
             </Option>
           );
