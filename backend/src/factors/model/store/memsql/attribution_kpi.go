@@ -78,14 +78,14 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 	}
 
 	logCtx.Info("done pulling group user list ids for Deal or Opportunity")
-
+	log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
+		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 1")
 	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
 		return kpiData, groupUserIDToKpiID, kpiKeys, err
 	}
-
 	log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
-		"kpiKeys": kpiKeys}).Info("KPI Attribution kpiData reports")
+		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 2")
 
 	return kpiData, groupUserIDToKpiID, kpiKeys, nil
 }
