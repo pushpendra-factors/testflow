@@ -404,6 +404,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/linkedin/documents/add",
 		IH.DataServiceLinkedinAddDocumentHandler)
 
+	dataServiceRouteGroup.PUT("/linkedin/access_token",
+		IH.DataServiceLinkedinUpdateAccessToken)
+
 	dataServiceRouteGroup.POST("/metrics",
 		IH.DataServiceRecordMetricHandler)
 
