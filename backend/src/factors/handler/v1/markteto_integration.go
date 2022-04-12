@@ -25,14 +25,6 @@ func CreateMarketoIntegration(c *gin.Context) (interface{}, int, string, string,
 	if statusCode != http.StatusCreated {
 		return nil, statusCode, "", errMsg, true
 	}
-	statusCode, errMsg = fivetran.FiveTranReloadConnectorSchema(connectorId)
-	if statusCode != http.StatusOK {
-		return nil, statusCode, "", errMsg, true
-	}
-	statusCode, errMsg = fivetran.FiveTranPatchMarketoConnectorSchema(connectorId, schemaId)
-	if statusCode != http.StatusOK {
-		return nil, statusCode, "", errMsg, true
-	}
 	statusCode, errMsg, redirectUri := fivetran.FiveTranCreateConnectorCard(connectorId)
 	if statusCode != http.StatusOK {
 		return nil, statusCode, "", errMsg, true
@@ -57,10 +49,18 @@ func EnableMarketoIntegration(c *gin.Context) (interface{}, int, string, string,
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
-	connectorId, err := store.GetStore().GetLatestFiveTranMapping(projectID, model.MarketoIntegration)
+	connectorId, schemaId, err := store.GetStore().GetLatestFiveTranMapping(projectID, model.MarketoIntegration)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch connector id from db")
 		return nil, http.StatusNotFound, "", err.Error(), true
+	}
+	statusCode, errMsg := fivetran.FiveTranReloadConnectorSchema(connectorId)
+	if statusCode != http.StatusOK {
+		return nil, statusCode, "", errMsg, true
+	}
+	statusCode, errMsg = fivetran.FiveTranPatchMarketoConnectorSchema(connectorId, schemaId)
+	if statusCode != http.StatusOK {
+		return nil, statusCode, "", errMsg, true
 	}
 	statusCode, msg := fivetran.FiveTranPatchConnector(connectorId)
 	if statusCode == http.StatusOK {

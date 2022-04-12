@@ -161,6 +161,13 @@ upload-marketo-enrich: export IMAGE_NAME=marketo-enrich-job
 upload-marketo-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/marketo-enrich-job:$(TAG)
 
+pack-marketo-sync:
+	docker build -t us.gcr.io/factors-$(ENV)/marketo-sync-job:$(TAG) -f Dockerfile.marketo_sync_job .
+
+upload-marketo-sync: export IMAGE_NAME=marketo-sync-job
+upload-marketo-sync: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/marketo-sync-job:$(TAG)
+
 pack-enrich-smart-properties:
 	docker build -t us.gcr.io/factors-$(ENV)/enrich-smart-properties-job:$(TAG) -f Dockerfile.enrich_smart_properties_job .
 

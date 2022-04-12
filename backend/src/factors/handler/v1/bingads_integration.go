@@ -57,7 +57,7 @@ func EnableBingAdsIntegration(c *gin.Context) (interface{}, int, string, string,
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "", true
 	}
-	connectorId, err := store.GetStore().GetLatestFiveTranMapping(projectID, model.BingAdsIntegration)
+	connectorId, _, err := store.GetStore().GetLatestFiveTranMapping(projectID, model.BingAdsIntegration)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch connector id from db")
 		return nil, http.StatusNotFound, "", err.Error(), true
