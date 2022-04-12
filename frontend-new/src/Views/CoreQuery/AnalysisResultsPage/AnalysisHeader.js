@@ -33,6 +33,7 @@ function AnalysisHeader({
     coreQueryState: { navigatedFromDashboard },
   } = useContext(CoreQueryContext);
   const { metadata } = useSelector((state) => state.insights);
+  const { active_insight } = useSelector((state) => state.insights);
   const isInsightsEnabled =
     (metadata?.QueryWiseResult != null &&
       !metadata?.DashboardUnitWiseResult != null) ||
@@ -122,6 +123,7 @@ function AnalysisHeader({
 
   const renderReportTabs = () => {
     if (!showReportTabs) return null;
+    if (!active_insight?.Enabled) return null;
     return (
       <div className={'items-center flex justify-center w-full'}>
         <Tabs
