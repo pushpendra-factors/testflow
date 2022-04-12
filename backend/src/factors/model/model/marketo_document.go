@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -123,9 +124,14 @@ func GetMarketoDocumentDocumentType(documentTypeString string) int {
 	return 0
 }
 
+const (
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP = "program_membership"
+	MARKETO_TYPE_NAME_LEAD               = "lead"
+)
+
 var MarketoDocumentTypeAlias = map[string]int{
-	"program_membership": 1,
-	"lead":               2,
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: 1,
+	MARKETO_TYPE_NAME_LEAD:               2,
 }
 
 var MarketoActorTypeMapping = map[string]string{
@@ -155,6 +161,18 @@ var MarketoPhoneMapping = map[string]string{
 var MarketoTimestampMapping = map[string][]string{
 	"program_membership": []string{"membership_date"},
 	"lead":               []string{"created_at", "created_at", "updated_at"},
+}
+
+func GetMarketoTypeToAliasMap(aliasToType map[string]int) (map[int]string, error) {
+	typeToAlias := make(map[int]string)
+	for typeAlias := range aliasToType {
+		objectType := aliasToType[typeAlias]
+		if _, exist := typeToAlias[objectType]; exist {
+			return nil, errors.New("same type on alias")
+		}
+		typeToAlias[objectType] = typeAlias
+	}
+	return typeToAlias, nil
 }
 
 func GetMetadataColumnNameIndex(columnName string) int {

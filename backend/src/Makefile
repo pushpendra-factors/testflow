@@ -154,6 +154,13 @@ upload-hubspot-enrich: export IMAGE_NAME=hubspot-enrich-job
 upload-hubspot-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG)
 
+pack-marketo-enrich:
+	docker build -t us.gcr.io/factors-$(ENV)/marketo-enrich-job:$(TAG) -f Dockerfile.marketo_enrich_job .
+
+upload-marketo-enrich: export IMAGE_NAME=marketo-enrich-job
+upload-marketo-enrich: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/marketo-enrich-job:$(TAG)
+
 pack-enrich-smart-properties:
 	docker build -t us.gcr.io/factors-$(ENV)/enrich-smart-properties-job:$(TAG) -f Dockerfile.enrich_smart_properties_job .
 

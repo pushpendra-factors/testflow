@@ -128,3 +128,120 @@ func (pg *Postgres) CreateCRMUser(crmUser *model.CRMUser) (int, error) {
 
 	return http.StatusCreated, nil
 }
+
+func (pg *Postgres) GetCRMUserByTypeAndAction(projectID uint64, source model.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int) {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+		"id":         id,
+		"user_type":  userType,
+		"action":     action,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || source == 0 || id == "" || userType == 0 || action == 0 {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	var crmUser model.CRMUser
+
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMUser{}).Where("project_id = ? AND source = ? AND id =? AND type = ? and action = ? ",
+		projectID, source, id, userType, action).
+		Limit(1).Find(&crmUser).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get crm user by type and action.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if crmUser.ID == "" {
+		return nil, http.StatusNotFound
+	}
+
+	return &crmUser, http.StatusFound
+}
+
+func (pg *Postgres) UpdateCRMUserAsSynced(projectID uint64, source model.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int) {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+		"id":         crmUser.ID,
+		"user_type":  crmUser.Type,
+		"action":     crmUser.Action,
+		"timestamp":  crmUser.Timestamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 || crmUser.ID == "" || crmUser.Type == 0 || crmUser.Action == 0 || crmUser.Timestamp == 0 {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	updates := make(map[string]interface{})
+	updates["synced"] = true
+
+	if syncID != "" {
+		updates["sync_id"] = syncID
+	}
+
+	if userID != "" {
+		updates["user_id"] = userID
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMUser{}).Where("project_id = ? AND source = ? AND id = ? AND type= ? AND action = ? AND timestamp= ? ",
+		projectID, source, crmUser.ID, crmUser.Type, crmUser.Action, crmUser.Timestamp).Updates(updates).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update crm user as synced.")
+		return nil, http.StatusInternalServerError
+	}
+
+	crmUser.SyncID = syncID
+	crmUser.UserID = userID
+	return crmUser, http.StatusAccepted
+}
+
+func (pg *Postgres) GetCRMUsersInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMUser, int) {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	var crmUsers []model.CRMUser
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMUser{}).Where("project_id = ? AND source = ? AND synced = false ",
+		projectID, source).Order("timestamp, created_at").Find(&crmUsers).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get crm user records for sync.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(crmUsers) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return crmUsers, http.StatusFound
+}

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -35,9 +36,12 @@ const (
 type CRMSource int
 
 const (
-	CRM_SOURCE_HUBSPOT    CRMSource = 1
-	CRM_SOURCE_SALESFORCE CRMSource = 2
-	CRM_SOURCE_MARKETO    CRMSource = 3
+	CRM_SOURCE_HUBSPOT         CRMSource = 1
+	CRM_SOURCE_SALESFORCE      CRMSource = 2
+	CRM_SOURCE_MARKETO         CRMSource = 3
+	CRM_SOURCE_NAME_HUBSPOT              = "hubspot"
+	CRM_SOURCE_NAME_SALESFORCE           = "salesforce"
+	CRM_SOURCE_NAME_MARKETO              = "marketo"
 )
 
 var ALLOWED_CRM_SOURCES = map[CRMSource]bool{
@@ -46,6 +50,22 @@ var ALLOWED_CRM_SOURCES = map[CRMSource]bool{
 	CRM_SOURCE_MARKETO:    true,
 }
 
+var CRM_SOURCE = map[CRMSource]string{
+	CRM_SOURCE_HUBSPOT:    CRM_SOURCE_NAME_HUBSPOT,
+	CRM_SOURCE_SALESFORCE: CRM_SOURCE_NAME_SALESFORCE,
+	CRM_SOURCE_MARKETO:    CRM_SOURCE_NAME_MARKETO,
+}
+
 func AllowedCRMBySource(crmSource CRMSource) bool {
 	return ALLOWED_CRM_SOURCES[crmSource]
+}
+
+func GetCRMSourceByAliasName(sourceAlias string) (CRMSource, error) {
+	for sourceType, alias := range CRM_SOURCE {
+		if sourceAlias == alias {
+			return sourceType, nil
+		}
+	}
+
+	return 0, errors.New("invalid source alias")
 }

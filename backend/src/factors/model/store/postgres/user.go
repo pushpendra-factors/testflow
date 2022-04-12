@@ -518,7 +518,7 @@ func (pg *Postgres) OverwriteUserPropertiesByID(projectID uint64, id string,
 	update := map[string]interface{}{"properties": properties}
 	if updateTimestamp > 0 && updateTimestamp > currentPropertiesUpdatedTimestamp {
 		if C.UseSourcePropertyOverwriteByProjectIDs(projectID) {
-			if source != model.SmartCRMEventSourceHubspot && source != model.SmartCRMEventSourceSalesforce {
+			if !model.BlacklistUserPropertiesUpdateTimestampBySource[source] {
 				update["properties_updated_timestamp"] = updateTimestamp
 			}
 		} else {

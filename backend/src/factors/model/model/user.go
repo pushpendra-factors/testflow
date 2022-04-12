@@ -110,12 +110,14 @@ const (
 	UserSourceSalesforce       = 3
 	UserSourceHubspotString    = "hubspot"
 	UserSourceSalesforceString = "salesforce"
+	UserSourceMarketo          = "marketo"
 )
 
 var UserSourceMap = map[string]int{
-	"web":        1,
-	"hubspot":    2,
-	"salesforce": 3,
+	"web":                      1,
+	UserSourceHubspotString:    2,
+	UserSourceSalesforceString: 3,
+	UserSourceMarketo:          6,
 }
 
 const USERS = "users"
@@ -748,12 +750,20 @@ func getCRMTimestampValue(value interface{}) (int64, error) {
 	return timestamp, nil
 }
 
+func IsAllowedCRMSourceForOverwrites(source string) bool {
+	if source != SmartCRMEventSourceHubspot && source != SmartCRMEventSourceSalesforce && source != CRM_SOURCE_NAME_MARKETO {
+		return false
+	}
+
+	return true
+}
+
 func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomingProperties map[string]interface{},
 	currentProperties map[string]interface{}) (bool, error) {
 	logCtx := log.WithField("source", source).
 		WithField("objectType", objectType)
 
-	if source != SmartCRMEventSourceHubspot && source != SmartCRMEventSourceSalesforce {
+	if !IsAllowedCRMSourceForOverwrites(source) {
 		return false, nil
 	}
 
@@ -762,7 +772,7 @@ func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomi
 		return overwriteProperties, nil
 	}
 
-	propertySuffix := GetPropertySuffix(source, objectType)
+	propertySuffix := GetSourceUserPropertyOverwritePropertySuffix(source, objectType)
 	lastmodifieddateProperty := GetCRMEnrichPropertyKeyByType(source, objectType, propertySuffix)
 	incomingPropertyValue, err := getCRMTimestampValue(incomingProperties[lastmodifieddateProperty])
 	if err != nil {
@@ -782,16 +792,37 @@ func CheckForCRMUserPropertiesOverwrite(source string, objectType string, incomi
 	return overwriteProperties, nil
 }
 
-func GetPropertySuffix(source string, objectType string) string {
-	if source == SmartCRMEventSourceHubspot {
-		if objectType == HubspotDocumentTypeNameContact {
-			return util.PROPERTY_KEY_LAST_MODIFIED_DATE
-		} else {
-			return util.PROPERTY_KEY_LAST_MODIFIED_DATE_HS
-		}
-	} else {
-		return util.PROPERTY_KEY_LAST_MODIFIED_DATE
+var SourceUserPropertiesOverwritePropertyKeys = map[string]map[string]string{
+	SmartCRMEventSourceHubspot: {
+		HubspotDocumentTypeNameContact: util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+		HubspotDocumentTypeNameCompany: util.PROPERTY_KEY_LAST_MODIFIED_DATE_HS,
+		HubspotDocumentTypeNameDeal:    util.PROPERTY_KEY_LAST_MODIFIED_DATE_HS,
+	},
+	SmartCRMEventSourceSalesforce: {
+		SalesforceDocumentTypeNameLead:        util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+		SalesforceDocumentTypeNameContact:     util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+		SalesforceDocumentTypeNameAccount:     util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+		SalesforceDocumentTypeNameOpportunity: util.PROPERTY_KEY_LAST_MODIFIED_DATE,
+	},
+	CRM_SOURCE_NAME_MARKETO: {
+		"lead": "updated_at",
+	},
+}
+
+var BlacklistUserPropertiesUpdateTimestampBySource = map[string]bool{
+	SmartCRMEventSourceHubspot:    true,
+	SmartCRMEventSourceSalesforce: true,
+	CRM_SOURCE_NAME_MARKETO:       true,
+}
+
+func GetSourceUserPropertyOverwritePropertySuffix(source string, objectType string) string {
+
+	sourceKeys, ok := SourceUserPropertiesOverwritePropertyKeys[source]
+	if !ok {
+		return ""
 	}
+
+	return sourceKeys[objectType]
 }
 
 // SetUserGroupFieldByColumnName update user struct field by gorm column name. If value already set then it won't update the value

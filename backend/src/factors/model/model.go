@@ -575,7 +575,7 @@ type Model interface {
 	// integration document
 	InsertIntegrationDocument(doc model.IntegrationDocument) error
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
-	
+
 	// alerts
 	GetAlertById(id string, projectID uint64) (model.Alert, int)
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)
@@ -601,5 +601,9 @@ type Model interface {
 	CreateCRMGroup(crmGroup *model.CRMGroup) (int, error)
 	CreateCRMActivity(crmActivity *model.CRMActivity) (int, error)
 	CreateCRMRelationship(crmRelationship *model.CRMRelationship) (int, error)
-
+	GetCRMUserByTypeAndAction(projectID uint64, source model.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int)
+	UpdateCRMUserAsSynced(projectID uint64, source model.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int)
+	GetCRMUsersInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMUser, int)
+	GetCRMActivityInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMActivity, int)
+	UpdateCRMActivityAsSynced(projectID uint64, source model.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
 }
