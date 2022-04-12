@@ -154,7 +154,7 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 
 		if flow == SIGNUP_FLOW {
 
-			if !U.IsPersonalEmail(strings.TrimSpace(profile.Email)) {
+			if U.IsPersonalEmail(strings.TrimSpace(profile.Email)) {
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, "", "INVALID_PERSONAL_EMAIL"))
 				return
 			}

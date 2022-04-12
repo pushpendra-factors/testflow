@@ -47,7 +47,7 @@ func SignUp(c *gin.Context) {
 		return
 	}
 
-	if !U.IsPersonalEmail(strings.TrimSpace(params.Email)) {
+	if U.IsPersonalEmail(strings.TrimSpace(params.Email)) {
 		logCtx.WithError(err).Error("Personal email is not allowed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
