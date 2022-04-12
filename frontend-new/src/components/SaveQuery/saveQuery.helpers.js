@@ -64,8 +64,8 @@ export const getQuery = ({ queryType, requestQuery }) => {
       qG: requestQuery.qG.map((q) => {
         return {
           ...q,
-          fr: startOfWeek,
-          to: todayNow,
+          fr: q.fr,
+          to: q.to,
           gbt: q.gbt ? q.gbt : '',
         };
       }),

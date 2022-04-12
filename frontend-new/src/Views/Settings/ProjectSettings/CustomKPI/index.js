@@ -109,6 +109,10 @@ const CustomKPI = ({
         opts.globalFilters = filters;
         setFilterValues(opts);
     }
+    useEffect(()=>{
+        setQueryOptions({});
+        setFilterValues([]);
+    },[viewMode])
 
     const operatorMap = {
         '=': 'equals',

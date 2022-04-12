@@ -29,6 +29,10 @@ func GetProjectSettingHandler(c *gin.Context) {
 	}
 
 	settings, errCode := store.GetStore().GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})
+		return
+	}
 	events, errCode := store.GetStore().GetEventNames(projectId)
 	var int_completed bool = false
 	if len(events) > 1 {
@@ -38,7 +42,7 @@ func GetProjectSettingHandler(c *gin.Context) {
 		Settings: *settings,
 		IntCompleted: int_completed,
 	}
-	if errCode != http.StatusFound {
+	if errCode != http.StatusFound && errCode != http.StatusNotFound{
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})
 	} else {
 		c.JSON(http.StatusOK, projectSettings)

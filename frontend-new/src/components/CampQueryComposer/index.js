@@ -338,7 +338,10 @@ const CampQueryComposer = ({
       }
     }
 
-    const frequency = getValidGranularityOptions()[0];
+    const frequency = getValidGranularityOptions({
+      from: dtRange.from,
+      to: dtRange.to,
+    })[0];
     dtRange.frequency = frequency;
     setCampDateRange(dtRange);
   };

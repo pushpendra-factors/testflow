@@ -951,22 +951,23 @@ func (store *MemSQL) GetHubspotFormDocuments(projectId uint64) ([]model.HubspotD
 	return documents, http.StatusFound
 }
 
-func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId uint64, typ int) ([]model.HubspotDocument, int) {
+func (store *MemSQL) GetHubspotDocumentsByTypeForSync(projectId uint64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {
 	argFields := log.Fields{"project_id": projectId, "type": typ}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectId, "typ": typ})
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectId, "typ": typ, "max_created_at_sec": maxCreatedAtSec})
 
 	logCtx := log.WithFields(argFields)
 
-	if projectId == 0 || typ == 0 {
-		logCtx.Error("Invalid project_id or type on get hubspot documents by type.")
+	if projectId == 0 || typ == 0 || maxCreatedAtSec <= 0 {
+		logCtx.Error("Invalid project_id or type or maxCreatedAtSec  on get hubspot documents by type.")
 		return nil, http.StatusBadRequest
 	}
 
+	maxCreatedAtFmt := time.Unix(maxCreatedAtSec+1, 0).Format("2006-01-02 15:04:05")
 	var documents []model.HubspotDocument
 
 	db := C.GetServices().Db
-	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false",
-		projectId, typ).Find(&documents).Error
+	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND created_at < ? ",
+		projectId, typ, maxCreatedAtFmt).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
 		return nil, http.StatusInternalServerError
@@ -1010,9 +1011,9 @@ func (store *MemSQL) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(pr
 
 // GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
 func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64,
-	docType int, from, to int64) ([]model.HubspotDocument, int) {
+	docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {
 
-	argFields := log.Fields{"project_id": projectID, "type": docType, "from": from, "to": to}
+	argFields := log.Fields{"project_id": projectID, "type": docType, "from": from, "to": to, "max_created_at_sec": maxCreatedAtSec}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
 	logCtx := log.WithFields(argFields)
 
@@ -1021,11 +1022,12 @@ func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64,
 		return nil, http.StatusBadRequest
 	}
 
+	maxCreatedAtFmt := time.Unix(maxCreatedAtSec+1, 0).Format("2006-01-02 15:04:05")
 	var documents []model.HubspotDocument
 
 	db := C.GetServices().Db
-	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ?",
-		projectID, docType, from, to).Find(&documents).Error
+	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ? AND created_at < ? ",
+		projectID, docType, from, to, maxCreatedAtFmt).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
 		return nil, http.StatusInternalServerError

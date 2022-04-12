@@ -28,10 +28,10 @@ func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) 
 	}
 }
 
-func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus) {
+func syncWorker(projectID uint64, wg *sync.WaitGroup, numDocRoutines int, syncStatus *SyncStatus, recordsMaxCreatedAt int64) {
 	defer wg.Done()
 
-	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines)
+	status, hasFailure := IntHubspot.Sync(projectID, numDocRoutines, recordsMaxCreatedAt)
 	syncStatus.AddSyncStatus(status, hasFailure)
 }
 
@@ -44,6 +44,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	defaultHealthcheckPingID := configs["health_check_ping_id"].(string)
 	overrideHealthcheckPingID := configs["override_healthcheck_ping_id"].(string)
 	numProjectRoutines := configs["num_project_routines"].(int)
+	hubspotMaxCreatedAt := configs["max_record_created_at"].(int64)
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, overrideHealthcheckPingID)
 
 	hubspotEnabledProjectSettings, errCode := store.GetStore().GetAllHubspotProjectSettings()
@@ -102,6 +103,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 
 	// Runs enrichment for list of project_ids as batch using go routines.
 	batches := U.GetUint64ListAsBatch(projectIDs, numProjectRoutines)
+	log.WithFields(log.Fields{"project_batches": batches}).Info("Running for batches.")
 	syncStatus := SyncStatus{}
 	for bi := range batches {
 		batch := batches[bi]
@@ -109,7 +111,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		var wg sync.WaitGroup
 		for pi := range batch {
 			wg.Add(1)
-			go syncWorker(batch[pi], &wg, numDocRoutines, &syncStatus)
+			go syncWorker(batch[pi], &wg, numDocRoutines, &syncStatus, hubspotMaxCreatedAt)
 		}
 		wg.Wait()
 	}

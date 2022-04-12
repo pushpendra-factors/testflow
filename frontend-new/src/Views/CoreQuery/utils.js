@@ -979,7 +979,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
 };
 
 export const getAttributionQuery = (
-  eventGoal = {filters: []},
+  eventGoal = { filters: [] },
   touchpoint,
   attr_dimensions,
   content_groups,
@@ -1019,7 +1019,7 @@ export const getAttributionQuery = (
       tactic_offer_type: tacticOfferType,
     },
   };
-  if(!eventGoal || !eventGoal.label) {
+  if (!eventGoal || !eventGoal.label) {
     query.query.ce = {};
   }
   if (dateRange.from && dateRange.to) {
@@ -1079,12 +1079,11 @@ export const getAttributionStateFromRequestQuery = (
   initial_attr_dimensions,
   initial_content_groups
 ) => {
-
   let attrQueries = [];
-  if(requestQuery.analyze_type && requestQuery.analyze_type !== 'users') {
+  if (requestQuery.analyze_type && requestQuery.analyze_type !== 'users') {
     const kpiQuery = getKPIStateFromRequestQuery(requestQuery.kpi_query_group);
     attrQueries = kpiQuery.events;
-  } 
+  }
 
   const filters = [];
   requestQuery.ce?.pr?.forEach((pr) => {
@@ -1721,6 +1720,8 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
   };
   const dateRange = {
     ...DefaultDateRangeFormat,
+    from: requestQuery.qG[1].fr * 1000,
+    to: requestQuery.qG[1].to * 1000,
     frequency: requestQuery.qG[1].gbt,
   };
   const result = {

@@ -2095,8 +2095,9 @@ func syncAllWorker(project *model.Project, wg *sync.WaitGroup, syncStatus *syncW
 }
 
 // Sync - Syncs hubspot documents in an order of type.
-func Sync(projectID uint64, workersPerProject int) ([]Status, bool) {
-	logCtx := log.WithField("project_id", projectID)
+func Sync(projectID uint64, workersPerProject int, recordsMaxCreatedAtSec int64) ([]Status, bool) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "workers_per_project": workersPerProject, "record_max_created_at": recordsMaxCreatedAtSec})
+	logCtx.Info("Running sync for project.")
 
 	statusByProjectAndType := make([]Status, 0, 0)
 	hubspotSmartEventNames := GetHubspotSmartEventNames(projectID)
@@ -2154,10 +2155,10 @@ func Sync(projectID uint64, workersPerProject int) ([]Status, bool) {
 			var documents []model.HubspotDocument
 			var errCode int
 			if workersPerProject > 1 {
-				documents, errCode = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(projectID, syncOrderByType[i], timeRange[0], timeRange[1])
+				documents, errCode = store.GetStore().GetHubspotDocumentsByTypeANDRangeForSync(projectID, syncOrderByType[i], timeRange[0], timeRange[1], recordsMaxCreatedAtSec)
 			} else {
 				documents, errCode = store.GetStore().
-					GetHubspotDocumentsByTypeForSync(projectID, syncOrderByType[i])
+					GetHubspotDocumentsByTypeForSync(projectID, syncOrderByType[i], recordsMaxCreatedAtSec)
 			}
 
 			if errCode != http.StatusFound {
