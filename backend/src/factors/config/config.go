@@ -217,6 +217,10 @@ type Configuration struct {
 	ResourcePoolForAnalytics                        string
 	RestrictReusingUsersByCustomerUserId            string
 	HubspotAPIOnboardingHAPIKey                     string
+	MailModoOnboardingAPIKey						string
+	MailModoOnboardingURL1							string
+	MailModoOnboardingURL2							string
+	SlackOnboardingWebhookURL						string
 	AllowProfilesGroupSupport                       string
 	DebugEnabled                                    bool
 	MergeAmpIDAndSegmentIDWithUserIDByProjectID     string
