@@ -271,7 +271,7 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map
 		customerUserIdList = append(customerUserIdList, v.KpiCoalUserIds...)
 	}
 
-	var custUserIdToUserIds map[string][]string
+	custUserIdToUserIds := make(map[string][]string)
 	custUserIDPlaceHolder := U.GetValuePlaceHolder(len(customerUserIdList))
 	custUserIDs := U.GetInterfaceList(customerUserIdList)
 	groupUserListQuery := "Select users.id, users.customer_user_id FROM users WHERE project_id=? " +
@@ -312,7 +312,7 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map
 	log.WithFields(log.Fields{"custUserIdToUserIds": custUserIdToUserIds}).Info("KPI-Attribution custUserIdToUserIds set")
 
 	for k, v := range *kpiData {
-		var userIdMap map[string]bool
+		userIdMap := make(map[string]bool)
 		// Add new users
 		for _, uid := range v.KpiUserIds {
 			userIdMap[uid] = true
