@@ -97,6 +97,8 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 
 					insertionStatus, err = store.GetStore().CreateCRMActivity(&intDocument)
 					if insertionStatus == http.StatusConflict {
+						// Need to check if membership data is getting updatd to new one for a given progression status
+						// Check what to do with missing leads
 						intDocument.Name = "program_membership_updated"
 						intDocument.Timestamp = timestamps[0]
 						insertionStatus, err = store.GetStore().CreateCRMActivity(&intDocument)
@@ -104,7 +106,7 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 				}
 				if model.DocTypeIntegrationObjectMap[docType] == "user" {
 					timestamps := model.GetMarketoDocumentTimestamp(docType, line, columnNamesFromMetadata)
-					intDocument := model.CRMUser{
+					intDocument1 := model.CRMUser{
 						ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
 						ProjectID:  projectId,
 						Source:     model.CRM_SOURCE_MARKETO,
@@ -114,13 +116,33 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 						Email:      model.GetMarketoDocumentEmail(docType, line, columnNamesFromMetadata),
 						Phone:      model.GetMarketoDocumentPhone(docType, line, columnNamesFromMetadata),
 					}
-					insertionStatus, err = store.GetStore().CreateCRMUser(&intDocument)
+					insertionStatus, err = store.GetStore().CreateCRMUser(&intDocument1)
 					if insertionStatus == http.StatusCreated {
-						intDocument.Timestamp = timestamps[1]
-						insertionStatus, err = store.GetStore().CreateCRMUser(&intDocument)
+						intDocument2 := model.CRMUser{
+							ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
+							ProjectID:  projectId,
+							Source:     model.CRM_SOURCE_MARKETO,
+							Type:       model.GetMarketoDocumentDocumentType(docType),
+							Timestamp:  timestamps[1],
+							Properties: valuesBlob,
+							Email:      model.GetMarketoDocumentEmail(docType, line, columnNamesFromMetadata),
+							Phone:      model.GetMarketoDocumentPhone(docType, line, columnNamesFromMetadata),
+						}
+						insertionStatus, err = store.GetStore().CreateCRMUser(&intDocument2)
 					}
-					intDocument.Timestamp = timestamps[2]
-					insertionStatus, err = store.GetStore().CreateCRMUser(&intDocument)
+					if model.GetMarketoDocumentAction(docType, line, columnNamesFromMetadata) == model.CRMActionUpdated {
+						intDocument3 := model.CRMUser{
+							ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
+							ProjectID:  projectId,
+							Source:     model.CRM_SOURCE_MARKETO,
+							Type:       model.GetMarketoDocumentDocumentType(docType),
+							Timestamp:  timestamps[2],
+							Properties: valuesBlob,
+							Email:      model.GetMarketoDocumentEmail(docType, line, columnNamesFromMetadata),
+							Phone:      model.GetMarketoDocumentPhone(docType, line, columnNamesFromMetadata),
+						}
+						insertionStatus, err = store.GetStore().CreateCRMUser(&intDocument3)
+					}
 
 				}
 				if err != nil || insertionStatus != http.StatusCreated {

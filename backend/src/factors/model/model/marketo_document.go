@@ -108,9 +108,18 @@ func GetMarketoDocumentValues(docType string, data []string, metadataColumns []s
 	dataObjectColumns := GetObjectDataColumns(docType, metadataColumns)
 	for key, index := range dataObjectColumns {
 		if MarketoDataObjectColumnsDatetimeType[docType][key] || (metadataColumnDateTimeType != nil && metadataColumnDateTimeType[key]) {
-			values[key] = ConvertTimestamp(data[index])
+			convertedTimestamp := ConvertTimestamp(data[index])
+			if convertedTimestamp == 0 {
+				values[key] = nil
+			} else {
+				values[key] = convertedTimestamp
+			}
 		} else {
-			values[key] = data[index]
+			if data[index] == "<nil>" {
+				values[key] = ""
+			} else {
+				values[key] = data[index]
+			}
 		}
 	}
 	return values
@@ -204,20 +213,11 @@ func GetMarketoDocumentActorId(documentType string, data []string, metadataColum
 		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
 		index, exists_index := dataObjectColumns[actorId]
 		if exists_index {
-			return data[index]
-		}
-		return ""
-	}
-	return ""
-}
-
-func GetMarketoDocumentActivityName(documentType string, data []string, metadataColumns []string) string {
-	activtyNameId, exists := MarketoActivityNameMapping[documentType]
-	if exists {
-		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
-		index, exists_index := dataObjectColumns[activtyNameId]
-		if exists_index {
-			return data[index]
+			if data[index] == "<nil>" {
+				return ""
+			} else {
+				return data[index]
+			}
 		}
 		return ""
 	}
@@ -230,7 +230,11 @@ func GetMarketoDocumentPhone(documentType string, data []string, metadataColumns
 		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
 		index, exists_index := dataObjectColumns[activtyNameId]
 		if exists_index {
-			return data[index]
+			if data[index] == "<nil>" {
+				return ""
+			} else {
+				return data[index]
+			}
 		}
 		return ""
 	}
@@ -243,7 +247,11 @@ func GetMarketoDocumentEmail(documentType string, data []string, metadataColumns
 		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
 		index, exists_index := dataObjectColumns[activtyNameId]
 		if exists_index {
-			return data[index]
+			if data[index] == "<nil>" {
+				return ""
+			} else {
+				return data[index]
+			}
 		}
 		return ""
 	}
@@ -256,7 +264,11 @@ func GetMarketoUserId(documentType string, data []string, metadataColumns []stri
 		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
 		index, exists_index := dataObjectColumns[activtyNameId]
 		if exists_index {
-			return data[index]
+			if data[index] == "<nil>" {
+				return ""
+			} else {
+				return data[index]
+			}
 		}
 		return ""
 	}
