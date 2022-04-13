@@ -79,7 +79,7 @@ function AppLayout({
     fetchDemoProject().then((res) => {
       setDemoProjectId(res.data);
     });
-  }, [ fetchDemoProject, setDemoProjectId, demoProjectId ]);
+  }, [ fetchDemoProject, setDemoProjectId ]);
 
   useEffect(() => {
     if (projects.length && _.isEmpty(active_project)) {

@@ -17,6 +17,7 @@ function SignUp({ signup }) {
   const [errorInfo, seterrorInfo] = useState(null);
   const [formData, setformData] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   const history = useHistory();
   const routeChange = (url) => {
@@ -134,6 +135,7 @@ function SignUp({ signup }) {
                                     </div>
                                 </Col>
                             </Row>
+                            { showForm ? <>
                             <Row>
                                 <Col span={24}>
                                         <div className={'flex flex-col mt-5'} >
@@ -275,6 +277,17 @@ function SignUp({ signup }) {
                                 </div>
                                 </Col>
                             </Row>
+                            </> 
+                            :
+                            <Row>
+                                <Col span={24}>
+                                    <div className={'flex flex-col justify-center items-center mt-5'} >
+                                        <Form.Item className={'m-0 w-full'} loading={dataLoading}>
+                                            <Button loading={dataLoading} type={'primary'} size={'large'} className={'w-full'} onClick={() => setShowForm(true)}>Signup with Email</Button>
+                                        </Form.Item>
+                                    </div>
+                                </Col>
+                            </Row>}
 
                             <Row>   
                                 <Col span={24}>
