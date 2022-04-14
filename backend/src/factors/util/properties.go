@@ -1184,6 +1184,13 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$offline_touch_point":            "Offline Touchpoint",
 }
 
+var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
+	"$hubspot_company":        "Hubspot Comapnies",
+	"$hubspot_deal":           "Hubspot Deals",
+	"$salesforce_account":     "Salesforce Accounts",
+	"$salesforce_opportunity": "Salesforce Opportunities",
+}
+
 var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
 	"$hubspot_contact_created":        "Hubspot",
 	"$hubspot_contact_updated":        "Hubspot",

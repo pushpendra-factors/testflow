@@ -116,6 +116,8 @@ func InitAppRoutes(r *gin.Engine) {
 		DashboardUnitsWebAnalyticsQueryHandler)
 
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
+	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
+	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
 	authRouteGroup.GET("/:project_id/queries", GetQueriesHandler)
 	authRouteGroup.POST("/:project_id/queries", CreateQueryHandler)
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
