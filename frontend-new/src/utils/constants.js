@@ -201,7 +201,7 @@ export const ATTRIBUTION_METRICS = [
   {
     title: 'Spend',
     header: 'Spend',
-    enabled: false,
+    enabled: true,
   },
   {
     title: 'CTR (%)',
