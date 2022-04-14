@@ -113,6 +113,64 @@ func buildEventPropertiesRequest(projectId uint64, event string, requestType, co
 	return req, nil
 }
 
+func sendGetEventNamesByGroupRequest(projectId uint64, group string, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	req, err := buildEventNamesByGroupRequest(projectId, group, cookieData)
+	if err != nil {
+		log.WithError(err).Error("Error getting event names")
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+
+}
+
+func buildEventNamesByGroupRequest(projectId uint64, groupName string, cookieData string) (*http.Request, error) {
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/groups/%s/event_names", projectId, groupName)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func sendGetEventNamesByUserRequest(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	req, err := buildEventNamesByUserRequest(projectId, cookieData)
+	if err != nil {
+		log.WithError(err).Error("Error getting event names")
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+
+}
+
+func buildEventNamesByUserRequest(projectId uint64, cookieData string) (*http.Request, error) {
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/user/event_names", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
 func sendGetUserProperties(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -185,6 +243,65 @@ func createEventWithTimestampByName(t *testing.T, project *model.Project, user *
 	event, errCode := store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp})
 	assert.Equal(t, http.StatusCreated, errCode)
 	return eventName, event
+}
+
+func TestGetEventNameByGroupHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	C.GetConfig().LookbackWindowForEventUserCache = 10
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	var eventNames = struct {
+		EventNames   map[string][]string `json:"event_names"`
+		DisplayNames map[string]string   `json:"display_names"`
+	}{}
+
+	t.Run("TestGetEventNameByGroupHandler", func(t *testing.T) {
+		w := sendGetEventNamesByGroupRequest(project.ID, model.GROUP_NAME_HUBSPOT_DEAL, agent, r)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &eventNames)
+		json.Unmarshal(jsonResponse, &eventNames)
+		assert.Nil(t, eventNames.EventNames)
+		fmt.Println(eventNames.EventNames)
+		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_DEAL]], "$hubspot_deal_created", "$hubspot_deal_updated")
+		assert.NotNil(t, eventNames.EventNames)
+	})
+}
+
+func TestGetEventNameByUserHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	C.GetConfig().LookbackWindowForEventUserCache = 10
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	var eventNames = struct {
+		EventNames   map[string][]string `json:"event_names"`
+		DisplayNames map[string]string   `json:"display_names"`
+	}{}
+
+	group1, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, group1)
+	group2, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.NotNil(t, group2)
+	assert.Equal(t, http.StatusCreated, status)
+
+	t.Run("TestGetEventNameByUserHandler", func(t *testing.T) {
+		w := sendGetEventNamesByUserRequest(project.ID, agent, r)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &eventNames)
+		assert.Nil(t, eventNames.EventNames)
+		fmt.Println(eventNames.EventNames)
+		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY]], "$hubspot_company_created", "$hubspot_company_updated")
+		assert.Contains(t, eventNames.EventNames[U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_SALESFORCE_ACCOUNT]], "$salesforce_account_created", "$salesforce_account_updated")
+	})
+
 }
 
 func TestGetEventNamesHandler(t *testing.T) {
@@ -452,7 +569,7 @@ func TestEnableEventLevelProperties(t *testing.T) {
 	assert.Equal(t, createdDate*1000, hubspotDocument.Timestamp)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 3)
+	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix())
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -569,7 +686,7 @@ func TestEnableEventLevelProperties(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ = IntHubspot.Sync(project.ID, 3)
+	allStatus, _ = IntHubspot.Sync(project.ID, 3, time.Now().Unix())
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}

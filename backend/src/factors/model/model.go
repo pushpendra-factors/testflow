@@ -272,9 +272,9 @@ type Model interface {
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
 	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64, docTypes []int) (int64, int)
 	GetHubspotFormDocuments(projectID uint64) ([]model.HubspotDocument, int)
-	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
 	GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, docID string) ([]model.HubspotDocument, int)
-	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
 	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
@@ -562,7 +562,7 @@ type Model interface {
 	GetFiveTranMapping(ProjectID uint64, Integration string) (string, error)
 	GetActiveFiveTranMapping(ProjectID uint64, Integration string) (model.FivetranMappings, error)
 	GetAllActiveFiveTranMapping(ProjectID uint64, Integration string) ([]string, error)
-	GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, error)
+	GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, string, error)
 	PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string, Accounts string) error
 	GetAllActiveFiveTranMappingByIntegration(Integration string) ([]model.FivetranMappings, error)
 	UpdateFiveTranMappingAccount(ProjectID uint64, Integration string, ConnectorId string, Accounts string) error

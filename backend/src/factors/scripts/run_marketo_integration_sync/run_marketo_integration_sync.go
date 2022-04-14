@@ -63,7 +63,7 @@ func main() {
 	configs := make(map[string]interface{})
 	configs["BigqueryProjectId"] = *bigqueryProjectId
 	configs["BigqueryCredential"] = *bigqueryCredential
-	status := taskWrapper.TaskFuncWithProjectId("MarketoIntegration", *lookback, projectIdsArray, T.MarketoIntegration, configs)
+	status := taskWrapper.TaskFuncWithProjectId("MarketoIntegrationSync", *lookback, projectIdsArray, T.MarketoIntegration, configs)
 	log.Info(status)
 	C.PingHealthcheckForSuccess(healthcheckPingID, status)
 

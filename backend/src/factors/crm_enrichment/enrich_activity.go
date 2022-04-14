@@ -110,7 +110,7 @@ func enrichCRMActivity(project *model.Project, config *CRMSourceConfig, crmActiv
 		userID = trackResponse.UserId
 	}
 
-	_, status = store.GetStore().UpdateCRMActivityAsSynced(project.ID, source, crmActivity, userID, syncID)
+	_, status = store.GetStore().UpdateCRMActivityAsSynced(project.ID, source, crmActivity, syncID, userID)
 	if status != http.StatusAccepted {
 		logCtx.Error("Failed to mark crm activity as synced.")
 		return http.StatusInternalServerError

@@ -47,6 +47,12 @@ func SignUp(c *gin.Context) {
 		return
 	}
 
+	if U.IsPersonalEmail(strings.TrimSpace(params.Email)) {
+		logCtx.WithError(err).Error("Personal email is not allowed.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	email := params.Email
 	phone := params.Phone
 	planCode := params.PlanCode

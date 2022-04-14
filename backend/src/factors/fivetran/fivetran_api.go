@@ -53,7 +53,7 @@ type FiveTranBingAdsSchemaRequest struct {
 }
 
 type FiveTranMarketoSchemaRequest struct {
-	Lead              FiveTranSchemaEnableRequest `json:"lead"`
+	LeadSegment       FiveTranSchemaEnableRequest `json:"lead_segment"`
 	ProgramMembership FiveTranSchemaEnableRequest `json:"program_membership"`
 	Segmentation      FiveTranSchemaEnableRequest `json:"segmentation"`
 	Program           FiveTranSchemaEnableRequest `json:"program"`
@@ -280,7 +280,7 @@ func FiveTranPatchMarketoConnectorSchema(ConnectorId string, SchemaName string) 
 	schemaPatchRequest := FiveTranSchemaPatchRequest{
 		Enabled: true,
 		Tables: FiveTranMarketoSchemaRequest{
-			Lead: FiveTranSchemaEnableRequest{
+			LeadSegment: FiveTranSchemaEnableRequest{
 				Enabled: true,
 			},
 			ProgramMembership: FiveTranSchemaEnableRequest{

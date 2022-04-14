@@ -216,6 +216,35 @@ func IsEmail(str string) bool {
 	return regexpEmail.MatchString(str)
 }
 
+func IsPersonalEmail(str string) bool {
+	str = strings.ToLower(str)
+	personalDomains := []string {
+		"gmail.com",
+		"yahoo.com",
+		"hotmail.com",
+		"yahoo.co.in",
+		"hey.com",
+		"icloud.com",
+		"me.com",
+		"mac.com",
+		"aol.com",
+		"abc.com",
+		"xyz.com",
+		"pqr.com",
+		"rediffmail.com",
+		"live.com",
+		"outlook.com",
+		"msn.com",
+		"ymail.com",
+	}
+	for _, domain := range personalDomains {
+		if strings.Contains(str, domain) {
+			return true
+		}
+	}
+	return false
+}
+
 func IsValidUrl(tocheck string) bool {
 
 	r, _ := regexp.Compile("(^(http|https)://)?(www)?.com")

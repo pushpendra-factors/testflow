@@ -83,7 +83,7 @@ function QueryComposer({
       );
     });
 
-    if (queries.length < 6) {
+    if ((queryType === QUERY_TYPE_FUNNEL && queries.length < 10) || (queryType === QUERY_TYPE_EVENT && queries.length < 4)) {
       blockList.push(
         <div key={'init'} className={styles.composer_body__query_block}>
           <QueryBlock
@@ -213,7 +213,10 @@ function QueryComposer({
         queryOptionsState.date_range.from = dates.startDate;
         queryOptionsState.date_range.to = dates.endDate;
       }
-      const frequency = getValidGranularityOptions()[0];
+      const frequency = getValidGranularityOptions({
+        from: queryOptionsState.date_range.from,
+        to: queryOptionsState.date_range.to,
+      })[0];
       queryOptionsState.date_range.frequency = frequency;
       setQueryOptions(queryOptionsState);
     }

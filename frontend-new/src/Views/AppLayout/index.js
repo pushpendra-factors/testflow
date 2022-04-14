@@ -12,7 +12,7 @@ import {
   Switch,
   useHistory,
 } from 'react-router-dom';
-import { fetchProjects, setActiveProject } from 'Reducers/global';
+import { fetchProjects, setActiveProject, fetchDemoProject } from 'Reducers/global';
 import {
   fetchAttrContentGroups,
   fetchGroups,
@@ -49,8 +49,10 @@ function AppLayout({
   getUserProperties,
   fetchWeeklyIngishtsMetaData,
   setActiveProject,
+  fetchDemoProject,
 }) {
   const [dataLoading, setDataLoading] = useState(true);
+  const [demoProjectId, setDemoProjectId] = useState();
   const { Content } = Layout;
   const history = useHistory();
   const agentState = useSelector((state) => state.agent);
@@ -74,13 +76,19 @@ function AppLayout({
   }, [asyncCallOnLoad]);
 
   useEffect(() => {
+    fetchDemoProject().then((res) => {
+      setDemoProjectId(res.data);
+    });
+  }, [ fetchDemoProject, setDemoProjectId ]);
+
+  useEffect(() => {
     if (projects.length && _.isEmpty(active_project)) {
       let activeItem = projects?.filter(
         (item) => item.id == localStorage.getItem('activeProject')
       );
-      //handling Saas factors demo
+      //handling Saas factors demo project
       let default_project =
-        projects[0]?.id == 519
+        demoProjectId.includes(projects[0].id)
           ? projects[1]
             ? projects[1]
             : projects[0]
@@ -170,6 +178,7 @@ const mapDispatchToProps = (dispatch) =>
       getUserProperties,
       fetchWeeklyIngishtsMetaData,
       setActiveProject,
+      fetchDemoProject,
     },
     dispatch
   );

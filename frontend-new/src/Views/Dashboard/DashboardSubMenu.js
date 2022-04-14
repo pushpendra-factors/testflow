@@ -67,6 +67,7 @@ function DashboardSubMenu({
           Data from
         </Text>
         <FaDatepicker
+          customPicker
           nowPicker={dashboard?.name === 'Website Analytics' ? true : false}
           presetRange
           range={{
