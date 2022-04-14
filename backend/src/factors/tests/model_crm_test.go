@@ -167,17 +167,19 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	// create crm activity record
 	activityUpdateTimestampProperty := "_fivetran_synced"
 	activityTimestamp := leadTimestamp.Add(2 * time.Hour)
+	externalActivityID := "activity1"
 	activityProperties := fmt.Sprintf(`{"Name":"Click event","status":"Responded","%s":%d}`, activityUpdateTimestampProperty, activityTimestamp.Unix())
 	activity1Properties := postgres.Jsonb{json.RawMessage(activityProperties)}
 	activity1 := &model.CRMActivity{
-		ProjectID:  project.ID,
-		Source:     model.CRM_SOURCE_MARKETO,
-		Type:       typeActivityProgramMember,
-		Name:       "program_membership_created",
-		ActorType:  typeUserLead,
-		ActorID:    "lead1",
-		Properties: &activity1Properties,
-		Timestamp:  activityTimestamp.Unix(),
+		ProjectID:          project.ID,
+		Source:             model.CRM_SOURCE_MARKETO,
+		ExternalActivityID: externalActivityID,
+		Type:               typeActivityProgramMember,
+		Name:               "program_membership_created",
+		ActorType:          typeUserLead,
+		ActorID:            "lead1",
+		Properties:         &activity1Properties,
+		Timestamp:          activityTimestamp.Unix(),
 	}
 
 	status, err = store.GetStore().CreateCRMActivity(activity1)
@@ -185,6 +187,30 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	activity1.ID = ""
 	status, err = store.GetStore().CreateCRMActivity(activity1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+
+	// same actor but different external id should be allowed
+	externalActivityID2 := "activity2"
+	activityProperties = fmt.Sprintf(`{"Name":"Click event","status":"Responded","%s":%d}`, activityUpdateTimestampProperty, activityTimestamp.Unix())
+	activity2Properties := postgres.Jsonb{json.RawMessage(activityProperties)}
+	activity2 := &model.CRMActivity{
+		ProjectID:          project.ID,
+		Source:             model.CRM_SOURCE_MARKETO,
+		ExternalActivityID: externalActivityID2,
+		Type:               typeActivityProgramMember,
+		Name:               "program_membership_created",
+		ActorType:          typeUserLead,
+		ActorID:            "lead1",
+		Properties:         &activity2Properties,
+		Timestamp:          activityTimestamp.Unix(),
+	}
+
+	status, err = store.GetStore().CreateCRMActivity(activity2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	activity2.ID = ""
+	status, err = store.GetStore().CreateCRMActivity(activity2)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusConflict, status)
 
@@ -224,7 +250,7 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	events, status := store.GetStore().GetUserEventsByEventNameId(project.ID, createdUserID, eventName.ID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Len(t, events, 1)
+	assert.Len(t, events, 2)
 	user, status := store.GetStore().GetUser(project.ID, events[0].UserId)
 	assert.Equal(t, http.StatusFound, status)
 	// activities shouldn't affect the user properties update timestamp
