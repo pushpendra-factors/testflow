@@ -44,10 +44,22 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 	totalSuccess := 0
 	totalFailures := 0
 	PAGE_SIZE := 1000
-	for docType, baseQuery := range model.MarketoDocumentToQuery {
+	for docType, _ := range model.MarketoDocumentTypeAlias {
 		offset := 0
 		for {
-			query := model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, baseQuery, executionDateString, docType, PAGE_SIZE, offset)
+			var query string
+			if docType == model.MARKETO_TYPE_NAME_LEAD {
+				tableRef := client.Dataset(mapping.SchemaID).Table("lead_segment")
+				_, existsErr := tableRef.Metadata(ctx)
+				if existsErr == nil {
+					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset)
+				} else {
+					query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT], executionDateString, model.MARKETO_TYPE_NAME_LEAD_NO_SEGMENT, PAGE_SIZE, offset)
+				}
+
+			} else {
+				query = model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, model.MarketoDocumentToQuery[docType], executionDateString, docType, PAGE_SIZE, offset)
+			}
 			var queryResult [][]string
 			err = BQ.ExecuteQuery(&ctx, client, query, &queryResult)
 			if err != nil {
