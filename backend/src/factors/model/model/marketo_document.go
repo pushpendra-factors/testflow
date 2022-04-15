@@ -7,7 +7,7 @@ import (
 )
 
 var MarketoDocumentToQuery = map[string]string{
-	"program_membership": "SELECT pm.id as lead_id, pm.program_id as program_id, pm.acquired_by, pm.is_exhausted, pm.membership_date, pm.nurture_cadence, pm.progression_status," +
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "SELECT pm.id as lead_id, pm.program_id as program_id, pm.acquired_by, pm.is_exhausted, pm.membership_date, pm.nurture_cadence, pm.progression_status," +
 		"pm.reached_success, pm.reached_success_date, pm.stream, p.channel AS program_channel, p.created_at AS program_created_at, p.description AS program_description, p.end_date AS program_end_date, " +
 		"p.name AS program_name, p.sfdc_id AS program_sfdc_id, p.sfdc_name AS program_sfdc_name, p.start_date AS program_start_date, p.status AS program_status, " +
 		"p.type AS program_type, p.url AS program_url, p.workspace AS program_workspace FROM " +
@@ -16,7 +16,7 @@ var MarketoDocumentToQuery = map[string]string{
 		" (SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY  id ORDER BY updated_at DESC) AS row_num " +
 		" FROM `%s.%s.program`)prog WHERE prog.row_num = 1)p " +
 		" ON pm.program_id = p.id WHERE %v AND pm.membership_date IS NOT NULL ORDER BY pm.id, pm.program_id LIMIT %v OFFSET %v",
-	"lead": "select lead_seg_agg.segment_ids,lead_seg_agg.segment_names,lead_seg_agg.segmentation_ids,lead_seg_agg.segmentation_names,l.* FROM `%s.%s.lead` AS l LEFT OUTER JOIN " +
+	MARKETO_TYPE_NAME_LEAD: "select lead_seg_agg.segment_ids,lead_seg_agg.segment_names,lead_seg_agg.segmentation_ids,lead_seg_agg.segmentation_names,l.* FROM `%s.%s.lead` AS l LEFT OUTER JOIN " +
 		" (SELECT ls.id, ARRAY_AGG(DISTINCT ls.segment_id IGNORE NULLS) AS segment_ids, ARRAY_AGG(DISTINCT s.name IGNORE NULLS) AS segment_names, " +
 		" ARRAY_AGG(DISTINCT sg.id IGNORE NULLS) AS segmentation_ids, ARRAY_AGG(DISTINCT sg.name IGNORE NULLS) AS segmentation_names " +
 		" FROM `%s.%s.lead_segment` AS ls left outer join `%s.%s.segment` AS s on ls.segment_id = s.id " +
@@ -37,28 +37,28 @@ func GetMarketoDocumentFilterCondition(docType string, addPrefix bool, prefix st
 }
 
 var MarketoDataObjectFilters = map[string]string{
-	"program_membership": "DATE(%v) = '%v'",
-	"lead":               "DATE(%v) = '%v'",
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "DATE(%v) = '%v'",
+	MARKETO_TYPE_NAME_LEAD:               "DATE(%v) = '%v'",
 }
 
 var MarketoDataObjectFiltersColumn = map[string]string{
-	"program_membership": "_fivetran_synced",
-	"lead":               "_fivetran_synced",
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "_fivetran_synced",
+	MARKETO_TYPE_NAME_LEAD:               "_fivetran_synced",
 }
 
 func GetMarketoDocumentQuery(bigQueryProjectId string, schemaId string, baseQuery string, executionDate string, docType string, limit int, offset int) string {
 
-	if docType == "program_membership" {
+	if docType == MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "pm", executionDate), limit, offset)
 	}
-	if docType == "lead" {
+	if docType == MARKETO_TYPE_NAME_LEAD {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, bigQueryProjectId, schemaId, GetMarketoDocumentFilterCondition(docType, true, "l", executionDate), limit, offset)
 	}
 	return ""
 }
 
 func GetMarketoDocumentMetadataQuery(docType string, bigQueryProjectId string, schemaId string, baseQuery string) (string, bool) {
-	if docType == "lead" {
+	if docType == MARKETO_TYPE_NAME_LEAD {
 		return fmt.Sprintf(baseQuery, bigQueryProjectId, schemaId), true
 	}
 	return "", false
@@ -71,24 +71,24 @@ var MarketoMetadataColumns = map[string]map[string]int{
 }
 
 var MarketoDataObjectColumnsInValue = map[string]map[string]int{
-	"program_membership": {"lead_id": 0, "program_id": 1, "acquired_by": 2, "is_exhausted": 3, "membership_date": 4, "nurture_cadence": 5, "progression_status": 6,
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: {"lead_id": 0, "program_id": 1, "acquired_by": 2, "is_exhausted": 3, "membership_date": 4, "nurture_cadence": 5, "progression_status": 6,
 		"reached_success": 7, "reached_success_date": 8, "stream": 9, "program_channel": 10, "program_created_at": 11, "program_description": 12, "program_end_date": 13,
 		"program_name": 14, "program_sfdc_id": 15, "program_sfdc_name": 16, "program_start_date": 17, "program_status": 18,
 		"program_type": 19, "program_url": 20, "program_workspace": 21},
-	"lead": {"segment_ids": 0, "segment_names": 1, "segmentation_ids": 2, "segmentation_names": 3},
+	MARKETO_TYPE_NAME_LEAD: {"segment_ids": 0, "segment_names": 1, "segmentation_ids": 2, "segmentation_names": 3},
 }
 
 var MarketoDataObjectColumnsQuery = map[string]string{
-	"lead": "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'lead' ORDER by ordinal_position",
+	MARKETO_TYPE_NAME_LEAD: "SELECT * FROM `%s.%s.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'lead' ORDER by ordinal_position",
 }
 
 var MarketoDataObjectColumnsDatetimeType = map[string]map[string]bool{
-	"program_membership": {"membership_date": true, "reached_success_date": true, "program_created_at": true, "program_end_date": true, "program_start_date": true},
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: {"membership_date": true, "reached_success_date": true, "program_created_at": true, "program_end_date": true, "program_start_date": true},
 }
 
 var DocTypeIntegrationObjectMap = map[string]string{
-	"program_membership": "activity",
-	"lead":               "user",
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "activity",
+	MARKETO_TYPE_NAME_LEAD:               "user",
 }
 
 func GetObjectDataColumns(docType string, metadataColumns []string) map[string]int {
@@ -144,32 +144,54 @@ var MarketoDocumentTypeAlias = map[string]int{
 }
 
 var MarketoActorTypeMapping = map[string]string{
-	"program_membership": "lead",
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: MARKETO_TYPE_NAME_LEAD,
 }
 
 var MarketoActorIdMapping = map[string]string{
-	"program_membership": "lead_id",
-}
-
-var MarketoActivityNameMapping = map[string]string{
-	"program_membership": "program_name",
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "lead_id",
 }
 
 var MarketoEmailMapping = map[string]string{
-	"lead": "email",
+	MARKETO_TYPE_NAME_LEAD: "email",
 }
 
 var MarketoUserIdMapping = map[string]string{
-	"lead": "id",
+	MARKETO_TYPE_NAME_LEAD: "id",
 }
 
 var MarketoPhoneMapping = map[string]string{
-	"lead": "phone",
+	MARKETO_TYPE_NAME_LEAD: "phone",
 }
 
 var MarketoTimestampMapping = map[string][]string{
-	"program_membership": []string{"membership_date"},
-	"lead":               []string{"created_at", "created_at", "updated_at"},
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: []string{"membership_date"},
+	MARKETO_TYPE_NAME_LEAD:               []string{"created_at", "created_at", "updated_at"},
+}
+
+var MarketoLogValuesMapping = map[string][]string{
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: []string{"lead_id", "program_id"},
+	MARKETO_TYPE_NAME_LEAD:               []string{"id"},
+}
+
+var MarketoProgramIdMapping = map[string]string{
+	MARKETO_TYPE_NAME_PROGRAM_MEMBERSHIP: "program_id",
+}
+
+func GetMarketoDocumentProgramId(documentType string, data []string, metadataColumns []string) string {
+	activtyNameId, exists := MarketoProgramIdMapping[documentType]
+	if exists {
+		dataObjectColumns := GetObjectDataColumns(documentType, metadataColumns)
+		index, exists_index := dataObjectColumns[activtyNameId]
+		if exists_index {
+			if data[index] == "<nil>" {
+				return ""
+			} else {
+				return data[index]
+			}
+		}
+		return ""
+	}
+	return ""
 }
 
 func GetMarketoTypeToAliasMap(aliasToType map[string]int) (map[int]string, error) {
@@ -224,6 +246,24 @@ func GetMarketoDocumentActorId(documentType string, data []string, metadataColum
 	return ""
 }
 
+func GetUniqueLogValue(docType string, data []string, metadataColumns []string) string {
+	index_ids, exists := MarketoLogValuesMapping[docType]
+	result := ""
+	for _, indexId := range index_ids {
+		if exists {
+			dataObjectColumns := GetObjectDataColumns(docType, metadataColumns)
+			index, exists_index := dataObjectColumns[indexId]
+			if exists_index {
+				if result == "" {
+					result = data[index]
+				} else {
+					result = result + "," + data[index]
+				}
+			}
+		}
+	}
+	return result
+}
 func GetMarketoDocumentPhone(documentType string, data []string, metadataColumns []string) string {
 	activtyNameId, exists := MarketoPhoneMapping[documentType]
 	if exists {

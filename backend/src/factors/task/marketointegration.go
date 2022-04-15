@@ -9,6 +9,7 @@ import (
 
 	U "factors/util"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -20,7 +21,7 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 	}
 
 	resultStatus := make(map[string]interface{})
-	executionDate := configs["startTimestamp"].(int64) - 86400
+	executionDate := configs["startTimestamp"].(int64)
 	executionDateString := U.GetDateOnlyHyphenFormatFromTimestampZ(executionDate)
 	//executionDateStringYYYYMMDD, _ := strconv.ParseInt(U.GetDateOnlyFromTimestampZ(executionDate), 10, 64)
 	ctx := context.Background()
@@ -46,8 +47,6 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 	for docType, baseQuery := range model.MarketoDocumentToQuery {
 		offset := 0
 		for {
-			success := 0
-			failures := 0
 			query := model.GetMarketoDocumentQuery(configs["BigqueryProjectId"].(string), mapping.SchemaID, baseQuery, executionDateString, docType, PAGE_SIZE, offset)
 			var queryResult [][]string
 			err = BQ.ExecuteQuery(&ctx, client, query, &queryResult)
@@ -62,98 +61,14 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 			columnNamesFromMetadataDateTime := make(map[string]bool)
 			if exists {
 				err = BQ.ExecuteQuery(&ctx, client, metadataQuery, &metadataQueryResult)
-				for _, metadataLine := range metadataQueryResult {
-					metadataIndex := model.GetMetadataColumnNameIndex("column_name")
-					columnName := metadataLine[metadataIndex]
-					columnNamesFromMetadata = append(columnNamesFromMetadata, columnName)
-					metadataIndexForDataType := model.GetMetadataColumnNameIndex("data_type")
-					dataType := metadataLine[metadataIndexForDataType]
-					if dataType == "TIMESTAMP" {
-						columnNamesFromMetadataDateTime[columnName] = true
-					}
-				}
-			}
-			for _, line := range queryResult {
-				values := model.GetMarketoDocumentValues(docType, line, columnNamesFromMetadata, columnNamesFromMetadataDateTime)
-				valuesBlob, err := U.EncodeToPostgresJsonb(&values)
 				if err != nil {
-					log.WithError(err).Error("Error while encoding to jsonb")
-					failures++
-					break
+					resultStatus["failure-"+docType] = "Error while executing metadata query" + err.Error()
+					status = false
+					log.WithError(err).Error("Error while executing query")
 				}
-				insertionStatus := int(0)
-				if model.DocTypeIntegrationObjectMap[docType] == "activity" {
-					timestamps := model.GetMarketoDocumentTimestamp(docType, line, columnNamesFromMetadata)
-					intDocument := model.CRMActivity{
-						ProjectID:  projectId,
-						Source:     model.CRM_SOURCE_MARKETO,
-						Name:       "program_membership_created",
-						Type:       model.GetMarketoDocumentDocumentType(docType),
-						ActorType:  model.GetMarketoActorType(docType),
-						ActorID:    model.GetMarketoDocumentActorId(docType, line, columnNamesFromMetadata),
-						Timestamp:  timestamps[0],
-						Properties: valuesBlob,
-					}
-
-					insertionStatus, err = store.GetStore().CreateCRMActivity(&intDocument)
-					if insertionStatus == http.StatusConflict {
-						// Need to check if membership data is getting updatd to new one for a given progression status
-						// Check what to do with missing leads
-						intDocument.Name = "program_membership_updated"
-						intDocument.Timestamp = timestamps[0]
-						insertionStatus, err = store.GetStore().CreateCRMActivity(&intDocument)
-					}
-				}
-				if model.DocTypeIntegrationObjectMap[docType] == "user" {
-					timestamps := model.GetMarketoDocumentTimestamp(docType, line, columnNamesFromMetadata)
-					intDocument1 := model.CRMUser{
-						ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
-						ProjectID:  projectId,
-						Source:     model.CRM_SOURCE_MARKETO,
-						Type:       model.GetMarketoDocumentDocumentType(docType),
-						Timestamp:  timestamps[0],
-						Properties: valuesBlob,
-						Email:      model.GetMarketoDocumentEmail(docType, line, columnNamesFromMetadata),
-						Phone:      model.GetMarketoDocumentPhone(docType, line, columnNamesFromMetadata),
-					}
-					insertionStatus, err = store.GetStore().CreateCRMUser(&intDocument1)
-					if insertionStatus == http.StatusCreated {
-						intDocument2 := model.CRMUser{
-							ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
-							ProjectID:  projectId,
-							Source:     model.CRM_SOURCE_MARKETO,
-							Type:       model.GetMarketoDocumentDocumentType(docType),
-							Timestamp:  timestamps[1],
-							Properties: valuesBlob,
-							Email:      model.GetMarketoDocumentEmail(docType, line, columnNamesFromMetadata),
-							Phone:      model.GetMarketoDocumentPhone(docType, line, columnNamesFromMetadata),
-						}
-						insertionStatus, err = store.GetStore().CreateCRMUser(&intDocument2)
-					}
-					if model.GetMarketoDocumentAction(docType, line, columnNamesFromMetadata) == model.CRMActionUpdated {
-						intDocument3 := model.CRMUser{
-							ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
-							ProjectID:  projectId,
-							Source:     model.CRM_SOURCE_MARKETO,
-							Type:       model.GetMarketoDocumentDocumentType(docType),
-							Timestamp:  timestamps[2],
-							Properties: valuesBlob,
-							Email:      model.GetMarketoDocumentEmail(docType, line, columnNamesFromMetadata),
-							Phone:      model.GetMarketoDocumentPhone(docType, line, columnNamesFromMetadata),
-						}
-						insertionStatus, err = store.GetStore().CreateCRMUser(&intDocument3)
-					}
-
-				}
-				if err != nil || insertionStatus != http.StatusCreated {
-					log.WithError(err).Error("Error upserting integration document")
-					failures++
-				} else {
-					success++
-				}
-
+				columnNamesFromMetadata, columnNamesFromMetadataDateTime = extractMetadataColumns(metadataQueryResult)
 			}
-
+			success, failures := InsertIntegrationDocument(projectId, docType, queryResult, columnNamesFromMetadata, columnNamesFromMetadataDateTime)
 			resultStatus["failure-"+docType] = failures
 			resultStatus["success-"+docType] = success
 			totalFailures = totalFailures + failures
@@ -168,4 +83,124 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 		return resultStatus, false
 	}
 	return resultStatus, true
+}
+
+func extractMetadataColumns(metadataQueryResult [][]string) ([]string, map[string]bool) {
+
+	columnNamesFromMetadata := make([]string, 0)
+	columnNamesFromMetadataDateTime := make(map[string]bool)
+	for _, metadataLine := range metadataQueryResult {
+		metadataIndex := model.GetMetadataColumnNameIndex("column_name")
+		columnName := metadataLine[metadataIndex]
+		columnNamesFromMetadata = append(columnNamesFromMetadata, columnName)
+		metadataIndexForDataType := model.GetMetadataColumnNameIndex("data_type")
+		dataType := metadataLine[metadataIndexForDataType]
+		if dataType == "TIMESTAMP" {
+			columnNamesFromMetadataDateTime[columnName] = true
+		}
+	}
+	return columnNamesFromMetadata, columnNamesFromMetadataDateTime
+}
+
+func InsertIntegrationDocument(projectId uint64, docType string, queryResult [][]string, columnNamesFromMetadata []string, columnNamesFromMetadataDateTime map[string]bool) (int, int) {
+	success := 0
+	failures := 0
+	for _, line := range queryResult {
+		values := model.GetMarketoDocumentValues(docType, line, columnNamesFromMetadata, columnNamesFromMetadataDateTime)
+		valuesBlob, err := U.EncodeToPostgresJsonb(&values)
+		if err != nil {
+			log.WithError(err).Error("Error while encoding to jsonb")
+			failures++
+			break
+		}
+		insertionStatus := int(0)
+		var errCRMStatus error
+		var logIndex string
+		if model.DocTypeIntegrationObjectMap[docType] == "activity" {
+			insertionStatus, errCRMStatus, logIndex = insertCRMActivity(projectId, line, docType, columnNamesFromMetadata, valuesBlob)
+		}
+		if model.DocTypeIntegrationObjectMap[docType] == "user" {
+			insertionStatus, errCRMStatus, logIndex = insertCRMUser(projectId, line, docType, columnNamesFromMetadata, valuesBlob)
+		}
+		if errCRMStatus != nil || insertionStatus != http.StatusCreated {
+			log.WithError(errCRMStatus).WithFields(log.Fields{
+				"Status":   errCRMStatus,
+				"DocValue": logIndex})
+			failures++
+		} else {
+			success++
+		}
+	}
+	return success, failures
+}
+
+func insertCRMActivity(projectId uint64, line []string, docType string, columnNamesFromMetadata []string, values *postgres.Jsonb) (int, error, string) {
+	insertionStatus := int(0)
+	var errCRMStatus error
+	timestamps := model.GetMarketoDocumentTimestamp(docType, line, columnNamesFromMetadata)
+	intDocument := model.CRMActivity{
+		ProjectID:          projectId,
+		ExternalActivityID: model.GetMarketoDocumentProgramId(docType, line, columnNamesFromMetadata),
+		Source:             model.CRM_SOURCE_MARKETO,
+		Name:               "program_membership_created",
+		Type:               model.GetMarketoDocumentDocumentType(docType),
+		ActorType:          model.GetMarketoActorType(docType),
+		ActorID:            model.GetMarketoDocumentActorId(docType, line, columnNamesFromMetadata),
+		Timestamp:          timestamps[0],
+		Properties:         values,
+	}
+
+	insertionStatus, errCRMStatus = store.GetStore().CreateCRMActivity(&intDocument)
+	if insertionStatus == http.StatusConflict {
+		// Need to check if membership data is getting updatd to new one for a given progression status
+		// Check what to do with missing leads
+		intDocument.Name = "program_membership_updated"
+		intDocument.Timestamp = timestamps[0]
+		insertionStatus, errCRMStatus = store.GetStore().CreateCRMActivity(&intDocument)
+	}
+	return insertionStatus, errCRMStatus, model.GetUniqueLogValue(docType, line, columnNamesFromMetadata)
+}
+
+func insertCRMUser(projectId uint64, line []string, docType string, columnNamesFromMetadata []string, values *postgres.Jsonb) (int, error, string) {
+	insertionStatus := int(0)
+	var errCRMStatus error
+	timestamps := model.GetMarketoDocumentTimestamp(docType, line, columnNamesFromMetadata)
+	intDocument1 := model.CRMUser{
+		ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
+		ProjectID:  projectId,
+		Source:     model.CRM_SOURCE_MARKETO,
+		Type:       model.GetMarketoDocumentDocumentType(docType),
+		Timestamp:  timestamps[0],
+		Properties: values,
+		Email:      model.GetMarketoDocumentEmail(docType, line, columnNamesFromMetadata),
+		Phone:      model.GetMarketoDocumentPhone(docType, line, columnNamesFromMetadata),
+	}
+	insertionStatus, errCRMStatus = store.GetStore().CreateCRMUser(&intDocument1)
+	if insertionStatus == http.StatusCreated {
+		intDocument2 := model.CRMUser{
+			ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
+			ProjectID:  projectId,
+			Source:     model.CRM_SOURCE_MARKETO,
+			Type:       model.GetMarketoDocumentDocumentType(docType),
+			Timestamp:  timestamps[1],
+			Properties: values,
+			Email:      model.GetMarketoDocumentEmail(docType, line, columnNamesFromMetadata),
+			Phone:      model.GetMarketoDocumentPhone(docType, line, columnNamesFromMetadata),
+		}
+		insertionStatus, errCRMStatus = store.GetStore().CreateCRMUser(&intDocument2)
+	}
+	if model.GetMarketoDocumentAction(docType, line, columnNamesFromMetadata) == model.CRMActionUpdated {
+		intDocument3 := model.CRMUser{
+			ID:         model.GetMarketoUserId(docType, line, columnNamesFromMetadata),
+			ProjectID:  projectId,
+			Source:     model.CRM_SOURCE_MARKETO,
+			Type:       model.GetMarketoDocumentDocumentType(docType),
+			Timestamp:  timestamps[2],
+			Properties: values,
+			Email:      model.GetMarketoDocumentEmail(docType, line, columnNamesFromMetadata),
+			Phone:      model.GetMarketoDocumentPhone(docType, line, columnNamesFromMetadata),
+		}
+		insertionStatus, errCRMStatus = store.GetStore().CreateCRMUser(&intDocument3)
+	}
+	return insertionStatus, errCRMStatus, model.GetUniqueLogValue(docType, line, columnNamesFromMetadata)
 }
