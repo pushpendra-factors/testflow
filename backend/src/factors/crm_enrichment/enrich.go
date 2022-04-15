@@ -65,9 +65,9 @@ func enrichByType(project *model.Project, config *CRMSourceConfig, recordsInt in
 }
 
 type EnrichStatus struct {
-	TableName  string
-	ObjectType string
-	Status     string
+	TableName  string `json:"table_name"`
+	ObjectType string `json:"type"`
+	Status     string `json:"status"`
 }
 
 func NewCRMEnrichmentConfig(sourceAlias string, sourceObjectTypeAndAlias map[int]string,
