@@ -41,6 +41,9 @@ PRODUCTION = "production"
 
 COST_PER_ACTION_TYPE = 'cost_per_action_type'
 WEBSITE_PURCHASE_ROAS = 'website_purchase_roas'
+ACTIONS = 'actions'
+ACTION_VALUES = 'action_values'
+
 ACTION_TYPE = 'action_type'
 VALUE = 'value'
 
