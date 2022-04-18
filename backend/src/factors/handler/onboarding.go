@@ -54,7 +54,7 @@ func onboardingMailModoAPICall(agent *model.Agent) int {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		logCtx.Error("Failed to execute POST mail modo request 1. -" + resp.StatusCode)
+		logCtx.Error("Failed to execute POST mail modo request 1.")
 		return http.StatusInternalServerError
 	}
 
