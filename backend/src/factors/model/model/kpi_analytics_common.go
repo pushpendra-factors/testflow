@@ -273,6 +273,7 @@ var MapOfMetricsToData = map[string]map[string]map[string]string{
 		SearchRankLostAbsoluteTopImpressionShare:   {"display_name": "Search rank lost abs. top Impr. share"},
 		SearchRankLostImpressionShare:              {"display_name": "Search rank lost Impr. share"},
 		SearchRankLostTopImpressionShare:           {"display_name": "Search rank lost top Impr. share"},
+		ConversionValue:                            {"display_name": "Conversion Value"},
 	},
 	FacebookDisplayCategory: {
 		"video_p50_watched_actions":     {"display_name": "Video p50 watched actions"},
