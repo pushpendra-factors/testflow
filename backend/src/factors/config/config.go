@@ -189,7 +189,6 @@ type Configuration struct {
 	// other services while testing.
 	DisableDBWrites                                 *bool
 	EnableDemoReadAccess                            *bool
-	DisableRedisWrites                              *bool
 	DisableQueryCache                               *bool
 	AllowedCampaignEnrichmentByProjectID            string
 	UseOpportunityAssociationByProjectID            string
@@ -927,18 +926,6 @@ func EnableDemoReadAccess() bool {
 		return *GetConfig().EnableDemoReadAccess
 	}
 	return false
-}
-
-// DisableMemSQLRedisWrites If redis writes are disabled. Defaults to true unless specified explicitly.
-func DisableRedisWrites() bool {
-	if GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
-		return false
-	}
-
-	if GetConfig().DisableRedisWrites != nil {
-		return *GetConfig().DisableRedisWrites
-	}
-	return true
 }
 
 // DisableMemSQLQueryCache If dashboard and query cache to be disabled. Defaults to false unless specified explicitly.

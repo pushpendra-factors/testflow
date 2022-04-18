@@ -55,7 +55,6 @@ func main() {
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	taskManagementLookback := flag.Int("task_management_lookback", 1, "")
-	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableHubspotGroupsByProjectID := flag.String("enable_hubspot_groups_by_project_id", "", "Enable hubspot groups for projects.")
 	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
@@ -106,7 +105,6 @@ func main() {
 		SentryDSN:                              *sentryDSN,
 		DryRunCRMSmartEvent:                    *dryRunSmartEvent,
 		CacheSortedSet:                         *cacheSortedSet,
-		DisableRedisWrites:                     disableRedisWrites,
 		AllowedHubspotGroupsByProjectIDs:       *enableHubspotGroupsByProjectID,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
