@@ -908,7 +908,7 @@ func (store *MemSQL) buildAdwordsChannelConfig(projectID uint64) *model.ChannelC
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	adwordsObjectsAndProperties := store.buildObjectAndPropertiesForAdwords(projectID, model.ObjectsForAdwords)
-	selectMetrics := append(selectableMetricsForAllChannels, model.SelectableMetricsForAdwords...)
+	selectMetrics := append(SelectableMetricsForAllChannels, model.SelectableMetricsForAdwords...)
 	objectsAndProperties := adwordsObjectsAndProperties
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectMetrics,
