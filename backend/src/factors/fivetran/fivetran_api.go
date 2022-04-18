@@ -36,8 +36,8 @@ type FiveTranSchemaReloadRequest struct {
 }
 
 type FiveTranSchemaPatchRequest struct {
-	Enabled bool                         `json:"enabled"`
-	Tables  FiveTranBingAdsSchemaRequest `json:"tables"`
+	Enabled bool        `json:"enabled"`
+	Tables  interface{} `json:"tables"`
 }
 
 type FiveTranBingAdsSchemaRequest struct {
@@ -48,6 +48,14 @@ type FiveTranBingAdsSchemaRequest struct {
 	CampaignHistory                FiveTranSchemaEnableRequest `json:"campaign_history"`
 	AdGroupHistory                 FiveTranSchemaEnableRequest `json:"ad_group_history"`
 	KeywordHistory                 FiveTranSchemaEnableRequest `json:"Keyword_History"`
+}
+
+type FiveTranMarketoSchemaRequest struct {
+	LeadSegment       FiveTranSchemaEnableRequest `json:"lead_segment"`
+	ProgramMembership FiveTranSchemaEnableRequest `json:"program_membership"`
+	Segmentation      FiveTranSchemaEnableRequest `json:"segmentation"`
+	Program           FiveTranSchemaEnableRequest `json:"program"`
+	Segment           FiveTranSchemaEnableRequest `json:"segment"`
 }
 
 type FiveTranSchemaEnableRequest struct {
@@ -73,6 +81,7 @@ func FiveTranCreateBingAdsConnector(projectId uint64) (int, string, string, stri
 		TrustCertificates: true,
 		RunSetupTests:     false,
 		Paused:            true,
+		PauseAfterTrial:   true,
 		SyncFrequency:     1440,
 		Config: ConfigSchema{
 			Schema: fmt.Sprintf("%v_%v_%v", "bingads", projectId, U.TimeNowUnix()),
@@ -88,7 +97,7 @@ func FiveTranCreateBingAdsConnector(projectId uint64) (int, string, string, stri
 	}
 }
 
-func FiveTranReloadBingAdsConnectorSchema(ConnectorId string) (int, string) {
+func FiveTranReloadConnectorSchema(ConnectorId string) (int, string) {
 	Authorization := map[string]string{
 		"Authorization": C.GetFivetranLicenseKey(),
 		"Content-Type":  "application/json",
@@ -194,36 +203,94 @@ func FiveTranGetConnector(ConnectorId string) (int, string, bool, string) {
 		"Content-Type":  "application/json",
 	}
 	statusCode, response, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s", ConnectorId), Authorization, nil, "GET")
-
 	if statusCode == http.StatusOK {
-		setupcomplete := response["data"].(map[string]interface{})["status"].(map[string]interface{})["setup_state"].(string)
-		paused := true
+		paused := response["data"].(map[string]interface{})["paused"].(bool)
+		var accounts []interface{}
+		if paused == false {
+			syncMode, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["sync_mode"]
+			if exists && syncMode == "AllAccounts" {
+				accounts = make([]interface{}, 0)
+				accounts = append(accounts, syncMode)
+			} else {
+				accountsObject, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["accounts"]
+				if exists {
+					accounts = accountsObject.([]interface{})
+				}
+			}
+		}
 		accountArray := ""
-		if setupcomplete == "connected" {
-			paused = response["data"].(map[string]interface{})["paused"].(bool)
-			var accounts []interface{}
-			if paused == false {
-				syncMode, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["sync_mode"]
-				if exists && syncMode == "AllAccounts" {
-					accounts = make([]interface{}, 0)
-					accounts = append(accounts, syncMode)
-				} else {
-					accountsObject, exists := response["data"].(map[string]interface{})["config"].(map[string]interface{})["accounts"]
-					if exists {
-						accounts = accountsObject.([]interface{})
-					}
-				}
-				for _, account := range accounts {
-					if accountArray == "" {
-						accountArray = fmt.Sprintf("%v", account)
-					} else {
-						accountArray = fmt.Sprintf(",%v", account)
-					}
-				}
+		for _, account := range accounts {
+			if accountArray == "" {
+				accountArray = fmt.Sprintf("%v", account)
+			} else {
+				accountArray = fmt.Sprintf(",%v", account)
 			}
 		}
 		return statusCode, "", !paused, accountArray // return accounts in comma seperated list - statuscode, errstring, status of connector, accounts
 	} else {
 		return statusCode, errResponse.Code, false, ""
+	}
+}
+
+func FiveTranCreateMarketoConnector(projectId uint64) (int, string, string, string) {
+
+	Authorization := map[string]string{
+		"Authorization": C.GetFivetranLicenseKey(),
+		"Content-Type":  "application/json",
+	}
+	GroupId := C.GetFivetranGroupId()
+
+	connectorCreateRequest := FiveTranConnectorCreateRequest{
+		Service:           "marketo",
+		GroupId:           GroupId,
+		TrustCertificates: true,
+		RunSetupTests:     false,
+		Paused:            true,
+		PauseAfterTrial:   true,
+		SyncFrequency:     1440,
+		Config: ConfigSchema{
+			Schema: fmt.Sprintf("%v_%v_%v", "marketo", projectId, U.TimeNowUnix()),
+		},
+	}
+	statusCode, response, errResponse := HttpRequestWrapper("connectors", Authorization, connectorCreateRequest, "POST")
+	if statusCode == http.StatusCreated {
+		connectorId := response["data"].(map[string]interface{})["id"].(string)
+		schemaId := response["data"].(map[string]interface{})["schema"].(string)
+		return statusCode, "", connectorId, schemaId // statuscode, errstring, connector_name, schema_name
+	} else {
+		return statusCode, errResponse.Code, "", ""
+	}
+}
+
+func FiveTranPatchMarketoConnectorSchema(ConnectorId string, SchemaName string) (int, string) {
+	Authorization := map[string]string{
+		"Authorization": C.GetFivetranLicenseKey(),
+		"Content-Type":  "application/json",
+	}
+	schemaPatchRequest := FiveTranSchemaPatchRequest{
+		Enabled: true,
+		Tables: FiveTranMarketoSchemaRequest{
+			LeadSegment: FiveTranSchemaEnableRequest{
+				Enabled: true,
+			},
+			ProgramMembership: FiveTranSchemaEnableRequest{
+				Enabled: true,
+			},
+			Segmentation: FiveTranSchemaEnableRequest{
+				Enabled: true,
+			},
+			Segment: FiveTranSchemaEnableRequest{
+				Enabled: true,
+			},
+			Program: FiveTranSchemaEnableRequest{
+				Enabled: true,
+			},
+		},
+	}
+	statusCode, _, errResponse := HttpRequestWrapper(fmt.Sprintf("connectors/%s/schemas/%s", ConnectorId, SchemaName), Authorization, schemaPatchRequest, "PATCH")
+	if statusCode == http.StatusOK {
+		return statusCode, "" // statuscode, errstring
+	} else {
+		return statusCode, errResponse.Code
 	}
 }

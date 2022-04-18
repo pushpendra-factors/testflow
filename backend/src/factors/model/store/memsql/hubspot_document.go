@@ -1429,6 +1429,9 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID uint64, gro
 				return "", errors.New("failed to update company groupID")
 			}
 		}
+
+		store.addGroupUserPropertyDetailsToCache(projectID, groupName, groupUserID, enProperties)
+
 		return groupUserID, nil
 	}
 
@@ -1455,6 +1458,8 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID uint64, gro
 	if status != http.StatusAccepted {
 		return userID, errors.New("failed to update company group properties")
 	}
+
+	store.addGroupUserPropertyDetailsToCache(projectID, groupName, userID, enProperties)
 
 	return userID, nil
 }

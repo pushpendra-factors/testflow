@@ -80,8 +80,8 @@ const (
 	TopOfPageCpc           = "top_of_page_cpc"
 	QualityScore           = "quality_score"
 	AdvertisingChannelType = "advertising_channel_type"
-	Impressions            = "impressions"
 
+	Impressions                                = "impressions"
 	Clicks                                     = "clicks"
 	ClickThroughRate                           = "click_through_rate"
 	Conversion                                 = "conversion"
@@ -109,6 +109,7 @@ const (
 	TotalSearchRankLostImpression              = "total_search_rank_lost_impression"
 	TotalSearchRankLostTopImpression           = "total_search_rank_lost_top_impression"
 	AdwordsSmartProperty                       = "smart_properties"
+	ConversionValue                            = "conversion_value"
 	SearchPerformanceReport                    = "search_performance_report"
 )
 
@@ -154,6 +155,7 @@ var AdwordsExtToInternal = map[string]string{
 	SearchRankLostAbsoluteTopImpressionShare:   SearchRankLostAbsoluteTopImpressionShare,
 	SearchRankLostImpressionShare:              SearchRankLostImpressionShare,
 	SearchRankLostTopImpressionShare:           SearchRankLostTopImpressionShare,
+	ConversionValue:                            ConversionValue,
 }
 
 var MapOfAdwordsObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
@@ -199,6 +201,7 @@ var SelectableMetricsForAdwords = []string{
 	SearchRankLostAbsoluteTopImpressionShare,
 	SearchRankLostImpressionShare,
 	SearchRankLostTopImpressionShare,
+	ConversionValue,
 }
 
 var AdwordsInternalPropertiesToJobsInternal = map[string]string{

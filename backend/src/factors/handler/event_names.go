@@ -38,6 +38,33 @@ var BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES = map[string]string{
 	"$sf_opportunity_":  "$salesforce_",
 }
 
+func GetDisplayEventNamesHandler(displayNames map[string]string) map[string]string {
+	displayNameEvents := make(map[string]string)
+	standardEvents := U.STANDARD_EVENTS_DISPLAY_NAMES
+	for event, displayName := range standardEvents {
+		displayNameEvents[event] = displayName
+	}
+	for event, displayName := range displayNames {
+		displayNameEvents[event] = displayName
+	}
+	return displayNames
+}
+
+func RemoveGroupEventNamesOnUserEventNames(eventNames map[string][]string) map[string][]string {
+
+	for key, tempString := range eventNames {
+		for index, eventName := range tempString {
+			_, isPresent := U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING[eventName]
+			if isPresent {
+				tempString[index] = tempString[len(tempString)-1]
+				tempString = tempString[:len(tempString)-1]
+			}
+		}
+		eventNames[key] = tempString
+	}
+	return eventNames
+}
+
 // GetEventNamesHandler godoc
 // @Summary Te fetch event names for a given project id.
 // @Tags Events
@@ -73,6 +100,7 @@ func GetEventNamesHandler(c *gin.Context) {
 	}
 
 	eventNameStrings := make([]string, 0)
+
 	if len(eventNames[U.SmartEvent]) > 0 {
 		eventNameStrings = append(eventNameStrings, eventNames[U.SmartEvent]...)
 	}
@@ -90,6 +118,111 @@ func GetEventNamesHandler(c *gin.Context) {
 	// TODO: Janani Removing the IsExact property from output since its anyway backward compat with UI
 	// Will remove exact/approx logic in UI as well
 	c.JSON(http.StatusOK, gin.H{"event_names": eventNameStrings})
+
+}
+
+func GetEventNamesByUserHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
+	// RedisGet is the only call. In case of Cache crash, job will be manually triggered to repopulate cache
+	// No fallback for now.
+	eventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	if len(eventNames) == 0 {
+
+		logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %v", projectId))
+	}
+
+	eventNames = RemoveGroupEventNamesOnUserEventNames(eventNames)
+
+	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
+	displayNameEvents := GetDisplayEventNamesHandler(displayNames)
+
+	groups, errCode := store.GetStore().GetGroups(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get groups failed."})
+		return
+	}
+
+	for _, group := range groups {
+		for key := range U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING {
+			groupName := U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING[key]
+			groupDisplayName := U.STANDARD_GROUP_DISPLAY_NAMES[groupName]
+			_, isPresent := eventNames[groupDisplayName]
+			if groupName == group.Name {
+				if !isPresent {
+					eventNames[groupDisplayName] = make([]string, 0)
+				}
+				eventNames[groupDisplayName] = append(eventNames[groupDisplayName], key)
+			}
+		}
+	}
+
+	// Force add specific events.
+	if fNames, pExists := FORCED_EVENT_NAMES[projectId]; pExists {
+		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], fNames...)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"event_names": eventNames, "display_names": displayNameEvents})
+
+}
+
+func GetEventNamesByGroupHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
+	eventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	if len(eventNames) == 0 {
+
+		logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %v", projectId))
+	}
+
+	eventNames = RemoveGroupEventNamesOnUserEventNames(eventNames)
+
+	_, displayNames := store.GetStore().GetDisplayNamesForAllEvents(projectId)
+	displayNameEvents := GetDisplayEventNamesHandler(displayNames)
+
+	groupName := c.Params.ByName("group_name")
+	groupDisplayName := U.STANDARD_GROUP_DISPLAY_NAMES[groupName]
+	eventNames[groupDisplayName] = make([]string, 0)
+
+	for key := range U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING {
+		if U.GROUP_EVENT_NAME_TO_GROUP_NAME_MAPPING[key] == groupName {
+			eventNames[groupDisplayName] = append(eventNames[groupDisplayName], key)
+		}
+	}
+	// Force add specific events.
+	if fNames, pExists := FORCED_EVENT_NAMES[projectId]; pExists {
+		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], fNames...)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"event_names": eventNames, "display_names": displayNameEvents})
 
 }
 
@@ -204,7 +337,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		for property, displayName := range standardPropertiesAllEvent {
 			displayNamesOp[property] = displayName
 		}
-		if eventName == "$session" {
+		if eventName == U.EVENT_NAME_SESSION {
 			standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
 			for property, displayName := range standardPropertiesSession {
 				displayNamesOp[property] = displayName
@@ -223,6 +356,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, properties)
 }
+
 func GetChannelGroupingPropertiesHandler(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)

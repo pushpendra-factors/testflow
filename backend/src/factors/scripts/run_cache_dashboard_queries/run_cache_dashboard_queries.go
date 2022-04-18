@@ -50,7 +50,6 @@ func main() {
 
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
-	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	// better to have 0 or 1 values instead of false/true
 	onlyAttribution := flag.Int("only_attribution", 0, "Cache only Attribution dashboards.")
 	skipAttribution := flag.Int("skip_attribution", 0, "Skip the Attribution and run other.")
@@ -122,7 +121,6 @@ func main() {
 			UseExactConnFromConfig: true,
 		},
 		PrimaryDatastore:                    *primaryDatastore,
-		DisableRedisWrites:                  disableRedisWrites,
 		EnableFilterOptimisation:            *enableFilterOptimisation,
 		FilterPropertiesStartTimestamp:      *filterPropertiesStartTimestamp,
 		SkipAttributionDashboardCaching:     *skipAttribution,

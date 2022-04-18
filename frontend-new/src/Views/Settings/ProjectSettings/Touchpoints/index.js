@@ -18,6 +18,8 @@ import {
     reverseOperatorMap, reverseDateOperatorMap
 } from '../../../../Views/CoreQuery/utils';
 
+import { MoreOutlined } from '@ant-design/icons';
+
 
 const { TabPane } = Tabs;
 
@@ -42,12 +44,12 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
             key: 'properties_map',
             render: (obj) => { return renderPropertyMap(obj) }
         },
-        // {
-        //     title: '',
-        //     dataIndex: 'index',
-        //     key: 'index',
-        //     render: (obj) => { return renderTableActions(obj) }
-        // },
+        {
+            title: '',
+            dataIndex: 'index',
+            key: 'index',
+            render: (obj) => { return renderTableActions(obj) }
+        },
 
     ];
 
@@ -84,14 +86,23 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
         getEventProperties(activeProject.id, '$hubspot_contact_updated')
     }
 
+    const menu = (index) => {
+        return (
+          <Menu>
+            <Menu.Item key="0" onClick={() => setTouchPointState({state: 'edit', index: index})}>
+              <a>Edit</a>
+            </Menu.Item>
+            <Menu.Item key="0" onClick={() => deleteTchPoint(index)}>
+              <a>Delete</a>
+            </Menu.Item>
+          </Menu>
+        );
+    };
+
     const renderTableActions = (index) => {
-        return (<Button
-            type='text'
-            onClick={() => setTouchPointState({state: 'edit', index: index})}
-            className={`fa-btn--custom ml-1 mr-1`}
-        >
-            <SVG name='more'></SVG>
-        </Button>)
+        return (<Dropdown overlay={() => menu(index)} trigger={['hover']}>
+                <Button type="text" icon={<MoreOutlined />} />
+            </Dropdown>);
     }
 
     const renderObjects = (obj) => {
@@ -181,6 +192,10 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
         if (touchPointState.state === 'add') {
             title = (<Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Add new Touchpoint</Text>);
         }
+
+        if (touchPointState.state === 'edit') {
+            title = (<Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Edit Touchpoint</Text>);
+        }
         return title;
     }
 
@@ -198,16 +213,39 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
         return titleAction;
     }
 
-    const onTchSave = (tchObj) => {
+    const deleteTchPoint = (index = 0) => {
         let tchPointRules = [];
         if(tabNo === '2') {
             tchPointRules = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
-            tchPointRules.push(tchObj);
+            tchPointRules = tchPointRules.filter((val, i) => i!==index);
+            udpateProjectDetails(activeProject.id, { 'hubspot_touch_points': { 'hs_touch_point_rules': tchPointRules } });
+        } else {
+            tchPointRules = activeProject['salesforce_touch_points'] && activeProject['salesforce_touch_points']['sf_touch_point_rules'] ? [...activeProject['salesforce_touch_points']['sf_touch_point_rules']] : [];
+            tchPointRules = tchPointRules.filter((val, i) => i!==index);
+            udpateProjectDetails(activeProject.id, { 'salesforce_touch_points': { 'sf_touch_point_rules': tchPointRules } });
+        }
+        fetchProjects();
+        setTouchPointState({state: 'list', index: 0});
+    }
+
+    const onTchSave = (tchObj, index = -1) => {
+        let tchPointRules = [];
+        if(tabNo === '2') {
+            tchPointRules = activeProject['hubspot_touch_points'] && activeProject['hubspot_touch_points']['hs_touch_point_rules'] ? [...activeProject['hubspot_touch_points']['hs_touch_point_rules']] : [];
+            if(index >= 0) {
+                tchPointRules[index] = tchObj;
+            } else {    
+                tchPointRules.push(tchObj);
+            }
             udpateProjectDetails(activeProject.id, { 'hubspot_touch_points': { 'hs_touch_point_rules': tchPointRules } });
         }
         else if (tabNo === '3') {
             tchPointRules = activeProject['salesforce_touch_points'] && activeProject['salesforce_touch_points']['sf_touch_point_rules'] ? [...activeProject['salesforce_touch_points']['sf_touch_point_rules']] : [];
-            tchPointRules.push(tchObj);
+            if(index >= 0) {
+                tchPointRules[index] = tchObj;
+            } else {    
+                tchPointRules.push(tchObj);
+            }
             udpateProjectDetails(activeProject.id, { 'salesforce_touch_points': { 'sf_touch_point_rules': tchPointRules } });
         }
         fetchProjects();
@@ -252,9 +290,9 @@ const Touchpoints = ({ activeProject, currentProjectSettings, getEventProperties
         else if (touchPointState.state === 'add') {
             touchPointContent = (<TouchpointView tchType={tabNo} rule={null} onSave={onTchSave} onCancel={onTchCancel}> </TouchpointView>)
         }
-        // else if (touchPointState.state === 'edit') {
-        //     touchPointContent = (<TouchpointView rule={touchPointsData[touchPointState.index]} onSave={onTchSave} onCancel={onTchCancel}> </TouchpointView>)
-        // }
+        else if (touchPointState.state === 'edit') {
+            touchPointContent = (<TouchpointView rule={touchPointsData[touchPointState.index]} onSave={(obj) => onTchSave(obj, touchPointState.index)} onCancel={onTchCancel}> </TouchpointView>)
+        }
         return touchPointContent;
     }
 

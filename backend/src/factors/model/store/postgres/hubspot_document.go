@@ -995,6 +995,9 @@ func (pg *Postgres) CreateOrUpdateGroupPropertiesBySource(projectID uint64, grou
 		return "", err
 	}
 
+	// The new group properties are being added to cache.
+	pg.addGroupUserPropertyDetailsToCache(projectID, groupName, groupUserID, enProperties)
+
 	if !newGroupUser {
 		user, status := pg.GetUser(projectID, groupUserID)
 		if status != http.StatusFound {

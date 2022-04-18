@@ -1569,7 +1569,7 @@ func isValidFunnelQuery(query *model.Query) bool {
 		"query": query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	return len(query.EventsWithProperties) <= 6
+	return len(query.EventsWithProperties) <= 10
 }
 
 func (store *MemSQL) Analyze(projectId uint64, queryOriginal model.Query) (*model.QueryResult, int, string) {

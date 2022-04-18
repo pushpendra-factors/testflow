@@ -313,6 +313,33 @@ function ProjectDropdown({
           }
           onError={FaErrorLog}
         >
+            {active_project.id === demoProjectId ? 
+            <div className={'rounded-lg border-2 h-20 mb-3 mx-10'}>
+              <Row justify={'space-between'} className={'m-0 p-3'}>
+                <Col span={projects.length == 1 ? 12: 18}>
+                  <img src='assets/icons/welcome.svg' style={{float: 'left', marginRight:'20px'}}/>
+                  <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
+                      Welcome! You just entered a Factors demo project
+                  </Text>
+                  {projects.length == 1 ?
+                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                        These reports have been built with a sample dataset. Use this to start exploring!
+                    </Text>
+                  :
+                    <Text type={'title'} level={7} extraClass={'m-0'}>
+                        To jump back into your Factors project, click on your account card on the bottom left of the screen.
+                    </Text>
+                  }
+                </Col>
+                <Col className={'mr-2 mt-2'}>
+                  <a href={meetLink(ownerID)} target='_blank' ><Button type={'default'} style={{background:'white', border: '1px solid #E7E9ED', height: '40px'}} className={'m-0 mr-2'} >Get a Personalized Demo</Button></a>
+                  {projects.length == 1 ?
+                  <Button type={'default'} style={{background:'white', border: '1px solid #E7E9ED', height: '40px'}} className={'m-0 mr-2'} onClick={() => setShowProjectModal(true)}>Set up my own Factors project</Button>
+                  : null}
+                </Col>
+              </Row>
+            </div>
+            : null}
           <div className={`flex items-center justify-between mx-10 mb-4`}>
             <div className={'flex flex-col items-start ml-4'}>
               <Button
@@ -353,32 +380,6 @@ function ProjectDropdown({
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
             />
-            {active_project.id === demoProjectId ? 
-            <div className={'rounded-lg h-20 bg-white mb-3 mt-8'} style={{width:'97%'}}>
-              <Row justify={'space-between'} className={'m-0 p-3'}>
-                <Col span={projects.length == 1 ? 12: 18}>
-                  <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-8'}>
-                      Welcome! You just entered a Factors demo project
-                  </Text>
-                  {projects.length == 1 ?
-                    <Text type={'title'} level={7} extraClass={'m-0 ml-8'}>
-                        These reports have been built with a sample dataset. Use this to start exploring!
-                    </Text>
-                  :
-                    <Text type={'title'} level={7} extraClass={'m-0 ml-8'}>
-                        To jump back into your Factors project, click on your account card on the bottom left of the screen.
-                    </Text>
-                  }
-                </Col>
-                <Col className={'mr-12 mt-3'}>
-                  <a href={meetLink(ownerID)} target='_blank' ><Button type={'default'} style={{background:'white', border: '1px solid gray'}} className={'m-0 mr-2'} >Get a Personalized Demo</Button></a>
-                  {projects.length == 1 ?
-                  <Button type={'primary'} className={'m-0'} onClick={() => setShowProjectModal(true)}>Set up my own Factors project</Button>
-                  : null}
-                </Col>
-              </Row>
-            </div>
-            : null}
             <SortableCards
               durationObj={durationObj}
               setwidgetModal={handleToggleWidgetModal}

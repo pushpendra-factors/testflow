@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -133,10 +134,14 @@ func TestUserGroups(t *testing.T) {
 
 	userIDs := make([]string, len(allowedGroups))
 	groupIDs := []string{"1", "2", "3", "4"}
+
+	var groupProperties postgres.Jsonb
+	groupProperties.RawMessage = []byte(`{"property1": "value1", "property2": "value2"}`)
 	for i := range allowedGroups {
 		userID, status := store.GetStore().CreateGroupUser(&model.User{
-			ProjectId: project.ID,
-			Source:    model.GetRequestSourcePointer(model.UserSourceHubspot),
+			ProjectId:  project.ID,
+			Source:     model.GetRequestSourcePointer(model.UserSourceHubspot),
+			Properties: groupProperties,
 		}, allowedGroups[i], groupIDs[i])
 		assert.Equal(t, http.StatusCreated, status)
 		assert.NotEqual(t, "", userID)

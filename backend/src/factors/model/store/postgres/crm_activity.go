@@ -14,7 +14,7 @@ import (
 
 // isExistActivty check for existing activity by activity name, type, actor type , actor id and timestamp
 func isExistActivty(projectID uint64, source model.CRMSource,
-	name string, activtyType int, actorType int, actorID string, timestamp int64) (int, error) {
+	name string, activtyType int, actorType int, actorID string, externalActivityID string, timestamp int64) (int, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"source":        source,
@@ -31,23 +31,23 @@ func isExistActivty(projectID uint64, source model.CRMSource,
 		return http.StatusBadRequest, errors.New("invalid source")
 	}
 
-	if projectID == 0 || name == "" ||
+	if projectID == 0 || name == "" || externalActivityID == "" ||
 		activtyType <= 0 || actorType <= 0 || actorID == "" {
 		logCtx.Error("Missing required parameters.")
-		return http.StatusBadRequest, errors.New("missing required field project_id, name, activity_type, actor_type, actor_id")
+		return http.StatusBadRequest, errors.New("missing required field project_id, name, activity_type, actor_type, actor_id, external_activity_id")
 	}
 
 	var activity model.CRMActivity
 	db := C.GetServices().Db
-	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? "+
-		"AND name = ? AND type = ? AND actor_type = ? AND actor_id = ? AND timestamp = ?",
-		projectID, source, name, activtyType, actorType, actorID, timestamp).Select("id").Limit(1).Find(&activity).Error
+	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND external_activity_id = ? "+
+		"AND name = ? AND type = ? AND actor_type = ? AND actor_id = ? AND timestamp =?",
+		projectID, source, externalActivityID, name, activtyType, actorType, actorID, timestamp).Select("id").Limit(1).Find(&activity).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return http.StatusNotFound, nil
 		}
 
-		logCtx.WithError(err).Error("Failed to get relationship from crm_relationship table.")
+		logCtx.WithError(err).Error("Failed to get activity from crm_activities table.")
 		return http.StatusInternalServerError, err
 	}
 
@@ -80,9 +80,9 @@ func (pg *Postgres) CreateCRMActivity(crmActivity *model.CRMActivity) (int, erro
 		Properties - properties for the actvity event
 	*/
 	if crmActivity.ProjectID == 0 || crmActivity.Properties == nil ||
-		crmActivity.Type <= 0 || crmActivity.ActorType <= 0 || crmActivity.ActorID == "" {
+		crmActivity.Type <= 0 || crmActivity.ActorType <= 0 || crmActivity.ActorID == "" || crmActivity.ExternalActivityID == "" {
 		logCtx.Error("Missing required parameters")
-		return http.StatusBadRequest, errors.New("missing required fields project_id, properties, type, actor_type, actor_id")
+		return http.StatusBadRequest, errors.New("missing required fields project_id, properties, type, actor_type, actor_id,external_activity_id")
 	}
 
 	if !model.AllowedCRMBySource(crmActivity.Source) {
@@ -114,7 +114,7 @@ func (pg *Postgres) CreateCRMActivity(crmActivity *model.CRMActivity) (int, erro
 	}
 
 	status, err := isExistActivty(crmActivity.ProjectID, crmActivity.Source, crmActivity.Name,
-		crmActivity.Type, crmActivity.ActorType, crmActivity.ActorID, crmActivity.Timestamp)
+		crmActivity.Type, crmActivity.ActorType, crmActivity.ActorID, crmActivity.ExternalActivityID, crmActivity.Timestamp)
 	if status != http.StatusNotFound {
 		if status == http.StatusFound {
 			return http.StatusConflict, nil
@@ -136,4 +136,88 @@ func (pg *Postgres) CreateCRMActivity(crmActivity *model.CRMActivity) (int, erro
 	}
 
 	return http.StatusCreated, nil
+}
+
+func (pg *Postgres) GetCRMActivityInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMActivity, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"source":     source,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	var crmActivity []model.CRMActivity
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND synced = false ",
+		projectID, source).Order("timestamp, created_at").Find(&crmActivity).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get crm activity records for sync.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(crmActivity) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return crmActivity, http.StatusFound
+}
+
+func (pg *Postgres) UpdateCRMActivityAsSynced(projectID uint64, source model.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int) {
+
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"source":        source,
+		"name":          crmActivity.Name,
+		"actor_type":    crmActivity.ActorType,
+		"actor_id":      crmActivity.ActorID,
+		"sync_id":       syncID,
+		"user_id":       userID,
+		"id":            crmActivity.ID,
+		"activity_type": crmActivity.Type,
+		"timestamp":     crmActivity.Timestamp,
+	}
+
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || source == 0 || crmActivity.ID == "" || crmActivity.Name == "" ||
+		crmActivity.ActorType == 0 || crmActivity.ActorID == "" {
+		logCtx.Error("Invalid parameters")
+		return nil, http.StatusBadRequest
+	}
+
+	updates := make(map[string]interface{})
+	updates["synced"] = true
+
+	if syncID != "" {
+		updates["sync_id"] = syncID
+	}
+
+	if userID != "" {
+		updates["user_id"] = userID
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND external_activity_id = ? AND id = ? AND name = ? "+
+		"AND actor_type = ? AND actor_id = ? AND type = ? AND timestamp = ? ",
+		projectID, source, crmActivity.ExternalActivityID, crmActivity.ID, crmActivity.Name, crmActivity.ActorType,
+		crmActivity.ActorID, crmActivity.Type, crmActivity.Timestamp).Updates(updates).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update crm activity as synced.")
+		return nil, http.StatusInternalServerError
+	}
+	crmActivity.SyncID = syncID
+	crmActivity.UserID = userID
+
+	return crmActivity, http.StatusAccepted
 }
