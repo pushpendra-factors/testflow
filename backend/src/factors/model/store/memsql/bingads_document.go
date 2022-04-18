@@ -98,7 +98,7 @@ func (store *MemSQL) GetBingadsFilterValuesSQLAndParams(projectID uint64, reques
 func (store *MemSQL) buildBingAdsChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	bingAdsObjectsAndProperties := store.buildObjectAndPropertiesForBingAds(projectID, model.ObjectsForBingads)
 	// selectable metrics for bing ads to be added ?
-	selectMetrics := append(selectableMetricsForAllChannels)
+	selectMetrics := append(SelectableMetricsForAllChannels)
 	objectsAndProperties := bingAdsObjectsAndProperties
 
 	return &model.ChannelConfigResult{

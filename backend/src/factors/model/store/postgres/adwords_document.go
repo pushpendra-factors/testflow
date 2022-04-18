@@ -759,7 +759,7 @@ func (pg *Postgres) PullGCLIDReport(projectID uint64, from, to int64, adwordsAcc
 // @TODO Kark v1
 func (pg *Postgres) buildAdwordsChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	adwordsObjectsAndProperties := pg.buildObjectAndPropertiesForAdwords(projectID, model.ObjectsForAdwords)
-	selectMetrics := append(selectableMetricsForAllChannels, model.SelectableMetricsForAdwords...)
+	selectMetrics := append(SelectableMetricsForAllChannels, model.SelectableMetricsForAdwords...)
 	objectsAndProperties := adwordsObjectsAndProperties
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectMetrics,

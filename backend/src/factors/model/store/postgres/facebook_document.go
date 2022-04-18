@@ -224,7 +224,7 @@ func getFacebookDocumentTypeAliasByType() map[int]string {
 // @TODO Kark v1
 func (pg *Postgres) buildFbChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	facebookObjectsAndProperties := pg.buildObjectAndPropertiesForFacebook(projectID, model.ObjectsForFacebook)
-	selectMetrics := append(selectableMetricsForAllChannels, model.SelectableMetricsForFacebook...)
+	selectMetrics := append(SelectableMetricsForAllChannels, model.SelectableMetricsForFacebook...)
 	objectsAndProperties := facebookObjectsAndProperties
 
 	return &model.ChannelConfigResult{
