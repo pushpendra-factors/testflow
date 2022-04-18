@@ -60,6 +60,32 @@ func DataServiceLinkedinAddDocumentHandler(c *gin.Context) {
 	c.JSON(errCode, gin.H{"message": "Successfully upserted linkedin document."})
 }
 
+type LinkedinUpdateAccessToken struct {
+	ProjectID   uint64 `json:"project_id"`
+	AccessToken string `json:"access_token"`
+}
+
+func DataServiceLinkedinUpdateAccessToken(c *gin.Context) {
+	r := c.Request
+	var linkedinUpdateAccessToken LinkedinUpdateAccessToken
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&linkedinUpdateAccessToken); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on linkedin update access token handler.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Invalid request json."})
+		return
+	}
+	_, errCode := store.GetStore().UpdateProjectSettings(linkedinUpdateAccessToken.ProjectID, &model.ProjectSetting{IntLinkedinAccessToken: linkedinUpdateAccessToken.AccessToken})
+	if errCode != http.StatusAccepted {
+		log.Error("Failed to update access token.")
+		c.AbortWithStatusJSON(errCode,
+			gin.H{"error": "Failed to update access token."})
+		return
+	}
+	c.JSON(errCode, gin.H{"message": "Successfully updated access token."})
+}
+
 func DataServiceLinkedinGetLastSyncInfoHandler(c *gin.Context) {
 	r := c.Request
 

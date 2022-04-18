@@ -148,7 +148,7 @@ const AttrQueryComposer = ({ activeProject,
                 return (
                     <ConversionGoalBlock eventGoal={query}
                         eventGoalChange={(val) => setToQueries(val, index)}
-                        delEvent={delQuery}
+                        delEvent={() => delQuery(index)}
                         group_analysis={queryOptions.group_analysis}
                     >
                     </ConversionGoalBlock>);
