@@ -104,7 +104,6 @@ func main() {
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
-	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableSalesforceGroupsByProjectIDs := flag.String("salesforce_groups_by_project_ids", "", "Enable salesforce groups by projects.")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
@@ -162,7 +161,6 @@ func main() {
 		CacheSortedSet:                         *cacheSortedSet,
 		AllowedCampaignEnrichmentByProjectID:   *allowedCampaignEnrichmentByProjectID,
 		UseOpportunityAssociationByProjectID:   *useOpportunityAssociationByProjectID,
-		DisableRedisWrites:                     disableRedisWrites,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
 		AllowedSalesforceGroupsByProjectIDs:    *enableSalesforceGroupsByProjectIDs,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,

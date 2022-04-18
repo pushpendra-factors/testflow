@@ -32,6 +32,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { fetchKPIConfig, fetchPageUrls } from '../../reducers/kpi';
 import Welcome from "../Settings/SetupAssist/Welcome";
+import { EMPTY_ARRAY } from '../../utils/global';
 
 const FactorsInsights = lazyWithRetry(() => import("../Factors/FactorsInsightsNew"));
 const CoreQuery = lazyWithRetry(() => import('../CoreQuery'));
@@ -52,7 +53,7 @@ function AppLayout({
   fetchDemoProject,
 }) {
   const [dataLoading, setDataLoading] = useState(true);
-  const [demoProjectId, setDemoProjectId] = useState();
+  const [demoProjectId, setDemoProjectId] = useState(EMPTY_ARRAY);
   const { Content } = Layout;
   const history = useHistory();
   const agentState = useSelector((state) => state.agent);

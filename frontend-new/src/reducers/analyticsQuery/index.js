@@ -1,7 +1,8 @@
 import {
   TOTAL_EVENTS_CRITERIA,
+  TOTAL_USERS_CRITERIA,
   EACH_USER_TYPE,
-} from "../../utils/constants";
+} from '../../utils/constants';
 
 const defaultState = {
   session_order: {
@@ -12,9 +13,9 @@ const defaultState = {
   performance_criteria: EACH_USER_TYPE,
 };
 
-export const SET_SESSION_ORDER = "SET_SESSION_ORDER";
-export const SET_SHOW_CRITERIA = "SET_SHOW_CRITERIA";
-export const SET_PERFORMANCE_CRITERIA = "SET_PERFORMANCE_CRITERIA";
+export const SET_SESSION_ORDER = 'SET_SESSION_ORDER';
+export const SET_SHOW_CRITERIA = 'SET_SHOW_CRITERIA';
+export const SET_PERFORMANCE_CRITERIA = 'SET_PERFORMANCE_CRITERIA';
 
 export const setSessionOrderAction = (sessionOrder) => {
   return { type: SET_SESSION_ORDER, payload: sessionOrder };
@@ -57,7 +58,14 @@ export default function (state = defaultState, action) {
     case SET_SESSION_ORDER:
       return { ...state, session_order: action.payload };
     case SET_SHOW_CRITERIA:
-      return { ...state, show_criteria: action.payload };
+      return {
+        ...state,
+        show_criteria: action.payload,
+        performance_criteria:
+          action.payload !== TOTAL_USERS_CRITERIA
+            ? EACH_USER_TYPE
+            : state.performance_criteria,
+      };
     case SET_PERFORMANCE_CRITERIA:
       return { ...state, performance_criteria: action.payload };
     default:

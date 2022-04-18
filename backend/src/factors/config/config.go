@@ -189,7 +189,6 @@ type Configuration struct {
 	// other services while testing.
 	DisableDBWrites                                 *bool
 	EnableDemoReadAccess                            *bool
-	DisableRedisWrites                              *bool
 	DisableQueryCache                               *bool
 	AllowedCampaignEnrichmentByProjectID            string
 	UseOpportunityAssociationByProjectID            string
@@ -285,7 +284,7 @@ const (
 	HealthcheckLeadgenInsertionJobPingID        = "830c0112-fc71-4257-b265-b3732f03115a"
 	HealthcheckBingAdsIntegrationPingID         = "33f862b1-453a-4352-b209-945b38ed1902"
 	HealthcheckMarketoEnrichmentPingID          = "72709dcf-3e85-476d-9c81-8eb4be639368"
-	HealthcheckMarketoIntegrationPingID         = ""
+	HealthcheckMarketoIntegrationPingID         = "58653751-9db8-4251-9048-6c999a139138"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
@@ -927,18 +926,6 @@ func EnableDemoReadAccess() bool {
 		return *GetConfig().EnableDemoReadAccess
 	}
 	return false
-}
-
-// DisableMemSQLRedisWrites If redis writes are disabled. Defaults to true unless specified explicitly.
-func DisableRedisWrites() bool {
-	if GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
-		return false
-	}
-
-	if GetConfig().DisableRedisWrites != nil {
-		return *GetConfig().DisableRedisWrites
-	}
-	return true
 }
 
 // DisableMemSQLQueryCache If dashboard and query cache to be disabled. Defaults to false unless specified explicitly.

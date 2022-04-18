@@ -38,6 +38,7 @@ CREATIVES = 'creative'
 CAMPAIGN_GROUPS = 'campaign_group'
 AD_ACCOUNT = 'ad_account'
 ACCESS_TOKEN = 'int_linkedin_access_token'
+REFRESH_TOKEN = 'int_linkedin_refresh_token'
 LINKEDIN_AD_ACCOUNT = 'int_linkedin_ad_account'
 ELEMENTS = 'elements'
 PROJECT_ID = 'project_id'
@@ -418,13 +419,35 @@ def get_collections(linkedin_int_setting, sync_info_with_type):
     response[API_REQUESTS] = requests_counter
     response['msg'] = skipMsgs
     return response
-def get_access_token_from_refresh_token(refresh_token):
+
+def validate_or_generate_access_token_from_refresh_token(refresh_token, access_token):
+    access_token_check_url = 'https://api.linkedin.com/v2/me?oauth2_access_token={}'.format(access_token)
+    response = requests.get(access_token_check_url)
+    if response.ok:
+        return access_token, '', True
+
     url = 'https://www.linkedin.com/oauth/v2/accessToken?grant_type=refresh_token&refresh_token={}&client_id={}&client_secret={}'.format(refresh_token, options.client_id, options.client_secret)
     response = requests.get(url)
     response_json = response.json()
     if response.ok:
-        return response_json['access_token'], ''
-    return '', 'Failed to generate access token from refresh token'
+        return response_json['access_token'], '', False
+    return '', response.text, False
+
+
+def update_access_token(project_id, access_token):
+    uri = '/data_service/linkedin/access_token'
+    url = options.data_service_host + uri
+
+    payload = {
+        PROJECT_ID: int(project_id),
+        'access_token': access_token
+    }
+
+    response = requests.put(url, json=payload)
+    if not response.ok:
+        log.error('Failed to update access token for project %s. StatusCode:  %d', project_id, response.status_code)
+    
+    return response
 
 if __name__ == '__main__':
     (options, args) = parser.parse_args()
@@ -442,9 +465,13 @@ if __name__ == '__main__':
         successes = []
         for linkedin_int_setting in linkedin_int_settings:
             response = {}
-            linkedin_int_setting[ACCESS_TOKEN], err = get_access_token_from_refresh_token(linkedin_int_setting['int_linkedin_refresh_token'])
+            linkedin_int_setting[ACCESS_TOKEN], err, is_prev_token_valid = validate_or_generate_access_token_from_refresh_token(linkedin_int_setting[REFRESH_TOKEN], linkedin_int_setting[ACCESS_TOKEN])
             if err == '':
-                time.sleep(600)
+                if not is_prev_token_valid:
+                    token_response = update_access_token(linkedin_int_setting[PROJECT_ID], linkedin_int_setting[ACCESS_TOKEN])
+                    if not token_response.ok:
+                        failures.append({'status': 'failed', 'msg': 'failed to update access token', PROJECT_ID: linkedin_int_setting[PROJECT_ID], AD_ACCOUNT: linkedin_int_setting[LINKEDIN_AD_ACCOUNT]})
+                    time.sleep(600)
                 if start_timestamp == None:
                     sync_info_with_type, err = get_last_sync_info(linkedin_int_setting)
                     if err != '':
@@ -463,6 +490,7 @@ if __name__ == '__main__':
                 failures.append(response)
             else:
                 successes.append(response)
+                
         status_msg = ''
         if len(failures) > 0: status_msg = 'Failures on sync.'
         else: status_msg = 'Successfully synced.'

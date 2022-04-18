@@ -51,7 +51,6 @@ func main() {
 
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	disableDBWrites := flag.Bool("disable_db_writes", false, "To disable DB writes.")
-	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	disableQueryCache := flag.Bool("disable_query_cache", false, "To disable dashboard and query analytics cache.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -238,7 +237,6 @@ func main() {
 		EnableDemoReadAccess:                    enableDemoReadAccess,
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableDBWrites:                         disableDBWrites,
-		DisableRedisWrites:                      disableRedisWrites,
 		DisableQueryCache:                       disableQueryCache,
 		AttributionDebug:                        *attributionDebug,
 		DisableDashboardQueryDBExecution:        *disableDashboardQueryDBExecution,
@@ -251,10 +249,10 @@ func main() {
 		AllowSupportForSourceColumnInUsers:      *allowSupportForSourceColumnInUsers,
 		ResourcePoolForAnalytics:                *resourcePoolForAnalytics,
 		HubspotAPIOnboardingHAPIKey:             *hubspotAPIOnboardingHAPIKey,
-		MailModoOnboardingAPIKey: 			  	 *mailmodoOnboardingAPIKey,
-		MailModoOnboardingURL1: 				 *mailmodoOnboardingURL1,
-		MailModoOnboardingURL2: 				 *mailmodoOnboardingURL2,
-		SlackOnboardingWebhookURL: 				 *slackOnboardingWebhookURL,
+		MailModoOnboardingAPIKey:                *mailmodoOnboardingAPIKey,
+		MailModoOnboardingURL1:                  *mailmodoOnboardingURL1,
+		MailModoOnboardingURL2:                  *mailmodoOnboardingURL2,
+		SlackOnboardingWebhookURL:               *slackOnboardingWebhookURL,
 		AllowProfilesGroupSupport:               *allowProfilesGroupSupport,
 		FivetranGroupId:                         *fivetranGroupId,
 		FivetranLicenseKey:                      *fivetranLicenseKey,

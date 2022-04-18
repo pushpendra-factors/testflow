@@ -20,6 +20,9 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 
 	rollupLookback := configs["rollupLookback"].(int)
 
+	logCtx := log.WithField("config", configs)
+	logCtx.Info("Starting rollup sorted set job.")
+
 	var isCurrentDay bool
 	currentDate := U.TimeNowZ()
 	for i := 0; i <= rollupLookback; i++ {
@@ -27,10 +30,13 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		currentTimeDatePart := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		uniqueUsersCountKey, err := model.UserCountAnalyticsCacheKey(
 			currentTimeDatePart)
+		logCtx = logCtx.WithField("unique_users_count_key", uniqueUsersCountKey)
+		logCtx.WithError(err).Info("Got unique users count key.")
 		if err != nil {
-			log.WithError(err).Error("Failed to get cache key - uniqueEventsCountKey")
+			logCtx.WithError(err).Error("Failed to get cache key - uniqueEventsCountKey")
 			return nil, false
 		}
+
 		allProjects, err := cacheRedis.ZrangeWithScoresPersistent(true, uniqueUsersCountKey)
 		log.WithField("projects", allProjects).Info("AllProjects")
 		if err != nil {

@@ -1090,7 +1090,7 @@ func addQueryToResultMeta(result *model.QueryResult, query model.Query) {
 }
 
 func isValidFunnelQuery(query *model.Query) bool {
-	return len(query.EventsWithProperties) <= 6
+	return len(query.EventsWithProperties) <= 10
 }
 
 func (pg *Postgres) Analyze(projectId uint64, queryOriginal model.Query) (*model.QueryResult, int, string) {

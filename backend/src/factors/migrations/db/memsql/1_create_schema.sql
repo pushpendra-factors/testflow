@@ -1001,6 +1001,7 @@ CREATE TABLE IF NOT EXISTS crm_activities (
     id text NOT NULL,
     project_id bigint NOT NULL,
     source int NOT NULL,
+    external_activity_id text NOT NULL,
     name text NOT NULL,
     type int NOT NULL,
     actor_type int NOT NULL,
@@ -1014,14 +1015,13 @@ CREATE TABLE IF NOT EXISTS crm_activities (
     updated_at timestamp(6) NOT NULL,
     KEY (updated_at) USING HASH,
     SHARD KEY (project_id, source, type, id),
-    KEY (project_id, source, type, id, timestamp) USING CLUSTERED COLUMNSTORE,
+    KEY (project_id, source, type, external_activity_id, id, timestamp) USING CLUSTERED COLUMNSTORE,
     KEY (user_id) USING HASH,
     KEY (synced) USING HASH,
-    UNIQUE KEY project_id_source_id_type_timestamp_unique_idx(project_id,source, id, type, actor_type, actor_id, timestamp) USING HASH
+    UNIQUE KEY project_id_source_id_type_timestamp_unique_idx(project_id,source, id, type, external_activity_id, actor_type, actor_id, timestamp) USING HASH
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
     -- Unique (project_id,source, id, type, actor_type, actor_id, timestamp)
-    -- Ref (project_id, user_id) -> users(project_id, id)
 );
 
 -- DROP DATABASE factors;

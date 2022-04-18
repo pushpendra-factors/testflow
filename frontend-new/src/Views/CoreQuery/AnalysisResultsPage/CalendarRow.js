@@ -122,6 +122,7 @@ function CalendarRow({
       queryType === QUERY_TYPE_CAMPAIGN ||
       queryType === QUERY_TYPE_KPI) &&
     section === REPORT_SECTION &&
+    durationObj.frequency &&
     isSeriesChart(chartType)
   ) {
     granularity = (
@@ -168,7 +169,7 @@ function CalendarRow({
                 bordered={false}
                 autoFocus={true}
                 allowClear={false}
-                placement="bottomLeft"
+                placement='bottomLeft'
                 open={true}
                 onOpenChange={() => {
                   setShowDatePicker(false);
@@ -190,8 +191,8 @@ function CalendarRow({
           range={{
             startDate: durationObj.from,
             endDate: durationObj.to,
-          }} 
-          placement="bottomLeft"
+          }}
+          placement='bottomLeft'
           onSelect={setDateRange}
           comparison_supported={comparison_supported}
           handleCompareWithClick={handleCompareWithClick}

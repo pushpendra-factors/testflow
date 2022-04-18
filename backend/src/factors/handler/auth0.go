@@ -26,7 +26,6 @@ import (
 
 var connections = map[string]bool{
 	"google-oauth2": true,
-	"windowslive":   true,
 }
 
 type Authenticator struct {

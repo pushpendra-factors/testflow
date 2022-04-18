@@ -810,7 +810,7 @@ export const toLetters = (num) => {
   return charArr[num];
 };
 
-export const PropTextFormat = (prop) => {
+export const PropTextFormat = (prop = 'users') => {
   const formatText = prop.replace('$', '').split('_');
   formatText.forEach((word, i) => {
     formatText[i] = formatText[i][0].toUpperCase() + formatText[i].substr(1);

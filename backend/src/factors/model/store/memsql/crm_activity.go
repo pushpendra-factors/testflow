@@ -14,7 +14,7 @@ import (
 
 // isExistActivty check for existing activity by activity name, type, actor type , actor id and timestamp
 func isExistActivty(projectID uint64, source model.CRMSource,
-	name string, activtyType int, actorType int, actorID string, timestamp int64) (int, error) {
+	name string, activtyType int, actorType int, actorID string, externalActivityID string, timestamp int64) (int, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
 		"source":        source,
@@ -31,17 +31,17 @@ func isExistActivty(projectID uint64, source model.CRMSource,
 		return http.StatusBadRequest, errors.New("invalid source")
 	}
 
-	if projectID == 0 || name == "" ||
+	if projectID == 0 || name == "" || externalActivityID == "" ||
 		activtyType <= 0 || actorType <= 0 || actorID == "" {
 		logCtx.Error("Missing required parameters.")
-		return http.StatusBadRequest, errors.New("missing required field project_id, name, activity_type, actor_type, actor_id")
+		return http.StatusBadRequest, errors.New("missing required field project_id, name, activity_type, actor_type, actor_id, external_activity_id")
 	}
 
 	var activity model.CRMActivity
 	db := C.GetServices().Db
-	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? "+
+	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND external_activity_id = ? "+
 		"AND name = ? AND type = ? AND actor_type = ? AND actor_id = ? AND timestamp =?",
-		projectID, source, name, activtyType, actorType, actorID, timestamp).Select("id").Limit(1).Find(&activity).Error
+		projectID, source, externalActivityID, name, activtyType, actorType, actorID, timestamp).Select("id").Limit(1).Find(&activity).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return http.StatusNotFound, nil
@@ -80,9 +80,9 @@ func (store *MemSQL) CreateCRMActivity(crmActivity *model.CRMActivity) (int, err
 		Properties - properties for the actvity event
 	*/
 	if crmActivity.ProjectID == 0 || crmActivity.Properties == nil ||
-		crmActivity.Type <= 0 || crmActivity.ActorType <= 0 || crmActivity.ActorID == "" {
+		crmActivity.Type <= 0 || crmActivity.ActorType <= 0 || crmActivity.ActorID == "" || crmActivity.ExternalActivityID == "" {
 		logCtx.Error("Missing required parameters")
-		return http.StatusBadRequest, errors.New("missing required fields project_id, properties, type, actor_type, actor_id")
+		return http.StatusBadRequest, errors.New("missing required fields project_id, properties, type, actor_type, actor_id,external_activity_id")
 	}
 
 	if !model.AllowedCRMBySource(crmActivity.Source) {
@@ -114,7 +114,7 @@ func (store *MemSQL) CreateCRMActivity(crmActivity *model.CRMActivity) (int, err
 	}
 
 	status, err := isExistActivty(crmActivity.ProjectID, crmActivity.Source, crmActivity.Name,
-		crmActivity.Type, crmActivity.ActorType, crmActivity.ActorID, crmActivity.Timestamp)
+		crmActivity.Type, crmActivity.ActorType, crmActivity.ActorID, crmActivity.ExternalActivityID, crmActivity.Timestamp)
 	if status != http.StatusNotFound {
 		if status == http.StatusFound {
 			return http.StatusConflict, nil
@@ -176,16 +176,17 @@ func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source model
 func (store *MemSQL) UpdateCRMActivityAsSynced(projectID uint64, source model.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int) {
 
 	logFields := log.Fields{
-		"project_id":    projectID,
-		"source":        source,
-		"name":          crmActivity.Name,
-		"actor_type":    crmActivity.ActorType,
-		"actor_id":      crmActivity.ActorID,
-		"sync_id":       syncID,
-		"user_id":       userID,
-		"id":            crmActivity.ID,
-		"activity_type": crmActivity.Type,
-		"timestamp":     crmActivity.Timestamp,
+		"project_id":           projectID,
+		"source":               source,
+		"name":                 crmActivity.Name,
+		"actor_type":           crmActivity.ActorType,
+		"actor_id":             crmActivity.ActorID,
+		"sync_id":              syncID,
+		"user_id":              userID,
+		"id":                   crmActivity.ID,
+		"activity_type":        crmActivity.Type,
+		"timestamp":            crmActivity.Timestamp,
+		"external_activity_id": crmActivity.ExternalActivityID,
 	}
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -209,9 +210,9 @@ func (store *MemSQL) UpdateCRMActivityAsSynced(projectID uint64, source model.CR
 	}
 
 	db := C.GetServices().Db
-	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND id = ? AND name = ? "+
+	err := db.Model(&model.CRMActivity{}).Where("project_id = ? AND source = ? AND external_activity_id = ? AND id = ? AND name = ? "+
 		"AND actor_type = ? AND actor_id = ? AND type = ? AND timestamp = ? ",
-		projectID, source, crmActivity.ID, crmActivity.Name, crmActivity.ActorType,
+		projectID, source, crmActivity.ExternalActivityID, crmActivity.ID, crmActivity.Name, crmActivity.ActorType,
 		crmActivity.ActorID, crmActivity.Type, crmActivity.Timestamp).Updates(updates).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update crm activity as synced.")
