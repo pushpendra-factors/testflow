@@ -8,19 +8,16 @@ import { useHistory } from 'react-router-dom';
 import { signup } from 'Reducers/agentActions';
 import factorsai from 'factorsai';
 import Congrats from './Congrats';
-import { createHubspotContact, getHubspotContact } from '../../reducers/global';
-import { getOwner } from '../../utils/hubspot';
-import { URL1, URL2 } from '../../utils/mailmodo';
 import MoreAuthOptions from './MoreAuthOptions';
 import { SSO_SIGNUP_URL } from '../../utils/sso';
 
-function SignUp({ signup, createHubspotContact, getHubspotContact }) {
+function SignUp({ signup }) {
   const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
   const [formData, setformData] = useState(null);
-  const [ownerID, setownerID] = useState();
   const [showModal, setShowModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   const history = useHistory();
   const routeChange = (url) => {
@@ -41,110 +38,6 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
       checkError();
   },[]);
 
-  const startMailModo = (email) => {
-    let data = {
-            "email": email,
-            "data": {} 
-        }
-    let params = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            "mmapikey": "TJ5JF61-44NMRN5-GAEA2WH-8Z99P4H"
-        },
-        body: JSON.stringify(data)
-    }
-
-    fetch(URL1, params)
-    .then((response) => response.json())
-    .then((response) => {
-      console.log(response);
-    })
-    .catch((err) => {
-      console.log('err',err);
-    });
-
-    fetch(URL2, params)
-    .then((response) => response.json())
-    .then((response) => {
-      console.log(response);
-    })
-    .catch((err) => {
-      console.log('err',err);
-    });
-  }
-
-  const hubspotCall = (data) => {
-        const owner = getOwner();
-
-        getHubspotContact(data.email).then((res) => {
-            setownerID(res.data.hubspot_owner_id)
-        }).catch((err) => {
-            console.log(err.data.error)
-        });
-
-
-        const jsonData = {
-            "properties": [
-                {
-                    "property": "email",
-                    "value": data.email
-                },
-                {
-                    "property": "firstname",
-                    "value": data.first_name
-                },
-                {
-                    "property": "lastname",
-                    "value": data.last_name
-                },
-                {
-                    "property": "phone",
-                    "value": data?.phone
-                },
-                {
-                    "property": "hubspot_owner_id",
-                    "value": ownerID ? ownerID: owner.value
-                },
-                {
-                    "property": "signup_method",
-                    "value": "Self-Serve Onboarding"
-                }                     
-            ]
-        }
-        
-        createHubspotContact(data.email, jsonData)
-        .then((response) => {
-            console.log(response);
-        })
-        .catch((err) => {
-            console.log(err);
-        });
-  };
-
-  const sendSlackNotification = (user) => {
-    let webhookURL = 'https://hooks.slack.com/services/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';
-    let data = {
-        "text": `User ${user.first_name} with email ${user.email} just signed up`,
-        "username" : "Signup User Actions",
-        "icon_emoji" : ":golf:"
-    }
-    let params = {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }
-
-    fetch(webhookURL, params)
-    .then((response) => response.json())
-    .then((response) => {
-        console.log(response);
-    })
-    .catch((err) => {
-        console.log('err',err);
-    });
-}
-
-
   const SignUpFn = () => {
     setDataLoading(true);
     form.validateFields().then((values) => {
@@ -160,9 +53,6 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
         signup(filteredValues).then(() => {
             setDataLoading(false);
             setformData(filteredValues);
-            startMailModo(filteredValues.email);
-            hubspotCall(filteredValues);
-            sendSlackNotification(filteredValues);
         }).catch((err) => {
             setDataLoading(false);
             form.resetFields();
@@ -245,6 +135,7 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                     </div>
                                 </Col>
                             </Row>
+                            { showForm ? <>
                             <Row>
                                 <Col span={24}>
                                         <div className={'flex flex-col mt-5'} >
@@ -379,13 +270,24 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                 }
                             </Row>
 
-                            {/* <Row>
+                            <Row>
                                 <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-6'} >
                                     <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'} color={'grey'}>OR</Text>
                                 </div>
                                 </Col>
                             </Row>
+                            </> 
+                            :
+                            <Row>
+                                <Col span={24}>
+                                    <div className={'flex flex-col justify-center items-center mt-5'} >
+                                        <Form.Item className={'m-0 w-full'} loading={dataLoading}>
+                                            <Button loading={dataLoading} type={'primary'} size={'large'} className={'w-full'} onClick={() => setShowForm(true)}>Signup with Email</Button>
+                                        </Form.Item>
+                                    </div>
+                                </Col>
+                            </Row>}
 
                             <Row>   
                                 <Col span={24}>
@@ -395,7 +297,7 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
                                     </Form.Item>
                                     </div>
                                 </Col>
-                            </Row> */}
+                            </Row>
 
                             {/* <Row>
                                 <Col span={24}>
@@ -437,4 +339,4 @@ function SignUp({ signup, createHubspotContact, getHubspotContact }) {
   );
 }
 
-export default connect(null, { signup, createHubspotContact, getHubspotContact })(SignUp);
+export default connect(null, { signup })(SignUp);

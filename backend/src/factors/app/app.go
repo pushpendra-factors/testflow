@@ -51,7 +51,6 @@ func main() {
 
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	disableDBWrites := flag.Bool("disable_db_writes", false, "To disable DB writes.")
-	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	disableQueryCache := flag.Bool("disable_query_cache", false, "To disable dashboard and query analytics cache.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -139,6 +138,10 @@ func main() {
 	resourcePoolForAnalytics := flag.String("resource_pool_for_analytics", "",
 		"Given resource_pool will be used for analytics queries.")
 	hubspotAPIOnboardingHAPIKey := flag.String("hubspot_API_onboarding_HAPI_key", "", "")
+	mailmodoOnboardingAPIKey := flag.String("mailmodo_onboarding_API_key", "TJ5JF61-44NMRN5-GAEA2WH-8Z99P4H", "")
+	mailmodoOnboardingURL1 := flag.String("mailmodo_onboarding_URL1", "https://api.mailmodo.com/hooks/start/1df3694b-8651-441f-a9ce-2f64d5e6b6ff", "")
+	mailmodoOnboardingURL2 := flag.String("mailmodo_onboarding_URL2", "https://api.mailmodo.com/hooks/start/ef8af6d0-e925-47e2-8c03-2b010c9a59f5", "")
+	slackOnboardingWebhookURL := flag.String("slack_onboarding_webhook_url", "https://hooks.slack.com/services/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", "")
 	allowProfilesGroupSupport := flag.String("allow_profiles_group_support", "", "")
 
 	auth0ClientID := flag.String("auth0_client_id", "", "")
@@ -234,7 +237,6 @@ func main() {
 		EnableDemoReadAccess:                    enableDemoReadAccess,
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableDBWrites:                         disableDBWrites,
-		DisableRedisWrites:                      disableRedisWrites,
 		DisableQueryCache:                       disableQueryCache,
 		AttributionDebug:                        *attributionDebug,
 		DisableDashboardQueryDBExecution:        *disableDashboardQueryDBExecution,
@@ -247,6 +249,10 @@ func main() {
 		AllowSupportForSourceColumnInUsers:      *allowSupportForSourceColumnInUsers,
 		ResourcePoolForAnalytics:                *resourcePoolForAnalytics,
 		HubspotAPIOnboardingHAPIKey:             *hubspotAPIOnboardingHAPIKey,
+		MailModoOnboardingAPIKey:                *mailmodoOnboardingAPIKey,
+		MailModoOnboardingURL1:                  *mailmodoOnboardingURL1,
+		MailModoOnboardingURL2:                  *mailmodoOnboardingURL2,
+		SlackOnboardingWebhookURL:               *slackOnboardingWebhookURL,
 		AllowProfilesGroupSupport:               *allowProfilesGroupSupport,
 		FivetranGroupId:                         *fivetranGroupId,
 		FivetranLicenseKey:                      *fivetranLicenseKey,

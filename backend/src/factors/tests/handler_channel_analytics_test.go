@@ -276,6 +276,8 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "12","clicks": "102","campaign_id":"2","impressions": "1002", "campaign_name": "test2"}`)}},
 		{ID: "2", Timestamp: 20210202, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "12","clicks": "102","campaign_id":"2","impressions": "1002", "campaign_name": "test2"}`)}},
+		{ID: "3", Timestamp: 20210202, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{json.RawMessage(`{"campaign_id":"3","campaign_name": "test3","conversion_value": "0.4"}`)}},
 
 		{ID: "11", Timestamp: 20210201, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "ad_group_performance_report",
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "11","clicks": "101","campaign_id":"1","impressions": "1001", "campaign_name":"test1","ad_group_id":"11","ad_group_name":"agtest1", "search_click_share":"10%", "total_search_click":"10010"}`)}},
@@ -289,6 +291,8 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "13","clicks": "103","campaign_id":"2","impressions": "1002", "campaign_name": "test2","ad_group_id":"21","ad_group_name":"agtest3","status":"enabled"}`)}},
 		{ID: "21", Timestamp: 20210202, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "ad_group_performance_report",
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "13","clicks": "103","campaign_id":"2","impressions": "1002", "campaign_name": "test2","ad_group_id":"21","ad_group_name":"agtest3"}`)}},
+		{ID: "31", Timestamp: 20210202, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "ad_group_performance_report",
+			Value: &postgres.Jsonb{json.RawMessage(`{"campaign_id":"3","campaign_name": "test3","conversion_value": "0.3","ad_group_id":"31","ad_group_name":"agtest4"}`)}},
 
 		{ID: "111", Timestamp: 20210201, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "keyword_performance_report",
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "11","clicks": "101","campaign_id":"1","impressions": "1001", "campaign_name": "test1", "ad_group_id":"11","ad_group_name":"agtest1","id":"111","quality_score":"0.1"}`)}},
@@ -319,6 +323,8 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 	successChannelQueries := []map[string]interface{}{
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
 			"gbt": "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
+		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [1]string{"conversion_value"},
+			"gbt": "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
 			"filters": [2]map[string]interface{}{{"name": "campaign", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "1"}, {"name": "ad_group", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "1"}},
@@ -331,6 +337,9 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 			"gbt":     "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
 			"filters": [2]map[string]interface{}{{"name": "ad_group", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "2"}, {"name": "campaign", "property": "status", "condition": "equals", "logical_operator": "AND", "value": "enabled"}},
+			"gbt":     "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
+		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [1]string{"conversion_value"},
+			"filters": [1]map[string]interface{}{{"name": "ad_group", "property": "id", "condition": "equals", "logical_operator": "AND", "value": "31"}},
 			"gbt":     "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
@@ -347,7 +356,7 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 			"gbt": "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
-			"group_by": [2]map[string]interface{}{{"name": "campaign", "property": "id"}},
+			"group_by": [1]map[string]interface{}{{"name": "campaign", "property": "id"}},
 			"filters":  [1]map[string]interface{}{{"name": "campaign", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "1"}},
 			"gbt":      "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
@@ -377,15 +386,17 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 
 	successChannelResponse := [][]byte{
 		[]byte(`{"result":{"result_group":[{"headers":["clicks","impressions","spend"],"rows":[[406,4006,0]]}]}}`),
+		[]byte(`{"result":{"result_group":[{"headers":["conversion_value"],"rows":[[0.4]]}]}}`),
 
 		[]byte(`{"result":{"result_group":[{"headers":["clicks","impressions","spend"],"rows":[[202,2002,0]]}]}}`),
 		[]byte(`{"result":{"result_group":[{"headers":["clicks","impressions","spend"],"rows":[[204,2004,0]]}]}}`),
 		[]byte(`{"result_group":[{"headers":["clicks","impressions","spend"],"rows":[[204,2004,0]]}]}`),
 		[]byte(`{"result":{"result_group":[{"headers":["clicks","impressions","spend"],"rows":[[0,0,0]]}]}}`),
+		[]byte(`{"result":{"result_group":[{"headers":["conversion_value"],"rows":[[0.3]]}]}}`),
 
-		[]byte(`{"result":{"result_group":[{"headers":["campaign_id","campaign_name","clicks","impressions","spend"],"rows":[[2,"test2",204,2004,0],[1,"test1",202,2002,0]]}]}}`),
-		[]byte(`{"result":{"result_group":[{"headers":["campaign_id","ad_group_name","clicks","impressions","spend"],"rows":[[2,"agtest3",206,2004,0],[1,"agtest2",204,2004,0],[1,"agtest1",202,2002,0]]}]}}`),
-		[]byte(`{"result":{"result_group":[{"headers":["ad_group_name","ad_group_id","clicks","impressions","spend"],"rows":[["agtest3",21,206,2004,0],["agtest2",12,204,2004,0],["agtest1",11,202,2002,0]]}]}}`),
+		[]byte(`{"result":{"result_group":[{"headers":["campaign_id","campaign_name","clicks","impressions","spend"],"rows":[[3,"test3",0,0,0],[2,"test2",204,2004,0],[1,"test1",202,2002,0]]}]}}`),
+		[]byte(`{"result":{"result_group":[{"headers":["campaign_id","ad_group_name","clicks","impressions","spend"],"rows":[[3,"agtest4",0,0,0],[2,"agtest3",206,2004,0],[1,"agtest2",204,2004,0],[1,"agtest1",202,2002,0]]}]}}`),
+		[]byte(`{"result":{"result_group":[{"headers":["ad_group_name","ad_group_id","clicks","impressions","spend"],"rows":[["agtest4",31,0,0,0],["agtest3",21,206,2004,0],["agtest2",12,204,2004,0],["agtest1",11,202,2002,0]]}]}}`),
 
 		[]byte(`{"result":{"result_group":[{"headers":["clicks","impressions","spend","search_top_impression_share"],"rows":[[406,4006,0,0]]}]}}`),
 
@@ -396,7 +407,7 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 
 		[]byte(`{"result":{"result_group":[{"headers":["impressions","search_click_share"],"rows":[[4006,0]]}]}}`),
 		[]byte(`{"result":{"result_group":[{"headers":["search_click_share"],"rows":[[0]]}]}}`),
-		[]byte(`{"result":{"result_group":[{"headers":["ad_group_name","search_click_share"],"rows":[["agtest2",0],["agtest3",0],["agtest1",0.1]]}]}}`),
+		[]byte(`{"result":{"result_group":[{"headers":["ad_group_name","search_click_share"],"rows":[["agtest2",0],["agtest3",0],["agtest4",0],["agtest1",0.1]]}]}}`),
 		[]byte(`{"result":{"result_group":[{"headers":["keyword_quality_score","clicks"],"rows":[[0,307],["0.2",204],["0.1",101]]}]}}`),
 	}
 

@@ -6,10 +6,11 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // ExecuteKPIForAttribution Executes the KPI sub-query for Attribution

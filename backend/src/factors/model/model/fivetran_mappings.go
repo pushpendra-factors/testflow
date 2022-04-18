@@ -15,3 +15,4 @@ type FivetranMappings struct {
 }
 
 var BingAdsIntegration = "bingads"
+var MarketoIntegration = "marketo"

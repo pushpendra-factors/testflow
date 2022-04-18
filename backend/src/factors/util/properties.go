@@ -46,6 +46,13 @@ const EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED = "$sf_opportunity_created"
 const EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$sf_opportunity_updated"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED = "$sf_campaign_member_created"
 const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED = "$sf_campaign_member_updated"
+
+// Integration: Marketo
+const EVENT_NAME_MARKETO_LEAD_CREATED = "$marketo_lead_created"
+const EVENT_NAME_MARKETO_LEAD_UPDATED = "$marketo_lead_updated"
+const EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_CREATED = "$marketo_program_membership_created"
+const EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_UPDATED = "$marketo_program_membership_updated"
+
 const GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED = "$hubspot_company_created"
 const GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED = "$hubspot_company_updated"
 const GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED = "$hubspot_deal_created"
@@ -96,6 +103,10 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
 	GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
 	GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
+	EVENT_NAME_MARKETO_LEAD_CREATED,
+	EVENT_NAME_MARKETO_LEAD_UPDATED,
+	EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_CREATED,
+	EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_UPDATED,
 }
 
 const GROUP_NAME_HUBSPOT_COMPANY = "$hubspot_company"
@@ -589,6 +600,13 @@ const QUERY_PARAM_PROPERTY_PREFIX = "$qp_"
 const QUERY_PARAM_UTM_PREFIX = QUERY_PARAM_PROPERTY_PREFIX + "utm_"
 const HUBSPOT_PROPERTY_PREFIX = "$hubspot_"
 const SALESFORCE_PROPERTY_PREFIX = "$salesforce_"
+const MARKETO_PROPERTY_PREFIX = "$marketo_"
+
+var AllowedCRMPropertyPrefix = map[string]bool{
+	HUBSPOT_PROPERTY_PREFIX:    true,
+	SALESFORCE_PROPERTY_PREFIX: true,
+	MARKETO_PROPERTY_PREFIX:    true,
+}
 
 const (
 	SMART_EVENT_SALESFORCE_PREV_PROPERTY = "$prev_salesforce_"
@@ -1008,6 +1026,7 @@ var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
 	UP_INITIAL_PAGE_EVENT_ID,
 	UP_META_OBJECT_IDENTIFIER_KEY,
 	EP_CRM_REFERENCE_EVENT_ID,
+	"marketo_lead__fivetran_synced",
 }
 
 // DISABLED_CORE_QUERY_EVENT_PROPERTIES Less important event properties in core query context.
@@ -1018,6 +1037,7 @@ var DISABLED_CORE_QUERY_EVENT_PROPERTIES = [...]string{
 	EP_SEGMENT_EVENT_VERSION,
 	EP_CRM_REFERENCE_EVENT_ID,
 	EP_SKIP_SESSION,
+	"marketo_lead__fivetran_synced",
 }
 
 var DISABLED_USER_PROPERTIES_UI = [...]string{
@@ -1164,6 +1184,13 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$salesforce_account_created":     "Salesforce Account Created",
 	"$salesforce_opportunity_created": "Salesforce Opportunity Created",
 	"$offline_touch_point":            "Offline Touchpoint",
+}
+
+var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
+	"$hubspot_company":        "Hubspot Comapnies",
+	"$hubspot_deal":           "Hubspot Deals",
+	"$salesforce_account":     "Salesforce Accounts",
+	"$salesforce_opportunity": "Salesforce Opportunities",
 }
 
 var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
@@ -2734,8 +2761,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	for k, v := range *properties {
 		if err := isPropertyTypeValid(v); err == nil {
 			if strings.HasPrefix(k, NAME_PREFIX) &&
-				!strings.HasPrefix(k, HUBSPOT_PROPERTY_PREFIX) &&
-				!strings.HasPrefix(k, SALESFORCE_PROPERTY_PREFIX) &&
+				!isAllowedCRMPropertyPrefix(k) &&
 				!isSDKAllowedUserProperty(&k) {
 
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
@@ -2761,6 +2787,15 @@ func isCRMSmartEventPropertyKey(key *string) bool {
 	return true
 }
 
+func isAllowedCRMPropertyPrefix(name string) bool {
+	for prefix := range AllowedCRMPropertyPrefix {
+		if strings.HasPrefix(name, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
@@ -2770,8 +2805,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 			// with selected prefixes starting with $ and default properties.
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
-				!strings.HasPrefix(k, HUBSPOT_PROPERTY_PREFIX) &&
-				!strings.HasPrefix(k, SALESFORCE_PROPERTY_PREFIX) &&
+				!isAllowedCRMPropertyPrefix(k) &&
 				!isCRMSmartEventPropertyKey(&k) &&
 				!isSDKAllowedEventProperty(&k) {
 				propertyKey = fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)

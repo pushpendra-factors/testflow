@@ -91,19 +91,19 @@ func (store *MemSQL) GetActiveFiveTranMapping(ProjectID uint64, Integration stri
 	return records, nil
 }
 
-func (store *MemSQL) GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, error) {
+func (store *MemSQL) GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, string, error) {
 	db := C.GetServices().Db
 	var records []model.FivetranMappings
 	if err := db.Where("project_id = ?", ProjectID).Where("integration = ?", Integration).Find(&records).Error; err != nil {
-		return "", err
+		return "", "", err
 	}
 	if len(records) > 0 {
 		sort.Slice(records, func(i, j int) bool {
 			return (*(records[i].UpdatedAt)).After(*(records[j].UpdatedAt))
 		})
-		return records[0].ConnectorID, nil
+		return records[0].ConnectorID, records[0].SchemaID, nil
 	} else {
-		return "", errors.New("Mapping not found")
+		return "", "", errors.New("Mapping not found")
 	}
 }
 

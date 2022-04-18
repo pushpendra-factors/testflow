@@ -2,8 +2,11 @@ package tests
 
 import (
 	"encoding/json"
+	enrichment "factors/crm_enrichment"
 	"factors/model/model"
 	"factors/model/store"
+	U "factors/util"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -128,4 +131,254 @@ func TestCRMCreateData(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, status)
 	},
 	)
+}
+
+func TestCRMMarketoEnrichment(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	//record types
+	typeUserLead := 1
+	typeActivityProgramMember := 2
+	// create crm user records
+	leadUpdateTimestampProperty := "updated_at"
+	leadTimestamp := time.Now().AddDate(0, 0, -1)
+	leadJoinTimestamp := leadTimestamp
+	leadProperties := fmt.Sprintf(`{"Name":"name1","city":"city1","%s":%d}`, leadUpdateTimestampProperty, leadTimestamp.Unix())
+	user1Properties := postgres.Jsonb{json.RawMessage(leadProperties)}
+
+	user1 := &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     model.CRM_SOURCE_MARKETO,
+		Type:       typeUserLead,
+		ID:         "lead1",
+		Properties: &user1Properties,
+		Timestamp:  leadTimestamp.Unix(),
+	}
+	status, err := store.GetStore().CreateCRMUser(user1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, user1.Action, model.CRMActionCreated)
+	status, err = store.GetStore().CreateCRMUser(user1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, user1.Action, model.CRMActionUpdated)
+
+	// create crm activity record
+	activityUpdateTimestampProperty := "_fivetran_synced"
+	activityTimestamp := leadTimestamp.Add(2 * time.Hour)
+	externalActivityID := "activity1"
+	activityProperties := fmt.Sprintf(`{"Name":"Click event","status":"Responded","%s":%d}`, activityUpdateTimestampProperty, activityTimestamp.Unix())
+	activity1Properties := postgres.Jsonb{json.RawMessage(activityProperties)}
+	activity1 := &model.CRMActivity{
+		ProjectID:          project.ID,
+		Source:             model.CRM_SOURCE_MARKETO,
+		ExternalActivityID: externalActivityID,
+		Type:               typeActivityProgramMember,
+		Name:               "program_membership_created",
+		ActorType:          typeUserLead,
+		ActorID:            "lead1",
+		Properties:         &activity1Properties,
+		Timestamp:          activityTimestamp.Unix(),
+	}
+
+	status, err = store.GetStore().CreateCRMActivity(activity1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	activity1.ID = ""
+	status, err = store.GetStore().CreateCRMActivity(activity1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+
+	// same actor but different external id should be allowed
+	externalActivityID2 := "activity2"
+	activityProperties = fmt.Sprintf(`{"Name":"Click event","status":"Responded","%s":%d}`, activityUpdateTimestampProperty, activityTimestamp.Unix())
+	activity2Properties := postgres.Jsonb{json.RawMessage(activityProperties)}
+	activity2 := &model.CRMActivity{
+		ProjectID:          project.ID,
+		Source:             model.CRM_SOURCE_MARKETO,
+		ExternalActivityID: externalActivityID2,
+		Type:               typeActivityProgramMember,
+		Name:               "program_membership_created",
+		ActorType:          typeUserLead,
+		ActorID:            "lead1",
+		Properties:         &activity2Properties,
+		Timestamp:          activityTimestamp.Unix(),
+	}
+
+	status, err = store.GetStore().CreateCRMActivity(activity2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	activity2.ID = ""
+	status, err = store.GetStore().CreateCRMActivity(activity2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+
+	sourceObjectTypeAndAlias := map[int]string{
+		typeUserLead:              "lead",
+		typeActivityProgramMember: "program_membership",
+	}
+
+	// create source config for mapping record type to alias
+	userTypes := map[int]bool{
+		typeUserLead: true,
+	}
+	activityTypes := map[int]bool{
+		typeActivityProgramMember: true,
+	}
+
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(model.CRM_SOURCE_NAME_MARKETO, sourceObjectTypeAndAlias, userTypes, nil, activityTypes)
+	assert.Nil(t, err)
+	enrichStatus := enrichment.Enrich(project.ID, sourceConfig)
+
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	sourceAlias, err := model.GetCRMSourceByAliasName(model.CRM_SOURCE_NAME_MARKETO)
+	assert.Nil(t, err)
+	crmUser, status := store.GetStore().GetCRMUserByTypeAndAction(project.ID, sourceAlias, "lead1", typeUserLead, model.CRMActionCreated)
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEqual(t, "", crmUser.UserID)
+	createdUserID := crmUser.UserID
+	crmUser, status = store.GetStore().GetCRMUserByTypeAndAction(project.ID, sourceAlias, "lead1", typeUserLead, model.CRMActionUpdated)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, createdUserID, crmUser.UserID)
+
+	// validate activity event
+	eventName, status := store.GetStore().GetEventName(U.EVENT_NAME_MARKETO_PROGRAM_MEMBERSHIP_CREATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	events, status := store.GetStore().GetUserEventsByEventNameId(project.ID, createdUserID, eventName.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, events, 2)
+	user, status := store.GetStore().GetUser(project.ID, events[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	// activities shouldn't affect the user properties update timestamp
+	assert.Equal(t, leadJoinTimestamp.Unix(), user.PropertiesUpdatedTimestamp)
+	properties := make(map[string]interface{})
+	err = json.Unmarshal(events[0].Properties.RawMessage, &properties)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "Click event", properties["$marketo_program_membership_name"])
+	assert.Equal(t, "Responded", properties["$marketo_program_membership_status"])
+
+	// validate user event
+	eventName, status = store.GetStore().GetEventName(U.EVENT_NAME_MARKETO_LEAD_CREATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	events, status = store.GetStore().GetUserEventsByEventNameId(project.ID, createdUserID, eventName.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, events, 1)
+	assert.Equal(t, events[0].EventNameId, eventName.ID)
+	assert.Equal(t, leadTimestamp.Unix(), events[0].Timestamp)
+	properties = make(map[string]interface{})
+	err = json.Unmarshal(events[0].Properties.RawMessage, &properties)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "name1", properties["$marketo_lead_name"])
+	assert.Equal(t, "city1", properties["$marketo_lead_city"])
+
+	eventName, status = store.GetStore().GetEventName(U.EVENT_NAME_MARKETO_LEAD_UPDATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	events, status = store.GetStore().GetUserEventsByEventNameId(project.ID, createdUserID, eventName.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, events, 1)
+	assert.Equal(t, events[0].EventNameId, eventName.ID)
+	assert.Equal(t, leadTimestamp.Unix(), events[0].Timestamp)
+	properties = make(map[string]interface{})
+	err = json.Unmarshal(events[0].Properties.RawMessage, &properties)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "name1", properties["$marketo_lead_name"])
+	assert.Equal(t, "city1", properties["$marketo_lead_city"])
+
+	//created crm user with email
+	lead2Timestmap := time.Now().AddDate(0, 0, -1)
+	lead2JointTimestamp := lead2Timestmap
+	leadProperties = fmt.Sprintf(`{"Name":"name2","city":"city2","%s":%d}`, leadUpdateTimestampProperty, lead2Timestmap.Unix())
+	user2Properties := postgres.Jsonb{json.RawMessage(leadProperties)}
+	user2 := &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     model.CRM_SOURCE_MARKETO,
+		Type:       typeUserLead,
+		ID:         "lead2",
+		Email:      "abc2@abc.com",
+		Properties: &user2Properties,
+		Timestamp:  lead2Timestmap.Unix(),
+	}
+	status, err = store.GetStore().CreateCRMUser(user2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, model.CRMActionCreated, user2.Action)
+	status, err = store.GetStore().CreateCRMUser(user2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, user2.Action, model.CRMActionUpdated)
+
+	enrichStatus = enrichment.Enrich(project.ID, sourceConfig)
+
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	// validate 2nd user
+	eventName, status = store.GetStore().GetEventName(U.EVENT_NAME_MARKETO_LEAD_CREATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	crmUser, status = store.GetStore().GetCRMUserByTypeAndAction(project.ID, sourceAlias, "lead2", typeUserLead, model.CRMActionCreated)
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, crmUser.UserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "abc2@abc.com", user.CustomerUserId) // validate email association
+	properties = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properties)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "name2", properties["$marketo_lead_name"])
+	assert.Equal(t, "city2", properties["$marketo_lead_city"])
+	events, status = store.GetStore().GetUserEventsByEventNameId(project.ID, crmUser.UserID, eventName.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, events, 1)
+
+	eventName, status = store.GetStore().GetEventName(U.EVENT_NAME_MARKETO_LEAD_UPDATED, project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	events, status = store.GetStore().GetUserEventsByEventNameId(project.ID, crmUser.UserID, eventName.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, events, 1)
+
+	// update on user2
+	lead2Timestmap = lead2Timestmap.Add(1 * time.Hour)
+	leadProperties = fmt.Sprintf(`{"Name":"name3","city":"city2","%s":%d}`, leadUpdateTimestampProperty, lead2Timestmap.Unix())
+	user2Properties = postgres.Jsonb{json.RawMessage(leadProperties)}
+	user2 = &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     model.CRM_SOURCE_MARKETO,
+		Type:       typeUserLead,
+		ID:         "lead2",
+		Email:      "abc2@abc.com",
+		Properties: &user2Properties,
+		Timestamp:  lead2Timestmap.Unix(),
+	}
+	status, err = store.GetStore().CreateCRMUser(user2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, model.CRMActionUpdated, user2.Action)
+	status, err = store.GetStore().CreateCRMUser(user2)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+	enrichStatus = enrichment.Enrich(project.ID, sourceConfig)
+
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+	crmUser, status = store.GetStore().GetCRMUserByTypeAndAction(project.ID, sourceAlias, "lead2", typeUserLead, model.CRMActionCreated)
+	assert.Equal(t, http.StatusFound, status)
+	user, status = store.GetStore().GetUser(project.ID, crmUser.UserID)
+	assert.Equal(t, http.StatusFound, status)
+	// crm user updates shouldn't affect the user properties update timestamp
+	assert.Equal(t, user.PropertiesUpdatedTimestamp, lead2JointTimestamp.Unix())
+	properties = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properties)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "name3", properties["$marketo_lead_name"])
+	assert.Equal(t, "city2", properties["$marketo_lead_city"])
 }

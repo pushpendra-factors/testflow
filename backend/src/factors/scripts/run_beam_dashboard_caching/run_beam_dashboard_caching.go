@@ -68,7 +68,6 @@ var (
 
 	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName           = flag.String("app_name", "", "Override default app_name.")
-	disableRedisWrites        = flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableFilterOptimisation  = flag.Bool("enable_filter_optimisation", false,
 		"Enables filter optimisation changes for memsql implementation.")
 	filterPropertiesStartTimestamp = flag.Int64("filter_properties_start_timestamp", -1,
@@ -267,7 +266,6 @@ func main() {
 		RedisHost:                           *redisHost,
 		RedisPort:                           *redisPort,
 		SentryDSN:                           *sentryDSN,
-		DisableRedisWrites:                  disableRedisWrites,
 		EnableFilterOptimisation:            *enableFilterOptimisation,
 		FilterPropertiesStartTimestamp:      *filterPropertiesStartTimestamp,
 		SkipAttributionDashboardCaching:     *skipAttribution,

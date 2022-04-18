@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	C "factors/config"
+	U "factors/util"
 	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
@@ -152,6 +153,12 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 		var existingAgent *model.Agent
 
 		if flow == SIGNUP_FLOW {
+
+			if U.IsPersonalEmail(strings.TrimSpace(profile.Email)) {
+				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "INVALID_PERSONAL_EMAIL"))
+				return
+			}
+
 			if existingAgent, errCode := store.GetStore().GetAgentByEmail(profile.Email); errCode == http.StatusInternalServerError {
 				c.Redirect(http.StatusPermanentRedirect, buildRedirectURL(c, flow, "DB_ERROR"))
 				return
@@ -190,6 +197,20 @@ func CallbackHandler(auth *Authenticator) gin.HandlerFunc {
 				return
 			}
 			existingAgent = createAgentResp.Agent
+
+			errCode = onboardingMailModoAPICall(existingAgent)
+			if errCode != http.StatusOK {
+				log.WithField("email", existingAgent.Email).Error("Failed To Send Onboarding Mail")
+			}
+			errCode = onboardingHubspotOwner(existingAgent)
+			if errCode != http.StatusOK {
+				log.WithField("email", existingAgent.Email).Error("Failed To Create Hubspot Owner")
+			}
+			errCode = onboardingSlackAPICall(existingAgent)
+			if errCode != http.StatusOK {
+				log.WithField("email", existingAgent.Email).Error("Failed To Send Onboarding Slack")
+			}
+
 		} else if flow == SIGNIN_FLOW {
 			var errCode int
 			existingAgent, errCode = store.GetStore().GetAgentByEmail(profile.Email)
