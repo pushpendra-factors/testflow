@@ -13,9 +13,11 @@ const { Option } = Select;
 
 function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite, activeProjectID}) {
   const [form] = Form.useForm();
+  const [loading, setloading] = useState(false); 
   const history = useHistory();
 
   const inviteUser = (payload) => {
+    setloading(true);
 
     const filteredData = Object.fromEntries(
       Object.entries(payload).filter(([key, value]) => key !== 'emails') );
@@ -42,22 +44,27 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
 
     projectAgentBatchInvite(activeProjectID, finalData).then((res) => {
       fetchProjectAgents(activeProjectID);
-      if(!res.failed_to_invite_agent_idx[0]) {
+      if(!res.failed_to_invite_agent_idx) {
           message.success('Invitation sent successfully!');
           handleCancel();
           history.push('/welcome');
-        } else {
-          for (let i = 0; i < finalData.length; i++) {
-            if(!res.failed_to_invite_agent_idx[i]) {
-              message.success(finalData[i]['email'] + ' : Invitation sent successfully!');
-              handleCancel();
-              history.push('/welcome');
-            } else {
-              message.error(finalData[i]['email'] + ' : ' + res.failed_to_invite_agent_idx[i]);
-            }
+      } else {
+        for (let i = 0; i < finalData.length; i++) {
+          if(!res.failed_to_invite_agent_idx[i]) {
+            message.success(finalData[i]['email'] + ' : Invitation sent successfully!');
+            handleCancel();
+            history.push('/welcome');
+          } else {
+            message.error(finalData[i]['email'] + ' : ' + res.failed_to_invite_agent_idx[i]);
           }
         }
-    })
+      }
+      setloading(false);
+    }).catch((info) => {
+      setloading(false);
+      setDataLoading(false);
+      form.resetFields();
+    });
   }; 
 
   const onSkip = () => {
@@ -109,28 +116,8 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                             <Input className={''} size={'large'} addonAfter={<Form.Item name={[0, "role"]} noStyle initialValue={2}>{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
                             </Form.Item>
                         </Col>
-                        {/* <Col span={24}>
-                            <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mt-2 mb-2'}>Email</Text>
-                            <Form.Item
-                                label={null}
-                                name={[1, 'email']}
-                                validateTrigger={['onChange', 'onBlur']}
-                                rules={[{ type: 'email', message: 'Please enter a valid e-mail' }, { required: true, message: 'Please enter email' }]} className={'m-0'}
-                            >
-                            <Input className={'fa-input'} size={'large'} addonAfter={<Form.Item name={[1, "role"]} noStyle initialValue="admin">{RoleTypeSelect}</Form.Item>} placeholder={'Enter email address'} />
-                            </Form.Item>
-                        </Col> */}
                     <Form.List
                       name="emails"
-                      rules={[
-                        {
-                          validator: async (_, names) => {
-                            if (!names || names.length < 1) {
-                              return Promise.reject(new Error('At least 1 users'));
-                            }
-                          },
-                        },
-                      ]}
                     >
                       {(fields, { add, remove }) => (
                         <>
@@ -177,7 +164,7 @@ function BasicDetails({handleCancel, fetchProjectAgents, projectAgentBatchInvite
                         <Col span={24}>
                             <div className={'mt-8 flex justify-center'}>
                                 <Form.Item className={'m-0'}>
-                                    <Button size={'large'} type="primary" style={{width:'28vw', height:'36px'}} className={`ml-2 ${styles.button}`} htmlType="submit">
+                                    <Button size={'large'} type="primary" loading={loading} style={{width:'28vw', height:'36px'}} className={`ml-2 ${styles.button}`} htmlType="submit">
                                     Invite and Continue
                                     </Button>
                                 </Form.Item>

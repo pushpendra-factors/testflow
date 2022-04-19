@@ -1,8 +1,10 @@
 package memsql
 
 import (
+	"errors"
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 	"strings"
 	"time"
@@ -113,11 +115,10 @@ func (store *MemSQL) GetGroup(projectID uint64, groupName string) (*model.Group,
 	}
 
 	db := C.GetServices().Db
-
 	group := model.Group{}
-
-	if err := db.Model(&model.Group{}).Where("project_id = ? AND name = ? ", projectID, groupName).Find(&group).Error; err != nil {
-
+	if err := db.Model(&model.Group{}).
+		Where("project_id = ? AND name = ? ", projectID, groupName).
+		Find(&group).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -127,4 +128,118 @@ func (store *MemSQL) GetGroup(projectID uint64, groupName string) (*model.Group,
 	}
 
 	return &group, http.StatusFound
+}
+
+// GetPropertiesByGroup (Part of group properties caching) This method iterates for last n days to get all the
+// top 'limit' properties for the given group name. Picks all last 24 hours properties and sorts the remaining by occurence
+// and returns top 'limit' properties
+func (store *MemSQL) GetPropertiesByGroup(projectID uint64, groupName string, limit int, lastNDays int) (map[string][]string, int) {
+	logFields := log.Fields{
+		"project_id":  projectID,
+		"group_name":  groupName,
+		"limit":       limit,
+		"last_N_days": lastNDays,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	properties := make(map[string][]string)
+	if projectID == 0 {
+		return properties, http.StatusBadRequest
+	}
+	currentDate := model.OverrideCacheDateRangeForProjects(projectID)
+	if groupName == "" {
+		logCtx.Error("Invalid group_name.")
+		return properties, http.StatusBadRequest
+	}
+	groupProperties := make([]U.CachePropertyWithTimestamp, 0)
+	for i := 0; i < lastNDays; i++ {
+		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
+		groupProperty, err := model.GetPropertiesByGroupFromCache(projectID, groupName, currentDateOnlyFormat)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get group properties from cache.")
+			return nil, http.StatusInternalServerError
+		}
+		groupProperties = append(groupProperties, groupProperty)
+	}
+
+	groupPropertiesAggregated := U.AggregatePropertyAcrossDate(groupProperties)
+	groupPropertiesSorted := U.SortByTimestampAndCount(groupPropertiesAggregated)
+	if limit > 0 {
+		sliceLength := len(groupPropertiesSorted)
+		if sliceLength > limit {
+			groupPropertiesSorted = groupPropertiesSorted[0:limit]
+		}
+	}
+
+	propertyDetails, propertyDetailsStatus := store.GetAllPropertyDetailsByProjectID(projectID, groupName, false)
+	for _, v := range groupPropertiesSorted {
+		category := v.Category
+		if propertyDetailsStatus == http.StatusFound {
+			pName := model.GetPropertyNameByTrimmedSmartEventPropertyPrefix(v.Name)
+			if pType, exist := (*propertyDetails)[pName]; exist {
+				category = pType
+			}
+		}
+
+		if properties[category] == nil {
+			properties[category] = make([]string, 0)
+		}
+		properties[category] = append(properties[category], v.Name)
+	}
+
+	return properties, http.StatusFound
+}
+
+// GetPropertyValuesByGroupProperty (Part of event_name and properties caching) This method iterates for
+// last n days to get all the top 'limit' property values for the given property/event
+// Picks all last 24 hours values and sorts the remaining by occurence and returns top 'limit' values
+func (store *MemSQL) GetPropertyValuesByGroupProperty(projectID uint64, groupName string,
+	propertyName string, limit int, lastNDays int) ([]string, error) {
+	logFields := log.Fields{
+		"project_id":    projectID,
+		"group_name":    groupName,
+		"property_name": propertyName,
+		"limit":         limit,
+		"last_N_days":   lastNDays,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if projectID == 0 {
+		return []string{}, errors.New("invalid project on GetPropertyValuesByGroupProperty")
+	}
+
+	if groupName == "" {
+		return []string{}, errors.New("invalid event_name on GetPropertyValuesByGroupProperty")
+	}
+
+	if propertyName == "" {
+		return []string{}, errors.New("invalid property_name on GetPropertyValuesByGroupProperty")
+	}
+	currentDate := model.OverrideCacheDateRangeForProjects(projectID)
+	values := make([]U.CachePropertyValueWithTimestamp, 0)
+	for i := 0; i < lastNDays; i++ {
+		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
+		value, err := model.GetPropertyValuesByGroupPropertyFromCache(projectID,
+			groupName, propertyName, currentDateOnlyFormat)
+		if err != nil {
+			return []string{}, err
+		}
+		values = append(values, value)
+	}
+
+	valueStrings := make([]string, 0)
+	valuesAggregated := U.AggregatePropertyValuesAcrossDate(values)
+	valuesSorted := U.SortByTimestampAndCount(valuesAggregated)
+
+	for _, v := range valuesSorted {
+		valueStrings = append(valueStrings, v.Name)
+	}
+	if limit > 0 {
+		sliceLength := len(valueStrings)
+		if sliceLength > limit {
+			return valueStrings[0:limit], nil
+		}
+	}
+	return valueStrings, nil
 }

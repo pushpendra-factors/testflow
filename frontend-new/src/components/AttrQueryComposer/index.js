@@ -131,7 +131,7 @@ const AttrQueryComposer = ({ activeProject,
 
 
     const renderConversionBlock = () => {
-        if (queryOptions.group_analysis === 'users') {
+        if (!queryOptions.group_analysis || queryOptions.group_analysis === 'users') {
             if (eventGoal) {
                 return (
                     <ConversionGoalBlock eventGoal={eventGoal}
@@ -148,7 +148,7 @@ const AttrQueryComposer = ({ activeProject,
                 return (
                     <ConversionGoalBlock eventGoal={query}
                         eventGoalChange={(val) => setToQueries(val, index)}
-                        delEvent={delQuery}
+                        delEvent={() => delQuery(index)}
                         group_analysis={queryOptions.group_analysis}
                     >
                     </ConversionGoalBlock>);

@@ -45,7 +45,7 @@ func (store *MemSQL) GetAllFactorsGoals(ProjectID uint64) ([]model.FactorsGoal, 
 	db := C.GetServices().Db
 
 	var goals []model.FactorsGoal
-	if err := db.Limit(1000).Where("project_id = ?", ProjectID).Find(&goals).Error; err != nil {
+	if err := db.Limit(1000).Where("project_id = ?", ProjectID).Order("created_at DESC").Find(&goals).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusFound
 		}
@@ -79,8 +79,8 @@ func (store *MemSQL) GetAllActiveFactorsGoals(ProjectID uint64) ([]model.Factors
 func (store *MemSQL) CreateFactorsGoal(ProjectID uint64, Name string, Rule model.FactorsGoalRule, agentUUID string) (int64, int, string) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"name": Name,
-		"rule": Rule,
+		"name":       Name,
+		"rule":       Rule,
 		"agent_uuid": agentUUID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -145,7 +145,7 @@ func (store *MemSQL) CreateFactorsGoal(ProjectID uint64, Name string, Rule model
 func isDulplicateFactorsGoalRule(ProjectID uint64, Rule model.FactorsGoalRule) bool {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"rule": Rule,
+		"rule":       Rule,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
@@ -176,8 +176,8 @@ func isDulplicateFactorsGoalRule(ProjectID uint64, Rule model.FactorsGoalRule) b
 
 func (store *MemSQL) isEventObjectValid(event string, eventFilters []model.KeyValueTuple, ProjectID uint64) (bool, string) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
-		"event": event,
+		"project_id":    ProjectID,
+		"event":         event,
 		"event_filters": eventFilters,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -210,7 +210,7 @@ func (store *MemSQL) isEventObjectValid(event string, eventFilters []model.KeyVa
 func (store *MemSQL) isRuleValid(Rule model.FactorsGoalRule, ProjectID uint64) (bool, string) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"rule": Rule,
+		"rule":       Rule,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -256,7 +256,7 @@ func (store *MemSQL) isRuleValid(Rule model.FactorsGoalRule, ProjectID uint64) (
 
 func (store *MemSQL) isUserPropertiesValid(ProjectID uint64, UserProperties []string) (bool, string) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
+		"project_id":      ProjectID,
 		"user_properties": UserProperties,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -292,8 +292,8 @@ func (store *MemSQL) isUserPropertiesValid(ProjectID uint64, UserProperties []st
 
 func (store *MemSQL) isEventPropertiesValid(ProjectID uint64, EventName string, EventProperties []string) (bool, string) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
-		"event_name": EventName,
+		"project_id":       ProjectID,
+		"event_name":       EventName,
 		"event_properties": EventProperties,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -322,7 +322,7 @@ func (store *MemSQL) isEventPropertiesValid(ProjectID uint64, EventName string, 
 func (store *MemSQL) DeactivateFactorsGoal(ID int64, ProjectID uint64) (int64, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"id": ID,
+		"id":         ID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -348,7 +348,7 @@ func (store *MemSQL) DeactivateFactorsGoal(ID int64, ProjectID uint64) (int64, i
 func (store *MemSQL) ActivateFactorsGoal(Name string, ProjectID uint64) (int64, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"name": Name,
+		"name":       Name,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if store.isActiveFactorsGoalsLimitExceeded(ProjectID) {
@@ -377,9 +377,9 @@ func (store *MemSQL) ActivateFactorsGoal(Name string, ProjectID uint64) (int64, 
 func (store *MemSQL) UpdateFactorsGoal(ID int64, Name string, Rule model.FactorsGoalRule, ProjectID uint64) (int64, int) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"name": Name,
-		"rule": Rule,
-		"id": ID,
+		"name":       Name,
+		"rule":       Rule,
+		"id":         ID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -417,7 +417,7 @@ func (store *MemSQL) UpdateFactorsGoal(ID int64, Name string, Rule model.Factors
 func (store *MemSQL) GetFactorsGoal(Name string, ProjectID uint64) (*model.FactorsGoal, error) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"name": Name,
+		"name":       Name,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -439,7 +439,7 @@ func (store *MemSQL) GetFactorsGoal(Name string, ProjectID uint64) (*model.Facto
 func (store *MemSQL) GetFactorsGoalByID(ID int64, ProjectID uint64) (*model.FactorsGoal, error) {
 	logFields := log.Fields{
 		"project_id": ProjectID,
-		"id": ID,
+		"id":         ID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -459,9 +459,9 @@ func (store *MemSQL) GetFactorsGoalByID(ID int64, ProjectID uint64) (*model.Fact
 
 func updateFactorsGoal(FactorsGoalID uint64, ProjectID uint64, updatedFields map[string]interface{}) (int64, int) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
+		"project_id":      ProjectID,
 		"factors_goal_id": FactorsGoalID,
-		"update_fields": updatedFields,
+		"update_fields":   updatedFields,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -477,7 +477,7 @@ func updateFactorsGoal(FactorsGoalID uint64, ProjectID uint64, updatedFields map
 // GetAllFactorsGoalsWithNamePattern - get all the goals for a project matching a specific pattern in the name
 func (store *MemSQL) GetAllFactorsGoalsWithNamePattern(ProjectID uint64, NamePattern string) ([]model.FactorsGoal, int) {
 	logFields := log.Fields{
-		"project_id": ProjectID,
+		"project_id":   ProjectID,
 		"name_pattern": NamePattern,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)

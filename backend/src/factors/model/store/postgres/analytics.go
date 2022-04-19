@@ -27,8 +27,8 @@ var queryOps = map[string]string{
 	model.LesserThanOpStr:         "<",
 	model.GreaterThanOrEqualOpStr: ">=",
 	model.LesserThanOrEqualOpStr:  "<=",
-	model.ContainsOpStr:           "ILIKE",
-	model.NotContainsOpStr:        "NOT ILIKE",
+	model.ContainsOpStr:           model.ILikeOp,
+	model.NotContainsOpStr:        model.NotiLikeOp,
 }
 
 func with(stmnt string) string {
@@ -173,13 +173,14 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 
 			// where condition for $none value.
 			var whereCond string
-			if propertyOp == model.EqualsOp {
+			if propertyOp == model.EqualsOp || propertyOp == model.ILikeOp {
 				// i.e: (NOT jsonb_exists(events.properties, 'property_name') OR events.properties->>'property_name'='')
 				whereCond = fmt.Sprintf("(NOT jsonb_exists(%s, ?) OR %s->>?='')", propertyEntity, propertyEntity)
-			} else if propertyOp == model.NotEqualOp {
+			} else if propertyOp == model.NotEqualOp || propertyOp == model.NotiLikeOp {
 				// i.e: (jsonb_exists(events.properties, 'property_name') AND events.properties->>'property_name'!='')
 				whereCond = fmt.Sprintf("(jsonb_exists(%s, ?) AND %s->>?!='')", propertyEntity, propertyEntity)
 			} else {
+				log.WithField("propertyEntity", propertyEntity).WithField("propertyOp", propertyOp).Warn("kark3")
 				return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
 			}
 
@@ -1089,7 +1090,7 @@ func addQueryToResultMeta(result *model.QueryResult, query model.Query) {
 }
 
 func isValidFunnelQuery(query *model.Query) bool {
-	return len(query.EventsWithProperties) <= 6
+	return len(query.EventsWithProperties) <= 10
 }
 
 func (pg *Postgres) Analyze(projectId uint64, queryOriginal model.Query) (*model.QueryResult, int, string) {

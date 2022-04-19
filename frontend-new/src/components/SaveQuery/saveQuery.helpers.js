@@ -6,9 +6,10 @@ import {
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_KPI,
   QUERY_TYPE_PROFILE,
+  EACH_USER_TYPE,
 } from '../../utils/constants';
 
-export const getQuery = ({ queryType, requestQuery }) => {
+export const getQuery = ({ queryType, requestQuery, user_type }) => {
   const startOfWeek = MomentTz().startOf('week').utc().unix();
   const todayNow = MomentTz().utc().unix();
 
@@ -38,7 +39,7 @@ export const getQuery = ({ queryType, requestQuery }) => {
           ...q,
           fr: q.fr,
           to: q.to,
-          gbt: q?.gbt,
+          gbt: user_type === EACH_USER_TYPE ? q?.gbt : 'date',
         };
       }),
     };
@@ -64,8 +65,8 @@ export const getQuery = ({ queryType, requestQuery }) => {
       qG: requestQuery.qG.map((q) => {
         return {
           ...q,
-          fr: startOfWeek,
-          to: todayNow,
+          fr: q.fr,
+          to: q.to,
           gbt: q.gbt ? q.gbt : '',
         };
       }),

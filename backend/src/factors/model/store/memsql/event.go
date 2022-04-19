@@ -25,13 +25,14 @@ import (
 const eventsLimitForProperites = 50000
 const OneDayInSeconds int64 = 24 * 60 * 60
 
-func (store *MemSQL) GetHubspotFormEvents(projectID uint64, userId string, timestamps[] interface{}) ([]model.Event, int) {
+func (store *MemSQL) GetHubspotFormEvents(projectID uint64, userId string, timestamps []interface{}) ([]model.Event, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"user_id":    userId,
-		"timestamps":  timestamps,
+		"timestamps": timestamps,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	fmt.Println("GetHubspotFormEvents ", projectID, userId)
 	if projectID < 1 || userId == "" {
 		log.Error("GetHubspotFormEvents Failed. Invalid projectId or userId")
 		return nil, http.StatusBadRequest
@@ -41,7 +42,7 @@ func (store *MemSQL) GetHubspotFormEvents(projectID uint64, userId string, times
 		log.WithField("timestamps", timestamps).Error("GetHubspotFormEvents Failed. no available timestamp.")
 		return nil, http.StatusBadRequest
 	}
-	
+
 	db := C.GetServices().Db
 
 	eventName, status := store.GetEventName(U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION, projectID)

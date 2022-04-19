@@ -55,12 +55,12 @@ func main() {
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 	taskManagementLookback := flag.Int("task_management_lookback", 1, "")
-	disableRedisWrites := flag.Bool("disable_redis_writes", false, "To disable redis writes.")
 	enableHubspotGroupsByProjectID := flag.String("enable_hubspot_groups_by_project_id", "", "Enable hubspot groups for projects.")
 	useSourcePropertyOverwriteByProjectID := flag.String("use_source_property_overwrite_by_project_id", "", "")
 	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	enableHubspotFormEventsByProjectID := flag.String("enable_hubspot_form_events_by_project_id", "", "")
+	hubspotMaxCreatedAt := flag.Int64("huspot_max_created_at", time.Now().Unix(), "max created_at for records to process.")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -105,7 +105,6 @@ func main() {
 		SentryDSN:                              *sentryDSN,
 		DryRunCRMSmartEvent:                    *dryRunSmartEvent,
 		CacheSortedSet:                         *cacheSortedSet,
-		DisableRedisWrites:                     disableRedisWrites,
 		AllowedHubspotGroupsByProjectIDs:       *enableHubspotGroupsByProjectID,
 		UseSourcePropertyOverwriteByProjectIDs: *useSourcePropertyOverwriteByProjectID,
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
@@ -139,6 +138,7 @@ func main() {
 	configs["health_check_ping_id"] = defaultHealthcheckPingID
 	configs["override_healthcheck_ping_id"] = *overrideHealthcheckPingID
 	configs["num_project_routines"] = *numProjectRoutines
+	configs["max_record_created_at"] = *hubspotMaxCreatedAt
 
 	taskWrapper.TaskFunc(appName, *taskManagementLookback, T.RunHubspotEnrich, configs)
 }

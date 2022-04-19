@@ -118,6 +118,13 @@ pack-pull-events:
 upload-pull-events: export IMAGE_NAME=pull-events-job
 upload-pull-events: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/pull-events-job:$(TAG)
+	
+pack-project-events:
+	docker build -t us.gcr.io/factors-$(ENV)/project-events-job:$(TAG) -f Dockerfile.project_events_job .
+
+upload-project-events: export IMAGE_NAME=project-events-job
+upload-project-events: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/project-events-job:$(TAG)
 
 pack-pattern-mine:
 	docker build -t us.gcr.io/factors-$(ENV)/pattern-mine-job:$(TAG) -f Dockerfile.pattern_mine_job .
@@ -146,6 +153,20 @@ pack-hubspot-enrich:
 upload-hubspot-enrich: export IMAGE_NAME=hubspot-enrich-job
 upload-hubspot-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG)
+
+pack-marketo-enrich:
+	docker build -t us.gcr.io/factors-$(ENV)/marketo-enrich-job:$(TAG) -f Dockerfile.marketo_enrich_job .
+
+upload-marketo-enrich: export IMAGE_NAME=marketo-enrich-job
+upload-marketo-enrich: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/marketo-enrich-job:$(TAG)
+
+pack-marketo-sync:
+	docker build -t us.gcr.io/factors-$(ENV)/marketo-sync-job:$(TAG) -f Dockerfile.marketo_sync_job .
+
+upload-marketo-sync: export IMAGE_NAME=marketo-sync-job
+upload-marketo-sync: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/marketo-sync-job:$(TAG)
 
 pack-enrich-smart-properties:
 	docker build -t us.gcr.io/factors-$(ENV)/enrich-smart-properties-job:$(TAG) -f Dockerfile.enrich_smart_properties_job .

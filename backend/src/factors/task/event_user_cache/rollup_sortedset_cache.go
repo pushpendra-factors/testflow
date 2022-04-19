@@ -20,21 +20,23 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 
 	rollupLookback := configs["rollupLookback"].(int)
 
+	logCtx := log.WithField("config", configs)
+	logCtx.Info("Starting rollup sorted set job.")
+
 	var isCurrentDay bool
 	currentDate := U.TimeNowZ()
 	for i := 0; i <= rollupLookback; i++ {
-		if i == 0 {
-			isCurrentDay = true
-		} else {
-			isCurrentDay = false
-		}
+		isCurrentDay = i == 0
 		currentTimeDatePart := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		uniqueUsersCountKey, err := model.UserCountAnalyticsCacheKey(
 			currentTimeDatePart)
+		logCtx = logCtx.WithField("unique_users_count_key", uniqueUsersCountKey)
+		logCtx.WithError(err).Info("Got unique users count key.")
 		if err != nil {
-			log.WithError(err).Error("Failed to get cache key - uniqueEventsCountKey")
+			logCtx.WithError(err).Error("Failed to get cache key - uniqueEventsCountKey")
 			return nil, false
 		}
+
 		allProjects, err := cacheRedis.ZrangeWithScoresPersistent(true, uniqueUsersCountKey)
 		log.WithField("projects", allProjects).Info("AllProjects")
 		if err != nil {
@@ -78,6 +80,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				log.WithError(err).Error("Failed to get cache key - values")
 				return nil, false
 			}
+
 			smartEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesSmartKeySortedSet)
 			log.WithField("Count", len(smartEvents)).Info("SmartEventCount")
 			events, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesKeySortedSet)
@@ -223,13 +226,124 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 						log.WithError(err).Error("Failed to set cache")
 					}
 				}
+
 				if isCurrentDay == false {
-					err = cacheRedis.DelPersistent(eventNamesSmartKeySortedSet,
+					err = cacheRedis.DelPersistent(
+						eventNamesSmartKeySortedSet,
 						eventNamesKeySortedSet,
 						propertyCategoryKeySortedSet,
 						valueKeySortedSet,
 						userPropertyCategoryKeySortedSet,
-						userValueKeySortedSet)
+						userValueKeySortedSet,
+					)
+					if err != nil {
+						log.WithError(err).Error("Failed to del cache keys")
+						return nil, false
+					}
+				}
+			}
+
+			groupPropertyCategoryKeySortedSet, err := model.GetPropertiesByGroupCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
+			if err != nil {
+				log.WithError(err).Error("Failed to get cache key - group property category")
+				return nil, false
+			}
+
+			groupProperties, err := cacheRedis.ZrangeWithScoresPersistent(false, groupPropertyCategoryKeySortedSet)
+			log.WithField("Count", len(groupProperties)).Info("GroupPropertiesCount")
+			if err != nil {
+				log.WithError(err).Error("Failed to get cache redis key - group property category")
+				return nil, false
+			}
+
+			if len(groupProperties) > 0 {
+				groupValueKeySortedSet, err := model.GetValuesByGroupPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
+				if err != nil {
+					log.WithError(err).Error("Failed to get cache key - group values")
+					return nil, false
+				}
+
+				groupValues, err := cacheRedis.ZrangeWithScoresPersistent(false, groupValueKeySortedSet)
+				log.WithField("Count", len(groupValues)).Info("GroupValuesCount")
+				if err != nil {
+					log.WithError(err).Error("Failed to get cache redis key - group values")
+					return nil, false
+				}
+
+				// group properties
+				groupPropertiesMap := make(map[string]map[string]string)
+				for property, count := range groupProperties {
+					split1 := strings.Split(property, ":SS-GN-PC:")
+					groupName := split1[0]
+					property := split1[1]
+					if groupPropertiesMap[groupName] == nil {
+						groupPropertiesMap[groupName] = make(map[string]string)
+					}
+					groupPropertiesMap[groupName][property] = count
+				}
+				groupPropertiesToCache := make(map[*cacheRedis.Key]string)
+				for groupName, properties := range groupPropertiesMap {
+					if len(properties) > 0 {
+						groupPropertiesKey, _ := model.GetPropertiesByGroupCategoryRollUpCacheKey(projectID, groupName, currentTimeDatePart)
+						cacheGroupPropertyObject := GetCachePropertyObject(properties, currentTimeDatePart)
+						enGroupPropertiesCache, err := json.Marshal(cacheGroupPropertyObject)
+						if err != nil {
+							log.WithError(err).Error("Failed to marshall - group properties")
+							continue
+						}
+						groupPropertiesToCache[groupPropertiesKey] = string(enGroupPropertiesCache)
+					}
+				}
+				if len(groupPropertiesToCache) > 0 {
+					err = cacheRedis.SetPersistentBatch(groupPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					if err != nil {
+						log.WithError(err).Error("Failed to set cache")
+					}
+				}
+
+				// group property values
+				groupPropertyValues := make(map[string]map[string]map[string]string)
+				for valueKey, count := range groupValues {
+					split1 := strings.Split(valueKey, ":SS-GN-PC:")
+					groupName := split1[0]
+					split2 := strings.Split(split1[1], ":SS-GN-PV:")
+					property := split2[0]
+					value := split2[1]
+					if groupPropertyValues[groupName] == nil {
+						groupPropertyValues[groupName] = make(map[string]map[string]string)
+					}
+					if groupPropertyValues[groupName][property] == nil {
+						groupPropertyValues[groupName][property] = make(map[string]string)
+					}
+					groupPropertyValues[groupName][property][value] = count
+				}
+				groupPropertyValuesToCache := make(map[*cacheRedis.Key]string)
+				for groupName, propertyValue := range groupPropertyValues {
+					for property, values := range propertyValue {
+						if len(values) > 0 {
+							groupPropertyValuesKey, _ := model.GetValuesByGroupPropertyRollUpCacheKey(projectID, groupName, property, currentTimeDatePart)
+							cacheGroupPropertyValueObject := GetCachePropertyValueObject(values, currentTimeDatePart)
+							enGroupPropertyValuesCache, err := json.Marshal(cacheGroupPropertyValueObject)
+							if err != nil {
+								log.WithError(err).Error("Failed to marshall - group property values")
+								continue
+							}
+							groupPropertyValuesToCache[groupPropertyValuesKey] = string(enGroupPropertyValuesCache)
+						}
+					}
+				}
+				if len(groupPropertyValuesToCache) > 0 {
+					err = cacheRedis.SetPersistentBatch(groupPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					if err != nil {
+						log.WithError(err).Error("Failed to set cache")
+					}
+				}
+
+				if isCurrentDay == false {
+					err = cacheRedis.DelPersistent(
+						groupPropertyCategoryKeySortedSet,
+						groupValueKeySortedSet,
+					)
 					if err != nil {
 						log.WithError(err).Error("Failed to del cache keys")
 						return nil, false

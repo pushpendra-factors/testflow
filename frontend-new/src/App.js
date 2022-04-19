@@ -13,7 +13,7 @@ import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
-import { enableBingAdsIntegration } from 'Reducers/global';
+import { enableBingAdsIntegration, enableMarketoIntegration } from 'Reducers/global';
 import { SSO_LOGIN_FULFILLED } from "./reducers/types";
 
 
@@ -25,7 +25,7 @@ const Activate = lazyWithRetry(() => import("./Views/Pages/Activate"));
 const Templates = lazyWithRetry(() => import("./Views/CoreQuery/Templates/ResultsPage"));
 const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
 
-function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsIntegration }) {
+function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsIntegration, enableMarketoIntegration }) {
   const dispatch = useDispatch();
 
   const ssoLogin = () => {
@@ -40,6 +40,8 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
       }
     }
   }
+
+  ssoLogin();
 
   const sendSlackNotification = (email, projectname) => {
     let webhookURL = 'https://hooks.slack.com/services/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';
@@ -95,8 +97,20 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
       }
     }
 
-    // SSO Login Func Call
-    ssoLogin();
+    if (window.location.href.indexOf("?marketoInt=") > -1) {
+      var searchParams = new URLSearchParams(window.location.search);
+      if (searchParams) {
+        let projectID = searchParams.get("marketoInt");
+        let email = searchParams.get('email');
+        let projectname = searchParams.get('projectname');
+        enableMarketoIntegration(projectID).then(() => {
+          sendSlackNotification(email, projectname);
+          window.location.replace("/settings/#integrations");
+        }).catch((err) => {
+          console.log('Marketo enable error', err)
+        })
+      }
+    }
 
     if (Sentry) {
       Sentry.setUser({
@@ -178,7 +192,7 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
       }
     }
 
-  }, [agent_details, dispatch]);
+  }, [agent_details]);
 
   useEffect(() => {
     const tz = active_project?.time_zone;
@@ -190,6 +204,10 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
       localStorage.setItem('project_timeZone', 'Asia/Kolkata');
     }
   });
+
+  useEffect(() => {
+    ssoLogin();
+  }, [agent_details])
 
   return (
     <div className="App">
@@ -225,11 +243,9 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
               )}
               {isAgentLoggedIn ? (
                 <Route path="/" name="Home" component={AppLayout} />
-              ) : <>
-                {ssoLogin()}
+              ) : (
                 <Redirect to="/login" />
-              </>
-              }
+              )}
             </Switch>
           </Router>
         </Suspense>
@@ -244,4 +260,4 @@ const mapStateToProps = (state) => ({
   active_project: state.global.active_project,
 });
 
-export default connect(mapStateToProps, { enableBingAdsIntegration })(App);
+export default connect(mapStateToProps, { enableBingAdsIntegration, enableMarketoIntegration })(App);

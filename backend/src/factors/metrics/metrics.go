@@ -49,6 +49,8 @@ const (
 	LatencyNewUserCache            = "new_user_cache_latency"
 	IncrEventUserCleanupCounter    = "clean_up_counter_incr"
 	LatencyEventUserCleanupCounter = "clean_up_counter_latency"
+	IncrGroupCacheCounter          = "group_cache_incr"
+	LatencyGroupCache              = "group_cache_latency"
 
 	// Metrics to monitor size of the database tables.
 	BytesTableSizeAdwordsDocuments = "table_adwords_documents_size"

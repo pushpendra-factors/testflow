@@ -46,6 +46,10 @@ function SaveQuery({
 }) {
   const dispatch = useDispatch();
 
+  const { performance_criteria: user_type } = useSelector(
+    (state) => state.analyticsQuery
+  );
+
   const savedQueries = useSelector((state) =>
     _.get(state, 'queries.data', EMPTY_ARRAY)
   );
@@ -203,7 +207,7 @@ function SaveQuery({
         }
 
         updateLocalReducer({ type: TOGGLE_APIS_CALLED });
-        const query = getQuery({ queryType, requestQuery });
+        const query = getQuery({ queryType, requestQuery, user_type });
 
         const querySettings = {
           ...getCurrentSorter(),
@@ -226,7 +230,7 @@ function SaveQuery({
         if (queryType === QUERY_TYPE_ATTRIBUTION) {
           querySettings.attributionMetrics = JSON.stringify(attributionMetrics);
         }
-
+        
         if (activeAction === ACTION_TYPES.SAVE) {
           const type = 2;
           const res = await saveQuery(
@@ -307,6 +311,7 @@ function SaveQuery({
       breakdown,
       attributionsState,
       campaignState,
+      user_type,
     ]
   );
 

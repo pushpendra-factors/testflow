@@ -204,8 +204,35 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 					}
 				}
 			}
+			logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 1")
+
+			// for new users who may have customer id not set for global users
+			for _, user := range kpiInfo.KpiUserIds {
+				// check if user has session/otp
+				if _, exists := sessions[user]; !exists {
+					logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+					continue
+				}
+
+				userSession := sessions[user] // map[string]model.UserSessionData
+
+				for attributionKey, newUserSession := range userSession {
+
+					if existingUserSession, exists := groupSessions[kpiID][attributionKey]; exists {
+						// Update the existing attribution first and last touch.
+						existingUserSession.MinTimestamp = U.Min(existingUserSession.MinTimestamp, newUserSession.MinTimestamp)
+						existingUserSession.MaxTimestamp = U.Max(existingUserSession.MaxTimestamp, newUserSession.MaxTimestamp)
+						// Merging timestamp of same customer having 2 userIds.
+						existingUserSession.TimeStamps = append(existingUserSession.TimeStamps, newUserSession.TimeStamps...)
+						existingUserSession.WithinQueryPeriod = existingUserSession.WithinQueryPeriod || newUserSession.WithinQueryPeriod
+						groupSessions[kpiID][attributionKey] = existingUserSession
+					} else {
+						groupSessions[kpiID][attributionKey] = newUserSession
+					}
+				}
+			}
 		}
-		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info(fmt.Sprintf("KPI-Attribution Group session"))
+		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 2")
 
 		// Build attribution weight
 		noOfConversionEvents := 1
@@ -417,12 +444,13 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 	// Merge compare data into attributionData.
 	for key := range attributionData {
 		if _, exists := attributionDataCompare[key]; exists {
+
+			for len(attributionDataCompare[key].ConversionEventCount) < len(attributionData[key].ConversionEventCount) {
+				attributionDataCompare[key].ConversionEventCount = append(attributionDataCompare[key].ConversionEventCount, float64(0))
+			}
+
 			for idx := 0; idx < len(attributionDataCompare[key].ConversionEventCount); idx++ {
 				attributionData[key].ConversionEventCompareCount = append(attributionData[key].ConversionEventCompareCount, attributionDataCompare[key].ConversionEventCount[idx])
-			}
-		} else {
-			for idx := 0; idx < len(attributionDataCompare[key].ConversionEventCount); idx++ {
-				attributionData[key].ConversionEventCompareCount = append(attributionData[key].ConversionEventCompareCount, float64(0))
 			}
 		}
 	}

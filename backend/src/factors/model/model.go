@@ -222,7 +222,7 @@ type Model interface {
 	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int
 	AssociateSessionByEventIds(projectId uint64, userID string, events []*model.Event, sessionId string, sessionEventNameId string) int
-	GetHubspotFormEvents(projectID uint64, userId string, timestamps[] interface{}) ([]model.Event, int)
+	GetHubspotFormEvents(projectID uint64, userId string, timestamps []interface{}) ([]model.Event, int)
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
@@ -272,9 +272,9 @@ type Model interface {
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
 	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID uint64, docTypes []int) (int64, int)
 	GetHubspotFormDocuments(projectID uint64) ([]model.HubspotDocument, int)
-	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
 	GetHubspotContactCreatedSyncIDAndUserID(projectID uint64, docID string) ([]model.HubspotDocument, int)
-	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
 	UpdateHubspotDocumentAsSynced(projectID uint64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
@@ -538,6 +538,8 @@ type Model interface {
 	CreateOrUpdateGroupPropertiesBySource(projectID uint64, groupName string, groupID, groupUserID string,
 		enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error)
 	GetGroups(projectID uint64) ([]model.Group, int)
+	GetPropertiesByGroup(projectID uint64, groupName string, limit int, lastNDays int) (map[string][]string, int)
+	GetPropertyValuesByGroupProperty(projectID uint64, groupName string, propertyName string, limit int, lastNDays int) ([]string, error)
 
 	// Delete channel Integrations
 	DeleteChannelIntegration(projectID uint64, channelName string) (int, error)
@@ -560,7 +562,7 @@ type Model interface {
 	GetFiveTranMapping(ProjectID uint64, Integration string) (string, error)
 	GetActiveFiveTranMapping(ProjectID uint64, Integration string) (model.FivetranMappings, error)
 	GetAllActiveFiveTranMapping(ProjectID uint64, Integration string) ([]string, error)
-	GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, error)
+	GetLatestFiveTranMapping(ProjectID uint64, Integration string) (string, string, error)
 	PostFiveTranMapping(ProjectID uint64, Integration string, ConnectorId string, SchemaId string, Accounts string) error
 	GetAllActiveFiveTranMappingByIntegration(Integration string) ([]model.FivetranMappings, error)
 	UpdateFiveTranMappingAccount(ProjectID uint64, Integration string, ConnectorId string, Accounts string) error
@@ -573,7 +575,7 @@ type Model interface {
 	// integration document
 	InsertIntegrationDocument(doc model.IntegrationDocument) error
 	UpsertIntegrationDocument(doc model.IntegrationDocument) error
-	
+
 	// alerts
 	GetAlertById(id string, projectID uint64) (model.Alert, int)
 	GetAllAlerts(projectID uint64) ([]model.Alert, int)
@@ -599,5 +601,9 @@ type Model interface {
 	CreateCRMGroup(crmGroup *model.CRMGroup) (int, error)
 	CreateCRMActivity(crmActivity *model.CRMActivity) (int, error)
 	CreateCRMRelationship(crmRelationship *model.CRMRelationship) (int, error)
-
+	GetCRMUserByTypeAndAction(projectID uint64, source model.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int)
+	UpdateCRMUserAsSynced(projectID uint64, source model.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int)
+	GetCRMUsersInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMUser, int)
+	GetCRMActivityInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMActivity, int)
+	UpdateCRMActivityAsSynced(projectID uint64, source model.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
 }

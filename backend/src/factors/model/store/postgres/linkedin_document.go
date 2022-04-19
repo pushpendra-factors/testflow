@@ -373,7 +373,7 @@ func (pg *Postgres) buildLinkedinChannelConfig(projectID uint64) *model.ChannelC
 	objectsAndProperties := append(linkedinObjectsAndProperties)
 
 	return &model.ChannelConfigResult{
-		SelectMetrics:        selectableMetricsForAllChannels,
+		SelectMetrics:        SelectableMetricsForAllChannels,
 		ObjectsAndProperties: objectsAndProperties,
 	}
 }

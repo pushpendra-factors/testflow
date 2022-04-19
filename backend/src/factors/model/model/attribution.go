@@ -134,8 +134,8 @@ const (
 	MarketingEventTypeTacticOffer = "TacticOffer"
 
 	AnalyzeTypeUsers           = "users"
-	AnalyzeTypeSFOpportunities = "sf_opportunities"
-	AnalyzeTypeHSDeals         = "hs_deals"
+	AnalyzeTypeSFOpportunities = "salesforce_opportunities"
+	AnalyzeTypeHSDeals         = "hubspot_deals"
 
 	HSDealIDProperty        = "$hubspot_deal_hs_object_id"
 	SFOpportunityIDProperty = "$salesforce_opportunity_id"
@@ -1456,7 +1456,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 			row1[i] = row1[i].(float64) + row2[i].(float64)
 			// Funnel - User Conversion Rate (%)
 			if row1[keyIndex+5].(float64) > 0 {
-				row1[i+1], _ = U.FloatRoundOffWithPrecision(row1[i].(float64)/row1[keyIndex+5].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate   conversion/user count
+				row1[i+1], _ = U.FloatRoundOffWithPrecision(100*row1[i].(float64)/row1[keyIndex+5].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate   conversion/user count
 			} else {
 				row1[i+1] = float64(0)
 			}
@@ -1539,7 +1539,7 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 			}
 
 			if row1[keyIndex+12].(float64) > 0 {
-				row1[i+2], _ = U.FloatRoundOffWithPrecision(row1[i].(float64)/row1[keyIndex+12].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate   conversion/user count
+				row1[i+2], _ = U.FloatRoundOffWithPrecision(100*row1[i].(float64)/row1[keyIndex+12].(float64), U.DefaultPrecision) // Funnel - User Conversion - CPC Rate   conversion/user count
 			} else {
 				row1[i+2] = float64(0) // Funnel - User Conversion Rate (%)
 			}
@@ -2300,7 +2300,10 @@ func ComputeAdditionalMetrics(attributionData *map[string]*AttributionData) {
 		}
 		if v.Clicks > 0 {
 			(*attributionData)[k].AvgCPC, _ = U.FloatRoundOffWithPrecision(float64(v.Spend)/float64(v.Clicks), U.DefaultPrecision)
-			(*attributionData)[k].ClickConversionRate, _ = U.FloatRoundOffWithPrecision(100*float64(v.ConversionEventCount[0])/float64(v.Clicks), U.DefaultPrecision)
+			if (*attributionData)[k].ConversionEventCount == nil || len((*attributionData)[k].ConversionEventCount) == 0 {
+				(*attributionData)[k].ConversionEventCount = append((*attributionData)[k].ConversionEventCount, float64(0))
+			}
+			(*attributionData)[k].ClickConversionRate, _ = U.FloatRoundOffWithPrecision(100*float64((*attributionData)[k].ConversionEventCount[0])/float64(v.Clicks), U.DefaultPrecision)
 		}
 	}
 }

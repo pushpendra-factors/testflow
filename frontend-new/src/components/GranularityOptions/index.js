@@ -7,9 +7,9 @@ import { SVG } from '../factorsComponents';
 
 function GranularityOptions({ durationObj, onClick, queryType }) {
   const validDateBreakdowns = [...DateBreakdowns];
-  
+
   const options = useMemo(() => {
-    const enabledOptions = getValidGranularityOptions();
+    const enabledOptions = getValidGranularityOptions(durationObj);
     return validDateBreakdowns.map((db) => {
       return {
         ...db,
@@ -51,7 +51,7 @@ function GranularityOptions({ durationObj, onClick, queryType }) {
   );
 
   return (
-    <Dropdown overlay={menu} placement="bottomLeft">
+    <Dropdown overlay={menu} placement='bottomLeft'>
       <Button className={`ant-dropdown-link flex items-center`}>
         {currentValue.title}
       </Button>

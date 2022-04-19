@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { Text } from 'factorsComponents';
-import { Row, Col, Button, Tabs, Select } from 'antd';
+import { Row, Col, Button, Tabs, Select, message } from 'antd';
 import SelectKPIBlock from './SelectKPIBlock';
 import {
   udpateProjectSettings,
@@ -23,12 +23,16 @@ const Attributions = ({
       sf_kpi: [],
       hs_kpi: [],
     },
-    attr_window: 1,
+    attribution_window: 1,
     enabled: true,
   });
 
   useEffect(() => {
-    if (currentProjectSettings.attribution_config) {
+    fetchProjectSettings(activeProject.id);
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (currentProjectSettings?.attribution_config) {
       setAttrConfig(currentProjectSettings.attribution_config);
     }
   }, [currentProjectSettings]);
@@ -39,9 +43,6 @@ const Attributions = ({
     ['Hubspot Deals', 'hs_kpi'],
   ];
 
-  const value = attrConfig.kpis_to_attribute['user_kpi'];
-  console.log('value', value);
-
   const [tabNo, setTabNo] = useState('0');
   const [edit, setEdit] = useState(false);
 
@@ -50,8 +51,9 @@ const Attributions = ({
   }
 
   const onWindowChange = (val) => {
+    setEdit(true);
     const opts = Object.assign({}, attrConfig);
-    opts.attr_window = val;
+    opts.attribution_window = val;
     setAttrConfig(opts);
   };
 
@@ -91,7 +93,9 @@ const Attributions = ({
 
   const kpiList = (header) => {
     const blockList = [];
-    const value = attrConfig.kpis_to_attribute[header];
+    const value = attrConfig?.kpis_to_attribute[header]
+      ? attrConfig?.kpis_to_attribute[header]
+      : [];
 
     value.forEach((ev, index) => {
       blockList.push(
@@ -129,13 +133,10 @@ const Attributions = ({
   };
 
   const selectWindow = () => {
-    const window = [1, 3, 7, 14, 20, 30, 60, 90, 'Full User Journey'];
-    const opts = window.map((opt) =>
-      Number.isInteger(opt) ? `${opt} ${opt === 1 ? 'day' : 'days'}` : opt
-    );
+    const window = [1, 3, 7, 14, 20, 30, 60, 90, -1];
     return (
       <Select
-        value={attrConfig.attr_window}
+        value={attrConfig?.attribution_window}
         style={{ width: 300 }}
         placement='bottomLeft'
         onChange={(val) => {
@@ -145,8 +146,10 @@ const Attributions = ({
         {window.map((days, index) => {
           return (
             <Option value={days}>
-              {Number.isInteger(days)
+              {Number.isInteger(days) && days !== -1
                 ? `${days} ${days === 1 ? 'day' : 'days'}`
+                : days === -1
+                ? 'Full User Journey'
                 : days}
             </Option>
           );
@@ -157,7 +160,7 @@ const Attributions = ({
 
   const attributionWindow = () => {
     return (
-      <div>
+      <div style={{ height: '32rem' }}>
         <Row>
           <Col span={24}>
             <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
@@ -203,47 +206,40 @@ const Attributions = ({
 
   return (
     <div>
-      <>
-        <Row className={`flex items-center`}>
-          <Col span={12}>
-            <Text
-              type={'title'}
-              level={3}
-              weight={'bold'}
-              extraClass={'m-0 m-1'}
-            >
-              Attributions Configuration
-            </Text>
-          </Col>
-          <Col span={12}>{edit ? renderEditActions() : null}</Col>
-        </Row>
-        <Row>
-          <div className={'fa-warning'}>
-            This is configured at the time of initial setup. We don’t support to
-            change it at the moment. Please contact customer support for more
-            details.
-          </div>
-        </Row>
-        <Row>
-          <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-            KPI's to contribute
+      <Row className={`flex items-center`}>
+        <Col span={12}>
+          <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 m-1'}>
+            Attributions Configuration
           </Text>
-          <Text type={'title'} level={7} extraClass={'m-0'}>
-            Select the KPI’s to be considered as part of Attribution Reporting.
-            You can select upto 5 KPI’s to atrribution.
-          </Text>
-        </Row>
-        <Row>
-          <Col span={24}>
-            <div className={'mt-6'}>{renderAttributionContent()}</div>
-          </Col>
-        </Row>
-        <Row>
-          <Col span={24}>
-            <div className={'my-6'}>{attributionWindow()}</div>
-          </Col>
-        </Row>
-      </>
+        </Col>
+        <Col span={12}>{edit ? renderEditActions() : null}</Col>
+      </Row>
+      <Row>
+        <div className={'fa-warning'}>
+          This is configured at the time of initial setup. We don’t support to
+          change it at the moment. Please contact customer support for more
+          details.
+        </div>
+      </Row>
+      <Row>
+        <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
+          KPI's to contribute
+        </Text>
+        <Text type={'title'} level={7} extraClass={'m-0'}>
+          Select the KPI’s to be considered as part of Attribution Reporting.
+          You can select upto 5 KPI’s to atrribution.
+        </Text>
+      </Row>
+      <Row>
+        <Col span={24}>
+          <div className={'mt-6'}>{renderAttributionContent()}</div>
+        </Col>
+      </Row>
+      <Row>
+        <Col span={24}>
+          <div className={'my-6'}>{attributionWindow()}</div>
+        </Col>
+      </Row>
     </div>
   );
 };

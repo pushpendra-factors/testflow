@@ -516,7 +516,7 @@ func (store *MemSQL) buildLinkedinChannelConfig(projectID uint64) *model.Channel
 	objectsAndProperties := append(linkedinObjectsAndProperties)
 
 	return &model.ChannelConfigResult{
-		SelectMetrics:        selectableMetricsForAllChannels,
+		SelectMetrics:        SelectableMetricsForAllChannels,
 		ObjectsAndProperties: objectsAndProperties,
 	}
 }

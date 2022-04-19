@@ -601,19 +601,20 @@ func (pg *Postgres) GetHubspotFormDocuments(projectId uint64) ([]model.HubspotDo
 	return documents, http.StatusFound
 }
 
-func (pg *Postgres) GetHubspotDocumentsByTypeForSync(projectId uint64, typ int) ([]model.HubspotDocument, int) {
+func (pg *Postgres) GetHubspotDocumentsByTypeForSync(projectId uint64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "type": typ})
 
-	if projectId == 0 || typ == 0 {
-		logCtx.Error("Invalid project_id or type on get hubspot documents by type.")
+	if projectId == 0 || typ == 0 || maxCreatedAtSec <= 0 {
+		logCtx.Error("Invalid project_id or type or maxCreatedAtSec on get hubspot documents by type.")
 		return nil, http.StatusBadRequest
 	}
 
+	maxCreatedAtFmt := time.Unix(maxCreatedAtSec+1, 0).Format("2006-01-02 15:04:05")
 	var documents []model.HubspotDocument
 
 	db := C.GetServices().Db
-	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false",
-		projectId, typ).Find(&documents).Error
+	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND created_at < ? ",
+		projectId, typ, maxCreatedAtFmt).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
 		return nil, http.StatusInternalServerError
@@ -654,7 +655,7 @@ func (pg *Postgres) GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(pro
 }
 
 // GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
-func (pg *Postgres) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to int64) ([]model.HubspotDocument, int) {
+func (pg *Postgres) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, docType int, from, to, maxCreatedAtSec int64) ([]model.HubspotDocument, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "type": docType, "from": from, "to": to})
 
 	if projectID == 0 || docType == 0 || from < 0 {
@@ -662,11 +663,12 @@ func (pg *Postgres) GetHubspotDocumentsByTypeANDRangeForSync(projectID uint64, d
 		return nil, http.StatusBadRequest
 	}
 
+	maxCreatedAtFmt := time.Unix(maxCreatedAtSec+1, 0).Format("2006-01-02 15:04:05")
 	var documents []model.HubspotDocument
 
 	db := C.GetServices().Db
-	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ?",
-		projectID, docType, from, to).Find(&documents).Error
+	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ? AND created_at < ? ",
+		projectID, docType, from, to, maxCreatedAtFmt).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
 		return nil, http.StatusInternalServerError
@@ -992,6 +994,9 @@ func (pg *Postgres) CreateOrUpdateGroupPropertiesBySource(projectID uint64, grou
 	if err != nil {
 		return "", err
 	}
+
+	// The new group properties are being added to cache.
+	pg.addGroupUserPropertyDetailsToCache(projectID, groupName, groupUserID, enProperties)
 
 	if !newGroupUser {
 		user, status := pg.GetUser(projectID, groupUserID)

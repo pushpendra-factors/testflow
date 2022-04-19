@@ -80,7 +80,6 @@ func InitAppRoutes(r *gin.Engine) {
 	r.GET(routePrefix+"/IsDependentTaskDone", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.IsDependentTaskDoneHandler))
 	r.POST(routePrefix+"/InsertTaskBeginRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskBeginRecordHandler))
 	r.POST(routePrefix+"/InsertTaskEndRecord", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.InsertTaskEndRecordHandler))
-	r.POST("/hubspot/createcontact", V1.HubspotCreateContact)
 	r.GET("/hubspot/getcontact", V1.GetHubspotContactByEmail)
 
 	// Shareable link routes
@@ -116,25 +115,29 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
 		DashboardUnitsWebAnalyticsQueryHandler)
 
-	authRouteGroup.GET("/:project_id/groups", GetGroupsHandler)
+	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
+	authRouteGroup.GET("/:project_id/user/event_names", GetEventNamesByUserHandler)
+	authRouteGroup.GET(":project_id/groups/:group_name/event_names", GetEventNamesByGroupHandler)
 	authRouteGroup.GET("/:project_id/queries", GetQueriesHandler)
 	authRouteGroup.POST("/:project_id/queries", CreateQueryHandler)
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
 	authRouteGroup.DELETE("/:project_id/queries/:query_id", DeleteSavedQueryHandler)
 	authRouteGroup.GET("/:project_id/queries/search", SearchQueriesHandler)
-	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
 	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
 	authRouteGroup.POST("/:project_id/filters", CreateFilterHandler)
 	authRouteGroup.PUT("/:project_id/filters/:filter_id", UpdateFilterHandler)
 	authRouteGroup.DELETE("/:project_id/filters/:filter_id", DeleteFilterHandler)
 	authRouteGroup.GET("/:project_id/event_names/:event_name/properties", GetEventPropertiesHandler)
-	authRouteGroup.GET("/:project_id/channel_grouping_properties", GetChannelGroupingPropertiesHandler)
 	authRouteGroup.GET("/:project_id/event_names/:event_name/properties/:property_name/values", GetEventPropertyValuesHandler)
+	authRouteGroup.GET("/:project_id/groups", GetGroupsHandler)
+	authRouteGroup.GET("/:project_id/groups/:group_name/properties", GetGroupPropertiesHandler)
+	authRouteGroup.GET("/:project_id/groups/:group_name/properties/:property_name/values", GetGroupPropertyValuesHandler)
 	authRouteGroup.GET("/:project_id/users", GetUsersHandler)
 	authRouteGroup.GET("/:project_id/users/:user_id", GetUserHandler)
 	authRouteGroup.GET("/:project_id/user_properties", GetUserPropertiesHandler)
 	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
+	authRouteGroup.GET("/:project_id/channel_grouping_properties", GetChannelGroupingPropertiesHandler)
 	authRouteGroup.POST("/:project_id/factor", FactorHandler)
 
 	// Moved to shareable routes
@@ -154,7 +157,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/shareable_url", CreateShareableURLHandler)
 	authRouteGroup.DELETE("/:project_id/shareable_url/:share_id", DeleteShareableURLHandler)
 	authRouteGroup.DELETE("/:project_id/shareable_url/revoke/:query_id", RevokeShareableURLHandler)
-
 
 	// v1 Dashboard endpoints
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", CreateDashboardUnitForMultiDashboardsHandler)
@@ -256,6 +258,12 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/v1/bingads/disable", responseWrapper(V1.DisableBingAdsIntegration))
 	authRouteGroup.GET("/:project_id/v1/bingads", responseWrapper(V1.GetBingAdsIntegration))
 	authRouteGroup.PUT("/:project_id/v1/bingads/enable", responseWrapper(V1.EnableBingAdsIntegration))
+
+	// marketo integration
+	authRouteGroup.POST("/:project_id/v1/marketo", responseWrapper(V1.CreateMarketoIntegration))
+	authRouteGroup.DELETE("/:project_id/v1/marketo/disable", responseWrapper(V1.DisableMarketoIntegration))
+	authRouteGroup.GET("/:project_id/v1/marketo", responseWrapper(V1.GetMarketoIntegration))
+	authRouteGroup.PUT("/:project_id/v1/marketo/enable", responseWrapper(V1.EnableMarketoIntegration))
 
 	// alerts
 	authRouteGroup.POST("/:project_id/v1/alerts", responseWrapper(V1.CreateAlertHandler))
@@ -426,6 +434,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.POST("/linkedin/documents/add",
 		IH.DataServiceLinkedinAddDocumentHandler)
+
+	dataServiceRouteGroup.PUT("/linkedin/access_token",
+		IH.DataServiceLinkedinUpdateAccessToken)
 
 	dataServiceRouteGroup.POST("/metrics",
 		IH.DataServiceRecordMetricHandler)

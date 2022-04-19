@@ -219,9 +219,9 @@ func DeleteSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
-	errCode = store.GetStore().DeleteShareableURLWithEntityIDandType(projectID, queryID, model.ShareableURLEntityTypeQuery)
-	if errCode != http.StatusNotFound && errCode != http.StatusAccepted {
-		c.AbortWithStatusJSON(errCode, "Failed to delete shareable urls.")
+	errCode_shareableurl := store.GetStore().DeleteShareableURLWithEntityIDandType(projectID, queryID, model.ShareableURLEntityTypeQuery)
+	if errCode_shareableurl != http.StatusNotFound && errCode_shareableurl != http.StatusAccepted {
+		c.AbortWithStatusJSON(errCode_shareableurl, "Failed to delete shareable urls.")
 		return
 	}
 

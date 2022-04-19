@@ -97,8 +97,8 @@ var CAFilters = []string{
 
 // TODO: Move and fetch it from respective channels - allChannels, adwords etc.. because this is error prone.
 // to do change kpi analytics/all channels, linkedin when we change below.
-var selectableMetricsForAllChannels = []string{"impressions", "clicks", "spend"}
-var objectsForAllChannels = []string{CAFilterCampaign, CAFilterAdGroup}
+var SelectableMetricsForAllChannels = []string{"impressions", "clicks", "spend"}
+var ObjectsForAllChannels = []string{CAFilterCampaign, CAFilterAdGroup}
 
 var allChannelsPropertyToRelated = map[string]model.PropertiesAndRelated{
 	"name": model.PropertiesAndRelated{
@@ -156,10 +156,10 @@ func isValidChannel(channel string) bool {
 
 // @TODO Kark v1
 func (pg *Postgres) buildAllChannelConfig(projectID uint64) *model.ChannelConfigResult {
-	objectsAndProperties := pg.buildObjectAndPropertiesForAllChannel(projectID, objectsForAllChannels)
+	objectsAndProperties := pg.buildObjectAndPropertiesForAllChannel(projectID, ObjectsForAllChannels)
 
 	return &model.ChannelConfigResult{
-		SelectMetrics:        selectableMetricsForAllChannels,
+		SelectMetrics:        SelectableMetricsForAllChannels,
 		ObjectsAndProperties: objectsAndProperties,
 	}
 }

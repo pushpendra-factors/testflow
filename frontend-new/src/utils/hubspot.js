@@ -1,19 +1,3 @@
-export const getOwner = () => {
-    // const ownersData = [
-    //     {
-    //         "value" : "145127740",
-    //     },
-    //     {
-    //         "value" : "116053799",
-    //     }
-    // ]
-    // const index = Math.floor(Math.random()*2);
-    // const data = ownersData[index];
-    
-    let data = { "value" : "116053799" };
-    return data;
-}
-
 export const meetLink = (ownerID) => {
     // switch (ownerID) {
     //     case '116046946': return 'https://mails.factors.ai/meeting/factors/prajwalsrinivas0';
@@ -22,5 +6,5 @@ export const meetLink = (ownerID) => {
     //     case '116053799': return 'https://factors1.us4.opv1.com/meeting/factors/ralitsa';
     //     default : return 'https://meetings.hubspot.com/sunil-seervi';
     // }
-    return 'https://meetings.hubspot.com/srikrishna-swaminathan';
+    return 'https://meetings.hubspot.com/ralitsa-dsouza';
 }

@@ -16,7 +16,7 @@ const contentGroupsLimt = 3
 
 func (store *MemSQL) DeleteContentGroup(id string, projectID uint64) (int, string) {
 	logFields := log.Fields{
-		"id": id,
+		"id":         id,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -39,7 +39,7 @@ func (store *MemSQL) DeleteContentGroup(id string, projectID uint64) (int, strin
 
 func (store *MemSQL) GetContentGroupById(id string, projectID uint64) (model.ContentGroup, int) {
 	logFields := log.Fields{
-		"id": id,
+		"id":         id,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -83,7 +83,7 @@ func (store *MemSQL) GetAllContentGroups(projectID uint64) ([]model.ContentGroup
 
 func (store *MemSQL) CreateContentGroup(projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":    projectID,
 		"content_group": contentGroup,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -139,7 +139,7 @@ func (store *MemSQL) CreateContentGroup(projectID uint64, contentGroup model.Con
 func (store *MemSQL) IsDuplicateNameCheck(projectID uint64, name string) bool {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"name": name,
+		"name":       name,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	contentGroups, _ := store.GetAllContentGroups(projectID)
@@ -216,8 +216,8 @@ func (store *MemSQL) ContentGroupLimitCheck(projectID uint64) bool {
 
 func (store *MemSQL) UpdateContentGroup(id string, projectID uint64, contentGroup model.ContentGroup) (model.ContentGroup, int, string) {
 	logFields := log.Fields{
-		"id": id,
-		"project_id": projectID,
+		"id":            id,
+		"project_id":    projectID,
 		"content_group": contentGroup,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -255,7 +255,7 @@ func (store *MemSQL) UpdateContentGroup(id string, projectID uint64, contentGrou
 
 func (store *MemSQL) CheckURLContentGroupValue(pageUrl string, projectID uint64) map[string]string {
 	logFields := log.Fields{
-		"page_url": pageUrl,
+		"page_url":   pageUrl,
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -310,6 +310,7 @@ func (store *MemSQL) CheckURLContentGroupValue(pageUrl string, projectID uint64)
 			}
 			if overallResult == true {
 				resultCg[contentGroup.ContentGroupName] = rule.ContentGroupValue
+				break
 			}
 		}
 	}
