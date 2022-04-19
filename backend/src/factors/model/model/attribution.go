@@ -2028,15 +2028,15 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 	for idx, funcType := range conversionFunTypes {
 
 		// Normal conversion [12, 13, 14] = [Conversion, CPC, Rate]
-		if grandTotalRow[keyIndex+9+idx].(int64) > 0 {
-			grandTotalRow[keyIndex+14+idx], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+12+idx].(float64)/float64(grandTotalRow[keyIndex+9+idx].(int64))*100, U.DefaultPrecision) //ConvUserRate
+		if grandTotalRow[keyIndex+9+idx].(float64) > 0 {
+			grandTotalRow[keyIndex+14+idx], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+12+idx].(float64)/float64(grandTotalRow[keyIndex+9+idx].(float64))*100, U.DefaultPrecision) //ConvUserRate
 		} else {
 			grandTotalRow[keyIndex+14+idx] = float64(0)
 		}
 
 		// Compare conversion  = [Conversion, CPC, Rate]
-		if grandTotalRow[keyIndex+9+idx].(int64) > 0 {
-			grandTotalRow[keyIndex+17+idx], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+15+idx].(float64)/float64(grandTotalRow[keyIndex+9+idx].(int64))*100, U.DefaultPrecision) // conversion rate
+		if grandTotalRow[keyIndex+9+idx].(float64) > 0 {
+			grandTotalRow[keyIndex+17+idx], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+15+idx].(float64)/float64(grandTotalRow[keyIndex+9+idx].(float64))*100, U.DefaultPrecision) // conversion rate
 		} else {
 			grandTotalRow[keyIndex+17+idx] = float64(0)
 		}
