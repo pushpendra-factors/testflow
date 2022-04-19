@@ -49,7 +49,13 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 			return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no-valid result for KPI query")
 		}
 
-		kpiKeys = GetDataFromKPIResult(kpiQueryResult, &kpiData, logCtx)
+		kpiKeys = store.GetDataFromKPIResult(projectID, kpiQueryResult, &kpiData, logCtx)
+	}
+
+	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
+	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
+	if len(kpiKeys) == 0 {
+		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
 	}
 
 	groups, errCode := store.GetGroups(projectID)
@@ -60,18 +66,11 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 
 	_groupIDKey, _groupIDUserKey := getGroupKeys(query, groups)
 
-	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
-	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
-	if len(kpiKeys) == 0 {
-		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
-	}
-
 	kpiKeyGroupUserIDList, err := store.PullGroupUserIDs(projectID, kpiKeys, _groupIDKey, &kpiData, &groupUserIDToKpiID, logCtx)
 	if err != nil {
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
 	}
 	log.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
-	logCtx.Info("done pulling group ids for Deal or Opportunity")
 
 	err = store.PullKPIKeyUserGroupInfo(projectID, kpiKeyGroupUserIDList, _groupIDUserKey, &kpiData, &groupUserIDToKpiID, logCtx)
 	if err != nil {
@@ -117,16 +116,50 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 	return _groupIDKey, _groupIDUserKey
 }
 
-func GetDataFromKPIResult(kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, logCtx log.Entry) []string {
+func (store *MemSQL) GetDataFromKPIResult(projectID uint64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, logCtx log.Entry) []string {
 
 	datetimeIdx := 0
 	keyIdx := 1
 	valIdx := 2
 	var kpiKeys []string
+	var kpiAggFunctionType []string
+
 	var kpiValueHeaders []string
 	for idx := valIdx; idx < len(kpiQueryResult.Headers); idx++ {
 		kpiValueHeaders = append(kpiValueHeaders, kpiQueryResult.Headers[idx])
 	}
+
+	if len(kpiValueHeaders) == 0 {
+		return kpiKeys
+	}
+
+	customMetrics, errMsg, statusCode := store.GetCustomMetricsByProjectId(projectID)
+	if statusCode != http.StatusFound {
+		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
+		return kpiKeys
+	}
+
+	mapKpiAggFunctionType := make(map[string]string)
+	for _, kpi := range customMetrics {
+		var customMetricTransformation model.CustomMetricTransformation
+		err := U.DecodePostgresJsonbToStructType(kpi.Transformations, &customMetricTransformation)
+		if err != nil {
+			continue
+		}
+		mapKpiAggFunctionType[kpi.Name] = customMetricTransformation.AggregateFunction
+	}
+
+	for _, kpiName := range kpiValueHeaders {
+		if fType, exists := mapKpiAggFunctionType[kpiName]; exists {
+			kpiAggFunctionType = append(kpiAggFunctionType, fType)
+		}
+	}
+
+	if len(kpiValueHeaders) != len(kpiAggFunctionType) {
+		logCtx.WithField("kpiAggFunctionType", kpiAggFunctionType).WithField("kpiValueHeaders", kpiValueHeaders).Warn("failed to get function types of all of given KPI")
+		return kpiKeys
+	}
+
 	log.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
 
 	for _, row := range kpiQueryResult.Rows {
@@ -170,6 +203,8 @@ func GetDataFromKPIResult(kpiQueryResult model.QueryResult, kpiData *map[string]
 
 		// add headers
 		kpiDetail.KpiHeaderNames = kpiValueHeaders
+		// add aggregate function type
+		kpiDetail.KpiAggFunctionTypes = kpiAggFunctionType
 
 		// map to kpi data to key - final data
 		(*kpiData)[kpiID] = kpiDetail
@@ -442,9 +477,14 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID uint64,
 	// Merge compare data into attributionData.
 	for key := range attributionData {
 		if _, exists := attributionDataCompare[key]; exists {
-			attributionData[key].ConversionEventCompareCount = attributionDataCompare[key].ConversionEventCount
-		} else {
-			attributionData[key].ConversionEventCompareCount = []float64{float64(0)}
+
+			for len(attributionDataCompare[key].ConversionEventCount) < len(attributionData[key].ConversionEventCount) {
+				attributionDataCompare[key].ConversionEventCount = append(attributionDataCompare[key].ConversionEventCount, float64(0))
+			}
+
+			for idx := 0; idx < len(attributionDataCompare[key].ConversionEventCount); idx++ {
+				attributionData[key].ConversionEventCompareCount = append(attributionData[key].ConversionEventCompareCount, attributionDataCompare[key].ConversionEventCount[idx])
+			}
 		}
 	}
 	// filling any non-matched touch points
@@ -452,7 +492,9 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID uint64,
 		if _, exists := attributionData[missingKey]; !exists {
 			attributionData[missingKey] = &model.AttributionData{}
 			attributionData[missingKey].ConversionEventCompareCount = attributionDataCompare[missingKey].ConversionEventCount
-			attributionData[missingKey].ConversionEventCount = []float64{float64(0)}
+			for idx := 0; idx < len(attributionDataCompare[missingKey].ConversionEventCount); idx++ {
+				attributionData[missingKey].ConversionEventCompareCount = append(attributionData[missingKey].ConversionEventCompareCount, float64(0))
+			}
 		}
 	}
 	return &attributionData, nil

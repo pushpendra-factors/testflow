@@ -13,7 +13,7 @@ class AdSetPerformanceReportExtract(BaseExtractContext):
                "frequency", "impressions", "inline_post_engagement", "social_spend", "spend",
                "inline_link_clicks", "unique_clicks", "reach"]
     METRICS_2 = ["video_p50_watched_actions", "video_p25_watched_actions", "video_30_sec_watched_actions",
-               "video_p100_watched_actions", "video_p75_watched_actions", "cost_per_action_type", "website_purchase_roas"]
+               "video_p100_watched_actions", "video_p75_watched_actions", "actions", "action_values"]
     LEVEL_BREAKDOWN = "adset"
     UNFORMATTED_URL = 'https://graph.facebook.com/v13.0/{}/insights?' \
                     'time_range={}&&fields={}&&access_token={}&&level={' \
