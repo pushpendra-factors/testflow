@@ -81,8 +81,8 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 				columnNamesFromMetadata, columnNamesFromMetadataDateTime = extractMetadataColumns(metadataQueryResult)
 			}
 			success, failures := InsertIntegrationDocument(projectId, docType, queryResult, columnNamesFromMetadata, columnNamesFromMetadataDateTime)
-			resultStatus["failure-"+docType] = failures
-			resultStatus["success-"+docType] = success
+			resultStatus["failure-"+docType] = totalFailures
+			resultStatus["success-"+docType] = totalSuccess
 			totalFailures = totalFailures + failures
 			totalSuccess = totalSuccess + success
 			if len(queryResult) < PAGE_SIZE {
@@ -91,7 +91,7 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 			offset = offset + PAGE_SIZE
 		}
 	}
-	if totalFailures > 0 || status == false {
+	if status == false {
 		return resultStatus, false
 	}
 	return resultStatus, true
