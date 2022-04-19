@@ -21,6 +21,7 @@ const defaultState = {
   currentProjectSettings: {},
   contentGroup: [],
   bingAds: {},
+  marketo: {},
 };
 
 export default function (state = defaultState, action) {
@@ -169,6 +170,15 @@ export default function (state = defaultState, action) {
     }
     case 'DISABLE_BINGADS_FULFILLED': {
       return {...state, bingAds: {}}
+    }
+    case 'FETCH_MARKETO_FULFILLED': {
+      return { ...state, marketo: action.payload };
+    }
+    case 'FETCH_MARKETO_REJECTED': {
+      return { ...state, marketo: action.payload };
+    }
+    case 'DISABLE_MARKETO_FULFILLED': {
+      return {...state, marketo: {}}
     }
     default:
       return state;
@@ -680,6 +690,87 @@ export function fetchBingAdsIntegration(projectId) {
         })
         .catch((err) => {
           dispatch({ type: 'FETCH_BINGADS_REJECTED', payload: {}});
+          reject(err);
+        });
+    });
+  };
+}
+
+export function createMarketoIntegration(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'projects/'+ projectId +'/v1/marketo')
+      .then((r) => {
+        if (r.ok) {
+          dispatch({ type: 'CREATE_MARKETO_FULFILLED', payload: r.data });
+          resolve(r);
+        } else {
+          dispatch({ type: 'CREATE_MARKETO_REJECTED' });
+          reject(r);
+        }
+      })
+      .catch((err) => {
+        dispatch({ type: 'CREATE_MARKETO_REJECTED', payload: err });
+        reject(err);
+      });
+    });
+  };
+}
+
+export function enableMarketoIntegration(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + 'projects/'+ projectId +'/v1/marketo/enable')
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'ENABLE_MARKETO_FULFILLED', payload: r.data });
+            resolve(r);
+          } else {
+            dispatch({ type: 'ENABLE_MARKETO_REJECTED' });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'ENABLE_MARKETO_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function disableMarketoIntegration(projectId) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/'+ projectId +'/v1/marketo/disable',{})
+      .then((res) => {
+          if(res.ok) {
+            dispatch({ type: 'DISABLE_MARKETO_FULFILLED', payload: res.data});
+            resolve(res);
+          } else {
+            reject(res);
+          }
+        }).catch((err) => {
+            reject(err);
+        });
+    });
+  };
+}
+
+export function fetchMarketoIntegration(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/'+ projectId +'/v1/marketo', {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_MARKETO_FULFILLED', payload: r.data});
+            resolve(r);
+          } else {
+            dispatch({ type: 'FETCH_MARKETO_REJECTED', payload: {}});
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_MARKETO_REJECTED', payload: {}});
           reject(err);
         });
     });

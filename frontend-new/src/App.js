@@ -13,7 +13,7 @@ import lazyWithRetry from 'Utils/lazyWithRetry';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
-import { enableBingAdsIntegration } from 'Reducers/global';
+import { enableBingAdsIntegration, enableMarketoIntegration } from 'Reducers/global';
 import { SSO_LOGIN_FULFILLED } from "./reducers/types";
 
 
@@ -25,7 +25,7 @@ const Activate = lazyWithRetry(() => import("./Views/Pages/Activate"));
 const Templates = lazyWithRetry(() => import("./Views/CoreQuery/Templates/ResultsPage"));
 const AppLayout = lazyWithRetry(() => import("./Views/AppLayout"));
 
-function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsIntegration }) {
+function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsIntegration, enableMarketoIntegration }) {
   const dispatch = useDispatch();
 
   const ssoLogin = () => {
@@ -93,6 +93,21 @@ function App({ isAgentLoggedIn, agent_details, active_project, enableBingAdsInte
           window.location.replace("/settings/#integrations");
         }).catch((err) => {
           console.log('bing ads enable error', err)
+        })
+      }
+    }
+
+    if (window.location.href.indexOf("?marketoInt=") > -1) {
+      var searchParams = new URLSearchParams(window.location.search);
+      if (searchParams) {
+        let projectID = searchParams.get("marketoInt");
+        let email = searchParams.get('email');
+        let projectname = searchParams.get('projectname');
+        enableMarketoIntegration(projectID).then(() => {
+          sendSlackNotification(email, projectname);
+          window.location.replace("/settings/#integrations");
+        }).catch((err) => {
+          console.log('Marketo enable error', err)
         })
       }
     }
@@ -245,4 +260,4 @@ const mapStateToProps = (state) => ({
   active_project: state.global.active_project,
 });
 
-export default connect(mapStateToProps, { enableBingAdsIntegration })(App);
+export default connect(mapStateToProps, { enableBingAdsIntegration, enableMarketoIntegration })(App);
