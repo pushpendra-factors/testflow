@@ -98,7 +98,7 @@ func (pg *Postgres) GetBingadsFilterValuesSQLAndParams(projectID uint64, request
 func (pg *Postgres) buildBingAdsChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	bingAdsObjectsAndProperties := pg.buildObjectAndPropertiesForBingAds(projectID, model.ObjectsForBingads)
 	// selectable metrics for bing ads to be added ?
-	selectMetrics := append(selectableMetricsForAllChannels)
+	selectMetrics := append(SelectableMetricsForAllChannels)
 	objectsAndProperties := bingAdsObjectsAndProperties
 
 	return &model.ChannelConfigResult{
