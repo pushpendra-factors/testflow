@@ -53,7 +53,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   integration?.int_salesforce_enabled_agent_uuid ||
   integration?.int_drift ||
   integration?.int_google_organic_enabled_agent_uuid ||
-  integration?.int_clear_bit || sdkCheck || bingAds?.accounts || marketo?.accounts;
+  integration?.int_clear_bit || sdkCheck || bingAds?.accounts || marketo?.status;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);

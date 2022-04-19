@@ -416,9 +416,9 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 
 	// Create public shareable url
 	w = sendCreateShareableUrlReq(r, project.ID, agent, H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	})
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -471,8 +471,7 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 		Type:  model.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
-	
-	
+
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
 	queryId := uint64(responseMap["id"].(float64))
@@ -488,9 +487,9 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 
 	// Create public shareable url
 	w = sendCreateShareableUrlReq(r, project.ID, agent, H.ShareableURLParams{
-		EntityID: queryId,
-		EntityType: model.ShareableURLEntityTypeQuery,
-		ShareType: model.ShareableURLShareTypePublic,
+		EntityID:        queryId,
+		EntityType:      model.ShareableURLEntityTypeQuery,
+		ShareType:       model.ShareableURLShareTypePublic,
 		IsExpirationSet: false,
 	})
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -530,4 +529,16 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 		assert.NotNil(t, nil, err)
 	}
 	assert.Equal(t, 2, len(queries))
+
+	// Test access of the agent to Demo project queries
+	C.GetConfig().DemoProjectIds = append(C.GetConfig().DemoProjectIds, project.ID)
+	b := true
+	C.GetConfig().EnableDemoReadAccess = &b
+
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+1343545")
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, agent2)
+
+	w = executeSharedQueryReq(r, project.ID, agent2, queries[0].IdText)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
