@@ -1194,7 +1194,7 @@ func getLatestHubspotDocumentsByLimit(projectID uint64, docType int, limit int) 
 	var hubspotDocuments []model.HubspotDocument
 	db := C.GetServices().Db
 	err := db.Model(&model.HubspotDocument{}).Where("project_id = ? AND type = ? AND action= ? AND timestamp > ?",
-		projectID, docType, model.HubspotDocumentActionUpdated, lookbackTimestampInMilliseconds).Order("timestamp desc").Limit(1000).Find(&hubspotDocuments).Error
+		projectID, docType, model.HubspotDocumentActionUpdated, lookbackTimestampInMilliseconds).Order("timestamp desc").Limit(limit).Find(&hubspotDocuments).Error
 	if err != nil {
 		return nil, err
 
