@@ -477,9 +477,14 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID uint64,
 	// Merge compare data into attributionData.
 	for key := range attributionData {
 		if _, exists := attributionDataCompare[key]; exists {
-			attributionData[key].ConversionEventCompareCount = attributionDataCompare[key].ConversionEventCount
-		} else {
-			attributionData[key].ConversionEventCompareCount = []float64{float64(0)}
+
+			for len(attributionDataCompare[key].ConversionEventCount) < len(attributionData[key].ConversionEventCount) {
+				attributionDataCompare[key].ConversionEventCount = append(attributionDataCompare[key].ConversionEventCount, float64(0))
+			}
+
+			for idx := 0; idx < len(attributionDataCompare[key].ConversionEventCount); idx++ {
+				attributionData[key].ConversionEventCompareCount = append(attributionData[key].ConversionEventCompareCount, attributionDataCompare[key].ConversionEventCount[idx])
+			}
 		}
 	}
 	// filling any non-matched touch points
@@ -487,7 +492,9 @@ func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID uint64,
 		if _, exists := attributionData[missingKey]; !exists {
 			attributionData[missingKey] = &model.AttributionData{}
 			attributionData[missingKey].ConversionEventCompareCount = attributionDataCompare[missingKey].ConversionEventCount
-			attributionData[missingKey].ConversionEventCount = []float64{float64(0)}
+			for idx := 0; idx < len(attributionDataCompare[missingKey].ConversionEventCount); idx++ {
+				attributionData[missingKey].ConversionEventCompareCount = append(attributionData[missingKey].ConversionEventCompareCount, float64(0))
+			}
 		}
 	}
 	return &attributionData, nil

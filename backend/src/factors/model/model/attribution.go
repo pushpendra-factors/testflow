@@ -1119,7 +1119,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 
 				functionType := data.ConvAggFunctionType[idx]
 
-				row = append(row, data.ConversionEventCount[idx])
+				row = append(row, float64(data.ConversionEventCount[idx]))
 
 				cpc = append(cpc, float64(0))
 				userConvRate = append(userConvRate, float64(0))
@@ -1156,7 +1156,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 					}
 					row = append(row, cpc[idx])
 					row = append(row, userConvRate[idx])
-					row = append(row, data.ConversionEventCompareCount[idx])
+					row = append(row, float64(data.ConversionEventCompareCount[idx]))
 					row = append(row, cpcCompare[idx])
 					row = append(row, compareUserConvRate[idx])
 				} else {
@@ -1164,7 +1164,7 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 				}
 			}
 			// for linked event considering the data.ConversionEventCount[0] only
-			row = append(row, getLinkedEventColumnAsInterfaceList(data.ConversionEventCount[0], data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
+			row = append(row, getLinkedEventColumnAsInterfaceList(float64(data.ConversionEventCount[0]), data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
 			rows = append(rows, row)
 		}
 	}
@@ -1542,19 +1542,19 @@ func MergeTwoDataRows(row1 []interface{}, row2 []interface{}, keyIndex int, attr
 
 			// Normal conversion [12, 13, 14] = [Conversion, CPC, Rate]
 
-			if row1[keyIndex+9+idx].(int64) > 0 {
-				row1[keyIndex+14+idx], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+12+idx].(float64)/float64(row1[keyIndex+9+idx].(int64))*100, U.DefaultPrecision)
+			if row1[keyIndex+9].(int64) > 0 {
+				row1[keyIndex+14+idx], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+12+idx].(float64)/float64(row1[keyIndex+9].(int64))*100, U.DefaultPrecision)
 			} else {
-				row1[keyIndex+9+idx] = int64(0)
+				row1[keyIndex+9] = int64(0)
 				row1[keyIndex+14+idx] = float64(0)
 			}
 
 			// Compare conversion  = [Conversion, CPC, Rate+idx]
 
-			if row1[keyIndex+9+idx].(int64) > 0 {
-				row1[keyIndex+17+idx], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+15+idx].(float64)/float64(row1[keyIndex+9+idx].(int64))*100, U.DefaultPrecision)
+			if row1[keyIndex+9].(int64) > 0 {
+				row1[keyIndex+17+idx], _ = U.FloatRoundOffWithPrecision(row1[keyIndex+15+idx].(float64)/float64(row1[keyIndex+9].(int64))*100, U.DefaultPrecision)
 			} else {
-				row1[keyIndex+9+idx] = int64(0)
+				row1[keyIndex+9] = int64(0)
 				row1[keyIndex+17+idx] = float64(0)
 			}
 
@@ -1986,8 +1986,8 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 		for idx, _ := range conversionFunTypes {
 			grandTotalRow[keyIndex+12+idx] = grandTotalRow[keyIndex+12+idx].(float64) + row[keyIndex+12+idx].(float64) // Conversion.
 			grandTotalRow[keyIndex+15+idx] = grandTotalRow[keyIndex+15+idx].(float64) + row[keyIndex+15+idx].(float64) // Compare Conversion.
-			spendCPC = append(spendCPC, 0)
-			conversionsCPC = append(conversionsCPC, 0)
+			spendCPC = append(spendCPC, 0.0)
+			conversionsCPC = append(conversionsCPC, 0.0)
 			if spend > 0 {
 				spendCPC[idx], _ = U.FloatRoundOffWithPrecision(spendCPC[idx]+spend, U.DefaultPrecision)
 				conversionsCPC[idx], _ = U.FloatRoundOffWithPrecision(conversionsCPC[idx]+row[keyIndex+12+idx].(float64), U.DefaultPrecision)
@@ -2028,15 +2028,15 @@ func AddGrandTotalRowKPI(headers []string, rows [][]interface{}, keyIndex int, a
 	for idx, funcType := range conversionFunTypes {
 
 		// Normal conversion [12, 13, 14] = [Conversion, CPC, Rate]
-		if grandTotalRow[keyIndex+9+idx].(float64) > 0 {
-			grandTotalRow[keyIndex+14+idx], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+12+idx].(float64)/float64(grandTotalRow[keyIndex+9+idx].(float64))*100, U.DefaultPrecision) //ConvUserRate
+		if grandTotalRow[keyIndex+9].(int64) > 0 {
+			grandTotalRow[keyIndex+14+idx], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+12+idx].(float64)/float64(grandTotalRow[keyIndex+9].(int64))*100, U.DefaultPrecision) //ConvUserRate
 		} else {
 			grandTotalRow[keyIndex+14+idx] = float64(0)
 		}
 
 		// Compare conversion  = [Conversion, CPC, Rate]
-		if grandTotalRow[keyIndex+9+idx].(float64) > 0 {
-			grandTotalRow[keyIndex+17+idx], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+15+idx].(float64)/float64(grandTotalRow[keyIndex+9+idx].(float64))*100, U.DefaultPrecision) // conversion rate
+		if grandTotalRow[keyIndex+9].(int64) > 0 {
+			grandTotalRow[keyIndex+17+idx], _ = U.FloatRoundOffWithPrecision(grandTotalRow[keyIndex+15+idx].(float64)/float64(grandTotalRow[keyIndex+9].(int64))*100, U.DefaultPrecision) // conversion rate
 		} else {
 			grandTotalRow[keyIndex+17+idx] = float64(0)
 		}
@@ -2192,7 +2192,7 @@ func AddUpConversionEventCount(usersIdAttributionIdMap map[string][]AttributionK
 					attributionData[keyWeight.Key].ConversionEventCount = append(attributionData[keyWeight.Key].ConversionEventCount, float64(0))
 				}
 				weightedValue := keyWeight.Weight * userIDWeightsForEachGoalEvent[idx]
-				attributionData[keyWeight.Key].ConversionEventCount[idx] = attributionData[keyWeight.Key].ConversionEventCount[idx] + weightedValue
+				attributionData[keyWeight.Key].ConversionEventCount[idx] = float64(attributionData[keyWeight.Key].ConversionEventCount[idx] + weightedValue)
 			}
 		}
 	}
