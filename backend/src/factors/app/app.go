@@ -158,6 +158,8 @@ func main() {
 
 	enableBingAdsAttribution := flag.Bool("enable_bing_ads_attribution", false, "")
 	salesforcePropertyLookBackTimeHr := flag.Int("salesforce_property_lookback_time_hr", 0, "")
+	hubspotPropertyLookbackLimit := flag.Int("hubspot_property_lookback_limit", 1000, "")
+
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -268,6 +270,7 @@ func main() {
 		EnableBingAdsAttribution:                       *enableBingAdsAttribution,
 		MonitoringAPIToken:                             *monitoringAPIToken,
 		SalesforcePropertyLookBackTimeHr:               *salesforcePropertyLookBackTimeHr,
+		HubspotPropertyLookBackLimit:                   *hubspotPropertyLookbackLimit,
 	}
 	C.InitConf(config)
 

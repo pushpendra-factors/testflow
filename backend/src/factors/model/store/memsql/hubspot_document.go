@@ -1219,7 +1219,7 @@ func (store *MemSQL) GetHubspotObjectPropertiesName(ProjectID uint64, objectType
 
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "object_type": objectType})
 
-	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
+	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, C.GetHubspotPropertiesLookbackLimit())
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to GetSalesforceObjectPropertiesValues")
 		return nil, nil
@@ -1247,7 +1247,7 @@ func (store *MemSQL) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64,
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID,
 		"object_type": objectType, "property_name": propertyName})
 
-	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
+	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, C.GetHubspotPropertiesLookbackLimit())
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to GetAllHubspotObjectPropertyValues")
 		return nil

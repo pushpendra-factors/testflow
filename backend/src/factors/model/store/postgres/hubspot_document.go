@@ -840,7 +840,7 @@ func (pg *Postgres) GetHubspotObjectPropertiesName(ProjectID uint64, objectType 
 
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
 
-	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
+	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, C.GetHubspotPropertiesLookbackLimit())
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to GetSalesforceObjectPropertiesValues")
 		return nil, nil
@@ -862,7 +862,7 @@ func (pg *Postgres) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, ob
 
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
 
-	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
+	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, C.GetHubspotPropertiesLookbackLimit())
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to GetAllHubspotObjectPropertyValues")
 		return nil

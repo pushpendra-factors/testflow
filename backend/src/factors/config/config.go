@@ -241,6 +241,7 @@ type Configuration struct {
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
 	SalesforcePropertyLookBackTimeHr                int
+	HubspotPropertyLookBackLimit                    int
 }
 
 type Services struct {
@@ -2131,4 +2132,8 @@ func GetSessionStoreSecret() string {
 
 func GetSalesforcePropertyLookBackTimeHr() int {
 	return GetConfig().SalesforcePropertyLookBackTimeHr
+}
+
+func GetHubspotPropertiesLookbackLimit() int {
+	return GetConfig().HubspotPropertyLookBackLimit
 }

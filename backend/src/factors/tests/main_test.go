@@ -100,6 +100,7 @@ func TestMain(m *testing.M) {
 		AllowEventsFunnelsGroupSupport:                  "*",
 		UseHubspotBatchInsertByProjectID:                "*",
 		SalesforcePropertyLookBackTimeHr:                48,
+		HubspotPropertyLookBackLimit:                    1000,
 	}
 	C.InitConf(config)
 
