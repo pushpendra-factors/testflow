@@ -12,11 +12,11 @@ import OtherIntegrations from './OtherIntegrations';
 import { useHistory } from 'react-router-dom';
 import Lottie from 'react-lottie';
 import setupAssistData from '../../../assets/lottie/Final Jan 3 Setupassist.json'
-import { fetchProjectSettingsV1, getHubspotContact, fetchBingAdsIntegration } from 'Reducers/global';
+import { fetchProjectSettingsV1, getHubspotContact, fetchBingAdsIntegration, fetchMarketoIntegration } from 'Reducers/global';
 import styles from './index.module.scss';
 import { meetLink } from '../../../utils/hubspot';
 
-const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSettingsV1, getHubspotContact, bingAds, fetchBingAdsIntegration}) => {
+const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSettingsV1, getHubspotContact, bingAds, fetchBingAdsIntegration, fetchMarketoIntegration, marketo}) => {
     const [current, setCurrent] = useState(0);
     const [showModal,setShowModal] = useState(false);
     const [ownerID, setownerID] = useState();
@@ -47,6 +47,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
             setsdkCheck(res.data.int_completed);
         });
         fetchBingAdsIntegration(activeProject.id);
+        fetchMarketoIntegration(activeProject.id);
     }, [activeProject, sdkCheck]);
 
     integration = integration?.project_settings || integration;
@@ -59,7 +60,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
     integration?.int_salesforce_enabled_agent_uuid ||
     integration?.int_drift ||
     integration?.int_google_organic_enabled_agent_uuid ||
-    integration?.int_clear_bit || sdkCheck || bingAds?.accounts;
+    integration?.int_clear_bit || sdkCheck || bingAds?.accounts || marketo?.status;
 
     return (
         <>
@@ -119,7 +120,7 @@ const SetupAssist = ({currentAgent, integration, activeProject, fetchProjectSett
                                 <div className={`${current == 3? styles.sideActive: styles.side}`}>
                                 </div>
                                 <div className={`${current == 3? styles.textActive: styles.text}`}>
-                                    <p className={`${styles.text1}`}>Other</p>
+                                    <p className={`${styles.text1}`}>More</p>
                                     <p className={`${styles.text2}`}>Integrations</p>
                                 </div>
                                 <div className={`m-0`}>
@@ -188,6 +189,7 @@ const mapStateToProps = (state) => ({
     currentAgent: state.agent.agent_details,
     integration: state.global.currentProjectSettings,
     bingAds: state.global.bingAds,
+    marketo: state.global.marketo,
 });
 
-export default connect(mapStateToProps, { fetchProjectSettingsV1, getHubspotContact, fetchBingAdsIntegration })(SetupAssist);
+export default connect(mapStateToProps, { fetchProjectSettingsV1, getHubspotContact, fetchBingAdsIntegration, fetchMarketoIntegration })(SetupAssist);

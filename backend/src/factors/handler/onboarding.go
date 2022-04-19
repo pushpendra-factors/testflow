@@ -161,7 +161,6 @@ func onboardingGetHubspotOwner(agent *model.Agent) string {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusConflict {
-		logCtx.Error("Failed to execute GET request in hubspot get contact by email handler.")
 		return owner
 	}
 	var responseDetails map[string]interface{}
@@ -170,7 +169,6 @@ func onboardingGetHubspotOwner(agent *model.Agent) string {
 		logCtx.Error("Unable to decode response from GET request in hubspot create contact handler : %v", resp.Body)
 		return owner
 	}
-	logCtx.Error(responseDetails)
 
 	properties, exists := responseDetails["properties"].(map[string]interface{})
 	if exists {
@@ -187,7 +185,7 @@ func onboardingGetHubspotOwner(agent *model.Agent) string {
 
 func onboardingHubspotOwner(agent *model.Agent) int {
 	owner := onboardingGetHubspotOwner(agent)
-	
+
 	contactData := contactPayload{
 		Properties: []contactProperty{
 			{

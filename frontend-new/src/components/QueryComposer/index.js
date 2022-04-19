@@ -83,7 +83,7 @@ function QueryComposer({
       );
     });
 
-    if ((queryType === QUERY_TYPE_FUNNEL && queries.length < 10) || (queryType === QUERY_TYPE_EVENT && queries.length < 4)) {
+    if ((queryType === QUERY_TYPE_FUNNEL && queries.length < 10) || (queryType === QUERY_TYPE_EVENT && queries.length < 6)) {
       blockList.push(
         <div key={'init'} className={styles.composer_body__query_block}>
           <QueryBlock

@@ -15,11 +15,11 @@ import EmptyDashboard from './EmptyDashboard';
 import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration'
 import ProjectDropdown from './ProjectDropdown';
 import { connect } from 'react-redux';
-import { fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration } from 'Reducers/global';
+import { fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration, fetchMarketoIntegration } from 'Reducers/global';
 import { useHistory } from 'react-router-dom';
 import { Spin } from 'antd';
 
-function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration }) {
+function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration, fetchMarketoIntegration }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
@@ -28,7 +28,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   const { dashboards } = useSelector((state) => state.dashboard);
   let integration = useSelector((state) => state.global.currentProjectSettings);
   const activeProject = useSelector((state) => state.global.active_project);
-  const { bingAds } = useSelector((state) => state.global)
+  const { bingAds, marketo } = useSelector((state) => state.global);
   const dispatch = useDispatch();
   const history = useHistory();
 
@@ -40,6 +40,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
         history.push('/');
       });
       fetchBingAdsIntegration(activeProject.id);
+      fetchMarketoIntegration(activeProject.id);
   }, [activeProject, sdkCheck]);
 
   integration = integration?.project_settings || integration;
@@ -52,7 +53,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   integration?.int_salesforce_enabled_agent_uuid ||
   integration?.int_drift ||
   integration?.int_google_organic_enabled_agent_uuid ||
-  integration?.int_clear_bit || sdkCheck || bingAds?.accounts;
+  integration?.int_clear_bit || sdkCheck || bingAds?.accounts || marketo?.status;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -168,4 +169,4 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   }
 }
 
-export default connect(null,{ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration })(Dashboard);
+export default connect(null,{ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration, fetchMarketoIntegration })(Dashboard);

@@ -145,12 +145,20 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 			return nil, err
 		}
 
+		// single function for user type queries
+		convAggFunctionType := []string{"unique"}
+		for key, _ := range *attributionData {
+			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
+		}
+
 		// Add the Added keys with no of conversion event = 1
 		model.AddTheAddedKeysAndMetrics(attributionData, query, sessions, 1)
 
 		// Add the performance information no of conversion event = 1
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, 1)
-
+		for key, _ := range *attributionData {
+			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
+		}
 	} else {
 		// This thread is for query.AnalyzeType == model.AnalyzeTypeHSDeals || query.AnalyzeType == model.AnalyzeTypeSFOpportunities.
 		kpiData, _, _, err = store.ExecuteKPIForAttribution(projectID, query, debugQueryKey, *logCtx)
@@ -204,8 +212,35 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 					}
 				}
 			}
+			logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 1")
+
+			// for new users who may have customer id not set for global users
+			for _, user := range kpiInfo.KpiUserIds {
+				// check if user has session/otp
+				if _, exists := sessions[user]; !exists {
+					logCtx.WithFields(log.Fields{"User": user, "KPI_ID": kpiID}).Info("user without session/otp")
+					continue
+				}
+
+				userSession := sessions[user] // map[string]model.UserSessionData
+
+				for attributionKey, newUserSession := range userSession {
+
+					if existingUserSession, exists := groupSessions[kpiID][attributionKey]; exists {
+						// Update the existing attribution first and last touch.
+						existingUserSession.MinTimestamp = U.Min(existingUserSession.MinTimestamp, newUserSession.MinTimestamp)
+						existingUserSession.MaxTimestamp = U.Max(existingUserSession.MaxTimestamp, newUserSession.MaxTimestamp)
+						// Merging timestamp of same customer having 2 userIds.
+						existingUserSession.TimeStamps = append(existingUserSession.TimeStamps, newUserSession.TimeStamps...)
+						existingUserSession.WithinQueryPeriod = existingUserSession.WithinQueryPeriod || newUserSession.WithinQueryPeriod
+						groupSessions[kpiID][attributionKey] = existingUserSession
+					} else {
+						groupSessions[kpiID][attributionKey] = newUserSession
+					}
+				}
+			}
 		}
-		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info(fmt.Sprintf("KPI-Attribution Group session"))
+		logCtx.WithFields(log.Fields{"KPIGroupSession": groupSessions}).Info("KPI-Attribution Group session 2")
 
 		// Build attribution weight
 		noOfConversionEvents := 1
@@ -225,7 +260,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		attributionData, isCompare, err = store.FireAttributionForKPI(projectID, query, groupSessions, kpiData, sessionWT, *logCtx)
 		logCtx.WithFields(log.Fields{"TimePassedInMins": float64(time.Now().UTC().Unix()-queryStartTime) / 60}).Info("FireAttribution KPI took time")
 		queryStartTime = time.Now().UTC().Unix()
-		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info(fmt.Sprintf("KPI-Attribution attributionData"))
+		logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
 
 		if err != nil {
 			return nil, err
@@ -236,11 +271,25 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 			logCtx.WithFields(log.Fields{"AttributionDebug": "attributionData"}).Info(fmt.Sprintf("Total users with session: %d", uniqueKeys))
 		}
 
+		// for KPI queries, use the kpiData.KpiAggFunctionTypes as ConvAggFunctionType
+		var convAggFunctionType []string
+		for _, val := range kpiData {
+			convAggFunctionType = val.KpiAggFunctionTypes
+			break
+		}
+		for key, _ := range *attributionData {
+			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
+		}
+
 		// Add the Added keys
 		model.AddTheAddedKeysAndMetrics(attributionData, query, groupSessions, noOfConversionEvents)
 
 		// Add the performance information
 		model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports, noOfConversionEvents)
+
+		for key, _ := range *attributionData {
+			(*attributionData)[key].ConvAggFunctionType = convAggFunctionType
+		}
 	}
 
 	// Filter out the key values from query (apply filter after performance enrichment)
@@ -289,6 +338,10 @@ func (store *MemSQL) AppendOTPSessions(projectID uint64, query *model.Attributio
 	}
 
 	_sessionsOTP, sessionOTPUsers, err := store.fetchOTPSessions(projectID, otpEvent.ID, query, logCtx)
+	if err != nil {
+		logCtx.Info("fetchOTPSessions failed for OTP events/sessions")
+		return
+	}
 
 	usersInfoOTP, err := store.GetCoalesceIDFromUserIDs(sessionOTPUsers, projectID, logCtx)
 	if err != nil {

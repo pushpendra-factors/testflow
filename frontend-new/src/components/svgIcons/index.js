@@ -1938,6 +1938,14 @@ const PivotchartSVG = () => {
   );
 };
 
+const MarketoSVG = ({ size = 16, extraClass, color }) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M41.1165 11.414L31.4995 6.18604V43.814L41.1165 36.154V11.414ZM27.0185 11.75V35.596L19.2745 38.979V9.46004L27.0185 11.75ZM8.91154 13.37L8.88354 34.73L14.8105 33.164V14.32L8.91154 13.37Z" fill="#5C4C9F"/>
+    </svg>
+  )
+}
+
 export {
   BrandSVG,
   DeleteSVG,
@@ -2071,5 +2079,6 @@ export {
   OrganisationSVG,
   PlayButtonSVG,
   CheckCircleSVG,
-  PivotchartSVG
+  PivotchartSVG,
+  MarketoSVG,
 };
