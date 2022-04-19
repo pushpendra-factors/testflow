@@ -68,83 +68,6 @@ func sendGetSavedQueriesReq(r *gin.Engine, projectId uint64, agent *model.Agent)
 	return w
 }
 
-func executeSharedQueryReq(r *gin.Engine, projectId uint64, agent *model.Agent, shareString string) *httptest.ResponseRecorder {
-
-	var rb *U.RequestBuilder
-	if agent != nil {
-		cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
-		if err != nil {
-			log.WithError(err).Error("Error creating cookie data.")
-		}
-		rb = C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/query?query_id=%s", projectId, shareString)).
-			WithCookie(&http.Cookie{
-				Name:   C.GetFactorsCookieName(),
-				Value:  cookieData,
-				MaxAge: 1000,
-			})
-	} else {
-		rb = C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/query?query_id=%s", projectId, shareString))
-	}
-
-	req, err := rb.Build()
-	if err != nil {
-		log.WithError(err).Error("Error creating get shared queries req.")
-	}
-
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	return w
-}
-
-func sendCreateShareableUrlReq(r *gin.Engine, projectId uint64, agent *model.Agent, share H.ShareableURLParams) *httptest.ResponseRecorder {
-
-	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
-	if err != nil {
-		log.WithError(err).Error("Error creating cookie data.")
-	}
-
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/shareable_url", projectId)).
-		WithPostParams(share).
-		WithCookie(&http.Cookie{
-			Name:   C.GetFactorsCookieName(),
-			Value:  cookieData,
-			MaxAge: 1000,
-		})
-
-	req, err := rb.Build()
-	if err != nil {
-		log.WithError(err).Error("Error creating create shareable url req.")
-	}
-
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	return w
-}
-
-func sendDeleteShareableUrlReq(r *gin.Engine, projectId uint64, agent *model.Agent, shareId string) *httptest.ResponseRecorder {
-
-	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
-	if err != nil {
-		log.WithError(err).Error("Error creating cookie data.")
-	}
-
-	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/shareable_url/%s", projectId, shareId)).
-		WithCookie(&http.Cookie{
-			Name:   C.GetFactorsCookieName(),
-			Value:  cookieData,
-			MaxAge: 1000,
-		})
-
-	req, err := rb.Build()
-	if err != nil {
-		log.WithError(err).Error("Error creating delete shareable url req.")
-	}
-
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	return w
-}
-
 func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, agent *model.Agent, query *H.SavedQueryUpdatePayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
@@ -415,7 +338,7 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 	shareString := responseMap["id_text"].(string)
 
 	// Create public shareable url
-	w = sendCreateShareableUrlReq(r, project.ID, agent, H.ShareableURLParams{
+	w = sendCreateShareableUrlReq(r, project.ID, agent, &H.ShareableURLParams{
 		EntityID: queryId,
 		EntityType: model.ShareableURLEntityTypeQuery,
 		ShareType: model.ShareableURLShareTypePublic,
@@ -472,7 +395,6 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 	
-	
 	responseMap := DecodeJSONResponseToMap(w.Body)
 
 	queryId := uint64(responseMap["id"].(float64))
@@ -487,7 +409,7 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Create public shareable url
-	w = sendCreateShareableUrlReq(r, project.ID, agent, H.ShareableURLParams{
+	w = sendCreateShareableUrlReq(r, project.ID, agent, &H.ShareableURLParams{
 		EntityID: queryId,
 		EntityType: model.ShareableURLEntityTypeQuery,
 		ShareType: model.ShareableURLShareTypePublic,
