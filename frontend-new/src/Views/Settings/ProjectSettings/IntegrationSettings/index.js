@@ -25,6 +25,7 @@ import GoogleSearchConsole from './GoogleSearchConsole';
 import { ErrorBoundary } from 'react-error-boundary';
 import RevealIntegration from './Reveal';
 import BingIntegration from './Bing';
+import MarketoIntegration from './Marketo';
 
 const IntegrationProviderData = [
   {
@@ -32,6 +33,12 @@ const IntegrationProviderData = [
     desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
     icon: 'Segment_ads',
     kbLink: 'https://help.factors.ai/en/articles/5835006-segment',
+  },
+  {
+    name: 'Marketo',
+    desc: 'Marketo is a leader in marketing automation. Using our Marketo source, we will ingest your Program, Campaign, Person and List records into Factors',
+    icon: 'Marketo',
+    kbLink: false,
   },
   {
     name: 'Hubspot',
@@ -133,6 +140,10 @@ const IntegrationCard = ({ item, index }) => {
       case 'Bing Ads':
         return (
           <BingIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
+        );
+      case 'Marketo':
+        return (
+          <MarketoIntegration kbLink={item.kbLink} setIsStatus={setIsStatus} />
         );
       case 'Clearbit Reveal':
         return (
