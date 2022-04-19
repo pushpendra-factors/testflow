@@ -38,6 +38,7 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 			// Skip the datetime header and the other result is of format. ex. "headers": ["$hubspot_deal_hs_object_id", "Revenue", "Pipeline", ...],
 			if res.Headers[0] == "datetime" {
 				kpiQueryResult = res
+				log.WithFields(log.Fields{"KpiQueryResult": kpiQueryResult}).Info("KPI-Attribution result set")
 				break
 			}
 		}
@@ -46,57 +47,13 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 			return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no-valid result for KPI query")
 		}
 
-		datetimeIdx := 0
-		keyIdx := 1
-		valIdx := 2
-		var kpiValueHeaders []string
-		for idx := valIdx; idx < len(kpiQueryResult.Headers); idx++ {
-			kpiValueHeaders = append(kpiValueHeaders, kpiQueryResult.Headers[idx])
-		}
+		kpiKeys = pg.GetDataFromKPIResult(projectID, kpiQueryResult, &kpiData, logCtx)
+	}
 
-		for _, row := range kpiQueryResult.Rows {
-
-			var kpiDetail model.KPIInfo
-
-			// get ID
-			kpiID := row[keyIdx].(string)
-			kpiKeys = append(kpiKeys, kpiID)
-
-			// get time
-			eventTime, err := time.Parse(time.RFC3339, row[datetimeIdx].(string))
-			if err != nil {
-				logCtx.WithError(err).WithFields(log.Fields{"timestamp": row[datetimeIdx]}).Error("couldn't parse the timestamp for KPI query, continuing")
-				continue
-			}
-			kpiDetail.Timestamp = eventTime.Unix()
-			kpiDetail.TimeString = row[datetimeIdx].(string)
-
-			// add kpi values
-			var kpiVals []float64
-			for vi := valIdx; vi < len(row); vi++ {
-				val := float64(0)
-				vInt, okInt := row[vi].(int)
-				if !okInt {
-					vFloat, okFloat := row[vi].(float64)
-					if !okFloat {
-						logCtx.WithError(err).WithFields(log.Fields{"value": row[vi]}).Error("couldn't parse the value for KPI query, continuing")
-						val = 0.0
-					} else {
-						val = vFloat
-					}
-				} else {
-					val = float64(vInt)
-				}
-				kpiVals = append(kpiVals, val)
-			}
-			kpiDetail.KpiValues = kpiVals
-
-			// add headers
-			kpiDetail.KpiHeaderNames = kpiValueHeaders
-
-			// map to kpi data to key - final data
-			kpiData[kpiID] = kpiDetail
-		}
+	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
+	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
+	if len(kpiKeys) == 0 {
+		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
 	}
 
 	groups, errCode := pg.GetGroups(projectID)
@@ -105,6 +62,33 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get groups for project")
 	}
 
+	_groupIDKey, _groupIDUserKey := getGroupKeys(query, groups)
+
+	kpiKeyGroupUserIDList, err := pg.PullGroupUserIDs(projectID, kpiKeys, _groupIDKey, &kpiData, &groupUserIDToKpiID, logCtx)
+	if err != nil {
+		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
+	}
+	log.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
+
+	err = pg.PullKPIKeyUserGroupInfo(projectID, kpiKeyGroupUserIDList, _groupIDUserKey, &kpiData, &groupUserIDToKpiID, logCtx)
+	if err != nil {
+		return kpiData, groupUserIDToKpiID, kpiKeys, err
+	}
+
+	logCtx.Info("done pulling group user list ids for Deal or Opportunity")
+	log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
+		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 1")
+	err = pg.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
+	if err != nil {
+		return kpiData, groupUserIDToKpiID, kpiKeys, err
+	}
+	log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
+		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 2")
+
+	return kpiData, groupUserIDToKpiID, kpiKeys, nil
+}
+
+func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, string) {
 	var _groupIDKey string
 	var _groupIDUserKey string
 	if query.AnalyzeType == model.AnalyzeTypeHSDeals {
@@ -127,26 +111,118 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 			}
 		}
 	}
+	return _groupIDKey, _groupIDUserKey
+}
 
-	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
-	var kpiKeyGroupUserIDList []string
-	log.WithFields(log.Fields{"kpiKeys": kpiKeys}).Info("KPI-Attribution keys set")
+func (pg *Postgres) GetDataFromKPIResult(projectID uint64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, logCtx log.Entry) []string {
 
-	if kpiKeys == nil || len(kpiKeys) == 0 {
-		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
+	datetimeIdx := 0
+	keyIdx := 1
+	valIdx := 2
+	var kpiKeys []string
+	var kpiAggFunctionType []string
+
+	var kpiValueHeaders []string
+	for idx := valIdx; idx < len(kpiQueryResult.Headers); idx++ {
+		kpiValueHeaders = append(kpiValueHeaders, kpiQueryResult.Headers[idx])
 	}
 
+	if len(kpiValueHeaders) == 0 {
+		return kpiKeys
+	}
+
+	customMetrics, errMsg, statusCode := pg.GetCustomMetricsByProjectId(projectID)
+	if statusCode != http.StatusFound {
+		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
+		return kpiKeys
+	}
+
+	mapKpiAggFunctionType := make(map[string]string)
+	for _, kpi := range customMetrics {
+		var customMetricTransformation model.CustomMetricTransformation
+		err := U.DecodePostgresJsonbToStructType(kpi.Transformations, &customMetricTransformation)
+		if err != nil {
+			continue
+		}
+		mapKpiAggFunctionType[kpi.Name] = customMetricTransformation.AggregateFunction
+	}
+
+	for _, kpiName := range kpiValueHeaders {
+		if fType, exists := mapKpiAggFunctionType[kpiName]; exists {
+			kpiAggFunctionType = append(kpiAggFunctionType, fType)
+		}
+	}
+
+	if len(kpiValueHeaders) != len(kpiAggFunctionType) {
+		logCtx.WithField("kpiAggFunctionType", kpiAggFunctionType).WithField("kpiValueHeaders", kpiValueHeaders).Warn("failed to get function types of all of given KPI")
+		return kpiKeys
+	}
+
+	log.WithFields(log.Fields{"kpiValueHeaders": kpiValueHeaders}).Info("KPI-Attribution headers set")
+
+	for _, row := range kpiQueryResult.Rows {
+
+		log.WithFields(log.Fields{"Row": row}).Info("KPI-Attribution KPI Row")
+
+		var kpiDetail model.KPIInfo
+
+		// get ID
+		kpiID := row[keyIdx].(string)
+		kpiKeys = append(kpiKeys, kpiID)
+
+		// get time
+		eventTime, err := time.Parse(time.RFC3339, row[datetimeIdx].(string))
+		if err != nil {
+			logCtx.WithError(err).WithFields(log.Fields{"timestamp": row[datetimeIdx]}).Error("couldn't parse the timestamp for KPI query, continuing")
+			continue
+		}
+		kpiDetail.Timestamp = eventTime.Unix()
+		kpiDetail.TimeString = row[datetimeIdx].(string)
+
+		// add kpi values
+		var kpiVals []float64
+		for vi := valIdx; vi < len(row); vi++ {
+			val := float64(0)
+			vInt, okInt := row[vi].(int)
+			if !okInt {
+				vFloat, okFloat := row[vi].(float64)
+				if !okFloat {
+					logCtx.WithError(err).WithFields(log.Fields{"value": row[vi]}).Error("couldn't parse the value for KPI query, continuing")
+					val = 0.0
+				} else {
+					val = vFloat
+				}
+			} else {
+				val = float64(vInt)
+			}
+			kpiVals = append(kpiVals, val)
+		}
+		kpiDetail.KpiValues = kpiVals
+
+		// add headers
+		kpiDetail.KpiHeaderNames = kpiValueHeaders
+		// add aggregate function type
+		kpiDetail.KpiAggFunctionTypes = kpiAggFunctionType
+
+		// map to kpi data to key - final data
+		(*kpiData)[kpiID] = kpiDetail
+	}
+	return kpiKeys
+}
+
+func (pg *Postgres) PullGroupUserIDs(projectID uint64, kpiKeys []string, _groupIDKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) ([]string, error) {
+
+	var kpiKeyGroupUserIDList []string
 	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeys))
 	kpiKeysIdValue := U.GetInterfaceList(kpiKeys)
-
 	groupUserQuery := "Select id, " + _groupIDKey + " FROM users WHERE project_id=? AND " + _groupIDKey + " IN ( " + kpiKeysIdPlaceHolder + " ) "
 	var gUParams []interface{}
 	gUParams = append(gUParams, projectID)
 	gUParams = append(gUParams, kpiKeysIdValue...)
-	gURows, tx, err := pg.ExecQueryWithContext(groupUserQuery, gUParams)
+	gURows, tx1, err := pg.ExecQueryWithContext(groupUserQuery, gUParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
-		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get groupUserQuery result for project")
+		return kpiKeyGroupUserIDList, errors.New("failed to get groupUserQuery result for project")
 	}
 	for gURows.Next() {
 		var groupUserIDNull sql.NullString
@@ -164,16 +240,19 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 		}
 
 		// enrich KPI group ID
-		v := kpiData[kpiID]
+		v := (*kpiData)[kpiID]
 		v.KpiGroupID = groupUserID
-		kpiData[kpiID] = v
+		(*kpiData)[kpiID] = v
 
-		groupUserIDToKpiID[groupUserID] = kpiID
+		(*groupUserIDToKpiID)[groupUserID] = kpiID
 		kpiKeyGroupUserIDList = append(kpiKeyGroupUserIDList, groupUserID)
 
 	}
-	logCtx.Info("done pulling group ids for Deal or Opportunity")
+	defer U.CloseReadQuery(gURows, tx1)
+	return kpiKeyGroupUserIDList, nil
+}
 
+func (pg *Postgres) PullKPIKeyUserGroupInfo(projectID uint64, kpiKeyGroupUserIDList []string, _groupIDUserKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
 	kpiKeysGroupUserIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeyGroupUserIDList))
@@ -183,10 +262,10 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 	var gULParams []interface{}
 	gULParams = append(gULParams, projectID)
 	gULParams = append(gULParams, kpiKeysGroupUserIdValue...)
-	gULRows, tx, err := pg.ExecQueryWithContext(groupUserListQuery, gULParams)
+	gULRows, tx2, err := pg.ExecQueryWithContext(groupUserListQuery, gULParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
-		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get groupUserListQuery result for project")
+		return errors.New("failed to get groupUserListQuery result for project")
 	}
 	for gULRows.Next() {
 		var groupIDNull sql.NullString
@@ -205,21 +284,92 @@ func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.Attr
 			continue
 		}
 
-		kpiID := groupUserIDToKpiID[groupID]
-		if _, exists := kpiData[kpiID]; exists {
-			v := kpiData[kpiID]
+		kpiID := (*groupUserIDToKpiID)[groupID]
+		if _, exists := (*kpiData)[kpiID]; exists {
+			v := (*kpiData)[kpiID]
 			v.KpiCoalUserIds = append(v.KpiCoalUserIds, coalUserID)
 			v.KpiUserIds = append(v.KpiUserIds, userID)
-			kpiData[kpiID] = v
+			(*kpiData)[kpiID] = v
 		}
 	}
+	log.WithFields(log.Fields{"kpiData": kpiData}).Info("KPI-Attribution group set")
+	defer U.CloseReadQuery(gULRows, tx2)
+	return nil
+}
 
-	logCtx.Info("done pulling group user list ids for Deal or Opportunity")
+func (pg *Postgres) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error {
+	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
-	defer U.CloseReadQuery(gURows, tx)
-	defer U.CloseReadQuery(gULRows, tx)
+	var customerUserIdList []string
+	for _, v := range *kpiData {
+		customerUserIdList = append(customerUserIdList, v.KpiCoalUserIds...)
+	}
 
-	return kpiData, groupUserIDToKpiID, kpiKeys, nil
+	custUserIdToUserIds := make(map[string][]string)
+	custUserIDPlaceHolder := U.GetValuePlaceHolder(len(customerUserIdList))
+	custUserIDs := U.GetInterfaceList(customerUserIdList)
+	groupUserListQuery := "Select users.id, users.customer_user_id FROM users WHERE project_id=? " +
+		" AND users.customer_user_id IN ( " + custUserIDPlaceHolder + " ) "
+	var gULParams []interface{}
+	gULParams = append(gULParams, projectID)
+	gULParams = append(gULParams, custUserIDs...)
+	gULRows, tx2, err := pg.ExecQueryWithContext(groupUserListQuery, gULParams)
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return errors.New("failed to get groupUserListQuery result for project")
+	}
+	for gULRows.Next() {
+		var userIDNull sql.NullString
+		var custUserIDNull sql.NullString
+		if err = gULRows.Scan(&userIDNull, &custUserIDNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+
+		userID := U.IfThenElse(userIDNull.Valid, userIDNull.String, model.PropertyValueNone).(string)
+		custUserID := U.IfThenElse(custUserIDNull.Valid, custUserIDNull.String, model.PropertyValueNone).(string)
+		if userID == model.PropertyValueNone || custUserID == model.PropertyValueNone {
+			logCtx.WithError(err).Error("Values are not correct - userID & custUserID . Ignoring row. Continuing")
+			continue
+		}
+
+		if _, exists := custUserIdToUserIds[custUserID]; exists {
+			v := custUserIdToUserIds[custUserID]
+			v = append(v, userID)
+			custUserIdToUserIds[custUserID] = v
+		} else {
+			var users []string
+			users = append(users, userID)
+			custUserIdToUserIds[custUserID] = users
+		}
+	}
+	log.WithFields(log.Fields{"custUserIdToUserIds": custUserIdToUserIds}).Info("KPI-Attribution custUserIdToUserIds set")
+
+	for k, v := range *kpiData {
+		userIdMap := make(map[string]bool)
+		// Add new users
+		for _, uid := range v.KpiUserIds {
+			userIdMap[uid] = true
+		}
+
+		// Add new users
+		for _, cid := range v.KpiCoalUserIds {
+			if _, exists := custUserIdToUserIds[cid]; exists {
+				for _, userID := range custUserIdToUserIds[cid] {
+					userIdMap[userID] = true
+				}
+			}
+		}
+		var users []string
+		for uID := range userIdMap {
+			users = append(users, uID)
+		}
+		// Replace users & Update the KPIInfo
+		v.KpiUserIds = users
+		(*kpiData)[k] = v
+	}
+	defer U.CloseReadQuery(gULRows, tx2)
+	return nil
 }
 
 func (pg *Postgres) FireAttributionForKPI(projectID uint64, query *model.AttributionQuery,
@@ -263,7 +413,9 @@ func (pg *Postgres) runAttributionKPI(projectID uint64,
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, error) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 
-	// 4. Apply attribution based on given attribution methodology
+	logCtx.WithFields(log.Fields{"sessionWT": sessionWT}).Info("KPI-Attribution sessionWT")
+
+	// Apply attribution based on given attribution methodology
 	userConversionHit, err := model.ApplyAttributionKPI(
 		query.QueryType,
 		query.AttributionMethodology,
@@ -274,8 +426,12 @@ func (pg *Postgres) runAttributionKPI(projectID uint64,
 		return nil, err
 	}
 
+	logCtx.WithFields(log.Fields{"userConversionHit": userConversionHit}).Info("KPI-Attribution userConversionHit")
+
 	attributionData := make(map[string]*model.AttributionData)
 	attributionData = model.AddUpConversionEventCount(userConversionHit, sessionWT)
+	logCtx.WithFields(log.Fields{"attributionData": attributionData}).Info("KPI-Attribution attributionData")
+
 	return &attributionData, nil
 }
 
