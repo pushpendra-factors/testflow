@@ -52,7 +52,7 @@ const MarketoIntegration = ({
   useEffect(() => {
     isMarketoEnabled();
     if (marketo.status) {
-      marketo.accounts == '' ? setIsStatus('Pending') : setIsStatus('Active');
+      setIsStatus('Active');
       setAccounts(marketo.accounts);
     } else {
       setIsStatus('');
@@ -119,6 +119,7 @@ const MarketoIntegration = ({
                   color={'grey'}
                   extraClass={'m-0 mt-2'}
                 >
+<<<<<<< HEAD
                   Marketo sync account details
                 </Text>
                 {accounts == "" ? 
@@ -131,6 +132,10 @@ const MarketoIntegration = ({
                   No ads account found or partial integration. Please disconnect and try again.
                 </Text>
                 :
+=======
+                  Marketo sync is enabled
+                </Text>
+>>>>>>> staging
                 <Input
                   size='large'
                   disabled={true}
@@ -139,7 +144,10 @@ const MarketoIntegration = ({
                   }
                   style={{ width: '400px' }}
                 />
+<<<<<<< HEAD
                 }
+=======
+>>>>>>> staging
               </div>
             </>
           )}

@@ -154,7 +154,7 @@ class BaseReportExtract(BaseExtract):
 
     def transform_array_metrics_with_action_type(self, records):
         new_records = []
-        keys= [COST_PER_ACTION_TYPE, WEBSITE_PURCHASE_ROAS]
+        keys= [ACTIONS, ACTION_VALUES]
         for record in records:
             for key in keys:
                 if key in record:

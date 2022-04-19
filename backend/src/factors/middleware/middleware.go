@@ -702,6 +702,12 @@ func ValidateAccessToSharedEntity(entityType int) gin.HandlerFunc {
 			}
 			agentId = agent.UUID
 			U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+
+			if C.EnableDemoReadAccess() && C.IsDemoProject(urlParamProjectId) {
+				U.SetScope(c, SCOPE_PROJECT_ID, urlParamProjectId)
+				c.Next()
+				return
+			}
 		}
 
 		// Check whether is part of the project, if yes than access allowed directly
