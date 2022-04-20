@@ -7,7 +7,7 @@ import Highcharts from 'highcharts';
 import { high_charts_default_spacing } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import TopLegends from '../GroupedBarChart/TopLegends';
-import { addQforQuarter, generateColors } from '../../utils/dataFormatter';
+import { generateColors } from '../../utils/dataFormatter';
 
 function LineChart({
   categories,
@@ -47,9 +47,7 @@ function LineChart({
               return moment(this.value).format('MMM D, h A');
             } else if (frequency === 'date' || frequency === 'week') {
               return moment(this.value).format('MMM D');
-            } else if (frequency === 'month') {
-              return moment(this.value).format('MMM YYYY');
-            } else return `${'Q' + moment(this.value).format('Q, YYYY')}`;
+            } else return moment(this.value).format('MMM YYYY');
           },
         },
       },
@@ -73,9 +71,7 @@ function LineChart({
               ? 'MMM D, h A'
               : frequency === 'date' || frequency === 'week'
               ? 'MMM D, YYYY'
-              : frequency === 'month'
-              ? 'MMM YYYY'
-              : 'Q, YYYY';
+              : 'MMM YYYY';
           return ReactDOMServer.renderToString(
             <>
               <Text
@@ -84,8 +80,7 @@ function LineChart({
                 type='title'
                 extraClass='text-sm mb-0'
               >
-                {addQforQuarter(frequency) +
-                  moment(this.point.category).format(format)}
+                {moment(this.point.category).format(format)}
               </Text>
               <Text
                 color='grey-2'

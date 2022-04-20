@@ -43,7 +43,6 @@ const BreakdownCharts = ({
   section,
   currentEventIndex,
   unit,
-  durationObj,
 }) => {
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [visibleSeriesData, setVisibleSeriesData] = useState([]);
@@ -158,7 +157,7 @@ const BreakdownCharts = ({
   } else if (chartType === CHART_TYPE_LINECHART) {
     chartContent = (
       <LineChart
-        frequency={durationObj.frequency}
+        frequency={'date'}
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
@@ -170,7 +169,7 @@ const BreakdownCharts = ({
   } else if (chartType === CHART_TYPE_STACKED_AREA) {
     chartContent = (
       <StackedAreaChart
-        frequency={durationObj.frequency}
+        frequency={'date'}
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
@@ -182,7 +181,7 @@ const BreakdownCharts = ({
   } else if (chartType === CHART_TYPE_STACKED_BAR) {
     chartContent = (
       <StackedBarChart
-        frequency={durationObj.frequency}
+        frequency={'date'}
         categories={categories}
         data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}

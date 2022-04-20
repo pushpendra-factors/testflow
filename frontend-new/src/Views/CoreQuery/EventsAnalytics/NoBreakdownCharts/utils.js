@@ -1,7 +1,6 @@
 import React from 'react';
 import MomentTz from 'Components/MomentTz';
 import {
-  addQforQuarter,
   getClickableTitleSorter,
   SortResults,
 } from '../../../../utils/dataFormatter';
@@ -70,7 +69,7 @@ export const getColumns = (
       ),
       dataIndex: 'date',
       render: (d) => {
-        return addQforQuarter(frequency) + MomentTz(d).format(format);
+        return MomentTz(d).format(format);
       },
     },
   ];
@@ -188,7 +187,7 @@ export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
     categories: differentDates,
     data: resultantData,
   };
-};
+}
 
 export const getDateBasedColumns = (
   data,
@@ -235,9 +234,9 @@ export const getDateBasedColumns = (
   const dateColumns = data.map((elem) => {
     return {
       title: getClickableTitleSorter(
-        addQforQuarter(frequency) + MomentTz(elem.date).format(format),
+        MomentTz(elem.date).format(format),
         {
-          key: addQforQuarter(frequency) + MomentTz(elem.date).format(format),
+          key: MomentTz(elem.date).format(format),
           type: 'numerical',
           subtype: null,
         },
@@ -246,7 +245,7 @@ export const getDateBasedColumns = (
         'right'
       ),
       width: frequency === 'hour' ? 200 : 150,
-      dataIndex: addQforQuarter(frequency) + MomentTz(elem.date).format(format),
+      dataIndex: MomentTz(elem.date).format(format),
       className: 'text-right',
       render: (d) => {
         return <NumFormat number={d} />;
@@ -268,9 +267,7 @@ export const getNoGroupingTablularDatesBasedData = (
     elem.eventName.toLowerCase().includes(searchText.toLowerCase())
   );
   const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
-  const dates = data.map(
-    (elem) => addQforQuarter(frequency) + MomentTz(elem.date).format(format)
-  );
+  const dates = data.map((elem) => MomentTz(elem.date).format(format));
   const result = filteredMapper.map((elem, index) => {
     let total = 0;
     if (
@@ -296,8 +293,7 @@ export const getNoGroupingTablularDatesBasedData = (
     const eventsData = {};
     dates.forEach((date) => {
       eventsData[date] = data.find(
-        (d) =>
-          addQforQuarter(frequency) + MomentTz(d.date).format(format) === date
+        (d) => MomentTz(d.date).format(format) === date
       )[elem.mapper];
     });
     return {

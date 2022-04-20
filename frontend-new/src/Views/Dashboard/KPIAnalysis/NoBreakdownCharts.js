@@ -40,7 +40,6 @@ const NoBreakdownCharts = ({
   section,
   unit,
   arrayMapper,
-  durationObj,
 }) => {
   const { handleEditQuery } = useContext(DashboardContext);
 
@@ -125,7 +124,7 @@ const NoBreakdownCharts = ({
           </div>
           <div className={unit.cardSize === 1 ? 'w-3/4' : 'w-full'}>
             <SparkChart
-              frequency={durationObj.frequency}
+              frequency='date'
               page='campaigns'
               event={aggregateData[0].name}
               chartData={aggregateData[0].dataOverTime}
@@ -171,14 +170,11 @@ const NoBreakdownCharts = ({
                       level={3}
                       weight={'bold'}
                     >
-                      <NumFormat
-                        shortHand={chartData.total > 1000}
-                        number={chartData.total}
-                      />
+                      <NumFormat shortHand={chartData.total > 1000} number={chartData.total} />
                     </Text>
                     <div className='w-2/3'>
                       <SparkChart
-                        frequency={durationObj.frequency}
+                        frequency='date'
                         page='kpi'
                         event={chartData.name}
                         chartData={chartData.dataOverTime}
@@ -204,7 +200,7 @@ const NoBreakdownCharts = ({
                       />
                       <div className='mt-8'>
                         <SparkChart
-                          frequency={durationObj.frequency}
+                          frequency='date'
                           page='kpi'
                           event={chartData.name}
                           chartData={chartData.dataOverTime}
@@ -241,7 +237,7 @@ const NoBreakdownCharts = ({
   } else if (chartType === CHART_TYPE_LINECHART) {
     chartContent = (
       <LineChart
-        frequency={durationObj.frequency}
+        frequency={'date'}
         categories={categories}
         data={data}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}

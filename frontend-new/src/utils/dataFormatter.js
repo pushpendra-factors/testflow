@@ -457,8 +457,17 @@ export const getValidGranularityOptions = ({ from, to }) => {
   const startDate = moment(from).startOf('day').utc().unix() * 1000;
   const endDate = moment(to).endOf('day').utc().unix() * 1000 + 1000;
   const daysDiff = moment(endDate).diff(startDate, 'days');
-  if (daysDiff > 1) {
+  if (daysDiff > 93) {
     return ['date', 'week', 'month', 'quarter'];
+  }
+  if (daysDiff > 31) {
+    return ['date', 'week', 'month'];
+  }
+  if (daysDiff > 7) {
+    return ['date', 'week'];
+  }
+  if (daysDiff > 1) {
+    return ['date'];
   }
   return ['hour'];
 };
@@ -822,8 +831,4 @@ export const HighlightSearchText = ({ text = '', highlight = '' }) => {
       )}
     </span>
   );
-};
-
-export const addQforQuarter = (freq) => {
-  return freq === 'quarter' ? 'Q' : '';
 };

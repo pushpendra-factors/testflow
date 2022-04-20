@@ -10,8 +10,7 @@ function KPIAnalysis({
   breakdown,
   currMetricsValue = 0,
   unit,
-  arrayMapper,
-  durationObj,
+  arrayMapper
 }) {
   if (breakdown.length) {
     return (
@@ -23,7 +22,6 @@ function KPIAnalysis({
         currentEventIndex={currMetricsValue}
         section={section}
         unit={unit}
-        durationObj={durationObj}
       />
     );
   } else {
@@ -35,7 +33,6 @@ function KPIAnalysis({
         section={section}
         unit={unit}
         arrayMapper={arrayMapper}
-        durationObj={durationObj}
       />
     );
     return null;

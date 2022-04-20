@@ -474,7 +474,7 @@ export const TimeZoneOffsetValues = {
 };
 
 export const DATE_FORMATS = {
-  quarter: 'Q-YYYY',
+  quarter: 'MMM-YYYY',
   month: 'MMM-YYYY',
   date: 'D-MMM-YYYY',
   day: 'D-MMM-YYYY',

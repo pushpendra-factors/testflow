@@ -62,7 +62,9 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   }, []);
 
   const handleDurationChange = useCallback((dates) => {
-    let from, to;
+    let from,
+      to,
+      frequency = 'date';
     if (Array.isArray(dates.startDate)) {
       from = dates.startDate[0];
       to = dates.startDate[1];
@@ -70,19 +72,22 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
       from = dates.startDate;
       to = dates.endDate;
     }
+    if (MomentTz(to).diff(from, 'hours') < 24) {
+      frequency = 'hour';
+    }
 
     setDurationObj((currState) => {
       const newState = {
         ...currState,
         from,
         to,
+        frequency,
         dateType: dates.dateType,
       };
       setItemToLocalStorage(
         LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION,
         JSON.stringify(newState)
       );
-      console.log("newState:::", newState)
       return newState;
     });
   }, []);

@@ -89,6 +89,7 @@ const BreakdownCharts = ({
         breakdown={breakdown}
         currentEventIndex={currentEventIndex}
         chartType={chartType}
+        sorter={sorter}
         handleSorting={handleSorting}
         visibleProperties={visibleProperties}
         isWidgetModal={false}

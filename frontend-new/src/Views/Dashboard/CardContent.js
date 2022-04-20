@@ -288,7 +288,6 @@ function CardContent({ unit, resultState, durationObj }) {
           breakdown={breakdown}
           unit={unit}
           arrayMapper={arrayMapper}
-          durationObj={durationObj}
         />
       );
     }
