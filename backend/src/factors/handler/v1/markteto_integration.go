@@ -60,7 +60,6 @@ func EnableMarketoIntegration(c *gin.Context) (interface{}, int, string, string,
 	})
 	connectorId, schemaId, err := store.GetStore().GetLatestFiveTranMapping(projectID, model.MarketoIntegration)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to fetch connector id from db")
 		return nil, http.StatusNotFound, "", err.Error(), true
 	}
 	statusCode, errMsg := fivetran.FiveTranReloadConnectorSchema(connectorId)
