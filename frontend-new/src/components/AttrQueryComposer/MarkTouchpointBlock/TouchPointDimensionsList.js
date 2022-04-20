@@ -38,7 +38,6 @@ function TouchPointDimensionsList({ touchPoint }) {
         newAttrDimensions.filter(
           (d) => d.touchPoint === touchPoint && d.enabled
         ).length > 0;
-      console.log('newAttr', newAttrDimensions);
       if (isAtleastOneSelected) {
         if (touchPoint === 'LandingPage') {
           dispatch({

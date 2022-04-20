@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useCallback } from "react";
 import * as d3 from "d3";
 import moment from "moment";
 import styles from "./index.module.scss";
-import { numberWithCommas, formatCount } from "../../utils/dataFormatter";
+import { numberWithCommas, formatCount, addQforQuarter } from "../../utils/dataFormatter";
 
 function SparkChart({
   chartData,
@@ -178,23 +178,27 @@ function SparkChart({
         "translate(" + x(d.date) + "," + y(d[event]) + ")"
       );
       tooltip.style("display", "block");
-      let format = "MMM D, YYYY";
-      if (frequency === "hour") {
-        format = "h A, MMM D, YYYY";
-      }
+      let format =
+        frequency === 'hour'
+          ? 'h A, MMM D, YYYY'
+          : frequency === 'date' || frequency === 'week'
+          ? 'MMM D, YYYY'
+          : frequency === 'month'
+          ? 'MMM YYYY'
+          : 'Q, YYYY';
       tooltip
         .html(
           `
-                <div class="font-semibold">${moment(d.date).format(
-                  format
-                )}</div>
+                <div class="font-semibold">${
+                  addQforQuarter(frequency) + moment(d.date).format(format)
+                }</div>
                 <div class="font-normal mt-1">${numberWithCommas(
                   formatCount(d[event], 1)
                 )}</div>
             `
         )
-        .style("left", left + "px")
-        .style("top", d3.event.pageY - 40 + "px");
+        .style('left', left + 'px')
+        .style('top', d3.event.pageY - 40 + 'px');
     }
   }, [
     bisectDate,
