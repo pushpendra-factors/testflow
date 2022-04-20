@@ -1771,7 +1771,10 @@ func (pg *Postgres) addGroupUserPropertyDetailsToCache(projectID uint64, groupNa
 		if value == nil {
 			continue
 		}
-		category := pg.GetPropertyTypeByKeyValue(projectID, groupName, property, value, false)
+
+		// TODO: Add support type support on property details for group properties.
+		// Using user_properties temporarily.
+		category := pg.GetPropertyTypeByKeyValue(projectID, "", property, value, true)
 		var propertyValue string
 		if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {
 			category = U.PropertyTypeCategorical

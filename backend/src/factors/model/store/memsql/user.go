@@ -2208,7 +2208,10 @@ func (store *MemSQL) addGroupUserPropertyDetailsToCache(projectID uint64, groupN
 		if value == nil {
 			continue
 		}
-		category := store.GetPropertyTypeByKeyValue(projectID, groupName, property, value, false)
+
+		// TODO: Add support type support on property details for group properties.
+		// Using user_properties temporarily.
+		category := store.GetPropertyTypeByKeyValue(projectID, "", property, value, true)
 		var propertyValue string
 		if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {
 			category = U.PropertyTypeCategorical
