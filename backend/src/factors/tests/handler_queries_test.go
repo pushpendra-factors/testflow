@@ -338,7 +338,7 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 	shareString := responseMap["id_text"].(string)
 
 	// Create public shareable url
-	w = sendCreateShareableUrlReq(r, project.ID, agent, H.ShareableURLParams{
+	w = sendCreateShareableUrlReq(r, project.ID, agent, &H.ShareableURLParams{
 		EntityID:        queryId,
 		EntityType:      model.ShareableURLEntityTypeQuery,
 		ShareType:       model.ShareableURLShareTypePublic,
@@ -409,7 +409,7 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 
 	// Create public shareable url
 
-	w = sendCreateShareableUrlReq(r, project.ID, agent, H.ShareableURLParams{
+	w = sendCreateShareableUrlReq(r, project.ID, agent, &H.ShareableURLParams{
 		EntityID:        queryId,
 		EntityType:      model.ShareableURLEntityTypeQuery,
 		ShareType:       model.ShareableURLShareTypePublic,
