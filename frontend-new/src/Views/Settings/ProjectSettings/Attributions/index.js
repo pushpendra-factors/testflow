@@ -121,7 +121,6 @@ const Attributions = ({
             index={value.length + 1}
             editMode={() => setEdit(true)}
             value={value}
-            value={value}
             attrConfig={attrConfig}
             setAttrConfig={setAttrConfig}
           />

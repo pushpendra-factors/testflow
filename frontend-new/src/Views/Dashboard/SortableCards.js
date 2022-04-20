@@ -5,7 +5,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import { UNITS_ORDER_CHANGED } from '../../reducers/types';
 import { updateDashboard } from '../../reducers/dashboard/services';
 import { getRequestForNewState } from '../../reducers/dashboard/utils';
-import { QUERY_TYPE_WEB } from '../../utils/constants';
+import {
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_KPI,
+  QUERY_TYPE_WEB,
+} from '../../utils/constants';
 import WebsiteAnalytics from './WebsiteAnalytics';
 import { Text } from '../../components/factorsComponents';
 
@@ -101,9 +105,18 @@ function SortableCards({
       >
         {activeUnits.map((item) => {
           const savedQuery = savedQueries.find((sq) => sq.id === item.query_id);
+          let frequency, queryType;
+          if (savedQuery.query.query_group) {
+            queryType = QUERY_TYPE_EVENT;
+            frequency = savedQuery.query.query_group[0].gbt;
+          } else if (savedQuery.query.cl === QUERY_TYPE_KPI) {
+            queryType = QUERY_TYPE_KPI;
+            frequency = savedQuery.query.qG[1].gbt;
+          }
+
           return (
             <WidgetCard
-              durationObj={durationObj}
+              durationObj={{ ...durationObj, frequency: frequency }}
               key={item.id}
               unit={{ ...item, query: savedQuery }}
               onDrop={onDrop}
