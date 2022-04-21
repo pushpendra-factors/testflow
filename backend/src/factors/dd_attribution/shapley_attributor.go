@@ -1,25 +1,11 @@
 package dd_attribution
 
-import (
-	"encoding/json"
-	"factors/filestore"
-	serviceDisk "factors/services/disk"
-	"fmt"
-
-	log "github.com/sirupsen/logrus"
-
-	"encoding/json"
-	"factors/filestore"
-	P "factors/pattern"
-	serviceDisk "factors/services/disk"
-	"fmt"
-
-	log "github.com/sirupsen/logrus"
-)
+/*
+// NON-COMPILING CODE.
 
 type SetFreqDist struct {
-	maxItems	int
-	setFreqDist   map[Set]interface{}
+	maxItems    int
+	setFreqDist map[Set]interface{}
 }
 
 func computeTouchPointSynergies(projectId uint64, periodCode Period, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, deltaQuery Query, multiStepQuery MultiFunnelQuery, k int, unionOfFeatures *(map[string]map[string]bool), passId int, insightGranularity string, isEventOccurence bool, isMultiStep bool) error {
@@ -73,3 +59,4 @@ func computeShapleyValues() {
     scores = shapley
     return scores
 }
+*/

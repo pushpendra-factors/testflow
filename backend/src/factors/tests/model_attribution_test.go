@@ -2065,7 +2065,7 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := model.MergeDataRowsHavingSameKey(tt.args.rows, 0, model.AttributionKeyCampaign, logCtx)
+			got := model.MergeDataRowsHavingSameKey(tt.args.rows, 0, model.AttributionKeyCampaign, model.AnalyzeTypeUsers, nil, logCtx)
 			for rowNo, _ := range got {
 				for colNo, _ := range got[rowNo] {
 					if got[rowNo][colNo] != tt.want[rowNo][colNo] {
@@ -2122,7 +2122,7 @@ func TestAddGrandTotalRow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0)
+			resultGot := model.AddGrandTotalRow(tt.args.headers, tt.args.rows, 0, model.AnalyzeTypeUsers, nil)
 			got := resultGot[0]
 			for colNo, _ := range got {
 				if got[colNo] != tt.want[colNo] {

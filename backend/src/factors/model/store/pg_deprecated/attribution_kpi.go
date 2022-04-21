@@ -1,4 +1,4 @@
-package memsql
+package postgres
 
 import (
 	"database/sql"
@@ -6,15 +6,14 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // ExecuteKPIForAttribution Executes the KPI sub-query for Attribution
-func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.AttributionQuery, debugQueryKey string, logCtx log.Entry) (map[string]model.KPIInfo, map[string]string, []string, error) {
+func (pg *Postgres) ExecuteKPIForAttribution(projectID uint64, query *model.AttributionQuery, debugQueryKey string, logCtx log.Entry) (map[string]model.KPIInfo, map[string]string, []string, error) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
 
@@ -27,8 +26,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 
 		var duplicatedRequest model.KPIQueryGroup
 		U.DeepCopy(&query.KPI, &duplicatedRequest)
-		resultGroup, statusCode := store.ExecuteKPIQueryGroup(projectID, debugQueryKey, duplicatedRequest)
-		log.WithFields(log.Fields{"ResultGroup": resultGroup, "Status": statusCode}).Info("KPI-Attribution result received")
+		resultGroup, statusCode := pg.ExecuteKPIQueryGroup(projectID, debugQueryKey, duplicatedRequest)
 		if statusCode != http.StatusOK {
 			logCtx.Error("failed to get KPI result for attribution query")
 			if statusCode == http.StatusPartialContent {
@@ -49,7 +47,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 			return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no-valid result for KPI query")
 		}
 
-		kpiKeys = store.GetDataFromKPIResult(projectID, kpiQueryResult, &kpiData, logCtx)
+		kpiKeys = pg.GetDataFromKPIResult(projectID, kpiQueryResult, &kpiData, logCtx)
 	}
 
 	// Pulling group ID (group user ID) for each KPI ID i.e. Deal ID or Opp ID
@@ -58,7 +56,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
 	}
 
-	groups, errCode := store.GetGroups(projectID)
+	groups, errCode := pg.GetGroups(projectID)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to get groups for project")
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("failed to get groups for project")
@@ -66,13 +64,13 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 
 	_groupIDKey, _groupIDUserKey := getGroupKeys(query, groups)
 
-	kpiKeyGroupUserIDList, err := store.PullGroupUserIDs(projectID, kpiKeys, _groupIDKey, &kpiData, &groupUserIDToKpiID, logCtx)
+	kpiKeyGroupUserIDList, err := pg.PullGroupUserIDs(projectID, kpiKeys, _groupIDKey, &kpiData, &groupUserIDToKpiID, logCtx)
 	if err != nil {
 		return kpiData, groupUserIDToKpiID, kpiKeys, errors.New("no valid KPIs found for this query to run")
 	}
 	log.WithFields(log.Fields{"kpiKeyGroupUserIDList": kpiKeyGroupUserIDList}).Info("KPI-Attribution group set")
 
-	err = store.PullKPIKeyUserGroupInfo(projectID, kpiKeyGroupUserIDList, _groupIDUserKey, &kpiData, &groupUserIDToKpiID, logCtx)
+	err = pg.PullKPIKeyUserGroupInfo(projectID, kpiKeyGroupUserIDList, _groupIDUserKey, &kpiData, &groupUserIDToKpiID, logCtx)
 	if err != nil {
 		return kpiData, groupUserIDToKpiID, kpiKeys, err
 	}
@@ -80,7 +78,7 @@ func (store *MemSQL) ExecuteKPIForAttribution(projectID uint64, query *model.Att
 	logCtx.Info("done pulling group user list ids for Deal or Opportunity")
 	log.WithFields(log.Fields{"KPIAttribution": "Debug", "kpiData": kpiData, "groupUserIDToKpiID": groupUserIDToKpiID,
 		"kpiKeys": kpiKeys}).Info("KPI-Attribution kpiData reports 1")
-	err = store.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
+	err = pg.PullAllUsersByCustomerUserID(projectID, &kpiData, logCtx)
 	if err != nil {
 		return kpiData, groupUserIDToKpiID, kpiKeys, err
 	}
@@ -116,7 +114,7 @@ func getGroupKeys(query *model.AttributionQuery, groups []model.Group) (string, 
 	return _groupIDKey, _groupIDUserKey
 }
 
-func (store *MemSQL) GetDataFromKPIResult(projectID uint64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, logCtx log.Entry) []string {
+func (pg *Postgres) GetDataFromKPIResult(projectID uint64, kpiQueryResult model.QueryResult, kpiData *map[string]model.KPIInfo, logCtx log.Entry) []string {
 
 	datetimeIdx := 0
 	keyIdx := 1
@@ -133,7 +131,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID uint64, kpiQueryResult model
 		return kpiKeys
 	}
 
-	customMetrics, errMsg, statusCode := store.GetCustomMetricsByProjectId(projectID)
+	customMetrics, errMsg, statusCode := pg.GetCustomMetricsByProjectId(projectID)
 	if statusCode != http.StatusFound {
 		logCtx.WithField("messageFinder", "Failed to get custom metrics").Error(errMsg)
 		return kpiKeys
@@ -212,7 +210,7 @@ func (store *MemSQL) GetDataFromKPIResult(projectID uint64, kpiQueryResult model
 	return kpiKeys
 }
 
-func (store *MemSQL) PullGroupUserIDs(projectID uint64, kpiKeys []string, _groupIDKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) ([]string, error) {
+func (pg *Postgres) PullGroupUserIDs(projectID uint64, kpiKeys []string, _groupIDKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) ([]string, error) {
 
 	var kpiKeyGroupUserIDList []string
 	kpiKeysIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeys))
@@ -221,7 +219,7 @@ func (store *MemSQL) PullGroupUserIDs(projectID uint64, kpiKeys []string, _group
 	var gUParams []interface{}
 	gUParams = append(gUParams, projectID)
 	gUParams = append(gUParams, kpiKeysIdValue...)
-	gURows, tx1, err := store.ExecQueryWithContext(groupUserQuery, gUParams)
+	gURows, tx1, err := pg.ExecQueryWithContext(groupUserQuery, gUParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return kpiKeyGroupUserIDList, errors.New("failed to get groupUserQuery result for project")
@@ -254,7 +252,7 @@ func (store *MemSQL) PullGroupUserIDs(projectID uint64, kpiKeys []string, _group
 	return kpiKeyGroupUserIDList, nil
 }
 
-func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID uint64, kpiKeyGroupUserIDList []string, _groupIDUserKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
+func (pg *Postgres) PullKPIKeyUserGroupInfo(projectID uint64, kpiKeyGroupUserIDList []string, _groupIDUserKey string, kpiData *map[string]model.KPIInfo, groupUserIDToKpiID *map[string]string, logCtx log.Entry) error {
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
 	kpiKeysGroupUserIdPlaceHolder := U.GetValuePlaceHolder(len(kpiKeyGroupUserIDList))
@@ -264,7 +262,7 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID uint64, kpiKeyGroupUserID
 	var gULParams []interface{}
 	gULParams = append(gULParams, projectID)
 	gULParams = append(gULParams, kpiKeysGroupUserIdValue...)
-	gULRows, tx2, err := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+	gULRows, tx2, err := pg.ExecQueryWithContext(groupUserListQuery, gULParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return errors.New("failed to get groupUserListQuery result for project")
@@ -299,7 +297,7 @@ func (store *MemSQL) PullKPIKeyUserGroupInfo(projectID uint64, kpiKeyGroupUserID
 	return nil
 }
 
-func (store *MemSQL) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error {
+func (pg *Postgres) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map[string]model.KPIInfo, logCtx log.Entry) error {
 	// Pulling user ID for each KPI ID i.e. associated users with each KPI ID i.e. DealID or OppID - kpiIDToCoalUsers
 
 	var customerUserIdList []string
@@ -315,7 +313,7 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map
 	var gULParams []interface{}
 	gULParams = append(gULParams, projectID)
 	gULParams = append(gULParams, custUserIDs...)
-	gULRows, tx2, err := store.ExecQueryWithContext(groupUserListQuery, gULParams)
+	gULRows, tx2, err := pg.ExecQueryWithContext(groupUserListQuery, gULParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return errors.New("failed to get groupUserListQuery result for project")
@@ -374,7 +372,7 @@ func (store *MemSQL) PullAllUsersByCustomerUserID(projectID uint64, kpiData *map
 	return nil
 }
 
-func (store *MemSQL) FireAttributionForKPI(projectID uint64, query *model.AttributionQuery,
+func (pg *Postgres) FireAttributionForKPI(projectID uint64, query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,
 	sessionWT map[string][]float64, logCtx log.Entry) (*map[string]*model.AttributionData, bool, error) {
@@ -396,18 +394,18 @@ func (store *MemSQL) FireAttributionForKPI(projectID uint64, query *model.Attrib
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
-		attributionData, err = store.RunAttributionForMethodologyComparisonKpi(projectID,
+		attributionData, err = pg.RunAttributionForMethodologyComparisonKpi(projectID,
 			conversionFrom, conversionTo, query, sessions, kpiData, sessionWT, logCtx)
 	} else {
 		// Single event attribution.
-		attributionData, err = store.runAttributionKPI(projectID,
+		attributionData, err = pg.runAttributionKPI(projectID,
 			conversionFrom, conversionTo,
 			query, sessions, kpiData, sessionWT, logCtx)
 	}
 	return attributionData, isCompare, err
 }
 
-func (store *MemSQL) runAttributionKPI(projectID uint64,
+func (pg *Postgres) runAttributionKPI(projectID uint64,
 	conversionFrom, conversionTo int64,
 	query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
@@ -437,7 +435,7 @@ func (store *MemSQL) runAttributionKPI(projectID uint64,
 	return &attributionData, nil
 }
 
-func (store *MemSQL) RunAttributionForMethodologyComparisonKpi(projectID uint64,
+func (pg *Postgres) RunAttributionForMethodologyComparisonKpi(projectID uint64,
 	conversionFrom, conversionTo int64, query *model.AttributionQuery,
 	sessions map[string]map[string]model.UserSessionData,
 	kpiData map[string]model.KPIInfo,
