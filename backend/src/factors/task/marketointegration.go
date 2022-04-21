@@ -107,7 +107,7 @@ func extractMetadataColumns(metadataQueryResult [][]string) ([]string, map[strin
 		columnNamesFromMetadata = append(columnNamesFromMetadata, columnName)
 		metadataIndexForDataType := model.GetMetadataColumnNameIndex("data_type")
 		dataType := metadataLine[metadataIndexForDataType]
-		if dataType == "TIMESTAMP" {
+		if dataType == "TIMESTAMP" || dataType == "DATE" {
 			columnNamesFromMetadataDateTime[columnName] = true
 		}
 	}
