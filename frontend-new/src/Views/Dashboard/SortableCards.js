@@ -105,18 +105,10 @@ function SortableCards({
       >
         {activeUnits.map((item) => {
           const savedQuery = savedQueries.find((sq) => sq.id === item.query_id);
-          let frequency, queryType;
-          if (savedQuery.query.query_group) {
-            queryType = QUERY_TYPE_EVENT;
-            frequency = savedQuery.query.query_group[0].gbt;
-          } else if (savedQuery.query.cl === QUERY_TYPE_KPI) {
-            queryType = QUERY_TYPE_KPI;
-            frequency = savedQuery.query.qG[1].gbt;
-          }
 
           return (
             <WidgetCard
-              durationObj={{ ...durationObj, frequency: frequency }}
+              durationObj={durationObj}
               key={item.id}
               unit={{ ...item, query: savedQuery }}
               onDrop={onDrop}
