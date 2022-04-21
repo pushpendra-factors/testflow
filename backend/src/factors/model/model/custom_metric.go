@@ -23,7 +23,7 @@ const (
 
 var CustomMetricAggregateFunctions = []string{SumAggregateFunction, UniqueAggregationFunction}
 var CustomMetricObjectTypeNames = []string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, HubspotDealsDisplayCategory,
-	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory}
+	SalesforceUsersDisplayCategory, SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory}
 var ProfileQueryType = 1
 
 type CustomMetric struct {
