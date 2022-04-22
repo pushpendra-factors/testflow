@@ -511,6 +511,12 @@ func (store *MemSQL) CreateHubspotDocumentInBatch(projectID uint64, docType int,
 		}
 	}
 
+	// update count cache for batch of documents
+	currentTime := U.TimeNowZ()
+	for range documents {
+		UpdateCountCacheByDocumentType(projectID, &currentTime, "hubspot")
+	}
+
 	return http.StatusCreated
 }
 
