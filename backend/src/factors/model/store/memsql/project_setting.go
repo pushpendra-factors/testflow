@@ -617,7 +617,7 @@ func (store *MemSQL) GetIntGoogleOrganicProjectSettingsForProjectID(projectID ui
 		" " + "agents.int_google_organic_refresh_token as refresh_token, project_settings.int_google_organic_enabled_agent_uuid as agent_uuid" +
 		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_google_organic_enabled_agent_uuid = agents.uuid" +
 		" " + "WHERE project_settings.project_id = ?" +
-		" " + "AND project_settings.int_google_organic_url_prefixes IS NOT NULL" +
+		" " + "AND project_settings.int_google_organic_url_prefixes IS NOT NULL AND project_settings.int_google_organic_url_prefixes != ''" +
 		" " + "AND project_settings.int_google_organic_enabled_agent_uuid IS NOT NULL "
 	params := []interface{}{projectID}
 
@@ -630,7 +630,7 @@ func (store *MemSQL) GetAllIntGoogleOrganicProjectSettings() ([]model.GoogleOrga
 	queryStr := "SELECT project_settings.project_id, project_settings.int_google_organic_url_prefixes as url_prefix," +
 		" " + "agents.int_google_organic_refresh_token as refresh_token, project_settings.int_google_organic_enabled_agent_uuid as agent_uuid" +
 		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_google_organic_enabled_agent_uuid = agents.uuid" +
-		" " + "WHERE project_settings.int_google_organic_url_prefixes IS NOT NULL" +
+		" " + "WHERE project_settings.int_google_organic_url_prefixes IS NOT NULL AND project_settings.int_google_organic_url_prefixes != ''" +
 		" " + "AND project_settings.int_google_organic_enabled_agent_uuid IS NOT NULL "
 	params := make([]interface{}, 0, 0)
 
