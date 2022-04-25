@@ -640,3 +640,8 @@ func (pg *Postgres) GetSalesforceDocumentBeginingTimestampByDocumentTypeForSync(
 
 	return docMinTimestamp, overallMinTimestamp, http.StatusFound
 }
+
+// batch not supported in Postgres
+func (pg *Postgres) BuildAndUpsertDocumentInBatch(projectID uint64, objectName string, values []model.SalesforceRecord) error {
+	return errors.New("method not allowed")
+}

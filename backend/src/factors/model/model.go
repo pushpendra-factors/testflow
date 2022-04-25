@@ -361,6 +361,7 @@ type Model interface {
 	GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.SalesforceDocument, int)
 	UpdateSalesforceDocumentBySyncStatus(projectID uint64, document *model.SalesforceDocument, syncID, userID, groupUserID string, synced bool) int
 	BuildAndUpsertDocument(projectID uint64, objectName string, value model.SalesforceRecord) error
+	BuildAndUpsertDocumentInBatch(projectID uint64, objectName string, values []model.SalesforceRecord) error
 	CreateSalesforceDocument(projectID uint64, document *model.SalesforceDocument) int
 	CreateSalesforceDocumentByAction(projectID uint64, document *model.SalesforceDocument, action model.SalesforceAction) int
 	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int, includeUnSynced bool) ([]model.SalesforceDocument, int)

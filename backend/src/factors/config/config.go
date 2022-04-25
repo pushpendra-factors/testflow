@@ -241,6 +241,7 @@ type Configuration struct {
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
 	SalesforcePropertyLookBackTimeHr                int
+	SalesforceBatchInsertBatchSize                  int
 	AllowHubspotEngagementsByProjectID              string
 }
 
@@ -2132,6 +2133,10 @@ func GetSessionStoreSecret() string {
 
 func GetSalesforcePropertyLookBackTimeHr() int {
 	return GetConfig().SalesforcePropertyLookBackTimeHr
+}
+
+func GetSalesforceBatchInsertBatchSize() int {
+	return GetConfig().SalesforceBatchInsertBatchSize
 }
 
 func AllowHubspotEngagementsByProjectID(projectID uint64) bool {

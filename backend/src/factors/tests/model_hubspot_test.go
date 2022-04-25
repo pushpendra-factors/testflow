@@ -185,7 +185,7 @@ func TestHubspotEngagements(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	
 
-	enrichStatus, _ := IntHubspot.Sync(project.ID, 1)
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 1,time.Now().Unix())
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -328,6 +328,7 @@ func TestHubspotContactFormSubmission(t *testing.T) {
 				"timestamp": 1647393874010,
 				"title": " Webinar 20th Jan 2021"
 		}
+		]
 		
 	}`
 
