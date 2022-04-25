@@ -47,6 +47,7 @@ export const SortRowOptions = ({ data, kpis, breakdown }) => {
 
 export const getFunctionOptions = () => {
   return [
+    'Integer Sum',
     'Sum',
     'Count',
     'Average',

@@ -52,14 +52,13 @@ export const IconAndTextSwitchQueryType = (queryType) => {
 export const getSavedPivotConfig = ({ queryType, selectedReport }) => {
   if (!isPivotSupported({ queryType })) {
     return { ...DEFAULT_PIVOT_CONFIG };
-  } else {
-    const savedPivotConfig = _.get(
-      selectedReport,
-      'settings.pivotConfig',
-      null
-    );
-    return savedPivotConfig
-      ? JSON.parse(savedPivotConfig)
-      : { ...DEFAULT_PIVOT_CONFIG };
   }
+  const savedPivotConfig = _.get(
+    selectedReport,
+    'settings.pivotConfig',
+    null
+  );
+  return savedPivotConfig
+    ? JSON.parse(savedPivotConfig)
+    : { ...DEFAULT_PIVOT_CONFIG };
 };

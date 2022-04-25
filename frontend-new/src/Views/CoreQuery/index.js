@@ -289,7 +289,7 @@ function CoreQuery({
             queryType,
             selectedReport,
           });
-          console.log('pivotConfig', pivotConfig);
+          
           updatePivotConfig(pivotConfig);
 
           //update the chart type to the saved chart type
