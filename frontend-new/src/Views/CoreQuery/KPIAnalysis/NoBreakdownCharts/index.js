@@ -27,7 +27,6 @@ import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
 import SparkChart from '../../../../components/SparkLineChart/Chart';
 import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
-import _ from 'lodash';
 
 const NoBreakdownCharts = forwardRef(
   (

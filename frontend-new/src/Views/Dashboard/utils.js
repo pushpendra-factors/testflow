@@ -200,7 +200,6 @@ export const getDataFromServer = (
     );
   } else {
     let funnelQuery = query.query;
-    console.log('funnelquery', funnelQuery);
     if (durationObj.from && durationObj.to) {
       funnelQuery = {
         ...funnelQuery,
