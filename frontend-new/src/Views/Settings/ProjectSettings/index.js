@@ -16,6 +16,7 @@ import Touchpoints from './Touchpoints';
 import CustomKPI from './CustomKPI';
 import Attributions from './Attributions';
 import ExplainDP from './ExplainDataPoints';
+import Alerts from './Alerts';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -31,6 +32,7 @@ const MenuTabs = {
   Attributions: 'Attributions',
   CustomKPI: 'Custom KPIs',
   ExplainDP: 'Top Events and Properties',
+  Alerts: 'Alerts',
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents }) {
@@ -123,6 +125,9 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
                 <Menu.Item key={MenuTabs.ExplainDP}>
                   {MenuTabs.ExplainDP}
                 </Menu.Item>
+                <Menu.Item key={MenuTabs.Alerts}>
+                  {MenuTabs.Alerts}
+                </Menu.Item>
               </Menu>
             </Col>
             <Col span={15}>
@@ -139,6 +144,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               {selectedMenu === MenuTabs.ContentGroups && <ContentGroups />}
               {selectedMenu === MenuTabs.CustomKPI && <CustomKPI />}
               {selectedMenu === MenuTabs.ExplainDP && <ExplainDP />}
+              {selectedMenu === MenuTabs.Alerts && <Alerts />}
             </Col>
           </Row>
         </div>

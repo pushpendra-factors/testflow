@@ -119,23 +119,8 @@ const MarketoIntegration = ({
                   color={'grey'}
                   extraClass={'m-0 mt-2'}
                 >
-<<<<<<< HEAD
-                  Marketo sync account details
-                </Text>
-                {accounts == "" ? 
-                <Text
-                type={'title'}
-                size={10}
-                color={'red'}
-                extraClass={'m-0 mt-2'}
-                >
-                  No ads account found or partial integration. Please disconnect and try again.
-                </Text>
-                :
-=======
                   Marketo sync is enabled
                 </Text>
->>>>>>> staging
                 <Input
                   size='large'
                   disabled={true}
@@ -144,10 +129,6 @@ const MarketoIntegration = ({
                   }
                   style={{ width: '400px' }}
                 />
-<<<<<<< HEAD
-                }
-=======
->>>>>>> staging
               </div>
             </>
           )}
