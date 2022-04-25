@@ -28,6 +28,250 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestHubspotEngagements(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	jsonContactModelMeetings := `{
+			"engagement": {
+				"id": 49861280153,
+				"portalId": 5928728,
+				"active": true,
+				"createdAt": 1579771558604,
+				"lastUpdated": 1626648055847,
+				"createdBy": 9765292,
+				"modifiedBy": 9765292,
+				"ownerId": 42479827,
+				"type": "MEETING",
+				"uid": "s16eeoebshn9mda18kdba4tt010",
+				"timestamp": 1579837500000,
+				"teamId": "3a81141",
+				"allAccessibleTeamIds": [381141],
+				"queueMembershipIds": [],
+				"bodyPreviewIsTruncated": true,
+				"gdprDeleted": false,
+				"source": "engage",
+				"active": "true"
+			},
+			"associations": {
+				"contactIds": [54051],
+				"companyIds": [],
+				"dealIds": [],
+				"ownerIds": [],
+				"workflowIds": [],
+				"ticketIds": [],
+				"contentIds": [],
+				"quoteIds": []
+			},
+			"attachments": [],
+			"scheduledTasks": [{
+				"engagementId": 4986280153,
+				"portalId": 5928728,
+				"engagementType": "MEETING",
+				"taskType": "PRE_MEETING_NOTIFICATION",
+				"timestamp": 1579835700000,
+				"uuid": "MEETING:8e1628saa68-d93c-41ff-9c02-2a17659e987f"
+			}],
+			"metadata": {
+				"startTime": 1579837500000,
+				"endTime": 1579838400000,
+				"title": "abc",
+				"source": "MEETINGS_PUBLIC",
+				"sourceId": "s16eeoebhasdn9mda18kdba4tt010",
+				"createdFromLinkId": 852169,
+				"preMeetingProspectReminders": [],
+				"attendeeOwnerIds": [],
+				"meetingOutcome": "nope"
+			}
+	}
+	`
+	jsonContactModelCalls := `{
+			  "engagement": {
+				"id": 4709059,
+				"portalId": 62515,
+				"active": true,
+				"createdAt": 1428586724779,
+				"lastUpdated": 1428586724779,
+				"createdBy": 215482,
+				"modifiedBy": 215482,
+				"ownerId": 70,
+				"type": "CALL",
+				"timestamp": 1428565020000,
+				"source": "engage",
+				"activityType": "calls"
+			  },
+			  "associations": {
+				"contactIds": [
+				  54051
+				],
+				"companyIds": [
+				  8347
+				],
+				"dealIds": [
+				  
+				],
+				"ownerIds": [
+				  
+				],
+				"workflowIds": [
+				  
+				]
+			  },
+			  "attachments": [
+				
+			  ],
+			  "metadata": {
+				"durationMilliseconds": 24000,
+				"body": "test call",
+				"disposition": "decent",
+				"status": "ok",
+				"title": "call"
+			  }
+	}`
+
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	jsonContact := fmt.Sprintf(jsonContactModel, 54051, 1428586724779, 1428586724779, 1428586724779, "lead", "a", "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	
+	contactPJsonMeetings := postgres.Jsonb{json.RawMessage(jsonContactModelMeetings)}
+	contactPJsonCalls := postgres.Jsonb{json.RawMessage(jsonContactModelCalls)}
+	
+	hubspotDocumentMeetings := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &contactPJsonMeetings,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocumentMeetings)
+	assert.Equal(t, http.StatusCreated, status)
+
+	hubspotDocumentCalls := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &contactPJsonCalls,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocumentCalls)
+	assert.Equal(t, http.StatusCreated, status)
+	
+
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 1)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+	
+
+	docMeetings, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"54051"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	eventNameObjMeetingCreated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED , project.ID)
+	eventsMeetingsCreated, status := store.GetStore().GetUserEventsByEventNameId(project.ID, docMeetings[0].UserId, eventNameObjMeetingCreated.ID)
+	assert.Len(t, eventsMeetingsCreated, 1)
+	eventNameObjMeetingUpdated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED , project.ID)
+	eventsMeetingsUpdated, status := store.GetStore().GetUserEventsByEventNameId(project.ID, docMeetings[0].UserId, eventNameObjMeetingUpdated.ID)
+	assert.Len(t, eventsMeetingsUpdated, 2)
+
+	docCalls, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"54051"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	eventNameObjCallCreated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED , project.ID)
+	eventsCallCreated, status := store.GetStore().GetUserEventsByEventNameId(project.ID, docCalls[0].UserId, eventNameObjCallCreated.ID)
+	assert.Len(t, eventsCallCreated, 1)
+	eventNameObjCallUpdated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED , project.ID)
+	eventsCallUpdated, status := store.GetStore().GetUserEventsByEventNameId(project.ID, docCalls[0].UserId, eventNameObjCallUpdated.ID)
+	assert.Len(t, eventsCallUpdated, 1)
+
+	propertyValuesMeetingCreated := make(map[string]interface{})
+	err = json.Unmarshal(eventsMeetingsCreated[0].Properties.RawMessage, &propertyValuesMeetingCreated)
+	assert.Nil(t, err)
+	assert.Equal(t, "49861280153", propertyValuesMeetingCreated["$hubspot_engagement_id"])
+	assert.Equal(t, float64(1579837500), propertyValuesMeetingCreated["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "MEETING", propertyValuesMeetingCreated["$hubspot_engagement_type"])
+	assert.Equal(t, "engage", propertyValuesMeetingCreated["$hubspot_engagement_source"])
+	assert.Equal(t, "true", propertyValuesMeetingCreated["$hubspot_engagement_active"])
+	assert.Equal(t, float64(1579837500), propertyValuesMeetingCreated["$hubspot_engagement_starttime"])
+	assert.Equal(t, float64(1579838400), propertyValuesMeetingCreated["$hubspot_engagement_endtime"])
+	assert.Equal(t, "abc", propertyValuesMeetingCreated["$hubspot_engagement_title"])
+	assert.Equal(t, "nope", propertyValuesMeetingCreated["$hubspot_engagement_meetingoutcome"])
+
+	propertyValuesMeetingUpdatedFirst := make(map[string]interface{})
+	err = json.Unmarshal(eventsMeetingsUpdated[0].Properties.RawMessage, &propertyValuesMeetingUpdatedFirst)
+	assert.Nil(t, err)
+	assert.Equal(t, "49861280153", propertyValuesMeetingUpdatedFirst["$hubspot_engagement_id"])
+	assert.Equal(t, float64(1579837500), propertyValuesMeetingUpdatedFirst["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "MEETING", propertyValuesMeetingUpdatedFirst["$hubspot_engagement_type"])
+	assert.Equal(t, "engage", propertyValuesMeetingUpdatedFirst["$hubspot_engagement_source"])
+	assert.Equal(t, "true", propertyValuesMeetingUpdatedFirst["$hubspot_engagement_active"])
+	assert.Equal(t, float64(1579837500), propertyValuesMeetingUpdatedFirst["$hubspot_engagement_starttime"])
+	assert.Equal(t, float64(1579838400), propertyValuesMeetingUpdatedFirst["$hubspot_engagement_endtime"])
+	assert.Equal(t, "abc", propertyValuesMeetingUpdatedFirst["$hubspot_engagement_title"])
+	assert.Equal(t, "nope", propertyValuesMeetingUpdatedFirst["$hubspot_engagement_meetingoutcome"])
+
+	propertyValuesMeetingUpdatedSecond := make(map[string]interface{})
+	err = json.Unmarshal(eventsMeetingsUpdated[1].Properties.RawMessage, &propertyValuesMeetingUpdatedSecond)
+	assert.Nil(t, err)
+	assert.Equal(t, "49861280153", propertyValuesMeetingUpdatedSecond["$hubspot_engagement_id"])
+	assert.Equal(t, float64(1579837500), propertyValuesMeetingUpdatedSecond["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "MEETING", propertyValuesMeetingUpdatedSecond["$hubspot_engagement_type"])
+	assert.Equal(t, "engage", propertyValuesMeetingUpdatedSecond["$hubspot_engagement_source"])
+	assert.Equal(t, "true", propertyValuesMeetingUpdatedSecond["$hubspot_engagement_active"])
+	assert.Equal(t, float64(1579837500), propertyValuesMeetingUpdatedSecond["$hubspot_engagement_starttime"])
+	assert.Equal(t, float64(1579838400), propertyValuesMeetingUpdatedSecond["$hubspot_engagement_endtime"])
+	assert.Equal(t, "abc", propertyValuesMeetingUpdatedSecond["$hubspot_engagement_title"])
+	assert.Equal(t, "nope", propertyValuesMeetingUpdatedSecond["$hubspot_engagement_meetingoutcome"])
+
+	propertyValuesCallsCreated := make(map[string]interface{})
+	err = json.Unmarshal(eventsCallCreated[0].Properties.RawMessage, &propertyValuesCallsCreated)
+	assert.Nil(t, err)
+	assert.Equal(t, "4709059", propertyValuesCallsCreated["$hubspot_engagement_id"])
+	assert.Equal(t, float64(1428565020), propertyValuesCallsCreated["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "CALL", propertyValuesCallsCreated["$hubspot_engagement_type"])
+	assert.Equal(t, "engage", propertyValuesCallsCreated["$hubspot_engagement_source"])
+	assert.Equal(t, "calls", propertyValuesCallsCreated["$hubspot_engagement_activitytype"])
+	assert.Equal(t, float64(24000), propertyValuesCallsCreated["$hubspot_engagement_durationmilliseconds"])
+	assert.Equal(t, "decent", propertyValuesCallsCreated["$hubspot_engagement_disposition"])
+	assert.Equal(t, "ok", propertyValuesCallsCreated["$hubspot_engagement_status"])
+	assert.Equal(t, "call", propertyValuesCallsCreated["$hubspot_engagement_title"])
+
+	propertyValuesCallsUpdated := make(map[string]interface{})
+	err = json.Unmarshal(eventsCallUpdated[0].Properties.RawMessage, &propertyValuesCallsUpdated)
+	assert.Nil(t, err)
+	assert.Equal(t, "4709059", propertyValuesCallsUpdated["$hubspot_engagement_id"])
+	assert.Equal(t, float64(1428565020), propertyValuesCallsUpdated["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "CALL", propertyValuesCallsUpdated["$hubspot_engagement_type"])
+	assert.Equal(t, "engage", propertyValuesCallsUpdated["$hubspot_engagement_source"])
+	assert.Equal(t, "calls", propertyValuesCallsUpdated["$hubspot_engagement_activitytype"])
+	assert.Equal(t, float64(24000), propertyValuesCallsUpdated["$hubspot_engagement_durationmilliseconds"])
+	assert.Equal(t, "decent", propertyValuesCallsUpdated["$hubspot_engagement_disposition"])
+	assert.Equal(t, "ok", propertyValuesCallsUpdated["$hubspot_engagement_status"])
+	assert.Equal(t, "call", propertyValuesCallsUpdated["$hubspot_engagement_title"])
+}
 func TestHubspotContactFormSubmission(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
@@ -84,7 +328,7 @@ func TestHubspotContactFormSubmission(t *testing.T) {
 				"timestamp": 1647393874010,
 				"title": " Webinar 20th Jan 2021"
 		}
-		]
+		
 	}`
 
 	jsonContact := fmt.Sprintf(jsonContactModel, 2, createdAt, lastModified)

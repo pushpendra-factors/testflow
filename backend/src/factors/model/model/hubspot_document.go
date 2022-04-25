@@ -63,6 +63,8 @@ const (
 	HubspotDocumentTypeNameForm           = "form"
 	HubspotDocumentTypeFormSubmission     = 5
 	HubspotDocumentTypeNameFormSubmission = "form_submission"
+	HubspotDocumentTypeEngagement         = 6
+	HubspotDocumentTypeNameEngagement     = "engagement"
 
 	HubspotDateTimeLayout = "2006-01-02T15:04:05.000Z"
 )
@@ -140,6 +142,22 @@ func GetHubspotMappedDataType(dataType string) string {
 	return util.PropertyTypeUnknown
 }
 
+func GetHubspotEngagementId(documentMap map[string]interface{}, idKey string) (string, error) {
+	engagementInterface, engagementExists := documentMap["engagement"]
+	if !engagementExists {
+		return "", errors.New("engagement not found on results document type")
+	}
+	engagementMap, isConverted := engagementInterface.(map[string]interface{})
+	if !isConverted {
+		log.Error("interface has not converted to map")
+	}
+	engagementMapvalueInFloat, ok := U.GetPropertyValueAsFloat64(engagementMap[idKey])
+	if ok != nil {
+		return "", errors.New("failed to convert interface into float64")
+	}
+	return fmt.Sprintf("%v", (int64)(engagementMapvalueInFloat)), nil
+}
+
 // ReadHubspotTimestamp returns timestamp in int64 format. Warning - documents use milliseconds
 func ReadHubspotTimestamp(value interface{}) (int64, error) {
 	switch value.(type) {
@@ -163,6 +181,7 @@ var HubspotDocumentTypeAlias = map[string]int{
 	HubspotDocumentTypeNameDeal:           HubspotDocumentTypeDeal,
 	HubspotDocumentTypeNameForm:           HubspotDocumentTypeForm,
 	HubspotDocumentTypeNameFormSubmission: HubspotDocumentTypeFormSubmission,
+	HubspotDocumentTypeNameEngagement:     HubspotDocumentTypeEngagement,
 }
 
 // GetHubspotTypeByAlias gets document type by document alias
@@ -277,6 +296,26 @@ func GetHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 		return 0, err
 	}
 
+	if document.Type == HubspotDocumentTypeEngagement {
+		engagementInterface, engagementExists := (*value)["engagement"]
+		if !engagementExists {
+			return 0, errors.New("engagement not found on results document type")
+		}
+		engagementMap, isConverted := engagementInterface.(map[string]interface{})
+		if !isConverted {
+			log.Error("interface has not converted to map")
+		}
+		value, exists := engagementMap["lastUpdated"]
+		if !exists || value == nil {
+			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
+		}
+		valueInFloat, ok := U.GetPropertyValueAsFloat64(value)
+		if ok != nil {
+			return 0, errors.New("failed to convert interface into float64")
+		}
+		return int64(valueInFloat), nil
+	}
+
 	// property nested value.
 	var propertyUpdateAtKey string
 	if document.Type == HubspotDocumentTypeCompany ||
@@ -349,6 +388,28 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 	value, err := U.DecodePostgresJsonb(document.Value)
 	if err != nil {
 		return 0, err
+	}
+
+	if document.Type == HubspotDocumentTypeEngagement {
+		engagementInterface, engagementExists := (*value)["engagement"]
+		if !engagementExists {
+			return 0, errors.New("engagement not found on results document type")
+		}
+
+		engagementMap, isConverted := engagementInterface.(map[string]interface{})
+		if !isConverted {
+			log.Error("interface has not converted to map")
+		}
+
+		value, exists := engagementMap["createdAt"]
+		if !exists || value == nil {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+		valueInFloat, ok := U.GetPropertyValueAsFloat64(value)
+		if ok != nil {
+			return 0, errors.New("failed to convert interface into float64")
+		}
+		return int64(valueInFloat), nil
 	}
 
 	if document.Type == HubspotDocumentTypeCompany {
