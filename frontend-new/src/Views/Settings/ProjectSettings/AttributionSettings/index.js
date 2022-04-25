@@ -7,11 +7,12 @@ import {
   udpateProjectSettings,
   fetchProjectSettings,
 } from '../../../../reducers/global';
+import FaSelect from '../../../../components/FaSelect';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
 
-const Attributions = ({
+const AttributionSettings = ({
   activeProject,
   currentProjectSettings,
   fetchProjectSettings,
@@ -27,6 +28,8 @@ const Attributions = ({
     enabled: true,
   });
 
+  console.log('AttrConfig:::', attrConfig);
+
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
   }, [activeProject]);
@@ -34,6 +37,7 @@ const Attributions = ({
   useEffect(() => {
     if (currentProjectSettings?.attribution_config) {
       setAttrConfig(currentProjectSettings.attribution_config);
+      console.log('I was called');
     }
   }, [currentProjectSettings]);
 
@@ -121,7 +125,6 @@ const Attributions = ({
             index={value.length + 1}
             editMode={() => setEdit(true)}
             value={value}
-            value={value}
             attrConfig={attrConfig}
             setAttrConfig={setAttrConfig}
           />
@@ -205,39 +208,52 @@ const Attributions = ({
   };
 
   return (
-    <div>
-      <Row className={`flex items-center`}>
-        <Col span={12}>
-          <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 m-1'}>
-            Attributions Configuration
-          </Text>
-        </Col>
-        <Col span={12}>{edit ? renderEditActions() : null}</Col>
-      </Row>
-      <Row>
-        <div className={'fa-warning'}>
-          This is configured at the time of initial setup. We don’t support to
-          change it at the moment. Please contact customer support for more
-          details.
-        </div>
-      </Row>
-      <Row>
-        <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-          KPI's to contribute
-        </Text>
-        <Text type={'title'} level={7} extraClass={'m-0'}>
-          Select the KPI’s to be considered as part of Attribution Reporting.
-          You can select upto 5 KPI’s to atrribution.
-        </Text>
-      </Row>
-      <Row>
-        <Col span={24}>
-          <div className={'mt-6'}>{renderAttributionContent()}</div>
-        </Col>
-      </Row>
-      <Row>
-        <Col span={24}>
-          <div className={'my-6'}>{attributionWindow()}</div>
+    <div className={'fa-container mt-32 mb-12 min-h-screen'}>
+      <Row gutter={[24, 24]} justify='center'>
+        <Col span={18}>
+          <Row className={`flex items-center`}>
+            <Col span={12}>
+              <Text
+                type={'title'}
+                level={3}
+                weight={'bold'}
+                extraClass={'m-0 m-1'}
+              >
+                Attributions Configuration
+              </Text>
+            </Col>
+            <Col span={12}>{edit ? renderEditActions() : null}</Col>
+          </Row>
+          <Row>
+            <div className={'fa-warning'}>
+              This is configured at the time of initial setup. We don't support
+              to change it at the moment. Please contact customer support for
+              more details.
+            </div>
+          </Row>
+          <Row>
+            <Col span={24}>
+              <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
+                KPI's to contribute
+              </Text>
+            </Col>
+            <Col span={24}>
+              <Text type={'title'} level={7} extraClass={'m-0'}>
+                Select the KPI's to be considered as part of Attribution
+                Reporting. You can select upto 5 KPI's to atrribution.
+              </Text>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24}>
+              <div className={'mt-6'}>{renderAttributionContent()}</div>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24}>
+              <div className={'my-6'}>{attributionWindow()}</div>
+            </Col>
+          </Row>
         </Col>
       </Row>
     </div>
@@ -252,4 +268,4 @@ const mapStateToProps = (state) => ({
 export default connect(mapStateToProps, {
   fetchProjectSettings,
   udpateProjectSettings,
-})(Attributions);
+})(AttributionSettings);

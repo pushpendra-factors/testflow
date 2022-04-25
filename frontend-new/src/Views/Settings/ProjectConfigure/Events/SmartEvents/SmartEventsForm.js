@@ -232,7 +232,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                     </Col>
                     <Col span={12}>
                         <div className={'flex justify-end'}>
-                        <Button size={'large'} onClick={() => setShowSmartEventForm(false)}>Back</Button>
+                        <Button size={'large'} disabled={loading} onClick={() => setShowSmartEventForm(false)}>Cancel</Button>
                         </div>
                     </Col>
                 </Row> 

@@ -326,7 +326,9 @@ const Alerts = ({
     ];
 
     return (
-        <>
+        <div className={'fa-container mt-32 mb-12 min-h-screen'}>
+          <Row gutter={[24, 24]} justify='center'>
+            <Col span={18}>
             <div className={'mb-10 pl-4'}>
 
                 {(!showForm && !viewMode) && <>
@@ -656,7 +658,9 @@ const Alerts = ({
                     confirmLoading={deleteApiCalled}
                 />                
             </div>
-        </>
+            </Col>
+          </Row>
+        </div>
     )
 }
 
