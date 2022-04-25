@@ -61,9 +61,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   }, []);
 
   const handleDurationChange = useCallback((dates) => {
-    let from,
-      to,
-      frequency = 'date';
+    let from, to;
     if (Array.isArray(dates.startDate)) {
       from = dates.startDate[0];
       to = dates.startDate[1];
@@ -71,16 +69,12 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
       from = dates.startDate;
       to = dates.endDate;
     }
-    if (MomentTz(to).diff(from, 'hours') < 24) {
-      frequency = 'hour';
-    }
 
     setDurationObj((currState) => {
       const newState = {
         ...currState,
         from,
         to,
-        frequency,
         dateType: dates.dateType,
       };
       setItemToLocalStorage(

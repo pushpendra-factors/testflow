@@ -76,7 +76,7 @@ class JobScheduler:
             traceback.print_tb(e.__traceback__)
             str_exception = str(e)
             message = str_exception
-            log.warning("Failed with exception: %d %s %s", project_id, url_prefix, str_exception)
+            log.warning("Failed with exception: %d %s %s %s", project_id, url_prefix, self.timestamp, str_exception)
             if "AuthorizationError.USER_PERMISSION_DENIED" in str_exception:
                 metrics_controller.update_permission_cache(url_prefix, refresh_token, str_exception)
 
@@ -90,5 +90,6 @@ class JobScheduler:
 
             else:
                 message = "Failed with exception: " + str_exception
-
             metrics_controller.update_job_stats(project_id, url_prefix, doc_type, STATUS_FAILED, message)
+
+            return ("Failed with exception: %d %s %s", project_id, url_prefix, str_exception)

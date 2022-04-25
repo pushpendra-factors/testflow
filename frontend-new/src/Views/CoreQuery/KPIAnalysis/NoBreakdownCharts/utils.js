@@ -3,6 +3,7 @@ import { DATE_FORMATS } from '../../../../utils/constants';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import moment from 'moment';
 import {
+  addQforQuarter,
   getClickableTitleSorter,
   SortResults,
 } from '../../../../utils/dataFormatter';
@@ -131,11 +132,11 @@ export const getTableColumns = (
         'Date',
         { key: 'date', type: 'datetime', subtype: 'date' },
         currentSorter,
-        handleSorting,
+        handleSorting
       ),
       dataIndex: 'date',
       render: (d) => {
-        return moment(d).format(format);
+        return addQforQuarter(frequency) + moment(d).format(format);
       },
     },
   ];
@@ -227,9 +228,9 @@ export const getDateBasedColumns = (
   const dateColumns = categories.map((cat) => {
     return {
       title: getClickableTitleSorter(
-        moment(cat).format(format),
+        addQforQuarter(frequency) + moment(cat).format(format),
         {
-          key: moment(cat).format(format),
+          key: addQforQuarter(frequency) + moment(cat).format(format),
           type: 'numerical',
           subtype: null,
         },
@@ -239,7 +240,7 @@ export const getDateBasedColumns = (
       ),
       className: 'text-right',
       width: frequency === 'hour' ? 200 : 150,
-      dataIndex: moment(cat).format(format),
+      dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
       render: (d) => {
         return <NumFormat number={d} />;
       },
@@ -264,7 +265,8 @@ export const getDateBasedTableData = (
     };
     const dateData = {};
     categories.forEach((cat, catIndex) => {
-      dateData[moment(cat).format(format)] = sd.data[catIndex];
+      dateData[addQforQuarter(frequency) + moment(cat).format(format)] =
+        sd.data[catIndex];
     });
     return {
       ...obj,

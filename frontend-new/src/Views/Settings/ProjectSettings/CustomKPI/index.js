@@ -232,6 +232,15 @@ const CustomKPI = ({
         })
 
         setFilterDDValues(DDvalues);
+        
+        console.log('customKPIConfig values-->',customKPIConfig);
+        console.log('customKPIConfig values with space-->',customKPIConfig?.result?.objTyAndProp?.map((item) => {
+            return item?.properties?.find((j) => {
+              if(j?.name?.includes(' ')){
+                return j
+              } 
+          })}));
+
     }, [selKPICategory, customKPIConfig]);
 
     const onKPICategoryChange = value => {

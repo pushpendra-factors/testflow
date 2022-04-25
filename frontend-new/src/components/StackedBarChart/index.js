@@ -6,7 +6,7 @@ import moment from 'moment';
 import Highcharts from 'highcharts';
 import { high_charts_default_spacing } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
-import { formatCount, generateColors } from '../../utils/dataFormatter';
+import { addQforQuarter, formatCount, generateColors } from '../../utils/dataFormatter';
 import TopLegends from '../GroupedBarChart/TopLegends';
 
 function StackedBarChart({
@@ -51,7 +51,9 @@ function StackedBarChart({
               return moment(this.value).format('MMM D, h A');
             } else if (frequency === 'date' || frequency === 'week') {
               return moment(this.value).format('MMM D');
-            } else return moment(this.value).format('MMM YYYY');
+            } else if (frequency === 'month') {
+              return moment(this.value).format('MMM YYYY');
+            } else return `${'Q' + moment(this.value).format('Q, YYYY')}`;
           },
         },
       },
@@ -80,7 +82,9 @@ function StackedBarChart({
               ? 'MMM D, h A'
               : frequency === 'date' || frequency === 'week'
               ? 'MMM D, YYYY'
-              : 'MMM YYYY';
+              : frequency === 'month'
+              ? 'MMM YYYY'
+              : 'Q, YYYY';
           return ReactDOMServer.renderToString(
             <>
               <Text
@@ -89,7 +93,8 @@ function StackedBarChart({
                 type='title'
                 extraClass='text-sm mb-0'
               >
-                {moment(this.point.category).format(format)}
+                {addQforQuarter(frequency) +
+                  moment(this.point.category).format(format)}
               </Text>
               <Text
                 color='grey-2'

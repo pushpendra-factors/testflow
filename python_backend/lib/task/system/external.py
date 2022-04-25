@@ -73,6 +73,7 @@ class ExternalSystem(BaseSystem):
         return payload
 
     def handle_request_with_retries(self, url):
+        r = None
         for retry in range(3):
             r = requests.get(url)
             if r.status_code == 500:
@@ -81,3 +82,4 @@ class ExternalSystem(BaseSystem):
                     time.sleep(2)
                     continue
             return r
+        return r

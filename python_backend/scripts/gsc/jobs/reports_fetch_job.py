@@ -38,7 +38,8 @@ class ReportsFetch(BaseJob):
         downloader = FetchService(scripts.gsc.CONFIG.GSC_OAUTH).get_webmasters_service(self._refresh_token)
         if downloader is None:
             self.log_status_of_job("extract", "not completed")
-            return
+            raise Exception("Unable to generate google services client")
+
         response_rows = []
         row_start = 0
         request = {

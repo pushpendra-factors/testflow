@@ -106,6 +106,8 @@ type Model interface {
 	GetKPIConfigsForFacebook(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForLinkedin(projectID uint64, reqID string) (map[string]interface{}, int)
 	GetKPIConfigsForAllChannels(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForMarketoLeads(projectID uint64, reqID string) (map[string]interface{}, int)
+	GetKPIConfigsForMarketo(projectID uint64, reqID string, displayCategory string) (map[string]interface{}, int)
 
 	// ExecuteKPIQueryGroup(kpiQueryGroup model.KPIQueryGroup)
 	ExecuteKPIQueryGroup(projectID uint64, reqID string, kpiQueryGroup model.KPIQueryGroup) ([]model.QueryResult, int)
@@ -197,6 +199,7 @@ type Model interface {
 	GetPropertyValuesByEventProperty(projectID uint64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
 	GetPropertiesForHubspot(projectID uint64, reqID string) []map[string]string
 	GetPropertiesForSalesforce(projectID uint64, reqID string) []map[string]string
+	GetPropertiesForMarketo(projectID uint64, reqID string) []map[string]string
 
 	// events
 	GetEventCountOfUserByEventName(projectID uint64, userId string, eventNameId string) (uint64, int)

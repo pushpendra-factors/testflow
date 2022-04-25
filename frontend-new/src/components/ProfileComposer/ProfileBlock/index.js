@@ -32,7 +32,7 @@ function ProfileBlock({
   const alphabetIndex = 'ABCDEF';
 
   const profileOptions = {
-    users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users']],
+    users: [['Website Visitors'], ['Hubspot Contacts'], ['Salesforce Users'], ['Marketo']],
     $salesforce_opportunity: [['All Opportunities']],
     $hubspot_deal: [['All Deals']],
     $salesforce_account: [['All Accounts']],
