@@ -39,7 +39,7 @@ func TestKpiAnalytics(t *testing.T) {
 	H.InitDataServiceRoutes(r2)
 	Const.SetSmartPropertiesReservedNames()
 
-	project, customerAccountID, _, statusCode := createProjectAndAddAdwordsDocument(t, r2)
+	project, customerAccountID, agent, statusCode := createProjectAndAddAdwordsDocument(t, r2)
 	log.Warn(customerAccountID)
 	if statusCode != http.StatusAccepted {
 		assert.Equal(t, false, true)
@@ -63,6 +63,31 @@ func TestKpiAnalytics(t *testing.T) {
 		[]byte(fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"$referrer": "https://example.com/abc?ref=1", "$referrer_url": "https://example.com/abc", "$referrer_domain": "example.com", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_ad": "ad_2021_1", "$qp_utm_ad_id": "9876543210", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$platform": "web", "$browser": "Mozilla", "$browser_version": "v0.1", "$browser_with_version": "Mozilla_v0.1", "$user_agent": "browser", "$os": "Linux", "$os_version": "v0.1", "$os_with_version": "Linux_v0.1", "$country": "india", "$region": "karnataka", "$city": "bengaluru", "$timezone": "Asia/Calcutta"}}`,
 			eventName, timestamp)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"$referrer": "https://example.com/abc?ref=1", "$referrer_url": "https://example.com/abc", "$referrer_domain": "example.com", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_ad": "ad_2021_1", "$qp_utm_ad_id": "9876543210", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$platform": "web", "$browser": "Mozilla", "$browser_version": "v0.1", "$browser_with_version": "Mozilla_v0.1", "$user_agent": "browser", "$os": "Linux", "$os_version": "v0.1", "$os_with_version": "Linux_v0.1", "$country": "india", "$region": "karnataka", "$city": "bengaluru", "$timezone": "Asia/Calcutta"}}`,
+			"123testing", timestamp)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	contentGroupRequest := model.ContentGroup{}
+	contentGroupRequest.ContentGroupName = "abc"
+	contentGroupRequest.ContentGroupDescription = "description"
+	value := model.ContentGroupValue{}
+	value.LogicalOp = "OR"
+	value.Operator = "contains"
+	value.Value = "xyz"
+	filters := make([]model.ContentGroupValue, 0)
+	filters = append(filters, value)
+	contentGroupValueArray := make([]model.ContentGroupRule, 0)
+	contentGroupValue := model.ContentGroupRule{
+		ContentGroupValue: "value",
+		Rule:              filters,
+	}
+	contentGroupValueArray = append(contentGroupValueArray, contentGroupValue)
+	contentGroupValueJson, _ := json.Marshal(contentGroupValueArray)
+	contentGroupRequest.Rule = &postgres.Jsonb{contentGroupValueJson}
+	w1 := sendCreateContentGroupRequest(a, contentGroupRequest, agent, project.ID)
+	assert.Equal(t, http.StatusCreated, w1.Code)
 
 	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
@@ -215,6 +240,43 @@ func TestKpiAnalytics(t *testing.T) {
 		assert.Equal(t, result[1].Rows[0][1], float64(100))
 	})
 
+	t.Run("Query for content group with session", func(t *testing.T) {
+
+		query1 := model.KPIQuery{
+			Category:        "events",
+			DisplayCategory: "website_session",
+			Metrics:         []string{"average_initial_page_load_time"},
+			Filters:         nil,
+			From:            timestamp - 60*2,
+			To:              timestamp,
+		}
+
+		kpiQueryGroup := model.KPIQueryGroup{
+			Class:         "kpi",
+			Queries:       []model.KPIQuery{query1},
+			GlobalFilters: []model.KPIFilter{},
+			GlobalGroupBy: []model.KPIGroupBy{
+				{
+					ObjectType:       "s0",
+					PropertyName:     "abc",
+					PropertyDataType: "categorical",
+					GroupByType:      "",
+					Granularity:      "",
+					Entity:           "event",
+				},
+			},
+		}
+
+		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
+		assert.Equal(t, http.StatusOK, statusCode)
+		log.WithField("result", result).Warn("kark3")
+
+		assert.Equal(t, result[0].Headers, []string{"abc", "average_initial_page_load_time"})
+		assert.Equal(t, len(result[0].Rows), 1)
+		assert.Equal(t, result[0].Rows[0][0], "value")
+		assert.Equal(t, result[0].Rows[0][1], float64(100))
+	})
+
 	t.Run("Query with channel", func(t *testing.T) {
 
 		query1 := model.KPIQuery{
@@ -240,7 +302,7 @@ func TestKpiAnalytics(t *testing.T) {
 
 		result, statusCode := store.GetStore().ExecuteKPIQueryGroup(project.ID, uuid.New().String(), kpiQueryGroup)
 		assert.Equal(t, http.StatusOK, statusCode)
-		assert.Equal(t, result[0].Headers, []string{"datetime", "impressions"})
+		assert.Equal(t, result[0].Headers, []string{"datetime", "adwords_metrics_impressions"})
 		assert.Equal(t, len(result[0].Rows), 0)
 	})
 }
