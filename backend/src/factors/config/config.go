@@ -242,6 +242,7 @@ type Configuration struct {
 	UseHubspotBatchInsertByProjectID                string
 	SalesforcePropertyLookBackTimeHr                int
 	HubspotPropertyLookBackLimit                    int
+	EnableSlowDBQueryLogging                        bool
 }
 
 type Services struct {
@@ -2136,4 +2137,8 @@ func GetSalesforcePropertyLookBackTimeHr() int {
 
 func GetHubspotPropertiesLookbackLimit() int {
 	return GetConfig().HubspotPropertyLookBackLimit
+}
+
+func IsSlowDBQueryLoggingEnabled() bool {
+	return configuration.EnableSlowDBQueryLogging
 }

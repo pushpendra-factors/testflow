@@ -159,6 +159,7 @@ func main() {
 	enableBingAdsAttribution := flag.Bool("enable_bing_ads_attribution", false, "")
 	salesforcePropertyLookBackTimeHr := flag.Int("salesforce_property_lookback_time_hr", 0, "")
 	hubspotPropertyLookbackLimit := flag.Int("hubspot_property_lookback_limit", 1000, "")
+	enableSlowDBQueryLogging := flag.Bool("log_slow_db_queries", false, "Logs queries with execution time greater than 50ms.")
 
 	flag.Parse()
 
@@ -271,6 +272,7 @@ func main() {
 		MonitoringAPIToken:                             *monitoringAPIToken,
 		SalesforcePropertyLookBackTimeHr:               *salesforcePropertyLookBackTimeHr,
 		HubspotPropertyLookBackLimit:                   *hubspotPropertyLookbackLimit,
+		EnableSlowDBQueryLogging:                       *enableSlowDBQueryLogging,
 	}
 	C.InitConf(config)
 
