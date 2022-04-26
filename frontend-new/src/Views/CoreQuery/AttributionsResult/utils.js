@@ -775,7 +775,7 @@ export const getTableData = (
           : row[touchpointIdx];
       }
 
-      const resultantRow = {
+      let resultantRow = {
         index,
         category: Object.values(dimensionsData).join(', '),
         ...dimensionsData,
