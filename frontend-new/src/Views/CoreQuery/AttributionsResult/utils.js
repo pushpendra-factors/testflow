@@ -16,7 +16,6 @@ import {
   DISPLAY_PROP,
 } from '../../../utils/constants';
 import styles from './index.module.scss';
-import { isArray } from 'lodash';
 
 export const defaultSortProp = () => {
   return [
@@ -402,9 +401,7 @@ export const getTableColumns = (
   content_groups,
   durationObj,
   comparison_data,
-  cmprDuration,
-  queryOptions,
-  attrQueries
+  cmprDuration
 ) => {
   const getEventColumnConfig = ({ title, key, method, hasBorder = false }) => {
     return {
@@ -516,59 +513,51 @@ export const getTableColumns = (
 
   const conversionBorderCondition = !showCPC && !showCR;
   const costBorderCondition = !showCR;
-  const eventColumns = [];
-  let attrQueryEvents = [];
 
-  if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && attrQueries.length) {
-    attrQueryEvents = attrQueries.map((q, i) => {
-      const lbl = q.label;
-      const attrChildren = [
-        getEventColumnConfig({
-          title: 'Conversion',
-          key: lbl + ' - Conversion',
-          hasBorder: conversionBorderCondition,
-        }),
-      ];
-      if (showCPC) {
-        attrChildren.push(
-          getEventColumnConfig({
-            title: 'Cost Per Conversion',
-            key: lbl + ' - Cost Per Conversion',
-            hasBorder: costBorderCondition,
-          })
-        );
-      } 
-      if (showCR) {
-        attrChildren.push(
-          getEventColumnConfig({
-            title: 'Conversion Rate',
-            key: lbl + ' - UserConversionRate(%)',
-            hasBorder: true,
-          })
-        );
-      }
-      return {
-        title: eventNames[lbl] || lbl,
-        className: 'bg-white tableParentHeader ',
-        children: attrChildren,
-      };
-    });
-  } else {
-    eventColumns.push([
+  const eventColumns = [
+    getEventColumnConfig({
+      title: 'Conversion',
+      key: 'Conversion',
+      method: attribution_method,
+      hasBorder: conversionBorderCondition,
+    }),
+  ];
+  if (showCPC) {
+    eventColumns.push(
+      getEventColumnConfig({
+        title: 'Cost Per Conversion',
+        key: 'Cost per Conversion',
+        method: attribution_method,
+        hasBorder: costBorderCondition,
+      })
+    );
+  }
+  if (showCR) {
+    eventColumns.push(
+      getEventColumnConfig({
+        title: 'Conversion Rate',
+        key: 'Conversion Rate',
+        method: attribution_method,
+        hasBorder: true,
+      })
+    );
+  }
+
+  if (attribution_method_compare) {
+    eventColumns.push(
       getEventColumnConfig({
         title: 'Conversion',
-        key: 'Conversion',
-        method: attribution_method,
+        key: 'conversion_compare',
+        method: attribution_method_compare,
         hasBorder: conversionBorderCondition,
-      }),
-    ])
-
+      })
+    );
     if (showCPC) {
       eventColumns.push(
         getEventColumnConfig({
           title: 'Cost Per Conversion',
-          key: 'Cost per Conversion',
-          method: attribution_method,
+          key: 'cost_compare',
+          method: attribution_method_compare,
           hasBorder: costBorderCondition,
         })
       );
@@ -577,44 +566,12 @@ export const getTableColumns = (
       eventColumns.push(
         getEventColumnConfig({
           title: 'Conversion Rate',
-          key: 'Conversion Rate',
-          method: attribution_method,
+          key: 'conversion_rate_compare',
+          method: attribution_method_compare,
           hasBorder: true,
         })
       );
     }
-
-    if (attribution_method_compare) {
-      eventColumns.push(
-        getEventColumnConfig({
-          title: 'Conversion',
-          key: 'conversion_compare',
-          method: attribution_method_compare,
-          hasBorder: conversionBorderCondition,
-        })
-      );
-      if (showCPC) {
-        eventColumns.push(
-          getEventColumnConfig({
-            title: 'Cost Per Conversion',
-            key: 'cost_compare',
-            method: attribution_method_compare,
-            hasBorder: costBorderCondition,
-          })
-        );
-      }
-      if (showCR) {
-        eventColumns.push(
-          getEventColumnConfig({
-            title: 'Conversion Rate',
-            key: 'conversion_rate_compare',
-            method: attribution_method_compare,
-            hasBorder: true,
-          })
-        );
-      }
-    }
-
   }
 
   let linkedEventsColumns = [];
@@ -635,7 +592,7 @@ export const getTableColumns = (
             hasBorder: costBorderCondition,
           })
         );
-      } 
+      }
       if (showCR) {
         linkedEventsChildren.push(
           getEventColumnConfig({
@@ -653,19 +610,16 @@ export const getTableColumns = (
     });
   }
 
-  let tableColumns = [...dimensionColumns, ...metricsColumns];
-
-  if (queryOptions.group_analysis && queryOptions.group_analysis !== 'Users') {
-    tableColumns = [...tableColumns, ...attrQueryEvents];
-  } else {
-    tableColumns = [...tableColumns, {
+  return [
+    ...dimensionColumns,
+    ...metricsColumns,
+    {
       title: eventNames[event] || event,
       className: 'bg-white tableParentHeader ',
       children: eventColumns,
-    }, ...linkedEventsColumns];
-  }
-
-  return tableColumns;
+    },
+    ...linkedEventsColumns,
+  ];
 };
 
 export const calcChangePerc = (val1, val2) => {
@@ -713,9 +667,7 @@ export const getTableData = (
   metrics,
   attr_dimensions,
   content_groups,
-  comparison_data,
-  queryOptions,
-  attrQueries
+  comparison_data
 ) => {
   const { headers } = data;
   const costIdx = headers.indexOf('Cost Per Conversion');
@@ -775,49 +727,7 @@ export const getTableData = (
           : row[touchpointIdx];
       }
 
-      const resultantRow = {
-        index,
-        category: Object.values(dimensionsData).join(', '),
-        ...dimensionsData,
-        ...metricsData
-      };
-
-      if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && attrQueries.length) {
-        attrQueries.forEach((q, i) => {
-          const lbl = q.label
-          const eventUsersIdx = headers.indexOf(`${lbl} - Conversion`);
-          const eventCPCIdx = headers.indexOf(`${lbl} - Cost Per Conversion`);
-          const eventConvRateIdx = headers.indexOf(
-            `${lbl} - UserConversionRate(%)`
-          );
-          resultantRow[`${lbl} - Conversion`] = !comparison_data
-            ? formatCount(row[eventUsersIdx], 1)
-            : {
-                value: formatCount(row[eventUsersIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
-                  : 0,
-              };
-          resultantRow[`${lbl} - Cost Per Conversion`] = !comparison_data
-            ? formatCount(row[eventCPCIdx], 1)
-            : {
-                value: formatCount(row[eventCPCIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
-                  : 0,
-              };
-          resultantRow[`${lbl} - UserConversionRate(%)`] =
-            !comparison_data
-              ? formatCount(row[eventConvRateIdx], 1)
-              : {
-                  value: formatCount(row[eventConvRateIdx], 1),
-                  compare_value: equivalent_compare_row
-                    ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
-                    : 0,
-                };
-        });
-      } else { 
-        resultantRow = {
+      let resultantRow = {
         index,
         category: Object.values(dimensionsData).join(', '),
         ...dimensionsData,
@@ -846,8 +756,7 @@ export const getTableData = (
                 ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
                 : 0,
             },
-      }
-    };
+      };
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
           const eventUsersIdx = headers.indexOf(`${le.label} - Users`);

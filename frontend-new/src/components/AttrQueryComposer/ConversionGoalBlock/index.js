@@ -66,7 +66,7 @@ const ConversionGoalBlock = ({
     const getKPIProps = (groupName) => {
         let KPIlist = KPI_config || [];
         let selGroup = KPIlist.find((item) => {
-          return item?.display_category == groupName;
+          return item.display_category == groupName;
         });
     
         let DDvalues = selGroup?.properties?.map((item) => {
@@ -87,7 +87,7 @@ const ConversionGoalBlock = ({
     const getKpiGroupList = (groupName) => {
         let KPIlist = KPI_config || [];
         let selGroup = KPIlist.find((item) => {
-          return item?.display_category == groupName;
+          return item.display_category == groupName;
         });
 
         const group = ((selGroup) => {
@@ -101,8 +101,8 @@ const ConversionGoalBlock = ({
         
             })
             return {
-              "label": selGroup?.display_category,
-              "group": selGroup?.display_category,
+              "label": selGroup.display_category,
+              "group": selGroup.display_category,
               "category": selGroup.category,
               "icon": "custom_events",
               "values": metricsValues

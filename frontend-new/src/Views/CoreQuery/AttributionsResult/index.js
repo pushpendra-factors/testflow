@@ -9,7 +9,6 @@ function AttributionsResult({
   currMetricsValue,
   renderedCompRef,
   chartType,
-  queryOptions
 }) {
   const {
     eventGoal,
@@ -38,7 +37,6 @@ function AttributionsResult({
       currMetricsValue={currMetricsValue}
       ref={renderedCompRef}
       chartType={chartType}
-      queryOptions={queryOptions}
     />
   );
 }
