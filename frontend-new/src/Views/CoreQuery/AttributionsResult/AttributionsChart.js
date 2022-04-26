@@ -53,6 +53,7 @@ const AttributionsChart = forwardRef(
       attr_dimensions,
       content_groups,
       chartType,
+      queryOptions,
     },
     ref
   ) => {
@@ -66,7 +67,10 @@ const AttributionsChart = forwardRef(
       setAttributionMetrics,
     } = useContext(CoreQueryContext);
 
-    const { eventNames } = useSelector((state) => state.coreQuery);
+    const { 
+      eventNames, 
+      attrQueries
+    } = useSelector((state) => state.coreQuery);
 
     const [aggregateData, setAggregateData] = useState({
       categories: [],
@@ -159,7 +163,9 @@ const AttributionsChart = forwardRef(
           content_groups,
           durationObj,
           comparison_data.data,
-          comparison_duration
+          comparison_duration,
+          queryOptions,
+          attrQueries
         )
       );
     }, [
@@ -191,7 +197,9 @@ const AttributionsChart = forwardRef(
         displayedAttributionMetrics,
         attr_dimensions,
         content_groups,
-        comparison_data.data
+        comparison_data.data,
+        queryOptions,
+        attrQueries
       );
       setTableData(tableData);
       setVisibleIndices(

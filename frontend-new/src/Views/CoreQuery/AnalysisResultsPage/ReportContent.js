@@ -256,6 +256,7 @@ function ReportContent({
           currMetricsValue={currMetricsValue}
           renderedCompRef={renderedCompRef}
           chartType={chartType}
+          queryOptions={queryOptions}
         />
       );
     }
