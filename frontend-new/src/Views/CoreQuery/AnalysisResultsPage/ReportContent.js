@@ -26,6 +26,7 @@ import { Text, SVG } from '../../../components/factorsComponents';
 import KPIAnalysis from '../KPIAnalysis';
 import ProfilesResultPage from '../ProfilesResultPage';
 import { getChartType } from './analysisResultsPage.helpers';
+import { getKpiLabel } from '../KPIAnalysis/kpiAnalysis.helpers';
 
 function ReportContent({
   resultState,
@@ -192,7 +193,7 @@ function ReportContent({
   if (queryType === QUERY_TYPE_KPI && breakdown.length && queries.length > 1) {
     metricsDropdown = (
       <CampaignMetricsDropdown
-        metrics={queries.map((q) => q)}
+        metrics={queries.map((q) => getKpiLabel(q))}
         currValue={currMetricsValue}
         onChange={setCurrMetricsValue}
       />

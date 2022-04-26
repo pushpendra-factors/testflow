@@ -1254,7 +1254,7 @@ func GetPropertiesMapFromFile(cloudManager *filestore.FileManager, fileDir, file
 	return reqMap, nil
 }
 
-func GetPropertiesCategoricalMapFromFile(cloudManager *filestore.FileManager, projectId, modelId uint64, fileDir, fileName string) (map[string]string, error) {
+func GetPropertiesCategoricalMapFromFile(cloudManager *filestore.FileManager, fileDir, fileName string) (map[string]string, error) {
 	var reqMap map[string]string
 	var buf bytes.Buffer
 

@@ -13,7 +13,6 @@ import (
 
 	U "factors/util"
 
-	"factors/model/model"
 	"factors/model/store"
 
 	M "factors/model/model"
@@ -37,11 +36,11 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	k := configs["k"].(int)
 	// Cross Period Insights
 	periodCodesWithWeekNMinus1 := []Period{
-		Period{
+		{
 			From: configs["startTimestamp"].(int64) - 604800,
 			To:   configs["endTimestamp"].(int64) - 604800,
 		},
-		Period{
+		{
 			From: configs["startTimestamp"].(int64),
 			To:   configs["endTimestamp"].(int64),
 		},
@@ -54,50 +53,61 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 	dashboardUnits, _ := store.GetStore().GetDashboardUnitsForProjectID(projectId)
 	isDownloaded = false
 	for _, dashboardUnit := range dashboardUnits {
-		if !(whitelistedDashboardUnits["*"] == true || whitelistedDashboardUnits[fmt.Sprintf("%v", dashboardUnit.ID)] == true) {
+		if !(whitelistedDashboardUnits["*"] || whitelistedDashboardUnits[fmt.Sprintf("%v", dashboardUnit.ID)]) {
 			continue
 		}
 		queryIdString := fmt.Sprintf("%v", dashboardUnit.QueryId)
-		deltaQuery, multiStepQuery, isEnabled, isEventOccurence, isMultiStep := IsDashboardUnitWIEnabled(dashboardUnit)
+		deltaQuery, multiStepQuery, kpiQuery, isEnabled, isEventOccurence, isMultiStep := IsDashboardUnitWIEnabled(dashboardUnit)
 		// Check if this is a valid query with valid filters
-		if isEnabled == false || computedQueries[dashboardUnit.QueryId] == true {
+		if !isEnabled || computedQueries[dashboardUnit.QueryId] {
 			continue
 		}
-		// Within Period Insights
-		// TODO: $others values are not getting propagated to the second pass. Do that.
-		// TODO: This was changed from set to map
-		unionOfFeatures := make(map[string]map[string]bool)
-		log.Info("1st pass: Scanning events file to get top-k base features for each period.")
-		err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2)
-		if err != nil {
-			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 1"))
-			status["error-wpi-pass1-"+queryIdString] = err.Error()
-			continue
-		}
-		isDownloaded = true
-		log.Info("2nd pass: Scanning events file again to compute counts for union of features.")
-		err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2)
-		if err != nil {
-			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 2"))
-			status["error-wpi-pass2-"+queryIdString] = err.Error()
-			continue
-		}
-		log.Info("Computing cross-period insights.")
-		var queryId int
-		if deltaQuery.Id == 0 {
-			queryId = multiStepQuery.Id
+
+		if len(kpiQuery.Queries) > 0 {
+			if err := CreateKpiInsights(diskManager, cloudManager, periodCodesWithWeekNMinus1, projectId,
+				dashboardUnit.QueryId, kpiQuery, insightGranularity); err != nil {
+				log.WithError(err).Error("KPI insights error query: ", dashboardUnit.QueryId)
+				status["error-kpi-pass-"+queryIdString] = err
+				continue
+			}
 		} else {
-			queryId = deltaQuery.Id
+			// Within Period Insights
+			// TODO: $others values are not getting propagated to the second pass. Do that.
+			// TODO: This was changed from set to map
+			unionOfFeatures := make(map[string]map[string]bool)
+			log.Info("1st pass: Scanning events file to get top-k base features for each period.")
+			err := processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 1, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2)
+			if err != nil {
+				log.WithError(err).Error("failed to process wpi pass 1")
+				status["error-wpi-pass1-"+queryIdString] = err.Error()
+				continue
+			}
+			isDownloaded = true
+			log.Info("2nd pass: Scanning events file again to compute counts for union of features.")
+			err = processSeparatePeriods(projectId, periodCodesWithWeekNMinus1, cloudManager, diskManager, deltaQuery, multiStepQuery, k, &unionOfFeatures, 2, insightGranularity, isEventOccurence, isMultiStep, skipWpi, skipWpi2)
+			if err != nil {
+				log.WithError(err).Error("failed to process wpi pass 2")
+				status["error-wpi-pass2-"+queryIdString] = err.Error()
+				continue
+			}
+			log.Info("Computing cross-period insights.")
+			var queryId int
+			if deltaQuery.Id == 0 {
+				queryId = multiStepQuery.Id
+			} else {
+				queryId = deltaQuery.Id
+			}
+			err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, queryId, cloudManager)
+			if err != nil {
+				log.WithError(err).Error("failed to process wpi pass 1")
+				status["error-cpi-pass1-"+queryIdString] = err.Error()
+				continue
+			}
 		}
-		err = processCrossPeriods(periodCodesWithWeekNMinus1, diskManager, projectId, k, queryId, cloudManager)
-		if err != nil {
-			log.WithError(err).Error(fmt.Sprintf("Failed to process wpi pass 1"))
-			status["error-cpi-pass1-"+queryIdString] = err.Error()
-			continue
-		}
+
 		insightId = uint64(U.TimeNowUnix())
 		computedQueries[dashboardUnit.QueryId] = true
-		errCode, errMsg := store.GetStore().CreateWeeklyInsightsMetadata(&model.WeeklyInsightsMetadata{
+		errCode, errMsg := store.GetStore().CreateWeeklyInsightsMetadata(&M.WeeklyInsightsMetadata{
 			ProjectId:           projectId,
 			QueryId:             dashboardUnit.QueryId,
 			BaseStartTime:       periodCodesWithWeekNMinus1[1].From,
@@ -135,7 +145,7 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 
 			err := ReadFromJSONFile(efTmpPath2+efTmpName2, &wpi2)
 			if err != nil {
-				log.WithError(err).Error(fmt.Sprintf("Failed to read json file "))
+				log.WithError(err).Error("failed to read json file")
 				return err
 			}
 			crossPeriodInsights, err := ComputeCrossPeriodInsights(wpi1, wpi2)
@@ -147,12 +157,12 @@ func processCrossPeriods(periodCodes []Period, diskManager *serviceDisk.DiskDriv
 			crossPeriodInsights.Periods = periodPair
 			crossPeriodInsightsBytes, err := json.Marshal(crossPeriodInsights)
 			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
+				log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal events Info.")
 				return err
 			}
-			err = writeCpiPath(projectId, periodPair.Second, uint64(queryId), k, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
+			err = WriteCpiPath(projectId, periodPair.Second, uint64(queryId), k, bytes.NewReader(crossPeriodInsightsBytes), *cloudManager)
 			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Error("Failed to write files to cloud")
+				log.WithFields(log.Fields{"err": err}).Error("failed to write files to cloud")
 				return err
 			}
 		}
@@ -166,7 +176,7 @@ func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager
 	earlierWeekMap[periodCodes[1].From] = periodCodes[0].From > periodCodes[1].From
 	for _, periodCode := range periodCodes {
 		fileDownloaded := false
-		if skipWpi == false || (earlierWeekMap[periodCode.From] == false && skipWpi2 == false) {
+		if !skipWpi || (!earlierWeekMap[periodCode.From] && !skipWpi2) {
 			err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
 			if err != nil {
 				return err
@@ -191,7 +201,7 @@ func processSeparatePeriods(projectId uint64, periodCodes []Period, cloudManager
 					fileDownloaded = true
 				}
 			}
-			if fileDownloaded == false {
+			if !fileDownloaded {
 				err := processSinglePeriodData(projectId, periodCode, cloudManager, diskManager, deltaQuery, multiStepQuery, k, unionOfFeatures, passId, insightGranularity, isEventOccurence, isMultiStep)
 				if err != nil {
 					return err
@@ -210,7 +220,7 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 	}
 	withinPeriodInsights, err := ComputeWithinPeriodInsights(scanner, deltaQuery, multiStepQuery, k, *unionOfFeatures, passId, isEventOccurence, isMultiStep)
 	if err != nil {
-		log.WithError(err).Error(fmt.Sprintf("Could not mine features for period ", periodCode))
+		log.WithError(err).Error(fmt.Sprintf("Could not mine features for period %v", periodCode))
 		return err
 	}
 	withinPeriodInsights.Period = Period(periodCode)
@@ -241,7 +251,7 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 			}
 		}
 		for key, valueStatus := range features {
-			for value, _ := range valueStatus {
+			for value := range valueStatus {
 				if (*unionOfFeatures)[key] == nil {
 					(*unionOfFeatures)[key] = make(map[string]bool)
 				}
@@ -258,7 +268,7 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 		if deltaQuery.Id == 0 {
 			deltaQuery.Id = multiStepQuery.Id
 		}
-		writeWpiPath(projectId, periodCode, uint64(deltaQuery.Id), k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager)
+		WriteWpiPath(projectId, periodCode, uint64(deltaQuery.Id), k, bytes.NewReader(withinPeriodInsightsBytes), *cloudManager)
 		dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 		efTmpPath, efTmpName := diskManager.GetInsightsWpiFilePathAndName(projectId, dateString, uint64(deltaQuery.Id), k)
 		err = diskManager.Create(efTmpPath, efTmpName, bytes.NewReader(withinPeriodInsightsBytes))
@@ -271,7 +281,7 @@ func processSinglePeriodData(projectId uint64, periodCode Period, cloudManager *
 	return nil
 }
 
-func writeWpiPath(projectId uint64, periodCode Period, queryId uint64, k int, events *bytes.Reader,
+func WriteWpiPath(projectId uint64, periodCode Period, queryId uint64, k int, events *bytes.Reader,
 	cloudManager filestore.FileManager) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsWpiFilePathAndName(projectId, dateString, queryId, k)
@@ -283,7 +293,7 @@ func writeWpiPath(projectId uint64, periodCode Period, queryId uint64, k int, ev
 	return err
 }
 
-func writeCpiPath(projectId uint64, periodCode Period, queryId uint64, k int, events *bytes.Reader,
+func WriteCpiPath(projectId uint64, periodCode Period, queryId uint64, k int, events *bytes.Reader,
 	cloudManager filestore.FileManager) error {
 	dateString := U.GetDateOnlyFromTimestampZ(periodCode.From)
 	path, name := cloudManager.GetInsightsCpiFilePathAndName(projectId, dateString, queryId, k)
@@ -295,24 +305,25 @@ func writeCpiPath(projectId uint64, periodCode Period, queryId uint64, k int, ev
 	return err
 }
 
-func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnelQuery, bool, bool, bool) {
+func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnelQuery, M.KPIQueryGroup, bool, bool, bool) {
 	var deltaQuery Query
 	queryClass, queryInfo, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
 	if errMsg != "" {
-		return Query{}, MultiFunnelQuery{}, false, false, false
+		log.Info("errMsg: ", errMsg)
+		return Query{}, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false
 	}
 
-	if queryClass == model.QueryClassEvents {
+	if queryClass == M.QueryClassEvents {
 		var queryGroup M.QueryGroup
 		U.DecodePostgresJsonbToStructType(&queryInfo.Query, &queryGroup)
 		query := queryGroup.Queries[0]
-		if query.Type == model.QueryTypeUniqueUsers || query.Type == model.QueryTypeEventsOccurrence {
-			isEventOccurence := query.Type == model.QueryTypeEventsOccurrence
-			if (query.EventsCondition == model.EventCondAnyGivenEvent || query.EventsCondition == model.EventCondAllGivenEvent) || (query.EventsCondition == model.EventCondEachGivenEvent && len(query.EventsWithProperties) == 1) {
+		if query.Type == M.QueryTypeUniqueUsers || query.Type == M.QueryTypeEventsOccurrence {
+			isEventOccurence := query.Type == M.QueryTypeEventsOccurrence
+			if (query.EventsCondition == M.EventCondAnyGivenEvent || query.EventsCondition == M.EventCondAllGivenEvent) || (query.EventsCondition == M.EventCondEachGivenEvent && len(query.EventsWithProperties) == 1) {
 				deltaQuery = Query{Id: int(dashboardUnit.QueryId),
 					Base: EventsCriteria{
 						Operator: "And",
-						EventCriterionList: []EventCriterion{EventCriterion{
+						EventCriterionList: []EventCriterion{{
 							Name:         "$session",
 							EqualityFlag: true,
 						}}},
@@ -321,7 +332,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 					}}
 				for _, event := range query.EventsWithProperties {
 					event.Properties = append(event.Properties, query.GlobalUserProperties...)
-					if query.EventsCondition == model.EventCondEachGivenEvent {
+					if query.EventsCondition == M.EventCondEachGivenEvent {
 						deltaQuery.Target.Operator = "And"
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
 							Name:                event.Name,
@@ -329,7 +340,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							FilterCriterionList: MapFilterProperties(event.Properties),
 						})
 					}
-					if query.EventsCondition == model.EventCondAllGivenEvent {
+					if query.EventsCondition == M.EventCondAllGivenEvent {
 						deltaQuery.Target.Operator = "And"
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
 							Name:                event.Name,
@@ -337,7 +348,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 							FilterCriterionList: MapFilterProperties(event.Properties),
 						})
 					}
-					if query.EventsCondition == model.EventCondAnyGivenEvent {
+					if query.EventsCondition == M.EventCondAnyGivenEvent {
 						deltaQuery.Target.Operator = "Or"
 						deltaQuery.Target.EventCriterionList = append(deltaQuery.Target.EventCriterionList, EventCriterion{
 							Name:                event.Name,
@@ -346,38 +357,38 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						})
 					}
 				}
-				return deltaQuery, MultiFunnelQuery{}, true, isEventOccurence, false
+				return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, isEventOccurence, false
 			}
 		}
 	}
-	if queryClass == model.QueryClassFunnel {
+	if queryClass == M.QueryClassFunnel {
 		var query M.Query
 		U.DecodePostgresJsonbToStructType(&queryInfo.Query, &query)
-		if query.Type == model.QueryTypeUniqueUsers {
-			if query.EventsCondition == model.EventCondAnyGivenEvent {
+		if query.Type == M.QueryTypeUniqueUsers {
+			if query.EventsCondition == M.EventCondAnyGivenEvent {
 				if len(query.EventsWithProperties) == 2 {
 					deltaQuery = Query{Id: int(dashboardUnit.QueryId),
 						Base: EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{EventCriterion{
+							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[0].Name,
 								EqualityFlag:        true,
 								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
 							}}},
 						Target: EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{EventCriterion{
+							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[1].Name,
 								EqualityFlag:        true,
 								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[1].Properties, query.GlobalUserProperties...)),
 							}},
 						}}
-					return deltaQuery, MultiFunnelQuery{}, true, false, false
+					return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, true, false, false
 				} else {
 					multiStepFunnel := MultiFunnelQuery{Id: int(dashboardUnit.QueryId),
 						Base: EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{EventCriterion{
+							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[0].Name,
 								EqualityFlag:        true,
 								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[0].Properties, query.GlobalUserProperties...)),
@@ -385,7 +396,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						Intermediate: make([]EventsCriteria, 0),
 						Target: EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{EventCriterion{
+							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[len(query.EventsWithProperties)-1].Name,
 								EqualityFlag:        true,
 								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[len(query.EventsWithProperties)-1].Properties, query.GlobalUserProperties...)),
@@ -394,7 +405,7 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 					for i := 1; i <= len(query.EventsWithProperties)-2; i++ {
 						criteria := EventsCriteria{
 							Operator: "And",
-							EventCriterionList: []EventCriterion{EventCriterion{
+							EventCriterionList: []EventCriterion{{
 								Name:                query.EventsWithProperties[i].Name,
 								EqualityFlag:        true,
 								FilterCriterionList: MapFilterProperties(append(query.EventsWithProperties[i].Properties, query.GlobalUserProperties...)),
@@ -402,16 +413,28 @@ func IsDashboardUnitWIEnabled(dashboardUnit M.DashboardUnit) (Query, MultiFunnel
 						}
 						multiStepFunnel.Intermediate = append(multiStepFunnel.Intermediate, criteria)
 					}
-					return Query{}, multiStepFunnel, true, false, true
+					return Query{}, multiStepFunnel, M.KPIQueryGroup{}, true, false, true
 				}
 
 			}
 		}
 	}
-	return deltaQuery, MultiFunnelQuery{}, false, false, false
+
+	if queryClass == M.QueryClassKPI {
+		var kpiQuery M.KPIQueryGroup
+		err := json.Unmarshal(queryInfo.Query.RawMessage, &kpiQuery)
+		if err == nil {
+			return deltaQuery, MultiFunnelQuery{}, kpiQuery, true, false, false
+		} else {
+			log.WithError(err).Error("error getting kpiQuery")
+		}
+		// query := queryGroup.Queries[0]
+		// log.Infof("query: %v", query)
+	}
+	return deltaQuery, MultiFunnelQuery{}, M.KPIQueryGroup{}, false, false, false
 }
 
-func MapFilterProperties(qp []model.QueryProperty) []EventFilterCriterion {
+func MapFilterProperties(qp []M.QueryProperty) []EventFilterCriterion {
 	filters := make(map[string]EventFilterCriterion)
 	for _, prop := range qp {
 		filterProp := EventFilterCriterion{
@@ -429,7 +452,7 @@ func MapFilterProperties(qp []model.QueryProperty) []EventFilterCriterion {
 		keyString := fmt.Sprintf("%s-%s", prop.Entity, prop.Property)
 		propertyInMap, exists := filters[keyString]
 		var values []OperatorValueTuple
-		if exists == false {
+		if !exists {
 			values = make([]OperatorValueTuple, 0)
 		} else {
 			values = propertyInMap.Values

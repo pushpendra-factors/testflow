@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-ilb
+  namespace: default
+  annotations:
+    cloud.google.com/load-balancer-type: "Internal"
+  labels:
+    env: "staging"
+    project: "factors-staging"
+spec:
+  type: LoadBalancer
+  selector:
+    statefulset.kubernetes.io/pod-name: etcd-0
+  ports:
+  - port: 2379
+    targetPort: 2379
+    protocol: TCP

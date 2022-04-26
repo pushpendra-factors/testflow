@@ -364,6 +364,7 @@ type Model interface {
 	GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.SalesforceDocument, int)
 	UpdateSalesforceDocumentBySyncStatus(projectID uint64, document *model.SalesforceDocument, syncID, userID, groupUserID string, synced bool) int
 	BuildAndUpsertDocument(projectID uint64, objectName string, value model.SalesforceRecord) error
+	BuildAndUpsertDocumentInBatch(projectID uint64, objectName string, values []model.SalesforceRecord) error
 	CreateSalesforceDocument(projectID uint64, document *model.SalesforceDocument) int
 	CreateSalesforceDocumentByAction(projectID uint64, document *model.SalesforceDocument, action model.SalesforceAction) int
 	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int, includeUnSynced bool) ([]model.SalesforceDocument, int)
@@ -604,9 +605,13 @@ type Model interface {
 	CreateCRMGroup(crmGroup *model.CRMGroup) (int, error)
 	CreateCRMActivity(crmActivity *model.CRMActivity) (int, error)
 	CreateCRMRelationship(crmRelationship *model.CRMRelationship) (int, error)
+	CreateCRMProperties(crmProperty *model.CRMProperty) (int, error)
 	GetCRMUserByTypeAndAction(projectID uint64, source model.CRMSource, id string, userType int, action model.CRMAction) (*model.CRMUser, int)
 	UpdateCRMUserAsSynced(projectID uint64, source model.CRMSource, crmUser *model.CRMUser, userID, syncID string) (*model.CRMUser, int)
 	GetCRMUsersInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMUser, int)
 	GetCRMActivityInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMActivity, int)
+	GetCRMPropertiesForSync(projectID uint64) ([]model.CRMProperty, int)
+	GetActivitiesDistinctEventNamesByType(projectID uint64, objectTypes []int) (map[int][]string, int)
+	UpdateCRMProperyAsSynced(projectID uint64, source model.CRMSource, crmProperty *model.CRMProperty) (*model.CRMProperty, int)
 	UpdateCRMActivityAsSynced(projectID uint64, source model.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int)
 }

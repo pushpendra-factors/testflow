@@ -431,8 +431,9 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 		return nil, nil, 0, 0, err
 	}
 
-	campaignMemberLeadIDs := make([]string, 0)
-	campaignMemberContactIDs := make([]string, 0)
+	// storing as map to avoid duplicate ids
+	campaignMemberLeadIDsMap := make(map[string]bool)
+	campaignMemberContactIDsMap := make(map[string]bool)
 
 	campaingMemberAPICalls := 0
 	if len(campaignMemberIDs) > 0 {
@@ -457,19 +458,20 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 				for i := range campaignMembers {
 					contactID, leadID := getSalesforceContactIDANDLeadIDFromCampaignMember(&campaignMembers[i])
 					if contactID != "" {
-						campaignMemberContactIDs = append(campaignMemberContactIDs, contactID)
+						campaignMemberContactIDsMap[contactID] = true
 					}
 					if leadID != "" {
-						campaignMemberLeadIDs = append(campaignMemberLeadIDs, leadID)
+						campaignMemberLeadIDsMap[leadID] = true
 					}
 				}
 			}
 
 			campaingMemberAPICalls += paginatedCampaignMembersByID.APICall
 		}
-
 	}
 
+	campaignMemberLeadIDs := U.GetKeysMapAsArray(campaignMemberLeadIDsMap)
+	campaignMemberContactIDs := U.GetKeysMapAsArray(campaignMemberContactIDsMap)
 	// sync all campaign member if not existed since the first date of data pull
 	memberObjectAPICalls := 0
 	var memberRecords []model.SalesforceRecord
@@ -531,13 +533,12 @@ func syncOpportunityPrimaryContact(projectID uint64, primaryContactIDs []string,
 			return nil, 0, true
 		}
 
-		for i := range contactRecords {
-			err = store.GetStore().BuildAndUpsertDocument(projectID, model.SalesforceDocumentTypeNameContact, contactRecords[i])
-			if err != nil {
-				log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to BuildAndUpsertDocument opportunity contact sync.")
-				failures = append(failures, err.Error())
-			}
+		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, model.SalesforceDocumentTypeNameContact, contactRecords)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to BuildAndUpsertDocument opportunity contact sync.")
+			failures = append(failures, err.Error())
 		}
+
 	}
 
 	opportunityPrimaryContact = paginatedContacts.APICall
@@ -602,11 +603,11 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 				} else {
 					log.WithFields(log.Fields{"project_id": projectID}).Error("Missing lead id on lead document")
 				}
+			}
 
-				err = store.GetStore().BuildAndUpsertDocument(projectID, model.SalesforceDocumentTypeNameLead, objectRecords[i])
-				if err != nil {
-					log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to BuildAndUpsertDocument opportunity lead sync .")
-				}
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, model.SalesforceDocumentTypeNameLead, objectRecords)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to BuildAndUpsertDocument opportunity lead sync .")
 			}
 		}
 		leadIDForOpportunityRecordsAPICalls += paginatedLeads.APICall
@@ -709,11 +710,11 @@ func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceUR
 				}
 			}
 
-			err = store.GetStore().BuildAndUpsertDocument(projectID, model.SalesforceDocumentTypeNameOpportunity, objectRecords[i])
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument for opportunity sync .")
-				failures = append(failures, err.Error())
-			}
+		}
+		err = store.GetStore().BuildAndUpsertDocumentInBatch(projectID, model.SalesforceDocumentTypeNameOpportunity, objectRecords)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument for opportunity sync .")
+			failures = append(failures, err.Error())
 		}
 
 		// only sync object if allowed by the project, will fallback to leads if not allowed
@@ -810,13 +811,14 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 					logCtx.WithError(err).Error("Missing campaign member Id from campaign member record.")
 				}
 			}
-
-			err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, objectName, objectRecords[i])
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument.")
-				failures = append(failures, err.Error())
-			}
 		}
+
+		err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, objectName, objectRecords)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument.")
+			failures = append(failures, err.Error())
+		}
+
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
 	}
 
@@ -833,9 +835,17 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		salesforceObjectStatus.TotalAPICalls["CampaignMemberAPICalls"] = campaingMemberAPICalls
 		salesforceObjectStatus.TotalAPICalls["MemberObjectAPICalls"] = memberObjectAPICalls
 
-		var failures []string
+		objectRecordsMap := make(map[string][]model.SalesforceRecord, 0)
 		for i := range campaignMemberRecords {
-			err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, recordObjectType[i], campaignMemberRecords[i])
+			if _, exist := objectRecordsMap[recordObjectType[i]]; !exist {
+				objectRecordsMap[recordObjectType[i]] = make([]model.SalesforceRecord, 0)
+			}
+			objectRecordsMap[recordObjectType[i]] = append(objectRecordsMap[recordObjectType[i]], campaignMemberRecords[i])
+		}
+
+		var failures []string
+		for objectName := range objectRecordsMap {
+			err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, objectName, objectRecordsMap[objectName])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to insert campaign members on BuildAndUpsertDocument.")
 				failures = append(failures, err.Error())
@@ -879,11 +889,9 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 					return salesforceObjectStatus, err
 				}
 
-				for i := range campaignRecords {
-					err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, docObjectName, campaignRecords[i])
-					if err != nil {
-						logCtx.WithError(err).Error("Failed to insert unsynced campaing related document on BuildAndUpsertDocument.")
-					}
+				err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, docObjectName, campaignRecords)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to insert unsynced campaing related document on BuildAndUpsertDocument.")
 				}
 			}
 			salesforceObjectStatus.TotalAPICalls[docObjectName] += paginatedObjectByID.APICall

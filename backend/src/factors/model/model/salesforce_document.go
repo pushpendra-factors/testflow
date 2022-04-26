@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 // SalesforceDocument is an interface for salesforce_documents table
@@ -286,4 +287,52 @@ func GetSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 	}
 
 	return t.Unix(), nil
+}
+
+func GetSalesforceDocumentsWithActionAndTimestamp(documents []*SalesforceDocument, existDocuments map[string]bool) []*SalesforceDocument {
+	documentsWithAction := make([]*SalesforceDocument, 0)
+
+	documentsIDs := make(map[string]bool)
+	for i := range documents {
+
+		if _, exist := documentsIDs[documents[i].ID]; exist {
+			log.WithFields(log.Fields{"document": documents[i]}).Error("Found duplicate salesforce document on same batch.")
+		}
+
+		documentsIDs[documents[i].ID] = true
+
+		timestamp, err := GetSalesforceLastModifiedTimestamp(documents[i])
+		if err != nil {
+			log.WithError(err).Error("Failed to get last modified timestamp on salesforce document. Skipping.")
+			continue
+		}
+
+		documents[i].Timestamp = timestamp
+
+		if !existDocuments[documents[i].ID] {
+			documents[i].Action = SalesforceDocumentCreated
+			documentsWithAction = append(documentsWithAction, documents[i])
+		} else {
+			documents[i].Action = SalesforceDocumentUpdated
+			documentsWithAction = append(documentsWithAction, documents[i])
+		}
+	}
+
+	return documentsWithAction
+}
+
+func GetSalesforceDocumentsAsBatch(list []*SalesforceDocument, batchSize int) [][]*SalesforceDocument {
+	batchList := make([][]*SalesforceDocument, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
 }

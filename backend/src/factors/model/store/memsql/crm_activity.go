@@ -223,3 +223,48 @@ func (store *MemSQL) UpdateCRMActivityAsSynced(projectID uint64, source model.CR
 
 	return crmActivity, http.StatusAccepted
 }
+
+func (store *MemSQL) GetActivitiesDistinctEventNamesByType(projectID uint64, objectTypes []int) (map[int][]string, int) {
+	logFields := log.Fields{"project_id": projectID, "object_types": objectTypes}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || len(objectTypes) < 1 {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	var distinctNames []struct {
+		Name string
+		Type int
+	}
+
+	err := db.Table("crm_activities").Where("project_id = ? AND type = ?", projectID, objectTypes).
+		Select("DISTINCT(name) as name, type").Find(&distinctNames).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get activity names by type.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(distinctNames) < 1 {
+		logCtx.Error("Failed to get name for activites.")
+		return nil, http.StatusNotFound
+	}
+
+	typeName := make(map[int][]string, 0)
+	for i := range distinctNames {
+		if _, exist := typeName[distinctNames[i].Type]; !exist {
+			typeName[distinctNames[i].Type] = make([]string, 0)
+		}
+
+		typeName[distinctNames[i].Type] = append(typeName[distinctNames[i].Type], distinctNames[i].Name)
+	}
+
+	return typeName, http.StatusFound
+}

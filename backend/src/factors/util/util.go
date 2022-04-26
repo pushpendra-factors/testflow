@@ -218,7 +218,7 @@ func IsEmail(str string) bool {
 
 func IsPersonalEmail(str string) bool {
 	str = strings.ToLower(str)
-	personalDomains := []string {
+	personalDomains := []string{
 		"gmail.com",
 		"yahoo.com",
 		"hotmail.com",
@@ -542,6 +542,15 @@ func GetInterfaceListAsBatch(list []interface{}, batchSize int) [][]interface{} 
 	}
 
 	return batchList
+}
+
+func GetKeysMapAsArray(keys map[string]bool) []string {
+	keysArray := make([]string, 0)
+	for key := range keys {
+		keysArray = append(keysArray, key)
+	}
+
+	return keysArray
 }
 
 func GetSnakeCaseToTitleString(str string) (title string) {
@@ -899,6 +908,26 @@ func StringIn(strList []string, s string) (bool, string, int) {
 	}
 
 	return false, "", -1
+
+}
+
+func FloatIn(strList []string, s float64) (bool, float64, int) {
+
+	if len(strList) == 0 {
+		return false, 0, -1
+	}
+
+	for idx, v := range strList {
+
+		if val, err := strconv.ParseFloat(v, 64); err == nil {
+			if val == s {
+				return true, s, idx
+			}
+		}
+
+	}
+
+	return false, 0, -1
 
 }
 

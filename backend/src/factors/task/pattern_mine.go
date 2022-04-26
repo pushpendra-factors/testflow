@@ -1274,14 +1274,14 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, cloudManager *f
 	var upCatg, epCatg map[string]string
 
 	fileDir, fileName = (*cloudManager).GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId)
-	upCatg, err = P.GetPropertiesCategoricalMapFromFile(cloudManager, projectId, modelId, fileDir, fileName)
+	upCatg, err = P.GetPropertiesCategoricalMapFromFile(cloudManager, fileDir, fileName)
 	if err != nil {
 		mineLog.Error("Error reading type of user properties from File")
 		return CampaignEventLists{}, err
 	}
 
 	fileDir, fileName = (*cloudManager).GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId)
-	epCatg, err = P.GetPropertiesCategoricalMapFromFile(cloudManager, projectId, modelId, fileDir, fileName)
+	epCatg, err = P.GetPropertiesCategoricalMapFromFile(cloudManager, fileDir, fileName)
 	if err != nil {
 		mineLog.Error("Error reading type of event properties from File")
 		return CampaignEventLists{}, err
@@ -2614,10 +2614,10 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 	}
 
 	dir, name = (*cloudManager).GetModelUserPropertiesCategoricalFilePathAndName(projectId, modelId)
-	createFileFromMap(dir, name, cloudManager, userPropCatgMap)
+	CreateFileFromMap(dir, name, cloudManager, userPropCatgMap)
 
 	dir, name = (*cloudManager).GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId)
-	createFileFromMap(dir, name, cloudManager, eventPropCatgMap)
+	CreateFileFromMap(dir, name, cloudManager, eventPropCatgMap)
 
 	err := scanner.Err()
 	logCtx.Info("Extraced Unique EventNames from file")
@@ -2638,15 +2638,15 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 	}
 
 	dir, name = (*cloudManager).GetModelUserPropertiesFilePathAndName(projectId, modelId)
-	createFileFromMap(dir, name, cloudManager, eventUserPropMap)
+	CreateFileFromMap(dir, name, cloudManager, eventUserPropMap)
 
 	_, name = (*cloudManager).GetModelEventPropertiesFilePathAndName(projectId, modelId)
-	createFileFromMap(dir, name, cloudManager, eventEventPropMap)
+	CreateFileFromMap(dir, name, cloudManager, eventEventPropMap)
 
 	return eventNames, nil
 }
 
-func createFileFromMap(fileDir, fileName string, cloudManager *filestore.FileManager, Map interface{}) error {
+func CreateFileFromMap(fileDir, fileName string, cloudManager *filestore.FileManager, Map interface{}) error {
 	if mapBytes, err := json.Marshal(Map); err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to create ", fileName, " with error: ", err)
 		return err

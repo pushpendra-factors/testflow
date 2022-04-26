@@ -370,6 +370,7 @@ func ValidateKPIQueryMetricsForAnyEventType(kpiQueryMetrics []string, mapOfMetri
 	return true
 }
 
+// Duplicated function present in postgres and memsql/kpi_analytics_website_session.
 func ValidateKPIQueryFiltersForAnyEventType(kpiQueryFilters []KPIFilter, configPropertiesData []map[string]string) bool {
 	mapOfPropertyName := make(map[string]struct{})
 	for _, propertyData := range configPropertiesData {
@@ -383,6 +384,7 @@ func ValidateKPIQueryFiltersForAnyEventType(kpiQueryFilters []KPIFilter, configP
 	return true
 }
 
+// Duplicated function present in postgres and memsql/kpi_analytics_website_session.
 func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, configPropertiesData []map[string]string) bool {
 	mapOfPropertyName := make(map[string]struct{})
 	for _, propertyData := range configPropertiesData {

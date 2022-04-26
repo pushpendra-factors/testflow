@@ -18,21 +18,25 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
-	"time"
 	"strings"
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 )
 
-const Session = "$session"
-const Hubspot_created = "$hubspot_contact_created"
-const Hubspot_updated = "$hubspot_contact_updated"
-const Sf_created = "$sf_contact_created"
-const Sf_updated = "$sf_contact_updated"
-const NoEvent = "NoEvent"
+const NO_EVENT = "NoEvent"
 const ReportName = "report.txt"
 const DetailedReportName = "detailed_report.txt"
-const EMAIL_SUBJECT = "Factors Report"
+
+var ALL_EVENTS = [...]string{
+	U.EVENT_NAME_SESSION,
+	U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+	U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+	U.EVENT_NAME_SALESFORCE_CONTACT_CREATED,
+	U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
+}
+
 type validationRule struct {
 	feild    string
 	property string
@@ -46,16 +50,12 @@ func main() {
 
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	envFlag := flag.String("env", "development", "environment")
-	var cloudManager filestore.FileManager
-
-	//Taking flag inputs
 	date := time.Now().AddDate(0, 0, -7)
 	for date.Weekday() != time.Sunday {
 		date = date.AddDate(0, 0, -1)
 	}
 	fromDate := flag.String("date", date.Format(U.DATETIME_FORMAT_YYYYMMDD), "start date of events")
 	projectIdFlag := flag.String("project_ids", "", "Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
-
 	modelType := flag.String("modelType", "w", "Model Type of events")
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
@@ -76,23 +76,7 @@ func main() {
 	emails := strings.Split(*emailString, ",")
 	flag.Parse()
 
-	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-	if allProjects {
-		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			log.Fatal("Failed to get all projects and project_ids set to '*'.")
-		}
-
-		projectIdsToRun = make(map[uint64]bool, 0)
-		for _, projectID := range projectIDs {
-			projectIdsToRun[projectID] = true
-		}
-	}
-
-	projectIdsArray := make([]uint64, 0)
-	for projectId := range projectIdsToRun {
-		projectIdsArray = append(projectIdsArray, projectId)
-	}
+	var cloudManager filestore.FileManager
 	if *envFlag == "development" {
 		cloudManager = serviceDisk.New(*bucketName)
 	} else {
@@ -103,7 +87,7 @@ func main() {
 			panic(err)
 		}
 	}
-
+	projectIdsList := getProjectIdsList(*projectIdFlag)
 	fromTime, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, *fromDate)
 	if err != nil {
 		log.Fatal("Failed in parsing date. Error = ", err)
@@ -118,11 +102,9 @@ func main() {
 	}
 	toDate := fromTime.AddDate(0, 0, 6).Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-	//fileDir and fileName
-	startTimeStamp := fromTime.Unix()
-	for _, project_id := range projectIdsArray {
+	for _, project_id := range projectIdsList {
 
-		fileDir, fileName := (cloudManager).GetModelEventsFilePathAndName(uint64(project_id), startTimeStamp, *modelType)
+		fileDir, fileName := (cloudManager).GetModelEventsFilePathAndName(uint64(project_id), fromTime.Unix(), *modelType)
 		reader, err := (cloudManager).Get(fileDir, fileName)
 		if err != nil {
 			log.Fatal("Failed to get data from file path. error = ", err)
@@ -134,17 +116,16 @@ func main() {
 		}
 		_ = closeFile(dataFile)
 		log.Info("data download sucessful...")
-		//initizalizing validator and validationMap
+
 		file, _ := openFile(fileName)
 		scanner := bufio.NewScanner(file)
 		scanner.Split(bufio.ScanLines)
-
+		//initizalizing validator and validationMap
 		validate := validator.New()
 		initialize()
 		var reportMap = make(map[string]map[string]bool)
 		var daterange = make(map[string]map[string]bool)
 		var dates = make([]string, 0, 10)
-		All_Events := []string{Session, Hubspot_created, Hubspot_updated, Sf_created, Sf_updated}
 		//Scanning the file row by row
 		for scanner.Scan() {
 			row := []byte(scanner.Text())
@@ -159,17 +140,22 @@ func main() {
 			mapKey := fmt.Sprintf("Date:%s, Day:%s ", dateKey, weekday)
 			if daterange[mapKey] == nil {
 				daterange[mapKey] = make(map[string]bool)
-				for _, event := range All_Events {
+				for _, event := range ALL_EVENTS {
 					daterange[mapKey][event] = false
 				}
 				dates = append(dates, mapKey)
 			}
 			eventName := data.EventName
+			if strings.HasPrefix(eventName, U.EVENT_NAME_SESSION) {
+				eventName = U.EVENT_NAME_SESSION
+			}
 			if validations[eventName] == nil {
-				eventName = "NoEvent"
+				eventName = NO_EVENT
 			} else {
 				daterange[mapKey][eventName] = true
 			}
+
+			//validating data
 			r := reflect.ValueOf(data)
 			for key, value := range validations[eventName] {
 				if reportMap[key] == nil {
@@ -192,67 +178,12 @@ func main() {
 		//end of data file
 
 		// Creating Reports
-		var report, detailed_report *os.File
-		report, _ = createFile(ReportName)
-		detailed_report, _ = createFile(DetailedReportName)
-		report.WriteString(fmt.Sprintf("Report from %s to %s.\n\n", *fromDate, toDate))
-		detailed_report.WriteString(fmt.Sprintf("Report from %s to %s.\n\n", *fromDate, toDate))
-
-		for key, value := range reportMap {
-			report.WriteString(fmt.Sprintf("Total invalid %s : %s \n", key, strconv.Itoa(int(len(value)))))
-			if len(value) != 0 {
-				detailed_report.WriteString("Invalid " + key + ":\n")
-				for uid := range value {
-					detailed_report.WriteString(uid + "\n")
-				}
-				detailed_report.WriteString("\n")
-			}
-		}
-		sort.Strings(dates)
-		report.WriteString("\nEvents for Date Ranges :\n")
-		for _, key := range dates {
-			report.WriteString(key + " : ")
-			value := daterange[key]
-			s := ""
-			flag := false
-			for event, present := range value {
-				if present {
-					flag = true
-					s += event
-					s += ", "
-				}
-			}
-			if !flag {
-				report.WriteString("None\n")
-				continue
-			}
-			report.WriteString(s[0:len(s)-2] + "\n")
-		}
-		report.WriteString("\nMissing events for Date Ranges :\n")
-		for _, key := range dates {
-			report.WriteString(key + " : ")
-			value := daterange[key]
-			s := ""
-			flag := false
-			for event, present := range value {
-				if !present {
-					flag = true
-					s += event
-					s += ", "
-				}
-			}
-			if !flag {
-				report.WriteString("None\n")
-				continue
-			}
-			report.WriteString(s[0:len(s)-2] + "\n")
-		}
+		writeReport(dates, daterange, reportMap, *fromDate, toDate)
+		writeDetailedReport(reportMap, *fromDate, toDate)
 
 		//uploading reports to cloud
-		_ = closeFile(report)
-		_ = closeFile(detailed_report)
-		report, _ = openFile(ReportName)
-		detailed_report, _ = openFile(DetailedReportName)
+		report, _ := openFile(ReportName)
+		detailed_report, _ := openFile(DetailedReportName)
 		err = (cloudManager).Create(fileDir, ReportName, report)
 		if err != nil {
 			log.Fatal("Failed to upload report in cloud. error = ", err)
@@ -261,11 +192,11 @@ func main() {
 		if err != nil {
 			log.Fatal("Failed to upload detailed_report in cloud. error = ", err)
 		}
-		//reports uploaded
-		//closing reports
-		sendReportviaEmail(emails)
 		_ = closeFile(report)
 		_ = closeFile(detailed_report)
+		//reports uploaded and closed
+
+		sendReportviaEmail(emails, project_id)
 		log.Info(fmt.Sprintf("Report written successfully from %s to %s.", *fromDate, toDate))
 		//sucess log
 	}
@@ -280,58 +211,141 @@ func initialize() {
 	initializeSalesforce_Updated()
 }
 func initializeSession() {
-	validations[Session] = make(map[string]validationRule)
-	validations[Session]["UserId"] = validationRule{"UserId", "", true, "required"}
-	validations[Session]["EventName"] = validationRule{"EventName", "", true, "required"}
-	validations[Session]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
-	validations[Session]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_SESSION] = make(map[string]validationRule)
+	validations[U.EVENT_NAME_SESSION]["UserId"] = validationRule{"UserId", "", true, "required"}
+	validations[U.EVENT_NAME_SESSION]["EventName"] = validationRule{"EventName", "", true, "required"}
+	validations[U.EVENT_NAME_SESSION]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_SESSION]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_SESSION]["$session_count"] = validationRule{"$session_count", "UserProperties", false, "required,gt=0"}
 
-	validations[Session]["$page_count"] = validationRule{"$page_count", "EventProperties", true, "required,min=1"}
-	validations[Session]["$country"] = validationRule{"$country", "EventProperties", true, "required,min=1"}
-	validations[Session]["$initial_page_scroll_percent"] = validationRule{"$initial_page_scroll_percent", "EventProperties", true, "required,gt=0"}
-	validations[Session]["$session_spent_time"] = validationRule{"$session_spent_time", "EventProperties", true, "required,gt=0"}
+	validations[U.EVENT_NAME_SESSION]["$page_count"] = validationRule{"$page_count", "EventProperties", true, "required,min=1"}
+	validations[U.EVENT_NAME_SESSION]["$country"] = validationRule{"$country", "EventProperties", true, "required,min=1"}
+	validations[U.EVENT_NAME_SESSION]["$initial_page_scroll_percent"] = validationRule{"$initial_page_scroll_percent", "EventProperties", true, "required,gt=0"}
+	validations[U.EVENT_NAME_SESSION]["$session_spent_time"] = validationRule{"$session_spent_time", "EventProperties", true, "required,gt=0"}
 }
 func initializeNoEvent() {
-	validations[NoEvent] = make(map[string]validationRule)
-	validations[NoEvent]["UserId"] = validationRule{"UserId", "", true, "required"}
-	validations[NoEvent]["EventName"] = validationRule{"EventName", "", true, "required"}
-	validations[NoEvent]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
-	validations[NoEvent]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
+	validations[NO_EVENT] = make(map[string]validationRule)
+	validations[NO_EVENT]["UserId"] = validationRule{"UserId", "", true, "required"}
+	validations[NO_EVENT]["EventName"] = validationRule{"EventName", "", true, "required"}
+	validations[NO_EVENT]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
+	validations[NO_EVENT]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
 
-	validations[NoEvent]["$page_spent_time"] = validationRule{"$page_spent_time", "EventProperties", false, "required,gt=0"}
-	validations[NoEvent]["$session_count"] = validationRule{"$session_count", "UserProperties", true, "required,gt=0"}
+	validations[NO_EVENT]["$page_spent_time"] = validationRule{"$page_spent_time", "EventProperties", false, "required,gt=0"}
 }
 func initializeHubspot_Created() {
-	validations[Hubspot_created] = make(map[string]validationRule)
-	validations[Hubspot_created]["UserId"] = validationRule{"UserId", "", true, "required"}
-	validations[Hubspot_created]["EventName"] = validationRule{"EventName", "", true, "required"}
-	validations[Hubspot_created]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
-	validations[Hubspot_created]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_CREATED] = make(map[string]validationRule)
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_CREATED]["UserId"] = validationRule{"UserId", "", true, "required"}
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_CREATED]["EventName"] = validationRule{"EventName", "", true, "required"}
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_CREATED]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_CREATED]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
 
 }
 func initializeHubspot_Updated() {
-	validations[Hubspot_updated] = make(map[string]validationRule)
-	validations[Hubspot_updated]["UserId"] = validationRule{"UserId", "", true, "required"}
-	validations[Hubspot_updated]["EventName"] = validationRule{"EventName", "", true, "required"}
-	validations[Hubspot_updated]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
-	validations[Hubspot_updated]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED] = make(map[string]validationRule)
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED]["UserId"] = validationRule{"UserId", "", true, "required"}
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED]["EventName"] = validationRule{"EventName", "", true, "required"}
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
 
 }
 func initializeSalesforce_Created() {
-	validations[Sf_created] = make(map[string]validationRule)
-	validations[Sf_created]["UserId"] = validationRule{"UserId", "", true, "required"}
-	validations[Sf_created]["EventName"] = validationRule{"EventName", "", true, "required"}
-	validations[Sf_created]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
-	validations[Sf_created]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_CREATED] = make(map[string]validationRule)
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_CREATED]["UserId"] = validationRule{"UserId", "", true, "required"}
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_CREATED]["EventName"] = validationRule{"EventName", "", true, "required"}
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_CREATED]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_CREATED]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
 
 }
 func initializeSalesforce_Updated() {
-	validations[Sf_updated] = make(map[string]validationRule)
-	validations[Sf_updated]["UserId"] = validationRule{"UserId", "", true, "required"}
-	validations[Sf_updated]["EventName"] = validationRule{"EventName", "", true, "required"}
-	validations[Sf_updated]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
-	validations[Sf_updated]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED] = make(map[string]validationRule)
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED]["UserId"] = validationRule{"UserId", "", true, "required"}
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED]["EventName"] = validationRule{"EventName", "", true, "required"}
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED]["UserJoinTimestamp"] = validationRule{"UserJoinTimestamp", "", true, "required,gt=0"}
+	validations[U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED]["EventTimestamp"] = validationRule{"EventTimestamp", "", true, "required,gt=0"}
 
+}
+
+func writeReport(dates []string, daterange, reportMap map[string]map[string]bool, from string, to string) {
+	report, _ := createFile(ReportName)
+	report.WriteString(fmt.Sprintf("Report from %s to %s.\n\n", from, to))
+	for key, value := range reportMap {
+		report.WriteString(fmt.Sprintf("Total invalid %s : %s \n", key, strconv.Itoa(int(len(value)))))
+	}
+	sort.Strings(dates)
+	report.WriteString("\nEvents for Date Ranges :\n")
+	for _, key := range dates {
+		report.WriteString(key + " : ")
+		value := daterange[key]
+		s := ""
+		flag := false
+		for event, present := range value {
+			if present {
+				flag = true
+				s += event
+				s += ", "
+			}
+		}
+		if !flag {
+			report.WriteString("None\n")
+			continue
+		}
+		report.WriteString(s[0:len(s)-2] + "\n")
+	}
+	report.WriteString("\nMissing events for Date Ranges :\n")
+	for _, key := range dates {
+		report.WriteString(key + " : ")
+		value := daterange[key]
+		s := ""
+		flag := false
+		for event, present := range value {
+			if !present {
+				flag = true
+				s += event
+				s += ", "
+			}
+		}
+		if !flag {
+			report.WriteString("None\n")
+			continue
+		}
+		report.WriteString(s[0:len(s)-2] + "\n")
+	}
+	_ = closeFile(report)
+}
+
+func writeDetailedReport(reportMap map[string]map[string]bool, from string, to string) {
+	detailed_report, _ := createFile(DetailedReportName)
+	detailed_report.WriteString(fmt.Sprintf("Report from %s to %s.\n\n", from, to))
+	for key, value := range reportMap {
+		if len(value) != 0 {
+			detailed_report.WriteString("Invalid " + key + ":\n")
+			for uid := range value {
+				detailed_report.WriteString(uid + "\n")
+			}
+			detailed_report.WriteString("\n")
+		}
+	}
+	_ = closeFile(detailed_report)
+}
+
+func getProjectIdsList(projectIdsString string) (projectIdsList []uint64) {
+	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(projectIdsString, "")
+	if allProjects {
+		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+		}
+
+		projectIdsToRun = make(map[uint64]bool, 0)
+		for _, projectID := range projectIDs {
+			projectIdsToRun[projectID] = true
+		}
+	}
+	projectIdsList = make([]uint64, 0)
+	for projectId := range projectIdsToRun {
+		projectIdsList = append(projectIdsList, projectId)
+	}
+	return projectIdsList
 }
 
 func openFile(fileName string) (*os.File, error) {
@@ -341,6 +355,7 @@ func openFile(fileName string) (*os.File, error) {
 	}
 	return file, err
 }
+
 func closeFile(fileName *os.File) error {
 	err := fileName.Close()
 	if err != nil {
@@ -348,6 +363,7 @@ func closeFile(fileName *os.File) error {
 	}
 	return err
 }
+
 func createFile(fileName string) (*os.File, error) {
 	f, err := os.Create(fileName)
 	if err != nil {
@@ -355,22 +371,24 @@ func createFile(fileName string) (*os.File, error) {
 	}
 	return f, err
 }
-func sendReportviaEmail(emails []string) {
+
+func sendReportviaEmail(emails []string, project_id uint64) {
 	var success, fail int
 	report, err := openFile(ReportName)
-	if err !=nil{
+	if err != nil {
 		log.Error(err)
 		return
 	}
 	scanner := bufio.NewScanner(report)
 	// send the report as mail
 	var data []string
-	for scanner.Scan(){
+	for scanner.Scan() {
 		data = append(data, scanner.Text())
 	}
 	html := getTemplateForReport(data)
+	email_subject := fmt.Sprintf("Factors Report for Project Id %v", project_id)
 	for _, email := range emails {
-		err = C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), EMAIL_SUBJECT, html, "")
+		err = C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), email_subject, html, "")
 		if err != nil {
 			fail++
 			log.WithError(err).Error("failed to send email for project_events")
@@ -381,7 +399,8 @@ func sendReportviaEmail(emails []string) {
 	defer report.Close()
 	log.Info("Report sent successfully successfully to ", success, "emails and failed to ", fail, "emails")
 }
-func getTemplateForReport(data []string) string{
+
+func getTemplateForReport(data []string) string {
 	var html string
 	html = "<html><body>"
 	for _, line := range data {
@@ -390,4 +409,4 @@ func getTemplateForReport(data []string) string{
 	}
 	html += "</body></html>"
 	return html
-} 
+}

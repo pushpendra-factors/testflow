@@ -87,7 +87,6 @@ func GetWeeklyInsightsHandler(c *gin.Context) (interface{}, int, string, string,
 	if err != nil {
 		log.Error(err)
 		return resp, http.StatusBadRequest, INVALID_INPUT, err.Error() + "1", true
-
 	}
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	if !C.IsWeeklyInsightsWhitelisted(agentUUID, params.ProjectID) {

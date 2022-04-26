@@ -241,6 +241,8 @@ type Configuration struct {
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
 	SalesforcePropertyLookBackTimeHr                int
+	SalesforceBatchInsertBatchSize                  int
+	AllowHubspotEngagementsByProjectID              string
 	HubspotPropertyLookBackLimit                    int
 	EnableSlowDBQueryLogging                        bool
 }
@@ -2133,6 +2135,19 @@ func GetSessionStoreSecret() string {
 
 func GetSalesforcePropertyLookBackTimeHr() int {
 	return GetConfig().SalesforcePropertyLookBackTimeHr
+}
+
+func GetSalesforceBatchInsertBatchSize() int {
+	return GetConfig().SalesforceBatchInsertBatchSize
+}
+
+func AllowHubspotEngagementsByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowHubspotEngagementsByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }
 
 func GetHubspotPropertiesLookbackLimit() int {

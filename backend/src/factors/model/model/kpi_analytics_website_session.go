@@ -40,23 +40,8 @@ var KPIPropertiesForWebsiteSessions = []map[string]string{
 var KPIConfigForWebsiteSessions = map[string]interface{}{
 	"category":         EventCategory,
 	"display_category": WebsiteSessionDisplayCategory,
-	"properties":       KPIPropertiesForWebsiteSessions,
 }
 
-func ValidateKPISessions(kpiQuery KPIQuery) bool {
-	return validateKPIQueryMetricsForWebsiteSession(kpiQuery.Metrics) ||
-		validateKPIQueryFiltersForWebsiteSession(kpiQuery.Filters) ||
-		validateKPIQueryGroupByForWebsiteSession(kpiQuery.GroupBy)
-}
-
-func validateKPIQueryMetricsForWebsiteSession(kpiQueryMetrics []string) bool {
+func ValidateKPIQueryMetricsForWebsiteSession(kpiQueryMetrics []string) bool {
 	return ValidateKPIQueryMetricsForAnyEventType(kpiQueryMetrics, MapOfMetricsToData[WebsiteSessionDisplayCategory])
-}
-
-func validateKPIQueryFiltersForWebsiteSession(kpiQueryFilters []KPIFilter) bool {
-	return ValidateKPIQueryFiltersForAnyEventType(kpiQueryFilters, KPIPropertiesForWebsiteSessions)
-}
-
-func validateKPIQueryGroupByForWebsiteSession(kpiQueryGroupBys []KPIGroupBy) bool {
-	return ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys, KPIPropertiesForWebsiteSessions)
 }

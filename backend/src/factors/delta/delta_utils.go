@@ -18,10 +18,20 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var TARGET_BEFORE_BASE_ERROR error = errors.New("LOGICAL ERROR: User hits target but misses base. It's recommended to change your base criteria.")
+var TARGET_BEFORE_BASE_ERROR error = errors.New("LOGICAL ERROR: User hits target but misses base. It's recommended to change your base criteria")
 
 // This is an enumerated list with values And or Or.
 type BooleanOperator string
+
+type Fraction struct {
+	Numerator   float64
+	Denominator float64
+}
+
+type MetricInfo struct {
+	Global   float64
+	Features map[string]map[string]float64
+}
 
 // const (
 // 	And BooleanOperator = iota
@@ -239,11 +249,6 @@ type WithinInsight struct {
 	Metrics map[string]Metric `json:"metrics"`
 }
 
-type pair struct {
-	first  uint64
-	second uint64
-}
-
 // WithinPeriodInsights stores insights per period (say a week or a month).
 type WithinPeriodInsights struct {
 	Period        Period                   `json:"period"`
@@ -298,6 +303,20 @@ type DiffMetric struct {
 	Second        interface{} `json:"second"`
 	PercentChange float64     `json:"perc"`
 	FactorChange  float64     `json:"factor"`
+}
+
+type WithinPeriodInsightsKpi map[string]*MetricInfo
+
+type CrossPeriodInsightsKpi struct {
+	Periods       PeriodPair                `json:"periods"`
+	Target        map[string]*CpiMetricInfo `json:"target"`
+	BaseAndTarget map[string]*CpiMetricInfo `json:"base_target"`
+	JSDivergence  JSDType                   `json:"jsd"`
+}
+
+type CpiMetricInfo struct {
+	GlobalMetrics  DiffMetric                       `json:"global"`
+	FeatureMetrics map[string]map[string]DiffMetric `json:"feat"`
 }
 
 type Level1CatDiffDist map[string]DiffMetric

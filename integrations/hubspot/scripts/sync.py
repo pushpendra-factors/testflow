@@ -337,6 +337,37 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
 
     return response_dict, unmodified_dict, r
 
+def sync_engagements(project_id, api_key):
+    get_url = "https://api.hubapi.com/engagements/v1/engagements/recent/modified?hapikey=" + api_key + "&count=100"
+    final_url = get_url
+    has_more = True
+    engagement_api_calls = 0
+    while has_more:
+        log.warning("Downloading engagements for project_id %d from url %s.", project_id, final_url)
+        r = get_with_fallback_retry(project_id, final_url)
+        engagement_api_calls += 1
+        filter_engagements = []
+        if not r.ok:
+            log.error("Failure response %d from hubspot on sync_contacts", r.status_code)
+            break
+        else:
+            response = json.loads(r.text)
+            for engagement in response['results']:
+                engagements = engagement["engagement"]
+                if engagements["type"] == "CALL" or engagements["type"] == "MEETING": 
+                    filter_engagements.append(engagement)
+                
+
+        create_all_documents(project_id, 'engagement', filter_engagements)
+        log.warning("Downloaded and created %d engagements.", len(filter_engagements))
+        response = json.loads(r.text)
+        if 'hasMore' in response and 'offset' in response:
+            has_more = response['hasMore']
+            final_url = get_url + "&offset=" + str(response['offset'])
+        else :
+            has_more = False
+    return engagement_api_calls
+
 
 def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
     if sync_all:
@@ -847,6 +878,8 @@ def sync(project_id, api_key, doc_type, sync_all, last_sync_timestamp):
             sync_form_submissions(project_id, api_key)
         elif doc_type == "deleted_contacts":
             response["deleted_contacts_api_calls"] = get_deleted_contacts(project_id, api_key)
+        elif doc_type == "engagement":
+            response["engagement_api_calls"] = sync_engagements(project_id, api_key)
         else:
             raise Exception("invalid doc_type "+ doc_type)
 
