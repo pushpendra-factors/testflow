@@ -243,6 +243,8 @@ type Configuration struct {
 	SalesforcePropertyLookBackTimeHr                int
 	SalesforceBatchInsertBatchSize                  int
 	AllowHubspotEngagementsByProjectID              string
+	HubspotPropertyLookBackLimit                    int
+	EnableSlowDBQueryLogging                        bool
 }
 
 type Services struct {
@@ -2146,4 +2148,12 @@ func AllowHubspotEngagementsByProjectID(projectID uint64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+func GetHubspotPropertiesLookbackLimit() int {
+	return GetConfig().HubspotPropertyLookBackLimit
+}
+
+func IsSlowDBQueryLoggingEnabled() bool {
+	return configuration.EnableSlowDBQueryLogging
 }

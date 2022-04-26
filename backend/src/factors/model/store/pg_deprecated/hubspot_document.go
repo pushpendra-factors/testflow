@@ -818,7 +818,7 @@ func getLatestHubspotDocumentsByLimit(projectID uint64, docType int, limit int) 
 	var hubspotDocuments []model.HubspotDocument
 	db := C.GetServices().Db
 	err := db.Model(&model.HubspotDocument{}).Where("project_id = ? AND type = ? AND action= ? AND timestamp > ?",
-		projectID, docType, model.HubspotDocumentActionUpdated, lookbackTimestampInMilliseconds).Order("timestamp desc").Limit(1000).Find(&hubspotDocuments).Error
+		projectID, docType, model.HubspotDocumentActionUpdated, lookbackTimestampInMilliseconds).Order("timestamp desc").Limit(limit).Find(&hubspotDocuments).Error
 	if err != nil {
 		return nil, err
 
@@ -840,7 +840,7 @@ func (pg *Postgres) GetHubspotObjectPropertiesName(ProjectID uint64, objectType 
 
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
 
-	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
+	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, C.GetHubspotPropertiesLookbackLimit())
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to GetSalesforceObjectPropertiesValues")
 		return nil, nil
@@ -862,7 +862,7 @@ func (pg *Postgres) GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, ob
 
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
 
-	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
+	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, C.GetHubspotPropertiesLookbackLimit())
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to GetAllHubspotObjectPropertyValues")
 		return nil

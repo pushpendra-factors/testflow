@@ -203,7 +203,6 @@ function QueryComposer({
   };
 
   const setDateRange = (dates) => {
-    console.log('setDateRange', dates);
     const queryOptionsState = Object.assign({}, queryOptions);
     if (dates && dates.startDate && dates.endDate) {
       if (Array.isArray(dates.startDate)) {

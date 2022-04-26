@@ -32,6 +32,11 @@ func IsPasswordAndHashEqual(password, hash string) bool {
 }
 
 func LogOnSlowExecutionWithParams(starttime time.Time, params *log.Fields) {
+	// Should be enabled using flag on need basis.
+	if !C.IsSlowDBQueryLoggingEnabled() {
+		return
+	}
+
 	timeTakenInMillsecs := time.Now().Sub(starttime).Milliseconds()
 	logCtx := log.WithField("app_name", C.GetConfig().AppName).
 		WithField("tag", "slow_exec").

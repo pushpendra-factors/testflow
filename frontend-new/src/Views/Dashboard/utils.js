@@ -57,7 +57,7 @@ export const getDataFromServer = (
           ...elem,
           fr: MomentTz(durationObj.from).startOf('day').utc().unix(),
           to: MomentTz(durationObj.to).endOf('day').utc().unix(),
-          gbt: elem.gbt ? (isCampaignQuery ? 'date' : elem.gbt) : '',
+          gbt: elem.gbt ? elem.gbt : '',
         };
         if (!isCampaignQuery) {
           obj.ewp = obj.ewp.map((e) => {
@@ -80,7 +80,7 @@ export const getDataFromServer = (
             MomentTz().format('dddd') !== 'Sunday'
               ? MomentTz().subtract(1, 'day').endOf('day').utc().unix()
               : MomentTz().utc().unix(),
-          gbt: elem.gbt ? (isCampaignQuery ? 'date' : elem.gbt) : '',
+          gbt: elem.gbt ? elem.gbt : '',
         };
         if (!isCampaignQuery) {
           obj.ewp = obj.ewp.map((e) => {
