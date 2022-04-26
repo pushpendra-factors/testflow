@@ -113,6 +113,7 @@ func TestCRMCreateData(t *testing.T) {
 			Source:     model.CRM_SOURCE_HUBSPOT,
 			Name:       "test1",
 			Type:       1,
+			ExternalActivityID:	"123",
 			ActorType:  1,
 			ActorID:    "123",
 			Properties: &activityProperties,
@@ -378,7 +379,40 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 	properties = make(map[string]interface{})
 	err = json.Unmarshal(user.Properties.RawMessage, &properties)
 	assert.Nil(t, err)
-
 	assert.Equal(t, "name3", properties["$marketo_lead_name"])
+	assert.Equal(t, "city2", properties["$marketo_lead_city"])
+
+	// update user2 crm properties if user update_timestamp is ahead of crm property timestamp
+	crmUser, status = store.GetStore().GetCRMUserByTypeAndAction(project.ID, sourceAlias, "lead2", typeUserLead, model.CRMActionCreated)
+	assert.Equal(t, http.StatusFound, status)
+	userProperties := &postgres.Jsonb{RawMessage: []byte(`{"name":"user1","city":"bangalore"}`)}
+	propertiesUpdateTimestamp := time.Now().Unix()
+	_, status = store.GetStore().UpdateUserProperties(project.ID, crmUser.UserID, userProperties, propertiesUpdateTimestamp)
+	assert.Equal(t, http.StatusAccepted, status)
+	leadProperties = fmt.Sprintf(`{"Name":"name4","city":"city2","%s":%d}`, leadUpdateTimestampProperty, lead2Timestmap.Unix()+100)
+	user2Properties = postgres.Jsonb{json.RawMessage(leadProperties)}
+	user2 = &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     model.CRM_SOURCE_MARKETO,
+		Type:       typeUserLead,
+		ID:         "lead2",
+		Email:      "abc2@abc.com",
+		Properties: &user2Properties,
+		Timestamp:  lead2Timestmap.Unix() + 100,
+	}
+	status, err = store.GetStore().CreateCRMUser(user2)
+	assert.Nil(t, err)
+	enrichStatus = enrichment.Enrich(project.ID, sourceConfig)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+	user, status = store.GetStore().GetUser(project.ID, crmUser.UserID)
+	assert.Equal(t, http.StatusFound, status)
+	// crm user updates shouldn't affect the user properties update timestamp
+	assert.Equal(t, user.PropertiesUpdatedTimestamp, propertiesUpdateTimestamp)
+	properties = make(map[string]interface{})
+	err = json.Unmarshal(user.Properties.RawMessage, &properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "name4", properties["$marketo_lead_name"])
 	assert.Equal(t, "city2", properties["$marketo_lead_city"])
 }
