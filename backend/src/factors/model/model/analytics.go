@@ -116,6 +116,8 @@ const (
 	EqualsOp                = "="
 	ILikeOp                 = "ILIKE"
 	NotiLikeOp              = "NOT ILIKE"
+	RLikeOp                 = "RLIKE"
+	NotRLikeOp              = "NOT RLIKE"
 	NotEqualOpStr           = "notEqual"
 	NotEqualOp              = "!="
 	GreaterThanOpStr        = "greaterThan"

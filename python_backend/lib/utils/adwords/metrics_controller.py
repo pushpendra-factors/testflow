@@ -136,7 +136,7 @@ class MetricsController:
             HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["success"], cls.ADWORDS_SYNC_PING_ID)
         else:
             HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["failures"], cls.ADWORDS_SYNC_PING_ID, endpoint="/fail")
-            log.warning("Job has errors. Successfully synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
+            log.warning("Job has errors. Failed synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
 
     @classmethod
     def publish_gsc_job_stats(cls):
@@ -147,7 +147,7 @@ class MetricsController:
             HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, cls.etl_stats["success"], cls.GSC_SYNC_PING_ID)
         else:
             HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, cls.etl_stats["failures"], cls.GSC_SYNC_PING_ID, endpoint="/fail")
-            log.warning("Job has errors. Successfully synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
+            log.warning("Job has errors. Failed synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
 
     @classmethod
     def compare_load_and_extract(cls):

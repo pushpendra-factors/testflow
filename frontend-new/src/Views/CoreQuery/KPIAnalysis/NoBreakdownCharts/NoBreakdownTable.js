@@ -13,6 +13,7 @@ import {
   DASHBOARD_WIDGET_SECTION,
   DATE_FORMATS,
 } from '../../../../utils/constants';
+import { addQforQuarter } from '../../../../utils/dataFormatter';
 
 const NoBreakdownTable = ({
   data,
@@ -70,14 +71,17 @@ const NoBreakdownTable = ({
 
   const getCSVData = () => {
     const activeTableData =
-      chartType !== CHART_TYPE_SPARKLINES
-        ? dateBasedTableData
-        : tableData;
+      chartType !== CHART_TYPE_SPARKLINES ? dateBasedTableData : tableData;
     const format = DATE_FORMATS[frequency] || DATE_FORMATS['date'];
     return {
       fileName: `KPI.csv`,
       data: activeTableData.map(({ index, label, date, ...rest }) => {
-        return chartType === CHART_TYPE_SPARKLINES ? { date: moment(date).format(format), ...rest } : { ...rest };
+        return chartType === CHART_TYPE_SPARKLINES
+          ? {
+              date: addQforQuarter(frequency) + moment(date).format(format),
+              ...rest,
+            }
+          : { ...rest };
       }),
     };
   };
@@ -86,7 +90,7 @@ const NoBreakdownTable = ({
     <DataTable
       tableData={
         chartType === CHART_TYPE_SPARKLINES ||
-          section === DASHBOARD_WIDGET_SECTION
+        section === DASHBOARD_WIDGET_SECTION
           ? tableData
           : dateBasedTableData
       }
@@ -94,7 +98,7 @@ const NoBreakdownTable = ({
       setSearchText={setSearchText}
       columns={
         chartType === CHART_TYPE_SPARKLINES ||
-          section === DASHBOARD_WIDGET_SECTION
+        section === DASHBOARD_WIDGET_SECTION
           ? columns
           : dateBasedColumns
       }

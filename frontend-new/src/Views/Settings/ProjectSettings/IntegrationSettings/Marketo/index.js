@@ -135,14 +135,6 @@ const MarketoIntegration = ({
                 >
                   Marketo sync is enabled
                 </Text>
-                <Input
-                  size='large'
-                  disabled={true}
-                  value={
-                    accounts
-                  }
-                  style={{ width: '400px' }}
-                />
               </div>
             </>
           )}

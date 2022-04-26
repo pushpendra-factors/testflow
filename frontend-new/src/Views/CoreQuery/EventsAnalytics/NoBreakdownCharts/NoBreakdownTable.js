@@ -9,7 +9,7 @@ import {
 } from './utils';
 import { CHART_TYPE_SPARKLINES } from '../../../../utils/constants';
 import { useSelector } from 'react-redux';
-import { getNewSorterState } from '../../../../utils/dataFormatter';
+import { addQforQuarter, getNewSorterState } from '../../../../utils/dataFormatter';
 
 function NoBreakdownTable({
   data,
@@ -120,7 +120,9 @@ function NoBreakdownTable({
             }
           }
           return {
-            date: moment(date).format(format),
+            date:
+              addQforQuarter(durationObj.frequency) +
+              moment(date).format(format),
             ...eventsData,
           };
         } else {

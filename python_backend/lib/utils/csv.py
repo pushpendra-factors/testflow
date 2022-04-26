@@ -53,15 +53,18 @@ class CsvUtil:
 
     @staticmethod
     def unmarshall(csv_string):
+        version = "##V00"
         if csv_string is None:
-            return []
+            return [], version
         lines = csv_string.splitlines()
         reader = csv.reader(lines)
         parsed_csv = list(reader)
-        version = "##V00"
-        if len(parsed_csv) > 0 and "##V" in parsed_csv[0][0]:
-            version = parsed_csv[0][0][:5]
-            del parsed_csv[0]
+        number_of_rows = len(parsed_csv)
+        if number_of_rows > 0:
+            number_of_words = len(parsed_csv[0]) 
+            if number_of_words > 0 and  "##V" in parsed_csv[0][0][:5]:
+                version = parsed_csv[0][0][:5]
+                del parsed_csv[0]
         return parsed_csv, version
 
     @staticmethod

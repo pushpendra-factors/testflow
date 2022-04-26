@@ -109,22 +109,26 @@ var objectToValueInFacebookFiltersMappingWithFacebookDocuments = map[string]stri
 }
 
 var facebookMetricsToAggregatesInReportsMapping = map[string]string{
-	"impressions":                   "SUM(JSON_EXTRACT_STRING(value,'impressions'))",
-	"clicks":                        "SUM(JSON_EXTRACT_STRING(value,'clicks'))",
-	"link_clicks":                   "SUM(JSON_EXTRACT_STRING(value,'inline_link_clicks'))",
-	"spend":                         "SUM(JSON_EXTRACT_STRING(value,'spend'))",
-	"video_p50_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p50_watched_actions'))",
-	"video_p25_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p25_watched_actions'))",
-	"video_30_sec_watched_actions":  "SUM(JSON_EXTRACT_STRING(value,'video_30_sec_watched_actions'))",
-	"video_p100_watched_actions":    "SUM(JSON_EXTRACT_STRING(value,'video_p100_watched_actions'))",
-	"video_p75_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p75_watched_actions'))",
-	"cost_per_click":                fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "clicks", "clicks"),
-	"cost_per_link_click":           fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "inline_link_clicks", "inline_link_clicks"),
-	"cost_per_thousand_impressions": fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1000", "impressions", "impressions"),
-	"click_through_rate":            fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "clicks", "100", "impressions", "impressions"),
-	"link_click_through_rate":       fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "inline_link_clicks", "100", "impressions", "impressions"),
-	"frequency":                     fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "impressions", "1", "reach", "reach"),
-	"reach":                         "SUM(JSON_EXTRACT_STRING(value,'reach'))",
+	"impressions":                            "SUM(JSON_EXTRACT_STRING(value,'impressions'))",
+	"clicks":                                 "SUM(JSON_EXTRACT_STRING(value,'clicks'))",
+	"link_clicks":                            "SUM(JSON_EXTRACT_STRING(value,'inline_link_clicks'))",
+	"spend":                                  "SUM(JSON_EXTRACT_STRING(value,'spend'))",
+	"video_p50_watched_actions":              "SUM(JSON_EXTRACT_STRING(value,'video_p50_watched_actions'))",
+	"video_p25_watched_actions":              "SUM(JSON_EXTRACT_STRING(value,'video_p25_watched_actions'))",
+	"video_30_sec_watched_actions":           "SUM(JSON_EXTRACT_STRING(value,'video_30_sec_watched_actions'))",
+	"video_p100_watched_actions":             "SUM(JSON_EXTRACT_STRING(value,'video_p100_watched_actions'))",
+	"video_p75_watched_actions":              "SUM(JSON_EXTRACT_STRING(value,'video_p75_watched_actions'))",
+	"cost_per_click":                         fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "clicks", "clicks"),
+	"cost_per_link_click":                    fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "inline_link_clicks", "inline_link_clicks"),
+	"cost_per_thousand_impressions":          fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1000", "impressions", "impressions"),
+	"click_through_rate":                     fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "clicks", "100", "impressions", "impressions"),
+	"link_click_through_rate":                fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "inline_link_clicks", "100", "impressions", "impressions"),
+	"frequency":                              fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "impressions", "1", "reach", "reach"),
+	"reach":                                  "SUM(JSON_EXTRACT_STRING(value,'reach'))",
+	"fb_pixel_purchase_count":                "SUM(JSON_EXTRACT_STRING(value, 'actions_offsite_conversion.fb_pixel_purchase'))",
+	"fb_pixel_purchase_revenue":              "SUM(JSON_EXTRACT_STRING(value, 'action_values_offsite_conversion.fb_pixel_purchase'))",
+	"fb_pixel_purchase_cost_per_action_type": fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "actions_offsite_conversion.fb_pixel_purchase", "actions_offsite_conversion.fb_pixel_purchase"),
+	"fb_pixel_purchase_roas":                 fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "action_values_offsite_conversion.fb_pixel_purchase", "1", "spend", "spend"),
 }
 
 const platform = "platform"
@@ -1456,7 +1460,7 @@ func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID uint64, days
 	}
 	for rows1.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
-		rows1.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
+		rows1.Scan(&currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupID, &currentRecord.AdGroupName)
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
 	U.CloseReadQuery(rows1, tx1)

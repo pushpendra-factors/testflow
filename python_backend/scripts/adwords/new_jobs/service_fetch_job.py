@@ -135,7 +135,7 @@ class ServicesFetch(BaseJob):
         else:
             job_storage = scripts.adwords.CONFIG.ADWORDS_APP.job_storage
             result_string = job_storage.read(timestamp, self._project_id, self._customer_acc_id, self._doc_type)
-            if len(result_string) > 0 and "##V" in result_string[:10]:
+            if result_string is not None and "##V" in result_string[:5]:
                 rows, version = CsvUtil.unmarshall(result_string)
             else:
                 version = "##V00"

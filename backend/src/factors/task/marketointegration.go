@@ -41,10 +41,10 @@ func MarketoIntegration(projectId uint64, configs map[string]interface{}) (map[s
 		log.WithError(err).Error("Error executing fivetran mapping query")
 	}
 
-	totalSuccess := 0
-	totalFailures := 0
 	PAGE_SIZE := 1000
 	for docType, _ := range model.MarketoDocumentTypeAlias {
+		totalSuccess := 0
+		totalFailures := 0
 		offset := 0
 		for {
 			var query string
@@ -107,7 +107,7 @@ func extractMetadataColumns(metadataQueryResult [][]string) ([]string, map[strin
 		columnNamesFromMetadata = append(columnNamesFromMetadata, columnName)
 		metadataIndexForDataType := model.GetMetadataColumnNameIndex("data_type")
 		dataType := metadataLine[metadataIndexForDataType]
-		if dataType == "TIMESTAMP" {
+		if dataType == "TIMESTAMP" || dataType == "DATE" {
 			columnNamesFromMetadataDateTime[columnName] = true
 		}
 	}
