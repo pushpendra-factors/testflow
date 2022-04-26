@@ -145,10 +145,10 @@ func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventP
 			continue
 		}
 		if value.Operator == model.EqualsOpStr {
-			results[i] = (strings.ToLower(propertyValue) == strings.ToLower(value.Value))
+			results[i] = strings.EqualFold(propertyValue, value.Value)
 		}
 		if value.Operator == model.NotEqualOpStr {
-			results[i] = (strings.ToLower(propertyValue) != strings.ToLower(value.Value))
+			results[i] = !strings.EqualFold(propertyValue, value.Value)
 		}
 		if value.Operator == model.ContainsOpStr {
 			results[i] = strings.Contains(strings.ToLower(propertyValue), strings.ToLower(value.Value))
@@ -159,7 +159,7 @@ func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventP
 	}
 	var soFar bool
 	var op string
-	for i, _ := range filterValues {
+	for i := range filterValues {
 		op = filterValues[i].LogicalOp
 		if i == 0 {
 			soFar = results[i]
@@ -177,10 +177,10 @@ func matchFitlerValuesForCategorical(eventPropValue interface{}, isPresentEventP
 
 func handleNoneCase(eventPropValue string, isPresentEventPropValue bool, operator string) bool {
 	if operator == model.EqualsOpStr || operator == model.ContainsOpStr {
-		return isPresentEventPropValue == false || eventPropValue == "$none"
+		return !isPresentEventPropValue || eventPropValue == "$none"
 	}
 	if operator == model.NotEqualOpStr || operator == model.NotContainsOpStr {
-		return isPresentEventPropValue == true && eventPropValue != "$none"
+		return isPresentEventPropValue && eventPropValue != "$none"
 	}
 	return false
 }
@@ -224,7 +224,7 @@ func matchFitlerValuesForNumerical(eventPropValue interface{}, isPresentEventPro
 	}
 	var soFar bool
 	var op string
-	for i, _ := range filterValues {
+	for i := range filterValues {
 		op = filterValues[i].LogicalOp
 
 		if i == 0 {
@@ -263,7 +263,7 @@ func matchFitlerValuesForDatetime(eventPropValue interface{}, isPresentEventProp
 	}
 	var soFar bool
 	var op string
-	for i, _ := range filterValues {
+	for i := range filterValues {
 		op = filterValues[i].LogicalOp
 		if i == 0 {
 			soFar = results[i]
@@ -300,7 +300,7 @@ func EventMatchesCriterion(event P.CounterEventFormat, eventCriterion EventCrite
 }
 
 func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult, isBase bool) bool {
-	customBlacklist := getCustomBlacklist()
+	customBlacklist := GetCustomBlacklist()
 	if criteriaResult.criteriaMatchFlag && isBase { // If criteria already met, do nothing.
 		return false
 	}
@@ -308,8 +308,8 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, c
 		log.Info("Criteria has empty criterion list. By default, making the user match the first event.")
 		(*criteriaResult).anyFlag = true
 		(*criteriaResult).allFlag = true
-		filterBlacklist(&event, &customBlacklist)
-		if (*criteriaResult).criteriaMatchFlag == false {
+		FilterBlacklist(&event, &customBlacklist)
+		if !(*criteriaResult).criteriaMatchFlag {
 			(*criteriaResult).firstEvent = event
 		}
 		(*criteriaResult).criteriaMatchFlag = true
@@ -321,14 +321,14 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, c
 			(*criteriaResult).criterionResultList[i].matchId = (*criteriaResult).numCriterionMatched
 			(*criteriaResult).numCriterionMatched++
 			(*criteriaResult).anyFlag = true
-			filterBlacklist(&event, &customBlacklist)
+			FilterBlacklist(&event, &customBlacklist)
 			(*criteriaResult).mostRecentEvent = event
 			if (*criteriaResult).numCriterionMatched == len(criteria.EventCriterionList) {
 				(*criteriaResult).allFlag = true
 			}
 			if ((criteria.Operator == "And") && (*criteriaResult).allFlag) ||
 				((criteria.Operator == "Or") && (*criteriaResult).anyFlag) {
-				if (*criteriaResult).criteriaMatchFlag == false {
+				if !(*criteriaResult).criteriaMatchFlag {
 					(*criteriaResult).firstEvent = event
 				}
 				(*criteriaResult).criteriaMatchFlag = true
@@ -340,13 +340,13 @@ func updateCriteriaResult(event P.CounterEventFormat, criteria EventsCriteria, c
 }
 
 func updateCriteriaResultEventOccurence(event P.CounterEventFormat, criteria EventsCriteria, criteriaResult *PerUserCriteriaResult, isBase bool) bool {
-	customBlacklist := getCustomBlacklist()
+	customBlacklist := GetCustomBlacklist()
 	if len(criteria.EventCriterionList) == 0 { // If criteria has no event criterion to match
 		log.Info("Criteria has empty criterion list. By default, making the user match the first event.")
 		(*criteriaResult).anyFlag = true
 		(*criteriaResult).allFlag = true
-		filterBlacklist(&event, &customBlacklist)
-		if (*criteriaResult).criteriaMatchFlag == false {
+		FilterBlacklist(&event, &customBlacklist)
+		if !(*criteriaResult).criteriaMatchFlag {
 			(*criteriaResult).firstEvent = event
 		}
 		(*criteriaResult).criteriaMatchFlag = true
@@ -358,14 +358,14 @@ func updateCriteriaResultEventOccurence(event P.CounterEventFormat, criteria Eve
 			(*criteriaResult).criterionResultList[i].matchId = (*criteriaResult).numCriterionMatched
 			(*criteriaResult).numCriterionMatched++
 			(*criteriaResult).anyFlag = true
-			filterBlacklist(&event, &customBlacklist)
+			FilterBlacklist(&event, &customBlacklist)
 			(*criteriaResult).mostRecentEvent = event
 			if (*criteriaResult).numCriterionMatched == len(criteria.EventCriterionList) {
 				(*criteriaResult).allFlag = true
 			}
 			if ((criteria.Operator == "And") && (*criteriaResult).allFlag) ||
 				((criteria.Operator == "Or") && (*criteriaResult).anyFlag) {
-				if (*criteriaResult).criteriaMatchFlag == false {
+				if !(*criteriaResult).criteriaMatchFlag {
 					(*criteriaResult).firstEvent = event
 				}
 				(*criteriaResult).criteriaMatchFlag = true
@@ -399,7 +399,7 @@ func QuerySessionMultiStepFunnel(session Session, multiStageFunnel MultiFunnelQu
 		if (*index)[0] == nil {
 			(*index)[0] = make([]int, 0)
 		}
-		if base == true {
+		if base {
 			(*timestamp)[0] = append((*timestamp)[0], event.EventTimestamp)
 			(*index)[0] = append((*index)[0], it)
 		}
@@ -412,7 +412,7 @@ func QuerySessionMultiStepFunnel(session Session, multiStageFunnel MultiFunnelQu
 			if (*index)[iteratorIndex+1] == nil {
 				(*index)[iteratorIndex+1] = make([]int, 0)
 			}
-			if intermediate == true {
+			if intermediate {
 				(*timestamp)[iteratorIndex+1] = append((*timestamp)[iteratorIndex+1], event.EventTimestamp)
 				(*index)[iteratorIndex+1] = append((*index)[iteratorIndex+1], it)
 			}
@@ -425,7 +425,7 @@ func QuerySessionMultiStepFunnel(session Session, multiStageFunnel MultiFunnelQu
 		if (*index)[intermediateLength+1] == nil {
 			(*index)[intermediateLength+1] = make([]int, 0)
 		}
-		if target == true {
+		if target {
 			(*timestamp)[intermediateLength+1] = append((*timestamp)[intermediateLength+1], event.EventTimestamp)
 			(*index)[intermediateLength+1] = append((*index)[intermediateLength+1], it)
 		}
@@ -436,11 +436,11 @@ func QuerySession(session Session, deltaQuery Query, perUserQueryResult *PerUser
 	index := i
 	for _, event := range session.Events {
 		base, target := QueryEvent(event, deltaQuery, perUserQueryResult)
-		if base == true {
+		if base {
 			(*baseTimestamp) = event.EventTimestamp
 			(*baseIndex) = index
 		}
-		if target == true {
+		if target {
 			(*targetTimestamp) = event.EventTimestamp
 			(*targetIndex) = index
 		}
@@ -455,7 +455,7 @@ func QuerySessionEventOccurence(session Session, deltaQuery Query, perUserQueryR
 	index := i
 	for _, event := range session.Events {
 		target := QueryEventEventOccurence(event, deltaQuery, perUserQueryResult)
-		if target == true {
+		if target {
 			(*targetTimestamp) = append((*targetTimestamp), event.EventTimestamp)
 			(*targetIndex) = append((*targetIndex), index)
 		}
@@ -554,24 +554,24 @@ func QueryUserMultiStepFunnel(preSessionEvents []P.CounterEventFormat, sessions 
 			if timestamp[it] == nil || len(timestamp[it]) <= 0 {
 				break
 			}
-			for iteratorI, _ := range timestamp[it] {
+			for iteratorI := range timestamp[it] {
 				if timestamp[it][iteratorI] >= maxTimestamp && index[it][iteratorI] != maxIndex {
 					maxTimestamp = timestamp[it][iteratorI]
 					maxIndex = index[it][iteratorI]
 					isLevelFunnelFound = true
 				}
-				if isLevelFunnelFound == true {
+				if isLevelFunnelFound {
 					break
 				}
 			}
-			if isLevelFunnelFound == false {
+			if !isLevelFunnelFound {
 				break
 			}
 			if it == totalFunnelEvents-1 {
 				isEntireFunnelFound = true
 			}
 		}
-		if isEntireFunnelFound == true {
+		if isEntireFunnelFound {
 			break
 		}
 		i = i + len(session.Events)
@@ -631,7 +631,7 @@ func QueryUserEventOccurence(preSessionEvents []P.CounterEventFormat, sessions [
 }
 
 func combineSourceAndTargetProperties(base P.CounterEventFormat, target P.CounterEventFormat, eventProperties *map[string]interface{}, userProperties *map[string]interface{}, isSessionTarget bool) {
-	if base.EventProperties != nil && isSessionTarget == false {
+	if base.EventProperties != nil && !isSessionTarget {
 		for key, value := range base.EventProperties {
 			propertyKey := fmt.Sprintf("s#%s", key)
 			(*eventProperties)[propertyKey] = value
@@ -648,7 +648,7 @@ func combineSourceAndTargetProperties(base P.CounterEventFormat, target P.Counte
 			(*eventProperties)[propertyKey] = value
 		}
 	}
-	if base.UserProperties != nil && isSessionTarget == false {
+	if base.UserProperties != nil && !isSessionTarget {
 		for key, value := range base.UserProperties {
 			propertyKey := fmt.Sprintf("s#%s", key)
 			(*userProperties)[propertyKey] = value
@@ -672,7 +672,7 @@ func getEventMatchFlag(event P.CounterEventFormat, eventCriterion EventCriterion
 	return matchFlag
 }
 
-func getCustomBlacklist() map[string]bool {
+func GetCustomBlacklist() map[string]bool {
 	// TODO: This was changed from set to map
 	customBlacklistMap := make(map[string]bool)
 	for _, featKey := range U.CUSTOM_BLACKLIST_DELTA {
@@ -759,7 +759,7 @@ func ComputeWithinPeriodInsights(scanner *bufio.Scanner, deltaQuery Query, multi
 	wpInsights = translateToWPMetrics(matchedBaseEvents, matchedTargetEvents,
 		matchedBaseAndTargetEvents, featSoftWhitelist, passId)
 	if passId == 1 {
-		prefilterFeatures(&wpInsights)
+		PrefilterFeatures(&wpInsights)
 		selectTopKFeatures(&(wpInsights), k)
 	}
 	return wpInsights, err
@@ -784,15 +784,15 @@ func matchOnlyPrefixedPropertiesWithPrefix(event PerEventProperties, prefix stri
 
 // RFDParams stands for Parameters of a Rank-Frequency Distribution
 type RFDParams struct {
-	numNonNullUniq              int
-	numNonNullMultiOccurrence   int
-	percNonNullSingleOccurrence float32
-	numNonNullSingleOccurrence  int
-	totalCount                  int
+	numNonNullUniq            int
+	numNonNullMultiOccurrence int
+	// percNonNullSingleOccurrence float32
+	numNonNullSingleOccurrence int
+	totalCount                 int
 }
 
 // Analyzes the RFD params of a feature and decides whether or not to retain it.
-func analyzeRFDParams(rfd RFDParams) bool {
+func AnalyzeRFDParams(rfd RFDParams) bool {
 	if rfd.numNonNullUniq == 1 { // If feature has only one non-null value, reject
 		return false
 	}
@@ -832,35 +832,35 @@ func countRFD(valStats Level2CatRatioDist) RFDParams {
 	return rfd
 }
 
-func analyzeFeature(key string, valStats Level2CatRatioDist) (bool, RFDParams) {
+func AnalyzeFeature(key string, valStats Level2CatRatioDist) (bool, RFDParams) {
 	rfd := countRFD(valStats)
 	numericFlag := IsANumericFeature(key, valStats)
 	return numericFlag, rfd
 }
 
-func prefilterFeatures(wpInsights *WithinPeriodInsights) {
-	prefilterFeaturesProperties(&((*wpInsights).Base.FeatureMetrics))
-	prefilterFeaturesProperties(&((*wpInsights).Target.FeatureMetrics))
-	prefilterFeaturesProperties(&((*wpInsights).BaseAndTarget.FeatureMetrics))
+func PrefilterFeatures(wpInsights *WithinPeriodInsights) {
+	PrefilterFeaturesProperties(&((*wpInsights).Base.FeatureMetrics))
+	PrefilterFeaturesProperties(&((*wpInsights).Target.FeatureMetrics))
+	PrefilterFeaturesProperties(&((*wpInsights).BaseAndTarget.FeatureMetrics))
 }
 
-func prefilterFeaturesProperties(featureMetrics *Level3CatRatioDist) {
+func PrefilterFeaturesProperties(featureMetrics *Level3CatRatioDist) {
 	for key, valStats := range *featureMetrics {
-		keyNumericFlag, keyRFDParams := analyzeFeature(key, valStats)
-		if keyNumericFlag || !analyzeRFDParams(keyRFDParams) {
+		keyNumericFlag, keyRFDParams := AnalyzeFeature(key, valStats)
+		if keyNumericFlag || !AnalyzeRFDParams(keyRFDParams) {
 			delete((*featureMetrics), key)
 		}
 	}
 }
 
-func filterBlacklist(event *P.CounterEventFormat, customBlacklist *map[string]bool) {
+func FilterBlacklist(event *P.CounterEventFormat, customBlacklist *map[string]bool) {
 	filterPropertiesBlacklist(&((*event).EventProperties), customBlacklist)
 	filterPropertiesBlacklist(&((*event).UserProperties), customBlacklist)
 }
 
 func filterPropertiesBlacklist(properties *map[string]interface{}, customBlacklist *map[string]bool) {
 	for key := range *properties {
-		if (*customBlacklist)[key] == true {
+		if (*customBlacklist)[key] {
 			delete((*properties), key)
 		}
 	}
@@ -885,7 +885,7 @@ func eventsToMetrics(events []PerEventProperties, featSoftWhitelist map[string]m
 	globalMetrics := make(Level1CatFreqDist)
 	featureMetrics := make(Level3CatRatioDist)
 	for _, event := range events {
-		updateLevel1CatFreqDist(&globalMetrics, "#users", 1)
+		UpdateLevel1CatFreqDist(&globalMetrics, "#users", 1)
 		eventProperties := make(map[string]interface{})
 		userProperties := make(map[string]interface{})
 		for key, value := range event.UserProperties {
@@ -920,16 +920,16 @@ func updateMetricsWithProperties(featureMetrics *Level3CatRatioDist, properties 
 		// Need to support numerical ones.
 		valStr := fmt.Sprintf("%v", val)
 		if passId == 2 { // In passId 1, we would have featSoftWhitelist as empty.
-			if !(featSoftWhitelist[key] != nil && featSoftWhitelist[key][valStr] == true) {
+			if !(featSoftWhitelist[key] != nil && featSoftWhitelist[key][valStr]) {
 				continue
 			}
 		}
 		// This increments the frequency of #users by 1.
-		updateLevel3CatRatioDist(featureMetrics, key, valStr, "#users", 1.0)
+		UpdateLevel3CatRatioDist(featureMetrics, key, valStr, "#users", 1.0)
 	}
 }
 
-func updateLevel1CatFreqDist(freqDist *Level1CatFreqDist, key string, count int) {
+func UpdateLevel1CatFreqDist(freqDist *Level1CatFreqDist, key string, count int) {
 	if _, ok := (*freqDist)[key]; !ok {
 		(*freqDist)[key] = count
 	} else {
@@ -942,7 +942,7 @@ func updateLevel2CatFreqDist(freqDist *Level2CatFreqDist, key1, key2 string, cou
 		(*freqDist)[key1] = make(Level1CatFreqDist)
 	}
 	level1FreqDist := (*freqDist)[key1]
-	updateLevel1CatFreqDist(&level1FreqDist, key2, count)
+	UpdateLevel1CatFreqDist(&level1FreqDist, key2, count)
 	(*freqDist)[key1] = level1FreqDist
 }
 
@@ -955,7 +955,7 @@ func updateLevel3CatFreqDist(freqDist *Level3CatFreqDist, key1, key2, key3 strin
 	(*freqDist)[key1] = level2FreqDist
 }
 
-func updateLevel1CatRatioDist(freqDist *Level1CatRatioDist, key string, ratio float64) {
+func UpdateLevel1CatRatioDist(freqDist *Level1CatRatioDist, key string, ratio float64) {
 	if _, ok := (*freqDist)[key]; !ok {
 		(*freqDist)[key] = ratio
 	} else {
@@ -968,11 +968,11 @@ func updateLevel2CatRatioDist(freqDist *Level2CatRatioDist, key1, key2 string, r
 		(*freqDist)[key1] = make(Level1CatRatioDist)
 	}
 	level1RatioDist := (*freqDist)[key1]
-	updateLevel1CatRatioDist(&level1RatioDist, key2, ratio)
+	UpdateLevel1CatRatioDist(&level1RatioDist, key2, ratio)
 	(*freqDist)[key1] = level1RatioDist
 }
 
-func updateLevel3CatRatioDist(freqDist *Level3CatRatioDist, key1, key2, key3 string, ratio float64) {
+func UpdateLevel3CatRatioDist(freqDist *Level3CatRatioDist, key1, key2, key3 string, ratio float64) {
 	if _, ok := (*freqDist)[key1]; !ok {
 		(*freqDist)[key1] = make(Level2CatRatioDist)
 	}
@@ -1020,7 +1020,7 @@ func translateToWPMetrics(baseEvents, targetEvents, baseAndTargetEvents []PerEve
 // 	return convMetrics
 // }
 
-func findTopKCountThres(featureMetrics Level3CatRatioDist, k int) (int, int) {
+func FindTopKCountThres(featureMetrics Level3CatRatioDist, k int) (int, int) {
 	baseMetrics := Level3CatRatioDist{}
 	targetMetrics := Level3CatRatioDist{}
 	for key, valStats := range featureMetrics {
@@ -1033,12 +1033,12 @@ func findTopKCountThres(featureMetrics Level3CatRatioDist, k int) (int, int) {
 	}
 	kthMaxCountBase, kthMaxCountTarget := int(0), int(0)
 	if len(baseMetrics) > 0 {
-		var counts []int = nil
+		// var counts []int = nil
 		var tempCounts []int = nil
 		for _, valStats := range baseMetrics {
 			for _, stats := range valStats {
 				count := int(stats["#users"])
-				counts = append(counts, count)
+				// counts = append(counts, count)
 				tempCounts = append(tempCounts, count)
 			}
 		}
@@ -1046,12 +1046,12 @@ func findTopKCountThres(featureMetrics Level3CatRatioDist, k int) (int, int) {
 	}
 
 	if len(targetMetrics) > 0 {
-		var counts []int = nil
+		// var counts []int = nil
 		var tempCounts []int = nil
 		for _, valStats := range targetMetrics {
 			for _, stats := range valStats {
 				count := int(stats["#users"])
-				counts = append(counts, count)
+				// counts = append(counts, count)
 				tempCounts = append(tempCounts, count)
 			}
 		}
@@ -1067,25 +1067,25 @@ func selectTopKFeatures(wpInsights *WithinPeriodInsights, k int) {
 	}
 	numBase := len((*wpInsights).Base.FeatureMetrics)
 	if k < numBase {
-		kthMaxCountBase, _ := findTopKCountThres((*wpInsights).Base.FeatureMetrics, k)
+		kthMaxCountBase, _ := FindTopKCountThres((*wpInsights).Base.FeatureMetrics, k)
 		totalUserCount := (*wpInsights).Base.GlobalMetrics["#users"]
-		filterFeatureCounts(&(*wpInsights).Base.FeatureMetrics, totalUserCount, kthMaxCountBase, 0)
+		FilterFeatureCounts(&(*wpInsights).Base.FeatureMetrics, totalUserCount, kthMaxCountBase, 0)
 	}
 	numBaseAndTarget := len((*wpInsights).BaseAndTarget.FeatureMetrics)
 	if k < numBaseAndTarget {
-		kthMaxCountBase, kthMaxCountTarget := findTopKCountThres((*wpInsights).BaseAndTarget.FeatureMetrics, k)
+		kthMaxCountBase, kthMaxCountTarget := FindTopKCountThres((*wpInsights).BaseAndTarget.FeatureMetrics, k)
 		totalUserCount := (*wpInsights).BaseAndTarget.GlobalMetrics["#users"]
-		filterFeatureCounts(&(*wpInsights).BaseAndTarget.FeatureMetrics, totalUserCount, kthMaxCountBase, kthMaxCountTarget)
+		FilterFeatureCounts(&(*wpInsights).BaseAndTarget.FeatureMetrics, totalUserCount, kthMaxCountBase, kthMaxCountTarget)
 	}
 	numTarget := len((*wpInsights).Target.FeatureMetrics)
 	if k < numTarget {
-		_, kthMaxCountTarget := findTopKCountThres((*wpInsights).Target.FeatureMetrics, k)
+		_, kthMaxCountTarget := FindTopKCountThres((*wpInsights).Target.FeatureMetrics, k)
 		totalUserCount := (*wpInsights).Target.GlobalMetrics["#users"]
-		filterFeatureCounts(&(*wpInsights).Target.FeatureMetrics, totalUserCount, 0, kthMaxCountTarget)
+		FilterFeatureCounts(&(*wpInsights).Target.FeatureMetrics, totalUserCount, 0, kthMaxCountTarget)
 	}
 }
 
-func filterFeatureCounts(featureMetrics *Level3CatRatioDist, totalCount int, kthMaxCountBase int, kthMaxCountTarget int) {
+func FilterFeatureCounts(featureMetrics *Level3CatRatioDist, totalCount int, kthMaxCountBase int, kthMaxCountTarget int) {
 	baseMetrics := Level3CatRatioDist{}
 	targetMetrics := Level3CatRatioDist{}
 	for key, valStats := range *featureMetrics {
@@ -1373,7 +1373,7 @@ func ComputeDeltaRatioMetrics(wpi1, wpi2 WithinPeriodInsights) Level2CatRatioDis
 	m2 := float64(wpi2.BaseAndTarget.GlobalMetrics["#users"])
 	for key, valStats1 := range wpi1.Base.FeatureMetrics {
 		drMetrics[key] = make(Level1CatRatioDist)
-		for val, _ := range valStats1 {
+		for val := range valStats1 {
 			f1 := wpi1.Base.FeatureMetrics[key][val]["#users"]
 			f2 := wpi2.Base.FeatureMetrics[key][val]["#users"]
 			fm1 := wpi1.BaseAndTarget.FeatureMetrics[key][val]["#users"]
@@ -1459,13 +1459,13 @@ func GetEventFileScanner(projectId uint64, periodCode Period, cloudManager *file
 	// The following eventsFilePath will run fine if the cloud_path is a local one. But not if it's an actual remote cloud path.
 	eventsFilePath := efTmpPath + efTmpName
 	fmt.Println(eventsFilePath)
-	scanner, err := T.OpenEventFileAndGetScanner(eventsFilePath)
+	_, err = T.OpenEventFileAndGetScanner(eventsFilePath)
 	if err != nil {
 		localFile = false
 		deltaComputeLog.WithFields(log.Fields{"err": err,
 			"eventsFilePath": eventsFilePath}).Error("Failed opening event file and getting scanner.")
 	}
-	if isDownloaded == false || localFile == false {
+	if !isDownloaded || !localFile {
 		efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, periodCode.From, insightGranularity)
 		deltaComputeLog.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
 			"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
@@ -1482,7 +1482,7 @@ func GetEventFileScanner(projectId uint64, periodCode Period, cloudManager *file
 			return nil, err
 		}
 	}
-	scanner, err = T.OpenEventFileAndGetScanner(eventsFilePath)
+	scanner, err := T.OpenEventFileAndGetScanner(eventsFilePath)
 	if err != nil {
 		deltaComputeLog.WithFields(log.Fields{"err": err,
 			"eventsFilePath": eventsFilePath}).Error("Failed opening event file and getting scanner.")

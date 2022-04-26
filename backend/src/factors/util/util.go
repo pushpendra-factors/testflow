@@ -911,6 +911,26 @@ func StringIn(strList []string, s string) (bool, string, int) {
 
 }
 
+func FloatIn(strList []string, s float64) (bool, float64, int) {
+
+	if len(strList) == 0 {
+		return false, 0, -1
+	}
+
+	for idx, v := range strList {
+
+		if val, err := strconv.ParseFloat(v, 64); err == nil {
+			if val == s {
+				return true, s, idx
+			}
+		}
+
+	}
+
+	return false, 0, -1
+
+}
+
 // Remove  remove string from given index
 func Remove(s []string, i int) ([]string, error) {
 	if len(s) > 0 {
