@@ -1,17 +1,20 @@
 import React from 'react';
+import moment from 'moment';
+
 import { DATE_FORMATS } from '../../../../utils/constants';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
-import moment from 'moment';
 import {
   getClickableTitleSorter,
   SortResults,
 } from '../../../../utils/dataFormatter';
 
+import { getKpiLabel } from '../kpiAnalysis.helpers';
+
 export const getDefaultSortProp = (kpis) => {
   if (Array.isArray(kpis) && kpis.length) {
     return [
       {
-        key: `${kpis[0]} - 0`,
+        key: `${getKpiLabel(kpis[0])} - 0`,
         type: 'numerical',
         subtype: null,
         order: 'descend',
@@ -35,11 +38,12 @@ export const getDefaultDateSortProp = () => {
 export const formatData = (data, kpis) => {
   try {
     const result = kpis.map((kpi, index) => {
+      const kpiLabel = getKpiLabel(kpi);
       const totalIndex = 1;
       const dateSplitIndex = 0;
       const obj = {
         index,
-        name: kpi,
+        name: kpiLabel,
       };
       if (data[totalIndex] && data[dateSplitIndex]) {
         const dateIndex = data[dateSplitIndex].headers.findIndex(
@@ -54,7 +58,7 @@ export const formatData = (data, kpis) => {
           dataOverTime: data[dateSplitIndex].rows.map((row) => {
             return {
               date: new Date(row[dateIndex]),
-              [kpi]: row[kpiIndex],
+              [kpiLabel]: row[kpiIndex],
             };
           }),
         };
@@ -131,7 +135,7 @@ export const getTableColumns = (
         'Date',
         { key: 'date', type: 'datetime', subtype: 'date' },
         currentSorter,
-        handleSorting,
+        handleSorting
       ),
       dataIndex: 'date',
       render: (d) => {
@@ -140,11 +144,12 @@ export const getTableColumns = (
     },
   ];
   const eventColumns = kpis.map((e, idx) => {
+    const kpiLabel = getKpiLabel(e);
     return {
       title: getClickableTitleSorter(
-        eventNames[e] || e,
+        eventNames[kpiLabel] || kpiLabel,
         {
-          key: `${e} - ${idx}`,
+          key: `${kpiLabel} - ${idx}`,
           type: 'numerical',
           subtype: null,
         },
@@ -153,7 +158,7 @@ export const getTableColumns = (
         'right'
       ),
       className: 'text-right',
-      dataIndex: `${e} - ${idx}`,
+      dataIndex: `${kpiLabel} - ${idx}`,
       render: (d) => {
         return <NumFormat number={d} />;
       },
@@ -174,7 +179,8 @@ export const getDataInTableFormat = (
       date: cat,
     };
     queries.forEach((q, qIndex) => {
-      obj[`${q} - ${qIndex}`] = data[qIndex].data[catIndex];
+      const kpiLabel = getKpiLabel(q);
+      obj[`${kpiLabel} - ${qIndex}`] = data[qIndex].data[catIndex];
     });
     return obj;
   });

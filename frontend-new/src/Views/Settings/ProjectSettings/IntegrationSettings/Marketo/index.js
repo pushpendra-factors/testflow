@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import {
-  Button,
-  message,
-  Input,
-} from 'antd';
+import { Button, message, Input } from 'antd';
 import {
   enableMarketoIntegration,
   createMarketoIntegration,
@@ -23,7 +19,7 @@ const MarketoIntegration = ({
   kbLink = false,
   fetchMarketoIntegration,
   disableMarketoIntegration,
-  marketo
+  marketo,
 }) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState(null);
@@ -65,12 +61,32 @@ const MarketoIntegration = ({
       .then((r) => {
         setLoading(false);
         if (r.status == 200) {
-          let hostname = window.location.hostname
-          let protocol = window.location.protocol
-          let port = window.location.port
-          let redirectURL = protocol + "//" + hostname + ":" + port + "?marketoInt=" + activeProject.id + "&email=" + agent_details.email + "&projectname=" + activeProject.name
+          let hostname = window.location.hostname;
+          let protocol = window.location.protocol;
+          let port = window.location.port;
+          let redirectURL =
+            protocol +
+            '//' +
+            hostname +
+            ':' +
+            port +
+            '?marketoInt=' +
+            activeProject.id +
+            '&email=' +
+            agent_details.email +
+            '&projectname=' +
+            activeProject.name;
           if (port === undefined || port === '') {
-            redirectURL = protocol + "//" + hostname + "?markketoInt=" + activeProject.id + "&email=" + agent_details.email + "&projectname=" + activeProject.name
+            redirectURL =
+              protocol +
+              '//' +
+              hostname +
+              '?markketoInt=' +
+              activeProject.id +
+              '&email=' +
+              agent_details.email +
+              '&projectname=' +
+              activeProject.name;
           }
           let url = new URL(r.data.redirect_uri);
           url.searchParams.set('redirect_uri', redirectURL);
@@ -91,9 +107,7 @@ const MarketoIntegration = ({
     <>
       <ErrorBoundary
         fallback={
-          <FaErrorComp
-            subtitle={'Facing issues with Marketo integrations'}
-          />
+          <FaErrorComp subtitle={'Facing issues with Marketo integrations'} />
         }
         onError={FaErrorLog}
       >
@@ -119,23 +133,8 @@ const MarketoIntegration = ({
                   color={'grey'}
                   extraClass={'m-0 mt-2'}
                 >
-<<<<<<< HEAD
-                  Marketo sync account details
-                </Text>
-                {accounts == "" ? 
-                <Text
-                type={'title'}
-                size={10}
-                color={'red'}
-                extraClass={'m-0 mt-2'}
-                >
-                  No ads account found or partial integration. Please disconnect and try again.
-                </Text>
-                :
-=======
                   Marketo sync is enabled
                 </Text>
->>>>>>> staging
                 <Input
                   size='large'
                   disabled={true}
@@ -144,17 +143,13 @@ const MarketoIntegration = ({
                   }
                   style={{ width: '400px' }}
                 />
-<<<<<<< HEAD
-                }
-=======
->>>>>>> staging
               </div>
             </>
           )}
         </div>
 
         <div className={'mt-4 flex'}>
-          {!marketo.status ? 
+          {!marketo.status ? (
             <Button
               className={'mr-2'}
               type={'primary'}
@@ -163,7 +158,7 @@ const MarketoIntegration = ({
             >
               Connect Now
             </Button>
-              :
+          ) : (
             <Button
               className={'mr-2'}
               loading={loading}
@@ -171,7 +166,7 @@ const MarketoIntegration = ({
             >
               Disconnect
             </Button>
-          }
+          )}
           {kbLink && (
             <a className={'ant-btn'} target={'_blank'} href={kbLink}>
               View documentation
@@ -193,5 +188,5 @@ export default connect(mapStateToProps, {
   enableMarketoIntegration,
   createMarketoIntegration,
   fetchMarketoIntegration,
-  disableMarketoIntegration
+  disableMarketoIntegration,
 })(MarketoIntegration);

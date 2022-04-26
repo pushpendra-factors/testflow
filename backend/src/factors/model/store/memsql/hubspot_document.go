@@ -93,12 +93,18 @@ func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 		idKey = "dealId"
 	case model.HubspotDocumentTypeFormSubmission:
 		idKey = "formId"
+	case model.HubspotDocumentTypeEngagement:
+		idKey = "id"
 	default:
 		idKey = "guid"
 	}
 
 	if idKey == "" {
 		return "", errors.New("invalid hubspot document key")
+	}
+
+	if document.Type == model.HubspotDocumentTypeEngagement {
+		return model.GetHubspotEngagementId(*documentMap, idKey)
 	}
 
 	id, idExists := (*documentMap)[idKey]
@@ -827,6 +833,10 @@ func (store *MemSQL) GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, 
 
 		// add types not synced before.
 		for typ := range model.HubspotDocumentTypeAlias {
+			if !C.AllowHubspotEngagementsByProjectID(ps.ProjectId) && typ == model.HubspotDocumentTypeNameEngagement {
+				continue
+			}
+
 			if _, exist := enabledProjectLastSync[ps.ProjectId]; !exist {
 				enabledProjectLastSync[ps.ProjectId] = make(map[string]int64)
 			}
@@ -917,6 +927,10 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 
 		// add types not synced before.
 		for typ := range model.HubspotDocumentTypeAlias {
+			if !C.AllowHubspotEngagementsByProjectID(ps.ProjectId) && typ == model.HubspotDocumentTypeNameEngagement {
+				continue
+			}
+
 			_, typExists := enabledProjectLastSync[ps.ProjectId][typ]
 			if !typExists {
 				// last sync timestamp as zero as type not synced before.

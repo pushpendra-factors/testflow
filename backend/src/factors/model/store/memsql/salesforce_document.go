@@ -204,6 +204,45 @@ func (store *MemSQL) GetSyncedSalesforceDocumentByType(projectID uint64, ids []s
 	return documents, http.StatusFound
 }
 
+func isExistSalesforceDocumentByIds(projectID uint64, ids []string, docType int) (map[string]bool, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"ids":        ids,
+		"doc_type":   docType,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || len(ids) == 0 || docType == 0 {
+		logCtx.Error("Failed to get salesforce document by id and type. Invalid project_id or id or type.")
+		return nil, http.StatusBadRequest
+	}
+
+	var documents []model.SalesforceDocument
+	db := C.GetServices().Db
+	err := db.Where("project_id = ? AND id IN ( ? ) AND type = ? AND action = ?", projectID, ids,
+		docType, model.SalesforceDocumentCreated).Select("id").Find(&documents).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get salesforce documents.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	documentIDs := make(map[string]bool)
+	for i := range documents {
+		documentIDs[documents[i].ID] = true
+	}
+
+	return documentIDs, http.StatusFound
+}
+
 func getSalesforceDocumentByIDAndType(projectID uint64, id string, docType int) ([]model.SalesforceDocument, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -234,75 +273,144 @@ func getSalesforceDocumentByIDAndType(projectID uint64, id string, docType int) 
 	return documents, http.StatusFound
 }
 
-// CreateSalesforceDocument fills required fields before inserting into salesforce_document table
-func (store *MemSQL) CreateSalesforceDocument(projectID uint64, document *model.SalesforceDocument) int {
-	logFields := log.Fields{
-		"project_id": projectID,
-		"document":   document,
-	}
+func salesforceBatchInsertTimeMs(projectID uint64, startTime time.Time, totalDocuments int, objectName string) {
+	totalTime := time.Now().Sub(startTime).Milliseconds()
+	log.WithFields(log.Fields{"project_id": projectID, "object_name": objectName,
+		"total_time_ms": totalTime, "total_documents": totalDocuments}).Info("Processed Salesforce batch insert.")
+}
+
+func (store *MemSQL) CreateSalesforceDocumentInBatches(projectID uint64, TypeAlias string, documents []*model.SalesforceDocument, batchSize int) int {
+	logFields := log.Fields{"project_id": projectID, "type_alias": TypeAlias, "documents": len(documents)}
+
+	defer salesforceBatchInsertTimeMs(projectID, time.Now(), len(documents), TypeAlias)
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
 	logCtx := log.WithFields(logFields)
 	if projectID == 0 {
 		logCtx.Error("Invalid project_id on create salesforce document.")
 		return http.StatusBadRequest
 	}
-	document.ProjectID = projectID
 
-	document.Type = model.GetSalesforceDocTypeByAlias(document.TypeAlias)
+	docType := model.GetSalesforceDocTypeByAlias(TypeAlias)
+	documentsIDs := make([]string, 0)
+	for i := range documents {
+		documents[i].ProjectID = projectID
+		documents[i].Type = docType
 
-	if U.IsEmptyPostgresJsonb(document.Value) {
-		logCtx.Error("Empty document value on create salesforce document.")
+		if U.IsEmptyPostgresJsonb(documents[i].Value) {
+			logCtx.Error("Empty document value on create salesforce document in batch. Continuing with empty value.")
+		}
+
+		documentID, err := getSalesforceDocumentID(documents[i])
+		if err != nil {
+			logCtx.WithError(err).Error(
+				"Failed to get id for salesforce document on create.")
+			return http.StatusInternalServerError
+		}
+
+		documents[i].ID = documentID
+		documentsIDs = append(documentsIDs, documentID)
+
+	}
+
+	existDocuments, status := isExistSalesforceDocumentByIds(projectID, documentsIDs, docType)
+	if status != http.StatusFound && status != http.StatusNotFound {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for existance of documents.")
+		return status
+	}
+
+	batchedDocuments := model.GetSalesforceDocumentsAsBatch(documents, batchSize)
+
+	for i := range batchedDocuments {
+		processDocuments := model.GetSalesforceDocumentsWithActionAndTimestamp(batchedDocuments[i], existDocuments)
+
+		status = store.CreateBatchedSalesforceDocument(projectID, processDocuments)
+		if status != http.StatusOK {
+			logCtx.WithFields(log.Fields{"batch_documents": batchedDocuments[i]}).
+				Error("Failed to insert batch of salesforce document.")
+			return status
+		}
+	}
+
+	// update cache count
+	currentTime := U.TimeNowZ()
+	for range documents {
+		UpdateCountCacheByDocumentType(projectID, &currentTime, "salesforce")
+	}
+
+	return http.StatusOK
+}
+
+func (store *MemSQL) CreateSalesforceDocument(projectID uint64, document *model.SalesforceDocument) int {
+	return store.CreateSalesforceDocumentInBatches(projectID, document.TypeAlias, []*model.SalesforceDocument{document}, 1)
+}
+
+func executeSalesforceDocumentInsertInBatch(projectID uint64, documents []*model.SalesforceDocument) error {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &log.Fields{"project_id": projectID, "total_documents": len(documents)})
+
+	if len(documents) <= 0 {
+		return errors.New("empty batch for salesforce batch insert")
+	}
+
+	log.Info("Using salesforce batch insert.")
+
+	batchedArguments := make([]interface{}, 0)
+	insertColumns := "INSERT INTO salesforce_documents(project_id, id, type, action, timestamp, value, created_at, updated_at)"
+	placeHolders := ""
+	for i := range documents {
+		documents[i].ProjectID = projectID
+		if placeHolders != "" {
+			placeHolders = placeHolders + ","
+		}
+
+		placeHolders = placeHolders + "( ? )"
+		createdTime := gorm.NowFunc()
+		arguments := []interface{}{
+			documents[i].ProjectID,
+			documents[i].ID,
+			documents[i].Type,
+			documents[i].Action,
+			documents[i].Timestamp,
+			documents[i].Value,
+			createdTime,
+			createdTime,
+		}
+		batchedArguments = append(batchedArguments, arguments)
+	}
+	insertStmnt := insertColumns + " VALUES " + placeHolders + " ON DUPLICATE KEY UPDATE synced=synced;"
+
+	db := C.GetServices().Db
+	err := db.Exec(insertStmnt, batchedArguments...).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (store *MemSQL) CreateBatchedSalesforceDocument(projectID uint64, documents []*model.SalesforceDocument) int {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"documents":  documents,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 {
 		return http.StatusBadRequest
 	}
 
-	documentID, err := getSalesforceDocumentID(document)
+	if len(documents) == 0 {
+		return http.StatusBadRequest
+	}
+
+	err := executeSalesforceDocumentInsertInBatch(projectID, documents)
 	if err != nil {
-		logCtx.WithError(err).Error(
-			"Failed to get id for salesforce document on create.")
+		logCtx.WithFields(log.Fields{"batched_documents": documents}).
+			WithError(err).Error("Failed to batch insert salesforce document.")
 		return http.StatusInternalServerError
 	}
-	document.ID = documentID
 
-	newBytes := U.RemoveNullCharacterBytes(document.Value.RawMessage)
-	if len(newBytes) != len(document.Value.RawMessage) {
-		log.WithFields(log.Fields{"document_id": document.ID, "project_id": document.ProjectID,
-			"raw_message":    string(document.Value.RawMessage),
-			"sliced_message": string(newBytes)}).Warn("Using new sliced bytes for null character.")
-		document.Value.RawMessage = newBytes
-	}
-
-	logCtx = logCtx.WithField("type", document.Type).WithField("value", document.Value)
-
-	_, errCode := getSalesforceDocumentByIDAndType(document.ProjectID,
-		document.ID, document.Type)
-	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-		return errCode
-	}
-
-	isNew := errCode == http.StatusNotFound
-	if isNew {
-		status := store.CreateSalesforceDocumentByAction(projectID, document, model.SalesforceDocumentCreated)
-		if status != http.StatusOK {
-			if status != http.StatusConflict {
-				logCtx.Error("Failed to create salesforce document.")
-			}
-
-			return status
-		}
-		UpdateCountCacheByDocumentType(projectID, &document.CreatedAt, "salesforce")
-		return http.StatusCreated
-	}
-
-	status := store.CreateSalesforceDocumentByAction(projectID, document, model.SalesforceDocumentUpdated)
-	if status != http.StatusOK {
-		if status != http.StatusConflict {
-			logCtx.Error("Failed to create salesforce document.")
-		}
-
-		return status
-	}
-	UpdateCountCacheByDocumentType(projectID, &document.CreatedAt, "salesforce")
-	return http.StatusCreated
+	return http.StatusOK
 }
 
 // CreateSalesforceDocumentByAction inserts salesforce_document to table by SalesforceAction
@@ -649,6 +757,53 @@ func (store *MemSQL) UpdateSalesforceDocumentBySyncStatus(projectID uint64, docu
 	return http.StatusAccepted
 }
 
+func (store *MemSQL) BuildAndUpsertDocumentInBatch(projectID uint64, objectName string, values []model.SalesforceRecord) error {
+	logFields := log.Fields{
+		"project_id":  projectID,
+		"object_name": objectName,
+		"value":       values,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if projectID == 0 {
+		return errors.New("invalid project id")
+	}
+
+	if objectName == "" || len(values) == 0 {
+		return errors.New("invalid object name or value")
+	}
+
+	var documents []*model.SalesforceDocument
+	for i := range values {
+		document := model.SalesforceDocument{
+			ProjectID: projectID,
+			TypeAlias: objectName,
+		}
+
+		enValue, err := json.Marshal(values[i])
+		if err != nil {
+			return err
+		}
+		newBytes := U.RemoveNullCharacterBytes(enValue)
+		if len(newBytes) != len(enValue) {
+			log.WithFields(log.Fields{"document_id": document.ID, "project_id": document.ProjectID,
+				"raw_message":    string(enValue),
+				"sliced_message": string(newBytes)}).Warn("Using new sliced bytes for null character.")
+			enValue = newBytes
+		}
+
+		document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
+		documents = append(documents, &document)
+	}
+
+	batchSize := C.GetSalesforceBatchInsertBatchSize()
+	status := store.CreateSalesforceDocumentInBatches(projectID, objectName, documents, batchSize)
+	if status != http.StatusOK {
+		return errors.New("failed to insert salesforce document in batch")
+	}
+
+	return nil
+}
+
 // BuildAndUpsertDocument creates new salesforce_document for insertion
 func (store *MemSQL) BuildAndUpsertDocument(projectID uint64, objectName string, value model.SalesforceRecord) error {
 	logFields := log.Fields{
@@ -661,7 +816,7 @@ func (store *MemSQL) BuildAndUpsertDocument(projectID uint64, objectName string,
 		return errors.New("invalid project id")
 	}
 	if objectName == "" || value == nil {
-		return errors.New("invalid oject name or value")
+		return errors.New("invalid object name or value")
 	}
 
 	if len(value) == 0 {

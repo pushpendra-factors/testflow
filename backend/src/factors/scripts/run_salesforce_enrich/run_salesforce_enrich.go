@@ -109,6 +109,7 @@ func main() {
 	restrictReusingUsersByCustomerUserId := flag.String("restrict_reusing_users_by_customer_user_id", "", "")
 	disableCRMUniquenessConstraintsCheckByProjectID := flag.String("disable_crm_unique_constraint_check_by_project_id", "", "")
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
+	insertBatchSize := flag.Int("insert_batch_size", 1, "Number of unique document go routines per project")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -166,6 +167,7 @@ func main() {
 		CaptureSourceInUsersTable:              *captureSourceInUsersTable,
 		RestrictReusingUsersByCustomerUserId:   *restrictReusingUsersByCustomerUserId,
 		DisableCRMUniquenessConstraintsCheckByProjectID: *disableCRMUniquenessConstraintsCheckByProjectID,
+		SalesforceBatchInsertBatchSize:                  *insertBatchSize,
 	}
 
 	C.InitConf(config)

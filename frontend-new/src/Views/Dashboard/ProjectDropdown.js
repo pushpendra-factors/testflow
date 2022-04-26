@@ -37,7 +37,7 @@ function ProjectDropdown({
   setRefreshClicked,
   isPinned = false,
   fetchDemoProject,
-  getHubspotContact
+  getHubspotContact,
 }) {
   const [moreOptions, setMoreOptions] = useState(false);
   const [widgetModal, setwidgetModal] = useState(false);
@@ -62,28 +62,34 @@ function ProjectDropdown({
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetchDemoProject().then((res) => {
+    fetchDemoProject()
+      .then((res) => {
         setdemoProjectId(res.data[0]);
-    }).catch((err) => {
-      console.log(err.data.error)
-    })
+      })
+      .catch((err) => {
+        console.log(err.data.error);
+      });
   }, [active_project, demoProjectId]);
 
   useEffect(() => {
     let email = currentAgent.email;
-    getHubspotContact(email).then((res) => {
-        setownerID(res.data.hubspot_owner_id)
-    }).catch((err) => {
-        console.log(err.data.error)
-    });
-}, []);
+    getHubspotContact(email)
+      .then((res) => {
+        setownerID(res.data.hubspot_owner_id);
+      })
+      .catch((err) => {
+        console.log(err.data.error);
+      });
+  }, []);
 
   const changeActiveDashboard = useCallback(
     (val) => {
       if (parseInt(val) === activeDashboard?.id) {
         return false;
       }
-      const active_dashboard = dashboards.data.find((d) => d.id === parseInt(val));
+      const active_dashboard = dashboards.data.find(
+        (d) => d.id === parseInt(val)
+      );
       dispatch({
         type: ACTIVE_DASHBOARD_CHANGE,
         payload: active_dashboard,
@@ -98,15 +104,16 @@ function ProjectDropdown({
     setDashboardDesc(activeDashboard?.description);
   }, [activeDashboard]);
 
-
-
-  useEffect(()=>{ 
-    if(activeDashboard){ 
+  useEffect(() => {
+    if (activeDashboard) {
       //Factors VIEW_DASHBOARD tracking
-    factorsai.track('VIEW_DASHBOARD',{'dashboard_name': activeDashboard?.name, 'dashboard_type': activeDashboard?.type, 'dashboard_id': activeDashboard?.id});
+      factorsai.track('VIEW_DASHBOARD', {
+        dashboard_name: activeDashboard?.name,
+        dashboard_type: activeDashboard?.type,
+        dashboard_id: activeDashboard?.id,
+      });
     }
-  },[activeDashboard]);
-
+  }, [activeDashboard]);
 
   const handleOptChange = useCallback(
     (group, data) => {
@@ -296,7 +303,7 @@ function ProjectDropdown({
         <NoDataChart />
       </div>
     );
-  } 
+  }
 
   if (dashboards.data.length) {
     return (
@@ -313,29 +320,29 @@ function ProjectDropdown({
           }
           onError={FaErrorLog}
         >
-            {active_project.id === demoProjectId ? 
+          {active_project.id === demoProjectId ?
             <div className={'rounded-lg border-2 h-20 mb-3 mx-10'}>
               <Row justify={'space-between'} className={'m-0 p-3'}>
-                <Col span={projects.length == 1 ? 12: 18}>
-                  <img src='assets/icons/welcome.svg' style={{float: 'left', marginRight:'20px'}}/>
+                <Col span={projects.length == 1 ? 12 : 18}>
+                  <img src='assets/icons/welcome.svg' style={{ float: 'left', marginRight: '20px' }} />
                   <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-                      Welcome! You just entered a Factors demo project
+                    Welcome! You just entered a Factors demo project
                   </Text>
                   {projects.length == 1 ?
                     <Text type={'title'} level={7} extraClass={'m-0'}>
-                        These reports have been built with a sample dataset. Use this to start exploring!
+                      These reports have been built with a sample dataset. Use this to start exploring!
                     </Text>
-                  :
+                    :
                     <Text type={'title'} level={7} extraClass={'m-0'}>
-                        To jump back into your Factors project, click on your account card on the bottom left of the screen.
+                      To jump back into your Factors project, click on your account card on the bottom left of the screen.
                     </Text>
                   }
                 </Col>
                 <Col className={'mr-2 mt-2'}>
-                  <a href={meetLink(ownerID)} target='_blank' ><Button type={'default'} style={{background:'white', border: '1px solid #E7E9ED', height: '40px'}} className={'m-0 mr-2'} >Get a Personalized Demo</Button></a>
+                  <a href={meetLink(ownerID)} target='_blank' ><Button type={'default'} style={{ background: 'white', border: '1px solid #E7E9ED', height: '40px' }} className={'m-0 mr-2'} >Get a Personalized Demo</Button></a>
                   {projects.length == 1 ?
-                  <Button type={'default'} style={{background:'white', border: '1px solid #E7E9ED', height: '40px'}} className={'m-0 mr-2'} onClick={() => setShowProjectModal(true)}>Set up my own Factors project</Button>
-                  : null}
+                    <Button type={'default'} style={{ background: 'white', border: '1px solid #E7E9ED', height: '40px' }} className={'m-0 mr-2'} onClick={() => setShowProjectModal(true)}>Set up my own Factors project</Button>
+                    : null}
                 </Col>
               </Row>
             </div>
@@ -369,8 +376,7 @@ function ProjectDropdown({
             </div>
           </div>
           <div
-            className={'pl-10 pr-6 py-6 flex-1'}
-            style={{ backgroundColor: '#f6f6f8' }}
+            className={'ml-10 mr-4 my-6 flex-1'}
           >
             <DashboardSubMenu
               durationObj={durationObj}
@@ -380,14 +386,14 @@ function ProjectDropdown({
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}
             />
-            <SortableCards
-              durationObj={durationObj}
-              setwidgetModal={handleToggleWidgetModal}
-              showDeleteWidgetModal={showDeleteWidgetModal}
-              refreshClicked={refreshClicked}
-              setRefreshClicked={setRefreshClicked}
-            />
-          </div>
+    <SortableCards
+      durationObj={durationObj}
+      setwidgetModal={handleToggleWidgetModal}
+      showDeleteWidgetModal={showDeleteWidgetModal}
+      refreshClicked={refreshClicked}
+      setRefreshClicked={setRefreshClicked}
+    />
+          </div >
 
           <ExpandableView
             widgetModalLoading={widgetModalLoading}
@@ -416,9 +422,12 @@ function ProjectDropdown({
             cancelText='Cancel'
             confirmLoading={dashboardDeleteApi}
           />
-          {/* create project modal */}
-          <NewProject visible={showProjectModal} handleCancel={() => setShowProjectModal(false)} />
-        </ErrorBoundary>
+    {/* create project modal */ }
+    <NewProject
+      visible={showProjectModal}
+      handleCancel={() => setShowProjectModal(false)}
+    />
+        </ErrorBoundary >
       </>
     );
   }
@@ -426,4 +435,6 @@ function ProjectDropdown({
   return null;
 }
 
-export default connect(null,{ fetchDemoProject, getHubspotContact })(ProjectDropdown);
+export default connect(null, { fetchDemoProject, getHubspotContact })(
+  ProjectDropdown
+);

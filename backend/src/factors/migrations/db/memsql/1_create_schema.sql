@@ -1024,4 +1024,24 @@ CREATE TABLE IF NOT EXISTS crm_activities (
     -- Unique (project_id,source, id, type, actor_type, actor_id, timestamp)
 );
 
+CREATE TABLE IF NOT EXISTS crm_properties (
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    source integer NOT NULL,
+    `type` integer NOT NULL,
+    name text NOT NULL,
+    label text,
+    external_data_type text,
+    mapped_data_type text,
+    synced boolean DEFAULT FALSE,
+    timestamp bigint,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (updated_at),
+    PRIMARY KEY (project_id, id),
+    SHARD KEY (project_id),
+    UNIQUE KEY crm_properties_project_id_source_type_name_unique_idx(project_id, id, source,`type`,name,timestamp)
+    -- Required constraints.
+    -- Ref (project_id) -> projects(id)
+)
 -- DROP DATABASE factors;

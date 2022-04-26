@@ -289,7 +289,7 @@ function CoreQuery({
             queryType,
             selectedReport,
           });
-          console.log('pivotConfig', pivotConfig);
+          
           updatePivotConfig(pivotConfig);
 
           //update the chart type to the saved chart type
@@ -320,14 +320,14 @@ function CoreQuery({
         type: SET_COMPARISON_SUPPORTED,
         payload: isComparisonEnabled(queryType, queries, groupBy, models),
       });
-      if (
-        queryType === QUERY_TYPE_FUNNEL ||
-        queryType === QUERY_TYPE_EVENT ||
-        queryType === QUERY_TYPE_KPI
-      ) {
+      if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
         setAppliedQueries(
           queries.map((elem) => (elem.alias ? elem.alias : elem.label))
         );
+        updateAppliedBreakdown();
+      }
+      if (queryType === QUERY_TYPE_KPI) {
+        setAppliedQueries(queries);
         updateAppliedBreakdown();
       }
       if (queryType === QUERY_TYPE_PROFILE) {

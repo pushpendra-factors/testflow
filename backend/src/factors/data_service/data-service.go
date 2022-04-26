@@ -47,6 +47,7 @@ func main() {
 	disableCRMUniquenessConstraintsCheckByProjectID := flag.String("disable_crm_unique_constraint_check_by_project_id", "", "")
 	hubspotBatchInsertBatchSize := flag.Int("hubspot_batch_insert_batch_size", 0, "")
 	useHubspotBatchInsertByProjectID := flag.String("use_hubspot_batch_insert_by_project_id", "", "")
+	allowHubspotEngagementsByProjectID := flag.String("allow_hubspot_engagements_by_project_id", "", "")
 	flag.Parse()
 
 	defaultAppName := "data_server"
@@ -89,6 +90,7 @@ func main() {
 		DisableCRMUniquenessConstraintsCheckByProjectID: *disableCRMUniquenessConstraintsCheckByProjectID,
 		HubspotBatchInsertBatchSize:                     *hubspotBatchInsertBatchSize,
 		UseHubspotBatchInsertByProjectID:                *useHubspotBatchInsertByProjectID,
+		AllowHubspotEngagementsByProjectID:              *allowHubspotEngagementsByProjectID,
 	}
 	C.InitConf(config)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)

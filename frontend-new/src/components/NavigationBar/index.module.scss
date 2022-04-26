@@ -1,0 +1,17 @@
+.sider {
+  position: relative;
+  background: #f0f2f5;
+  -webkit-transition: all 0.3s;
+  transition: all 0.3s;
+  z-index: 999;
+}
+
+.menu {
+  height: 100%;
+  background-color: #f5f6f8;
+  overflow: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  max-width: 264px;
+}
