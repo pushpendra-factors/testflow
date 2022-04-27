@@ -2079,7 +2079,7 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 
 	properties := extractionOfPropertiesWithOutEmailOrContact(engagement, fmt.Sprintf("%v", engagementType))
 
-	contactEngagementProperties := make([]map[string]interface{}, 0)
+	contactEngagementProperties := make(map[string]map[string]interface{})
 	contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
 	if status != http.StatusFound {
 		logCtx.Error(
@@ -2122,7 +2122,7 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 			propertiesWithEmailOrContact[enkey] = value
 		}
 
-		contactEngagementProperties = append(contactEngagementProperties, propertiesWithEmailOrContact)
+		contactEngagementProperties[contactIds[i]] = propertiesWithEmailOrContact
 	}
 
 	if len(contactEngagementProperties) < 1 {
@@ -2140,14 +2140,14 @@ func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
 			}
 		}
 
-		if userId == "" {
+		if _, exist := contactEngagementProperties[contactIds[i]]; !exist || userId == "" {
 			continue
 		}
 
 		payload := &SDK.TrackPayload{
 			ProjectId:       projectID,
 			Name:            eventName,
-			EventProperties: contactEngagementProperties[i],
+			EventProperties: contactEngagementProperties[contactIds[i]],
 			UserId:          userId,
 			Timestamp:       getEventTimestamp(document.Timestamp),
 		}
