@@ -283,18 +283,18 @@ func (store *MemSQL) DeleteDashboardUnit(projectId uint64, agentUUID string, das
 		return http.StatusBadRequest
 	}
 
-	hasAccess, dashboard := store.HasAccessToDashboard(projectId, agentUUID, dashboardId)
+	hasAccess, _ := store.HasAccessToDashboard(projectId, agentUUID, dashboardId)
 	if !hasAccess {
 		return http.StatusForbidden
 	}
 
-	errCode := store.removeUnitPositionOnDashboard(projectId, agentUUID, dashboardId, id, dashboard.UnitsPosition)
+	/*errCode := store.removeUnitPositionOnDashboard(projectId, agentUUID, dashboardId, id, dashboard.UnitsPosition)
 	if errCode != http.StatusAccepted {
 		errMsg := "Failed remove position for unit on dashboard."
 		log.WithFields(log.Fields{"project_id": projectId, "unitId": id}).Error(errMsg)
 		// log error and continue to delete dashboard unit.
 		// To avoid improper experience.
-	}
+	}*/
 	return store.deleteDashboardUnit(projectId, dashboardId, id)
 }
 
