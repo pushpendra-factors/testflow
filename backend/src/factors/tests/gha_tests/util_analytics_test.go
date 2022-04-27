@@ -1,9 +1,10 @@
-package unit_tests
+package gha_tests
 
 import (
 	U "factors/util"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetTimeFromTimestampStr(t *testing.T) {

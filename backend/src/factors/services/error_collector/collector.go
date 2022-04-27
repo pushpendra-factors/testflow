@@ -2,7 +2,7 @@ package error_collector
 
 import (
 	"encoding/json"
-	"factors/interfaces/maileriface"
+	"factors/services/mailer"
 	"fmt"
 	"strings"
 	"sync"
@@ -25,14 +25,14 @@ type Entity struct {
 }
 
 type Collector struct {
-	mailer                           maileriface.Mailer
+	mailer                           mailer.Mailer
 	fromEmail, toEmail, env, appName string
 	entriesLock                      sync.RWMutex
 	entries                          []*Entry
 	ticker                           *time.Ticker
 }
 
-func New(m maileriface.Mailer, reportingInterval time.Duration, env, appName, toMail, fromMail string) *Collector {
+func New(m mailer.Mailer, reportingInterval time.Duration, env, appName, toMail, fromMail string) *Collector {
 	collector := Collector{
 		mailer:    m,
 		entries:   make([]*Entry, 0, 0),
