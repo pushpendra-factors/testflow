@@ -112,7 +112,7 @@ function Congrats({ signup, data, setShowModal, showModal }) {
                     </Col>
                 </Row>
                 <Row className={'mt-4'}>
-                    <iframe className={'w-full h-full'} style={{height: '600px'}} src={meetLink()}></iframe>
+                    <iframe className={'w-full h-full'} style={{height: '450px'}} src={meetLink()}></iframe>
                 </Row>
             </div>
         </Modal> 
