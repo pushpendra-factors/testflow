@@ -62,10 +62,9 @@ func (store *MemSQL) RunEventsGroupQuery(queriesOriginal []model.Query, projectI
 func (store *MemSQL) runSingleEventsQuery(projectId uint64, query model.Query,
 	resultHolder *model.QueryResult, waitGroup *sync.WaitGroup) {
 	logFields := log.Fields{
-		"query":         query,
-		"project_id":    projectId,
-		"result_holder": resultHolder,
-		"wait_group":    waitGroup,
+		"query":      query,
+		"project_id": projectId,
+		"wait_group": waitGroup,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -233,9 +232,7 @@ func buildErrorResult(errMsg string) *model.QueryResult {
 // updateEventNameInHeaderAndAddMeta makes header from 0_$session to $session
 // and adds event's index, name and headerIndex in meta
 func updateEventNameInHeaderAndAddMeta(result *model.QueryResult) {
-	logFields := log.Fields{
-		"result": result,
-	}
+	logFields := log.Fields{}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	var rows [][]interface{}
@@ -261,9 +258,7 @@ func updateEventNameInHeaderAndAddMeta(result *model.QueryResult) {
 
 // addEventNameIndexInResult adds event_index and fills up the rows accordingly
 func addEventNameIndexInResult(result *model.QueryResult) {
-	logFields := log.Fields{
-		"result": result,
-	}
+	logFields := log.Fields{}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	eventNameIndex := -1
@@ -456,9 +451,7 @@ func transformResultsForEachEventQuery(oldResult *model.QueryResult, query model
 // addEventMetricsMetaToQueryResult adds meta metrics in query result based on query type, event
 // condition and group by inputs
 func addEventMetricsMetaToQueryResult(result *model.QueryResult) {
-	logFields := log.Fields{
-		"result": result,
-	}
+	logFields := log.Fields{}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	metaMetricsEventCount := model.HeaderRows{}
@@ -538,7 +531,6 @@ func (store *MemSQL) BuildInsightsQuery(projectId uint64, query model.Query) (st
 
 func LimitQueryResult(result *model.QueryResult, groupPropsLen int, groupByTimestamp bool) error {
 	logFields := log.Fields{
-		"result":          result,
 		"group_props_len": groupPropsLen,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -559,7 +551,6 @@ func LimitQueryResult(result *model.QueryResult, groupPropsLen int, groupByTimes
 // datetime for the limited combination of group keys.
 func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp bool) error {
 	logFields := log.Fields{
-		"result":             result,
 		"group_by_timestamp": groupByTimestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -598,7 +589,6 @@ func limitGroupByTimestampResult(result *model.QueryResult, groupByTimestamp boo
 // values together as unique). Limited set dimension = ResultLimit * ResultLimit.
 func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimestamp bool) error {
 	logFields := log.Fields{
-		"result":             result,
 		"group_by_timestamp": groupByTimestamp,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -646,8 +636,7 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 // SanitizeQueryResult Converts DB results into plottable query results.
 func SanitizeQueryResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
-		"query":  query,
-		"result": result,
+		"query": query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if query.GetGroupByTimestamp() != "" {
@@ -674,8 +663,7 @@ func SanitizeQueryResult(result *model.QueryResult, query *model.Query, isTimezo
 
 func sanitizeGroupByTimestampResult(result *model.QueryResult, query *model.Query, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
-		"query":  query,
-		"result": result,
+		"query": query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	aggrIndex, timeIndex, err := GetTimstampAndAggregateIndexOnQueryResult(result.Headers)
@@ -744,7 +732,6 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string, isTimez
 func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
-		"result":              result,
 		"query":               query,
 		"aggr_index":          aggrIndex,
 		"timestamp_index":     timestampIndex,
@@ -787,7 +774,6 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *model.QueryResult,
 func addMissingTimestampsOnResultWithGroupByProps(result *model.QueryResult,
 	query *model.Query, aggrIndex int, timestampIndex int, isTimezoneEnabled bool) error {
 	logFields := log.Fields{
-		"result":              result,
 		"query":               query,
 		"aggr_index":          aggrIndex,
 		"timestamp_index":     timestampIndex,
