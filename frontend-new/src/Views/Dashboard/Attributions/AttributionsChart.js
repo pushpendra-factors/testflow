@@ -58,6 +58,8 @@ const AttributionsChart = ({
   chartType,
   cardSize,
   unitId,
+  attrQueries,
+  queryOptions
 }) => {
   const {
     attributionMetrics,
@@ -130,7 +132,10 @@ const AttributionsChart = ({
         attributionMetrics,
         attr_dimensions,
         content_groups,
-        durationObj
+        durationObj,
+        undefined, undefined, 
+        queryOptions,
+        attrQueries
       )
     );
   }, [
@@ -159,7 +164,9 @@ const AttributionsChart = ({
       linkedEvents,
       attributionMetrics,
       attr_dimensions,
-      content_groups
+      content_groups, undefined, 
+      queryOptions,
+      attrQueries
     );
     setTableData(tableData);
     setVisibleIndices(
