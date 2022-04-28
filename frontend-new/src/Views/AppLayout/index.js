@@ -206,10 +206,6 @@ function AppLayout({
                       path='/settings/integration'
                       component={IntegrationSettings}
                     />
-                    <Route
-                      path='/settings/alerts'
-                      component={Alerts}
-                    />
 
                     {/* configure */}
                     <Route path='/configure/events' component={Events} />
@@ -230,6 +226,7 @@ function AppLayout({
                       path='/configure/explaindp'
                       component={ExplainDataPoints}
                     />
+                    <Route path='/configure/alerts' component={Alerts} />
                     {/* <Route path='/configure/goals' component={goals} /> */}
                   </Switch>
                 </Suspense>

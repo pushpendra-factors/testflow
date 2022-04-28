@@ -4,14 +4,42 @@
   -webkit-transition: all 0.3s;
   transition: all 0.3s;
   z-index: 999;
+  overflow: scroll;
 }
 
 .menu {
   height: 100%;
-  background-color: #f5f6f8;
-  overflow: auto;
   position: fixed;
-  top: 0;
-  left: 0;
+  padding-top: 80px;
+  overflow: scroll;
   max-width: 264px;
+
+  //hiding scrollbar
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  &_assist {
+    position: fixed !important;
+    margin: 0 !important;
+    bottom: 48px !important;
+    background-color: #f0f2f5 !important;
+    max-width: 264px;
+    height: 64px !important;
+    padding: 8px 20px 32px !important;
+  }
+}
+
+.button {
+  margin: 0;
+  padding: 0;
+  background: #f0f2f5 !important;
+
+  &:hover,
+  &:focus {
+    background: #f0f2f5 !important;
+  }
 }
