@@ -283,11 +283,6 @@ function SiderMenu({ collapsed, setCollapsed, handleClick }) {
         </Popover>
       ) : (
         <SubMenu
-          onTitleClick={() => {
-            if (collapsed) {
-              setCollapsed(false);
-            }
-          }}
           key='sub3'
           icon={setIcon('settings')}
           title={
@@ -297,16 +292,16 @@ function SiderMenu({ collapsed, setCollapsed, handleClick }) {
           }
         >
           <Menu.Item className={styles.menuitems_sub} key={`/settings/general`}>
-            {MenuItems.generalSettings}
+            {MenuItems.general}
           </Menu.Item>
           <Menu.Item className={styles.menuitems_sub} key={`/settings/user`}>
-            {MenuItems.Users}
+            {MenuItems.User}
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
             key={`/settings/attribution`}
           >
-            {MenuItems.Attributions}
+            {MenuItems.Attribution}
           </Menu.Item>
           <Menu.Item className={styles.menuitems_sub} key={`/settings/sdk`}>
             {MenuItems.SDK}
@@ -315,7 +310,7 @@ function SiderMenu({ collapsed, setCollapsed, handleClick }) {
             className={styles.menuitems_sub}
             key={`/settings/integration`}
           >
-            {MenuItems.Integrations}
+            {MenuItems.Integration}
           </Menu.Item>
         </SubMenu>
       )}

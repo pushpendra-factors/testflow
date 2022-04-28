@@ -32,6 +32,9 @@
     bottom: 60px !important;
     background-color: #f0f2f5 !important;
     max-width: 240px !important;
+    &:hover {
+      background: #e2e4e8 !important;
+    }
   }
 
   &_collapse {
