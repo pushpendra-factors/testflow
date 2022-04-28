@@ -187,6 +187,8 @@ func (store *MemSQL) buildObjectAndPropertiesForAllChannel(projectID uint64, obj
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
+
+	objectsAndProperties = append(objectsAndProperties, model.ChannelNameProperty)
 	for _, currentObject := range objects {
 		currentProperties := buildProperties(allChannelsPropertyToRelated)
 		smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "all")

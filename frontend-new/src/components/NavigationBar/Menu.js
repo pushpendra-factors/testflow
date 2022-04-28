@@ -25,6 +25,7 @@ const MenuItems = {
   Accounts: 'Accounts',
   Campaigns: 'Campaigns',
   Pages: 'Pages',
+  Alerts: 'Alerts',
 };
 
 const MapNametToLocation = {
@@ -34,7 +35,8 @@ const MapNametToLocation = {
   key: '/explain',
   attribution: '/attribution',
   configure: '/configure',
-  hexagon: '/settings',
+  settings: '/settings',
+  Emoji: '/welcome',
 };
 
 const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
@@ -54,7 +56,9 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
   };
 
   const onClickAction = (key) => {
-    handleClick(key);
+    if (key.key === 'collapse') {
+      setCollapsed(!collapsed);
+    } else handleClick(key);
   };
 
   const setIcon = (name, size = 24) => {
@@ -62,7 +66,7 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
     if (location.pathname === MapNametToLocation[name]) {
       color = 'purple';
     }
-    if (name == 'profile' || name == 'configure' || name == 'hexagon') {
+    if (name == 'profile' || name == 'configure' || name == 'settings') {
       if (location.pathname.includes(MapNametToLocation[name])) {
         color = 'purple';
       }
@@ -85,8 +89,7 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
       style={{ background: '#f0f2f5' }}
       className={styles.menu}
     >
-      <div style={{ height: '60px' }}></div>
-
+      {/* <div style={{height:}}></div> */}
       <Menu.Item key='/' icon={setIcon('dashboard')}>
         <b>Dashboard</b>
       </Menu.Item>
@@ -137,10 +140,11 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
         <Menu.Item key={`/configure/customkpi`}>
           {MenuItems.CustomKPI}
         </Menu.Item>
-        <Menu.Item key={`/configure/goals`}>{MenuItems.TargetGoals}</Menu.Item>
+        {/* <Menu.Item key={`/configure/goals`}>{MenuItems.TargetGoals}</Menu.Item> */}
         <Menu.Item key={`/configure/explaindp`}>
           {MenuItems.ExplainDP}
         </Menu.Item>
+        <Menu.Item key={`/configure/alerts`}>{MenuItems.Alerts}</Menu.Item>
       </SubMenu>
       <SubMenu
         onTitleClick={() => {
@@ -149,7 +153,7 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
           }
         }}
         key='sub3'
-        icon={setIcon('hexagon')}
+        icon={setIcon('settings')}
         title={<b>Settings</b>}
       >
         <Menu.Item key={`/settings/general`}>
@@ -163,17 +167,22 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
         <Menu.Item key={`/settings/integration`}>
           {MenuItems.Integrations}
         </Menu.Item>
-        <Menu.Item key={`/settings/alerts`}>
-          Alerts
-        </Menu.Item>
       </SubMenu>
       <Menu.Item
-        style={{ position: 'absolute', bottom: '48px' }}
+        className={styles.menu_assist}
         key='/welcome'
         icon={setIcon('Emoji')}
       >
         <b>Setup Assist</b>
       </Menu.Item>
+      <Menu.Item
+        className={styles.menu_collapse}
+        key='collapse'
+        icon={setIcon(collapsed ? 'arrow_right' : 'arrow_left')}
+      >
+        <b>{collapsed ? 'Expand' : 'Collapse'}</b>
+      </Menu.Item>
+      <div style={{ height: '120px' }}></div>
     </Menu>
   );
 };

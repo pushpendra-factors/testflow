@@ -15,10 +15,12 @@ import (
 	"github.com/jinzhu/now"
 	log "github.com/sirupsen/logrus"
 )
+
 type message struct {
 	AlertName     string
 	AlertType     int
 	Operator      string
+	Category      string
 	ActualValue   float64
 	ComparedValue float64
 	Value         float64
@@ -32,6 +34,7 @@ type dateRanges struct {
 	prev_from int64
 	prev_to   int64
 }
+
 func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
 	allAlerts, errCode := store.GetStore().GetAllAlerts(projectID)
 	if errCode != http.StatusFound {
@@ -87,9 +90,10 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 		}
 		if notify {
 			msg := message{
-				AlertName:     alert.AlertName,
+				AlertName:     alertDescription.Name,
 				AlertType:     alert.AlertType,
 				Operator:      alertDescription.Operator,
+				Category:      kpiQuery.DisplayCategory,
 				ActualValue:   actualValue,
 				ComparedValue: comparedValue,
 				Value:         value,
@@ -266,17 +270,18 @@ func sendEmailAlert(msg message, emails []string) {
 }
 
 func CreateAlertTemplate(msg message) (subject, text, html string) {
-	subject = "Alert"
-	var comparedValue, comparedDate string
-	if msg.AlertType == 2 {
-		comparedValue = fmt.Sprintf("compared_value : %v ,", msg.ComparedValue)
-		comparedDate = fmt.Sprintf(",compared to : %s ", msg.ComparedTo)
+	subject = "Factors.ai Alert"
+	if msg.AlertType == 1 {
+		html = fmt.Sprintf(`<h1>%s</h1><br><br><p>%s %s recorded for %s in %s </p>`, "Alert", fmt.Sprint(msg.Value), msg.AlertName, msg.Category, msg.DateRange)
+	} else if msg.AlertType == 2 {
+		html = fmt.Sprintf(`<h1>%s</h1><br><br><p>%s has %s %s for %s in %s compared to %s - %s( %s)</p>`, "Alert", msg.AlertName, msg.Operator, fmt.Sprint(msg.Value), msg.Category, msg.DateRange, msg.ComparedTo, fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
 	}
-	html = fmt.Sprintf(`<h1>Email Alert</h1><p>This alert is regarding %s <br> actual_value : %v , %s value : %v <br> 
-	for date range : %s %s<br></p>`, msg.AlertName, msg.ActualValue, comparedValue, msg.Value, msg.DateRange, comparedDate)
-	text = fmt.Sprintf(`<h1>Email Alert</h1><p>This alert is regarding %s <br> actual_value : %v , %s value : %v <br> 
-	for date range : %s %s<br></p>`, msg.AlertName, msg.ActualValue, comparedValue, msg.Value, msg.DateRange, comparedDate)
-	return subject, text, html
+	return subject, "", html
+	// html = fmt.Sprintf(`<h1>Email Alert</h1><p>This alert is regarding %s <br> actual_value : %v , %s value : %v <br>
+	// for date range : %s %s<br></p>`, msg.AlertName, msg.ActualValue, comparedValue, msg.Value, msg.DateRange, comparedDate)
+	// text = fmt.Sprintf(`<h1>Email Alert</h1><p>This alert is regarding %s <br> actual_value : %v , %s value : %v <br>
+	// for date range : %s %s<br></p>`, msg.AlertName, msg.ActualValue, comparedValue, msg.Value, msg.DateRange, comparedDate)
+	// return subject, text, html
 }
 
 func sendSlackAlert(msg message) bool {

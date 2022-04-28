@@ -236,9 +236,10 @@ function ProjectDropdown({
             type='text'
             size={'large'}
             onClick={() => setMoreOptions(true)}
-            className={`btn-custom ml-1`}
+            className={`ml-1`}
+            style={{padding: '4px 6px'}}
           >
-            <SVG name='more' />
+            <SVG name='more' size={24}/>
           </Button>
 
           {moreOptions ? (
@@ -347,8 +348,8 @@ function ProjectDropdown({
               </Row>
             </div>
             : null}
-          <div className={`flex items-center justify-between mx-10 mb-4`}>
-            <div className={'flex flex-col items-start ml-4'}>
+          <div className={`flex items-start justify-between mx-10 my-2`}>
+            <div className={'flex flex-col items-start'}>
               <Button
                 className={`${styles.dropdownbtn}`}
                 type='text'

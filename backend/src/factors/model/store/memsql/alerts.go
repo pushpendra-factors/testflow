@@ -82,6 +82,7 @@ func (store *MemSQL) CreateAlert(projectID uint64, alert model.Alert) (model.Ale
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 	var alertDescription model.AlertDescription
+	var alertConfiguration model.AlertConfiguration
 	err := U.DecodePostgresJsonbToStructType(alert.AlertDescription, &alertDescription)
 	if err != nil {
 		return model.Alert{}, http.StatusInternalServerError, "failed to decode jsonb to alert description"
@@ -90,6 +91,19 @@ func (store *MemSQL) CreateAlert(projectID uint64, alert model.Alert) (model.Ale
 	// - Check for valid operator
 	// - Check if the KPI/Metric is valid TODO
 	// - Check if the date range is valid for both type 1 and type 2
+	if alert.AlertName == "" {
+		logCtx.Error("Invalid alert name")
+		return model.Alert{}, http.StatusBadRequest, "Invalid alert name"
+	}
+	err = U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfiguration)
+	if err != nil {
+		return model.Alert{}, http.StatusInternalServerError, "failed to decode jsonb to alert configuration"
+	}
+	if alertConfiguration.IsEmailEnabled && len(alertConfiguration.Emails) == 0 {
+		logCtx.Error("empty email list")
+		return model.Alert{}, http.StatusBadRequest, "empty email list"
+	}
+
 	if !store.isValidOperator(alertDescription.Operator) {
 		return model.Alert{}, http.StatusBadRequest, "Invalid Operator for Alert"
 	}
