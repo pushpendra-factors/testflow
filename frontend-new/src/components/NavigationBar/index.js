@@ -27,23 +27,7 @@ function NavigationBar(props) {
         collapsible
         collapsed={props.collapse}
         onCollapse={onCollapse}
-        trigger={
-          props.collapse ? (
-            <Button
-              type='text'
-              className={`${styles.button} w-full`}
-              icon={<SVG name='arrow_right'/>}
-            ></Button>
-          ) : (
-            <Button
-              type='text'
-              className={`${styles.button} w-full`}
-              icon={<SVG name='arrow_left'/>}
-            >
-              Collapse
-            </Button>
-          )
-        }
+        trigger={null}
       >
         <div>
           <SiderMenu

@@ -56,7 +56,9 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
   };
 
   const onClickAction = (key) => {
-    handleClick(key);
+    if (key.key === 'collapse') {
+      setCollapsed(!collapsed);
+    } else handleClick(key);
   };
 
   const setIcon = (name, size = 24) => {
@@ -172,6 +174,13 @@ const SiderMenu = ({ collapsed, setCollapsed, handleClick }) => {
         icon={setIcon('Emoji')}
       >
         <b>Setup Assist</b>
+      </Menu.Item>
+      <Menu.Item
+        className={styles.menu_collapse}
+        key='collapse'
+        icon={setIcon(collapsed ? 'arrow_right' : 'arrow_left')}
+      >
+        <b>{collapsed ? 'Expand' : 'Collapse'}</b>
       </Menu.Item>
       <div style={{ height: '120px' }}></div>
     </Menu>
