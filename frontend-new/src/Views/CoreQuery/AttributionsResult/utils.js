@@ -815,6 +815,14 @@ export const getTableData = (
                     ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
                     : 0,
                 };
+          resultantRow[`${lbl} - Conversion Rate`] = !comparison_data
+                ? formatCount(row[conversionRateIdx], 1)
+                : {
+                    value: formatCount(row[conversionRateIdx], 1),
+                    compare_value: equivalent_compare_row
+                      ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
+                      : 0,
+                  };     
         });
       } else { 
         resultantRow = {
