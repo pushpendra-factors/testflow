@@ -554,14 +554,14 @@ export const getTableColumns = (
       };
     });
   } else {
-    eventColumns.push([
+    eventColumns.push(
       getEventColumnConfig({
         title: 'Conversion',
         key: 'Conversion',
         method: attribution_method,
         hasBorder: conversionBorderCondition,
       }),
-    ])
+    );
 
     if (showCPC) {
       eventColumns.push(
@@ -824,7 +824,7 @@ export const getTableData = (
                       : 0,
                   };     
         });
-      } else { 
+      } else {
         resultantRow = {
         index,
         category: Object.values(dimensionsData).join(', '),
@@ -856,7 +856,7 @@ export const getTableData = (
             },
       }
     };
-      if (linkedEvents.length) {
+    if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
           const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
           const eventCPCIdx = headers.indexOf(`${le.label} - CPC`);
