@@ -1,13 +1,14 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import {
-  Row, Col, Button, message
+  Row, Col, Button, message, Modal
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { signup } from 'Reducers/agentActions';
 import styles from './index.module.scss';
+import { meetLink } from '../../utils/hubspot';
 
-function Congrats({ signup, data }) {
+function Congrats({ signup, data, setShowModal, showModal }) {
 
 //   const popBookDemo = () => {
 //     if(Calendly){ Calendly.initPopupWidget({ url: 'https://calendly.com/factorsai/demo' }); }
@@ -49,7 +50,7 @@ function Congrats({ signup, data }) {
 
                             <Col span={24}>
                                 <div className={'flex justify-center items-center mb-5'} >
-                                    <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>You’re only one step away!</Text>
+                                    <Text type={'title'} level={3} extraClass={'m-0'} weight={'bold'}>Confirm your email to get started!</Text>
                                 </div>
                             </Col>
                             
@@ -81,6 +82,40 @@ function Congrats({ signup, data }) {
             <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
             </div>
       </div>
+
+
+        <Modal
+        title={null}
+        visible={showModal}
+        footer={
+            <Row className={'mb-2 mt-2'}>
+            <Col span={24}>
+                <div className={'flex flex-col justify-end items-end'} >
+                    <Button type={'primary'} size={'large'} onClick={() => setShowModal(false)}>Done! Start setting up my Factors project</Button>
+                </div>
+            </Col>
+            </Row>
+        }
+        centered={true}
+        mask={true}
+        maskClosable={false}
+        maskStyle={{backgroundColor: 'rgb(0 0 0 / 70%)'}}
+        closable={false}
+        onCancel={()=> setShowModal(false)}
+        className={`fa-modal--regular`}
+        width={'70%'}
+        >
+            <div className={'m-0 mb-2'}>
+                <Row justify={'center'} className={'mt-2'}>
+                    <Col>
+                        <Text type={'title'} level={5} weight={'bold'} color={'grey-2'} extraClass={'m-0'}>Get a free product walkthrough</Text>
+                    </Col>
+                </Row>
+                <Row className={'mt-4'}>
+                    <iframe className={'w-full h-full'} style={{height: '450px'}} src={meetLink()}></iframe>
+                </Row>
+            </div>
+        </Modal> 
 
     </>
 

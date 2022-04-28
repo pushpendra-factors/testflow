@@ -23,6 +23,7 @@ import ControlledComponent from '../ControlledComponent';
 import PivotTableControls from '../PivotTableControls';
 import { PIVOT_SORT_ORDERS } from '../PivotTableControls/pivotTableControls.constants';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
+import { getKpiLabel } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 const PivotTable = ({ data, breakdown, kpis, showControls }) => {
   const {
@@ -98,7 +99,7 @@ const PivotTable = ({ data, breakdown, kpis, showControls }) => {
         }),
       });
     },
-    [updatePivotConfig, pivotConfig]
+    [updatePivotConfig, pivotConfig, kpis, breakdown]
   );
 
   const handleSortChange = useCallback(() => {
@@ -120,7 +121,7 @@ const PivotTable = ({ data, breakdown, kpis, showControls }) => {
     if (!configLoaded) {
       updatePivotConfig({
         rows: breakdownAttributes,
-        vals: [kpis[0]],
+        vals: [getKpiLabel(kpis[0])],
         configLoaded: true,
       });
     }

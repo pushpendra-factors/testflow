@@ -183,7 +183,7 @@ const IntegrationCard = ({ item, index }) => {
       >
         <div>
           <div
-            className={`flex justify-between`}
+            className={`flex justify-between cursor-pointer`}
             onClick={() =>
               isActive || isStatus === 'Active' ? setToggle(!toggle) : null
             }
@@ -288,30 +288,41 @@ function IntegrationSettings({
         }
         onError={FaErrorLog}
       >
-        <div className={'mb-10 pl-4'}>
-          <Row>
-            <Col span={12}>
-              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
-                Integrations
-              </Text>
-            </Col>
-          </Row>
-          <Row className={'mt-4'}>
-            <Col span={24}>
-              {dataLoading ? (
-                <Skeleton active paragraph={{ rows: 4 }} />
-              ) : (
-                IntegrationProviderData.map((item, index) => {
-                  return (
-                    <IntegrationCard
-                      item={item}
-                      index={index}
-                      key={index}
-                      currentProjectSettings={currentProjectSettings}
-                    />
-                  );
-                })
-              )}
+        <div className={'fa-container mt-32 mb-12 min-h-screen'}>
+          <Row gutter={[24, 24]} justify='center'>
+            <Col span={18}>
+              <div className={'mb-10 pl-4'}>
+                <Row>
+                  <Col span={12}>
+                    <Text
+                      type={'title'}
+                      level={3}
+                      weight={'bold'}
+                      extraClass={'m-0'}
+                    >
+                      Integrations
+                    </Text>
+                  </Col>
+                </Row>
+                <Row className={'mt-4'}>
+                  <Col span={24}>
+                    {dataLoading ? (
+                      <Skeleton active paragraph={{ rows: 4 }} />
+                    ) : (
+                      IntegrationProviderData.map((item, index) => {
+                        return (
+                          <IntegrationCard
+                            item={item}
+                            index={index}
+                            key={index}
+                            currentProjectSettings={currentProjectSettings}
+                          />
+                        );
+                      })
+                    )}
+                  </Col>
+                </Row>
+              </div>
             </Col>
           </Row>
         </div>

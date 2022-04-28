@@ -2,10 +2,11 @@
 {  
     height: 100%;
     width: 64px;
-    background-color: $fa-color--mono-7;
+    background-color: #f5f6f8;
     overflow: auto;
-    height: 100vh;
+    height: calc(100vh - 56px);
     position: fixed;
+    top: 56px;
     left: 0;
     // z-index: 1001;
 
@@ -32,7 +33,7 @@
         height: 40px;
         width: 40px;
         border-radius: 8px;
-        opacity: 0.5;
+        opacity: 0.58;
         background-color: transparent;
         -webkit-transition: all .3s cubic-bezier(.645,.045,.355,1);
         transition: all .3s cubic-bezier(.645,.045,.355,1); 
@@ -59,7 +60,7 @@
             }
         }
         &:hover{
-            background-color: $fa-color--mono-5;
+            background-color: $fa-color--mono-3;
         }
 
         &.fa-brand-logo{
@@ -83,6 +84,9 @@
 
 .fa-popupcard--wrapper
 {
+    position: fixed;
+    top: 44px !important;
+
     .ant-popover-inner
     {
 

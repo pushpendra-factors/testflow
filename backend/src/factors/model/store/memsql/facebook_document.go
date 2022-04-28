@@ -354,7 +354,7 @@ func (store *MemSQL) buildFbChannelConfig(projectID uint64) *model.ChannelConfig
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	facebookObjectsAndProperties := store.buildObjectAndPropertiesForFacebook(projectID, model.ObjectsForFacebook)
-	selectMetrics := append(selectableMetricsForAllChannels, model.SelectableMetricsForFacebook...)
+	selectMetrics := append(SelectableMetricsForAllChannels, model.SelectableMetricsForFacebook...)
 	objectsAndProperties := facebookObjectsAndProperties
 
 	return &model.ChannelConfigResult{

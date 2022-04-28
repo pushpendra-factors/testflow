@@ -96,8 +96,8 @@ var CAFilters = []string{
 }
 
 // TODO: Move and fetch it from respective channels - allChannels, adwords etc.. because this is error prone.
-var selectableMetricsForAllChannels = []string{"impressions", "clicks", "spend"}
-var objectsForAllChannels = []string{CAFilterCampaign, CAFilterAdGroup}
+var SelectableMetricsForAllChannels = []string{"impressions", "clicks", "spend"}
+var ObjectsForAllChannels = []string{CAFilterCampaign, CAFilterAdGroup}
 
 var allChannelsPropertyToRelated = map[string]model.PropertiesAndRelated{
 	"name": model.PropertiesAndRelated{
@@ -174,10 +174,10 @@ func (store *MemSQL) buildAllChannelConfig(projectID uint64) *model.ChannelConfi
 		"project_id": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	objectsAndProperties := store.buildObjectAndPropertiesForAllChannel(projectID, objectsForAllChannels)
+	objectsAndProperties := store.buildObjectAndPropertiesForAllChannel(projectID, ObjectsForAllChannels)
 
 	return &model.ChannelConfigResult{
-		SelectMetrics:        selectableMetricsForAllChannels,
+		SelectMetrics:        SelectableMetricsForAllChannels,
 		ObjectsAndProperties: objectsAndProperties,
 	}
 }
@@ -188,6 +188,8 @@ func (store *MemSQL) buildObjectAndPropertiesForAllChannel(projectID uint64, obj
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
+
+	objectsAndProperties = append(objectsAndProperties, model.ChannelNameProperty)
 	for _, currentObject := range objects {
 		currentProperties := buildProperties(allChannelsPropertyToRelated)
 		smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "all")

@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
+import { Row, Col, Button, Spin, Tag } from 'antd';
 import {
-  Row, Col, Button, Spin, Tag
-} from 'antd';
-import { fetchFactorsGoals, fetchFactorsModels, fetchGoalInsights, saveGoalInsightRules, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
-import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
+  fetchFactorsGoals,
+  fetchFactorsModels,
+  fetchGoalInsights,
+  saveGoalInsightRules,
+  fetchFactorsTrackedEvents,
+  fetchFactorsTrackedUserProperties,
+} from 'Reducers/factors';
+import {
+  fetchEventNames,
+  getUserProperties,
+} from 'Reducers/coreQuery/middleware';
 import { connect } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
 import _, { isEmpty } from 'lodash';
@@ -14,6 +22,9 @@ import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import ExplainV2 from './FactorsInsightsNew';
 import { useHistory } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar';
+import FaHeader from '../../components/FaHeader';
+import NavigationBar from '../../components/NavigationBar';
 
 const ExplainTypeList = [
   {
@@ -33,21 +44,21 @@ const ExplainTypeList = [
     desc: 'What are the differences between users in California and London?',
     icon: '',
     active: false,
-  }, 
+  },
 ];
 
 const Factors = ({
-  fetchFactorsGoals
-  , activeProject
-  , goals
-  , agents
-  , fetchProjectAgents
-  , fetchEventNames
-  , fetchFactorsModels
-  , fetchGoalInsights
-  , fetchFactorsTrackedEvents
-  , fetchFactorsTrackedUserProperties
-  , getUserProperties
+  fetchFactorsGoals,
+  activeProject,
+  goals,
+  agents,
+  fetchProjectAgents,
+  fetchEventNames,
+  fetchFactorsModels,
+  fetchGoalInsights,
+  fetchFactorsTrackedEvents,
+  fetchFactorsTrackedUserProperties,
+  getUserProperties,
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -55,7 +66,6 @@ const Factors = ({
   const [showGoalDrawer, setGoalDrawer] = useState(false);
   const [dataSource, setdataSource] = useState(null);
   const history = useHistory();
-
 
   useEffect(() => {
     const getData1 = async () => {
@@ -76,44 +86,106 @@ const Factors = ({
 
   return (
     <>
-      <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Explain Error '} subtitle={'We are facing trouble loading Explain. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-
-        {fetchingIngishts ? <Spin size={'large'} className={'fa-page-loader'} /> :
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size={'medium'}
+            title={'Explain Error '}
+            subtitle={
+              'We are facing trouble loading Explain. Drop us a message on the in-app chat.'
+            }
+          />
+        }
+        onError={FaErrorLog}
+      >
+        {fetchingIngishts ? (
+          <Spin size={'large'} className={'fa-page-loader'} />
+        ) : (
           <>
-            <Header>
-              <div className="w-full h-full py-4 flex flex-col justify-center items-center">
-                <SearchBar />
-              </div>
-            </Header>
+            {/* <FaHeader>
+              <SearchBar />
+            </FaHeader> */}
 
-            <div className={'fa-container mt-24 min-h-screen'}>
-              <Row gutter={[24, 24]} justify="center">
-
+            <div className={'fa-container mt-24 mb-12 min-h-screen'}>
+              <Row gutter={[24, 24]} justify='center'>
                 <Col span={20}>
                   <Row gutter={[24, 24]}>
                     <Col span={24}>
-                      <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
-                      <Text type={'title'} level={6} extraClass={'m-0 mt-2'} color={"grey"} >Investigate the impact of various user segments and their behaviors on your marketing efforts.</Text>
+                      <Text
+                        type={'title'}
+                        level={3}
+                        weight={'bold'}
+                        extraClass={'m-0'}
+                      >
+                        Explain
+                      </Text>
+                      <Text
+                        type={'title'}
+                        level={6}
+                        extraClass={'m-0 mt-2'}
+                        color={'grey'}
+                      >
+                        Investigate the impact of various user segments and
+                        their behaviors on your marketing efforts.
+                      </Text>
                     </Col>
                     <Col span={24}>
-                      <div className={`flex items-stretch`}>  
-                      {ExplainTypeList?.map((item) => {
-                        return (
-                          <div
-                            onClick={item.active ? () => { history.push('/explain/insights')} : null }
-                            style={{ width: '320px' }}
-                            className={`relative inline-flex items-stretch justify-start border-radius--sm border--thin-2 cursor-pointer mb-6 mr-6 ${item.active ? 'cursor-pointer': 'fa-template--card cursor-not-allowed'}`}>
-                            <div className='px-6 py-4 flex flex-col items-center justify-center background-color--brand-color-1'>
-                              <SVG name={item?.icon ? item.icon : 'organisation'} size={32} color={'grey'} extraClass={'mr-2'} />
-                            </div> 
-                            <div className='px-4 py-4 flex flex-col items-start justify-start'>
-                              {!item.active && <Tag color='red' className={'fai--custom-card--badge'} > Coming Soon </Tag> }
-                              <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>{item.title}</Text>
-                              <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 mb-2'}>{item.desc}</Text> 
+                      <div className={`flex items-stretch justify-between mb-6`}>
+                        {ExplainTypeList?.map((item) => {
+                          return (
+                            <div
+                              onClick={
+                                item.active
+                                  ? () => {
+                                      history.push('/explain/insights');
+                                    }
+                                  : null
+                              }
+                              // style={{ width: '320px' }}
+                              className={`relative inline-flex items-stretch justify-start border-radius--sm border--thin-2 cursor-pointer mr-6 ${
+                                item.active
+                                  ? 'cursor-pointer'
+                                  : 'fa-template--card cursor-not-allowed'
+                              }`}
+                            >
+                              <div className='px-6 py-4 flex flex-col items-center justify-center background-color--brand-color-1'>
+                                <SVG
+                                  name={item?.icon ? item.icon : 'organisation'}
+                                  size={32}
+                                  color={'grey'}
+                                  extraClass={'mr-2'}
+                                />
+                              </div>
+                              <div className='px-4 py-4 flex flex-col items-start justify-start'>
+                                {!item.active && (
+                                  <Tag
+                                    color='red'
+                                    className={'fai--custom-card--badge'}
+                                  >
+                                    {' '}
+                                    Coming Soon{' '}
+                                  </Tag>
+                                )}
+                                <Text
+                                  type={'title'}
+                                  level={7}
+                                  weight={'bold'}
+                                  extraClass={'m-0'}
+                                >
+                                  {item.title}
+                                </Text>
+                                <Text
+                                  type={'title'}
+                                  level={8}
+                                  color={'grey'}
+                                  extraClass={'m-0 mb-2'}
+                                >
+                                  {item.desc}
+                                </Text>
+                              </div>
                             </div>
-                          </div>
-                        )
-                      })}
+                          );
+                        })}
                       </div>
                     </Col>
                   </Row>
@@ -125,9 +197,8 @@ const Factors = ({
                 </Col>
               </Row>
             </div>
-
           </>
-        }
+        )}
       </ErrorBoundary>
     </>
   );
@@ -140,4 +211,14 @@ const mapStateToProps = (state) => {
     factors_models: state.factors.factors_models,
   };
 };
-export default connect(mapStateToProps, { fetchFactorsGoals, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchGoalInsights, fetchFactorsModels, fetchEventNames, getUserProperties })(Factors);
+export default connect(mapStateToProps, {
+  fetchFactorsGoals,
+  fetchFactorsTrackedEvents,
+  fetchFactorsTrackedUserProperties,
+  fetchProjectAgents,
+  saveGoalInsightRules,
+  fetchGoalInsights,
+  fetchFactorsModels,
+  fetchEventNames,
+  getUserProperties,
+})(Factors);

@@ -26,7 +26,7 @@ export const DEFAULT_PIVOT_CONFIG = {
   rows: EMPTY_ARRAY,
   cols: EMPTY_ARRAY,
   vals: EMPTY_ARRAY,
-  aggregatorName: 'Sum',
+  aggregatorName: 'Integer Sum',
   rowOrder: PIVOT_SORT_ORDERS.ASCEND,
   configLoaded: false,
 };

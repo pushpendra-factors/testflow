@@ -1,7 +1,7 @@
 .PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-beam-dashboard-caching-now upload-beam-dashboard-caching-now pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events go-fmt pack-beam-add-session upload-beam-add-session pack-memsql-hubspot-sync-fields upload-memsql-hubspot-sync-fields pack-replicate-properties upload-replicate-properties pack-precompiles-queries upload-precompile-queries pack-sdk-bundle upload-sdk-bundle pack-event-bundle upload-event-bundle pack-analytics-bundle upload-analytics-bundle test pack-convert_epoch_saved_queries_tz1_to_tz2 upload-convert_epoch_saved_queries_tz1_to_tz2
 
 # Update tag with the latest release version
-# Ex format: v0.05-beta_d0e9ed9 
+# Ex format: v0.05-beta_d0e9ed9
 # git rev-list HEAD --max-count=1 --abbrev-commit
 TAG?=
 export TAG
@@ -118,7 +118,7 @@ pack-pull-events:
 upload-pull-events: export IMAGE_NAME=pull-events-job
 upload-pull-events: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/pull-events-job:$(TAG)
-	
+
 pack-project-events:
 	docker build -t us.gcr.io/factors-$(ENV)/project-events-job:$(TAG) -f Dockerfile.project_events_job .
 
@@ -308,49 +308,49 @@ upload-journey-mining: export IMAGE_NAME=journey-mining-job
 upload-journey-mining: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/journey-mining-job:$(TAG)
 
-pack-yourstory-add-properties: 
+pack-yourstory-add-properties:
 	docker build -t us.gcr.io/factors-$(ENV)/yourstory-add-properties-job:$(TAG) -f Dockerfile.yourstory_add_properties_job .
 
 upload-yourstory-add-properties: export IMAGE_NAME=yourstory-add-properties-job
 upload-yourstory-add-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/yourstory-add-properties-job:$(TAG)
 
-pack-instantiate-event-user-cache: 
+pack-instantiate-event-user-cache:
 	docker build -t us.gcr.io/factors-$(ENV)/instantiate-event-user-cache-job:$(TAG) -f Dockerfile.instantiate_event_user_cache_job .
 
 upload-instantiate-event-user-cache: export IMAGE_NAME=instantiate-event-user-cache-job
 upload-instantiate-event-user-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/instantiate-event-user-cache-job:$(TAG)
 
-pack-migrate-model-metadata: 
+pack-migrate-model-metadata:
 	docker build -t us.gcr.io/factors-$(ENV)/migrate-model-metadata-todb-job:$(TAG) -f Dockerfile.migrate_model_metadata_job .
 
 upload-migrate-model-metadata: export IMAGE_NAME=migrate-model-metadata-todb-job
 upload-migrate-model-metadata: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/migrate-model-metadata-todb-job:$(TAG)
 
-pack-cleanup-eventuser-cache: 
+pack-cleanup-eventuser-cache:
 	docker build -t us.gcr.io/factors-$(ENV)/cleanup-eventuser-cache-job:$(TAG) -f Dockerfile.cleanup_eventuser_cache_job .
 
 upload-cleanup-eventuser-cache: export IMAGE_NAME=cleanup-eventuser-cache-job
 upload-cleanup-eventuser-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/cleanup-eventuser-cache-job:$(TAG)
 
-pack-cleanup-sortedset-cache: 
+pack-cleanup-sortedset-cache:
 	docker build -t us.gcr.io/factors-$(ENV)/cleanup-sortedset-cache-job:$(TAG) -f Dockerfile.cleanup_sortedset_cache_job .
 
 upload-cleanup-sortedset-cache: export IMAGE_NAME=cleanup-sortedset-cache-job
 upload-cleanup-sortedset-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/cleanup-sortedset-cache-job:$(TAG)
 
-pack-cleanup-dangling-keys: 
+pack-cleanup-dangling-keys:
 	docker build -t us.gcr.io/factors-$(ENV)/cleanup-dangling-keys-job:$(TAG) -f Dockerfile.cleanup_dangling_keys_job .
 
 upload-cleanup-dangling-keys: export IMAGE_NAME=cleanup-dangling-keys-job
 upload-cleanup-dangling-keys: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/cleanup-dangling-keys-job:$(TAG)
 
-pack-rollup-sortedset-cache: 
+pack-rollup-sortedset-cache:
 	docker build -t us.gcr.io/factors-$(ENV)/rollup-sortedset-cache-job:$(TAG) -f Dockerfile.rollup_sortedset_cache_job .
 
 upload-rollup-sortedset-cache: export IMAGE_NAME=rollup-sortedset-cache-job

@@ -370,6 +370,7 @@ func ValidateKPIQueryMetricsForAnyEventType(kpiQueryMetrics []string, mapOfMetri
 	return true
 }
 
+// Duplicated function present in postgres and memsql/kpi_analytics_website_session.
 func ValidateKPIQueryFiltersForAnyEventType(kpiQueryFilters []KPIFilter, configPropertiesData []map[string]string) bool {
 	mapOfPropertyName := make(map[string]struct{})
 	for _, propertyData := range configPropertiesData {
@@ -383,6 +384,7 @@ func ValidateKPIQueryFiltersForAnyEventType(kpiQueryFilters []KPIFilter, configP
 	return true
 }
 
+// Duplicated function present in postgres and memsql/kpi_analytics_website_session.
 func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, configPropertiesData []map[string]string) bool {
 	mapOfPropertyName := make(map[string]struct{})
 	for _, propertyData := range configPropertiesData {
@@ -505,10 +507,18 @@ func MergeQueryResults(queryResults []QueryResult, queries []KPIQuery, timezoneS
 func TransformColumnResultGroup(queryResults []QueryResult, queries []KPIQuery, timezoneString string) []string {
 	finalResultantColumns := make([]string, 0)
 	for index, queryResult := range queryResults {
-		if index == 0 {
-			finalResultantColumns = append(queryResult.Headers[:len(queryResult.Headers)-1], queries[index].Metrics...)
+		resultantMetrics := make([]string, 0)
+		if queries[index].Category == ChannelCategory {
+			for _, metric := range queries[index].Metrics {
+				resultantMetrics = append(resultantMetrics, queries[index].DisplayCategory+"_"+metric)
+			}
 		} else {
-			finalResultantColumns = append(finalResultantColumns, queries[index].Metrics...)
+			resultantMetrics = queries[index].Metrics
+		}
+		if index == 0 {
+			finalResultantColumns = append(queryResult.Headers[:len(queryResult.Headers)-1], resultantMetrics...)
+		} else {
+			finalResultantColumns = append(finalResultantColumns, resultantMetrics...)
 		}
 	}
 	return finalResultantColumns

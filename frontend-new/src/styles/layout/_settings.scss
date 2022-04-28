@@ -12,6 +12,10 @@
   width: 100%;
   margin: 0 15px 15px 0;
   transition: all 0.3s;
+
+  &:hover {
+    box-shadow: 0px 0px 20px $fa-color--mono-2;
+  }
 }
 
 .fa-warning {

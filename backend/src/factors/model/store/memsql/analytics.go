@@ -208,10 +208,10 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 
 			// where condition for $none value.
 			var whereCond string
-			if propertyOp == model.EqualsOp {
+			if propertyOp == model.EqualsOp || propertyOp == model.RLikeOp {
 				// i.e: (NOT jsonb_exists(events.properties, 'property_name') OR events.properties->>'property_name'='')
 				whereCond = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) IS NULL OR JSON_EXTRACT_STRING(%s, ?)='')", propertyEntity, propertyEntity)
-			} else if propertyOp == model.NotEqualOp {
+			} else if propertyOp == model.NotEqualOp || propertyOp == model.NotRLikeOp {
 				// i.e: (jsonb_exists(events.properties, 'property_name') AND events.properties->>'property_name'!='')
 				whereCond = fmt.Sprintf("(JSON_EXTRACT_STRING(%s, ?) IS NOT NULL AND JSON_EXTRACT_STRING(%s, ?)!='')", propertyEntity, propertyEntity)
 			} else {

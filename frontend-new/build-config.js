@@ -11,7 +11,7 @@ const CONFIG = {
   },
   staging: {
     backend_host: 'https://staging-api.factors.ai',
-    sdk_asset_url: 'https://staging-app.factors.ai/assets/factors.js',
+    sdk_asset_url: 'https://staging-app.factors.ai/assets/v1/factors.js',
     android_sdk_asset_url: 'https://storage.googleapis.com/factors-staging-v2/sdk/android/sdk-staging-v0.1.aar',
     factors_sdk_token: 'we0jyjxcs0ix4ggnkptymjh48ur8y7q7',
     facebook_app_id: '1022017331596075',
@@ -25,7 +25,7 @@ const CONFIG = {
   },
   production: {
     backend_host: 'https://api.factors.ai',
-    sdk_asset_url: 'https://app.factors.ai/assets/factors.js',
+    sdk_asset_url: 'https://app.factors.ai/assets/v1/factors.js',
     android_sdk_asset_url: 'https://storage.googleapis.com/factors-production-v2/sdk/android/sdk-production-v0.1.aar',
     factors_sdk_token: 'we0jyjxcs0ix4ggnkptymjh48ur8y7q7',
     facebook_app_id: '1022017331596075',

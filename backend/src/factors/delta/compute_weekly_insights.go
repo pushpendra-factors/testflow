@@ -74,6 +74,7 @@ var propertyMap map[string]bool
 var WebsiteEvent string = "WebsiteEvent"
 var CRM string = "CRM"
 var Funnel string = "Funnel"
+var KPI string = "KPI"
 
 var BlackListedKeys map[string]bool
 var WhiteListedKeys map[string]bool
@@ -91,6 +92,152 @@ const (
 
 const DistributionChangePer float64 = 5 // x of overall to be comapared with distrubution W1
 
+func getInsightImportance(valWithDetails ValueWithDetails) float64 {
+	w1 := valWithDetails.ActualValues.W1
+	w2 := valWithDetails.ActualValues.W2
+	dist1 := valWithDetails.ChangeInDistribution.W1
+	dist2 := valWithDetails.ChangeInDistribution.W1
+	if w2+w1 == 0 {
+		return 0
+	}
+	return math.Abs(w2-w1) * (dist1 + dist2) / (w2 + w1)
+}
+
+func GetInsightsKpi(file CrossPeriodInsightsKpi, numberOfRecords int, QueryClass, KpiType string, isEventWebsite bool) WeeklyInsights {
+	var KeyMapForDistribution = make(map[string]bool)
+	propertyMap := make(map[string]bool)
+	var insights WeeklyInsights
+	insights.Insights = make([]ActualMetrics, 0)
+	insights.InsightsType = "DistOnly"
+	// ZeroFlag := true // flag to check if overall W1||W2 is 0.
+	var tmpGlobal Base
+	var valWithDetailsArr []ValueWithDetails
+	var ActualValuearr []ActualMetrics
+	for _, cpiInfo := range file.Target {
+		var globalW1, globalW2 float64
+		if cpiInfo.GlobalMetrics.First != nil {
+			globalW1 = cpiInfo.GlobalMetrics.First.(float64)
+		}
+		tmpGlobal.W1 = globalW1
+		if cpiInfo.GlobalMetrics.Second != nil {
+			globalW2 = cpiInfo.GlobalMetrics.Second.(float64)
+		}
+		tmpGlobal.W2 = globalW2
+		tmpGlobal.IsIncreased = cpiInfo.GlobalMetrics.PercentChange > 0
+		tmpGlobal.Percentage = cpiInfo.GlobalMetrics.PercentChange
+		insights.Goal = tmpGlobal
+
+		var tmp ValueWithDetails
+		var temp BaseTargetMetrics
+
+		for key, valMap := range cpiInfo.FeatureMetrics {
+			keyNameType := strings.SplitN(key, "#", 2)
+			keyType, keyName := keyNameType[0], keyNameType[1]
+
+			for val, diff := range valMap {
+				if val == "" { // omitting "" values
+					continue
+				}
+				if KeyMapForDistribution[val] {
+					continue
+				}
+				if BlackListedKeys[keyName] {
+					continue
+				}
+				KeyMapForDistribution[val] = true
+				featW1 := diff.First.(float64)
+				featW2 := diff.Second.(float64)
+				tmp.Key = keyName
+				tmp.Value = val
+				tmp.Entity = keyType
+				temp.W1 = featW1
+				temp.W2 = featW2
+				// tmp.ActualValues.IsIncreased = diff.PercentChange > 0
+				temp.Per = diff.PercentChange
+
+				if _, exists := file.JSDivergence.Target[key][val]; exists {
+					temp.JSDivergence = file.JSDivergence.Target[key][val] * temp.W1
+					if _, exists := PriorityKeysDistribution[tmp.Key]; exists {
+						temp.JSDivergence = 4
+					} else {
+						if WhiteListedKeys[tmp.Key] {
+							temp.JSDivergence = 3
+							tmp.VoteStatus = Upvoted
+						} else if WhiteListedKeysOtherQuery[tmp.Key] {
+							temp.JSDivergence = 2
+							tmp.VoteStatus = UpvotedForOtherQuery
+						} else if DecreaseBoostKeys[tmp.Key] {
+							temp.JSDivergence = 0
+							tmp.VoteStatus = DownvotedForOtherQuery
+						} else {
+							temp.JSDivergence = 1
+						}
+					}
+				}
+				tmp.ActualValues = temp
+
+				if globalW1 != 0 {
+					tmp.ChangeInDistribution.W1 = featW1 * 100 / globalW1
+				}
+				if globalW2 != 0 {
+					tmp.ChangeInDistribution.W2 = featW2 * 100 / globalW2
+				}
+				tmp.ChangeInDistribution.IsIncreased = tmp.ChangeInDistribution.W1 < tmp.ChangeInDistribution.W2
+				tmp.ChangeInDistribution.Percentage = tmp.ChangeInDistribution.W2 - tmp.ChangeInDistribution.W1
+				tmp.Type = "distribution"
+				if !(CheckPercentageChange(globalW1, featW1) || CheckPercentageChange(globalW2, featW2)) && math.Abs(tmp.ActualValues.Per) > 5 {
+					valWithDetailsArr = append(valWithDetailsArr, tmp)
+				}
+			}
+		}
+	}
+	sort.Slice(valWithDetailsArr, func(i, j int) bool {
+		if valWithDetailsArr[i].ActualValues.JSDivergence == valWithDetailsArr[j].ActualValues.JSDivergence {
+			return getInsightImportance(valWithDetailsArr[i]) > getInsightImportance(valWithDetailsArr[j])
+		}
+		return valWithDetailsArr[i].ActualValues.JSDivergence > valWithDetailsArr[j].ActualValues.JSDivergence
+	})
+
+	if insights.Goal.IsIncreased {
+		// dividing records into 70% and 30%
+		floatValue := float64(0.7) * float64(numberOfRecords)
+		increasedRecords = int(floatValue)
+		decreasedRecords = numberOfRecords - increasedRecords
+	} else {
+		floatValue := float64(0.7) * float64(numberOfRecords)
+		decreasedRecords = int(floatValue)
+		increasedRecords = numberOfRecords - increasedRecords
+	}
+
+	for _, data := range valWithDetailsArr {
+		var tempActualValue = ActualMetrics{
+			ActualValues: Base{
+				W1:          data.ActualValues.W1,
+				W2:          data.ActualValues.W2,
+				IsIncreased: data.ActualValues.Per > 0,
+				Percentage:  data.ActualValues.Per,
+			},
+		}
+		tempActualValue.ChangeInDistribution = data.ChangeInDistribution
+		propertyMap[data.Key] = true
+		tempActualValue.Key = data.Key
+		tempActualValue.Value = data.Value
+		tempActualValue.Entity = data.Entity
+		tempActualValue.VoteStatus = data.VoteStatus
+		tempActualValue.Type = data.Type
+		if tempActualValue.ActualValues.IsIncreased && increasedRecords > 0 {
+			ActualValuearr = append(ActualValuearr, tempActualValue)
+			increasedRecords -= 1
+		} else if !tempActualValue.ActualValues.IsIncreased && decreasedRecords > 0 {
+			ActualValuearr = append(ActualValuearr, tempActualValue)
+			decreasedRecords -= 1
+		}
+	}
+
+	insights.Insights = append(insights.Insights, ActualValuearr...)
+	return insights
+}
+
 func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, EventType string, isEventWebsite bool) WeeklyInsights {
 	var KeyMapForConversion = make(map[string]bool)
 	var KeyMapForDistribution = make(map[string]bool)
@@ -103,7 +250,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		if EventType == WebsiteEvent {
 			insights.BaseLine = "$session"
 		}
-	} else if EventType == CRM {
+	} else if EventType == CRM || EventType == KPI {
 		insights.InsightsType = "DistOnly"
 	}
 	if EventType == Funnel || EventType == WebsiteEvent { // change the values
@@ -291,8 +438,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		if increasedRecords == 0 && decreasedRecords == 0 {
 			break
 		}
-		var tempActualValue ActualMetrics
-		tempActualValue = ActualMetrics{
+		var tempActualValue = ActualMetrics{
 			ActualValues: Base{
 				W1:          data.ActualValues.W1,
 				W2:          data.ActualValues.W2,
@@ -490,8 +636,7 @@ func GetInsights(file CrossPeriodInsights, numberOfRecords int, QueryClass, Even
 		if increasedRecords == 0 && decreasedRecords == 0 {
 			break
 		}
-		var tempActualValue ActualMetrics
-		tempActualValue = ActualMetrics{
+		var tempActualValue = ActualMetrics{
 			ActualValues: Base{
 				W1:          data.ActualValues.W1,
 				W2:          data.ActualValues.W2,
@@ -535,7 +680,7 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 		kValue = 100
 	}
 	path, file := C.GetCloudManager().GetInsightsCpiFilePathAndName(projectId, U.GetDateOnlyFromTimestampZ(baseStartTime.Unix()), queryId, kValue)
-	fmt.Println(path, file)
+	fmt.Println("path/file:", path, file)
 	reader, err := C.GetCloudManager().Get(path, file)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -549,12 +694,6 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 		return nil, err
 	}
 
-	var insights CrossPeriodInsights
-	err = json.Unmarshal(data, &insights)
-	if err != nil {
-		log.WithError(err).Error("Error unmarshalling response")
-		return nil, err
-	}
 	// finding query class and query object
 	QueriesObj, status := store.GetStore().GetQueryWithQueryId(projectId, queryId)
 	if status != http.StatusFound {
@@ -582,9 +721,18 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 		}
 		query = queryGroup.Queries[0]
 		isEventOccurence = (query.Type == model.QueryTypeEventsOccurrence)
+	} else if class == model.QueryClassKPI {
+		var KpiQueryGroup model.KPIQueryGroup
+		err = U.DecodePostgresJsonbToStructType(&QueriesObj.Query, &KpiQueryGroup)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
 	}
-	EventType := getEventType(&query, class, projectId)
+
+	var EventType string
 	var isEventWebsite bool
+	EventType = getEventType(&query, class, projectId)
 	if EventType == Funnel || EventType == WebsiteEvent {
 		NewEventType := GetEventTypeForFunnelOrWebsite(&query, projectId)
 		if NewEventType == WebsiteEvent {
@@ -594,17 +742,39 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 	if isEventOccurence {
 		EventType = CRM
 	}
-	BlackListedKeys = GetBlackListedKeys()
-	PriorityKeysConversion = GetPriorityKeysMapConversion()
+
+	var insights CrossPeriodInsights
+	var insightsKpiList []CrossPeriodInsightsKpi
+	var insightsKpi CrossPeriodInsightsKpi
+	if class == model.QueryClassKPI {
+		err = json.Unmarshal(data, &insightsKpiList)
+		if len(insightsKpiList) > 0 {
+			insightsKpi = insightsKpiList[0]
+		}
+	} else {
+		err = json.Unmarshal(data, &insights)
+	}
+	if err != nil {
+		log.WithError(err).Error("error unmarshalling response")
+		return nil, err
+	}
+	var insightsObj WeeklyInsights
 	PriorityKeysDistribution = GetPriorityKeysMapDistribution()
 	WhiteListedKeys = make(map[string]bool)
 	WhiteListedKeysOtherQuery = make(map[string]bool)
+	BlackListedKeys = GetBlackListedKeys()
+	PriorityKeysConversion = GetPriorityKeysMapConversion()
 	CaptureBlackListedAndWhiteListedKeys(projectId, agentUUID, queryId)
-	insightsObj := GetInsights(insights, numberOfRecords, class, EventType, isEventWebsite)
-	// adding query groups
-	gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj, isEventWebsite)
-	// appending at top
-	insightsObj.Insights = append(gbpInsights, insightsObj.Insights...)
+	if class == model.QueryClassKPI {
+		insightsObj = GetInsightsKpi(insightsKpi, numberOfRecords, class, EventType, isEventWebsite)
+	} else {
+		insightsObj = GetInsights(insights, numberOfRecords, class, EventType, isEventWebsite)
+		// adding query groups
+		gbpInsights := addGroupByProperties(query, EventType, insights, insightsObj, isEventWebsite)
+		// appending at top
+		insightsObj.Insights = append(gbpInsights, insightsObj.Insights...)
+	}
+
 	removeNegativePercentageFromInsights(&insightsObj)
 	insightsObj.QueryId = queryId
 	return insightsObj, nil
@@ -612,6 +782,10 @@ func GetWeeklyInsights(projectId uint64, agentUUID string, queryId uint64, baseS
 
 func addGroupByProperties(query model.Query, EventType string, file CrossPeriodInsights, insights WeeklyInsights, isEventWebsite bool) []ActualMetrics {
 	ActualMetricsArr := make([]ActualMetrics, 0)
+	if EventType == KPI {
+		return ActualMetricsArr
+	}
+
 	ZeroFlag := true
 	if insights.Goal.W1 == float64(0) || insights.Goal.W2 == float64(0) {
 		ZeroFlag = false
@@ -718,8 +892,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 							if index >= numberOfRecordsFromGbp {
 								break
 							}
-							var tempActualValue ActualMetrics
-							tempActualValue = ActualMetrics{
+							var tempActualValue = ActualMetrics{
 								ActualValues: Base{
 									W1:          data.ActualValues.W1,
 									W2:          data.ActualValues.W2,
@@ -876,8 +1049,7 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 				if index >= numberOfRecordsFromGbp {
 					break
 				}
-				var tempActualValue ActualMetrics
-				tempActualValue = ActualMetrics{
+				var tempActualValue = ActualMetrics{
 					ActualValues: Base{
 						W1:          data.ActualValues.W1,
 						W2:          data.ActualValues.W2,
@@ -893,18 +1065,19 @@ func addGroupByProperties(query model.Query, EventType string, file CrossPeriodI
 				tempActualValue.VoteStatus = data.VoteStatus
 				tempActualValue.Type = data.Type
 				ActualMetricsArr = append(ActualMetricsArr, tempActualValue)
-
 			}
 		}
-
 	}
 
 	return ActualMetricsArr
 }
+
 func getEventType(query *model.Query, QueryClass string, project_id uint64) string {
 	EventType := ""
 	if QueryClass == model.QueryClassFunnel {
 		return Funnel
+	} else if QueryClass == model.QueryClassKPI {
+		return KPI
 	} else if QueryClass == model.QueryClassEvents {
 
 		ewp := query.EventsWithProperties
@@ -925,8 +1098,8 @@ func getEventType(query *model.Query, QueryClass string, project_id uint64) stri
 
 	}
 	return EventType
-
 }
+
 func GetEventTypeForFunnelOrWebsite(query *model.Query, project_id uint64) string {
 	EventType := ""
 	ewp := query.EventsWithProperties
@@ -946,6 +1119,7 @@ func GetEventTypeForFunnelOrWebsite(query *model.Query, project_id uint64) strin
 	}
 	return EventType
 }
+
 func removeNegativePercentageFromInsights(insightsObj *WeeklyInsights) {
 	insightsObj.Base.Percentage = math.Abs(insightsObj.Base.Percentage)
 	insightsObj.Goal.Percentage = math.Abs(insightsObj.Goal.Percentage)
@@ -957,8 +1131,8 @@ func removeNegativePercentageFromInsights(insightsObj *WeeklyInsights) {
 		insightsObj.Insights[index].ChangeInPrevalance.Percentage = math.Abs(insightsObj.Insights[index].ChangeInPrevalance.Percentage)
 		insightsObj.Insights[index].ChangeInDistribution.Percentage = math.Abs(insightsObj.Insights[index].ChangeInDistribution.Percentage)
 	}
-
 }
+
 func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string, queryID uint64) {
 	records, err := store.GetStore().GetRecordsFromFeedback(projectID, agentUUID)
 	if err != nil {
@@ -991,11 +1165,9 @@ func CaptureBlackListedAndWhiteListedKeys(projectID uint64, agentUUID string, qu
 
 	}
 }
+
 func CheckPercentageChange(overall, week float64) bool {
 	//filtering  if week1 data is less than x % of overall w1 data
 	actual := (DistributionChangePer / 100 * overall)
-	if week < actual {
-		return true
-	}
-	return false
+	return week < actual
 }

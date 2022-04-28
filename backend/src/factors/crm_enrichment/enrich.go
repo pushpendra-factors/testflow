@@ -25,6 +25,7 @@ const (
 	TableNameCRMGroups        = "crm_groups"
 	TableNameCRMRelationships = "crm_relationships"
 	TableNameCRMActivities    = "crm_activities"
+	TableNameCRMProperties    = "crm_properties"
 )
 
 var enrichOrder = []string{
