@@ -119,7 +119,7 @@ func TransformLeadgenPayloadToPropertiesMap(leadgenDataPayload LeadgenDataPayloa
 	userProperties := make(U.PropertiesMap, 0)
 
 	eventProperties[U.EP_FORM_ID] = leadgenDataPayload.FormID
-	if source == "Linkedin" {
+	if source == "Linkedin" && strings.Contains(leadgenDataPayload.CampaignID, "urn:") {
 		campaignArray := strings.Split(leadgenDataPayload.CampaignID, ":")
 		if len(campaignArray) != 4 {
 			return nil, nil, 0, errors.New("invalid campaign ID")

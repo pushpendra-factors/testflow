@@ -60,6 +60,15 @@ func AllowedCRMBySource(crmSource CRMSource) bool {
 	return ALLOWED_CRM_SOURCES[crmSource]
 }
 
+func IsCRMSource(source string) bool {
+	for _, crmSource := range CRM_SOURCE {
+		if source == crmSource {
+			return true
+		}
+	}
+	return false
+}
+
 func GetCRMSourceByAliasName(sourceAlias string) (CRMSource, error) {
 	for sourceType, alias := range CRM_SOURCE {
 		if sourceAlias == alias {

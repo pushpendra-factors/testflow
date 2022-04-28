@@ -1167,7 +1167,6 @@ func isEventLevelGroupBy(groupBy model.QueryGroupByProperty) bool {
 func translateGroupKeysIntoColumnNames(result *model.QueryResult,
 	groupProps []model.QueryGroupByProperty) error {
 	logFields := log.Fields{
-		"result":      result,
 		"group_props": groupProps,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1474,8 +1473,7 @@ func sanitizeNumericalBucketRange(query *model.Query, rows [][]interface{}, inde
 // sanitizeNumericalBucketRanges Removes any .0 added to bucket ranges wherever possible.
 func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query) {
 	logFields := log.Fields{
-		"result": result,
-		"query":  query,
+		"query": query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	headerIndexMap := make(map[string][]int)
@@ -1557,8 +1555,7 @@ func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.Query
 
 func addQueryToResultMeta(result *model.QueryResult, query model.Query) {
 	logFields := log.Fields{
-		"result": result,
-		"query":  query,
+		"query": query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	result.Meta.Query = query
