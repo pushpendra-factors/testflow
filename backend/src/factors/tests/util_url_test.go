@@ -98,6 +98,13 @@ func TestUtilIsBotUserAgent(t *testing.T) {
 	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)"))
 	assert.True(t, U.IsBotUserAgent("facebookexternalhit/1.0 (+http://www.facebook.com/externalhit_uatext.php)"))
 	assert.True(t, U.IsBotUserAgent("ia_archiver (+http://www.alexa.com/site/help/webmasters; crawler@alexa.com)"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/61.0.3163.100 Chrome/61.0.3163.100 Safari/537.36 PingdomPageSpeed/1.0 (pingbot/2.0; +http://www.pingdom.com/)"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) browser/2020.2.1 Chrome/78.0.3904.130 Electron/7.3.2 Safari/537.36 PingdomTMS/2020.2"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/53.0.2785.143 Chrome/53.0.2785.143 Safari/537.36 PingdomPageSpeed/1.0 (pingbot/2.0; +http://www.pingdom.com/)"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) WPMRecorder/2020.2.6 Chrome/87.0.4280.141 Electron/11.3.0 Safari/537.36 PingdomTMS/2020.2"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) browser/2020.2.2 Chrome/78.0.3904.130 Electron/7.3.2 Safari/537.36 PingdomTMS/2020.2"))
+	assert.True(t, U.IsBotUserAgent("Pingdom.com_bot_version_1.4_(http://www.pingdom.com/)"))
+
 }
 
 func TestRemoveAllInvalidURLEscapeFromURL(t *testing.T) {

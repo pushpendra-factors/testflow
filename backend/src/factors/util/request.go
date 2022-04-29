@@ -82,7 +82,17 @@ func IsRequestFromLocalhost(host string) bool {
 	return true
 }
 
+// IsPinggdomBot - Check whether it is pingdom bot or not
+func IsPingdomBot(userAgent string) bool {
+	return strings.Contains(strings.ToLower(userAgent), "pingdom")
+}
+
 // IsBotUserAgent - Check request user agent is bot or not.
 func IsBotUserAgent(userAgent string) bool {
+
+	if IsPingdomBot(userAgent) {
+		return true
+	}
+
 	return user_agent.New(userAgent).Bot()
 }

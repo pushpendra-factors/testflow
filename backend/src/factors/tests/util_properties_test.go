@@ -66,6 +66,14 @@ func TestFillUserAgentUserProperties(t *testing.T) {
 	assert.NotNil(t, newUserProperties[U.UP_DEVICE_MODEL])
 	assert.NotNil(t, newUserProperties[U.UP_DEVICE_TYPE])
 	assert.NotEqual(t, "Bot", newUserProperties[U.UP_BROWSER])
+
+	UserProperties1 := make(U.PropertiesMap, 0)
+	userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) browser/2020.2.2 Chrome/78.0.3904.130 Electron/7.3.2 Safari/537.36 PingdomTMS/2020.2"
+	SDK.FillUserAgentUserProperties(&UserProperties1, userAgent)
+	assert.NotNil(t, UserProperties1[U.UP_USER_AGENT])
+	assert.Equal(t, userAgent, UserProperties1[U.UP_USER_AGENT])
+	assert.NotNil(t, UserProperties1[U.UP_BROWSER])
+	assert.Equal(t, "Bot", UserProperties1[U.UP_BROWSER])
 }
 
 func TestFillFirstEventUserPropertiesIfNotExist(t *testing.T) {
