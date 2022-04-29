@@ -4,58 +4,50 @@ import BasicSettings from './BasicSettings';
 import SDKSettings from './SDKSettings';
 import UserSettings from './UserSettings';
 import IntegrationSettings from './IntegrationSettings';
-import Events from './Events';
-import Properties from './PropertySettings';
 import { fetchSmartEvents } from 'Reducers/events';
 import { connect } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
-import ContentGroups from './ContentGroups';
-import Touchpoints from './Touchpoints';
-import CustomKPI from './CustomKPI';
 import Attributions from './Attributions';
 import ExplainDP from './ExplainDataPoints';
+import Alerts from './Alerts';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
   SDK: 'Javascript SDK',
   Users: 'Users',
   Integrations: 'Integrations',
-  EventAlias: 'Event Alias',
-  Events: 'Events',
-  Properties: 'Properties',
   MarketingInteractions: 'Marketing Touchpoints',
-  ContentGroups: 'Content Groups',
-  Touchpoints: 'Touchpoints',
   Attributions: 'Attributions',
   CustomKPI: 'Custom KPIs',
   ExplainDP: 'Top Events and Properties',
+  Alerts: 'Alerts',
 };
 
-function ProjectSettings({ activeProject, fetchSmartEvents }) {
+function ProjectSettings({ activeProject, fetchSmartEvents, setKey }) {
   const [selectedMenu, setSelectedMenu] = useState(MenuTabs.generalSettings);
   const history = useHistory();
   let location = useLocation();
 
   const handleClick = (e) => {
     setSelectedMenu(e.key);
-    if (e.key == 'Integrations') {
-      history.push(`/settings/#${e.key.toLowerCase()}`);
-    } else {
-      history.push(`/settings`);
-    }
+    // if (e.key == 'Integrations') {
+    // history.push(`/settings/#${e.key.toLowerCase()}`);
+    // } else {
+    history.push(`/settings`);
+    // }
 
     if (e.key === MenuTabs.Events) {
       fetchSmartEvents(activeProject.id);
     }
   };
 
-  useEffect(() => {
-    if (location.hash == '#integrations') {
-      setSelectedMenu(MenuTabs.Integrations);
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (location.hash == '#integrations') {
+  //     setSelectedMenu(MenuTabs.Integrations);
+  //   }
+  // }, []);
 
   return (
     <>
@@ -123,6 +115,9 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
                 <Menu.Item key={MenuTabs.ExplainDP}>
                   {MenuTabs.ExplainDP}
                 </Menu.Item>
+                <Menu.Item key={MenuTabs.Alerts}>
+                  {MenuTabs.Alerts}
+                </Menu.Item>
               </Menu>
             </Col>
             <Col span={15}>
@@ -139,6 +134,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               {selectedMenu === MenuTabs.ContentGroups && <ContentGroups />}
               {selectedMenu === MenuTabs.CustomKPI && <CustomKPI />}
               {selectedMenu === MenuTabs.ExplainDP && <ExplainDP />}
+              {selectedMenu === MenuTabs.Alerts && <Alerts />}
             </Col>
           </Row>
         </div>

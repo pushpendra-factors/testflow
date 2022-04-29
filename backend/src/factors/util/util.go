@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/mssola/user_agent"
 	log "github.com/sirupsen/logrus"
 	"github.com/ttacon/libphonenumber"
 )
@@ -95,10 +96,11 @@ const (
 	CacheExpiryWeeklyRangeInSeconds = 6 * 7 * SECONDS_IN_A_DAY // 6 Weeks.
 	CacheExpiryDefaultInSeconds     = 62 * SECONDS_IN_A_DAY    // 62 Days.
 
-	CacheExpiryQueryMaxInSeconds            = 2 * SECONDS_IN_A_DAY
-	CacheExpiryQueryTodaysDataInSeconds     = 10 * 60      // 10 minutes.
-	CacheExpiryDashboardTodaysDataInSeconds = 12 * 60 * 60 // 12 hours.
-	CacheExpiryDashboard30MinutesInSeconds  = 12 * 60 * 60 // 12 hours.
+	CacheExpiryQueryMaxInSeconds             = 2 * SECONDS_IN_A_DAY
+	CacheExpiryQueryMaxInSecondsFourteenDays = 14 * SECONDS_IN_A_DAY
+	CacheExpiryQueryTodaysDataInSeconds      = 10 * 60      // 10 minutes.
+	CacheExpiryDashboardTodaysDataInSeconds  = 12 * 60 * 60 // 12 hours.
+	CacheExpiryDashboard30MinutesInSeconds   = 12 * 60 * 60 // 12 hours.
 )
 
 // Group Names
@@ -218,7 +220,7 @@ func IsEmail(str string) bool {
 
 func IsPersonalEmail(str string) bool {
 	str = strings.ToLower(str)
-	personalDomains := []string {
+	personalDomains := []string{
 		"gmail.com",
 		"yahoo.com",
 		"hotmail.com",
@@ -544,6 +546,15 @@ func GetInterfaceListAsBatch(list []interface{}, batchSize int) [][]interface{} 
 	return batchList
 }
 
+func GetKeysMapAsArray(keys map[string]bool) []string {
+	keysArray := make([]string, 0)
+	for key := range keys {
+		keysArray = append(keysArray, key)
+	}
+
+	return keysArray
+}
+
 func GetSnakeCaseToTitleString(str string) (title string) {
 	if str == "" {
 		return
@@ -849,9 +860,9 @@ func GetQueryCacheResultExpiryInSeconds(from, to int64, timezoneString TimeZoneS
 		return float64(CacheExpiryQueryTodaysDataInSeconds)
 	} else if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay > ImmutableDataEndDateBufferInSeconds {
 		// Data can be assumed to be immutable here after buffer (2) days.
-		return float64(CacheExpiryQueryMaxInSeconds)
+		return float64(CacheExpiryQueryMaxInSecondsFourteenDays)
 	}
-	return float64(CacheExpiryQueryMutableDataInSeconds)
+	return float64(CacheExpiryQueryMaxInSecondsFourteenDays)
 }
 
 func GetAggrAsFloat64(aggr interface{}) (float64, error) {
@@ -899,6 +910,26 @@ func StringIn(strList []string, s string) (bool, string, int) {
 	}
 
 	return false, "", -1
+
+}
+
+func FloatIn(strList []string, s float64) (bool, float64, int) {
+
+	if len(strList) == 0 {
+		return false, 0, -1
+	}
+
+	for idx, v := range strList {
+
+		if val, err := strconv.ParseFloat(v, 64); err == nil {
+			if val == s {
+				return true, s, idx
+			}
+		}
+
+	}
+
+	return false, 0, -1
 
 }
 
@@ -1250,4 +1281,11 @@ func HasMaliciousContent(reqPayload string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func GetBrowser(p *user_agent.UserAgent) (string, string) {
+	if IsPingdomBot(p.UA()) {
+		return "PingdomBot", ""
+	}
+	return p.Browser()
 }

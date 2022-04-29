@@ -75,7 +75,7 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 	syncInfo, status = store.GetStore().GetSalesforceSyncInfo()
 
 	// should return the latest timestamp from the database.
@@ -83,7 +83,7 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 
 	// should return error on duplicate.
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusConflict, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// enrich job, create contact created and contact updated event.
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
@@ -163,7 +163,7 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// salesforce record2 with created != updated same user
 	updatedDate = updatedDate.AddDate(0, 0, 1)
@@ -174,11 +174,11 @@ func TestSalesforceCreateSalesforceDocument(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	//should return conflict on duplicate
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusConflict, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
@@ -280,7 +280,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID3, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
@@ -294,7 +294,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID1, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
@@ -308,7 +308,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID2, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
@@ -322,7 +322,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	prevDoc, status := store.GetStore().GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(project.ID, cuid, userID3, salesforceDocument.Type)
 	assert.Equal(t, http.StatusFound, status)
@@ -458,7 +458,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 			Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 		}
 		status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-		assert.Equal(t, http.StatusCreated, status)
+		assert.Equal(t, http.StatusOK, status)
 		status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userIDs[i], "", true)
 		assert.Equal(t, http.StatusAccepted, status)
 	}
@@ -471,7 +471,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID1, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
@@ -484,7 +484,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 	status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, salesforceDocument, "", userID1, "", true)
 	assert.Equal(t, http.StatusAccepted, status)
 
@@ -738,7 +738,7 @@ func TestSalesforceSameUserSmartEvent(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	userID1 := U.RandomLowerAphaNumString(5)
 	_, status = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: userID1, Source: model.GetRequestSourcePointer(model.UserSourceSalesforce)})
@@ -887,11 +887,11 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	//should return error on duplicate
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusConflict, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
@@ -999,7 +999,7 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	limit := 100
 	for i := 0; i < limit; i++ {
@@ -1013,7 +1013,7 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 			Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 		}
 		status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
-		assert.Equal(t, http.StatusCreated, status)
+		assert.Equal(t, http.StatusOK, status)
 	}
 
 	var property1Values []interface{}
@@ -1046,7 +1046,7 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 				Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 			}
 			status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
-			assert.Equal(t, http.StatusCreated, status)
+			assert.Equal(t, http.StatusOK, status)
 		}
 	}
 
@@ -1059,7 +1059,7 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	w = sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameContact, property1)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -1181,7 +1181,7 @@ func TestSalesforcePropertyDetails(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	allStatus, _ := IntSalesforce.Enrich(project.ID, 2)
 	for i := range allStatus {
@@ -1332,7 +1332,7 @@ func TestSalesforceIdentification(t *testing.T) {
 	}
 
 	status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 	jsonDataContact := fmt.Sprintf(`{"Id":"%s","Email":"%s","MobilePhone":%d,"CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailContact, number, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
@@ -1341,7 +1341,7 @@ func TestSalesforceIdentification(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 	jsonDataLead := fmt.Sprintf(`{"Id":"%s","Email":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailLead, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
@@ -1359,7 +1359,7 @@ func TestSalesforceIdentification(t *testing.T) {
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataOpportunity))},
 	}
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	allStatus, _ := IntSalesforce.Enrich(project.ID, 2)
 	for i := range allStatus {
@@ -1417,7 +1417,7 @@ func createDummySalesforceDocument(projectID uint64, value interface{}, doctType
 	}
 
 	status := store.GetStore().CreateSalesforceDocument(projectID, salesforceDocument)
-	if status != http.StatusCreated {
+	if status != http.StatusOK {
 		return errors.New("failed to create salesforce document")
 	}
 
@@ -1477,7 +1477,7 @@ func TestSalesforceSmartEventPropertyDetails(t *testing.T) {
 	}
 
 	status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	jsonDataContact = fmt.Sprintf(`{"Id":"%s","Email":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailLead, createdDate.Add(2*time.Second).UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.Add(10*time.Minute).UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
@@ -1487,7 +1487,7 @@ func TestSalesforceSmartEventPropertyDetails(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	dtEnKey1 := model.GetCRMEnrichPropertyKeyByType(
 		model.SmartCRMEventSourceSalesforce,
@@ -3544,7 +3544,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contact created above
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
@@ -3585,7 +3585,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contact created above
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
@@ -3622,7 +3622,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contact created above
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
@@ -3661,7 +3661,7 @@ func TestSalesforceUserPropertiesOverwrite(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contact created above
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
@@ -3718,7 +3718,7 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	}
 
 	status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// create salesforce-opportunity record
 	contactID2 := U.RandomLowerAphaNumString(5)
@@ -3732,7 +3732,7 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// execute enrich job to process the contacts created above
 	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2)
@@ -3774,7 +3774,7 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// get groupName
 	groupName := model.GROUP_NAME_SALESFORCE_ACCOUNT
@@ -3798,7 +3798,7 @@ func TestSalesforceGroupUserFix(t *testing.T) {
 	}
 
 	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
-	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, http.StatusOK, status)
 
 	// Execute enrich job to process the contacts created above
 	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2)
@@ -4109,4 +4109,73 @@ func TestSalesforceCampaignMemberCampaignAssociation(t *testing.T) {
 	assert.Equal(t, campaign1ModifiedTimestampStr, rows[2][3])
 	assert.Equal(t, campaignName, rows[2][4])
 	assert.Equal(t, "4", rows[2][5])
+}
+
+func TestSalesforceBatchCreate(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	documentIDs := []string{}
+	documentCreatedTimestamp := []time.Time{}
+	documentProperties := []map[string]interface{}{}
+
+	baseTimestamp := time.Now().AddDate(0, 0, -1)
+	for i := 0; i < 20; i++ {
+		documentIDs = append(documentIDs, fmt.Sprintf("%d", i))
+		documentCreatedTimestamp = append(documentCreatedTimestamp, baseTimestamp.Add(time.Duration(1)*time.Minute))
+		documentProperties = append(documentProperties, map[string]interface{}{"name": fmt.Sprintf("name_%d", i)})
+	}
+	records := make([]model.SalesforceRecord, 0)
+
+	// new records
+	for i := range documentIDs {
+		document := map[string]interface{}{
+			"Id":               documentIDs[i],
+			"Name":             documentProperties[i]["name"],
+			"CreatedDate":      documentCreatedTimestamp[i].Format(model.SalesforceDocumentDateTimeLayout),
+			"LastModifiedDate": documentCreatedTimestamp[i].Format(model.SalesforceDocumentDateTimeLayout),
+		}
+		records = append(records, document)
+	}
+
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameContact, records)
+	assert.Nil(t, err)
+	documents, status := store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeContact, 0, 0)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 20)
+	for i := range documents {
+		assert.Contains(t, documentIDs, documents[i].ID)
+		assert.Equal(t, model.SalesforceDocumentCreated, documents[i].Action)
+		status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, &documents[i], "123", "123", "123", true)
+		assert.Equal(t, http.StatusAccepted, status)
+	}
+
+	//updated records
+	records = make([]model.SalesforceRecord, 0)
+	for i := range documentIDs {
+		document := map[string]interface{}{
+			"Id":               documentIDs[i],
+			"Name":             documentProperties[i]["name"],
+			"CreatedDate":      documentCreatedTimestamp[i].Format(model.SalesforceDocumentDateTimeLayout),
+			"LastModifiedDate": documentCreatedTimestamp[i].Add(time.Duration(2) * time.Minute).Format(model.SalesforceDocumentDateTimeLayout),
+		}
+		records = append(records, document)
+	}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameContact, records)
+	assert.Nil(t, err)
+	documents, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeContact, 0, 0)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, documents, 20)
+	for i := range documents {
+		assert.Contains(t, documentIDs, documents[i].ID)
+		assert.Equal(t, model.SalesforceDocumentUpdated, documents[i].Action)
+		status = store.GetStore().UpdateSalesforceDocumentBySyncStatus(project.ID, &documents[i], "123", "123", "123", true)
+		assert.Equal(t, http.StatusAccepted, status)
+	}
+
+	// check duplicate inserts
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameContact, records)
+	assert.Nil(t, err)
+	_, status = store.GetStore().GetSalesforceDocumentsByTypeForSync(project.ID, model.SalesforceDocumentTypeContact, 0, 0)
+	assert.Equal(t, http.StatusNotFound, status) // no records for process
 }

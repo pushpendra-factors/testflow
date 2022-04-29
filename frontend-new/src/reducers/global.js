@@ -171,6 +171,14 @@ export default function (state = defaultState, action) {
     case 'DISABLE_BINGADS_FULFILLED': {
       return {...state, bingAds: {}}
     }
+    case 'CREATE_ALERTS': {
+      const props = [...state.Alerts];
+      props.push(action.payload);
+      return { ...state, Alerts: props}
+    }
+    case 'FETCH_ALERTS': {
+      return { ...state, Alerts: action.payload };
+    }
     case 'FETCH_MARKETO_FULFILLED': {
       return { ...state, marketo: action.payload };
     }
@@ -875,6 +883,57 @@ export function getHubspotContact(email) {
         })
         .catch((err) => {
           reject(err);
+        });
+    });
+  };
+}
+
+export function createAlerts(projectId, payload) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + 'projects/'+ projectId +'/v1/alerts', payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'CREATE_ALERTS', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchAlerts(projectId) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + 'projects/'+ projectId +'/v1/alerts', {})
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: 'FETCH_ALERTS', payload: r.data});
+            resolve(r);
+          } else {
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function deleteAlerts(projectId, id) {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      del(dispatch, host + 'projects/'+ projectId +'/v1/alerts/' + id)
+      .then((res) => {
+            resolve(res);
+        }).catch((err) => {
+            reject(err);
         });
     });
   };

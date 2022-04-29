@@ -330,27 +330,9 @@ var TransformationOfKPIMetricsToEventAnalyticsQuery = map[string]map[string][]Tr
 	},
 }
 
-// TO Change.
-func ValidateKPIQuery(kpiQuery KPIQuery) bool {
-	if kpiQuery.DisplayCategory == WebsiteSessionDisplayCategory {
-		return ValidateKPISessions(kpiQuery)
-	} else if kpiQuery.DisplayCategory == PageViewsDisplayCategory {
-		return ValidateKPIPageView(kpiQuery)
-	} else if kpiQuery.DisplayCategory == FormSubmissionsDisplayCategory {
-		return ValidateKPIFormSubmissions(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == HubspotContactsDisplayCategory {
-		// 	return ValidateKPIHubspotContacts(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == HubspotCompaniesDisplayCategory {
-		// 	return ValidateKPIHubspotCompanies(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == SalesforceUsersDisplayCategory {
-		// 	return ValidateKPISalesforceUsers(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == SalesforceAccountsDisplayCategory {
-		// 	return ValidateKPISalesforceAccounts(kpiQuery)
-		// } else if kpiQuery.DisplayCategory == SalesforceOpportunitiesDisplayCategory {
-		// 	return ValidateKPISalesforceOpportunities(kpiQuery)
-	} else {
-		return false
-	}
+func CheckIfPropertyIsPresentInStaticKPIPropertyList(inputProperty string) bool {
+	_, exists := MapOfKPIPropertyNameToData[inputProperty]
+	return exists
 }
 
 func GetDirectDerviableQueryPropsFromKPI(kpiQuery KPIQuery) Query {
@@ -391,7 +373,7 @@ func GetObjectTypeForFilterValues(displayCategory string, metric string) string 
 	} else if displayCategory == FormSubmissionsDisplayCategory {
 		objectType = U.EVENT_NAME_FORM_SUBMITTED
 	} else if U.ContainsStringInArray([]string{HubspotContactsDisplayCategory, HubspotCompaniesDisplayCategory, SalesforceUsersDisplayCategory,
-		SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory}, displayCategory) {
+		SalesforceAccountsDisplayCategory, SalesforceOpportunitiesDisplayCategory, MarketoLeadsDisplayCategory}, displayCategory) {
 		metricsData := MapOfMetricsToData[displayCategory][metric]
 		objectType = metricsData["object_type"]
 	} else { // pageViews case as default.

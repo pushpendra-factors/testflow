@@ -2,7 +2,6 @@ package postgres
 
 import (
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
@@ -98,7 +97,7 @@ func validateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.S
 	if smartPropertyRulesDoc.Name == "" {
 		return "Empty name for rule.", false
 	}
-	if Const.SmartPropertyReservedNames[strings.ToLower(smartPropertyRulesDoc.Name)] {
+	if model.SmartPropertyReservedNames[strings.ToLower(smartPropertyRulesDoc.Name)] {
 		return "Entered Name is not allowed.", false
 	}
 	if strings.Contains(smartPropertyRulesDoc.Name, " ") {

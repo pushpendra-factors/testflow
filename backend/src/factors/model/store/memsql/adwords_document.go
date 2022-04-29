@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	"fmt"
 	"net/http"
@@ -1507,7 +1506,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	// Group By
 	dimensions := fields{}
 	for _, groupBy := range query.GroupBy {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == model.AdwordsCampaign {
@@ -1940,7 +1939,7 @@ func getNotNullFilterStatementForSmartPropertyGroupBys(groupBys []model.ChannelG
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	resultStatement := ""
 	for _, groupBy := range groupBys {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == model.AdwordsCampaign {
@@ -2407,7 +2406,7 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 
 	for rows1.Next() {
 		currentRecord := model.ChannelDocumentsWithFields{}
-		rows1.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.CampaignName, &currentRecord.AdGroupName)
+		rows1.Scan(&currentRecord.AdGroupID, &currentRecord.CampaignID, &currentRecord.AdGroupName, &currentRecord.CampaignName)
 		channelDocumentsAdGroup = append(channelDocumentsAdGroup, currentRecord)
 	}
 	U.CloseReadQuery(rows1, tx1)

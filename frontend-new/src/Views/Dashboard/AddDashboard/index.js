@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { Row, Col, Tabs, Modal, notification } from "antd";
-import { useSelector, useDispatch } from "react-redux";
-import AddDashboardTab from "./AddDashboardTab";
-import AddWidgetsTab from "./AddWidgetsTab";
-import { Text } from "../../../components/factorsComponents";
+import React, { useState, useCallback, useEffect } from 'react';
+import { Row, Col, Tabs, Modal, notification } from 'antd';
+import { useSelector, useDispatch } from 'react-redux';
+import AddDashboardTab from './AddDashboardTab';
+import AddWidgetsTab from './AddWidgetsTab';
+import { Text } from '../../../components/factorsComponents';
 import {
   createDashboard,
   assignUnitsToDashboard,
@@ -11,15 +11,15 @@ import {
   DeleteUnitFromDashboard,
   updateDashboard,
   fetchActiveDashboardUnits,
-} from "../../../reducers/dashboard/services";
+} from '../../../reducers/dashboard/services';
 import {
   DASHBOARD_CREATED,
   DASHBOARD_DELETED,
   WIDGET_DELETED,
   DASHBOARD_UPDATED,
-} from "../../../reducers/types";
-import styles from "./index.module.scss";
-import ConfirmationModal from "../../../components/ConfirmationModal";
+} from '../../../reducers/types';
+import styles from './index.module.scss';
+import ConfirmationModal from '../../../components/ConfirmationModal';
 import factorsai from 'factorsai';
 
 function AddDashboard({
@@ -28,10 +28,10 @@ function AddDashboard({
   editDashboard,
   setEditDashboard,
 }) {
-  const [activeKey, setActiveKey] = useState("1");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dashboardType, setDashboardType] = useState("pr");
+  const [activeKey, setActiveKey] = useState('1');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [dashboardType, setDashboardType] = useState('pr');
   const [apisCalled, setApisCalled] = useState(false);
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
@@ -53,10 +53,10 @@ function AddDashboard({
   }, [editDashboard, activeDashboardUnits.data]);
 
   const resetState = useCallback(() => {
-    setActiveKey("1");
-    setTitle("");
-    setDescription("");
-    setDashboardType("pr");
+    setActiveKey('1');
+    setTitle('');
+    setDescription('');
+    setDashboardType('pr');
     setApisCalled(false);
     setSelectedQueries([]);
     setEditDashboard(null);
@@ -84,18 +84,18 @@ function AddDashboard({
   }, [resetState, apisCalled]);
 
   const handleTabChange = useCallback(() => {
-    if (activeKey === "2") {
-      setActiveKey("1");
+    if (activeKey === '2') {
+      setActiveKey('1');
     } else {
       if (!title.trim().length) {
         notification.error({
-          message: "Incorrect Input!",
-          description: "Please Enter dashboard title",
+          message: 'Incorrect Input!',
+          description: 'Please Enter dashboard title',
           duration: 5,
         });
         return false;
       }
-      setActiveKey("2");
+      setActiveKey('2');
     }
   }, [activeKey, title]);
 
@@ -194,15 +194,17 @@ function AddDashboard({
       });
 
       if (newAddedUnits.length) {
-        fetchActiveDashboardUnits(
-          dispatch,
-          active_project.id,
-          editDashboard.id
+        dispatch(
+          fetchActiveDashboardUnits(active_project.id, editDashboard.id)
         );
-      } 
-      
+      }
+
       //Factors EDIT_DASHBOARD tracking
-      factorsai.track('EDIT_DASHBOARD',{'dashboard_name': title, 'dashboard_type': dashboardType, 'dashboard_id': editDashboard.id}); 
+      factorsai.track('EDIT_DASHBOARD', {
+        dashboard_name: title,
+        dashboard_type: dashboardType,
+        dashboard_id: editDashboard.id,
+      });
 
       setApisCalled(false);
       resetState();
@@ -223,7 +225,7 @@ function AddDashboard({
   ]);
 
   const handleOk = useCallback(async () => {
-    if (activeKey === "2") {
+    if (activeKey === '2') {
       if (!editDashboard) {
         createNewDashboard();
       } else {
@@ -232,13 +234,13 @@ function AddDashboard({
     } else {
       if (!title.trim().length) {
         notification.error({
-          message: "Incorrect Input!",
-          description: "Please Enter dashboard title",
+          message: 'Incorrect Input!',
+          description: 'Please Enter dashboard title',
           duration: 5,
         });
         return false;
       }
-      setActiveKey("2");
+      setActiveKey('2');
     }
   }, [
     activeKey,
@@ -249,21 +251,21 @@ function AddDashboard({
   ]);
 
   const getOkText = useCallback(() => {
-    if (activeKey === "1") {
-      return "Next";
+    if (activeKey === '1') {
+      return 'Next';
     } else {
       if (editDashboard) {
-        return "Update Dashboard";
+        return 'Update Dashboard';
       } else {
         if (selectedQueries.length) {
-          return "Create Dashboard";
+          return 'Create Dashboard';
         } else {
           return "I'll add them later";
         }
       }
     }
   }, [activeKey, editDashboard, selectedQueries.length]);
-  
+
   return (
     <>
       <Modal
@@ -274,26 +276,26 @@ function AddDashboard({
         width={700}
         onCancel={handleCancel}
         onOk={handleOk}
-        className={"fa-modal--regular p-4 fa-modal--slideInDown"}
+        className={'fa-modal--regular p-4 fa-modal--slideInDown'}
         confirmLoading={apisCalled}
         closable={false}
         okText={getOkText()}
-        transitionName=""
-        maskTransitionName=""
-        okButtonProps={{ size: "large" }}
-        cancelButtonProps={{ size: "large" }}
+        transitionName=''
+        maskTransitionName=''
+        okButtonProps={{ size: 'large' }}
+        cancelButtonProps={{ size: 'large' }}
       >
         <div>
           <Row>
             <Col span={24}>
               <Text
-                type={"title"}
+                type={'title'}
                 level={4}
-                weight={"bold"}
-                size={"grey"}
-                extraClass={"m-0"}
+                weight={'bold'}
+                size={'grey'}
+                extraClass={'m-0'}
               >
-                {editDashboard ? "Edit Dashboard" : "New Dashboard"}
+                {editDashboard ? 'Edit Dashboard' : 'New Dashboard'}
               </Text>
             </Col>
           </Row>
@@ -302,9 +304,9 @@ function AddDashboard({
               <Tabs
                 onChange={handleTabChange}
                 activeKey={activeKey}
-                className={"fa-tabs"}
+                className={'fa-tabs'}
               >
-                <TabPane className={styles.tabContent} tab="Setup" key="1">
+                <TabPane className={styles.tabContent} tab='Setup' key='1'>
                   <AddDashboardTab
                     title={title}
                     setTitle={setTitle}
@@ -316,7 +318,7 @@ function AddDashboard({
                     showDeleteModal={showDeleteModal}
                   />
                 </TabPane>
-                <TabPane className={styles.tabContent} tab="Widget" key="2">
+                <TabPane className={styles.tabContent} tab='Widget' key='2'>
                   <AddWidgetsTab
                     queries={queries}
                     selectedQueries={selectedQueries}
@@ -330,12 +332,12 @@ function AddDashboard({
       </Modal>
       <ConfirmationModal
         visible={deleteModal}
-        confirmationText="Are you sure you want to delete this Dashboard?"
+        confirmationText='Are you sure you want to delete this Dashboard?'
         onOk={confirmDelete}
         onCancel={showDeleteModal.bind(this, false)}
-        title={`Delete Dashboard - ${editDashboard ? editDashboard.name : ""}`}
-        okText="Confirm"
-        cancelText="Cancel"
+        title={`Delete Dashboard - ${editDashboard ? editDashboard.name : ''}`}
+        okText='Confirm'
+        cancelText='Cancel'
         confirmLoading={deleteApiCalled}
       />
     </>

@@ -2,7 +2,6 @@ package memsql
 
 import (
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -188,6 +187,8 @@ func (store *MemSQL) buildObjectAndPropertiesForAllChannel(projectID uint64, obj
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
+
+	objectsAndProperties = append(objectsAndProperties, model.ChannelNameProperty)
 	for _, currentObject := range objects {
 		currentProperties := buildProperties(allChannelsPropertyToRelated)
 		smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "all")
@@ -288,7 +289,7 @@ func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, f
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
-	_, isPresent := Const.SmartPropertyReservedNames[filterProperty]
+	_, isPresent := model.SmartPropertyReservedNames[filterProperty]
 	if !isPresent {
 		filterValues, errCode := store.getSmartPropertyFilterValues(projectID, filterObject, filterProperty, "all", reqID)
 		if errCode != http.StatusFound {

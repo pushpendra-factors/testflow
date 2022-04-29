@@ -102,7 +102,7 @@ const BreakdownCharts = forwardRef(
       setAggregateData(aggData);
       setCategories(cats);
       setData(d);
-    }, [responseData, breakdown, currentEventIndex]);
+    }, [responseData, breakdown, currentEventIndex, kpis, durationObj]);
 
     useEffect(() => {
       setVisibleProperties(getVisibleData(aggregateData, sorter));

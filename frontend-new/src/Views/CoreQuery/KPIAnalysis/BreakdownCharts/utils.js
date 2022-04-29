@@ -1,9 +1,11 @@
 import React from 'react';
 import moment from 'moment';
+
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import {
   SortResults,
   getClickableTitleSorter,
+  addQforQuarter,
 } from '../../../../utils/dataFormatter';
 import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
@@ -19,11 +21,13 @@ import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 
+import { getKpiLabel } from '../kpiAnalysis.helpers';
+
 export const getDefaultSortProp = (kpis) => {
   if (Array.isArray(kpis) && kpis.length) {
     return [
       {
-        key: `${kpis[0]} - 0`,
+        key: `${getKpiLabel(kpis[0])} - 0`,
         type: 'numerical',
         subtype: null,
         order: 'descend',
@@ -85,7 +89,7 @@ export const formatData = (data, kpis, breakdown, currentEventIndex) => {
       const kpiVals = d.slice(breakdown.length);
       const kpisData = {};
       for (let j = 0; j < kpis.length; j++) {
-        kpisData[`${kpis[j]} - ${j}`] = kpiVals[j];
+        kpisData[`${getKpiLabel(kpis[j])} - ${j}`] = kpiVals[j];
       }
       const grpLabel = Object.values(breakdownData).join(', ');
       return {
@@ -127,17 +131,22 @@ export const getTableColumns = (
   });
 
   const kpiColumns = kpis.map((kpi, index) => {
+    const kpiLabel = getKpiLabel(kpi);
     return {
       title: getClickableTitleSorter(
-        kpi,
-        { key: `${kpi} - ${index}`, type: 'numerical', subtype: null },
+        kpiLabel,
+        {
+          key: `${kpiLabel} - ${index}`,
+          type: 'numerical',
+          subtype: null,
+        },
         currentSorter,
         handleSorting,
         'right'
       ),
       className: 'text-right',
-      dataIndex: `${kpi} - ${index}`,
-      width: 200,
+      dataIndex: `${kpiLabel} - ${index}`,
+      width: 300,
       render: (d) => {
         return d ? <NumFormat number={d} /> : 0;
       },
@@ -365,8 +374,9 @@ export const formatDataInSeriesFormat = (
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);
     if (resultantData[bIdx]) {
-      resultantData[bIdx][moment(category).format(format)] =
-        kpiVals[currentEventIndex];
+      resultantData[bIdx][
+        addQforQuarter(frequency) + moment(category).format(format)
+      ] = kpiVals[currentEventIndex];
       resultantData[bIdx].data[idx] = kpiVals[currentEventIndex];
     }
   });
@@ -400,7 +410,7 @@ export const getDateBasedColumns = (
     dataIndex: `value`,
     width: 150,
   };
-  
+
   const breakdownColumns = breakdown.map((e, index) => {
     return {
       title: getClickableTitleSorter(
@@ -416,17 +426,22 @@ export const getDateBasedColumns = (
   });
 
   const kpiColumns = kpis.map((kpi, index) => {
+    const kpiLabel = getKpiLabel(kpi);
     return {
       title: getClickableTitleSorter(
-        kpi,
-        { key: `${kpi} - ${index}`, type: 'numerical', subtype: null },
+        kpiLabel,
+        {
+          key: `${kpiLabel} - ${index}`,
+          type: 'numerical',
+          subtype: null,
+        },
         currentSorter,
         handleSorting,
         'right'
       ),
       className: 'text-right',
-      dataIndex: `${kpi} - ${index}`,
-      width: 200,
+      dataIndex: `${kpiLabel} - ${index}`,
+      width: 300,
       render: (d) => {
         return d ? <NumFormat number={d} /> : 0;
       },
@@ -438,15 +453,19 @@ export const getDateBasedColumns = (
   const dateColumns = categories.map((cat) => {
     return {
       title: getClickableTitleSorter(
-        moment(cat).format(format),
-        { key: moment(cat).format(format), type: 'numerical', subtype: null },
+        addQforQuarter(frequency) + moment(cat).format(format),
+        {
+          key: addQforQuarter(frequency) + moment(cat).format(format),
+          type: 'numerical',
+          subtype: null,
+        },
         currentSorter,
         handleSorting,
         'right'
       ),
       className: 'text-right',
       width: 150,
-      dataIndex: moment(cat).format(format),
+      dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
       render: (d) => {
         return d ? <NumFormat number={d} /> : 0;
       },

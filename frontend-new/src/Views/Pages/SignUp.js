@@ -53,6 +53,7 @@ function SignUp({ signup }) {
         signup(filteredValues).then(() => {
             setDataLoading(false);
             setformData(filteredValues);
+            setShowModal(true);
         }).catch((err) => {
             setDataLoading(false);
             form.resetFields();
@@ -330,7 +331,7 @@ function SignUp({ signup }) {
       </div>
         }
         {formData &&
-            <Congrats data = {formData} />
+            <Congrats data = {formData} setShowModal={setShowModal} showModal={showModal} />
         }
 
         {/* <MoreAuthOptions showModal={showModal} setShowModal={setShowModal}/>   */}

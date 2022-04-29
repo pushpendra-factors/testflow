@@ -41,7 +41,6 @@ import (
 	"factors/metrics"
 	U "factors/util"
 
-	"factors/interfaces/maileriface"
 	"factors/services/error_collector"
 	serviceEtcd "factors/services/etcd"
 	"factors/services/mailer"
@@ -241,6 +240,10 @@ type Configuration struct {
 	HubspotBatchInsertBatchSize                     int
 	UseHubspotBatchInsertByProjectID                string
 	SalesforcePropertyLookBackTimeHr                int
+	SalesforceBatchInsertBatchSize                  int
+	AllowHubspotEngagementsByProjectID              string
+	HubspotPropertyLookBackLimit                    int
+	EnableSlowDBQueryLogging                        bool
 }
 
 type Services struct {
@@ -255,7 +258,7 @@ type Services struct {
 	DuplicateQueueClient *machinery.Server
 	patternServersLock   sync.RWMutex
 	patternServers       map[string]string
-	Mailer               maileriface.Mailer
+	Mailer               mailer.Mailer
 	ErrorCollector       *error_collector.Collector
 	DeviceDetector       *D.DeviceDetector
 	SentryHook           *logrus_sentry.SentryHook
@@ -2131,4 +2134,25 @@ func GetSessionStoreSecret() string {
 
 func GetSalesforcePropertyLookBackTimeHr() int {
 	return GetConfig().SalesforcePropertyLookBackTimeHr
+}
+
+func GetSalesforceBatchInsertBatchSize() int {
+	return GetConfig().SalesforceBatchInsertBatchSize
+}
+
+func AllowHubspotEngagementsByProjectID(projectID uint64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowHubspotEngagementsByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func GetHubspotPropertiesLookbackLimit() int {
+	return GetConfig().HubspotPropertyLookBackLimit
+}
+
+func IsSlowDBQueryLoggingEnabled() bool {
+	return configuration.EnableSlowDBQueryLogging
 }

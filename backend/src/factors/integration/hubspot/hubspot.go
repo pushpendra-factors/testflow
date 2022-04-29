@@ -54,6 +54,11 @@ type ContactIdentity struct {
 type ContactIdentityProfile struct {
 	Identities []ContactIdentity `json:"identities"`
 }
+type Engagements struct {
+	Engagement   map[string]interface{}   `json:"engagement"`
+	Associations map[string][]interface{} `json:"associations"`
+	Metadata     map[string]interface{}   `json:"metadata"`
+}
 
 // Contact definition
 type Contact struct {
@@ -90,6 +95,7 @@ var syncOrderByType = [...]int{
 	model.HubspotDocumentTypeContact,
 	model.HubspotDocumentTypeCompany,
 	model.HubspotDocumentTypeDeal,
+	model.HubspotDocumentTypeEngagement,
 }
 
 func GetURLParameterAsMap(pageUrl string) map[string]interface{} {
@@ -1997,6 +2003,182 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 	return http.StatusOK
 }
 
+var keyArrEngagementMeeting = []string{"id", "timestamp", "type", "source", "active"}
+var keyArrMetaMeeting = []string{"startTime", "endTime", "title", "meetingOutcome"}
+var keyArrEngagementCall = []string{"id", "timestamp", "type", "source", "activityType"}
+var keyArrMetaCall = []string{"durationMilliseconds", "disposition", "status", "title"}
+
+func extractionOfPropertiesWithOutEmailOrContact(engagement Engagements, engagementType string) map[string]interface{} {
+	properties := make(map[string]interface{})
+	var engagementArray []string
+	var metaDataArray []string
+	if engagementType == "MEETING" {
+		engagementArray = keyArrEngagementMeeting
+		metaDataArray = keyArrMetaMeeting
+	} else if engagementType == "CALL" {
+		engagementArray = keyArrEngagementCall
+		metaDataArray = keyArrMetaCall
+	}
+
+	for _, key := range engagementArray {
+		if key == "timestamp" {
+			vfloat, _ := util.GetPropertyValueAsFloat64(engagement.Engagement[key])
+			properties[key] = (int64)(vfloat / 1000)
+		} else if key == "id" {
+			properties[key] = util.GetPropertyValueAsString(engagement.Engagement[key])
+		} else {
+			properties[key] = engagement.Engagement[key]
+		}
+	}
+
+	for _, key := range metaDataArray {
+		if key == "startTime" || key == "endTime" {
+			properties[key] = (int64)((engagement.Metadata[key]).(float64) / 1000)
+		} else {
+			properties[key] = engagement.Metadata[key]
+		}
+	}
+
+	return properties
+}
+
+func syncEngagements(projectID uint64, document *model.HubspotDocument) int {
+	if document.Type != model.HubspotDocumentTypeEngagement {
+		return http.StatusInternalServerError
+	}
+
+	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
+	var engagement Engagements
+	err := json.Unmarshal((document.Value).RawMessage, &engagement)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to unmarshal hubspot engagement document.")
+		return http.StatusInternalServerError
+	}
+
+	engagementType, isPresent := engagement.Engagement["type"]
+	if !isPresent {
+		logCtx.Error("Failed to find type as a key.")
+		return http.StatusInternalServerError
+	}
+
+	if fmt.Sprintf("%v", engagementType) != "CALL" && fmt.Sprintf("%v", engagementType) != "MEETING" {
+		return http.StatusInternalServerError
+	}
+
+	contactIds := make([]string, 0, 0)
+	contactIdArr := engagement.Associations["contactIds"]
+	for i := range contactIdArr {
+		contactId, err := U.GetPropertyValueAsFloat64(contactIdArr[i])
+		if err != nil {
+			logCtx.WithError(err).Error("cannot convert interface to float64")
+			return http.StatusInternalServerError
+		}
+		contactIds = append(contactIds,
+			strconv.FormatInt((int64)(contactId), 10))
+	}
+
+	properties := extractionOfPropertiesWithOutEmailOrContact(engagement, fmt.Sprintf("%v", engagementType))
+
+	contactEngagementProperties := make(map[string]map[string]interface{})
+	contactDocuments, status := store.GetStore().GetHubspotDocumentByTypeAndActions(projectID, contactIds, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
+	if status != http.StatusFound {
+		logCtx.Error(
+			"Failed to get hubspot documents by type and action on sync contact, action delete.")
+		return http.StatusInternalServerError
+	}
+
+	for i := range contactIds {
+		latestContactDocument := make(map[string]*model.HubspotDocument)
+
+		var time int64 = -1
+		for j := range contactDocuments {
+			if contactIds[i] == contactDocuments[j].ID && contactDocuments[j].Timestamp <= document.Timestamp &&
+				contactDocuments[j].Timestamp >= time {
+				latestContactDocument[contactIds[i]] = &contactDocuments[j]
+				time = contactDocuments[j].Timestamp
+			}
+		}
+
+		if latestContactDocument[contactIds[i]] == nil {
+			logCtx.WithFields(log.Fields{"contact_id": contactIds[i]}).Warning("Missing contact record for activity.")
+			continue
+		}
+
+		propertiesWithEmailOrContact := make(map[string]interface{})
+		enProperties, _, err := GetContactProperties(projectID, latestContactDocument[contactIds[i]])
+		if err != nil {
+			logCtx.WithError(err).Error("can't get contact properties")
+			return http.StatusInternalServerError
+		}
+
+		key, value := getCustomerUserIDFromProperties(projectID, *enProperties)
+		enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameEngagement, key)
+		if _, exists := propertiesWithEmailOrContact[enkey]; !exists {
+			propertiesWithEmailOrContact[enkey] = value
+		}
+
+		for key, value := range properties {
+			enkey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameEngagement, key)
+			propertiesWithEmailOrContact[enkey] = value
+		}
+
+		contactEngagementProperties[contactIds[i]] = propertiesWithEmailOrContact
+	}
+
+	if len(contactEngagementProperties) < 1 {
+		logCtx.Warn("No contacts for processing engagement.")
+		return http.StatusInternalServerError
+	}
+
+	eventName := getEventNameByDocumentTypeAndAction(fmt.Sprintf("%v", engagementType), document.Action)
+
+	for i := range contactIds {
+		var userId string
+		for j := range contactDocuments {
+			if contactIds[i] == contactDocuments[j].ID && contactDocuments[j].Action == 1 && contactDocuments[j].Synced {
+				userId = contactDocuments[j].UserId
+			}
+		}
+
+		if _, exist := contactEngagementProperties[contactIds[i]]; !exist || userId == "" {
+			continue
+		}
+
+		payload := &SDK.TrackPayload{
+			ProjectId:       projectID,
+			Name:            eventName,
+			EventProperties: contactEngagementProperties[contactIds[i]],
+			UserId:          userId,
+			Timestamp:       getEventTimestamp(document.Timestamp),
+		}
+		status, _ = sdk.Track(projectID, payload, true, SDK.SourceHubspot, "")
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.Error("Failed to create hubspot engagement event")
+			return http.StatusInternalServerError
+		}
+	}
+	errCode := store.GetStore().UpdateHubspotDocumentAsSynced(projectID, document.ID, model.HubspotDocumentTypeEngagement, "", document.Timestamp, document.Action, "", "")
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update hubspot engagement document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+func getEventNameByDocumentTypeAndAction(Type string, action int) string {
+	if model.HubspotDocumentActionCreated == action {
+		if Type == "MEETING" {
+			return U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED
+		}
+		return U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED
+	}
+	if Type == "MEETING" {
+		return U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED
+	}
+	return U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED
+}
+
 // GetBatchedOrderedDocumentsByID return list of document in batches. Order is maintained on document id.
 func GetBatchedOrderedDocumentsByID(documents []model.HubspotDocument, batchSize int) []map[string][]model.HubspotDocument {
 
@@ -2053,6 +2235,11 @@ func syncAll(project *model.Project, documents []model.HubspotDocument, hubspotS
 			}
 		case model.HubspotDocumentTypeDeal:
 			errCode := syncDeal(project.ID, &documents[i], hubspotSmartEventNames)
+			if errCode != http.StatusOK {
+				seenFailures = true
+			}
+		case model.HubspotDocumentTypeEngagement:
+			errCode := syncEngagements(project.ID, &documents[i])
 			if errCode != http.StatusOK {
 				seenFailures = true
 			}

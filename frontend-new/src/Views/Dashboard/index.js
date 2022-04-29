@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import MomentTz from 'Components/MomentTz';
-import Header from '../AppLayout/Header';
+import FaHeader from '../../components/FaHeader';
 import SearchBar from '../../components/SearchBar';
-import ProjectTabs from './ProjectTabs';
 import AddDashboard from './AddDashboard';
 import { useDispatch, useSelector } from 'react-redux';
 import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
@@ -12,14 +11,24 @@ import { setItemToLocalStorage } from '../../utils/dataFormatter';
 import { getDashboardDateRange } from './utils';
 import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
 import EmptyDashboard from './EmptyDashboard';
-import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration'
+import DashboardAfterIntegration from './EmptyDashboard/DashboardAfterIntegration';
 import ProjectDropdown from './ProjectDropdown';
 import { connect } from 'react-redux';
-import { fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration, fetchMarketoIntegration } from 'Reducers/global';
+import {
+  fetchProjectSettingsV1,
+  fetchDemoProject,
+  fetchBingAdsIntegration,
+  fetchMarketoIntegration,
+} from 'Reducers/global';
 import { useHistory } from 'react-router-dom';
 import { Spin } from 'antd';
 
-function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration, fetchMarketoIntegration }) {
+function Dashboard({
+  fetchProjectSettingsV1,
+  fetchDemoProject,
+  fetchBingAdsIntegration,
+  fetchMarketoIntegration,
+}) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getDashboardDateRange());
@@ -33,28 +42,33 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   const history = useHistory();
 
   useEffect(() => {
-      fetchProjectSettingsV1(activeProject.id).then((res) => {
-          setsdkCheck(res.data.int_completed);
-      }).catch((err) => {
-        console.log(err.data.error)
+    fetchProjectSettingsV1(activeProject.id)
+      .then((res) => {
+        setsdkCheck(res.data.int_completed);
+      })
+      .catch((err) => {
+        console.log(err.data.error);
         history.push('/');
       });
-      fetchBingAdsIntegration(activeProject.id);
-      fetchMarketoIntegration(activeProject.id);
+    fetchBingAdsIntegration(activeProject.id);
+    fetchMarketoIntegration(activeProject.id);
   }, [activeProject, sdkCheck]);
 
   integration = integration?.project_settings || integration;
 
-  const checkIntegration = integration?.int_segment || 
-  integration?.int_adwords_enabled_agent_uuid ||
-  integration?.int_linkedin_agent_uuid ||
-  integration?.int_facebook_user_id ||
-  integration?.int_hubspot ||
-  integration?.int_salesforce_enabled_agent_uuid ||
-  integration?.int_drift ||
-  integration?.int_google_organic_enabled_agent_uuid ||
-  integration?.int_clear_bit || sdkCheck || bingAds?.accounts || marketo?.status;
-
+  const checkIntegration =
+    integration?.int_segment ||
+    integration?.int_adwords_enabled_agent_uuid ||
+    integration?.int_linkedin_agent_uuid ||
+    integration?.int_facebook_user_id ||
+    integration?.int_hubspot ||
+    integration?.int_salesforce_enabled_agent_uuid ||
+    integration?.int_drift ||
+    integration?.int_google_organic_enabled_agent_uuid ||
+    integration?.int_clear_bit ||
+    sdkCheck ||
+    bingAds?.accounts ||
+    marketo?.status;
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -62,9 +76,7 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   }, []);
 
   const handleDurationChange = useCallback((dates) => {
-    let from,
-      to,
-      frequency = 'date';
+    let from, to;
     if (Array.isArray(dates.startDate)) {
       from = dates.startDate[0];
       to = dates.startDate[1];
@@ -72,16 +84,12 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
       from = dates.startDate;
       to = dates.endDate;
     }
-    if (MomentTz(to).diff(from, 'hours') < 24) {
-      frequency = 'hour';
-    }
 
     setDurationObj((currState) => {
       const newState = {
         ...currState,
         from,
         to,
-        frequency,
         dateType: dates.dateType,
       };
       setItemToLocalStorage(
@@ -121,25 +129,19 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
           }
           onError={FaErrorLog}
         >
-          <div className='flex flex-col h-full'>
-            <Header>
-              <div className='w-full h-full py-4 flex flex-col justify-center items-center'>
-                <SearchBar />
-              </div>
-            </Header>
-
-            <div className={`mt-20 flex-1 flex flex-col`}>
-              <ProjectDropdown
-                handleEditClick={handleEditClick}
-                setaddDashboardModal={setaddDashboardModal}
-                durationObj={durationObj}
-                handleDurationChange={handleDurationChange}
-                refreshClicked={refreshClicked}
-                setRefreshClicked={setRefreshClicked}
-              />
-            </div>
+          {/* <FaHeader>
+            <SearchBar />
+          </FaHeader> */}
+          <div className={`mt-20 flex-1 flex flex-col`}>
+            <ProjectDropdown
+              handleEditClick={handleEditClick}
+              setaddDashboardModal={setaddDashboardModal}
+              durationObj={durationObj}
+              handleDurationChange={handleDurationChange}
+              refreshClicked={refreshClicked}
+              setRefreshClicked={setRefreshClicked}
+            />
           </div>
-
 
           <AddDashboard
             setEditDashboard={setEditDashboard}
@@ -153,9 +155,11 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
   } else {
     return (
       <>
-        {checkIntegration ?
+        {checkIntegration ? (
           <>
-            <DashboardAfterIntegration setaddDashboardModal={setaddDashboardModal} />
+            <DashboardAfterIntegration
+              setaddDashboardModal={setaddDashboardModal}
+            />
             <AddDashboard
               setEditDashboard={setEditDashboard}
               editDashboard={editDashboard}
@@ -163,11 +167,17 @@ function Dashboard({ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsInteg
               setaddDashboardModal={setaddDashboardModal}
             />
           </>
-          : <EmptyDashboard />
-        }
-      </> 
+        ) : (
+          <EmptyDashboard />
+        )}
+      </>
     );
   }
 }
 
-export default connect(null,{ fetchProjectSettingsV1, fetchDemoProject, fetchBingAdsIntegration, fetchMarketoIntegration })(Dashboard);
+export default connect(null, {
+  fetchProjectSettingsV1,
+  fetchDemoProject,
+  fetchBingAdsIntegration,
+  fetchMarketoIntegration,
+})(Dashboard);

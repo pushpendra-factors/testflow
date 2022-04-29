@@ -3,10 +3,14 @@ import ViewBasicSettings from './ViewBasicSettings';
 import EditBasicSettings from './EditBasicSettings';
 import { connect } from 'react-redux';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
-import { fetchProjects } from "Reducers/global";
+import { fetchProjects } from 'Reducers/global';
+import { Row, Col } from 'antd';
 
 function BasicSettings({
-  fetchProjectAgents, fetchAgentInfo, fetchProjects, activeProject
+  fetchProjectAgents,
+  fetchAgentInfo,
+  fetchProjects,
+  activeProject,
 }) {
   const [editMode, setEditMode] = useState(false);
 
@@ -19,13 +23,24 @@ function BasicSettings({
     getData();
   }, [activeProject]);
   return (
-    <>
-    {editMode ? <EditBasicSettings setEditMode={setEditMode} /> : <ViewBasicSettings setEditMode={setEditMode} /> }
-    </>
-
+    <div className={'fa-container mt-32 mb-12 min-h-screen'}>
+      <Row gutter={[24, 24]} justify='center'>
+        <Col span={18}>
+          {editMode ? (
+            <EditBasicSettings setEditMode={setEditMode} />
+          ) : (
+            <ViewBasicSettings setEditMode={setEditMode} />
+          )}
+        </Col>
+      </Row>
+    </div>
   );
 }
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project
+  activeProject: state.global.active_project,
 });
-export default connect(mapStateToProps, { fetchProjectAgents, fetchAgentInfo, fetchProjects })(BasicSettings);
+export default connect(mapStateToProps, {
+  fetchProjectAgents,
+  fetchAgentInfo,
+  fetchProjects,
+})(BasicSettings);

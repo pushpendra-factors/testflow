@@ -109,14 +109,15 @@ func TestCRMCreateData(t *testing.T) {
 	t.Run("CreateCRMActivity", func(t *testing.T) {
 		activityProperties := postgres.Jsonb{json.RawMessage(`{"name":"abc","clicked":"true"}`)}
 		activity := &model.CRMActivity{
-			ProjectID:  project.ID,
-			Source:     model.CRM_SOURCE_HUBSPOT,
-			Name:       "test1",
-			Type:       1,
-			ActorType:  1,
-			ActorID:    "123",
-			Properties: &activityProperties,
-			Timestamp:  time.Now().Unix(),
+			ProjectID:          project.ID,
+			Source:             model.CRM_SOURCE_HUBSPOT,
+			Name:               "test1",
+			ExternalActivityID: "123",
+			Type:               1,
+			ActorType:          1,
+			ActorID:            "123",
+			Properties:         &activityProperties,
+			Timestamp:          time.Now().Unix(),
 		}
 		status, err := store.GetStore().CreateCRMActivity(activity)
 		assert.Nil(t, err)
@@ -381,4 +382,128 @@ func TestCRMMarketoEnrichment(t *testing.T) {
 
 	assert.Equal(t, "name3", properties["$marketo_lead_name"])
 	assert.Equal(t, "city2", properties["$marketo_lead_city"])
+}
+
+func TestCRMPropertiesSync(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	userTypeMap := map[int]bool{
+		1: true,
+	}
+
+	activityTypeMap := map[int]bool{
+		2: true,
+	}
+
+	typeAlias := map[int]string{
+		1: "lead",
+		2: "program_member",
+	}
+
+	property1 := model.CRMProperty{
+		ProjectID:        project.ID,
+		Source:           model.CRM_SOURCE_MARKETO,
+		Type:             1,
+		Name:             "created_at",
+		ExternalDataType: "datetime",
+		MappedDataType:   U.PropertyTypeDateTime,
+		Label:            "Created At",
+	}
+
+	status, err := store.GetStore().CreateCRMProperties(&property1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	status, err = store.GetStore().CreateCRMProperties(&property1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+
+	leadTimestamp := time.Now().AddDate(0, 0, -1)
+	leadProperties := fmt.Sprintf(`{"Name":"name1","city":"city1","%s":%d}`, "updated_at", leadTimestamp.Unix())
+	user1Properties := postgres.Jsonb{json.RawMessage(leadProperties)}
+
+	user1 := &model.CRMUser{
+		ProjectID:  project.ID,
+		Source:     model.CRM_SOURCE_MARKETO,
+		Type:       1,
+		ID:         "lead1",
+		Properties: &user1Properties,
+		Timestamp:  leadTimestamp.Unix(),
+	}
+	status, err = store.GetStore().CreateCRMUser(user1)
+	assert.Nil(t, err)
+
+	// create activity record for adding property details
+	activityTimestamp := time.Now().Add(2 * time.Hour)
+	activityUpdateTimestampProperty := "_fivetran_synced"
+	activityProperties := fmt.Sprintf(`{"Name":"Click event","status":"Responded","%s":%d}`, activityUpdateTimestampProperty, activityTimestamp.Unix())
+	activity1 := &model.CRMActivity{
+		ProjectID:          project.ID,
+		Source:             model.CRM_SOURCE_MARKETO,
+		ExternalActivityID: "123",
+		Type:               2,
+		Name:               "program_membership_created",
+		ActorType:          1,
+		ActorID:            "lead1",
+		Properties:         &postgres.Jsonb{[]byte(activityProperties)},
+		Timestamp:          activityTimestamp.Unix(),
+	}
+
+	status, err = store.GetStore().CreateCRMActivity(activity1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+
+	activityProperty1 := model.CRMProperty{
+		ProjectID:        project.ID,
+		Source:           model.CRM_SOURCE_MARKETO,
+		Type:             2,
+		Name:             "created_at",
+		ExternalDataType: "datetime",
+		MappedDataType:   U.PropertyTypeDateTime,
+		Label:            "Created At",
+	}
+
+	status, err = store.GetStore().CreateCRMProperties(&activityProperty1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	status, err = store.GetStore().CreateCRMProperties(&activityProperty1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+
+	sourceConfig, err := enrichment.NewCRMEnrichmentConfig(model.CRM_SOURCE_NAME_MARKETO, typeAlias, userTypeMap, nil, activityTypeMap)
+	assert.Nil(t, err)
+	enrichStatus := enrichment.Enrich(project.ID, sourceConfig)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	enrichStatus = enrichment.SyncProperties(project.ID, sourceConfig)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	propertyDetails, status := store.GetStore().GetAllPropertyDetailsByProjectID(project.ID, "", true)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Len(t, *propertyDetails, 1)
+	assert.Equal(t, U.PropertyTypeDateTime, (*propertyDetails)[model.GetCRMEnrichPropertyKeyByType(model.CRM_SOURCE_NAME_MARKETO, "lead", "created_at")])
+
+	status, displayNames := store.GetStore().GetDisplayNamesForObjectEntities(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "marketo lead Created At", displayNames[model.GetCRMEnrichPropertyKeyByType(model.CRM_SOURCE_NAME_MARKETO, "lead", "created_at")])
+
+	status, displayNames = store.GetStore().GetDisplayNamesForObjectEntities(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, "marketo program_member Created At", displayNames[model.GetCRMEnrichPropertyKeyByType(model.CRM_SOURCE_NAME_MARKETO, "program_member", "created_at")])
+
+	// change data type should be allowed to insert
+	property1.ExternalDataType = "int"
+	status, err = store.GetStore().CreateCRMProperties(&property1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	property1.ExternalDataType = "datetime"
+	status, err = store.GetStore().CreateCRMProperties(&property1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusCreated, status)
+	status, err = store.GetStore().CreateCRMProperties(&property1)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusConflict, status)
 }

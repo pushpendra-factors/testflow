@@ -20,7 +20,7 @@ func (store *MemSQL) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kp
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	queryResults := make([]model.QueryResult, len(kpiQuery.Metrics))
-	isValid := model.ValidateKPIQuery(kpiQuery)
+	isValid := store.ValidateKPIQuery(projectID, kpiQuery)
 	if !isValid {
 		return queryResults, http.StatusPartialContent
 	}
@@ -59,6 +59,29 @@ func (store *MemSQL) transformToAndExecuteEventAnalyticsQueries(projectID uint64
 		}
 	}
 	return queryResults, http.StatusOK
+}
+
+// To Change.
+func (store *MemSQL) ValidateKPIQuery(projectID uint64, kpiQuery model.KPIQuery) bool {
+	if kpiQuery.DisplayCategory == model.WebsiteSessionDisplayCategory {
+		return store.ValidateKPISessions(projectID, kpiQuery)
+	} else if kpiQuery.DisplayCategory == model.PageViewsDisplayCategory {
+		return model.ValidateKPIPageView(kpiQuery)
+	} else if kpiQuery.DisplayCategory == model.FormSubmissionsDisplayCategory {
+		return model.ValidateKPIFormSubmissions(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == HubspotContactsDisplayCategory {
+		// 	return ValidateKPIHubspotContacts(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == HubspotCompaniesDisplayCategory {
+		// 	return ValidateKPIHubspotCompanies(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceUsersDisplayCategory {
+		// 	return ValidateKPISalesforceUsers(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceAccountsDisplayCategory {
+		// 	return ValidateKPISalesforceAccounts(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceOpportunitiesDisplayCategory {
+		// 	return ValidateKPISalesforceOpportunities(kpiQuery)
+	} else {
+		return false
+	}
 }
 
 // Each KPI Metric is mapped to array of operations containing metrics and aggregates, filters.

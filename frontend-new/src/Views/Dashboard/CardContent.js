@@ -84,12 +84,14 @@ function CardContent({ unit, resultState, durationObj }) {
     if (
       queryType === QUERY_TYPE_EVENT ||
       queryType === QUERY_TYPE_FUNNEL ||
-      queryType === QUERY_TYPE_PROFILE ||
-      queryType === QUERY_TYPE_KPI
+      queryType === QUERY_TYPE_PROFILE
     ) {
       return equivalentQuery.events.map((elem) =>
         elem.alias ? elem.alias : eventNames[elem.label] || elem.label
       );
+    }
+    if (queryType === QUERY_TYPE_KPI) {
+      return equivalentQuery.events;
     }
   }, [equivalentQuery.events, queryType]);
 
@@ -288,6 +290,7 @@ function CardContent({ unit, resultState, durationObj }) {
           breakdown={breakdown}
           unit={unit}
           arrayMapper={arrayMapper}
+          durationObj={durationObj}
         />
       );
     }

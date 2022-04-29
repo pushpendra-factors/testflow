@@ -233,7 +233,7 @@ function ProjectTabs({
             {dashboards.data.map((d, index) => {
               return (
                 <TabPane tab={getTabName(d, index)} key={d.id}>
-                  <div className={'fa-container mt-4 min-h-screen'}>
+                  <div className={'fa-container mt-4'}>
                     <ErrorBoundary
                       fallback={
                         <FaErrorComp

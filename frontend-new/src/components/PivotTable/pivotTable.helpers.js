@@ -1,16 +1,17 @@
 import { EMPTY_ARRAY } from 'Utils/global';
+import { getKpiLabel } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 
 export const formatPivotData = ({ data, breakdown, kpis }) => {
   try {
     const breakdownAttributes = breakdown.map((b) => b.property);
-    const kpiAttributes = kpis.map((kpi) => kpi);
+    const kpiAttributes = kpis.map((kpi) => getKpiLabel(kpi));
     const attributesRow = breakdownAttributes.concat(kpiAttributes);
     const values = data.map((d) => {
       const breakdownVals = breakdown.map((b, index) => {
         return d[`${b.property} - ${index}`];
       });
       const kpiVals = kpis.map((kpi, index) => {
-        return d[`${kpi} - ${index}`];
+        return d[`${getKpiLabel(kpi)} - ${index}`];
       });
       const current = breakdownVals.concat(kpiVals);
       return current;
@@ -23,7 +24,7 @@ export const formatPivotData = ({ data, breakdown, kpis }) => {
 };
 
 export const getValueOptions = ({ kpis }) => {
-  return _.map(kpis, (kpi) => kpi);
+  return _.map(kpis, (kpi) => getKpiLabel(kpi));
 };
 
 export const getColumnOptions = ({ breakdown }) => {
@@ -47,6 +48,7 @@ export const SortRowOptions = ({ data, kpis, breakdown }) => {
 
 export const getFunctionOptions = () => {
   return [
+    'Integer Sum',
     'Sum',
     'Count',
     'Average',

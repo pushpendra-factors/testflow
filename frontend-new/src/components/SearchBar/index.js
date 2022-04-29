@@ -19,16 +19,19 @@ function SearchBar({ setQueryToState }) {
   }, []);
 
 
-  const handleQueryClick = useCallback((query) => {
-    if (history.location.pathname === '/analyse') {
-      setQueryToState(query);
-    } else {
+  const handleQueryClick = useCallback(
+    (query) => {
+      // if (history.location.pathname === '/analyse') {
+      //   setQueryToState(query);
+      // } else {
       history.push({
         pathname: '/analyse',
-        state: { query, global_search: true }
+        state: { query, global_search: true },
       });
-    }
-  }, [setQueryToState, history]);
+      // }
+    },
+    [setQueryToState, history]
+  );
 
   return (
     <> 

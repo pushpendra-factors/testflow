@@ -5,6 +5,7 @@ import {
   SortResults,
   getBreakdownDisplayTitle,
   generateColors,
+  addQforQuarter,
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 import { parseForDateTimeLabel } from '../SingleEventSingleBreakdown/utils';
@@ -212,15 +213,19 @@ export const getDateBasedColumns = (
   const dateColumns = categories.map((cat) => {
     return {
       title: getClickableTitleSorter(
-        moment(cat).format(format),
-        { key: moment(cat).format(format), type: 'numerical', subtype: null },
+        addQforQuarter(frequency) + moment(cat).format(format),
+        {
+          key: addQforQuarter(frequency) + moment(cat).format(format),
+          type: 'numerical',
+          subtype: null,
+        },
         currentSorter,
         handleSorting,
         'right'
       ),
       className: 'text-right',
       width: 150,
-      dataIndex: moment(cat).format(format),
+      dataIndex: addQforQuarter(frequency) + moment(cat).format(format),
       render: (d) => {
         return <NumFormat number={d} />;
       },
@@ -303,7 +308,9 @@ export const formatDataInStackedAreaFormat = (
     const category = row[dateIndex];
     const idx = differentDates.indexOf(category);
     if (resultantData[bIdx]) {
-      resultantData[bIdx][moment(category).format(format)] = row[countIndex];
+      resultantData[bIdx][
+        addQforQuarter(frequency) + moment(category).format(format)
+      ] = row[countIndex];
       resultantData[bIdx].data[idx] = row[countIndex];
     }
   });

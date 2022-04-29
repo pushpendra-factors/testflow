@@ -109,22 +109,22 @@ func (sd *S3Driver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) 
 
 func (sd *S3Driver) GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, fmt.Sprintf("events.txt")
+	return path, "events.txt"
 }
 
 func (sd *S3Driver) GetModelEventsBucketingFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, fmt.Sprintf("events_bucketed.txt")
+	return path, "events_bucketed.txt"
 }
 
 func (sd *S3Driver) GetMasterNumericalBucketsFile(projectId uint64) (string, string) {
 	path := sd.GetProjectDir(projectId)
-	return path, fmt.Sprintf("numerical_buckets_master.txt")
+	return path, "numerical_buckets_master.txt"
 }
 
 func (sd *S3Driver) GetModelEventsNumericalBucketsFile(projectId uint64, startTimestamp int64, modelType string) (string, string) {
 	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
-	return path, fmt.Sprintf("numerical_buckets.txt")
+	return path, "numerical_buckets.txt"
 }
 
 func (sd *S3Driver) GetPatternChunksDir(projectId, modelId uint64) string {
@@ -141,8 +141,9 @@ func (sd *S3Driver) GetPatternChunkFilePathAndName(projectId, modelId uint64, ch
 	return sd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }
 func (sd *S3Driver) GetChunksMetaDataFilePathAndName(projectId, modelId uint64) (string, string) {
-	return sd.GetChunksMetaDataDir(projectId, modelId), fmt.Sprintf("metadata.txt")
+	return sd.GetChunksMetaDataDir(projectId, modelId), "metadata.txt"
 }
+
 // GetEventArchiveFilePathAndName - Placeholder definition. Has to be implemented.
 func (sd *S3Driver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
 	return "", ""
@@ -165,14 +166,23 @@ func (sd *S3Driver) GetBucketName() string {
 
 func (sd *S3Driver) GetInsightsWpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
 	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
-	return path, fmt.Sprintf("wpi.txt")
+	return path, "wpi.txt"
 }
 
 func (sd *S3Driver) GetInsightsCpiFilePathAndName(projectId uint64, dateString string, queryId uint64, k int) (string, string) {
 	path := sd.GetWeeklyInsightsModelDir(projectId, dateString, queryId, k)
-	return path, fmt.Sprintf("cpi.txt")
+	return path, "cpi.txt"
 }
 
 func (sd *S3Driver) GetWeeklyInsightsModelDir(projectId uint64, dateString string, queryId uint64, k int) string {
 	return fmt.Sprintf("projects/%v/weeklyinsights/%v/q-%v/k-%v/", projectId, dateString, queryId, k)
+}
+
+func (sd *S3Driver) GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId uint64) string {
+	return fmt.Sprintf("projects/%v/weeklyKPI/%v/q-%v/", projectId, dateString, queryId)
+}
+
+func (sd *S3Driver) GetKPIFilePathAndName(projectId uint64, dateString string, queryId uint64) (string, string) {
+	path := sd.GetWeeklyKPIModelDir(projectId, dateString, queryId)
+	return path, "kpi.txt"
 }

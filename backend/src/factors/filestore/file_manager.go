@@ -32,4 +32,6 @@ type FileManager interface {
 	GetModelEventPropertiesCategoricalFilePathAndName(projectId, modelId uint64) (string, string)
 	GetModelUserPropertiesFilePathAndName(projectId, modelId uint64) (string, string)
 	GetModelEventPropertiesFilePathAndName(projectId, modelId uint64) (string, string)
+	GetWeeklyKPIModelDir(projectId uint64, dateString string, queryId uint64) string
+	GetKPIFilePathAndName(projectId uint64, dateString string, queryId uint64) (string, string)
 }

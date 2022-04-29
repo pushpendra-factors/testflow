@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import _ from 'lodash';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
@@ -47,10 +47,31 @@ function WidgetCard({
   const { active_project } = useSelector((state) => state.global);
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const { metadata } = useSelector((state) => state.insights);
+  const { data: savedQueries } = useSelector((state) => state.queries);
   const dispatch = useDispatch();
   const [attributionMetrics, setAttributionMetrics] = useState([
     ...ATTRIBUTION_METRICS,
   ]);
+
+  const savedQuery = useMemo(() => {
+    return _.find(savedQueries, (sq) => sq.id === unit.query_id);
+  }, [savedQueries]);
+
+  const durationWithSavedFrequency = useMemo(() => {
+    if (_.get(savedQuery, 'query.query_group', null)) {
+      return {
+        ...durationObj,
+        frequency: _.get(savedQuery, 'query.query_group.0.gbt','date'),
+      };
+    } else if (_.get(savedQuery, 'query.cl', null) === QUERY_TYPE_KPI) {
+      return {
+        ...durationObj,
+        frequency: _.get(savedQuery, 'query.qG.1.gbt', 'date'),
+      };
+    }
+    return durationObj;
+  }, [durationObj, savedQuery]);
+
 
   useEffect(() => {
     if (
@@ -97,7 +118,7 @@ function WidgetCard({
           unit.query.query.cl &&
           unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
         ) {
-          apiCallStatus = shouldDataFetch(durationObj);
+          apiCallStatus = shouldDataFetch(durationWithSavedFrequency);
           queryType = QUERY_TYPE_ATTRIBUTION;
         } else if (
           unit.query.query.cl &&
@@ -118,7 +139,7 @@ function WidgetCard({
             unit.query,
             unit.id,
             unit.dashboard_id,
-            durationObj,
+            durationWithSavedFrequency,
             refresh,
             active_project.id
           );
@@ -242,7 +263,7 @@ function WidgetCard({
       unit.query,
       unit.id,
       unit.dashboard_id,
-      durationObj,
+      durationWithSavedFrequency,
       setRefreshClicked,
     ]
   );
@@ -252,7 +273,7 @@ function WidgetCard({
     return () => {
       hasComponentUnmounted.current = true;
     };
-  }, [getData, durationObj]);
+  }, [getData, durationWithSavedFrequency]);
 
   useEffect(() => {
     if (refreshClicked) {
@@ -433,7 +454,7 @@ function WidgetCard({
               }}
             >
               <CardContent
-                durationObj={durationObj}
+                durationObj={durationWithSavedFrequency}
                 unit={unit}
                 resultState={resultState}
               />

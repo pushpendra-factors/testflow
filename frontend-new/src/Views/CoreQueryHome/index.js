@@ -9,7 +9,6 @@ import {
 import { ErrorBoundary } from 'react-error-boundary';
 import { Row, Col, Table, Avatar, Button, Dropdown, Menu, Tag } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
-import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import MomentTz from 'Components/MomentTz';
@@ -60,6 +59,7 @@ import _ from 'lodash';
 import { getQueryType } from '../../utils/dataFormatter';
 import { fetchAgentInfo } from 'Reducers/agentActions';
 import factorsai from 'factorsai';
+import FaHeader from '../../components/FaHeader';
 
 // const whiteListedAccounts_KPI = [
 //   'jitesh@factors.ai',
@@ -473,9 +473,9 @@ function CoreQuery({
           setQueryOptions((currData) => {
             return {
               ...currData,
-              group_analysis: record.query.query.analyze_type
-            }
-          })
+              group_analysis: record.query.query.analyze_type,
+            };
+          });
         } else if (record.query.cl && record.query.cl === QUERY_TYPE_PROFILE) {
           equivalentQuery = getProfileQueryFromRequestQuery(record.query);
           updateProfileQueryState(equivalentQuery);
@@ -668,49 +668,53 @@ function CoreQuery({
           templatesModalVisible={templatesModalVisible}
           setTemplatesModalVisible={setTemplatesModalVisible}
         />
-        <Header>
-          <div className='w-full h-full py-4 flex flex-col justify-center items-center'>
-            <SearchBar setQueryToState={setQueryToState} />
-          </div>
-        </Header>
-        <div className={'fa-container mt-24'}>
-          <Row gutter={[24, 24]} justify='center'>
-            <Col span={20}>
-              <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>
-                Analyse
-              </Text>
-              <Text
-                type={'title'}
-                level={6}
-                weight={'regular'}
-                color={'grey'}
-                extraClass={'m-0'}
-              >
-                Use these techniques to Analyse and get a deeper understanding
-                of User Behaviors and Marketing Funnels
-              </Text>
-            </Col>
-          </Row>
-          <Row gutter={[24, 24]} justify='center' className={'mt-10'}>
-            <Col span={20}>
-              <div className={'flex'}>
-                {coreQueryoptions.map((item, index) => {
-                  // if (
-                  //   item.title === 'KPIs' &&
-                  //   !whiteListedAccounts_KPI.includes(activeAccount)
-                  // ) {
-                  //   return null;
-                  // }
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => setQueryTypeTab(item)}
-                      className={`fai--custom-card-new flex flex-col`}
+        {/* <FaHeader>
+          <SearchBar setQueryToState={setQueryToState} />
+        </FaHeader> */}
+        <div>
+          <div className={'fa-container mt-24 min-h-screen'}>
+            <Row gutter={[24, 24]} justify='center'>
+              <Col span={20}>
+                <Row gutter={[24, 24]}>
+                  <Col span={24}>
+                    <Text
+                      type={'title'}
+                      level={3}
+                      weight={'bold'}
+                      extraClass={'m-0'}
                     >
-                      <div
-                        className={`fai--custom-card-new--top-section flex justify-center items-center`}
-                      >
-                        {/* {item.title == 'KPIs' && (
+                      Analyse
+                    </Text>
+                    <Text
+                      type={'title'}
+                      level={6}
+                      weight={'regular'}
+                      color={'grey'}
+                      extraClass={'m-0'}
+                    >
+                      Use these techniques to Analyse and get a deeper
+                      understanding of User Behaviors and Marketing Funnels
+                    </Text>
+                  </Col>
+                  <Col span={24}>
+                    <div className={`flex justify-between mt-4`}>
+                      {coreQueryoptions.map((item, index) => {
+                        // if (
+                        //   item.title === 'KPIs' &&
+                        //   !whiteListedAccounts_KPI.includes(activeAccount)
+                        // ) {
+                        //   return null;
+                        // }
+                        return (
+                          <div
+                            key={index}
+                            onClick={() => setQueryTypeTab(item)}
+                            className={`fai--custom-card-new flex flex-col`}
+                          >
+                            <div
+                              className={`fai--custom-card-new--top-section flex justify-center items-center`}
+                            >
+                              {/* {item.title == 'KPIs' && (
                           <Tag
                             color='orange'
                             className={'fai--custom-card--badge'}
@@ -718,80 +722,70 @@ function CoreQuery({
                             BETA
                           </Tag>
                         )} */}
-                        <SVG name={item.icon} size={40} />
-                      </div>
+                              <SVG name={item.icon} size={40} />
+                            </div>
 
-                      <div className='fai--custom-card-new--bottom-section'>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          weight={'bold'}
-                          extraClass={'m-0'}
-                        >
-                          {item.title}
-                        </Text>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          color={'grey'}
-                          extraClass={'m-0 mt-1 fai--custom-card-new--desc'}
-                        >
-                          {item.desc}
-                        </Text>
-                      </div>
+                            <div className='fai--custom-card-new--bottom-section'>
+                              <Text
+                                type={'title'}
+                                level={7}
+                                weight={'bold'}
+                                extraClass={'m-0'}
+                              >
+                                {item.title}
+                              </Text>
+                              <Text
+                                type={'title'}
+                                level={7}
+                                color={'grey'}
+                                extraClass={
+                                  'm-0 mt-1 fai--custom-card-new--desc'
+                                }
+                              >
+                                {item.desc}
+                              </Text>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-            </Col>
-          </Row>
-
-          <Row justify='center' className={'mt-8'}>
-            <Col span={20}>
-              <Row className={'flex justify-between items-center'}>
-                <Col span={10}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    weight={'bold'}
-                    extraClass={'m-0 mb-2'}
-                  >
-                    Saved Reports
-                  </Text>
-                </Col>
-                {/* <Col span={5}>
-                <div className={"flex flex-row justify-end items-end "}>
-                  <Button
-                    icon={<SVG name={"help"} size={12} color={"grey"} />}
-                    type="text"
-                  >
-                    Learn More
-                  </Button>
-                </div>
-              </Col> */}
-              </Row>
-            </Col>
-          </Row>
-          <Row justify='center' className={'mt-2 mb-20'}>
-            <Col span={20}>
-              <Table
-                onRow={(record) => {
-                  return {
-                    onClick: (e) => {
-                      getWeeklyIngishts(record);
-                      setQueryToState(record);
-                    },
-                  };
-                }}
-                loading={queriesState.loading}
-                className='fa-table--basic'
-                columns={columns}
-                dataSource={data}
-                pagination={true}
-                rowClassName='cursor-pointer'
-              />
-            </Col>
-          </Row>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col span={24}>
+                    <Text
+                      type={'title'}
+                      level={6}
+                      weight={'bold'}
+                      extraClass={'m-0 mb-2 mt-8'}
+                    >
+                      Saved Reports
+                    </Text>
+                  </Col>
+                </Row>
+                <Row className={'mt-2 mb-20'}>
+                  <Col span={24}>
+                    <Table
+                      onRow={(record) => {
+                        return {
+                          onClick: (e) => {
+                            getWeeklyIngishts(record);
+                            setQueryToState(record);
+                          },
+                        };
+                      }}
+                      loading={queriesState.loading}
+                      className='fa-table--basic'
+                      columns={columns}
+                      dataSource={data}
+                      pagination={true}
+                      rowClassName='cursor-pointer'
+                    />
+                  </Col>
+                </Row>
+              </Col>
+            </Row>
+          </div>
         </div>
       </ErrorBoundary>
     </>

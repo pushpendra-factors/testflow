@@ -1,0 +1,7 @@
+.button {
+  padding: 0;
+  &:hover,
+  &:focus {
+    background: #fff !important;
+  }
+}

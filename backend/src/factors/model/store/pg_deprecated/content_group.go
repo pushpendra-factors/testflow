@@ -138,6 +138,10 @@ func (pg *Postgres) IsValidRule(contentGroup model.ContentGroup) (bool, string) 
 	}
 	var contentGroupRule []model.ContentGroupRule
 	err := U.DecodePostgresJsonbToStructType(contentGroup.Rule, &contentGroupRule)
+
+	if model.CheckIfPropertyIsPresentInStaticKPIPropertyList(contentGroup.ContentGroupName) {
+		return false, "Content Group name is conflicting with KPI property names."
+	}
 	fmt.Println(contentGroupRule)
 	if len(contentGroupRule) == 0 {
 		return false, "Minimum one value required"

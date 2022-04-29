@@ -65,15 +65,15 @@ if __name__ == "__main__":
 
 
     final_last_sync_infos = get_last_sync_infos(input_project_ids, input_exclude_project_ids, input_document_type)
-    log.warning("Final last sync infos: ", final_last_sync_infos)
     for last_sync in final_last_sync_infos:
         next_sync_infos = SyncUtil.get_gsc_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp)
-        log.warning("Next sync infos: ", next_sync_infos)
         if next_sync_infos is None:
             continue
         for next_sync in next_sync_infos:
             if JobScheduler.validate(next_sync, skip_today):
-                JobScheduler(next_sync, skip_today).sync(env, is_dry)
+                err = JobScheduler(next_sync, skip_today).sync(env, is_dry)
+                if err != '' and err != None:
+                    break
             else:
                 log.warning("Skipping job scheduler for following project with following properties: "+ str(next_sync))
                 continue

@@ -2,7 +2,6 @@ package postgres
 
 import (
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -241,7 +240,7 @@ func (pg *Postgres) GetChannelFilterValuesV1(projectID uint64, channel, filterOb
 // GetAllChannelFilterValues - @Kark TODO v1
 func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty string, reqID string) ([]interface{}, int) {
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
-	_, isPresent := Const.SmartPropertyReservedNames[filterProperty]
+	_, isPresent := model.SmartPropertyReservedNames[filterProperty]
 	if !isPresent {
 		filterValues, errCode := pg.getSmartPropertyFilterValues(projectID, filterObject, filterProperty, "all", reqID)
 		if errCode != http.StatusFound {

@@ -108,7 +108,7 @@ class MetricsAggregator:
         else:
             if len(cls.etl_stats["failures"]) != 0:
                 cls.publish_to_healthcheck_failure()
-                log.warning("Job has errors. Successfully synced Projects and customer accounts are: %s",
+                log.warning("Job has errors. Failed synced Projects and customer accounts are: %s",
                             json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
             if len(cls.etl_stats["token_failures"]) != 0:
                 cls.publish_to_healthcheck_token_failure()

@@ -56,14 +56,19 @@ type RunBeamConfig struct {
 }
 
 func InitConfBeam(config *C.Configuration) {
-	log.Info("initializing conf from startbundle")
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetReportCaller(true)
-	log.SetLevel(log.InfoLevel)
 
 	C.InitConf(config)
 	C.SetIsBeamPipeline()
+	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 5, 2)
+	if err != nil {
+		// TODO(prateek): Check how a panic here will effect the pipeline.
+		log.WithError(err).Panic("Failed to initalize db.")
+	}
+	C.InitRedisConnection(config.RedisHost, config.RedisPort, true, 20, 0)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	C.KillDBQueriesOnExit()
 }
 
 func countPatternsWorkerBeam(ctx context.Context, projectID uint64, filepath string,

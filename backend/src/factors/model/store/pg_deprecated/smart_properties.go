@@ -3,7 +3,6 @@ package postgres
 import (
 	"encoding/json"
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -285,13 +284,13 @@ func (pg *Postgres) DeleteSmartPropertyByRuleID(projectID uint64, ruleID string)
 
 func checkSmartProperty(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) bool {
 	for _, filter := range filters {
-		_, isPresent := Const.SmartPropertyReservedNames[filter.Property]
+		_, isPresent := model.SmartPropertyReservedNames[filter.Property]
 		if !isPresent {
 			return true
 		}
 	}
 	for _, groupBy := range groupBys {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		if !isPresent {
 			return true
 		}
@@ -302,7 +301,7 @@ func checkSmartPropertyWithTypeAndSource(filters []model.ChannelFilterV1, groupB
 	campaignProperty := false
 	adGroupProperty := false
 	for _, filter := range filters {
-		_, isPresent := Const.SmartPropertyReservedNames[filter.Property]
+		_, isPresent := model.SmartPropertyReservedNames[filter.Property]
 		if !isPresent {
 			switch source {
 			case "adwords":
@@ -330,7 +329,7 @@ func checkSmartPropertyWithTypeAndSource(filters []model.ChannelFilterV1, groupB
 		}
 	}
 	for _, groupBy := range groupBys {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		if !isPresent {
 			switch source {
 			case "adwords":

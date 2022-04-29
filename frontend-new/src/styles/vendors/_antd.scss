@@ -4273,7 +4273,8 @@ html {
 .ant-menu:not(.ant-menu-inline) .ant-menu-submenu-open,
 .ant-menu-submenu-active,
 .ant-menu-submenu-title:hover {
-  color: #1890ff;
+  border-radius: 8px;
+  background-color: #e2e4e8;
 }
 .ant-menu-horizontal .ant-menu-item,
 .ant-menu-horizontal .ant-menu-submenu {
@@ -4292,7 +4293,7 @@ html {
   color: #1890ff;
 }
 .ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected {
-  background-color: #e6f7ff;
+  background-color: transparent;
 }
 .ant-menu-inline,
 .ant-menu-vertical,
@@ -4409,7 +4410,7 @@ html {
   left: -7px;
 }
 .ant-menu-submenu > .ant-menu {
-  background-color: #fff;
+  background-color: #f0f2f5;
   border-radius: 2px;
 }
 .ant-menu-submenu > .ant-menu-submenu-title::after {
@@ -4476,8 +4477,8 @@ html {
 .ant-menu-submenu-vertical-left > .ant-menu-submenu-title:hover .ant-menu-submenu-arrow::before,
 .ant-menu-submenu-vertical-right > .ant-menu-submenu-title:hover .ant-menu-submenu-arrow::before,
 .ant-menu-submenu-inline > .ant-menu-submenu-title:hover .ant-menu-submenu-arrow::before {
-  background: -webkit-gradient(linear, left top, right top, from(#1890ff), to(#1890ff));
-  background: linear-gradient(to right, #1890ff, #1890ff);
+  background: -webkit-gradient(linear, left top, right top, from(#0E2647), to(#0E2647));
+  background: linear-gradient(to right, #0E2647, #0E2647);
 }
 .ant-menu-submenu-vertical > .ant-menu-submenu-title .ant-menu-submenu-arrow::before,
 .ant-menu-submenu-vertical-left > .ant-menu-submenu-title .ant-menu-submenu-arrow::before,
@@ -4635,6 +4636,8 @@ html {
 .ant-menu-inline > .ant-menu-submenu > .ant-menu-submenu-title {
   height: 40px;
   line-height: 40px;
+  display: flex;
+  align-items: center;
 }
 .ant-menu-vertical .ant-menu-submenu-title {
   padding-right: 34px;
@@ -4646,7 +4649,7 @@ html {
 .ant-menu-inline .ant-menu-item-selected::after {
   -webkit-transform: scaleY(1);
           transform: scaleY(1);
-  opacity: 1;
+  opacity: 0;
   -webkit-transition: opacity 0.15s cubic-bezier(0.645, 0.045, 0.355, 1), -webkit-transform 0.15s cubic-bezier(0.645, 0.045, 0.355, 1);
   transition: opacity 0.15s cubic-bezier(0.645, 0.045, 0.355, 1), -webkit-transform 0.15s cubic-bezier(0.645, 0.045, 0.355, 1);
   transition: transform 0.15s cubic-bezier(0.645, 0.045, 0.355, 1), opacity 0.15s cubic-bezier(0.645, 0.045, 0.355, 1);
@@ -4660,15 +4663,15 @@ html {
   padding-right: 34px;
 }
 .ant-menu-inline-collapsed {
-  width: 80px;
+  width: 64px;
 }
 .ant-menu-inline-collapsed > .ant-menu-item,
 .ant-menu-inline-collapsed > .ant-menu-item-group > .ant-menu-item-group-list > .ant-menu-item,
 .ant-menu-inline-collapsed > .ant-menu-item-group > .ant-menu-item-group-list > .ant-menu-submenu > .ant-menu-submenu-title,
 .ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title {
   left: 0;
-  padding: 0 32px;
-  text-overflow: clip;
+  padding: 0 20px;
+  text-overflow: ellipsis;
 }
 .ant-menu-inline-collapsed > .ant-menu-item .ant-menu-submenu-arrow,
 .ant-menu-inline-collapsed > .ant-menu-item-group > .ant-menu-item-group-list > .ant-menu-item .ant-menu-submenu-arrow,
@@ -20218,7 +20221,6 @@ textarea.ant-input-number {
           flex: 0 0 auto;
 }
 .ant-layout-header {
-  padding: 0 2rem;
   color: rgba(0, 0, 0, 0.65);
   line-height: 64px;
   background: #001529;
@@ -20262,13 +20264,12 @@ textarea.ant-input-number {
   bottom: 0;
   z-index: 1;
   height: 48px;
-  color: #fff;
   line-height: 48px;
   text-align: center;
-  background: #002140;
   cursor: pointer;
   -webkit-transition: all 0.2s;
   transition: all 0.2s;
+  background: #f0f2f5;
 }
 .ant-layout-sider-zero-width > * {
   overflow: hidden;

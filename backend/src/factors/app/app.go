@@ -2,9 +2,9 @@ package main
 
 import (
 	C "factors/config"
-	Const "factors/constants"
 	H "factors/handler"
 	mid "factors/middleware"
+	"factors/model/model"
 	session "factors/session/store"
 	U "factors/util"
 	"flag"
@@ -158,6 +158,9 @@ func main() {
 
 	enableBingAdsAttribution := flag.Bool("enable_bing_ads_attribution", false, "")
 	salesforcePropertyLookBackTimeHr := flag.Int("salesforce_property_lookback_time_hr", 0, "")
+	hubspotPropertyLookbackLimit := flag.Int("hubspot_property_lookback_limit", 1000, "")
+	enableSlowDBQueryLogging := flag.Bool("log_slow_db_queries", false, "Logs queries with execution time greater than 50ms.")
+
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -268,6 +271,8 @@ func main() {
 		EnableBingAdsAttribution:                       *enableBingAdsAttribution,
 		MonitoringAPIToken:                             *monitoringAPIToken,
 		SalesforcePropertyLookBackTimeHr:               *salesforcePropertyLookBackTimeHr,
+		HubspotPropertyLookBackLimit:                   *hubspotPropertyLookbackLimit,
+		EnableSlowDBQueryLogging:                       *enableSlowDBQueryLogging,
 	}
 	C.InitConf(config)
 
@@ -319,7 +324,7 @@ func main() {
 		H.InitExternalAuth(r, authenticator)
 	}
 
-	Const.SetSmartPropertiesReservedNames()
+	model.SetSmartPropertiesReservedNames()
 
 	C.KillDBQueriesOnExit()
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))

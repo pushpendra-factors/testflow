@@ -13,11 +13,34 @@ import (
 // We convert kpi Query to eventQueries by applying transformation.
 func (pg *Postgres) ExecuteKPIQueryForEvents(projectID uint64, reqID string, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {
 	queryResults := make([]model.QueryResult, len(kpiQuery.Metrics))
-	isValid := model.ValidateKPIQuery(kpiQuery)
+	isValid := pg.ValidateKPIQuery(projectID, kpiQuery)
 	if !isValid {
 		return queryResults, http.StatusBadRequest
 	}
 	return pg.transformToAndExecuteEventAnalyticsQueries(projectID, kpiQuery)
+}
+
+// To Change.
+func (pg *Postgres) ValidateKPIQuery(projectID uint64, kpiQuery model.KPIQuery) bool {
+	if kpiQuery.DisplayCategory == model.WebsiteSessionDisplayCategory {
+		return pg.ValidateKPISessions(projectID, kpiQuery)
+	} else if kpiQuery.DisplayCategory == model.PageViewsDisplayCategory {
+		return model.ValidateKPIPageView(kpiQuery)
+	} else if kpiQuery.DisplayCategory == model.FormSubmissionsDisplayCategory {
+		return model.ValidateKPIFormSubmissions(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == HubspotContactsDisplayCategory {
+		// 	return ValidateKPIHubspotContacts(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == HubspotCompaniesDisplayCategory {
+		// 	return ValidateKPIHubspotCompanies(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceUsersDisplayCategory {
+		// 	return ValidateKPISalesforceUsers(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceAccountsDisplayCategory {
+		// 	return ValidateKPISalesforceAccounts(kpiQuery)
+		// } else if kpiQuery.DisplayCategory == SalesforceOpportunitiesDisplayCategory {
+		// 	return ValidateKPISalesforceOpportunities(kpiQuery)
+	} else {
+		return false
+	}
 }
 
 func (pg *Postgres) transformToAndExecuteEventAnalyticsQueries(projectID uint64, kpiQuery model.KPIQuery) ([]model.QueryResult, int) {

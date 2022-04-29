@@ -266,6 +266,16 @@ func (query *ChannelQueryV1) GetGroupByTimestamp() string {
 	return query.GroupByTimestamp.(string)
 }
 
+var ChannelNameProperty = ChannelObjectAndProperties{
+	Name: Channel,
+	Properties: []ChannelProperty{
+		ChannelProperty{
+			Name: "name",
+			Type: "categorical",
+		},
+	},
+}
+
 // buildErrorResult takes the failure msg and wraps it into a model.QueryResult object
 func BuildErrorResultForChannelsV1(errMsg string) *ChannelQueryResultV1 {
 	errMsg = "Query failed:" + " - " + errMsg
