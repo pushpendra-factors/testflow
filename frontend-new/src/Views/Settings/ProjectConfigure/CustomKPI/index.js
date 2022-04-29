@@ -28,7 +28,9 @@ import _ from 'lodash';
 import {
   reverseOperatorMap,
   reverseDateOperatorMap,
+  convertDateTimeObjectValuesToMilliSeconds,
 } from '../../../../Views/CoreQuery/utils';
+import { FILTER_TYPES } from '../../../CoreQuery/constants';
 
 const { Panel } = Collapse;
 const { Option, OptGroup } = Select; 
@@ -149,10 +151,6 @@ const matchEventName = (item) => {
     opts.globalFilters = filters;
     setFilterValues(opts);
   };
-  useEffect(() => {
-    setQueryOptions({});
-    setFilterValues([]);
-  }, [viewMode]);
 
   const operatorMap = {
     '=': 'equals',
@@ -262,13 +260,13 @@ const matchEventName = (item) => {
   };
 
   useEffect(() => {
-    if (!customKPIConfig) {
-      fetchCustomKPIConfig(activeProject.id);
-    }
-    if (!savedCustomKPI) {
-      fetchSavedCustomKPI(activeProject.id);
-    }
-  }, [customKPIConfig, savedCustomKPI]);
+    // if (!customKPIConfig) {
+    fetchCustomKPIConfig(activeProject.id);
+    // }
+    // if (!savedCustomKPI) {
+    fetchSavedCustomKPI(activeProject.id);
+    // }
+  }, [activeProject]);
 
   useEffect(() => {
     let DDCategory = customKPIConfig?.result?.objTyAndProp?.find((category) => {
@@ -283,14 +281,6 @@ const matchEventName = (item) => {
 
     setFilterDDValues(DDvalues);
   }, [selKPICategory, customKPIConfig]);
-
-  console.log('customKPIConfig values-->',customKPIConfig);
-  console.log('customKPIConfig values with space-->',customKPIConfig?.result?.objTyAndProp?.map((item) => {
-      return item?.properties?.find((j) => {
-        if(j?.name?.includes(' ')){
-          return j
-        } 
-    })}));
 
   const onKPICategoryChange = (value) => {
     setKPICategory(value);
@@ -312,19 +302,28 @@ const matchEventName = (item) => {
     }
   }, [savedCustomKPI]);
 
-  const getStateFromFilters = (rawFilters = []) => {
+  const getStateFromFilters = (rawFilters) => {
     const filters = [];
+
     rawFilters.forEach((pr) => {
       if (pr.lOp === 'AND') {
+        const val = pr.prDaTy === FILTER_TYPES.CATEGORICAL ? [pr.va] : pr.va;
+
+        const DNa = _.startCase(pr.prNa);
+
         filters.push({
           operator:
-            pr.objTy === 'datetime'
+            pr.prDaTy === 'datetime'
               ? reverseDateOperatorMap[pr.co]
               : reverseOperatorMap[pr.co],
-          props: [pr.prNa, pr.prDaTy, pr.objTy],
-          values: [pr.va],
+          props: [DNa, pr.prDaTy],
+          values:
+            pr.prDaTy === FILTER_TYPES.DATETIME
+              ? convertDateTimeObjectValuesToMilliSeconds(val)
+              : val,
+          extra: [DNa, pr.prNa, pr.prDaTy],
         });
-      } else {
+      } else if (pr.prDaTy === FILTER_TYPES.CATEGORICAL) {
         filters[filters.length - 1].values.push(pr.va);
       }
     });
@@ -335,7 +334,6 @@ const matchEventName = (item) => {
     <div className={'fa-container mt-32 mb-12 min-h-screen'}>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={18}>
-          {' '}
           <div className={'mb-10 pl-4'}>
             {!showForm && !viewMode && (
               <>
