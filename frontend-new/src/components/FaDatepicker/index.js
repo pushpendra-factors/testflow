@@ -311,7 +311,7 @@ const FaDatepicker = ({
               Last Month
             </a>
           </Menu.Item>
-          <Menu.Item key="this_quarter">
+          {/* <Menu.Item key="this_quarter">
             <a target='_blank' onClick={() => returnPreSetDate('this_quarter')}>
               This Quarter
             </a>
@@ -320,7 +320,7 @@ const FaDatepicker = ({
             <a target='_blank' onClick={() => returnPreSetDate('last_quarter')}>
               Last Quarter
             </a>
-          </Menu.Item>
+          </Menu.Item> */}
           <Menu.Divider />
         </>
       )}

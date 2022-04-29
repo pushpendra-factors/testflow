@@ -1168,6 +1168,7 @@ export const getAttributionStateFromRequestQuery = (
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
     tacticOfferType: requestQuery.tactic_offer_type,
+    analyze_type: requestQuery.analyze_type
   };
 
   if (requestQuery.attribution_methodology_c) {

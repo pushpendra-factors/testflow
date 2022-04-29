@@ -16,6 +16,8 @@ function Attributions({
     linkedEvents,
     attr_dimensions,
     content_groups,
+    attrQueries,
+    queryOptions
   } = attributionsState;
 
   return (
@@ -37,6 +39,8 @@ function Attributions({
       chartType={chartType}
       cardSize={unit.cardSize}
       unitId={unit.id}
+      attrQueries={attrQueries}
+      queryOptions={queryOptions}
     />
   );
 }
