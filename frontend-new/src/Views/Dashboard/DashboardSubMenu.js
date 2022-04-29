@@ -70,6 +70,7 @@ function DashboardSubMenu({
           customPicker
           nowPicker={dashboard?.name === 'Website Analytics' ? true : false}
           presetRange
+          quarterPicker
           range={{
             startDate: durationObj.from,
             endDate: durationObj.to,

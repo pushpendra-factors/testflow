@@ -11,8 +11,10 @@
   height: 100%;
   position: fixed;
   padding-top: 80px;
-  overflow: scroll;
-  max-width: 264px;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  max-width: 252px !important;
+  z-index: 1001;
 
   //hiding scrollbar
   -ms-overflow-style: none;
@@ -26,18 +28,21 @@
 
   &_assist {
     position: fixed !important;
-    margin: 0 !important;
+    margin: 0 12px !important;
     bottom: 60px !important;
     background-color: #f0f2f5 !important;
-    max-width: 264px !important;
+    max-width: 240px !important;
+    &:hover {
+      background: #e2e4e8 !important;
+    }
   }
 
   &_collapse {
     position: fixed !important;
-    margin: 0 !important;
+    margin: 0 12px !important;
     bottom: 0 !important;
     background-color: #f0f2f5 !important;
-    max-width: 264px !important;
+    max-width: 240px !important;
     height: 60px !important;
   }
 }
@@ -51,5 +56,41 @@
   &:hover,
   &:focus {
     background: #f0f2f5 !important;
+  }
+}
+
+.popover {
+  position: fixed;
+
+  &_content {
+    display: flex;
+    flex-direction: column;
+
+    a {
+      padding: 8px;
+      color: rgba(0, 0, 0, 0.65);
+
+      &:hover {
+        color: #1890ff;
+      }
+    }
+  }
+}
+
+.menuitems {
+
+  margin: 8px 12px !important;
+  padding: 8px !important;
+  background: transparent;
+  height: 40px !important;
+
+  &_sub {
+    margin-left: 12px !important;
+    padding-left: 28px !important;
+    width: 224px !important;
+  }
+
+  &:hover {
+    background: #e2e4e8 !important;
   }
 }
