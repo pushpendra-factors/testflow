@@ -1378,13 +1378,13 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 			mergedPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY] = newPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY]
 		}
 	} else {
-		if useSourcePropertyOverwrite && (source == model.SmartCRMEventSourceHubspot || source == model.SmartCRMEventSourceSalesforce) {
+		if useSourcePropertyOverwrite && model.IsCRMSource(source) {
 			for property := range newPropertiesMap {
 				if model.IsEmptyPropertyValue(newPropertiesMap[property]) {
 					continue
 				}
 
-				if (strings.HasPrefix(property, U.HUBSPOT_PROPERTY_PREFIX) || strings.HasPrefix(property, U.SALESFORCE_PROPERTY_PREFIX)) && overwriteProperties {
+				if model.IsCRMPropertyKey(source, property) && overwriteProperties {
 					mergedPropertiesMap[property] = newPropertiesMap[property]
 				} else {
 					if _, exists := mergedPropertiesMap[property]; !exists {

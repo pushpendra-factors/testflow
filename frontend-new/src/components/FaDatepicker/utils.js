@@ -1,5 +1,7 @@
 import MomentTz from 'Components/MomentTz';
 
+export const DATE_RANGE_LABEL_CURRENT_QUARTER = 'This Quarter';
+export const DATE_RANGE_LABEL_LAST_QUARTER = 'Last Quarter';
 export const DATE_RANGE_LABEL_CURRENT_MONTH = 'This Month';
 export const DEFAULT_DATE_RANGE_LABEL = 'This Week';
 export const DATE_RANGE_LABEL_LAST_MONTH = 'Last Month';
@@ -9,6 +11,8 @@ export const DATE_RANGE_TODAY_LABEL = 'Today';
 export const DATE_RANGE_LABEL_LAST_7_DAYS = 'Last 7 Days';
 export const DATE_RANGE_LAST_2_MIN_LABEL = 'Last 2 mins';
 export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins';
+
+
 
 export const getFirstDayOfLastWeek = () => {
     const d = new Date();
@@ -62,6 +66,36 @@ export const getRangeByLabel = (label) => {
     }
     return rnge;
 
+}
+
+const QuarterMap = (month, lastXNo = 0) => {
+  let rng;
+  let mnth = month;
+  let year = new Date().getFullYear();
+  if(lastXNo) {
+    month-4 >= 0? mnth = month-4 : mnth = 11 , year = year-1;
+  }
+  
+  if(mnth<=3) {
+    rng = {
+        startDate: MomentTz().set({'month': 0, 'date': 1, 'year': year}).startOf('day'),
+        endDate: MomentTz().set({'month': 3, 'year': year}).endOf('month').endOf('day'),
+        dateStr: `${year}, Q1`
+      }
+    } else if(mnth<=7) {
+      rng = {
+        startDate: MomentTz().set({ 'date': 1, 'month': 4, 'year': year}).startOf('day'),
+        endDate: MomentTz().set({'month': 7, 'year': year}).endOf('month').endOf('day'),
+        dateStr: `${year}, Q2`
+      }
+    } else if (mnth<=11) {
+      rng = {
+        startDate: MomentTz().set({'month': 8, 'date': 1, 'year': year}).startOf('day'),
+        endDate: MomentTz().set({'month': 11, 'year': year}).endOf('month').endOf('day'),
+        dateStr: `${year}, Q3`
+      }
+    }
+  return rng;
 }
 
 const DEFAULT_DATE_RANGES = [
@@ -136,5 +170,19 @@ const DEFAULT_DATE_RANGES = [
         startDate: MomentTz().subtract(7, 'days').startOf('day'),
         endDate: MomentTz()
       })
+    },
+    {
+      label: DATE_RANGE_LABEL_CURRENT_QUARTER,
+      range: () => {
+        const currMonthNumber = MomentTz().month();
+        return QuarterMap(currMonthNumber);
+      }
+    },
+    {
+      label: DATE_RANGE_LABEL_LAST_QUARTER,
+      range: () => {
+        const currMonthNumber = MomentTz().month();
+        return QuarterMap(currMonthNumber, 1);
+      }
     }
   ]; 

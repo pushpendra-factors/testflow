@@ -63,6 +63,10 @@ func ComputeDeltaInsights(projectId uint64, configs map[string]interface{}) (map
 			continue
 		}
 
+		if len(kpiQuery.Queries) > 0 && configs["runKpi"] == false {
+			continue
+		}
+
 		if len(kpiQuery.Queries) > 0 {
 			if err := CreateKpiInsights(diskManager, cloudManager, periodCodesWithWeekNMinus1, projectId,
 				dashboardUnit.QueryId, kpiQuery, insightGranularity); err != nil {

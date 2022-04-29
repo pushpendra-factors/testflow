@@ -239,8 +239,7 @@ func getNoneHandledGroupBySelectForProfiles(projectID uint64, groupProp model.Qu
 
 func SanitizeQueryResultProfiles(result *model.QueryResult, query *model.ProfileQuery) error {
 	logFields := log.Fields{
-		"result": result,
-		"query":  query,
+		"query": query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -262,8 +261,7 @@ func SanitizeQueryResultProfiles(result *model.QueryResult, query *model.Profile
 
 func sanitizeNumericalBucketRangesProfiles(result *model.QueryResult, query *model.ProfileQuery) {
 	logFields := log.Fields{
-		"result": result,
-		"query":  query,
+		"query": query,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	headerIndexMap := make(map[string][]int)
