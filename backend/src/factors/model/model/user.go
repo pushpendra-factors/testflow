@@ -87,6 +87,7 @@ var UserPropertiesToSkipOnMergeByCustomerUserID = []string{
 	UserPropertyHubspotContactDeleted,
 	UserPropertyHubspotContactMerged,
 	UserPropertyHubspotContactPrimaryContact,
+	U.UP_SESSION_COUNT,
 }
 
 var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")
@@ -726,6 +727,9 @@ func MergeUserPropertiesByCustomerUserID(projectID uint64, users []User, custome
 		return &mergedUserProperties, http.StatusOK
 	}
 	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
+
+	// removing U.UP_SESSION_COUNT, from user properties.
+	delete(mergedUserProperties, U.UP_SESSION_COUNT)
 
 	return &mergedUserProperties, http.StatusOK
 }

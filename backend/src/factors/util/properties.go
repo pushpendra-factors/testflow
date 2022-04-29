@@ -310,6 +310,7 @@ var UP_INITIAL_REFERRER_URL string = "$initial_referrer_url"
 var UP_INITIAL_REFERRER_DOMAIN string = "$initial_referrer_domain"
 var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
+
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
 var UP_TOTAL_SPENT_TIME string = "$session_spent_time" // unit:seconds
@@ -661,7 +662,6 @@ var NUMERICAL_PROPERTY_BY_NAME = [...]string{
 	UP_SCREEN_WIDTH,
 	UP_SCREEN_HEIGHT,
 	UP_SCREEN_DENSITY,
-	UP_SESSION_COUNT,
 	EP_SESSION_COUNT,
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
@@ -993,19 +993,6 @@ var PREDEFINED_BIN_RANGES_FOR_PROPERTY = map[string][][2]float64{
 		[2]float64{51, 100},
 		[2]float64{101, math.MaxFloat64},
 	},
-	UP_SESSION_COUNT: [][2]float64{
-		//[2]float64{0, 1},
-		[2]float64{1, 1},
-		[2]float64{2, 2},
-		[2]float64{3, 3},
-		[2]float64{4, 4},
-		[2]float64{5, 5},
-		[2]float64{6, 10},
-		[2]float64{11, 25},
-		[2]float64{26, 50},
-		[2]float64{51, 100},
-		[2]float64{101, math.MaxFloat64},
-	},
 	UP_PAGE_COUNT: [][2]float64{
 		//[2]float64{0, 1},
 		[2]float64{1, 1},
@@ -1154,7 +1141,6 @@ var ITREE_PROPERTIES_TO_IGNORE = map[string]bool{
 	// Counts being seen as categorical.
 	UP_PAGE_COUNT:       true,
 	SP_PAGE_COUNT:       true,
-	UP_SESSION_COUNT:    true,
 	EP_SESSION_COUNT:    true,
 	SP_SESSION_TIME:     true,
 	SP_SPENT_TIME:       true,
@@ -1489,7 +1475,6 @@ var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
 
 var USER_PROPERTIES_MERGE_TYPE_ADD = [...]string{
 	UP_PAGE_COUNT,
-	UP_SESSION_COUNT,
 	UP_TOTAL_SPENT_TIME,
 }
 
