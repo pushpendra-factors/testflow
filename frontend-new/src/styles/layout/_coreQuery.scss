@@ -507,3 +507,16 @@ $cq-card-transition: transform 0.2s ease-in-out;
   max-width: 150px;
   overflow: hidden;
 }
+
+.btn-left-round{
+  border-radius: 100px 0 0 100px !important;
+}
+.btn-right-round{
+  border-radius: 0 100px 100px 0 !important;
+}
+.filter-buttons-radius{
+  border-radius: 0px !important;
+}
+.filter-buttons-margin{
+  margin-left: 2px;
+}

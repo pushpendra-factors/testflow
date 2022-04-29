@@ -675,16 +675,6 @@ export default function AttrFilterBlock({
 
   return (
     <div className={`flex items-center relative w-full`}>
-      {delFilter && (
-        <Button
-          type='text'
-          onClick={delFilter}
-          size={'small'}
-          className={`fa-btn--custom mr-1`}
-        >
-          <SVG name={delIcon} />
-        </Button>
-      )}
       {
         <Text level={8} type={'title'} extraClass={'m-0 mr-2'} weight={'thin'}>
           {index >= 1 ? 'and' : 'Filter by'}
@@ -693,6 +683,16 @@ export default function AttrFilterBlock({
       <div className={`relative flex flex-grow`}>
         {filter ? renderFilterContent() : filterSelComp()}
       </div>
+      {delFilter && (
+        <Button
+          type='text'
+          onClick={delFilter}
+          size={'small'}
+          className={`fa-btn--custom filter-buttons-margin btn-right-round`}
+        >
+          <SVG name={delIcon} />
+        </Button>
+      )}
     </div>
   );
 }

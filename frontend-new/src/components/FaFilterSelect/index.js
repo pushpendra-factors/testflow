@@ -238,7 +238,7 @@ const FAFilterSelect = ({
                 <SVG name={propState.icon} size={16} color={'purple'} />
               ) : null
             }
-            className={`fa-button--truncate fa-button--truncate-xs mr-2`}
+            className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
             type='link'
             onClick={() => setPropSelectOpen(!propSelectOpen)}
           >
@@ -264,7 +264,7 @@ const FAFilterSelect = ({
       <div className={styles.filter__propContainer}>
         <Button
           disabled={disabled}
-          className={`fa-button--truncate`}
+          className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
           type='link'
           onClick={() => setOperSelectOpen(true)}
         >
@@ -536,7 +536,7 @@ const FAFilterSelect = ({
 
     return (
       <div
-        className={`${styles.filter__propContainer} ml-2 ${
+        className={`${styles.filter__propContainer}${
           disabled ? `fa-truncate-150` : ''
         }`}
       >
@@ -553,7 +553,7 @@ const FAFilterSelect = ({
               }
             >
               <Button
-                className={`fa-button--truncate`}
+                className={`fa-button--truncate filter-buttons-radius filter-buttons-margin`}
                 type='link'
                 disabled={disabled}
                 onClick={() => setValuesSelectionOpen(!valuesSelectionOpen)}
