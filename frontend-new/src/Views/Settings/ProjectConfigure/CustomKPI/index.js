@@ -31,7 +31,8 @@ import {
 } from '../../../../Views/CoreQuery/utils';
 
 const { Panel } = Collapse;
-const { Option, OptGroup } = Select;
+const { Option, OptGroup } = Select; 
+ 
 
 const CustomKPI = ({
   activeProject,
@@ -40,6 +41,8 @@ const CustomKPI = ({
   customKPIConfig,
   savedCustomKPI,
   addNewCustomKPI,
+  eventPropNames,
+  userPropNames
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [tableData, setTableData] = useState([]);
@@ -57,6 +60,14 @@ const CustomKPI = ({
   const [form] = Form.useForm();
 
   const [queryOptions, setQueryOptions] = useState({});
+
+ 
+
+const matchEventName = (item) => { 
+  let findItem = eventPropNames?.[item] || userPropNames?.[item]
+  return findItem ? findItem : item
+}
+
 
   const menu = (item) => {
     return (
@@ -102,9 +113,9 @@ const CustomKPI = ({
       dataIndex: 'transformations',
       key: 'transformations',
       render: (item) => (
-        <Text type={'title'} level={7} truncate={true} charLimit={25}>{`${
+        <Text type={'title'} level={7} truncate={true} charLimit={35}>{`${
           item.agFn
-        }(${item.agPr ? item.agPr : item.daFie ? item.daFie : ''})`}</Text>
+        }(${item.agPr ? matchEventName(item.agPr) : item.daFie ? matchEventName(item.daFie) : ''})`}</Text>
       ),
       width: 'auto',
     },
@@ -841,6 +852,8 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   customKPIConfig: state.kpi?.custom_kpi_config,
   savedCustomKPI: state.kpi?.saved_custom_kpi,
+  userPropNames: state.coreQuery?.userPropNames,
+  eventPropNames: state.coreQuery?.eventPropNames, 
 });
 
 export default connect(mapStateToProps, {
