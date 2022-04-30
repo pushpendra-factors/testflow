@@ -365,6 +365,9 @@ func executeSalesforceDocumentInsertInBatch(projectID uint64, documents []*model
 
 		placeHolders = placeHolders + "( ? )"
 		createdTime := gorm.NowFunc()
+
+		// Clean unsupported character as callback hook is not possible
+		documents[i].Value.RawMessage = U.CleanupUnsupportedCharOnStringBytes(documents[i].Value.RawMessage)
 		arguments := []interface{}{
 			documents[i].ProjectID,
 			documents[i].ID,
@@ -768,7 +771,12 @@ func (store *MemSQL) BuildAndUpsertDocumentInBatch(projectID uint64, objectName 
 		return errors.New("invalid project id")
 	}
 
-	if objectName == "" || len(values) == 0 {
+	if len(values) == 0 {
+		log.WithFields(logFields).Warn("Empty records for processing in BuildAndUpsertDocumentInBatch.")
+		return nil
+	}
+
+	if objectName == "" {
 		return errors.New("invalid object name or value")
 	}
 

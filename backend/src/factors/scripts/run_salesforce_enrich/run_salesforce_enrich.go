@@ -59,6 +59,17 @@ func allowProjectByProjectIDList(projectID uint64, allProjects bool, allowedProj
 	return !disabledProjects[projectID] && (allProjects || allowedProjects[projectID])
 }
 
+func overrideLastSyncTimestampIfRequired(overrideSyncTimestamp int64, syncInfo map[string]int64) map[string]int64 {
+	if overrideSyncTimestamp > 0 {
+
+		for typ := range syncInfo {
+			syncInfo[typ] = overrideSyncTimestamp
+		}
+	}
+
+	return syncInfo
+}
+
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
@@ -110,6 +121,7 @@ func main() {
 	disableCRMUniquenessConstraintsCheckByProjectID := flag.String("disable_crm_unique_constraint_check_by_project_id", "", "")
 	numDocRoutines := flag.Int("num_unique_doc_routines", 1, "Number of unique document go routines per project")
 	insertBatchSize := flag.Int("insert_batch_size", 1, "Number of unique document go routines per project")
+	overrideLastSyncTimestamp := flag.Int64("override_last_sync_timestamp", 0, "Override last sync timestamp")
 
 	flag.Parse()
 	defaultAppName := "salesforce_enrich"
@@ -217,6 +229,8 @@ func main() {
 				log.WithField("project_id", pid).Errorf("Failed to get salesforce access token: %s", err)
 				continue
 			}
+
+			syncInfo.LastSyncInfo[pid] = overrideLastSyncTimestampIfRequired(*overrideLastSyncTimestamp, syncInfo.LastSyncInfo[pid])
 
 			objectStatus := IntSalesforce.SyncDocuments(projectSettings, syncInfo.LastSyncInfo[pid], accessToken)
 			for i := range objectStatus {
