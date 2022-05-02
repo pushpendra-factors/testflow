@@ -1663,6 +1663,7 @@ export const getKPIStateFromRequestQuery = (requestQuery, kpiConfig = []) => {
     queries.push({
       category: q.ca,
       group: q.dc,
+      pageViewVal: q.pgUrl,
       metric: q.me[0],
       label: metric ? metric.display_name : q.me[0],
       filters: eventFilters,
