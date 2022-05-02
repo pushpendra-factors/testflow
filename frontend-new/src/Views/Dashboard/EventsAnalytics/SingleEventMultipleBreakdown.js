@@ -18,6 +18,7 @@ import {
   CHART_TYPE_STACKED_BAR,
   CHART_TYPE_LINECHART,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
+  CHART_TYPE_PIVOT_CHART,
 } from '../../../utils/constants';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
@@ -90,7 +91,7 @@ function SingleEventMultipleBreakdown({
 
   let tableContent = null;
 
-  if (chartType === CHART_TYPE_TABLE) {
+  if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
     tableContent = (
       <div
         onClick={handleEditQuery}
@@ -115,7 +116,10 @@ function SingleEventMultipleBreakdown({
         />
       </div>
     );
-  } else if (chartType === CHART_TYPE_TABLE) {
+  } else if (
+    chartType === CHART_TYPE_TABLE ||
+    chartType === CHART_TYPE_PIVOT_CHART
+  ) {
     chartContent = (
       <SingleEventMultipleBreakdownTable
         data={aggregateData}

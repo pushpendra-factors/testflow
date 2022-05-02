@@ -18,12 +18,13 @@ import HorizontalBarChartCell from './HorizontalBarChartCell';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
+import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 
 export const defaultSortProp = () => {
   return [
     {
       order: 'descend',
-      key: 'Event Count',
+      key: EVENT_COUNT_KEY,
       type: 'numerical',
       subtype: null,
     },
@@ -76,7 +77,7 @@ export const formatData = (data) => {
     return {
       label: grpLabel,
       value: d[countIndex],
-      'Event Count': d[countIndex], //used for sorting, value key will be removed soon
+      [EVENT_COUNT_KEY]: d[countIndex], //used for sorting, value key will be removed soon
       index,
       ...breakdownData,
     };
@@ -95,6 +96,28 @@ export const getBreakDownGranularities = (breakDownSlice, breakdowns) => {
   return grns;
 };
 
+export const getBreakdownDisplayName = ({
+  breakdown,
+  userPropNames,
+  eventPropNames,
+}) => {
+  const displayTitle =
+    breakdown.prop_category === 'user'
+      ? userPropNames[breakdown.property] || breakdown.property
+      : breakdown.prop_category === 'event'
+      ? eventPropNames[breakdown.property] || `${breakdown.property}`
+      : breakdown.property;
+
+  if (breakdown.eventIndex) {
+    return displayTitle + ' (event)';
+  }
+  return displayTitle;
+};
+
+export const getEventDisplayName = ({ eventNames, event }) => {
+  return _.get(eventNames, event, event);
+};
+
 export const getTableColumns = (
   events,
   breakdown,
@@ -107,16 +130,11 @@ export const getTableColumns = (
 ) => {
   console.log('semb getTableColumns');
   const breakdownColumns = breakdown.map((e, index) => {
-    let displayTitle =
-      e.prop_category === 'user'
-        ? userPropNames[e.property] || e.property
-        : e.prop_category === 'event'
-        ? eventPropNames[e.property] || `${e.property}`
-        : e.property;
-
-    if (e.eventIndex) {
-      displayTitle = displayTitle + ' (event)';
-    }
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropNames,
+    });
 
     return {
       title: getClickableTitleSorter(
@@ -131,19 +149,18 @@ export const getTableColumns = (
     };
   });
 
-  const e = events[0];
-  const title = eventNames[e] || e;
+  const title = getEventDisplayName({ eventNames, event: events[0] });
 
   const countColumn = {
     title: getClickableTitleSorter(
       `${title}: ${labelsObj[page]}`,
-      { key: 'Event Count', type: 'numerical', subtype: null },
+      { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
       'right'
     ),
     className: 'text-right',
-    dataIndex: 'Event Count',
+    dataIndex: EVENT_COUNT_KEY,
     width: 150,
     render: (d) => {
       return <NumFormat number={d} />;
@@ -174,26 +191,21 @@ export const getDateBasedColumns = (
   const OverallColumn = {
     title: getClickableTitleSorter(
       'Overall',
-      { key: `Event Count`, type: 'numerical', subtype: null },
+      { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
       'right'
     ),
     className: 'text-right',
-    dataIndex: `Event Count`,
+    dataIndex: EVENT_COUNT_KEY,
     width: 150,
   };
   const breakdownColumns = breakdown.map((e, index) => {
-    let displayTitle =
-      e.prop_category === 'user'
-        ? userPropNames[e.property] || e.property
-        : e.prop_category === 'event'
-        ? eventPropNames[e.property] || e.property
-        : e.property;
-
-    if (e.eventIndex) {
-      displayTitle = displayTitle + ' (event)';
-    }
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
+      userPropNames,
+      eventPropNames,
+    });
 
     return {
       title: getClickableTitleSorter(

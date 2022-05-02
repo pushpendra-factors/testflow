@@ -197,7 +197,11 @@ const BreakdownCharts = forwardRef(
     } else if (chartType === CHART_TYPE_PIVOT_CHART) {
       chart = (
         <div className='w-full'>
-          <PivotTable data={aggregateData} breakdown={breakdown} kpis={kpis} />
+          <PivotTable
+            data={aggregateData}
+            breakdown={breakdown}
+            metrics={kpis}
+          />
         </div>
       );
     }

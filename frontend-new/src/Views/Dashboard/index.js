@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
 import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
-import { setItemToLocalStorage } from '../../utils/dataFormatter';
+import { setItemToLocalStorage } from '../../utils/localStorage.helpers';
 import { getDashboardDateRange } from './utils';
 import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
 import EmptyDashboard from './EmptyDashboard';

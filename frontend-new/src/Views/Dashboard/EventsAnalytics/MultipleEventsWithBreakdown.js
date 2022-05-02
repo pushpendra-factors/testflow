@@ -27,6 +27,7 @@ import {
   CHART_TYPE_STACKED_AREA,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
   CHART_TYPE_STACKED_BAR,
+  CHART_TYPE_PIVOT_CHART,
 } from '../../../utils/constants';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
@@ -118,7 +119,7 @@ function MultipleEventsWithBreakdown({
 
   let tableContent = null;
 
-  if (chartType === CHART_TYPE_TABLE) {
+  if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
     tableContent = (
       <div
         onClick={handleEditQuery}
@@ -165,7 +166,7 @@ function MultipleEventsWithBreakdown({
         chartId={`bar-${unit.id}`}
       />
     );
-  } else if (chartType === CHART_TYPE_TABLE) {
+  } else if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
     chartContent = (
       <MultipleEventsWithBreakdownTable
         data={aggregateData}

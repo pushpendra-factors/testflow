@@ -6,16 +6,22 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import { formatData, defaultSortProp, getVisibleData } from './utils';
-import BarChart from '../../../../components/BarChart';
-import BreakdownTable from './BreakdownTable';
-import NoDataChart from '../../../../components/NoDataChart';
-import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
-import { getNewSorterState } from '../../../../utils/dataFormatter';
+
+import BarChart from 'Components/BarChart';
+import NoDataChart from 'Components/NoDataChart';
+import PivotTable from 'Components/PivotTable';
+
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_HORIZONTAL_BAR_CHART,
-} from '../../../../utils/constants';
+  CHART_TYPE_PIVOT_CHART,
+  QUERY_TYPE_PROFILE,
+} from 'Utils/constants';
+import { getNewSorterState } from 'Utils/dataFormatter';
+
+import { formatData, defaultSortProp, getVisibleData } from './utils';
+import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
+import BreakdownTable from './BreakdownTable';
 import HorizontalBarChartTable from './HorizontalBarChartTable';
 
 const BreakdownCharts = forwardRef(
@@ -90,6 +96,19 @@ const BreakdownCharts = forwardRef(
           <HorizontalBarChartTable
             aggregateData={aggregateData}
             breakdown={breakdown}
+          />
+        </div>
+      );
+    }
+
+    if (chartType === CHART_TYPE_PIVOT_CHART) {
+      chart = (
+        <div className='w-full'>
+          <PivotTable
+            data={aggregateData}
+            breakdown={breakdown}
+            metrics={queries}
+            queryType={QUERY_TYPE_PROFILE}
           />
         </div>
       );

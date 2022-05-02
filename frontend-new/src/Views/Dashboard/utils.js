@@ -20,8 +20,7 @@ import {
 import {
   getItemFromLocalStorage,
   setItemToLocalStorage,
-  formatFilterDate,
-} from '../../utils/dataFormatter';
+} from '../../utils/localStorage.helpers';
 import {
   DashboardDefaultDateRangeFormat,
   DefaultDateRangeFormat,
