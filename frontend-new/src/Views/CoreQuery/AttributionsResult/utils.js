@@ -404,8 +404,11 @@ export const getTableColumns = (
   comparison_data,
   cmprDuration,
   queryOptions,
-  attrQueries
+  attrQueries,
+  data
 ) => {
+  const { headers } = data;
+
   const getEventColumnConfig = ({ title, key, method, hasBorder = false }) => {
     return {
       title: getClickableTitleSorter(
@@ -519,34 +522,48 @@ export const getTableColumns = (
   const eventColumns = [];
   let attrQueryEvents = [];
 
-  if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && attrQueries.length) {
+  if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users') {
     attrQueryEvents = attrQueries.map((q, i) => {
       const lbl = q.label;
-      const attrChildren = [
-        getEventColumnConfig({
-          title: 'Conversion',
-          key: lbl + ' - Conversion',
-          hasBorder: conversionBorderCondition,
-        }),
-      ];
-      if (showCPC) {
-        attrChildren.push(
-          getEventColumnConfig({
-            title: 'Cost Per Conversion',
-            key: lbl + ' - Cost Per Conversion',
-            hasBorder: costBorderCondition,
-          })
-        );
-      } 
-      if (showCR) {
-        attrChildren.push(
-          getEventColumnConfig({
-            title: 'Conversion Rate',
-            key: lbl + ' - UserConversionRate(%)',
-            hasBorder: true,
-          })
-        );
-      }
+      const attrQueryHeaders = headers.filter((h, i) => h.startsWith(lbl));
+      const attrChildren = attrQueryHeaders.map((hd) => {
+        let title = hd.split(' - ')[1];
+        if (hd.search('UserConversionRate') >= 0) {
+          title = 'Conversion Rate';
+        };
+        return getEventColumnConfig({
+          title: title, 
+          key: hd, 
+          method: attribution_method,
+          hasBorder: true
+        });
+      });
+      
+      // const attrChildren = [
+      //   getEventColumnConfig({
+      //     title: 'Conversion',
+      //     key: lbl + ' - Conversion',
+      //     hasBorder: conversionBorderCondition,
+      //   }),
+      // ];
+      // if (showCPC) {
+      //   attrChildren.push(
+      //     getEventColumnConfig({
+      //       title: 'Cost Per Conversion',
+      //       key: lbl + ' - Cost Per Conversion',
+      //       hasBorder: costBorderCondition,
+      //     })
+      //   );
+      // } 
+      // if (showCR) {
+      //   attrChildren.push(
+      //     getEventColumnConfig({
+      //       title: 'Conversion Rate',
+      //       key: lbl + ' - UserConversionRate(%)',
+      //       hasBorder: true,
+      //     })
+      //   );
+      // }
       return {
         title: eventNames[lbl] || lbl,
         className: 'bg-white tableParentHeader ',
@@ -785,45 +802,53 @@ export const getTableData = (
       if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && attrQueries.length) {
         attrQueries.forEach((q, i) => {
           const lbl = q.label
-          const eventUsersIdx = headers.indexOf(`${lbl} - Conversion`);
-          const eventCPCIdx = headers.indexOf(`${lbl} - Cost Per Conversion`);
-          const eventConvRateIdx = headers.indexOf(
-            `${lbl} - UserConversionRate(%)`
-          );
-          resultantRow[`${lbl} - Conversion`] = !comparison_data
-            ? formatCount(row[eventUsersIdx], 1)
-            : {
-                value: formatCount(row[eventUsersIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
-                  : 0,
-              };
-          resultantRow[`${lbl} - Cost Per Conversion`] = !comparison_data
-            ? formatCount(row[eventCPCIdx], 1)
-            : {
-                value: formatCount(row[eventCPCIdx], 1),
-                compare_value: equivalent_compare_row
-                  ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
-                  : 0,
-              };
-          resultantRow[`${lbl} - UserConversionRate(%)`] =
-            !comparison_data
-              ? formatCount(row[eventConvRateIdx], 1)
+          headers.forEach((head, i) => {
+            if(head.startsWith(`${lbl} - `)) {
+              resultantRow[head] = !comparison_data? formatCount(row[i], 1) 
               : {
-                  value: formatCount(row[eventConvRateIdx], 1),
-                  compare_value: equivalent_compare_row
-                    ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
-                    : 0,
-                };
-          resultantRow[`${lbl} - Conversion Rate`] = !comparison_data
-                ? formatCount(row[conversionRateIdx], 1)
-                : {
-                    value: formatCount(row[conversionRateIdx], 1),
-                    compare_value: equivalent_compare_row
-                      ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
-                      : 0,
-                  };     
-        });
+                value: formatCount(row[i]),
+                compare_value: equivalent_compare_row? formatCount(equivalent_compare_row[i], 1) : 0,
+              };
+            };     
+          })
+        
+          })
+
+
+          // resultantRow[`${lbl} - Conversion`] = !comparison_data
+          //   ? formatCount(row[eventUsersIdx], 1)
+          //   : {
+          //       value: formatCount(row[eventUsersIdx], 1),
+          //       compare_value: equivalent_compare_row
+          //         ? formatCount(equivalent_compare_row[eventUsersIdx], 1)
+          //         : 0,
+          //     };
+          // resultantRow[`${lbl} - Cost Per Conversion`] = !comparison_data
+          //   ? formatCount(row[eventCPCIdx], 1)
+          //   : {
+          //       value: formatCount(row[eventCPCIdx], 1),
+          //       compare_value: equivalent_compare_row
+          //         ? formatCount(equivalent_compare_row[eventCPCIdx], 1)
+          //         : 0,
+          //     };
+          // resultantRow[`${lbl} - UserConversionRate(%)`] =
+          //   !comparison_data
+          //     ? formatCount(row[eventConvRateIdx], 1)
+          //     : {
+          //         value: formatCount(row[eventConvRateIdx], 1),
+          //         compare_value: equivalent_compare_row
+          //           ? formatCount(equivalent_compare_row[eventConvRateIdx], 1)
+          //           : 0,
+          //       };
+          // resultantRow[`${lbl} - Conversion Rate`] = !comparison_data
+          //       ? formatCount(row[conversionRateIdx], 1)
+          //       : {
+          //           value: formatCount(row[conversionRateIdx], 1),
+          //           compare_value: equivalent_compare_row
+          //             ? formatCount(equivalent_compare_row[conversionRateIdx], 1)
+          //             : 0,
+          //         };     
+        
       } else {
         resultantRow = {
         index,

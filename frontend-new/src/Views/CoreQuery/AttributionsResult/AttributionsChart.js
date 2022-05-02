@@ -147,6 +147,26 @@ const AttributionsChart = forwardRef(
       );
     }, [displayedAttributionMetrics, handleMetricsVisibilityChange]);
 
+    // useEffect(() => {
+      
+    // }, [
+    //   attr_dimensions,
+    //   content_groups,
+    //   displayedAttributionMetrics,
+    //   attribution_method,
+    //   attribution_method_compare,
+    //   event,
+    //   eventNames,
+    //   data,
+    //   handleSorting,
+    //   linkedEvents,
+    //   sorter,
+    //   touchpoint,
+    //   durationObj,
+    //   comparison_data.data,
+    //   comparison_duration,
+    // ]);
+
     useEffect(() => {
       setColumns(
         getTableColumns(
@@ -165,27 +185,11 @@ const AttributionsChart = forwardRef(
           comparison_data.data,
           comparison_duration,
           queryOptions,
-          attrQueries
+          attrQueries,
+          data
         )
       );
-    }, [
-      attr_dimensions,
-      content_groups,
-      displayedAttributionMetrics,
-      attribution_method,
-      attribution_method_compare,
-      event,
-      eventNames,
-      handleSorting,
-      linkedEvents,
-      sorter,
-      touchpoint,
-      durationObj,
-      comparison_data.data,
-      comparison_duration,
-    ]);
 
-    useEffect(() => {
       const tableData = getTableData(
         data,
         event,
@@ -213,6 +217,7 @@ const AttributionsChart = forwardRef(
           .map((v) => v.index)
       );
     }, [
+      handleSorting,
       attr_dimensions,
       content_groups,
       displayedAttributionMetrics,

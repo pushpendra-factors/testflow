@@ -59,7 +59,7 @@ const FaDatepicker = ({
   const onChange = (startDate, dateString) => { 
     setShowDatePicker(false);
     const dateType = datePickerType;
-    const endDate = MomentTz(startDate).add(1, MomentTzKey[dateType]);
+    let endDate = MomentTz(startDate).startOf('day').add(1, MomentTzKey[dateType]);
 
     const newDateData = {
       ...dateData,
@@ -92,13 +92,14 @@ const FaDatepicker = ({
 
         onSelect(newDateDataMonth);
       } else {
+        endDate = MomentTz(startDate).endOf('Q');
         let newDateDataMonth = {
           ...dateData,
           startDate,
           endDate,
           dateType: datePickerType,
         };
-
+        setQuarterDateStr(`${new Date().getFullYear()}, Q${startDate.quarter()}`)
         onSelect(newDateDataMonth);
       }
     } else {
@@ -311,7 +312,7 @@ const FaDatepicker = ({
               Last Month
             </a>
           </Menu.Item>
-          {/* <Menu.Item key="this_quarter">
+          <Menu.Item key="this_quarter">
             <a target='_blank' onClick={() => returnPreSetDate('this_quarter')}>
               This Quarter
             </a>
@@ -320,7 +321,7 @@ const FaDatepicker = ({
             <a target='_blank' onClick={() => returnPreSetDate('last_quarter')}>
               Last Quarter
             </a>
-          </Menu.Item> */}
+          </Menu.Item>
           <Menu.Divider />
         </>
       )}
@@ -382,7 +383,7 @@ const FaDatepicker = ({
       // return MomentTz(range.startDate).format('MMM DD, YYYY hh:mma')
       return 'Now';
     }
-    if(dateString === 'This Quarter' || dateString === 'Last Quarter') {
+    if(dateString === 'This Quarter' || dateString === 'Last Quarter' || datePickerType === 'quarter') {
       return quarterDateStr;
     }
     if (dateString == 'Today' || range.startDate == range.endDate) {
