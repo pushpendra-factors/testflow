@@ -20,7 +20,7 @@ services:
                 context: .
                 dockerfile: Dockerfile.memsql.testing
                 args:
-                    - MEMSQL_VERSION=latest
+                    - MEMSQL_VERSION=alma-7.6.13-39da2f5c72-4.0.4-1.13.6
             image: testing/memsql:1.0
             restart: always
             environment:
