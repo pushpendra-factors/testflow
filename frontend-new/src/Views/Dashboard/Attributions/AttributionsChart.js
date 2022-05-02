@@ -135,7 +135,8 @@ const AttributionsChart = ({
         durationObj,
         undefined, undefined, 
         queryOptions,
-        attrQueries
+        attrQueries,
+        data
       )
     );
   }, [
@@ -147,6 +148,7 @@ const AttributionsChart = ({
     event,
     eventNames,
     handleSorting,
+    data,
     linkedEvents,
     sorter,
     touchpoint,

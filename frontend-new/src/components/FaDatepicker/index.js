@@ -5,10 +5,6 @@ import MomentTz from 'Components/MomentTz';
 import { useSelector } from 'react-redux';
 // import { TimeZoneOffsetValues } from 'Utils/constants';
 import {
-  getFirstDayOfLastWeek,
-  getLastDayOfLastWeek,
-  getFirstDayOfLastMonth,
-  getLastDayOfLastMonth,
   getRangeByLabel,
 } from './utils';
 

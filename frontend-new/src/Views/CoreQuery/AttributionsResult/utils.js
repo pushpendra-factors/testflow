@@ -407,6 +407,7 @@ export const getTableColumns = (
   attrQueries,
   data
 ) => {
+  if(!data) {return []};
   const { headers } = data;
 
   const getEventColumnConfig = ({ title, key, method, hasBorder = false }) => {
@@ -522,10 +523,13 @@ export const getTableColumns = (
   const eventColumns = [];
   let attrQueryEvents = [];
 
-  if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users') {
+  if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && headers.length) {
     attrQueryEvents = attrQueries.map((q, i) => {
       const lbl = q.label;
-      const attrQueryHeaders = headers.filter((h, i) => h.startsWith(lbl));
+      let attrQueryHeaders = headers.filter((h, i) => {h.startsWith(lbl)});
+      if(!attribution_method_compare) {
+        attrQueryHeaders = attrQueryHeaders.filter((hd) => hd.search('(compare)') >= 0);
+      }
       const attrChildren = attrQueryHeaders.map((hd) => {
         let title = hd.split(' - ')[1];
         if (hd.search('UserConversionRate') >= 0) {
@@ -799,7 +803,7 @@ export const getTableData = (
         ...metricsData
       };
 
-      if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && attrQueries.length) {
+      if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && attrQueries.length && headers.length) {
         attrQueries.forEach((q, i) => {
           const lbl = q.label
           headers.forEach((head, i) => {
