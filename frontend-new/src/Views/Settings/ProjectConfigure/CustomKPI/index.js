@@ -266,7 +266,7 @@ const matchEventName = (item) => {
     // if (!savedCustomKPI) {
     fetchSavedCustomKPI(activeProject.id);
     // }
-  }, [activeProject]);
+  }, [activeProject]); 
 
   useEffect(() => {
     let DDCategory = customKPIConfig?.result?.objTyAndProp?.find((category) => {
@@ -798,6 +798,22 @@ const matchEventName = (item) => {
                     />
                   </Col>
                 </Row>
+                {!_.isEmpty(viewKPIDetails?.transformations?.agPr) && (
+                <Row>
+                  <Col span={18}>
+                    <Text type={'title'} level={7} extraClass={'m-0 mt-6'}>
+                      Property
+                    </Text>
+                    <Input
+                      disabled={true}
+                      size='large'
+                      value={matchEventName(viewKPIDetails?.transformations?.agPr)}
+                      className={'fa-input w-full'}
+                      placeholder='Display Name'
+                    />
+                  </Col>
+                </Row>
+                )}
                 {!_.isEmpty(viewKPIDetails?.transformations?.fil) && (
                   <Row>
                     <Col span={18}>
@@ -831,7 +847,7 @@ const matchEventName = (item) => {
                     <Input
                       disabled={true}
                       size='large'
-                      value={viewKPIDetails?.transformations?.daFie}
+                      value={matchEventName(viewKPIDetails?.transformations?.daFie)}
                       className={'fa-input w-full'}
                       placeholder='Display Name'
                     />
