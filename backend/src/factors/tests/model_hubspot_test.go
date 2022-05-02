@@ -129,6 +129,62 @@ func TestHubspotEngagements(t *testing.T) {
 			  }
 	}`
 
+	jsonContactEmail := `{
+		"engagement":{
+			"id":12134,
+			"createdAt":1428586724780,
+			"lastUpdated":1428586724781,
+			"type":"EMAIL",
+			"teamId":"",
+			"ownerId":"",
+			"active":"",
+			"timestamp":1322343000,
+			"source":""
+		},
+		"metadata":{
+			"from":{
+				"email":"abcd@xyz.com",
+				"contactId":54051
+			},
+			"to":[
+				{
+					"email":"abcd1@xyz.com",
+					"contactId":54051
+				}
+			],
+			"subject":"",
+			"sentVia":""
+		}
+	}`
+
+	jsonContactIncomingEmail := `{
+		"engagement":{
+			"id":12135,
+			"createdAt":1428586724780,
+			"lastUpdated":1428586724781,
+			"type": "INCOMING_EMAIL",
+			"teamId":"",
+			"ownerId":"",
+			"active":"",
+			"timestamp":1322343000,
+			"source":""
+		},
+		"metadata":{
+			"from":{
+				"email":"abcd@xyz.com",
+				"contactId":54051
+			},
+			"to":[
+				{
+					"email":"abcd1@xyz.com",
+					"contactId":54051
+				}
+			],
+			"subject":"",
+			"sentVia":""
+		}
+	}`
+
 	jsonContactModel := `{
 		"vid": %d,
 		"addedAt": %d,
@@ -165,10 +221,11 @@ func TestHubspotEngagements(t *testing.T) {
 	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 
-	
 	contactPJsonMeetings := postgres.Jsonb{json.RawMessage(jsonContactModelMeetings)}
 	contactPJsonCalls := postgres.Jsonb{json.RawMessage(jsonContactModelCalls)}
-	
+	contactPJsonEmail := postgres.Jsonb{json.RawMessage(jsonContactEmail)}
+	contactPJsonIncomingEmail := postgres.Jsonb{json.RawMessage(jsonContactIncomingEmail)}
+
 	hubspotDocumentMeetings := model.HubspotDocument{
 		TypeAlias: model.HubspotDocumentTypeNameEngagement,
 		Value:     &contactPJsonMeetings,
@@ -183,29 +240,49 @@ func TestHubspotEngagements(t *testing.T) {
 
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocumentCalls)
 	assert.Equal(t, http.StatusCreated, status)
-	
 
-	enrichStatus, _ := IntHubspot.Sync(project.ID, 1,time.Now().Unix())
+	hubspotDocumentEmail := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &contactPJsonEmail,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocumentEmail)
+	assert.Equal(t, http.StatusCreated, status)
+
+	hubspotDocumentIncomingEmail := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameEngagement,
+		Value:     &contactPJsonIncomingEmail,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocumentIncomingEmail)
+	assert.Equal(t, http.StatusCreated, status)
+
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix())
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
-	
 
 	docMeetings, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"54051"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
-	eventNameObjMeetingCreated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED , project.ID)
+	eventNameObjMeetingCreated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED, project.ID)
 	eventsMeetingsCreated, status := store.GetStore().GetUserEventsByEventNameId(project.ID, docMeetings[0].UserId, eventNameObjMeetingCreated.ID)
 	assert.Len(t, eventsMeetingsCreated, 1)
-	eventNameObjMeetingUpdated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED , project.ID)
+	eventNameObjMeetingUpdated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED, project.ID)
 	eventsMeetingsUpdated, status := store.GetStore().GetUserEventsByEventNameId(project.ID, docMeetings[0].UserId, eventNameObjMeetingUpdated.ID)
 	assert.Len(t, eventsMeetingsUpdated, 2)
 
 	docCalls, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"54051"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
-	eventNameObjCallCreated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED , project.ID)
+	eventNameObjCallCreated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED, project.ID)
 	eventsCallCreated, status := store.GetStore().GetUserEventsByEventNameId(project.ID, docCalls[0].UserId, eventNameObjCallCreated.ID)
 	assert.Len(t, eventsCallCreated, 1)
-	eventNameObjCallUpdated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED , project.ID)
+	eventNameObjCallUpdated, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED, project.ID)
 	eventsCallUpdated, status := store.GetStore().GetUserEventsByEventNameId(project.ID, docCalls[0].UserId, eventNameObjCallUpdated.ID)
 	assert.Len(t, eventsCallUpdated, 1)
+
+	docEmail, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"54051"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	eventNameObjEmail, status := store.GetStore().GetEventName(U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL, project.ID)
+	eventsEmail, status := store.GetStore().GetUserEventsByEventNameId(project.ID, docEmail[0].UserId, eventNameObjEmail.ID)
+	assert.Len(t, eventsEmail, 2)
+
 
 	propertyValuesMeetingCreated := make(map[string]interface{})
 	err = json.Unmarshal(eventsMeetingsCreated[0].Properties.RawMessage, &propertyValuesMeetingCreated)
@@ -271,6 +348,52 @@ func TestHubspotEngagements(t *testing.T) {
 	assert.Equal(t, "decent", propertyValuesCallsUpdated["$hubspot_engagement_disposition"])
 	assert.Equal(t, "ok", propertyValuesCallsUpdated["$hubspot_engagement_status"])
 	assert.Equal(t, "call", propertyValuesCallsUpdated["$hubspot_engagement_title"])
+
+
+	propertyValuesEmailOne:= make(map[string]interface{})
+	err = json.Unmarshal(eventsEmail[0].Properties.RawMessage, &propertyValuesEmailOne)
+	assert.Nil(t, err)
+	if propertyValuesEmailOne["$hubspot_engagement_type"] == "EMAIL" {
+		assert.Equal(t, "12134", propertyValuesEmailOne["$hubspot_engagement_id"])
+		assert.Equal(t, "EMAIL", propertyValuesEmailOne["$hubspot_engagement_type"])
+	}else {
+		assert.Equal(t, "12135", propertyValuesEmailOne["$hubspot_engagement_id"])
+		assert.Equal(t, "INCOMING_EMAIL", propertyValuesEmailOne["$hubspot_engagement_type"])
+	}
+	
+	assert.Equal(t, float64(1428586724780), propertyValuesEmailOne["$hubspot_engagement_createdat"])
+	assert.Equal(t, float64(1428586724781), propertyValuesEmailOne["$hubspot_engagement_lastupdated"])
+	assert.Equal(t, "", propertyValuesEmailOne["$hubspot_engagement_teamid"])
+	assert.Equal(t, "", propertyValuesEmailOne["$hubspot_engagement_ownerid"])
+	assert.Equal(t, "", propertyValuesEmailOne["$hubspot_engagement_active"])
+	assert.Equal(t, float64(1322343), propertyValuesEmailOne["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "", propertyValuesEmailOne["$hubspot_engagement_source"])
+	assert.Equal(t, "abcd@xyz.com", propertyValuesEmailOne["$hubspot_engagement_from"])
+	assert.Equal(t, "abcd1@xyz.com", propertyValuesEmailOne["$hubspot_engagement_to"])
+	assert.Equal(t, "", propertyValuesEmailOne["$hubspot_engagement_subject"])
+	assert.Equal(t, "", propertyValuesEmailOne["$hubspot_engagement_sentvia"])
+
+	propertyValuesEmailTwo:= make(map[string]interface{})
+	err = json.Unmarshal(eventsEmail[1].Properties.RawMessage, &propertyValuesEmailTwo)
+	assert.Nil(t, err)
+	if propertyValuesEmailTwo["$hubspot_engagement_type"] == "INCOMING_EMAIL" {
+		assert.Equal(t, "12135", propertyValuesEmailTwo["$hubspot_engagement_id"])
+		assert.Equal(t, "INCOMING_EMAIL", propertyValuesEmailTwo["$hubspot_engagement_type"])
+	}else {
+		assert.Equal(t, "12134", propertyValuesEmailTwo["$hubspot_engagement_id"])
+		assert.Equal(t, "EMAIL", propertyValuesEmailTwo["$hubspot_engagement_type"])
+	}
+	assert.Equal(t, float64(1428586724780), propertyValuesEmailTwo["$hubspot_engagement_createdat"])
+	assert.Equal(t, float64(1428586724781), propertyValuesEmailTwo["$hubspot_engagement_lastupdated"])
+	assert.Equal(t, "", propertyValuesEmailTwo["$hubspot_engagement_teamid"])
+	assert.Equal(t, "", propertyValuesEmailTwo["$hubspot_engagement_ownerid"])
+	assert.Equal(t, "", propertyValuesEmailTwo["$hubspot_engagement_active"])
+	assert.Equal(t, float64(1322343), propertyValuesEmailTwo["$hubspot_engagement_timestamp"])
+	assert.Equal(t, "", propertyValuesEmailTwo["$hubspot_engagement_source"])
+	assert.Equal(t, "abcd@xyz.com", propertyValuesEmailTwo["$hubspot_engagement_from"])
+	assert.Equal(t, "abcd1@xyz.com", propertyValuesEmailTwo["$hubspot_engagement_to"])
+	assert.Equal(t, "", propertyValuesEmailTwo["$hubspot_engagement_subject"])
+	assert.Equal(t, "", propertyValuesEmailTwo["$hubspot_engagement_sentvia"])
 }
 func TestHubspotContactFormSubmission(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
