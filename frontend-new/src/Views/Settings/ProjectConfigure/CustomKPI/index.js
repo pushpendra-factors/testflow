@@ -248,6 +248,7 @@ const matchEventName = (item) => {
         });
         form.resetFields();
         setShowForm(false);
+        setFilterValues([]);
       })
       .catch((err) => {
         setLoading(false);
