@@ -965,7 +965,7 @@ func computeInsights1(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 	propertyCounts := make(map[string][]float64)
 	noneCounts := make(map[string]int64)
 	properties := []string{U.UP_PAGE_COUNT, U.UP_TOTAL_SPENT_TIME}
-	sessionEvent := model.QueryEventWithProperties{Name: U.EVENT_NAME_SESSION}
+	//sessionEvent := model.QueryEventWithProperties{Name: U.EVENT_NAME_SESSION}
 
 	for _, property := range properties {
 		propertyCounts[property] = []float64{}
