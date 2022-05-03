@@ -526,7 +526,7 @@ export const getTableColumns = (
   if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && headers.length) {
     attrQueryEvents = attrQueries.map((q, i) => {
       const lbl = q.label;
-      let attrQueryHeaders = headers.filter((h, i) => {h.startsWith(lbl)});
+      let attrQueryHeaders = headers.filter((h, i) => h.startsWith(lbl));
       if(!attribution_method_compare) {
         attrQueryHeaders = attrQueryHeaders.filter((hd) => hd.search('(compare)') >= 0);
       }
