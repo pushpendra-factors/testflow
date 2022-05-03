@@ -528,12 +528,12 @@ export const getTableColumns = (
       const lbl = q.label;
       let attrQueryHeaders = headers.filter((h, i) => h.startsWith(lbl));
       if(!attribution_method_compare) {
-        attrQueryHeaders = attrQueryHeaders.filter((hd) => !hd.search('(compare)') >= 0);
+        attrQueryHeaders = attrQueryHeaders.filter((hd) => hd.search('(compare)') < 0);
       }
       const attrChildren = attrQueryHeaders.map((hd) => {
         let title = hd.split(' - ')[1];
         if (hd.search('UserConversionRate') >= 0) {
-          title = 'Conversion Rate';
+          title = title.replace('UserConversionRate', 'Conversion Rate');
         };
         return getEventColumnConfig({
           title: title, 
@@ -805,7 +805,7 @@ export const getTableData = (
 
       if(queryOptions.group_analysis && queryOptions.group_analysis !== 'users' && attrQueries.length && headers.length) {
         attrQueries.forEach((q, i) => {
-          const lbl = q.label
+          const lbl = q.label;
           headers.forEach((head, i) => {
             if(head.startsWith(`${lbl} - `)) {
               resultantRow[head] = !comparison_data? formatCount(row[i], 1) 
