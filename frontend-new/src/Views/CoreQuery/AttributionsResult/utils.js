@@ -528,7 +528,7 @@ export const getTableColumns = (
       const lbl = q.label;
       let attrQueryHeaders = headers.filter((h, i) => h.startsWith(lbl));
       if(!attribution_method_compare) {
-        attrQueryHeaders = attrQueryHeaders.filter((hd) => hd.search('(compare)') >= 0);
+        attrQueryHeaders = attrQueryHeaders.filter((hd) => !hd.search('(compare)') >= 0);
       }
       const attrChildren = attrQueryHeaders.map((hd) => {
         let title = hd.split(' - ')[1];
