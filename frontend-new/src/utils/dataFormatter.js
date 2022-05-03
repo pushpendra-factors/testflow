@@ -610,26 +610,6 @@ export function isDateInMilliSeconds(date) {
   return date?.toString().length === 13;
 }
 
-export const getBreakdownDisplayTitle = (
-  breakdown,
-  userPropNames,
-  eventPropNames
-) => {
-  const property = breakdown.pr || breakdown.property;
-  const prop_category = breakdown.en || breakdown.prop_category;
-  let displayTitle =
-    prop_category === 'user'
-      ? userPropNames[property] || property
-      : prop_category === 'event'
-      ? eventPropNames[property] || property
-      : property;
-
-  if (breakdown.eventIndex) {
-    displayTitle = displayTitle + ' (event)';
-  }
-  return displayTitle;
-};
-
 export const Wait = (duration) => {
   return new Promise((resolve) => {
     setTimeout(() => {

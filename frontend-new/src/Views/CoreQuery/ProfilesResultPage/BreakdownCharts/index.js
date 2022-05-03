@@ -109,6 +109,7 @@ const BreakdownCharts = forwardRef(
             breakdown={breakdown}
             metrics={queries}
             queryType={QUERY_TYPE_PROFILE}
+            groupAnalysis={groupAnalysis}
           />
         </div>
       );

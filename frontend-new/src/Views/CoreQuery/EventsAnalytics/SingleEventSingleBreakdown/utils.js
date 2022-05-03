@@ -4,7 +4,6 @@ import { labelsObj } from '../../utils';
 import {
   getClickableTitleSorter,
   SortResults,
-  getBreakdownDisplayTitle,
   addQforQuarter,
 } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
@@ -13,6 +12,7 @@ import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
 import { renderHorizontalBarChart } from '../SingleEventMultipleBreakdown/utils';
+import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
 import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
@@ -355,11 +355,11 @@ export const getHorizontalBarChartColumns = (
   eventPropNames
 ) => {
   const result = breakdown.map((e) => {
-    const displayTitle = getBreakdownDisplayTitle(
-      e,
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
       userPropNames,
-      eventPropNames
-    );
+      eventPropNames,
+    });
 
     return {
       title: <NonClickableTableHeader title={displayTitle} />,

@@ -3,7 +3,6 @@ import moment from 'moment';
 import {
   getClickableTitleSorter,
   SortResults,
-  getBreakdownDisplayTitle,
   generateColors,
   addQforQuarter,
 } from '../../../../utils/dataFormatter';
@@ -19,6 +18,7 @@ import tableStyles from '../../../../components/DataTable/index.module.scss';
 import { DISPLAY_PROP } from '../../../../utils/constants';
 import NonClickableTableHeader from '../../../../components/NonClickableTableHeader';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
+import { getBreakdownDisplayName } from '../eventsAnalytics.helpers';
 
 export const defaultSortProp = () => {
   return [
@@ -94,24 +94,6 @@ export const getBreakDownGranularities = (breakDownSlice, breakdowns) => {
     brks.splice(brkIndex, 1);
   });
   return grns;
-};
-
-export const getBreakdownDisplayName = ({
-  breakdown,
-  userPropNames,
-  eventPropNames,
-}) => {
-  const displayTitle =
-    breakdown.prop_category === 'user'
-      ? userPropNames[breakdown.property] || breakdown.property
-      : breakdown.prop_category === 'event'
-      ? eventPropNames[breakdown.property] || `${breakdown.property}`
-      : breakdown.property;
-
-  if (breakdown.eventIndex) {
-    return displayTitle + ' (event)';
-  }
-  return displayTitle;
 };
 
 export const getEventDisplayName = ({ eventNames, event }) => {
@@ -474,11 +456,11 @@ export const getHorizontalBarChartColumns = (
 ) => {
   console.log('semb getHorizontalBarChartColumns');
   const result = breakdown.map((e, index) => {
-    const displayTitle = getBreakdownDisplayTitle(
-      e,
+    const displayTitle = getBreakdownDisplayName({
+      breakdown: e,
       userPropNames,
-      eventPropNames
-    );
+      eventPropNames,
+    });
 
     return {
       title: <NonClickableTableHeader title={displayTitle} />,

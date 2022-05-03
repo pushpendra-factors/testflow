@@ -1,5 +1,9 @@
 import { EMPTY_ARRAY } from 'Utils/global';
-import { QUERY_TYPE_KPI, QUERY_TYPE_EVENT } from 'Utils/constants';
+import {
+  QUERY_TYPE_KPI,
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_PROFILE,
+} from 'Utils/constants';
 
 import { getKpiLabel } from '../../Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
 import { EVENT_COUNT_KEY } from '../../Views/CoreQuery/EventsAnalytics/eventsAnalytics.constants';
@@ -7,13 +11,20 @@ import {
   getBreakdownDisplayName,
   getEventDisplayName,
 } from '../../Views/CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/utils';
+import { getProfileQueryDisplayName } from '../../Views/CoreQuery/ProfilesResultPage/BreakdownCharts/utils';
 
 export const getMetricLabel = ({ metric, queryType, eventNames }) => {
   if (queryType === QUERY_TYPE_KPI) {
     return getKpiLabel(metric);
   }
   if (queryType === QUERY_TYPE_EVENT) {
-    getEventDisplayName({ event: metric, eventNames });
+    return getEventDisplayName({ event: metric, eventNames });
+  }
+  if (queryType === QUERY_TYPE_PROFILE) {
+    return getProfileQueryDisplayName({
+      query: metric,
+      groupAnalysis: 'users',
+    });
   }
   return metric;
 };
@@ -38,6 +49,9 @@ export const getMetricValue = ({
     // return dataObject[
     //   `${getMetricLabel({ metric, queryType, eventNames })} - ${index}`
     // ];
+  }
+  if (queryType === QUERY_TYPE_PROFILE) {
+    return dataObject.value;
   }
   return 0;
 };
@@ -76,7 +90,6 @@ export const formatPivotData = ({
       const current = breakdownVals.concat(metricVals);
       return current;
     });
-    console.log("values", values)
     return [breakdownAttributes, attributesRow, values];
   } catch (err) {
     console.log('formatPivotData -> err', err);
