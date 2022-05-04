@@ -27,19 +27,19 @@ function ButtonLib() {
 
       <Row>
         <Col span={4}>
-          <Button size="large" type="primary">Primary Button</Button>
+          <Button size="large" type="primary" loading={true}>Primary Button</Button>
         </Col>
         <Col span={4}>
-          <Button size="large" >Default Button</Button>
+          <Button size="large" loading={true} >Default Button</Button>
         </Col>
         {/* <Col span={4}>
           <Button size="large" type="dashed">Dashed Button</Button>
         </Col> */}
         <Col span={4}>
-          <Button size="large" type="text">Text Button</Button>
+          <Button size="large" type="text" loading={true}>Text Button</Button>
         </Col>
         <Col span={4}>
-          <Button size="large" type="link">Secondary Button</Button>
+          <Button size="large" type="link" loading={true}>Secondary Button</Button>
         </Col>
       </Row>
       <Row className={'my-6'}>

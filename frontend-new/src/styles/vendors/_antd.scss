@@ -7075,12 +7075,17 @@ html {
 .ant-btn.ant-btn-loading::before {
   display: block;
 }
+.ant-btn > .ant-btn-loading-icon > .anticon-loading {
+  vertical-align: 0.1em; // loading button spinner issue fix
+}
 .ant-btn > .ant-btn-loading-icon {
   -webkit-transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
   transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  padding-right: 8px; // loading button spinner issue fix
 }
 .ant-btn > .ant-btn-loading-icon .anticon {
-  padding-right: 8px;
+  // loading button spinner issue fix
+  // padding-right: 8px; 
 }
 .ant-btn > .ant-btn-loading-icon:only-child .anticon {
   padding-right: 0;

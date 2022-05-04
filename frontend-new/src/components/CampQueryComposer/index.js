@@ -356,6 +356,7 @@ const CampQueryComposer = ({
         <FaDatepicker
           customPicker
           presetRange
+          quarterPicker
           monthPicker
           range={{
             startDate: dateRange.from,

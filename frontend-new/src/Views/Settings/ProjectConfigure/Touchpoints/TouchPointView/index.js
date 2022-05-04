@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { connect } from 'react-redux';
 import { Text, SVG } from 'factorsComponents';
 import {
-    Row, Col, Button, Radio, Input, Select
+    Row, Col, Button, Radio, Input, Select, Tooltip
 } from 'antd';
 
 import FaFilterSelect from 'Components/FaFilterSelect';
@@ -367,29 +367,38 @@ const TouchpointView = ({ activeProject, tchType = '2', eventProperties, userPro
         if(tchType === '2') {
             eventProperties[eventToCall]?.forEach((prop) => {
                 if(prop[1]?.startsWith('$hubspot') && isSearchProps(dropDownType, prop)){
-                    propertiesMp.push(<Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>);
+                    propertiesMp.push(
+                    <Tooltip title={prop[0]}>
+                    <Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>
+                    </Tooltip>);
                 }
             });
             userProperties.forEach((prop) => {
                 if(prop[1]?.startsWith('$hubspot') && isSearchProps(dropDownType, prop)){
-                    propertiesMp.push(<Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>);
+                    propertiesMp.push( <Tooltip title={prop[0]}>
+                        <Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>
+                        </Tooltip>);
                 }
             });
         } else if(tchType === '3') {
             eventProperties[eventToCall]?.forEach((prop) => {
                 if(prop[1]?.startsWith('$salesforce') && isSearchProps(dropDownType, prop)){
-                    propertiesMp.push(<Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>);
+                    propertiesMp.push( <Tooltip title={prop[0]}>
+                        <Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>
+                        </Tooltip>);
                 }
             });
             userProperties.forEach((prop) => {
                 if(prop[1]?.startsWith('$salesforce') && isSearchProps(dropDownType, prop))
                 {
-                    propertiesMp.push(<Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>);
+                    propertiesMp.push( <Tooltip title={prop[0]}>
+                        <Option key={prop[1]} value={prop[1]}> {prop[0]} </Option>
+                        </Tooltip>);
                 }
             });
         }
         if(dropDownType && searchSour[dropDownType]) {
-            propertiesMp.push((<Option value={searchSour[dropDownType]}> {searchSour[dropDownType]} </Option>));
+            propertiesMp.push((<Option value={searchSour[dropDownType]}> <span>Select: </span> {searchSour[dropDownType]} </Option>));
         }
         return propertiesMp;
     }

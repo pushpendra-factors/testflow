@@ -171,19 +171,24 @@ const CreateGoalDrawer = (props) => {
     }
   }, [selectedModel]);
 
-  useEffect(() => { 
+  useEffect(() => {
     let goalInsights = props.goal_insights
     if (goalInsights) {
       console.log("coming from saved insights", goalInsights);
-      if(goalInsights.type=="singleevent"){
+      if (goalInsights.type == "singleevent") {
         setEvent1(goalInsights?.goal?.en_en)
       }
-      else{
+      else {
         setEvent1(goalInsights?.goal?.st_en)
-        setEvent2(goalInsights?.goal?.en_en) 
+        setEvent2(goalInsights?.goal?.en_en)
       }
     }
   }, []);
+
+  const matchEventName = (item) => {
+    let findItem = props?.eventPropNames?.[item] || props?.userPropNames?.[item]
+    return findItem ? findItem : item
+  }
 
   useEffect(() => {
     // if(!props.GlobalEventNames || !factorsModels){
@@ -200,13 +205,13 @@ const CreateGoalDrawer = (props) => {
 
     //fetching model metada for 'events to include'
     let modelID = props.factors_models ? props.factors_models[0]?.mid : 0;
-    modelMetaDataFn(props.activeProject.id, modelID); 
+    modelMetaDataFn(props.activeProject.id, modelID);
 
     if (props.factors_models) {
-      if(props.factors_insight_model){
-        setSelectedModel(props.factors_insight_model); 
-      }else{
-        setSelectedModel(factorsModels[0]); 
+      if (props.factors_insight_model) {
+        setSelectedModel(props.factors_insight_model);
+      } else {
+        setSelectedModel(factorsModels[0]);
       }
     }
     if (props.activeProject && props.activeProject.id) {
@@ -214,7 +219,8 @@ const CreateGoalDrawer = (props) => {
     }
     if (props.tracked_events) {
       const fromatterTrackedEvents = props.tracked_events.map((item) => {
-        return [item.name]
+        let displayName = matchEventName(item.name)
+        return [displayName]
       });
       SetTrackedEventNames(fromatterTrackedEvents);
     }
@@ -276,18 +282,18 @@ const CreateGoalDrawer = (props) => {
 
   const smoothScroll = (element) => {
     document.querySelector(element).scrollIntoView({
-      behavior: 'smooth', 
+      behavior: 'smooth',
     });
   }
 
   const modelIDtoStringMap = () => {
-    if(_.isArray(props?.factors_models)){
+    if (_.isArray(props?.factors_models)) {
       return props?.factors_models?.filter((item) => {
         const generateStringArray = [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`];
         if (_.isEqual(selectedModel, generateStringArray)) {
           return item
         }
-      }); 
+      });
     }
     else return []
 
@@ -326,7 +332,7 @@ const CreateGoalDrawer = (props) => {
       // history.push('/explain/insights');
       setCollapse(true);
       setTimeout(() => {
-        smoothScroll('#explain-builder--footer'); 
+        smoothScroll('#explain-builder--footer');
       }, 200);
 
     }).catch((err) => {
@@ -340,17 +346,17 @@ const CreateGoalDrawer = (props) => {
     factorsai.track('RUN_EXPLAIN', { 'query_type': 'explain' });
 
   }
-   
+
 
   const valuesSelect = (val) => {
-
     let values = val.map((vl) => JSON.parse(vl)[0]);
     setEventsToInc(values);
     setShowEventsToIncDD(false);
   };
 
-  const modelMetadataDDValue = modelMetadata?.map((item) => { return [item] })
-  const queryBuilderCollapse = !_.isEmpty(props?.goal_insights?.insights)   
+  const modelMetadataDDValue = modelMetadata?.map((item) => { return [matchEventName(item)] })
+  const queryBuilderCollapse = !_.isEmpty(props?.goal_insights?.insights)
+
   return (
     <div
     >
@@ -369,100 +375,50 @@ const CreateGoalDrawer = (props) => {
         <div className={`explain-builder--content ${collapse ? 'explain-builder--collapsed' : ''}`}>
 
 
-        <ComposerBlock blockTitle={'SELECT ANALYSIS WINDOW'} isOpen={showDateBlock}
-          showIcon={true} onClick={() => setDateBlock(!showDateBlock)}
-          extraClass={`no-padding-l`}
-        >
-          <div className={'relative mr-2'}>
-            {<Button size={'large'} onClick={() => setShowDateTime(true)} className='mt-2 border--thin-2 '><SVG name={'calendar'} extraClass={'mr-1'} />{selectedModel ? selectedModel : 'Select Date Range'} </Button>}
-            {showDateTime && 
-              <GroupSelect2
-                groupedProperties={factorsModels ? [
-                  {
-                    label: 'Most Recent',
-                    icon: 'most_recent',
-                    values: factorsModels
-                  }
-                ] : null}
-                placeholder="Select Date Range "
-                optionClick={(group, val) => onChangeDateTime(group, val)}
-                onClickOutside={() => setShowDateTime(false)} 
-              /> 
-            }
-          </div>
+          <ComposerBlock blockTitle={'SELECT ANALYSIS WINDOW'} isOpen={showDateBlock}
+            showIcon={true} onClick={() => setDateBlock(!showDateBlock)}
+            extraClass={`no-padding-l`}
+          >
+            <div className={'relative mr-2'}>
+              {<Button size={'large'} onClick={() => setShowDateTime(true)} className='mt-2 border--thin-2 '><SVG name={'calendar'} extraClass={'mr-1'} />{selectedModel ? selectedModel : 'Select Date Range'} </Button>}
+              {showDateTime &&
+                <GroupSelect2
+                  groupedProperties={factorsModels ? [
+                    {
+                      label: 'Most Recent',
+                      icon: 'most_recent',
+                      values: factorsModels
+                    }
+                  ] : null}
+                  placeholder="Select Date Range "
+                  optionClick={(group, val) => onChangeDateTime(group, val)}
+                  onClickOutside={() => setShowDateTime(false)}
+                />
+              }
+            </div>
 
-        </ComposerBlock>
+          </ComposerBlock>
 
-        <ComposerBlock blockTitle={'EXPLAIN CONVERSIONS BETWEEN'} isOpen={eventsBlockOpen}
-          showIcon={true} onClick={() => setEventsBlockOpen(!eventsBlockOpen)}
-          extraClass={`no-padding-l`}
-        >
+          <ComposerBlock blockTitle={'EXPLAIN CONVERSIONS BETWEEN'} isOpen={eventsBlockOpen}
+            showIcon={true} onClick={() => setEventsBlockOpen(!eventsBlockOpen)}
+            extraClass={`no-padding-l`}
+          >
 
-          <Row gutter={[24, 4]}>
-            <Col span={24}>
-              <div className={'mt-4'}>
-
-                <div className={'flex flex-col'}>
-
-                  <div className={'flex items-center justify-start query_block--actions '}>
-                    <div className={'flex items-center'}>
-                      {event1 && <>
-                        <EventTag />
-                        {/* <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>Users who perform</Text>  */}
-                      </>}
-                      <div className='relative' style={{ height: '42px' }}>
-                        {!showDropDown && !event1 && <Button onClick={() => setShowDropDown(true)} type={'text'} size={'large'} icon={<SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'} />}>{eventCount === 2 ? 'Add First event' : 'Add an event'}</Button>}
-                        {showDropDown && <>
-                          <GroupSelect2
-                            allowEmpty={true}
-                            groupedProperties={TrackedEventNames ? [
-                              {
-                                label: 'Most Recent',
-                                icon: 'most_recent',
-                                values: TrackedEventNames
-                              }
-                            ] : null}
-                            placeholder="Select Events"
-                            optionClick={(group, val) => onChangeGroupSelect1(group, val)}
-                            onClickOutside={() => setShowDropDown(false)}
-                          />
-                        </>
-                        }
-
-                        {event1 && !showDropDown && <Button type={'link'} size={'large'} className={'ml-2 fa-button--truncate fa-button--truncate-sm'} ellipsis onClick={() => {
-                          setShowDropDown(true);
-                        }} >{event1}</Button>
-                        }
-                      </div>
-                    </div>
-                    {event1 && <Button type={'text'} onClick={() => setEventFilter1DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
-                    {event1 && <Button type={'text'} onClick={() => setEvent1(null)} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
-                  </div>
-                  <EventFilterBy event={event1} setfiltersParent={setfiltersEvent1} showEventFilterDD={showEventFilter1DD} setEventFilterDD={setEventFilter1DD} />
-                </div>
-              </div>
-            </Col>
-          </Row>
-
-          {(event1 || event2) &&
             <Row gutter={[24, 4]}>
               <Col span={24}>
                 <div className={'mt-4'}>
 
                   <div className={'flex flex-col'}>
 
-                    <div className={'flex items-center justify-start query_block--actions'}>
+                    <div className={'flex items-center justify-start query_block--actions '}>
                       <div className={'flex items-center'}>
-
-                        {event2 && <>
-                          <EventTag text={'B'} color={'yellow'} />
-                          {/* <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>And then</Text> */}
-                          {/* <Text type={'title'} level={6} weight={'bold'} color={'black'} extraClass={'m-0 ml-2'}>performed</Text> */}
+                        {event1 && <>
+                          <EventTag />
+                          {/* <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>Users who perform</Text>  */}
                         </>}
                         <div className='relative' style={{ height: '42px' }}>
-                          {!showDropDown2 && !event2 && <Button onClick={() => setShowDropDown2(true)} type={'text'} size={'large'} icon={<SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'} />}>Add next event</Button>}
-                          {showDropDown2 && <>
-
+                          {!showDropDown && !event1 && <Button onClick={() => setShowDropDown(true)} type={'text'} size={'large'} icon={<SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'} />}>{eventCount === 2 ? 'Add First event' : 'Add an event'}</Button>}
+                          {showDropDown && <>
                             <GroupSelect2
                               allowEmpty={true}
                               groupedProperties={TrackedEventNames ? [
@@ -473,80 +429,130 @@ const CreateGoalDrawer = (props) => {
                                 }
                               ] : null}
                               placeholder="Select Events"
-                              optionClick={(group, val) => onChangeGroupSelect2(group, val)}
-                              onClickOutside={() => setShowDropDown2(false)}
+                              optionClick={(group, val) => onChangeGroupSelect1(group, val)}
+                              onClickOutside={() => setShowDropDown(false)}
                             />
                           </>
                           }
 
-                          {event2 && !showDropDown2 && <Button type={'link'} size={'large'} className={'ml-2 fa-button--truncate fa-button--truncate-xs'} ellipsis onClick={() => {
-                            setShowDropDown2(true);
-                          }} >{event2}</Button>
+                          {event1 && !showDropDown && <Button type={'link'} size={'large'} className={'ml-2 fa-button--truncate fa-button--truncate-sm'} ellipsis onClick={() => {
+                            setShowDropDown(true);
+                          }} >{event1}</Button>
                           }
                         </div>
                       </div>
-                      {event2 && <Button type={'text'} onClick={() => setEventFilter2DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
-                      {event2 && <Button type={'text'} onClick={() => setEvent2(null)} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
+                      {event1 && <Button type={'text'} onClick={() => setEventFilter1DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
+                      {event1 && <Button type={'text'} onClick={() => setEvent1(null)} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
                     </div>
-                    <EventFilterBy event={event2} setfiltersParent={setfiltersEvent2} showEventFilterDD={showEventFilter2DD} setEventFilterDD={setEventFilter2DD} />
-                    {/* {event2 && <EventFilterBy setfiltersParent={setfiltersEvent2} /> } */}
+                    <EventFilterBy event={event1} setfiltersParent={setfiltersEvent1} showEventFilterDD={showEventFilter1DD} setEventFilterDD={setEventFilter1DD} />
                   </div>
                 </div>
               </Col>
             </Row>
-          }
+
+            {(event1 || event2) &&
+              <Row gutter={[24, 4]}>
+                <Col span={24}>
+                  <div className={'mt-4'}>
+
+                    <div className={'flex flex-col'}>
+
+                      <div className={'flex items-center justify-start query_block--actions'}>
+                        <div className={'flex items-center'}>
+
+                          {event2 && <>
+                            <EventTag text={'B'} color={'yellow'} />
+                            {/* <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>And then</Text> */}
+                            {/* <Text type={'title'} level={6} weight={'bold'} color={'black'} extraClass={'m-0 ml-2'}>performed</Text> */}
+                          </>}
+                          <div className='relative' style={{ height: '42px' }}>
+                            {!showDropDown2 && !event2 && <Button onClick={() => setShowDropDown2(true)} type={'text'} size={'large'} icon={<SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'} />}>Add next event</Button>}
+                            {showDropDown2 && <>
+
+                              <GroupSelect2
+                                allowEmpty={true}
+                                groupedProperties={TrackedEventNames ? [
+                                  {
+                                    label: 'Most Recent',
+                                    icon: 'most_recent',
+                                    values: TrackedEventNames
+                                  }
+                                ] : null}
+                                placeholder="Select Events"
+                                optionClick={(group, val) => onChangeGroupSelect2(group, val)}
+                                onClickOutside={() => setShowDropDown2(false)}
+                              />
+                            </>
+                            }
+
+                            {event2 && !showDropDown2 && <Button type={'link'} size={'large'} className={'ml-2 fa-button--truncate fa-button--truncate-xs'} ellipsis onClick={() => {
+                              setShowDropDown2(true);
+                            }} >{event2}</Button>
+                            }
+                          </div>
+                        </div>
+                        {event2 && <Button type={'text'} onClick={() => setEventFilter2DD(true)} className={'fa-btn--custom m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button>}
+                        {event2 && <Button type={'text'} onClick={() => setEvent2(null)} className={'fa-btn--custom m-0'}><SVG name={'delete'} extraClass={'m-0'} /></Button>}
+                      </div>
+                      <EventFilterBy event={event2} setfiltersParent={setfiltersEvent2} showEventFilterDD={showEventFilter2DD} setEventFilterDD={setEventFilter2DD} />
+                      {/* {event2 && <EventFilterBy setfiltersParent={setfiltersEvent2} /> } */}
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            }
 
 
-        </ComposerBlock>
+          </ComposerBlock>
 
-        <ComposerBlock blockTitle={'EVENTS TO INCLUDE'} isOpen={eventsToIncBlock}
-          showIcon={true} onClick={() => setEventsToIncBlock(!eventsToIncBlock)}
-          extraClass={`no-padding-l`}
-        >
+          <ComposerBlock blockTitle={'EVENTS TO INCLUDE'} isOpen={eventsToIncBlock}
+            showIcon={true} onClick={() => setEventsToIncBlock(!eventsToIncBlock)}
+            extraClass={`no-padding-l`}
+          >
 
-          <div>
+            <div>
 
 
-            {eventsToInc && eventsToInc?.map((item) => {
-              return <Button
-                className={`ml-2 mt-4 flex justify-start`}
-                type='link'
+              {eventsToInc && eventsToInc?.map((item) => {
+                return <Button
+                  className={`ml-2 mt-4 flex justify-start`}
+                  type='link'
+                  onClick={() => setShowEventsToIncDD(true)}
+                >
+                  {item}
+                </Button>
+              })}
+
+              <Button
+                className={` ml-2 mt-4`}
+                type={'text'}
                 onClick={() => setShowEventsToIncDD(true)}
+                icon={<SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'} />}
               >
-                {item}
+                {`Add Event`}
               </Button>
-            })}
 
-            <Button
-              className={` ml-2 mt-4`}
-              type={'text'}
-              onClick={() => setShowEventsToIncDD(true)}
-              icon={<SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'} />}
-            >
-              {`Add Event`}
-            </Button>
+              {showEventsToIncDD && (
+                <FaSelect
+                  options={modelMetadata ? modelMetadataDDValue : []}
+                  onClickOutside={() => setShowEventsToIncDD(false)}
+                  applClick={(val) => valuesSelect(val)}
+                  allowSearch={true}
+                  multiSelect={true}
+                  selectedOpts={eventsToInc}
 
-            {showEventsToIncDD && (
-              <FaSelect
-                options={modelMetadata ? modelMetadataDDValue : []}
-                onClickOutside={() => setShowEventsToIncDD(false)}
-                applClick={(val) => valuesSelect(val)}
-                allowSearch={true}
-                multiSelect={true}
-                selectedOpts={eventsToInc}
+                />
+              )}
+            </div>
 
-              />
-            )}
-          </div>
-
-        </ComposerBlock>
+          </ComposerBlock>
 
         </div>
-        <div id={`explain-builder--footer`} className={`flex items-center pt-4 border-top--thin-2 justify-end`} > 
-            
-            {(queryBuilderCollapse || collapse) && <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(!collapse)} > <SVG name={collapse ? `Expand` : `arrowUp` } size={20} extraClass={`mr-1`}></SVG>{`${collapse? 'Expand' : 'Collapse all'}`} </Button>}
-            <Button type="primary" size={'large'} loading={insightBtnLoading} disabled={!(event1 && selectedModel)} onClick={() => getInsights(props.activeProject.id, eventCount === 2 ? true : false)}>Find Insights</Button>
-          
+        <div id={`explain-builder--footer`} className={`flex items-center pt-4 border-top--thin-2 justify-end`} >
+
+          {(queryBuilderCollapse || collapse) && <Button className={`mr-2`} size={'large'} type={'default'} onClick={() => setCollapse(!collapse)} > <SVG name={collapse ? `Expand` : `arrowUp`} size={20} extraClass={`mr-1`}></SVG>{`${collapse ? 'Expand' : 'Collapse all'}`} </Button>}
+          <Button type="primary" size={'large'} loading={insightBtnLoading} disabled={!(event1 && selectedModel)} onClick={() => getInsights(props.activeProject.id, eventCount === 2 ? true : false)}>Find Insights</Button>
+
         </div>
 
 
@@ -569,6 +575,8 @@ const mapStateToProps = (state) => {
     tracked_events: state.factors.tracked_events,
     factors_model_metadata: state.factors.factors_model_metadata,
     factors_insight_model: state.factors.factors_insight_model,
+    userPropNames: state.coreQuery?.userPropNames,
+    eventPropNames: state.coreQuery?.eventPropNames,
   };
 };
 export default connect(mapStateToProps, {

@@ -241,6 +241,8 @@ const AttrQueryComposer = ({ activeProject,
                 {!collapse ? <FaDatepicker
                     customPicker
                     presetRange
+                    quarterPicker
+                    monthPicker
                     buttonSize={`large`}
                     className={`mr-2`}
                     monthPicker

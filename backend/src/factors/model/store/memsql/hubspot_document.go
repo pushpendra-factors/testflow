@@ -356,13 +356,14 @@ func (store *MemSQL) createBatchedHubspotDocuments(projectID uint64, documents [
 	batchedArguments := make([]interface{}, 0)
 	insertColumns := "INSERT INTO hubspot_documents(project_id,id, type, action, timestamp, value, created_at, updated_at)"
 	placeHolders := ""
+	createdTime := gorm.NowFunc()
 	for i := range documents {
 		documents[i].ProjectId = projectID
 		if placeHolders != "" {
 			placeHolders = placeHolders + ","
 		}
 		placeHolders = placeHolders + "( ? )"
-		createdTime := gorm.NowFunc()
+		createdTime = createdTime.Add(1 * time.Microsecond) // db precision is in microsecond
 		arguments := []interface{}{
 			documents[i].ProjectId,
 			documents[i].ID,

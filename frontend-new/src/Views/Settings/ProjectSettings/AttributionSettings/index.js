@@ -28,8 +28,6 @@ const AttributionSettings = ({
     enabled: true,
   });
 
-  console.log('AttrConfig:::', attrConfig);
-
   useEffect(() => {
     fetchProjectSettings(activeProject.id);
   }, [activeProject]);

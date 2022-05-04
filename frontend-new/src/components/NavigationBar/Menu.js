@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Menu, Icon, Popover, Button } from 'antd';
 import { SVG } from '../factorsComponents';
 import { useLocation, NavLink } from 'react-router-dom';
 import styles from './index.module.scss';
+import { fetchSmartEvents } from 'Reducers/events';
+import { connect } from 'react-redux';
+import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
+import { fetchProjects } from 'Reducers/global';
 
 const { SubMenu } = Menu;
 
@@ -39,7 +43,16 @@ const MapNametToLocation = {
   setup_assist: '/welcome',
 };
 
-function SiderMenu({ collapsed, setCollapsed, handleClick }) {
+function SiderMenu({
+  collapsed,
+  setCollapsed,
+  handleClick,
+  activeProject,
+  fetchSmartEvents,
+  fetchProjectAgents,
+  fetchAgentInfo,
+  fetchProjects,
+}) {
   const location = useLocation();
   const [openKeys, setOpenKeys] = useState([]);
   const [ShowPopOverSettings, setShowPopOverSettings] = useState(false);
@@ -105,6 +118,18 @@ function SiderMenu({ collapsed, setCollapsed, handleClick }) {
       );
     }
   };
+
+  useEffect(() => {
+    const getData = async () => {
+      await fetchAgentInfo();
+      await fetchProjects();
+      await fetchProjectAgents(activeProject.id);
+    };
+    getData();
+    if (location.pathname === '/configure/events') {
+      fetchSmartEvents(activeProject.id);
+    }
+  }, [location.pathname, activeProject]);
 
   const onClickAction = (key) => {
     if (key.key === 'collapse') {
@@ -332,5 +357,12 @@ function SiderMenu({ collapsed, setCollapsed, handleClick }) {
     </Menu>
   );
 }
-
-export default SiderMenu;
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+});
+export default connect(mapStateToProps, {
+  fetchSmartEvents,
+  fetchProjectAgents,
+  fetchAgentInfo,
+  fetchProjects,
+})(SiderMenu);
