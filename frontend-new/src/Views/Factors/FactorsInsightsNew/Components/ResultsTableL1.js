@@ -12,7 +12,7 @@ import { Text, SVG, FaErrorComp, FaErrorLog, Number } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import L2Modal from './ModalL2';
 import CardInsight from './CardInsight';
-
+import {renderAttributeValue} from '../Utils/renderAttributeVal'
 
 
 const CardInsightWrapper = ({ data }) => {
@@ -72,7 +72,7 @@ const InsightItem = ({ data, sort, setModalL2, showModalL2, showIncrease = false
           }}>
             <div className={`py-2 px-4 flex items-center `}>
               <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3'}>{item?.factors_insights_type == "journey" ? `Users who visit` : `Users from`}</Text>
-              <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'}>{explainMatchEventName(item?.factors_insights_key, false, 'blue')}</Tag>
+              <Tag className={'fa-tag--regular fa-tag--highlight truncate'}>{explainMatchEventName(item?.factors_insights_key, false, 'blue')}</Tag>
 
             </div>
             <div className={'py-2 px-4 flex justify-end column_right'}>
@@ -94,11 +94,11 @@ const InsightItem = ({ data, sort, setModalL2, showModalL2, showIncrease = false
             setModalData(item)
           }}>
             <div className={`py-2 px-4 flex items-center `}>
-              <Tag className={'m-0 mx-2'} className={'fa-tag--regular fa-tag--highlight truncate'}>
+              <Tag className={'fa-tag--regular fa-tag--highlight truncate'}>
                 {explainMatchEventName(item?.factors_insights_attribute[0]?.factors_attribute_key, false, 'blue')}
               </Tag>
-              <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3'}>
-                {`= ${item?.factors_insights_attribute[0]?.factors_attribute_value}`}
+              <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'m-0 mr-3'}>  
+                {renderAttributeValue(item)}
               </Text>
             </div>
             <div className={'py-2 px-4 flex justify-end column_right'}>

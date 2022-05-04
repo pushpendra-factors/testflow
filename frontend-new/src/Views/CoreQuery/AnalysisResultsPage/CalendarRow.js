@@ -89,6 +89,7 @@ function CalendarRow({
                 customPicker
                 presetRange
                 monthPicker
+                quarterPicker
                 placement='bottomLeft'
                 range={
                   comparison_duration && {
@@ -188,6 +189,7 @@ function CalendarRow({
           customPicker
           presetRange
           monthPicker
+          quarterPicker
           range={{
             startDate: durationObj.from,
             endDate: durationObj.to,

@@ -165,9 +165,11 @@ const AttributionsChart = forwardRef(
           comparison_data.data,
           comparison_duration,
           queryOptions,
-          attrQueries
+          attrQueries,
+          data
         )
       );
+      
     }, [
       attr_dimensions,
       content_groups,
@@ -176,6 +178,7 @@ const AttributionsChart = forwardRef(
       attribution_method_compare,
       event,
       eventNames,
+      data,
       handleSorting,
       linkedEvents,
       sorter,
@@ -213,6 +216,7 @@ const AttributionsChart = forwardRef(
           .map((v) => v.index)
       );
     }, [
+      handleSorting,
       attr_dimensions,
       content_groups,
       displayedAttributionMetrics,
@@ -352,7 +356,6 @@ const AttributionsChart = forwardRef(
         </div>
       </div>
     );
-  }
-);
+  });
 
 export default AttributionsChart;

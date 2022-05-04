@@ -91,7 +91,7 @@ func (store *MemSQL) CreateAlert(projectID uint64, alert model.Alert) (model.Ale
 	// - Check for valid operator
 	// - Check if the KPI/Metric is valid TODO
 	// - Check if the date range is valid for both type 1 and type 2
-	if alert.AlertName == "" {
+	if alertDescription.Name == "" {
 		logCtx.Error("Invalid alert name")
 		return model.Alert{}, http.StatusBadRequest, "Invalid alert name"
 	}

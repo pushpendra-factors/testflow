@@ -157,8 +157,9 @@ func (store *MemSQL) GetPropertiesByGroup(projectID uint64, groupName string, li
 		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		groupProperty, err := model.GetPropertiesByGroupFromCache(projectID, groupName, currentDateOnlyFormat)
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to get group properties from cache.")
-			return nil, http.StatusInternalServerError
+			logCtx.WithField("current_date", currentDateOnlyFormat).WithError(err).
+				Error("Failed to get group properties from cache.")
+			continue
 		}
 		groupProperties = append(groupProperties, groupProperty)
 	}
