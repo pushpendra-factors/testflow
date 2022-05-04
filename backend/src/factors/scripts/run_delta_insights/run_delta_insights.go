@@ -42,7 +42,7 @@ func mainRunDeltaInsights() {
 	whitelistedDashboardIds := flag.String("whitelisted_dashboard_ids", "*", "")
 	skipWpi := flag.Bool("skip_wpi", false, "")
 	skipWpi2 := flag.Bool("skip_wpi2", false, "")
-	runKpi := flag.Bool("run_kpi", true, "")
+	runKpi := flag.Bool("run_kpi", false, "")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
