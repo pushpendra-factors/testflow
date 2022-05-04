@@ -3294,7 +3294,7 @@ func isURLProperty(property string) bool {
 
 func SanitizeProperties(properties *PropertiesMap) {
 	for k, v := range *properties {
-		if v == nil {
+		if v == nil && !IsCRMPropertyKey(k) {
 			continue
 		}
 		if isURLProperty(k) {

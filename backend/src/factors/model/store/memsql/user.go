@@ -1383,11 +1383,11 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 	} else {
 		if useSourcePropertyOverwrite && model.IsCRMSource(source) {
 			for property := range newPropertiesMap {
-				if model.IsEmptyPropertyValue(newPropertiesMap[property]) {
+				if model.IsEmptyPropertyValue(newPropertiesMap[property]) && !U.IsCRMPropertyKey(property) {
 					continue
 				}
 
-				if model.IsCRMPropertyKey(source, property) && overwriteProperties {
+				if U.IsCRMPropertyKeyBySource(source, property) && overwriteProperties {
 					mergedPropertiesMap[property] = newPropertiesMap[property]
 				} else {
 					if _, exists := mergedPropertiesMap[property]; !exists {

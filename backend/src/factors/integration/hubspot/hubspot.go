@@ -1506,7 +1506,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 
 func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}) (interface{}, error) {
 	if value == nil || value == "" {
-		return nil, nil
+		return "", nil
 	}
 
 	if !C.IsEnabledPropertyDetailFromDB() || !C.IsEnabledPropertyDetailByProjectID(projectID) {

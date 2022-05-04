@@ -10,7 +10,6 @@ import (
 	"factors/model/store"
 	SDK "factors/sdk"
 	"factors/task/event_user_cache"
-	"factors/util"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -2253,9 +2252,9 @@ func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	enrichStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix())
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectId)
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
-	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[2].Status)
+	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
+	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[2].Status)
 
 	query := model.Query{
 		From: createdDate/1000 - 500,
@@ -2277,7 +2276,7 @@ func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
 		GroupByProperties: []model.QueryGroupByProperty{
 			{
 				Entity:   model.PropertyEntityEvent,
-				Property: util.EP_TIMESTAMP,
+				Property: U.EP_TIMESTAMP,
 			},
 		},
 	}
@@ -2287,7 +2286,7 @@ func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
 	assert.Equal(t, 3, len(result.Rows))
 	eventNameTimestamp := make(map[string]int64)
 	for i := range result.Rows {
-		timestamp, _ := util.GetPropertyValueAsFloat64(result.Rows[i][1])
+		timestamp, _ := U.GetPropertyValueAsFloat64(result.Rows[i][1])
 		eventNameTimestamp[result.Rows[i][0].(string)] = int64(timestamp)
 	}
 	assert.Equal(t, lastModifiedDate/1000+1, eventNameTimestamp[eventNameLifecycleStageLead]) // timestamp+1
@@ -3697,7 +3696,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, companyDocuments[0].ID, user.Group1ID)
 	assert.Equal(t, model.UserSourceHubspot, *user.Source)
-	userProperties, err := util.DecodePostgresJsonb(&user.Properties)
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Equal(t, "lead", (*userProperties)["$hubspot_company_lifecyclestage"])
 
 	// verify deal groups
@@ -4077,7 +4076,7 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	var propertiesMap map[string]interface{}
 	err = json.Unmarshal((storedUser.Properties).RawMessage, &propertiesMap)
 	assert.Nil(t, err)
-	storedLastModifiedDate, err := util.GetPropertyValueAsFloat64(propertiesMap["$hubspot_contact_lastmodifieddate"])
+	storedLastModifiedDate, err := U.GetPropertyValueAsFloat64(propertiesMap["$hubspot_contact_lastmodifieddate"])
 	assert.Nil(t, err)
 	assert.Equal(t, middleTimestamp, int64(storedLastModifiedDate))
 
@@ -4095,7 +4094,7 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	var updatedPropertiesMap map[string]interface{}
 	err = json.Unmarshal((storedUser.Properties).RawMessage, &updatedPropertiesMap)
 	assert.Nil(t, err)
-	storedLastModifiedDate, err = util.GetPropertyValueAsFloat64(updatedPropertiesMap["$hubspot_contact_lastmodifieddate"])
+	storedLastModifiedDate, err = U.GetPropertyValueAsFloat64(updatedPropertiesMap["$hubspot_contact_lastmodifieddate"])
 	assert.Nil(t, err)
 	assert.Equal(t, middleTimestamp, int64(storedLastModifiedDate))
 
@@ -4115,7 +4114,7 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	assert.Equal(t, futureTimestamp, storedUser.PropertiesUpdatedTimestamp)
 	err = json.Unmarshal((storedUser.Properties).RawMessage, &propertiesMap)
 	assert.Nil(t, err)
-	storedLastModifiedDate, err = util.GetPropertyValueAsFloat64(propertiesMap["$hubspot_contact_lastmodifieddate"])
+	storedLastModifiedDate, err = U.GetPropertyValueAsFloat64(propertiesMap["$hubspot_contact_lastmodifieddate"])
 	assert.Nil(t, err)
 	assert.Equal(t, futureTimestamp, int64(storedLastModifiedDate))
 
@@ -4182,8 +4181,8 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 
 	// Verify hubspot_contact_lastmodifieddate is set to timestampT1
 	lastmodifieddateProperty := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
-		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
-	userPropertyValue, err := util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+		U.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err := U.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
 	assert.Equal(t, err, nil)
 	assert.Equal(t, timestampT1, int64(userPropertyValue)*1000)
 
@@ -4248,8 +4247,8 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
 	assert.Nil(t, err)
 	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
-		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
-	userPropertyValue, err = util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+		U.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err = U.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
 	assert.Equal(t, err, nil)
 	assert.Equal(t, timestampT2, int64(userPropertyValue)*1000)
 	assert.Equal(t, timestampT1, user.PropertiesUpdatedTimestamp*1000)
@@ -4318,8 +4317,8 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
 	assert.Nil(t, err)
 	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
-		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
-	userPropertyValue, err = util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+		U.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err = U.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
 	assert.Equal(t, err, nil)
 	assert.Equal(t, timestampT1, int64(userPropertyValue)*1000)
 
@@ -4386,8 +4385,8 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
 	assert.Nil(t, err)
 	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
-		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
-	userPropertyValue, err = util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+		U.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err = U.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
 	assert.Equal(t, err, nil)
 	assert.Equal(t, timestampT2, int64(userPropertyValue)*1000)
 	assert.Equal(t, timestampT3, user.PropertiesUpdatedTimestamp)
@@ -4398,8 +4397,8 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	err = json.Unmarshal(user.Properties.RawMessage, &properitesMap)
 	assert.Nil(t, err)
 	lastmodifieddateProperty = model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact,
-		util.PROPERTY_KEY_LAST_MODIFIED_DATE)
-	userPropertyValue, err = util.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
+		U.PROPERTY_KEY_LAST_MODIFIED_DATE)
+	userPropertyValue, err = U.GetPropertyValueAsFloat64(properitesMap[lastmodifieddateProperty])
 	assert.Equal(t, err, nil)
 	assert.Equal(t, timestampT2, int64(userPropertyValue)*1000)
 	assert.Equal(t, timestampT3, user.PropertiesUpdatedTimestamp)
@@ -4706,4 +4705,123 @@ func TestHubspotBatchCreate(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"14"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionDeleted})
 	assert.Equal(t, http.StatusNotFound, status)
+}
+
+func TestHubspotEmptyPropertiesUpdated(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+
+	contactCreatedDate := time.Now().AddDate(0, 0, -5)
+	customerUserID := getRandomEmail()
+	contact := IntHubspot.Contact{
+		Vid: 1,
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", contactCreatedDate.Unix()*1000+10)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", contactCreatedDate.Unix()*1000+10)},
+			"lifecyclestage":   {Value: "lead"},
+			"Workflow":         {Value: "A"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				[]IntHubspot.ContactIdentity{{
+					Type:  "EMAIL",
+					Value: customerUserID,
+				},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err := json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	contactDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	processDocuments := []*model.HubspotDocument{&contactDocument}
+	status := store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, processDocuments, 2)
+	assert.Equal(t, http.StatusCreated, status)
+
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 2, time.Now().UTC().Unix())
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	documents, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+
+	// validated all properties exist in event properties, event user properties and user properties
+	for i := range documents {
+		user, status := store.GetStore().GetUser(project.ID, documents[i].UserId)
+		assert.Equal(t, http.StatusFound, status)
+		event, status := store.GetStore().GetEventById(project.ID, documents[i].SyncId, documents[i].UserId)
+		assert.Equal(t, http.StatusFound, status)
+		var userProperties map[string]interface{}
+		var eventProperties map[string]interface{}
+		var eventUserProperties map[string]interface{}
+		json.Unmarshal(user.Properties.RawMessage, &userProperties)
+		json.Unmarshal(event.Properties.RawMessage, &eventProperties)
+		json.Unmarshal(event.UserProperties.RawMessage, &eventUserProperties)
+		for key, value := range map[string]interface{}{"lifecyclestage": "lead", "Email": customerUserID, "Workflow": "A"} {
+			enKey := model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_HUBSPOT,
+				model.HubspotDocumentTypeNameContact, key)
+			assert.Equal(t, value, userProperties[enKey])
+			assert.Equal(t, value, eventProperties[enKey])
+			assert.Equal(t, value, eventUserProperties[enKey])
+		}
+	}
+
+	contact.Properties = map[string]IntHubspot.Property{
+		"createdate":       {Value: fmt.Sprintf("%d", contactCreatedDate.Unix()*1000+10)},
+		"lastmodifieddate": {Value: fmt.Sprintf("%d", contactCreatedDate.Unix()*1000+20)},
+		"lifecyclestage":   {Value: ""},
+		"Workflow":         {Value: ""},
+	}
+
+	enJSON, err = json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	contactDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	processDocuments = []*model.HubspotDocument{&contactDocument}
+	status = store.GetStore().CreateHubspotDocumentInBatch(project.ID, model.HubspotDocumentTypeContact, processDocuments, 2)
+	assert.Equal(t, http.StatusCreated, status)
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 2, time.Now().UTC().Unix())
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	documents, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionUpdated})
+	assert.Equal(t, http.StatusFound, status)
+	documents = documents[len(documents)-1:] // check the latest processed document
+
+	// Empty properties should overwrite previous non empty properties
+	for i := range documents {
+		user, status := store.GetStore().GetUser(project.ID, documents[i].UserId)
+		assert.Equal(t, http.StatusFound, status)
+		event, status := store.GetStore().GetEventById(project.ID, documents[i].SyncId, documents[i].UserId)
+		assert.Equal(t, http.StatusFound, status)
+		var userProperties map[string]interface{}
+		var eventProperties map[string]interface{}
+		var eventUserProperties map[string]interface{}
+		json.Unmarshal(user.Properties.RawMessage, &userProperties)
+		json.Unmarshal(event.Properties.RawMessage, &eventProperties)
+		json.Unmarshal(event.UserProperties.RawMessage, &eventUserProperties)
+		for key, value := range map[string]interface{}{"lifecyclestage": "", "Email": customerUserID, "Workflow": ""} {
+			enKey := model.GetCRMEnrichPropertyKeyByType(U.CRM_SOURCE_NAME_HUBSPOT,
+				model.HubspotDocumentTypeNameContact, key)
+			assert.Equal(t, value, userProperties[enKey])
+			assert.Equal(t, value, eventProperties[enKey])
+			assert.Equal(t, value, eventUserProperties[enKey])
+		}
+	}
 }

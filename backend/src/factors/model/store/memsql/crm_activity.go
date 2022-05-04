@@ -13,7 +13,7 @@ import (
 )
 
 // isExistActivty check for existing activity by activity name, type, actor type , actor id and timestamp
-func isExistActivty(projectID uint64, source model.CRMSource,
+func isExistActivty(projectID uint64, source U.CRMSource,
 	name string, activtyType int, actorType int, actorID string, externalActivityID string, timestamp int64) (int, error) {
 	logFields := log.Fields{
 		"project_id":    projectID,
@@ -139,7 +139,7 @@ func (store *MemSQL) CreateCRMActivity(crmActivity *model.CRMActivity) (int, err
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source model.CRMSource) ([]model.CRMActivity, int) {
+func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source U.CRMSource) ([]model.CRMActivity, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"source":     source,
@@ -173,7 +173,7 @@ func (store *MemSQL) GetCRMActivityInOrderForSync(projectID uint64, source model
 	return crmActivity, http.StatusFound
 }
 
-func (store *MemSQL) UpdateCRMActivityAsSynced(projectID uint64, source model.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int) {
+func (store *MemSQL) UpdateCRMActivityAsSynced(projectID uint64, source U.CRMSource, crmActivity *model.CRMActivity, syncID, userID string) (*model.CRMActivity, int) {
 
 	logFields := log.Fields{
 		"project_id":           projectID,

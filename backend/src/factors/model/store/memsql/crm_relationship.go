@@ -13,7 +13,7 @@ import (
 )
 
 // isExistRelationshipByID check for existing relationship between two different object type by their external id.
-func isExistRelationshipByID(projectID uint64, source model.CRMSource, fromType,
+func isExistRelationshipByID(projectID uint64, source U.CRMSource, fromType,
 	toType int, fromID, toID string) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
