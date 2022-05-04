@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/mssola/user_agent"
 	log "github.com/sirupsen/logrus"
 	"github.com/ttacon/libphonenumber"
 )
@@ -1280,4 +1281,11 @@ func HasMaliciousContent(reqPayload string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func GetBrowser(p *user_agent.UserAgent) (string, string) {
+	if IsPingdomBot(p.UA()) {
+		return "PingdomBot", ""
+	}
+	return p.Browser()
 }

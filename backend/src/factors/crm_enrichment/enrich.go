@@ -41,7 +41,7 @@ func (c *CRMSourceConfig) GetCRMObjectTypeAlias(objectType int) (string, error) 
 	return c.objectTypeAlias[objectType], nil
 }
 
-func getCRMRecordByTypeForSync(projectID uint64, source model.CRMSource, tableName string) (interface{}, int) {
+func getCRMRecordByTypeForSync(projectID uint64, source U.CRMSource, tableName string) (interface{}, int) {
 	switch tableName {
 	case TableNameCRMusers:
 		return store.GetStore().GetCRMUsersInOrderForSync(projectID, source)
@@ -114,7 +114,7 @@ func NewCRMEnrichmentConfig(sourceAlias string, sourceObjectTypeAndAlias map[int
 	}
 
 	// prefix check for crm properties for overwriting
-	if !model.IsCRMPropertyKey(sourceAlias, model.GetCRMEnrichPropertyKeyByType(sourceAlias, " ", " ")) {
+	if !U.IsCRMPropertyKeyBySource(sourceAlias, model.GetCRMEnrichPropertyKeyByType(sourceAlias, " ", " ")) {
 		return nil, errors.New("missing prefix check for source")
 	}
 

@@ -292,7 +292,7 @@ export const getTableColumns = (
         'pb-3'
       ),
       dataIndex: `${e.pr} - ${e.eni}`,
-      width: 200,
+      width: 400,
       fixed: !index ? 'left' : ''
     };
   };

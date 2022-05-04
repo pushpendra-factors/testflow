@@ -3,9 +3,6 @@
 #starting redis
 docker-compose build redis
 
-#starting postgres
-docker-compose build postgres
-
 #starting etcd
 docker-compose build etcd
 

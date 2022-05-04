@@ -2,9 +2,9 @@ package main
 
 import (
 	C "factors/config"
-	Const "factors/constants"
 	H "factors/handler"
 	mid "factors/middleware"
+	"factors/model/model"
 	session "factors/session/store"
 	U "factors/util"
 	"flag"
@@ -324,7 +324,7 @@ func main() {
 		H.InitExternalAuth(r, authenticator)
 	}
 
-	Const.SetSmartPropertiesReservedNames()
+	model.SetSmartPropertiesReservedNames()
 
 	C.KillDBQueriesOnExit()
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))

@@ -3,7 +3,6 @@ package tests
 import (
 	"encoding/json"
 	C "factors/config"
-	Const "factors/constants"
 	H "factors/handler"
 	"factors/handler/helpers"
 	v1 "factors/handler/v1"
@@ -37,7 +36,7 @@ func TestKpiAnalytics(t *testing.T) {
 
 	r2 := gin.Default()
 	H.InitDataServiceRoutes(r2)
-	Const.SetSmartPropertiesReservedNames()
+	model.SetSmartPropertiesReservedNames()
 
 	project, customerAccountID, agent, statusCode := createProjectAndAddAdwordsDocument(t, r2)
 	log.Warn(customerAccountID)

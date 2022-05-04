@@ -1584,7 +1584,6 @@ func (pg *Postgres) updateUserPropertiesForSessionV2(projectID uint64,
 
 		(*userPropertiesMap)[U.UP_PAGE_COUNT] = newPageCount
 		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = newTotalSpentTime
-		(*userPropertiesMap)[U.UP_SESSION_COUNT] = newSessionCount
 
 		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 		if err != nil {
@@ -1665,7 +1664,6 @@ func (pg *Postgres) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
 		newUserProperties := map[string]interface{}{
 			U.UP_TOTAL_SPENT_TIME: sessionUserProperties.TotalSpentTime,
 			U.UP_PAGE_COUNT:       sessionUserProperties.PageCount,
-			U.UP_SESSION_COUNT:    sessionUserProperties.SessionCount,
 		}
 		userPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newUserProperties, true)
 		if err != nil {

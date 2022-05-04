@@ -3,7 +3,6 @@ package postgres
 import (
 	"errors"
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -394,7 +393,7 @@ func (pg *Postgres) buildObjectAndPropertiesForLinkedin(projectID uint64, object
 
 // GetLinkedinFilterValues ...
 func (pg *Postgres) GetLinkedinFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
-	_, isPresent := Const.SmartPropertyReservedNames[requestFilterProperty]
+	_, isPresent := model.SmartPropertyReservedNames[requestFilterProperty]
 	if !isPresent {
 		filterValues, errCode := pg.getSmartPropertyFilterValues(projectID, requestFilterObject, requestFilterProperty, "linkedin", reqID)
 		if errCode != http.StatusFound {
@@ -683,7 +682,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 
 	// Group By and select keys
 	for _, groupBy := range query.GroupBy {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == "campaign_group" {
@@ -944,7 +943,7 @@ func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFi
 		} else {
 			filterValue = filter.Value
 		}
-		_, isPresent := Const.SmartPropertyReservedNames[filter.Property]
+		_, isPresent := model.SmartPropertyReservedNames[filter.Property]
 		if isPresent {
 			currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectToValueInLinkedinFiltersMapping[filter.Object+":"+filter.Property], filterOperator, filterValue)
 			if index == 0 {
@@ -982,7 +981,7 @@ func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFi
 func getNotNullFilterStatementForSmartPropertyLinkedinGroupBys(groupBys []model.ChannelGroupBy) string {
 	resultStatement := ""
 	for _, groupBy := range groupBys {
-		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		_, isPresent := model.SmartPropertyReservedNames[groupBy.Property]
 		isSmartProperty := !isPresent
 		if isSmartProperty {
 			if groupBy.Object == model.LinkedinCampaignGroup {

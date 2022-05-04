@@ -2,7 +2,6 @@ package memsql
 
 import (
 	C "factors/config"
-	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
@@ -55,7 +54,7 @@ func (store *MemSQL) satisfiesSmartPropertyRulesForeignConstraints(rule model.Sm
 
 func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":  projectID,
 		"object_type": objectType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -82,8 +81,8 @@ func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType st
 }
 func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, name string, objectType int) int {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"name": name,
+		"project_id":  projectID,
+		"name":        name,
 		"object_type": objectType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -99,10 +98,10 @@ func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, 
 }
 func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, name string, ruleID string, objectType int) int {
 	logFields := log.Fields{
-		"project_id": projectID,
-		"name": name,
+		"project_id":  projectID,
+		"name":        name,
 		"object_type": objectType,
-		"rule_id": ruleID,
+		"rule_id":     ruleID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	db := C.GetServices().Db
@@ -117,7 +116,7 @@ func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, 
 }
 func validateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.SmartPropertyRules) (string, bool) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":               projectID,
 		"smart_property_rules_doc": smartPropertyRulesDoc,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -128,7 +127,7 @@ func validateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.S
 	if smartPropertyRulesDoc.Name == "" {
 		return "Empty name for rule.", false
 	}
-	if Const.SmartPropertyReservedNames[strings.ToLower(smartPropertyRulesDoc.Name)] {
+	if model.SmartPropertyReservedNames[strings.ToLower(smartPropertyRulesDoc.Name)] {
 		return "Entered Name is not allowed.", false
 	}
 	if strings.Contains(smartPropertyRulesDoc.Name, " ") {
@@ -144,7 +143,7 @@ func validateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.S
 
 func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":               projectID,
 		"smart_property_rules_doc": smartPropertyRulesDoc,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -204,9 +203,9 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 }
 func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, smartPropertyRulesDoc model.SmartPropertyRules) (model.SmartPropertyRules, string, int) {
 	logFields := log.Fields{
-		"project_id": projectID,
+		"project_id":               projectID,
 		"smart_property_rules_doc": smartPropertyRulesDoc,
-		"rule_id": ruleID,
+		"rule_id":                  ruleID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
@@ -336,7 +335,7 @@ func (store *MemSQL) GetAllChangedSmartPropertyRulesForProject(projectID uint64)
 func (store *MemSQL) GetSmartPropertyRule(projectID uint64, ruleID string) (model.SmartPropertyRules, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"rule_id": ruleID,
+		"rule_id":    ruleID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	var smartPropertyRule model.SmartPropertyRules
@@ -366,7 +365,7 @@ func (store *MemSQL) GetSmartPropertyRule(projectID uint64, ruleID string) (mode
 func (store *MemSQL) DeleteSmartPropertyRules(projectID uint64, ruleID string) int {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"rule_id": ruleID,
+		"rule_id":    ruleID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {

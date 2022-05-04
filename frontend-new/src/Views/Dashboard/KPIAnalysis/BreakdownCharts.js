@@ -101,7 +101,7 @@ const BreakdownCharts = ({
   let chartContent = null;
   let tableContent = null;
 
-  if (chartType === CHART_TYPE_TABLE) {
+  if (chartType === CHART_TYPE_TABLE || chartType === CHART_TYPE_PIVOT_CHART) {
     tableContent = (
       <div
         onClick={handleEditQuery}

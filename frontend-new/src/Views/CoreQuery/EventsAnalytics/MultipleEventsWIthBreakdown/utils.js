@@ -14,12 +14,13 @@ import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../../utils/constants';
 import { DISPLAY_PROP } from '../../../../utils/constants';
+import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 
 export const defaultSortProp = () => {
   return [
     {
       order: 'descend',
-      key: 'Event Count',
+      key: EVENT_COUNT_KEY,
       type: 'numerical',
       subtype: null,
     },
@@ -110,7 +111,7 @@ export const formatData = (data, queries, colors, eventNames) => {
     return {
       label: str,
       value: d[countIndex],
-      'Event Count': d[countIndex], //used for sorting, value key will be removed soon
+      [EVENT_COUNT_KEY]: d[countIndex], //used for sorting, value key will be removed soon
       index,
       event: eventName,
       eventIndex: d[event_indexIndex],
@@ -177,13 +178,13 @@ export const getTableColumns = (
   result.push({
     title: getClickableTitleSorter(
       labelsObj[page],
-      { key: `Event Count`, type: 'numerical', subtype: null },
+      { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
       'right'
     ),
     className: 'text-right',
-    dataIndex: 'Event Count',
+    dataIndex: EVENT_COUNT_KEY,
     width: 150,
     render: (d) => {
       return <NumFormat number={d} />;
@@ -215,13 +216,13 @@ export const getDateBasedColumns = (
   const OverallColumn = {
     title: getClickableTitleSorter(
       'Overall',
-      { key: `Event Count`, type: 'numerical', subtype: null },
+      { key: EVENT_COUNT_KEY, type: 'numerical', subtype: null },
       currentSorter,
       handleSorting,
       'right'
     ),
     className: 'text-right',
-    dataIndex: `Event Count`,
+    dataIndex: EVENT_COUNT_KEY,
     width: 150,
   };
   const breakdownColumns = breakdown.map((b, index) => {

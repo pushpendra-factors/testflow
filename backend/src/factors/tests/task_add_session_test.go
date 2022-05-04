@@ -804,7 +804,6 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Equal(t, float64(10), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*userPropertiesMap)[U.UP_OS])
@@ -813,7 +812,6 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	lastestUserPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, user.Properties)
-	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Equal(t, float64(10), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*lastestUserPropertiesMap)[U.UP_OS])
@@ -954,7 +952,6 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
 	assert.Nil(t, err)
 
-	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
 	assert.Equal(t, float64(12), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
@@ -1004,7 +1001,6 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
 	assert.Equal(t, float64(14), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
@@ -2150,8 +2146,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		user, _ := store.GetStore().GetUser(project.ID, userId)
 		lastestUserPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
-		assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
 		assert.Equal(t, float64(10), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 		assert.Equal(t, trackUserProperties[U.UP_OS], (*lastestUserPropertiesMap)[U.UP_OS])
 		timestamp = timestamp + 2
@@ -2188,7 +2182,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		user, _ = store.GetStore().GetUser(project.ID, userId)
 		lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
 		assert.Equal(t, float64(2), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
 		assert.Equal(t, float64(15), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 		assert.Equal(t, trackUserProperties[U.UP_OS], (*lastestUserPropertiesMap)[U.UP_OS])
@@ -2371,7 +2364,6 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Equal(t, float64(10), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*userPropertiesMap)[U.UP_OS])
@@ -2380,7 +2372,6 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	lastestUserPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, user.Properties)
-	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Equal(t, float64(10), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*lastestUserPropertiesMap)[U.UP_OS])
@@ -2523,7 +2514,6 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
 	assert.Nil(t, err)
 
-	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
 	assert.Equal(t, float64(12), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
@@ -2575,7 +2565,6 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	// This is because of two different user property id in the same session
 	assert.Equal(t, float64(14), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])

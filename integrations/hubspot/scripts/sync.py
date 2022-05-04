@@ -207,7 +207,7 @@ def get_with_fallback_retry(project_id, get_url):
                 r = requests.get(url=get_url, headers = {}, timeout=REQUEST_TIMEOUT)
                 if r.status_code != 429:
                     if not r.ok:
-                        if r.status_code== 414:
+                        if r.status_code== 414 or r.status_codes == 404:
                             return r
                         if retries < RETRY_LIMIT:
                             log.error("Failed to get data from hubspot %d.Retries %d. Retrying in 2 seconds",r.status_code,retries)
@@ -337,6 +337,20 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
 
     return response_dict, unmodified_dict, r
 
+def add_contactId(api_key, email, project_id, engagement):
+    get_url = "https://api.hubapi.com/contacts/v1/contact/email/" + email + "/profile?hapikey=" + api_key
+    r  = get_with_fallback_retry(project_id, get_url)
+    if not r.ok:
+        log.error("Failure response %d from hubspot on contactID", r.status_code)
+        return
+
+    response = json.loads(r.text)
+    engagements = engagement["engagement"]
+    if engagements["type"] == "INCOMING_EMAIL":
+        engagement["metadata"]["from"]["contactId"] = response["vid"]
+    elif engagements["type"] == "EMAIL":
+        engagement["metadata"]["to"][0]["contactId"] = response["vid"]
+        
 def sync_engagements(project_id, api_key):
     get_url = "https://api.hubapi.com/engagements/v1/engagements/recent/modified?hapikey=" + api_key + "&count=100"
     final_url = get_url
@@ -345,6 +359,9 @@ def sync_engagements(project_id, api_key):
     while has_more:
         log.warning("Downloading engagements for project_id %d from url %s.", project_id, final_url)
         r = get_with_fallback_retry(project_id, final_url)
+        if not r.ok:
+            log.error("Failure response %d from hubspot on sync_engagements", r.status_code)
+            break
         engagement_api_calls += 1
         filter_engagements = []
         if not r.ok:
@@ -354,10 +371,16 @@ def sync_engagements(project_id, api_key):
             response = json.loads(r.text)
             for engagement in response['results']:
                 engagements = engagement["engagement"]
-                if engagements["type"] == "CALL" or engagements["type"] == "MEETING": 
+                if engagements["type"] == "CALL" or engagements["type"] == "MEETING":
                     filter_engagements.append(engagement)
-                
-
+                elif engagements["type"] == "INCOMING_EMAIL":
+                    if "metadata" in engagement and "from" in engagement["metadata"] and "email" in engagement["metadata"]["from"]:
+                        add_contactId(api_key, engagement["metadata"]["from"]["email"], project_id, engagement)
+                    filter_engagements.append(engagement)
+                elif engagements["type"] == "EMAIL":
+                    if "metadata" in engagement and "to" in engagement["metadata"] and len(engagement["metadata"]["to"])>0 and "email" in engagement["metadata"]["to"][0]:
+                        add_contactId(api_key, engagement["metadata"]["to"][0]["email"], project_id, engagement)
+                    filter_engagements.append(engagement)
         create_all_documents(project_id, 'engagement', filter_engagements)
         log.warning("Downloaded and created %d engagements.", len(filter_engagements))
         response = json.loads(r.text)
@@ -367,7 +390,6 @@ def sync_engagements(project_id, api_key):
         else :
             has_more = False
     return engagement_api_calls
-
 
 def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
     if sync_all:

@@ -6,13 +6,14 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"factors/sdk"
+	U "factors/util"
 	"fmt"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func getActivityAssociatedUserID(projectID uint64, source model.CRMSource, config *CRMSourceConfig, crmActivity *model.CRMActivity) (string, error) {
+func getActivityAssociatedUserID(projectID uint64, source U.CRMSource, config *CRMSourceConfig, crmActivity *model.CRMActivity) (string, error) {
 	tableName := ""
 
 	if config.userTypes[crmActivity.ActorType] == true {

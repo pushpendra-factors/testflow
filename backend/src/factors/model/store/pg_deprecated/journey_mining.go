@@ -826,7 +826,7 @@ func computeInsights2(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 func computeInsights1(userEventsMap map[string][]ArchiveEventFormat, segmentUsers map[string]bool) {
 	propertyCounts := make(map[string][]float64)
 	noneCounts := make(map[string]int64)
-	properties := []string{U.UP_SESSION_COUNT, U.UP_PAGE_COUNT, U.UP_TOTAL_SPENT_TIME}
+	properties := []string{U.UP_PAGE_COUNT, U.UP_TOTAL_SPENT_TIME}
 	sessionEvent := model.QueryEventWithProperties{Name: U.EVENT_NAME_SESSION}
 
 	for _, property := range properties {
@@ -836,7 +836,6 @@ func computeInsights1(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 
 	for userID := range segmentUsers {
 		userCounts := map[string]float64{
-			U.UP_SESSION_COUNT:    0,
 			U.UP_PAGE_COUNT:       0,
 			U.UP_TOTAL_SPENT_TIME: 0,
 		}
@@ -861,9 +860,7 @@ func computeInsights1(userEventsMap map[string][]ArchiveEventFormat, segmentUser
 		// 	}
 		// }
 		for _, denormalizedEvent := range userEventsMap[userID] {
-			if areEqualEventsWithFilters(denormalizedEvent, sessionEvent) {
-				userCounts[U.UP_SESSION_COUNT]++
-			} else if strings.HasPrefix(denormalizedEvent.EventName, "www.") {
+			if strings.HasPrefix(denormalizedEvent.EventName, "www.") {
 				userCounts[U.UP_PAGE_COUNT]++
 				eventProperties := denormalizedEvent.EventPropertiesMap
 
