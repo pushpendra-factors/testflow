@@ -127,11 +127,24 @@ class GetCustomerAccountsV1Handler(BaseHandler):
             return
 
         # Get customer accounts.
+        seed_customer_ids = []
+        final_customer_ids = []
+
+        # manager(bool): returns if query customer id is manager or not. level 0 signifies directly related accounts of logged in user i.e no child/sub-accounts included
+        query = """
+            SELECT
+            customer_client.manager,
+            customer_client.id,
+            customer_client.descriptive_name
+            FROM customer_client
+            WHERE customer_client.level = 0"""
+
         try:
-            customer_service = FetchService(app.CONFIG.ADWORDS_OAUTH).get_customer_accounts(refresh_token)
-            response = []
-            customer_accounts = customer_service.getCustomers()
-            log.warning("List of customer accounts: "+ str(customer_accounts))
+            customer_service = FetchService(app.CONFIG.ADWORDS_OAUTH).new_get_service('CustomerService',refresh_token)
+            googleads_service = FetchService(app.CONFIG.ADWORDS_OAUTH).new_get_service('GoogleAdsService',refresh_token) 
+            customer_resource_names = (
+                customer_service.list_accessible_customers().resource_names
+            )
         except Exception as e:
             self.set_status(400)
             traceback.print_tb(e.__traceback__)
@@ -139,42 +152,28 @@ class GetCustomerAccountsV1Handler(BaseHandler):
             self.finish({"message":"Error happened during fetch of customers from adwords."})
             return
 
-        if len(customer_accounts) == 0:
-            self.set_status(404)
-            self.finish({"message": "no customer accounts found for user on adwords"})
-            return
+        for customer_resource_name in customer_resource_names:
+            customer_id = googleads_service.parse_customer_path(
+                customer_resource_name
+            )["customer_id"]
+            seed_customer_ids.append(customer_id)
 
-        for account in customer_accounts:
-            resp_account = {}
-
-            # Manager account doesn"t support reports download.
-            # Skip listing it.
+        for seed_customer_id in seed_customer_ids:
             try:
-                if account["canManageClients"]:
-                    log.warning("Skipping manager accounts on get customer accounts.")
-                    continue
-            except Exception:
-                pass
-
-            try:
-                resp_account["customer_id"] = account["customerId"]
-            except Exception:
-                log.error("customer account id is missing on response from adwords")
+                response = googleads_service.search(
+                        customer_id=str(seed_customer_id), query=query
+                    )
+            except Exception as e:
+                traceback.print_tb(e.__traceback__)
+                log.warning("Error during manager status fetch " + str(e))
                 continue
-
-            try:
-                if account["descriptiveName"] is not None:
-                    resp_account["name"] = account["descriptiveName"]
+            for row in response:
+                customer_client = row.customer_client
+                if not customer_client.manager:
+                     final_customer_ids.append({"customer_id": customer_client.id, "descriptiveName": customer_client.descriptive_name})
                 else:
-                    resp_account["name"] = ""
-            except KeyError:
-                resp_account["name"] = ""
-            except Exception:
-                log.error("descriptive name is missing on response from adwords")
-                continue
-
-            response.append(resp_account)
+                    log.warning("Skipping manager account")
 
         self.set_status(200)
-        self.finish({"customer_accounts": response})
+        self.finish({"customer_accounts": final_customer_ids})
         return
