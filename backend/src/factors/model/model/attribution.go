@@ -1693,16 +1693,16 @@ func SanitizeResult(result *QueryResult) {
 
 	// Building new headers
 	var resultHeader []string
-	for idx := range validIdx {
-		resultHeader = append(resultHeader, result.Headers[idx])
+	for _, val := range validIdx {
+		resultHeader = append(resultHeader, result.Headers[val])
 	}
 
 	// Building new rows
 	resultRows := make([][]interface{}, 0)
 	for _, row := range result.Rows {
 		resultRow := make([]interface{}, 0)
-		for idx := range validIdx {
-			resultRow = append(resultRow, row[idx])
+		for _, val := range validIdx {
+			resultRow = append(resultRow, row[val])
 		}
 		resultRows = append(resultRows, resultRow)
 	}
