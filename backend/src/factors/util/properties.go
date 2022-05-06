@@ -1023,7 +1023,7 @@ var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
 	UP_INITIAL_PAGE_EVENT_ID,
 	UP_META_OBJECT_IDENTIFIER_KEY,
 	EP_CRM_REFERENCE_EVENT_ID,
-	"marketo_lead__fivetran_synced",
+	"$marketo_lead__fivetran_synced",
 }
 
 // DISABLED_CORE_QUERY_EVENT_PROPERTIES Less important event properties in core query context.
@@ -1034,7 +1034,7 @@ var DISABLED_CORE_QUERY_EVENT_PROPERTIES = [...]string{
 	EP_SEGMENT_EVENT_VERSION,
 	EP_CRM_REFERENCE_EVENT_ID,
 	EP_SKIP_SESSION,
-	"marketo_lead__fivetran_synced",
+	"$marketo_lead__fivetran_synced",
 }
 
 var DISABLED_USER_PROPERTIES_UI = [...]string{
