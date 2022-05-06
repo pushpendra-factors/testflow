@@ -244,6 +244,7 @@ type Configuration struct {
 	AllowHubspotEngagementsByProjectID              string
 	HubspotPropertyLookBackLimit                    int
 	EnableSlowDBQueryLogging                        bool
+	EnableDryRunAlerts							    bool
 }
 
 type Services struct {

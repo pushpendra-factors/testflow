@@ -54,6 +54,7 @@ func main() {
 	isQuarterlyEnabled := flag.Bool("quarterly_enabled", false, "")
 	projectIdFlag := flag.String("project_id", "", "Comma separated list of project ids to run")
 	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
+	enableDryRunAlerts := flag.Bool("dry_run_alerts", false, "")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -88,6 +89,7 @@ func main() {
 		AWSSecret:        *awsSecretAccessKey,
 		AWSRegion:        *awsRegion,
 		EmailSender:      *factorsEmailSender,
+		EnableDryRunAlerts: *enableDryRunAlerts,
 	}
 	C.InitConf(config)
 	C.InitSenderEmail(C.GetFactorsSenderEmail())

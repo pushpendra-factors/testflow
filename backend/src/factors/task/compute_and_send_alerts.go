@@ -7,16 +7,16 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
-
-	"github.com/jinzhu/now"
-	log "github.com/sirupsen/logrus"
 )
 
-type message struct {
+type Message struct {
 	AlertName     string
 	AlertType     int
 	Operator      string
@@ -26,6 +26,8 @@ type message struct {
 	Value         float64
 	DateRange     string
 	ComparedTo    string
+	From          int64
+	To            int64
 }
 
 type dateRanges struct {
@@ -44,7 +46,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 	var alertDescription model.AlertDescription
 	var alertConfiguration model.AlertConfiguration
 	var kpiQuery model.KPIQuery
-	var date_range dateRanges
+	var dateRange dateRanges
 
 	for _, alert := range allAlerts {
 
@@ -67,12 +69,12 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 			continue
 		}
 		timezoneString := U.TimeZoneString(kpiQuery.Timezone)
-		date_range, err = getDateRange(timezoneString, alertDescription.DateRange, alertDescription.ComparedTo)
+		dateRange, err = getDateRange(timezoneString, alertDescription.DateRange, alertDescription.ComparedTo)
 		if err != nil {
 			log.Errorf("failed to getDateRange, error: %v for project_id: %v,alert_name: %s,", err, projectID, alert.AlertName)
 			continue
 		}
-		statusCode, actualValue, comparedValue, err := executeAlertsKPIQuery(projectID, alert.AlertType, date_range, kpiQuery)
+		statusCode, actualValue, comparedValue, err := executeAlertsKPIQuery(projectID, alert.AlertType, dateRange, kpiQuery)
 		if (err != nil) || (statusCode != http.StatusOK) {
 			log.Errorf("failed to execute query for project_id: %v, alert_name: %s", projectID, alert.AlertName)
 			log.Errorf("status code: %v, error: %s", statusCode, err)
@@ -89,7 +91,7 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 			continue
 		}
 		if notify {
-			msg := message{
+			msg := Message{
 				AlertName:     alertDescription.Name,
 				AlertType:     alert.AlertType,
 				Operator:      alertDescription.Operator,
@@ -99,9 +101,11 @@ func ComputeAndSendAlerts(projectID uint64, configs map[string]interface{}) (map
 				Value:         value,
 				DateRange:     alertDescription.DateRange,
 				ComparedTo:    alertDescription.ComparedTo,
+				From:          dateRange.from,
+				To:            dateRange.to,
 			}
 			if alertConfiguration.IsEmailEnabled {
-				sendEmailAlert(msg, alertConfiguration.Emails)
+				sendEmailAlert(msg, dateRange, timezoneString, alertConfiguration.Emails)
 			}
 			if alertConfiguration.IsSlackEnabled {
 				sendSlackAlert(msg)
@@ -254,9 +258,35 @@ func sendAlert(operator string, actualValue float64, comparedValue float64, valu
 	return false, nil
 }
 
-func sendEmailAlert(msg message, emails []string) {
+func sendEmailAlert(msg Message, dateRange dateRanges, timezone U.TimeZoneString, emails []string) {
 	var success, fail int
-	sub, text, html := CreateAlertTemplate(msg)
+	sub := "Factors Alert"
+	text := ""
+	var statement string
+	fromTime := time.Unix(dateRange.from, 0)
+	toTime := time.Unix(dateRange.to, 0)
+
+	fromTime = U.ConvertTimeIn(fromTime, timezone)
+	toTime = U.ConvertTimeIn(toTime, timezone)
+
+	year, month, day := fromTime.Date()
+	from := fmt.Sprintf("%d-%d-%d", day, month, year)
+
+	year, month, day = toTime.Date()
+	to := fmt.Sprintf("%d-%d-%d", day, month, year)
+
+	if msg.AlertType == 1 {
+		statement = fmt.Sprintf(`%s %s recorded for %s in %s from %s to %s`, fmt.Sprint(msg.ActualValue), strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to)
+	} else if msg.AlertType == 2 {
+		statement = fmt.Sprintf(`%s %s %s for %s in %s (form %s to %s ) compared to %s - %s(%s)`, strings.ReplaceAll(msg.AlertName, "_", " "), strings.ReplaceAll(msg.Operator, "_", " "), fmt.Sprint(msg.Value), strings.ReplaceAll(msg.Category, "_", " "), strings.ReplaceAll(msg.DateRange, "_", " "), from, to, strings.ReplaceAll(msg.ComparedTo, "_", " "), fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
+	}
+	html := U.CreateAlertTemplate(statement)
+	dryRunFlag := C.GetConfig().EnableDryRunAlerts
+	if dryRunFlag {
+		log.Info("Dry run mode enabled. No emails will be sent")
+		log.Info(html)
+		return
+	}
 	for _, email := range emails {
 		err := C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), sub, html, text)
 		if err != nil {
@@ -266,25 +296,10 @@ func sendEmailAlert(msg message, emails []string) {
 		}
 		success++
 	}
-	log.Info("sent email alert to ", success, "failed to send email alert to ", fail)
+	log.Info("sent email alert to ", success, " failed to send email alert to ", fail)
 }
 
-func CreateAlertTemplate(msg message) (subject, text, html string) {
-	subject = "Factors.ai Alert"
-	if msg.AlertType == 1 {
-		html = fmt.Sprintf(`<h1>%s</h1><br><br><p>%s %s recorded for %s in %s </p>`, "Alert", fmt.Sprint(msg.Value), msg.AlertName, msg.Category, msg.DateRange)
-	} else if msg.AlertType == 2 {
-		html = fmt.Sprintf(`<h1>%s</h1><br><br><p>%s has %s %s for %s in %s compared to %s - %s( %s)</p>`, "Alert", msg.AlertName, msg.Operator, fmt.Sprint(msg.Value), msg.Category, msg.DateRange, msg.ComparedTo, fmt.Sprint(msg.ActualValue), fmt.Sprint(msg.ComparedValue))
-	}
-	return subject, "", html
-	// html = fmt.Sprintf(`<h1>Email Alert</h1><p>This alert is regarding %s <br> actual_value : %v , %s value : %v <br>
-	// for date range : %s %s<br></p>`, msg.AlertName, msg.ActualValue, comparedValue, msg.Value, msg.DateRange, comparedDate)
-	// text = fmt.Sprintf(`<h1>Email Alert</h1><p>This alert is regarding %s <br> actual_value : %v , %s value : %v <br>
-	// for date range : %s %s<br></p>`, msg.AlertName, msg.ActualValue, comparedValue, msg.Value, msg.DateRange, comparedDate)
-	// return subject, text, html
-}
-
-func sendSlackAlert(msg message) bool {
+func sendSlackAlert(msg Message) bool {
 	fmt.Println("slack alert sent")
 	return true
 }
