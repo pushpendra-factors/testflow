@@ -683,6 +683,28 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 	adwordsSettingsByProjectAndCustomerAccount := make(map[uint64]map[string]*model.AdwordsProjectSettings, 0)
 	projectIDs := make([]uint64, 0, 0)
 
+	// Forming MapOfProjectToCustomerAccToManagerAcc
+	projectToCustomerAccToManagerAccMap := make(map[uint64]map[string]string)
+	for i := range adwordsSettings {
+		customerAccToManagerAccMap := make(map[string]string)
+		if adwordsSettings[i].IntAdwordsClientManagerMap != nil {
+			err := U.DecodePostgresJsonbToStructType(adwordsSettings[i].IntAdwordsClientManagerMap, &customerAccToManagerAccMap)
+			if err != nil {
+				log.Warn(err)
+			} else {
+				projectToCustomerAccToManagerAccMap[adwordsSettings[i].ProjectId] = customerAccToManagerAccMap
+			}
+		}
+
+		customerAccountIDs := strings.Split(adwordsSettings[i].CustomerAccountId, ",")
+		for j := range customerAccountIDs {
+			_, isExists := projectToCustomerAccToManagerAccMap[adwordsSettings[i].ProjectId][customerAccountIDs[j]]
+			if !isExists {
+				projectToCustomerAccToManagerAccMap[adwordsSettings[i].ProjectId][customerAccountIDs[j]] = ""
+			}
+		}
+	}
+
 	// Forming the MapOfProjectIdCustomerAccountToData.
 	for i := range adwordsSettings {
 		customerAccountIDs := strings.Split(adwordsSettings[i].CustomerAccountId, ",")
@@ -709,6 +731,11 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 			log.Fields{"project_id": adwordsLastSyncInfos[i].ProjectId,
 				"customer_account_id": adwordsLastSyncInfos[i].CustomerAccountId})
 
+		projectToCustomerAccMap, isExists := projectToCustomerAccToManagerAccMap[adwordsLastSyncInfos[i].ProjectId]
+		if !isExists {
+			projectToCustomerAccMap = make(map[string]string)
+		}
+
 		settings, exists := adwordsSettingsByProjectAndCustomerAccount[adwordsLastSyncInfos[i].ProjectId][adwordsLastSyncInfos[i].CustomerAccountId]
 		if !exists {
 			logCtx.Warn("Adwords project settings not found for customer account adwords synced earlier.")
@@ -729,6 +756,12 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 		adwordsLastSyncInfos[i].DocumentTypeAlias = typeAlias // map the type to type alias name.
 		adwordsLastSyncInfos[i].RefreshToken = settings.RefreshToken
 		adwordsLastSyncInfos[i].Timezone = settings.IntGoogleIngestionTimezone
+		managerID, isExists := projectToCustomerAccMap[adwordsLastSyncInfos[i].CustomerAccountId]
+		if isExists {
+			adwordsLastSyncInfos[i].ManagerID = managerID
+		} else {
+			adwordsLastSyncInfos[i].ManagerID = ""
+		}
 
 		selectedLastSyncInfos = append(selectedLastSyncInfos, adwordsLastSyncInfos[i])
 
@@ -749,7 +782,7 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 		for _, accountID := range customerAccountIDs {
 			existingTypesForAccount, accountExists := existingProjectAndCustomerAccountWithTypes[adwordsSettings[i].ProjectId][accountID]
 			for docTypeAlias := range model.AdwordsDocumentTypeAlias {
-				if !accountExists || (accountExists && existingTypesForAccount[docTypeAlias] == false) {
+				if !accountExists || (accountExists && !existingTypesForAccount[docTypeAlias]) {
 					syncInfo := model.AdwordsLastSyncInfo{
 						ProjectId:         adwordsSettings[i].ProjectId,
 						RefreshToken:      adwordsSettings[i].RefreshToken,
@@ -757,6 +790,7 @@ func (store *MemSQL) sanitizedLastSyncInfos(adwordsLastSyncInfos []model.Adwords
 						LastTimestamp:     0, // no sync yet.
 						DocumentTypeAlias: docTypeAlias,
 						Timezone:          adwordsSettings[i].IntGoogleIngestionTimezone,
+						ManagerID:         projectToCustomerAccToManagerAccMap[adwordsSettings[i].ProjectId][accountID],
 					}
 
 					selectedLastSyncInfos = append(selectedLastSyncInfos, syncInfo)

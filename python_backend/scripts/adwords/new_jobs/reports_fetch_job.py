@@ -84,7 +84,7 @@ class ReportsFetch(BaseJob):
                                     .During(during)
                                     .Build())
         ads_service = FetchService(scripts.adwords.CONFIG.ADWORDS_OAUTH).new_get_service(
-                                                    "GoogleAdsService", self._refresh_token)
+                                                    "GoogleAdsService", self._refresh_token, self._manager_id)
         stream = ads_service.search_stream(customer_id=self._customer_acc_id, query=report_query)
         report = self.MAX_VERSION + CsvUtil.stream_to_csv(
                                             self.EXTRACT_FIELDS, self.HEADERS_VMAX, stream)

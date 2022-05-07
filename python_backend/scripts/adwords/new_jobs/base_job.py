@@ -20,6 +20,7 @@ class BaseJob:
         self._extract_load_timestamps = next_info.get("extract_load_timestamps")
         self._doc_type = next_info.get("doc_type_alias")
         self._first_run = next_info.get("first_run")
+        self._manager_id = next_info.get("manager_id")
 
     def start(self):
         log.warning("ETL for project: %s, cutomer_account_id: %s, document_type: %s, timestamp: %s",
